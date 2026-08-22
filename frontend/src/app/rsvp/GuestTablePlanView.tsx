@@ -206,10 +206,10 @@ export default function GuestTablePlanView({
   if (!placementAccessible) {
     return (
       <div className="text-center py-12 space-y-3 max-w-sm mx-auto">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-[var(--radius-card)] bg-surface-muted text-muted border border-border">
-          <LayoutGrid className="w-5 h-5" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary border border-primary/15">
+          <LayoutGrid className="w-6 h-6" />
         </div>
-        <h3 className="font-semibold text-foreground text-sm">Votre place arrive</h3>
+        <h3 className="font-display font-semibold text-foreground text-base">Votre place arrive</h3>
         <p className="text-muted text-xs leading-relaxed">
           Votre plan de table, invitation PDF et localisation GPS sont disponibles dès votre confirmation RSVP,
           dès que les organisateurs vous ont assigné une place.
@@ -221,10 +221,10 @@ export default function GuestTablePlanView({
   if (!tableDetails && (!tablePlanOverview || tablePlanOverview.length === 0)) {
     return (
       <div className="text-center py-12 space-y-3 max-w-xs mx-auto">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-[var(--radius-card)] bg-surface-muted text-muted border border-border">
-          <LayoutGrid className="w-5 h-5" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary border border-primary/15">
+          <LayoutGrid className="w-6 h-6" />
         </div>
-        <h3 className="font-semibold text-foreground text-sm">Plan de table en cours</h3>
+        <h3 className="font-display font-semibold text-foreground text-base">Plan de table en cours</h3>
         <p className="text-muted text-xs leading-relaxed">
           Les organisateurs finalisent le placement. Revenez bientôt.
         </p>
@@ -235,22 +235,23 @@ export default function GuestTablePlanView({
   const planSection = (opts: { height?: number; fill?: boolean }) =>
     tablePlanOverview && tablePlanOverview.length > 0 ? (
       <div className={opts.fill ? 'space-y-2 w-full h-full min-h-0 flex flex-col' : 'space-y-3 w-full'}>
-        <div className="flex items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center justify-between gap-2 shrink-0 px-1">
           <div>
-            <h4 className="font-semibold text-foreground text-xs">Plan de la salle</h4>
+            <p className="em-guest-section-label">Salle</p>
+            <h4 className="font-semibold text-foreground text-sm mt-0.5">Plan de la salle</h4>
             <p className="text-[10px] text-muted mt-0.5">
               Thème : <span style={{ color: theme.accentColor }}>{theme.name}</span>
-              {effectivePlanView === '3d' ? ' · vue 3D showcase' : ''}
+              {effectivePlanView === '3d' ? ' · vue 3D' : ''}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {canShow3d && (
-              <div className="flex gap-1 rounded-full border border-border bg-surface p-0.5">
+              <div className="flex gap-1 rounded-full border border-border bg-surface p-0.5 shadow-sm">
                 <button
                   type="button"
                   onClick={() => setPlanView('2d')}
                   className={cn(
-                    'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold transition',
+                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
                     effectivePlanView === '2d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
                   )}
                 >
@@ -261,7 +262,7 @@ export default function GuestTablePlanView({
                   type="button"
                   onClick={() => setPlanView('3d')}
                   className={cn(
-                    'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold transition',
+                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
                     effectivePlanView === '3d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
                   )}
                 >
@@ -274,15 +275,16 @@ export default function GuestTablePlanView({
               <button
                 type="button"
                 onClick={() => setIsFullscreen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border text-[10px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border text-[10px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
               >
                 <Maximize2 className="w-3.5 h-3.5" /> Agrandir
               </button>
             )}
           </div>
         </div>
+        <div className="rounded-2xl border border-border overflow-hidden bg-surface shadow-[0_10px_40px_rgba(15,23,42,0.05)]">
         {effectivePlanView === '3d' && previewBlueprint ? (
-          <>
+          <div className="p-2 sm:p-3 space-y-2">
             <RoomLayoutPreview
               blueprint={previewBlueprint}
               quality="showcase"
@@ -290,17 +292,17 @@ export default function GuestTablePlanView({
               showMeta={false}
               className={cn(
                 opts.fill ? 'flex-1 min-h-[280px] h-full' : undefined,
-                '[&_.em-floor-canvas]:min-h-[280px]',
+                '[&_.em-floor-canvas]:min-h-[280px] [&_.em-floor-canvas]:rounded-xl',
               )}
             />
-            <p className="text-[10px] text-muted leading-relaxed shrink-0">
+            <p className="text-[10px] text-muted leading-relaxed shrink-0 px-1">
               Orbitez pour explorer la salle. Votre table est visible sur le{' '}
               <button type="button" onClick={() => setPlanView('2d')} className="font-semibold text-primary hover:underline">
                 plan 2D
               </button>
               .
             </p>
-          </>
+          </div>
         ) : (
           <GuestRoomPlanCanvas
             tables={tablePlanOverview}
@@ -316,37 +318,49 @@ export default function GuestTablePlanView({
             neighborNames={neighborNames}
             height={opts.height}
             fill={opts.fill}
-            className={opts.fill ? 'flex-1 min-h-0' : undefined}
+            className={opts.fill ? 'flex-1 min-h-0' : 'rounded-none border-0'}
           />
         )}
+        </div>
       </div>
     ) : null;
 
   const seatDetailSection = tableDetails && (
     <>
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-5 space-y-3 sm:space-y-4 shadow-[var(--shadow-soft)]">
+      <div
+        className="rounded-2xl border p-4 sm:p-6 space-y-4 shadow-[0_10px_40px_rgba(15,23,42,0.05)]"
+        style={{
+          background: `linear-gradient(145deg, color-mix(in srgb, ${theme.accentColor} 14%, var(--surface)), var(--surface))`,
+          borderColor: `color-mix(in srgb, ${theme.accentColor} 28%, var(--border))`,
+        }}
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Votre placement</span>
-            <h3 className="text-lg font-semibold text-foreground leading-tight">{tableDetails.tableName}</h3>
+            <p className="em-guest-section-label" style={{ color: theme.accentColor }}>Votre place</p>
+            <h3 className="text-2xl font-display font-semibold text-foreground leading-none">{tableDetails.tableName}</h3>
             {tableDetails.seatIndex !== undefined && (
-              <p className="text-xs text-primary font-semibold">Siège n°{tableDetails.seatIndex + 1}</p>
+              <p className="text-sm font-bold mt-2" style={{ color: theme.accentColor }}>
+                Siège n°{tableDetails.seatIndex + 1}
+              </p>
             )}
           </div>
-          <span
-            className="text-[10px] font-semibold px-2 py-1 rounded-[var(--radius-button)] border shrink-0"
-            style={{ color: theme.accentColor, borderColor: `${theme.accentColor}44`, background: `${theme.accentColor}12` }}
+          <div
+            className="rounded-2xl px-3.5 py-3 text-center min-w-[76px] shrink-0 border bg-surface/80"
+            style={{ borderColor: `color-mix(in srgb, ${theme.accentColor} 22%, var(--border))` }}
           >
-            {getTableShapeLabel(tableDetails.shape)}
-          </span>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted">Siège</p>
+            <p className="text-lg font-black text-foreground mt-0.5">
+              {tableDetails.seatIndex !== undefined ? tableDetails.seatIndex + 1 : '—'}
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="bg-surface-muted border border-border rounded-[var(--radius-button)] p-3">
-            <p className="text-[10px] font-semibold text-muted">Type</p>
+          <div className="bg-surface/80 border border-border rounded-xl p-3">
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Type</p>
             <p className="text-sm font-semibold text-foreground mt-0.5">{getTableShapeLabel(tableDetails.shape)}</p>
           </div>
-          <div className="bg-surface-muted border border-border rounded-[var(--radius-button)] p-3">
-            <p className="text-[10px] font-semibold text-muted">Capacité</p>
+          <div className="bg-surface/80 border border-border rounded-xl p-3">
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">Capacité</p>
             <p className="text-sm font-semibold text-foreground mt-0.5">{tableDetails.capacity} places</p>
           </div>
         </div>
@@ -362,7 +376,7 @@ export default function GuestTablePlanView({
                 void api.download(`/rsvp/${guestId}/seating-invitation.pdf`, `invitation-${guestLastName || 'invite'}.pdf`);
               }
             }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-button)] text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition shadow-sm"
           >
             <Download className="w-4 h-4" />
             Télécharger l&apos;invitation PDF
@@ -370,8 +384,9 @@ export default function GuestTablePlanView({
         )}
       </div>
 
-      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-5 shadow-[var(--shadow-soft)]">
-        <p className="text-[10px] font-semibold text-muted mb-4 text-center">
+      <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-[0_10px_40px_rgba(15,23,42,0.05)]">
+        <p className="em-guest-section-label text-center mb-1">Disposition</p>
+        <p className="text-xs font-semibold text-foreground mb-4 text-center">
           Votre place à la table
         </p>
         <div className="relative flex items-center justify-center py-4" style={{ minHeight: Math.max(180, tableDetails.capacity * 28 + 80) }}>
@@ -402,7 +417,7 @@ export default function GuestTablePlanView({
                     >
                       {occupant.type === 'guest' || occupant.type === 'neighbor' ? (
                         <div
-                          className={`w-9 h-9 rounded-[var(--radius-button)] border flex items-center justify-center text-[8px] font-semibold ${
+                          className={`w-9 h-9 rounded-xl border flex items-center justify-center text-[8px] font-semibold ${
                             occupant.type === 'guest'
                               ? 'bg-primary text-white border-primary ring-2 ring-primary/25'
                               : 'bg-surface-muted border-border text-foreground'
@@ -433,8 +448,8 @@ export default function GuestTablePlanView({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {tableDetails.neighbors.map((neighbor) => (
-              <div key={neighbor.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-3 flex items-center gap-3 shadow-[var(--shadow-soft)]">
-                <div className="w-8 h-8 rounded-[var(--radius-button)] flex items-center justify-center font-semibold text-[10px] bg-primary/10 text-primary border border-primary/15">
+              <div key={neighbor.id} className="bg-surface border border-border rounded-2xl p-3 flex items-center gap-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-semibold text-[10px] bg-primary/10 text-primary border border-primary/15">
                   {neighbor.firstName[0]}{neighbor.lastName[0]}
                 </div>
                 <div>

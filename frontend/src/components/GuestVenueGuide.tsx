@@ -326,7 +326,14 @@ export default function GuestVenueGuide({
 
   return (
     <div className="space-y-3 animate-fade-in">
-      <div className="em-venue-guide rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]" data-guest-no-swipe>
+      <div className="px-1">
+        <p className="em-guest-section-label">Itinéraire</p>
+        <h3 className="font-display font-semibold text-foreground text-base mt-0.5">
+          {eventTitle || 'Réception'}
+        </h3>
+        <p className="text-xs text-muted mt-1 leading-relaxed">{location}</p>
+      </div>
+      <div className="em-venue-guide rounded-2xl border border-border overflow-hidden bg-surface shadow-[0_10px_40px_rgba(15,23,42,0.05)]" data-guest-no-swipe>
         <div className="relative">
           <div ref={mapElRef} className="em-venue-guide-map h-[280px] sm:h-[340px] w-full bg-surface-muted" />
           {!ready && (
@@ -334,23 +341,13 @@ export default function GuestVenueGuide({
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
             </div>
           )}
-          <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-border bg-surface text-[10px] font-semibold text-foreground">
-            <MapPin className="w-3 h-3" />
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface/95 backdrop-blur-sm text-[10px] font-semibold text-foreground shadow-sm">
+            <MapPin className="w-3 h-3 text-primary" />
             {destinationLabel}
           </div>
         </div>
 
         <div className="p-4 space-y-3 bg-surface border-t border-border">
-          <div className="pl-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-              Guide jusqu’au lieu
-            </p>
-            <h3 className="font-semibold text-foreground text-sm leading-snug mt-0.5">
-              {eventTitle || 'Réception'}
-            </h3>
-            <p className="text-xs text-muted mt-1 leading-relaxed">{location}</p>
-          </div>
-
           {summary && guiding && (
             <div className="flex items-center gap-3 text-xs">
               <span className="inline-flex items-center gap-1 font-semibold text-foreground">
@@ -374,7 +371,7 @@ export default function GuestVenueGuide({
               type="button"
               onClick={startGuide}
               disabled={starting}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition disabled:opacity-60"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition disabled:opacity-60 shadow-sm"
             >
               {starting ? (
                 <>

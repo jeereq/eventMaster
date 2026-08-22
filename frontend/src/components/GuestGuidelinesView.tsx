@@ -51,22 +51,27 @@ export default function GuestGuidelinesView({
 
   return (
     <div className={cn('space-y-3', className)}>
-      <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-        <Info className="w-4 h-4" style={{ color: accent }} />
-        Infos pratiques
-      </h3>
+      <div className="flex items-center gap-2">
+        <div className="p-2 rounded-xl bg-primary/10" style={{ color: accent }}>
+          <Info className="w-4 h-4" />
+        </div>
+        <div>
+          <p className="em-guest-section-label" style={{ color: accent }}>Pratique</p>
+          <h3 className="text-sm font-semibold text-foreground">Infos pour le jour J</h3>
+        </div>
+      </div>
 
       {guidelines.dressCode.enabled && (dressText || (guidelines.dressCode.imageUrls?.length ?? 0) > 0) && (
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-1.5 text-foreground">
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-2 text-foreground shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="flex items-center gap-2">
             <Shirt className="w-4 h-4 shrink-0" style={{ color: accent }} />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Tenue recommandée</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">Tenue recommandée</span>
           </div>
           {dressText ? <p className="text-sm leading-relaxed text-muted">{dressText}</p> : null}
           {guidelines.dressCode.presetId === 'theme_color' && guidelines.dressCode.themeColor && (
             <div className="flex items-center gap-2 pt-1">
               <span
-                className="w-6 h-6 rounded-[var(--radius-button)] border border-border"
+                className="w-6 h-6 rounded-lg border border-border"
                 style={{ backgroundColor: guidelines.dressCode.themeColor }}
               />
               {guidelines.dressCode.themeColorLabel && (
@@ -82,7 +87,7 @@ export default function GuestGuidelinesView({
         const Icon = RECOMMENDATION_ICONS[rec.type] ?? Info;
         const label = rec.title || RECOMMENDATION_PRESETS[rec.type]?.label || 'Info';
         return (
-          <div key={rec.id} className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-1 text-foreground">
+          <div key={rec.id} className="rounded-2xl border border-border bg-surface p-4 space-y-1.5 text-foreground shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
             <div className="flex items-center gap-2">
               <Icon className="w-4 h-4 shrink-0" style={{ color: accent }} />
               <span className="text-xs font-semibold text-foreground">{label}</span>

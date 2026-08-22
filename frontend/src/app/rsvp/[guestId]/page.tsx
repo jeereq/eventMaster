@@ -558,11 +558,11 @@ export default function RsvpPage() {
           }
           contentClassName="space-y-5"
         >
-          <GuestPortalCard className="text-center space-y-4 py-8">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border text-[10px] font-semibold uppercase tracking-wider text-muted">
+          <GuestPortalCard className="text-center space-y-4 py-10">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-surface-muted border border-border text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
               Réponse enregistrée
             </span>
-            <h2 className="text-xl font-semibold text-foreground tracking-tight">
+            <h2 className="text-xl font-display font-semibold text-foreground tracking-tight">
               {guest.firstName}, nous avons bien noté votre absence.
             </h2>
             <p className="text-sm text-muted leading-relaxed max-w-sm mx-auto">
@@ -573,7 +573,7 @@ export default function RsvpPage() {
               <button
                 type="button"
                 onClick={() => setSubmitted(false)}
-                className="inline-flex items-center justify-center px-4 py-2.5 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:bg-primary-hover transition"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary-hover transition shadow-sm"
               >
                 Modifier ma réponse
               </button>
@@ -621,64 +621,61 @@ export default function RsvpPage() {
         >
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
-              <div className="space-y-6">
-                <div className="bg-surface rounded-3xl border border-border/50 shadow-sm overflow-hidden relative">
-                  {/* Billets / Pass Design */}
-                  <div className="absolute top-0 inset-x-0 h-32 bg-primary opacity-10" />
-                  <div className="absolute -top-16 -right-16 w-48 h-48 bg-primary opacity-20 rounded-full blur-3xl" />
-                  
-                  <div className="p-6 sm:p-8 relative space-y-6">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
-                      <div className="flex-1 min-w-0 space-y-3 text-center sm:text-left">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100/50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-[0.1em]">
+              <div className="space-y-5 animate-fade-in">
+                <div className="em-guest-hero">
+                  <div className="em-guest-hero__banner">
+                    <div className="relative z-[1] space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 border border-white/25 text-[10px] font-bold uppercase tracking-[0.14em] text-white">
                           Présence confirmée
                         </span>
-                        <h2 className="text-2xl font-display font-semibold leading-tight tracking-tight text-foreground">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75 truncate max-w-[50%]">
+                          {guest.organizationName || 'EventMaster'}
+                        </span>
+                      </div>
+                      <div className="text-center sm:text-left space-y-1.5">
+                        <h2 className="text-2xl sm:text-[1.75rem] font-display font-semibold leading-tight tracking-tight text-white">
                           Bonjour {guest.firstName}
                         </h2>
-                        <p className="text-muted text-sm leading-relaxed max-w-sm mx-auto sm:mx-0">
-                          Voici votre pass exclusif pour l&apos;événement. Présentez ce badge à l&apos;accueil le jour J.
+                        <p className="text-sm text-white/85 leading-relaxed max-w-md mx-auto sm:mx-0">
+                          Votre pass d&apos;entrée pour{' '}
+                          <span className="font-semibold text-white">{guest.event.title}</span>.
+                          Présentez le badge QR à l&apos;accueil.
                         </p>
-                        
-                        <div className="pt-4 grid grid-cols-2 gap-4">
-                          <div className="space-y-1 text-center sm:text-left">
-                            <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Date</p>
-                            <p className="text-sm font-semibold">{new Date(guest.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>
-                          </div>
-                          <div className="space-y-1 text-center sm:text-left">
-                            <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Heure</p>
-                            <p className="text-sm font-semibold">{new Date(guest.event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
-                          </div>
-                        </div>
                       </div>
-                      
-                      <div className="shrink-0 relative">
-                        {/* Perforated edge effect for the ticket */}
-                        <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full hidden sm:block" />
-                        
-                        <div className="p-3 bg-white border border-border/60 rounded-2xl shadow-sm inline-block relative z-10">
-                          <img
-                            src={getGuestQrImageUrl(guest.id, 180)}
-                            alt="QR Code Pass"
-                            className="w-40 h-40"
-                          />
+                      <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto sm:mx-0">
+                        <div className="rounded-xl bg-white/12 border border-white/15 px-3 py-2.5 text-center sm:text-left">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">Date</p>
+                          <p className="text-sm font-semibold text-white mt-0.5">
+                            {new Date(guest.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          </p>
                         </div>
-                        <p className="text-center text-[10px] font-mono text-muted mt-3 uppercase tracking-widest">
-                          {guest.id.split('-')[0]}
-                        </p>
+                        <div className="rounded-xl bg-white/12 border border-white/15 px-3 py-2.5 text-center sm:text-left">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">Heure</p>
+                          <p className="text-sm font-semibold text-white mt-0.5">
+                            {new Date(guest.event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Decorative Dashed Line */}
-                  <div className="w-full border-t-2 border-dashed border-border/50 relative">
-                    <div className="absolute -left-3 -top-3 w-6 h-6 bg-background rounded-full" />
-                    <div className="absolute -right-3 -top-3 w-6 h-6 bg-background rounded-full" />
-                  </div>
-                  
-                  <div className="px-6 py-4 bg-surface-muted/30 flex justify-between items-center text-xs font-semibold text-muted">
-                    <span className="tracking-widest">VIP PASS</span>
-                    <span className="tracking-widest">{guest.organizationName?.toUpperCase() || 'EVENTMASTER'}</span>
+
+                  <div className="px-6 py-6 sm:px-8 flex flex-col items-center gap-4 bg-gradient-to-b from-surface to-surface-muted/40">
+                    <div
+                      className="p-4 bg-white rounded-[1.25rem] border border-border shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
+                    >
+                      <img
+                        src={getGuestQrImageUrl(guest.id, 200)}
+                        alt="QR Code Pass"
+                        className="w-44 h-44 sm:w-48 sm:h-48"
+                      />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Badge d&apos;entrée</p>
+                      <p className="text-[11px] font-mono text-muted tracking-widest">
+                        {guest.id.split('-')[0]?.toUpperCase()}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -687,42 +684,45 @@ export default function RsvpPage() {
                     <button
                       type="button"
                       onClick={() => setSubmitted(false)}
-                      className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl border-2 border-border bg-surface text-foreground text-sm font-semibold hover:bg-surface-muted transition shadow-sm"
+                      className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-border bg-surface text-foreground text-xs font-semibold hover:bg-surface-muted transition shadow-sm"
                     >
                       Modifier mes informations RSVP
                     </button>
                   </div>
                 )}
 
-                <GuestPortalCard className="space-y-4">
-                  {guest.event.description?.trim() ? (
-                    <div className="space-y-1.5">
-                      <h3 className="font-semibold text-foreground text-sm">Détails de l&apos;événement</h3>
-                      <p className="text-muted text-xs leading-relaxed whitespace-pre-line">
+                <GuestPortalCard className="space-y-4 !p-0 overflow-hidden">
+                  <div className="px-5 pt-5 pb-3 border-b border-border/70 bg-gradient-to-r from-primary/5 to-transparent">
+                    <p className="em-guest-section-label">Détails</p>
+                    <h3 className="font-display font-semibold text-foreground text-base mt-1">
+                      {guest.event.title}
+                    </h3>
+                  </div>
+                  <div className="px-5 pb-5 space-y-4">
+                    {guest.event.description?.trim() ? (
+                      <p className="text-muted text-xs leading-relaxed whitespace-pre-line border-l-2 border-primary/30 pl-3">
                         {guest.event.description}
                       </p>
-                    </div>
-                  ) : (
-                    <h3 className="font-semibold text-foreground text-sm">Détails de l&apos;événement</h3>
-                  )}
+                    ) : null}
 
-                  <div className="space-y-3 text-xs text-muted pt-3 border-t border-border">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-[var(--radius-button)] text-primary">
-                        <Calendar className="w-4 h-4" />
+                    <div className="space-y-3 text-xs text-muted">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-semibold block text-foreground">Date & heure</span>
+                          {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-semibold block text-foreground">Date & heure</span>
-                        {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-[var(--radius-button)] text-primary">
-                        <MapPin className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="font-semibold block text-foreground">Lieu</span>
-                        {guest.event.location}
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-semibold block text-foreground">Lieu</span>
+                          {guest.event.location}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -731,20 +731,20 @@ export default function RsvpPage() {
                 {guest.event.location && (
                   <GuestPortalCard className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-[var(--radius-button)] bg-primary/10 text-primary">
+                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                         <Navigation className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground">Guide jusqu’au lieu</p>
+                        <p className="text-sm font-semibold text-foreground">Guide jusqu&apos;au lieu</p>
                         <p className="text-xs text-muted mt-0.5 leading-relaxed">
-                          Carte interactive : lancez l’itinéraire depuis votre position.
+                          Carte interactive : lancez l&apos;itinéraire depuis votre position.
                         </p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => goGuestTab('route')}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:bg-primary-hover transition"
+                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary-hover transition shadow-sm"
                     >
                       Ouvrir la carte
                     </button>
@@ -759,7 +759,7 @@ export default function RsvpPage() {
                 {!rsvpLocked && (
                 <button
                   onClick={() => setSubmitted(false)}
-                  className="w-full py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-[var(--radius-button)] text-xs transition"
+                  className="w-full py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-xs transition"
                 >
                   Modifier ma réponse
                 </button>
@@ -786,13 +786,16 @@ export default function RsvpPage() {
 
             {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
-              <div className="space-y-4">
-                <GuestPortalCard padding="sm" className="bg-surface-muted/30">
-                  <div className="p-4 sm:p-5 border-b border-border bg-surface">
-                    <h2 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
-                      Votre placement
-                    </h2>
-                  </div>
+              <div className="space-y-4 animate-fade-in">
+                <div className="px-1">
+                  <p className="em-guest-section-label">Placement</p>
+                  <h2 className="text-lg font-display font-semibold leading-snug tracking-tight text-foreground mt-0.5">
+                    Votre table
+                  </h2>
+                  <p className="text-xs text-muted mt-1">
+                    Vue 3D de la salle, plan 2D et détails de votre siège.
+                  </p>
+                </div>
                   <GuestTablePlanView
                     guestId={guestId}
                     placementAccessible={guest.placementAccessible}
@@ -828,15 +831,15 @@ export default function RsvpPage() {
                     guestLastName={guest.lastName}
                     immersive
                   />
-                </GuestPortalCard>
               </div>
             )}
 
             {/* 3. LIVRE D'OR TAB */}
             {activeGuestTab === 'guestbook' && (
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-foreground text-sm">Livre d&apos;or</h3>
+              <div className="space-y-4 animate-fade-in">
+                <div className="space-y-1 px-1">
+                  <p className="em-guest-section-label">Messages</p>
+                  <h3 className="font-display font-semibold text-foreground text-base">Livre d&apos;or</h3>
                   <p className="text-muted text-xs leading-relaxed">
                     Laissez un mot ou des photos pour les organisateurs.
                   </p>
