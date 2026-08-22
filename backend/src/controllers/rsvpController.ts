@@ -23,6 +23,7 @@ import {
 } from '../utils/brandedMessaging';
 import { escapeHtml, resolveBranding } from '../utils/brandingUtils';
 import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
+import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -189,6 +190,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             latitude: true,
             longitude: true,
             tablePlan: true,
+            eventProgram: true,
             guestGuidelines: true,
             rsvpForm: true,
             room: {
@@ -260,6 +262,9 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     let floorImageUrl: string | null = null;
     let depthAmount = 0;
     let depthView = false;
+    let roomLayoutPreview: unknown = null;
+    let sourceRoomType: string | null = null;
+    let previewLightingPreset: string | null = null;
 
     const eventObj = guest.event as any;
     if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
@@ -333,6 +338,19 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       }
 
       const room = eventObj.room as any;
+      if (room?.layoutBlueprint) {
+        roomLayoutPreview = sanitizeLayoutBlueprint(room.layoutBlueprint);
+      }
+      if (plan.sourceRoomType) {
+        sourceRoomType = String(plan.sourceRoomType);
+      } else if (room?.layoutBlueprint?.roomType) {
+        sourceRoomType = String(room.layoutBlueprint.roomType);
+      }
+      const program = eventObj.eventProgram;
+      if (program && typeof program === 'object' && Array.isArray((program as { slots?: unknown[] }).slots)) {
+        const firstSlot = (program as { slots: Array<{ lighting?: string }> }).slots[0];
+        if (firstSlot?.lighting) previewLightingPreset = firstSlot.lighting;
+      }
       if (room?.layoutBlueprint?.roomOutline) {
         roomOutline = room.layoutBlueprint.roomOutline;
       } else if (plan.roomOutline) {
@@ -407,6 +425,9 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       floorImageUrl,
       depthAmount,
       depthView,
+      roomLayoutPreview,
+      sourceRoomType,
+      previewLightingPreset,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
     });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   getSeatCoordinates,
   getTableShapeLabel,
@@ -9,10 +9,16 @@ import {
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import ChairRenderer from '@/components/ChairRenderer';
 import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
-import { LayoutGrid, Users, Maximize2, Download } from 'lucide-react';
+import RoomLayoutPreview from '@/components/RoomLayoutPreview';
+import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
+import type { LightingPreset } from '@/lib/roomRenderQuality';
+import { LayoutGrid, Users, Maximize2, Download, Box } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { api } from '@/lib/api';
-import { ChairType } from '@/lib/roomLayoutUtils';
+import { ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { TableShape } from '@/lib/tablePlanUtils';
+
+type GuestPlanView = '2d' | '3d';
 
 export interface GuestTableDetails {
   tableName: string;
@@ -82,6 +88,9 @@ interface GuestTablePlanViewProps {
   floorImageUrl?: string | null;
   depthAmount?: number | null;
   depthView?: boolean | null;
+  roomLayoutPreview?: RoomLayoutBlueprint | null;
+  sourceRoomType?: string | null;
+  previewLightingPreset?: Exclude<LightingPreset, 'auto'> | null;
   guestFirstName: string;
   guestLastName: string;
   immersive?: boolean;
@@ -123,17 +132,66 @@ export default function GuestTablePlanView({
   floorImageUrl,
   depthAmount,
   depthView,
+  roomLayoutPreview = null,
+  sourceRoomType,
+  previewLightingPreset,
   guestFirstName,
   guestLastName,
   placementAccessible = false,
   immersive = false,
 }: GuestTablePlanViewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [planView, setPlanView] = useState<GuestPlanView>('3d');
   const [planHeight, setPlanHeight] = useState(360);
   const guestFullName = `${guestFirstName} ${guestLastName}`;
   const theme = getRoomTheme(roomThemeId);
   const neighborNames = tableDetails?.neighbors.map((n) => `${n.firstName} ${n.lastName}`) ?? [];
   const guestTableId = tablePlanOverview?.find((t) => t.isGuestTable)?.id;
+
+  const previewBlueprint = useMemo(
+    () => {
+      if (!tablePlanOverview?.length) return null;
+      return buildTablePlanPreviewBlueprint(
+        {
+          roomOutline: roomOutline ?? undefined,
+          roomThemeId,
+          floorType,
+          floorImageUrl,
+          depthAmount,
+          depthView,
+          fixtures: planFixtures,
+          sourceRoomType,
+        },
+        tablePlanOverview.map((table) => ({
+          id: table.id,
+          name: table.name,
+          shape: table.shape,
+          capacity: table.capacity,
+          x: table.x,
+          y: table.y,
+          chairType: table.chairType,
+          tableColor: table.tableColor,
+        })),
+        roomLayoutPreview,
+      );
+    },
+    [
+      tablePlanOverview,
+      roomOutline,
+      roomThemeId,
+      floorType,
+      floorImageUrl,
+      depthAmount,
+      depthView,
+      planFixtures,
+      sourceRoomType,
+      roomLayoutPreview,
+    ],
+  );
+
+  const canShow3d = Boolean(previewBlueprint);
+  const effectivePlanView: GuestPlanView = canShow3d ? planView : '2d';
+  const previewLighting = previewLightingPreset ?? 'dusk';
 
   useEffect(() => {
     const update = () => {
@@ -182,34 +240,85 @@ export default function GuestTablePlanView({
             <h4 className="font-semibold text-foreground text-xs">Plan de la salle</h4>
             <p className="text-[10px] text-muted mt-0.5">
               Thème : <span style={{ color: theme.accentColor }}>{theme.name}</span>
+              {effectivePlanView === '3d' ? ' · vue 3D showcase' : ''}
             </p>
           </div>
-          {!isFullscreen && !immersive && (
-            <button
-              type="button"
-              onClick={() => setIsFullscreen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border text-[10px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
-            >
-              <Maximize2 className="w-3.5 h-3.5" /> Agrandir
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {canShow3d && (
+              <div className="flex gap-1 rounded-full border border-border bg-surface p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setPlanView('2d')}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold transition',
+                    effectivePlanView === '2d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  <LayoutGrid className="w-3 h-3" />
+                  2D
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlanView('3d')}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold transition',
+                    effectivePlanView === '3d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  <Box className="w-3 h-3" />
+                  3D
+                </button>
+              </div>
+            )}
+            {!isFullscreen && !immersive && (
+              <button
+                type="button"
+                onClick={() => setIsFullscreen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border text-[10px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+              >
+                <Maximize2 className="w-3.5 h-3.5" /> Agrandir
+              </button>
+            )}
+          </div>
         </div>
-        <GuestRoomPlanCanvas
-          tables={tablePlanOverview}
-          fixtures={planFixtures}
-          roomOutline={roomOutline}
-          roomThemeId={roomThemeId}
-          floorType={floorType}
-          floorImageUrl={floorImageUrl}
-          depthAmount={depthAmount}
-          depthView={depthView}
-          guestTableId={guestTableId}
-          guestFullName={guestFullName}
-          neighborNames={neighborNames}
-          height={opts.height}
-          fill={opts.fill}
-          className={opts.fill ? 'flex-1 min-h-0' : undefined}
-        />
+        {effectivePlanView === '3d' && previewBlueprint ? (
+          <>
+            <RoomLayoutPreview
+              blueprint={previewBlueprint}
+              quality="showcase"
+              lightingPreset={previewLighting}
+              showMeta={false}
+              className={cn(
+                opts.fill ? 'flex-1 min-h-[280px] h-full' : undefined,
+                '[&_.em-floor-canvas]:min-h-[280px]',
+              )}
+            />
+            <p className="text-[10px] text-muted leading-relaxed shrink-0">
+              Orbitez pour explorer la salle. Votre table est visible sur le{' '}
+              <button type="button" onClick={() => setPlanView('2d')} className="font-semibold text-primary hover:underline">
+                plan 2D
+              </button>
+              .
+            </p>
+          </>
+        ) : (
+          <GuestRoomPlanCanvas
+            tables={tablePlanOverview}
+            fixtures={planFixtures}
+            roomOutline={roomOutline}
+            roomThemeId={roomThemeId}
+            floorType={floorType}
+            floorImageUrl={floorImageUrl}
+            depthAmount={depthAmount}
+            depthView={depthView}
+            guestTableId={guestTableId}
+            guestFullName={guestFullName}
+            neighborNames={neighborNames}
+            height={opts.height}
+            fill={opts.fill}
+            className={opts.fill ? 'flex-1 min-h-0' : undefined}
+          />
+        )}
       </div>
     ) : null;
 

@@ -12,7 +12,8 @@ import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
 import GuestVenueGuide from '@/components/GuestVenueGuide';
 import type { GuestGuidelines } from '@/lib/guestGuidelines';
-import type { ChairType, RoomOutlineShape } from '@/lib/roomLayoutUtils';
+import type { ChairType, RoomLayoutBlueprint, RoomOutlineShape } from '@/lib/roomLayoutUtils';
+import type { LightingPreset } from '@/lib/roomRenderQuality';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award,
@@ -91,6 +92,9 @@ interface GuestRsvpData {
   floorImageUrl?: string | null;
   depthAmount?: number | null;
   depthView?: boolean | null;
+  roomLayoutPreview?: unknown;
+  sourceRoomType?: string | null;
+  previewLightingPreset?: string | null;
   eventPassed?: boolean;
   rsvpLocked?: boolean;
   event: {
@@ -811,6 +815,15 @@ export default function RsvpPage() {
                     floorImageUrl={guest.floorImageUrl ?? null}
                     depthAmount={guest.depthAmount ?? null}
                     depthView={guest.depthView ?? null}
+                    roomLayoutPreview={
+                      guest.roomLayoutPreview && typeof guest.roomLayoutPreview === 'object'
+                        ? (guest.roomLayoutPreview as RoomLayoutBlueprint)
+                        : null
+                    }
+                    sourceRoomType={guest.sourceRoomType ?? null}
+                    previewLightingPreset={
+                      (guest.previewLightingPreset as Exclude<LightingPreset, 'auto'> | null) ?? null
+                    }
                     guestFirstName={guest.firstName}
                     guestLastName={guest.lastName}
                     immersive
