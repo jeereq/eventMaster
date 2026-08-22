@@ -49,6 +49,17 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
  const qIndex = item.href.indexOf('?');
  const path = qIndex >= 0 ? item.href.slice(0, qIndex) : item.href;
  const query = qIndex >= 0 ? item.href.slice(qIndex + 1) : '';
+ const have = new URLSearchParams(search);
+ const protocolDeskActive =
+  pathname === '/dashboard/protocol'
+  || ((pathname === '/dashboard/events' || pathname.startsWith('/dashboard/events/'))
+    && have.get('mode') === 'protocol');
+
+ // Entrée dédiée /dashboard/protocol + desk events?mode=protocol
+ if (path === '/dashboard/protocol' || (path === '/dashboard/events' && new URLSearchParams(query).get('mode') === 'protocol')) {
+  return protocolDeskActive;
+ }
+
  const pathMatch = pathname === path || (path !== '/dashboard' && pathname.startsWith(`${path}/`)) || pathname.startsWith(`${path}?`);
  // /dashboard/events et /dashboard/events/:id
  const eventsPathMatch =
@@ -59,7 +70,6 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
  if (item.href === '/dashboard/billing' && pathname.startsWith('/dashboard/billing/')) return false;
  if (query) {
   const want = new URLSearchParams(query);
-  const have = new URLSearchParams(search);
   for (const [key, value] of want.entries()) {
     if (have.get(key) !== value) return false;
   }
@@ -68,22 +78,17 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
    const haveTab = have.get('tab') || 'quotes';
    if (haveTab !== want.get('tab')) return false;
   }
-  // Desk protocole : reste actif sur la fiche événement (?mode=protocol)
-  if (path === '/dashboard/events' && want.get('mode') === 'protocol') {
-    return have.get('mode') === 'protocol';
-  }
   return pathname === path || (path === '/dashboard/events' && eventsPathMatch);
  }
  // « Événements » (sans mode) : pas actif quand on est en desk protocole
  if (path === '/dashboard/events' && !query) {
-  const have = new URLSearchParams(search);
   if (have.get('mode') === 'protocol') return false;
  }
  if (path === '/dashboard/bookings' && pathname === '/dashboard/bookings') {
   return true;
  }
  if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
-  return new URLSearchParams(search).get('kind') !== 'event';
+  return have.get('kind') !== 'event';
  }
  return true;
 }
@@ -221,7 +226,7 @@ function buildDashboardNav(opts: {
     { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Accueils du jour, check-in et tâches' },
    ]),
    navSection('Jour J', [
-    { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Accueil QR, événements et tâches du jour' },
+    { name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Accueil QR, événements et tâches du jour' },
    ]),
    navSection('Marketplace', [
     { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et locations — comme le catalogue client' },
@@ -255,7 +260,7 @@ function buildDashboardNav(opts: {
    ? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
    : []),
   ...(workspace.showProtocol
-   ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
+   ? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine }]
    : []),
   ...(workspace.showAnalytics
    ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
@@ -502,6 +507,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading || !token || !user || isClientAccount) return;
   if (user.role !== 'USER') return;
   if (!planQuota) return;
+  // Les comptes protocole doivent pouvoir ouvrir le desk (événements + stats)
+  if (access?.isProtocolOnly) return;
   const fallback = workspace.showMarketplace
     ? '/dashboard/marketplace'
     : workspace.showRooms
@@ -526,6 +533,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   token,
   user,
   isClientAccount,
+  access?.isProtocolOnly,
   planQuota,
   workspace.showEvents,
   workspace.showRooms,

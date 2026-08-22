@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { Suspense, useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -421,11 +421,22 @@ A très vite !`
 ];
 
 export default function EventsPage() {
+ return (
+  <Suspense fallback={<SkeletonEventsView mode="grid" />}>
+   <EventsPageInner />
+  </Suspense>
+ );
+}
+
+function EventsPageInner() {
  const { user, access, planFeatures, planQuota, tenant } = useAuth();
  const router = useRouter();
  const params = useParams();
  const searchParams = useSearchParams();
  const eventIdFromRoute = typeof params?.eventId === 'string' ? params.eventId : null;
+ const modeParam = searchParams.get('mode');
+ const viewParam = searchParams.get('view');
+ const tabParam = searchParams.get('tab');
  const { mode: eventsViewMode, setViewMode: setEventsViewMode, columns: eventsColumns, setGridColumns: setEventsColumns, gridClassName: eventsGridClass } = useViewMode('em-view-events', 'grid', 3);
  const {
    mode: guestsViewMode,
@@ -439,7 +450,7 @@ export default function EventsPage() {
  const [eventsPageSize, setEventsPageSize] = usePageSize('org-events', 8);
  const [guestsPageSize, setGuestsPageSize] = usePageSize('org-guests', 8);
  const isProtocolOnly = access?.isProtocolOnly ?? false;
- const protocolDesk = isProtocolOnly || searchParams.get('mode') === 'protocol';
+ const protocolDesk = isProtocolOnly || modeParam === 'protocol';
  const canManageEvents = access?.canManageAllEvents ?? false;
  const eventsAtLimit = isAtQuota(planQuota?.usage.events, planQuota?.limits.maxEvents);
  const guestsAtLimit = isAtQuota(planQuota?.usage.guests, planQuota?.limits.maxGuests);
@@ -450,6 +461,7 @@ export default function EventsPage() {
  const protocolLockMsg = getFeatureLockMessage('protocolQr', tenant?.plan);
  const [events, setEvents] = useState<EventItem[]>([]);
  const [loading, setLoading] = useState(true);
+ const [loadingEventDetail, setLoadingEventDetail] = useState(false);
  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
  const [eventSearch, setEventSearch] = useState('');
  const [eventWhen, setEventWhen] = useState<'ALL' | 'upcoming' | 'past'>('ALL');
@@ -616,19 +628,19 @@ export default function EventsPage() {
  // Compte protocole : toujours en desk (URL canonique avec mode=protocol)
  useEffect(() => {
  if (!isProtocolOnly) return;
- if (searchParams.get('mode') === 'protocol') return;
+ if (modeParam === 'protocol') return;
  if (eventIdFromRoute) {
   router.replace(eventDashboardHref(eventIdFromRoute, {
-    tab: searchParams.get('tab') === 'tasks' ? 'tasks' : 'protocol',
+    tab: tabParam === 'tasks' ? 'tasks' : 'protocol',
     protocol: true,
   }), { scroll: false });
   return;
  }
- const view = searchParams.get('view') === 'tasks' ? 'tasks' : 'events';
+ const view = viewParam === 'tasks' ? 'tasks' : 'events';
  router.replace(eventsListHref(true, view), { scroll: false });
- }, [isProtocolOnly, searchParams, eventIdFromRoute, router]);
+ }, [isProtocolOnly, modeParam, viewParam, tabParam, eventIdFromRoute, router]);
 
- const listView: 'events' | 'tasks' = searchParams.get('view') === 'tasks' ? 'tasks' : 'events';
+ const listView: 'events' | 'tasks' = viewParam === 'tasks' ? 'tasks' : 'events';
 
  const setListView = useCallback(
  (view: 'events' | 'tasks') => {
@@ -639,15 +651,14 @@ export default function EventsPage() {
 
  useEffect(() => {
  if (!protocolDesk || !selectedEvent) return;
- const tab = searchParams.get('tab');
- setActiveTab(tab === 'tasks' ? 'tasks' : 'protocol');
- }, [protocolDesk, selectedEvent?.id, searchParams]);
+ setActiveTab(tabParam === 'tasks' ? 'tasks' : 'protocol');
+ }, [protocolDesk, selectedEvent?.id, tabParam]);
 
  const filteredEventsList = events.filter((event) => {
  const q = eventSearch.trim().toLowerCase();
  const matchesSearch = !q
   || event.title.toLowerCase().includes(q)
-  || event.location.toLowerCase().includes(q)
+  || (event.location || '').toLowerCase().includes(q)
   || (event.room?.name || '').toLowerCase().includes(q);
  const when = new Date(event.date).getTime();
  const matchesWhen = eventWhen === 'ALL'
@@ -1086,34 +1097,34 @@ Merci de confirmer votre présence :
  setSelectedEvent(event);
  setGuestGuidelines(normalizeGuestGuidelines(event.guestGuidelines));
  setEventRsvpFields(parseEventRsvpForm(event.rsvpForm).length ? parseEventRsvpForm(event.rsvpForm) : createMandatoryRsvpFields());
- setLoading(true);
+ setLoadingEventDetail(true);
  setError('');
  setSuccess('');
  try {
  const [guestsData, templatesData, invitesData] = await Promise.all([
  api.get(`/events/${event.id}/guests`),
- api.get('/templates'),
- api.get(`/events/${event.id}/invitations`),
+ api.get('/templates').catch(() => []),
+ api.get(`/events/${event.id}/invitations`).catch(() => []),
  ]);
- setGuests(guestsData);
- setTemplates(templatesData);
- setInvitations(invitesData);
+ setGuests(Array.isArray(guestsData) ? guestsData : []);
+ setTemplates(Array.isArray(templatesData) ? templatesData : []);
+ setInvitations(Array.isArray(invitesData) ? invitesData : []);
  } catch (err: any) {
- setError('Erreur lors du chargement des invités ou modèles.');
+ setError('Erreur lors du chargement des invités.');
  } finally {
- setLoading(false);
+ setLoadingEventDetail(false);
  }
  };
 
  useEffect(() => {
- const tab = searchParams.get('tab');
+ const tab = tabParam;
  if (!isEventWorkspaceTab(tab)) return;
  if (protocolDesk && tab !== 'protocol' && tab !== 'tasks') {
   setActiveTab('protocol');
   return;
  }
  setActiveTab(tab);
- }, [searchParams, protocolDesk]);
+ }, [tabParam, protocolDesk]);
 
  useEffect(() => {
  if (!eventIdFromRoute) {
@@ -2045,8 +2056,8 @@ Merci de confirmer votre présence :
  size="sm"
  variant="secondary"
  onClick={() => handleManageEvent(selectedEvent)}
- disabled={loading}
- leftIcon={<RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />}
+ disabled={loadingEventDetail}
+ leftIcon={<RefreshCw className={cn('w-4 h-4', loadingEventDetail && 'animate-spin')} />}
  >
  Actualiser
  </Button>

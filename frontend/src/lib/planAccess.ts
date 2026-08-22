@@ -273,7 +273,7 @@ export function getWorkspaceModules(opts: {
   const maxTemplates = opts.planQuota?.limits.maxTemplates ?? 2;
   const maxServices = opts.planQuota?.limits.maxServices ?? 0;
 
-  const showEvents = maxEvents > 0;
+  const showEvents = maxEvents > 0 || protocolOnly;
   const showRooms = canRooms && maxRooms > 0;
   const showMarketplace = maxServices > 0 && !protocolOnly;
   /** Protocole et orga avec événements peuvent explorer le catalogue acheteur. */
@@ -284,12 +284,15 @@ export function getWorkspaceModules(opts: {
     showRooms,
     showMarketplace,
     showBrowseCatalogue,
-    showTemplates: showEvents && maxTemplates > 0 && !protocolOnly,
+    showTemplates: maxEvents > 0 && maxTemplates > 0 && !protocolOnly,
     showAnalytics: showEvents,
     showProtocol:
-      showEvents &&
-      Boolean(opts.access?.canProtocolAllEvents || opts.access?.level === 'staff') &&
-      opts.planFeatures?.protocolQr !== false,
+      protocolOnly
+      || (
+        maxEvents > 0
+        && Boolean(opts.access?.canProtocolAllEvents || opts.access?.level === 'staff')
+        && opts.planFeatures?.protocolQr !== false
+      ),
     showTeam: canTeam,
   };
 }

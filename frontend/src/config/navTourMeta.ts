@@ -130,8 +130,8 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-protocol': {
     title: 'Protocole',
     description:
-      'Mode accueil le jour J : scan QR. Les tâches sont dans Événements → sous-onglet Tâches (même page).',
-    route: '/dashboard/events?mode=protocol',
+      'Desk accueil jour J : scan QR, check-in et checklist tâches. Ouvrez un événement puis basculez Accueil | Tâches.',
+    route: '/dashboard/protocol',
   },
   'nav-analytics-org': {
     title: 'Statistiques',

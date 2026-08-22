@@ -212,7 +212,7 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
       { label: 'Événements', href: '/dashboard/events' },
-      { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+      { label: 'Protocole', href: '/dashboard/protocol' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Facturation & plan', href: '/dashboard/billing' },
@@ -272,7 +272,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'manage-team',
         title: 'Inviter un membre d\'équipe',
         content:
-          '1. Ouvrez Équipe.\n2. Rôle : Manager, Protocole ou Commercial org.\n3. E-mail + mot de passe temporaire.\n4. Le protocole voit Protocole (événements + tâches), Explorer, devis et réservations.',
+          '1. Ouvrez Équipe.\n2. Rôle : Manager, Protocole ou Commercial org.\n3. E-mail + mot de passe temporaire.\n4. Le protocole voit Tableau de bord, Protocole (événements + tâches), Explorer, devis et réservations.',
         links: [{ label: 'Équipe', href: '/dashboard/team' }],
       },
       {
@@ -353,7 +353,7 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
       { label: 'Événements', href: '/dashboard/events' },
-      { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+      { label: 'Protocole', href: '/dashboard/protocol' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Factures', href: '/dashboard/invoices' },
@@ -449,10 +449,11 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Protocole organisation',
     badge: 'Organisation',
     summary:
-      'Accueil jour J (scan QR), tâches protocole dans Événements, plus accès Explorer / devis / réservations pour le contexte marketplace — sans créer d’événements ni gérer la facturation.',
+      'Tableau de bord du jour J, desk Protocole (scan QR + tâches), Explorer / devis / réservations pour le contexte marketplace — sans créer d’événements ni gérer la facturation.',
     canDo: [
-      'Mode Protocole : scan QR navigateur, check-in, validation de siège',
-      'Sous-onglet Tâches (liste Événements) et Accueil | Tâches sur un événement',
+      'Tableau de bord : stats du jour, prochaines accueils, tâches assignées',
+      'Desk Protocole : liste des événements à accueillir + sous-onglet Tâches',
+      'Sur un événement : Accueil (scan QR) | Tâches (checklist)',
       'Explorer le catalogue (comme le client)',
       'Consulter Demandes de devis et Réservations',
       'Statistiques d’accueil (check-in, tâches)',
@@ -464,9 +465,9 @@ export const USER_GUIDES: UserGuide[] = [
       'Publier des offres vendeur (Mes offres)',
     ],
     navLinks: [
-      { label: 'Événements', href: '/dashboard/events' },
-      { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
-      { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+      { label: 'Tableau de bord', href: '/dashboard' },
+      { label: 'Protocole', href: '/dashboard/protocol' },
+      { label: 'Tâches', href: '/dashboard/protocol?view=tasks' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
       { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
@@ -476,11 +477,12 @@ export const USER_GUIDES: UserGuide[] = [
     workflows: [
       {
         id: 'whats-new',
-        title: 'Nouveautés pour le protocole',
+        title: 'Parcours protocole',
         content:
-          '1. Menu Protocole : sous-onglets Événements | Tâches.\n2. Sur un événement : Accueil (scan) | Tâches (checklist).\n3. Explorer + Devis + Réservations : même catalogue que le client, pour le contexte jour J.',
+          '1. Tableau de bord : vue du jour (accueils, check-in, mes tâches).\n2. Menu Protocole : sous-onglets Événements | Tâches.\n3. Sur un événement : Accueil (scan) | Tâches (checklist).\n4. Explorer + Devis + Réservations pour le contexte marketplace.',
         links: [
-          { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+          { label: 'Tableau de bord', href: '/dashboard' },
+          { label: 'Protocole', href: '/dashboard/protocol' },
           { label: 'Explorer', href: '/dashboard/catalogue' },
         ],
       },
@@ -488,17 +490,17 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'protocol-scan',
         title: 'Accueillir un invité (scan QR)',
         content:
-          '1. Protocole ou événement → Accueil.\n2. Autorisez la caméra (ou recherche par nom).\n3. RSVP confirmé requis.\n4. Confirmez présence puis siège si prévu.',
-        links: [{ label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' }],
+          '1. Ouvrez Protocole → choisissez l’événement → Accueil.\n2. Autorisez la caméra (ou recherchez par nom).\n3. RSVP confirmé requis.\n4. Confirmez la présence puis le siège si prévu.',
+        links: [{ label: 'Ouvrir Protocole', href: '/dashboard/protocol' }],
       },
       {
         id: 'protocol-tasks',
         title: 'Checklist tâches du jour',
         content:
-          '1. Événements → Tâches : vos tâches assignées.\n2. Ou événement → Tâches : filtre Jour J / À moi.\n3. Démarrer ou Faite.\n4. Retour Accueil pour scanner.',
+          '1. Protocole → Tâches : vos tâches assignées sur tous les événements.\n2. Ou événement → Tâches : filtre Jour J / À moi.\n3. Démarrer ou Faite.\n4. Retour Accueil pour scanner.',
         links: [
-          { label: 'Tâches', href: '/dashboard/events?view=tasks' },
-          { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+          { label: 'Tâches', href: '/dashboard/protocol?view=tasks' },
+          { label: 'Protocole', href: '/dashboard/protocol' },
         ],
       },
       {
@@ -514,15 +516,16 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'check-guest-list',
-        title: 'Vérifier la liste des invités',
+        title: 'Vérifier la file d’accueil',
         content:
-          '1. Ouvrez l’événement.\n2. Filtrez RSVP.\n3. Recherche nom / VIP.',
-        links: [{ label: 'Événements', href: '/dashboard/events' }],
+          '1. Protocole → ouvrez l’événement → Accueil.\n2. Filtrez file / déjà entrés / tous.\n3. Recherchez un nom ou un VIP.',
+        links: [{ label: 'Protocole', href: '/dashboard/protocol' }],
       },
     ],
     tips: [
+      'Commencez par le Tableau de bord, puis ouvrez Protocole pour le scan.',
       'Testez le scan web avant le jour J.',
-      'Les tâches sont dans Événements, pas dans un menu séparé.',
+      'Les tâches sont dans Protocole → Tâches, pas dans un menu séparé.',
       'Explorer vous aide à connaître les prestataires sur place.',
       'Pas d’app native pour l’instant : tout se fait dans le navigateur.',
     ],
@@ -578,8 +581,8 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     navLinks: [
       { label: 'Événements', href: '/dashboard/events' },
-      { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
-      { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+      { label: 'Protocole', href: '/dashboard/protocol' },
+      { label: 'Tâches', href: '/dashboard/protocol?view=tasks' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Guide', href: '/dashboard/guide' },
     ],
@@ -589,22 +592,22 @@ export const USER_GUIDES: UserGuide[] = [
         title: 'Identifier votre périmètre',
         content:
           '1. Protocole : vos événements assignés (liste + tâches).\n2. Accueil pour le scan QR.\n3. Tâches pour la checklist.\n4. Demandez une affectation au manager org. si la liste est vide.',
-        links: [{ label: 'Événements', href: '/dashboard/events' }],
+        links: [{ label: 'Protocole', href: '/dashboard/protocol' }],
       },
       {
         id: 'staff-day-of',
         title: 'Jour J — protocole',
         content:
-          '1. Ouvrez l’événement.\n2. Accueil : scan QR web.\n3. Tâches : cochez la checklist.\n4. Signalez les no-shows.',
+          '1. Ouvrez Protocole → événement → Accueil.\n2. Scannez ou recherchez l’invité.\n3. Confirmez présence / siège.\n4. Cochez vos tâches dans l’onglet Tâches.',
         links: [
-          { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
-          { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+          { label: 'Protocole', href: '/dashboard/protocol' },
+          { label: 'Tâches', href: '/dashboard/protocol?view=tasks' },
         ],
       },
     ],
     tips: [
       'Rôle = affectation salle/événement.',
-      'Tâches = sous-onglet Événements / Protocole.',
+      'Tâches = sous-onglet Protocole.',
       'Scan dans le navigateur uniquement pour l’instant.',
     ],
   },

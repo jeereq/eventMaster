@@ -12,7 +12,7 @@ import {
 } from '@/components/ui';
 import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
 import ProtocolTasksInbox from '@/components/ProtocolTasksInbox';
-import { eventsListHref, eventDashboardHref } from '@/lib/eventRoutes';
+import { eventDashboardHref } from '@/lib/eventRoutes';
 import {
   CalendarCheck,
   ClipboardList,
@@ -73,13 +73,13 @@ export default function ProtocolDashboardHome() {
                 </Button>
               </Link>
             ) : (
-              <Link href={eventsListHref(true)}>
+              <Link href="/dashboard/protocol">
                 <Button size="sm" leftIcon={<ScanLine className="w-4 h-4" />}>
                   Desk protocole
                 </Button>
               </Link>
             )}
-            <Link href={eventsListHref(true, 'tasks')}>
+            <Link href="/dashboard/protocol?view=tasks">
               <Button size="sm" variant="secondary" leftIcon={<ClipboardList className="w-4 h-4" />}>
                 Mes tâches
               </Button>
@@ -105,7 +105,7 @@ export default function ProtocolDashboardHome() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Link
-          href={eventsListHref(true)}
+          href="/dashboard/protocol"
           className="rounded-2xl border border-border bg-surface px-3.5 py-3 hover:border-primary/40 hover:bg-primary/5 transition"
         >
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
