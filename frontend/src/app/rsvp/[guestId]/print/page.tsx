@@ -12,6 +12,8 @@ import type {
   GuestRoomOutline,
   GuestTablePlanOverviewItem,
 } from '@/app/rsvp/GuestTablePlanView';
+import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
+import type { LightingPreset } from '@/lib/roomRenderQuality';
 import { Loader2 } from 'lucide-react';
 
 type GuestApiResponse = {
@@ -33,6 +35,9 @@ type GuestApiResponse = {
   floorImageUrl?: string | null;
   depthAmount?: number | null;
   depthView?: boolean | null;
+  roomLayoutPreview?: unknown;
+  sourceRoomType?: string | null;
+  previewLightingPreset?: string | null;
   branding?: GuestPrintDocumentData['branding'];
   organizationName?: string;
   event: {
@@ -54,7 +59,6 @@ export default function GuestInvitationPrintPage() {
   const guestId = params.guestId as string;
   const [data, setData] = useState<GuestPrintDocumentData | null>(null);
   const [error, setError] = useState('');
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +98,15 @@ export default function GuestInvitationPrintPage() {
           floorImageUrl: guest.placementAccessible ? guest.floorImageUrl ?? null : null,
           depthAmount: guest.placementAccessible ? guest.depthAmount ?? null : null,
           depthView: guest.placementAccessible ? guest.depthView ?? null : null,
+          roomLayoutPreview:
+            guest.placementAccessible && guest.roomLayoutPreview && typeof guest.roomLayoutPreview === 'object'
+              ? (guest.roomLayoutPreview as RoomLayoutBlueprint)
+              : null,
+          sourceRoomType: guest.placementAccessible ? guest.sourceRoomType ?? null : null,
+          previewLightingPreset:
+            guest.placementAccessible
+              ? ((guest.previewLightingPreset as Exclude<LightingPreset, 'auto'> | null) ?? null)
+              : null,
           showQrCode: guest.rsvp === 'ACCEPTED',
           branding: guest.branding,
           organizationName: guest.organizationName,
@@ -108,22 +121,6 @@ export default function GuestInvitationPrintPage() {
     void load();
     return () => { cancelled = true; };
   }, [guestId]);
-
-  useEffect(() => {
-    if (!data) return;
-
-    const markReady = () => {
-      if (document.fonts?.ready) {
-        void document.fonts.ready.then(() => {
-          setTimeout(() => setReady(true), 1200);
-        });
-      } else {
-        setTimeout(() => setReady(true), 1500);
-      }
-    };
-
-    markReady();
-  }, [data]);
 
   if (error) {
     return (
@@ -141,9 +138,5 @@ export default function GuestInvitationPrintPage() {
     );
   }
 
-  return (
-    <div data-pdf-ready={ready ? 'true' : 'false'}>
-      <GuestInvitationPrintDocument data={data} />
-    </div>
-  );
+  return <GuestInvitationPrintDocument data={data} />;
 }

@@ -1,17 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { getCanvasStyle } from '@/lib/rsvpFormFields';
 import { getTemplateBackgroundStyle } from '@/lib/templateBackgroundStyle';
 import { formatGuestInvitationText, type GuestInvitationContext } from '@/lib/guestInvitationText';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
-import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
+import GuestPrintPlanSection from '@/components/GuestPrintPlanSection';
 import type { GuestGuidelines } from '@/lib/guestGuidelines';
 import type {
   GuestPlanFixture,
   GuestRoomOutline,
   GuestTablePlanOverviewItem,
 } from '@/app/rsvp/GuestTablePlanView';
+import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
+import type { LightingPreset } from '@/lib/roomRenderQuality';
 
 import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { guestRsvpUrl } from '@/lib/share';
@@ -80,6 +82,9 @@ export type GuestPrintDocumentData = {
   floorImageUrl?: string | null;
   depthAmount?: number | null;
   depthView?: boolean | null;
+  roomLayoutPreview?: RoomLayoutBlueprint | null;
+  sourceRoomType?: string | null;
+  previewLightingPreset?: Exclude<LightingPreset, 'auto'> | null;
   showQrCode?: boolean;
   branding?: {
     primary?: string;
@@ -108,6 +113,26 @@ function rsvpStatusLabel(status: string) {
 }
 
 export default function GuestInvitationPrintDocument({ data }: { data: GuestPrintDocumentData }) {
+  const [fontsReady, setFontsReady] = useState(false);
+  const [planCaptureState, setPlanCaptureState] = useState<'pending' | 'ready' | 'skipped'>(
+    data.tablePlanOverview?.length ? 'pending' : 'skipped',
+  );
+
+  const pdfReady = fontsReady && planCaptureState !== 'pending';
+
+  useEffect(() => {
+    if (document.fonts?.ready) {
+      void document.fonts.ready.then(() => setFontsReady(true));
+    } else {
+      const t = window.setTimeout(() => setFontsReady(true), 800);
+      return () => window.clearTimeout(t);
+    }
+  }, []);
+
+  const handlePlanCaptureState = useCallback((state: 'pending' | 'ready' | 'skipped') => {
+    setPlanCaptureState(state);
+  }, []);
+
   const rsvpLink = guestRsvpUrl(data.guestId);
 
   const ctx: GuestInvitationContext = {
@@ -223,7 +248,14 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   };
 
   const renderRsvpBlock = (el: TemplateElement) => (
-    <div className="bg-surface/90 border border-border rounded-2xl p-6 text-center space-y-4 shadow-sm">
+    <div
+      className="rounded-[22px] border p-6 text-center space-y-4"
+      style={{
+        background: '#ffffff',
+        borderColor: '#e2e8f0',
+        boxShadow: '0 8px 30px rgba(15, 23, 42, 0.06)',
+      }}
+    >
       <p className="font-bold text-foreground text-base" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
         {formatGuestInvitationText(el.text || 'Merci de confirmer votre présence', ctx)}
       </p>
@@ -252,7 +284,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   const primary = data.branding?.primary || '#4f46e5';
   const accent = data.branding?.accent || primary;
   const orgName = data.organizationName?.trim() || 'Organisation';
-  const cardMax = Number.parseInt(String(canvasStyle.maxWidth), 10) || 480;
+  const cardMax = Number.parseInt(String(canvasStyle.maxWidth), 10) || 520;
   const eventDateLabel = data.event.date
     ? new Date(data.event.date).toLocaleDateString('fr-FR', {
         weekday: 'long',
@@ -273,27 +305,49 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
     printColorAdjust: 'exact' as const,
   };
 
-  return (
-    <div className="min-h-screen" style={{ background: '#f8fafc', ...brandVars }}>
-      <link href={PRINT_FONTS} rel="stylesheet" />
+  const hasPlacement = Boolean(data.tableDetails || (data.tablePlanOverview && data.tablePlanOverview.length > 0));
 
-      <div className="mx-auto py-8 px-4 flex flex-col items-center gap-5" style={{ maxWidth: cardMax + 32 }}>
+  return (
+    <div
+      className="min-h-screen guest-print-doc"
+      style={{ background: 'linear-gradient(180deg, #f1f5f9 0%, #f8fafc 40%, #ffffff 100%)', ...brandVars }}
+      data-pdf-ready={pdfReady ? 'true' : 'false'}
+    >
+      <link href={PRINT_FONTS} rel="stylesheet" />
+      <style>{`
+        @media print {
+          .guest-print-doc { background: #fff !important; }
+          .guest-print-page { box-shadow: none !important; }
+        }
+      `}</style>
+
+      <div className="mx-auto py-10 px-5 flex flex-col items-center gap-6" style={{ maxWidth: cardMax + 48 }}>
         <article
-          className="w-full overflow-hidden border shadow-sm"
+          className="guest-print-page w-full overflow-hidden border"
           style={{
             maxWidth: cardMax,
-            borderRadius: 24,
-            borderColor: '#e2e8f0',
+            borderRadius: 28,
+            borderColor: '#dbe3ec',
             background: '#ffffff',
+            boxShadow: '0 20px 60px rgba(15, 23, 42, 0.08)',
           }}
         >
           <header
-            className="px-8 py-8 text-center text-white"
-            style={{ background: `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)` }}
+            className="relative px-8 py-9 text-center text-white overflow-hidden"
+            style={{ background: `linear-gradient(135deg, ${primary} 0%, ${accent} 55%, color-mix(in srgb, ${accent} 70%, #0f172a) 100%)` }}
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85">{orgName}</p>
-            <p className="mt-2 text-[22px] font-extrabold tracking-tight">Votre invitation</p>
-            <p className="mt-1.5 text-sm font-medium text-white/90">{data.event.title}</p>
+            <div
+              className="absolute inset-0 opacity-20 pointer-events-none"
+              style={{
+                backgroundImage: 'radial-gradient(circle at 20% 0%, #fff 0%, transparent 42%), radial-gradient(circle at 80% 100%, #fff 0%, transparent 38%)',
+              }}
+            />
+            <p className="relative text-[10px] font-bold uppercase tracking-[0.22em] text-white/80">{orgName}</p>
+            <p className="relative mt-3 text-[26px] font-black tracking-tight leading-tight" style={{ fontFamily: '"Playfair Display", serif' }}>
+              Votre invitation
+            </p>
+            <div className="relative mx-auto mt-3 h-px w-16 bg-white/45" />
+            <p className="relative mt-3 text-sm font-medium text-white/92">{data.event.title}</p>
           </header>
 
           <div
@@ -347,32 +401,35 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
                   })}
                 </div>
               ) : (
-                <div className="space-y-4 text-left">
-                  <p className="text-[17px] font-bold text-foreground">Bonjour {data.firstName},</p>
+                <div className="space-y-5 text-left">
+                  <p className="text-[18px] font-bold text-foreground" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
+                    Bonjour {data.firstName},
+                  </p>
                   <p className="text-sm text-muted leading-relaxed">
-                    Voici votre invitation. Conservez ce document pour le jour J.
+                    Voici votre invitation personnelle. Conservez ce document pour le jour J — placement, plan et badge d&apos;entrée.
                   </p>
                   {data.event.description ? (
-                    <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
+                    <p className="text-sm text-foreground/85 whitespace-pre-line leading-relaxed border-l-2 pl-4" style={{ borderColor: `color-mix(in srgb, ${primary} 40%, #e2e8f0)` }}>
                       {data.event.description}
                     </p>
                   ) : null}
                   <div
-                    className="rounded-2xl border px-4 py-3.5 space-y-1.5 text-sm"
-                    style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}
+                    className="rounded-[18px] border px-5 py-4 space-y-2 text-sm"
+                    style={{
+                      background: `linear-gradient(180deg, color-mix(in srgb, ${primary} 6%, #fff), #f8fafc)`,
+                      borderColor: '#e2e8f0',
+                    }}
                   >
                     {eventDateLabel ? (
-                      <p className="text-foreground">
-                        <span className="font-semibold" style={{ color: primary }}>Date</span>
-                        {'  ·  '}
-                        {eventDateLabel}
+                      <p className="text-foreground flex gap-2">
+                        <span className="font-bold shrink-0" style={{ color: primary, minWidth: '3.5rem' }}>Date</span>
+                        <span>{eventDateLabel}</span>
                       </p>
                     ) : null}
                     {data.event.location ? (
-                      <p className="text-foreground">
-                        <span className="font-semibold" style={{ color: primary }}>Lieu</span>
-                        {'  ·  '}
-                        {data.event.location}
+                      <p className="text-foreground flex gap-2">
+                        <span className="font-bold shrink-0" style={{ color: primary, minWidth: '3.5rem' }}>Lieu</span>
+                        <span>{data.event.location}</span>
                       </p>
                     ) : null}
                   </div>
@@ -388,85 +445,130 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
           </div>
         )}
 
-        {data.tableDetails && (
-          <div
-            className="w-full rounded-2xl border p-6 space-y-2 text-center"
-            style={{
-              maxWidth: cardMax,
-              background: `linear-gradient(180deg, color-mix(in srgb, ${primary} 12%, #fff), color-mix(in srgb, ${primary} 5%, #fff))`,
-              borderColor: `color-mix(in srgb, ${primary} 28%, #e2e8f0)`,
-            }}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>
-              Votre place
-            </p>
-            <p className="text-2xl font-black text-foreground">{data.tableDetails.tableName}</p>
-            {typeof data.tableDetails.seatIndex === 'number' && (
-              <p className="font-semibold" style={{ color: primary }}>
-                Siège n°{data.tableDetails.seatIndex + 1}
-              </p>
-            )}
-            {data.tableDetails.neighbors && data.tableDetails.neighbors.length > 0 && (
-              <div className="text-sm text-foreground space-y-1 pt-3 border-t text-left" style={{ borderColor: `color-mix(in srgb, ${primary} 20%, #e2e8f0)` }}>
-                <p className="font-bold text-center" style={{ color: primary }}>À votre table</p>
-                {data.tableDetails.neighbors.map((n, i) => (
-                  <p key={i}>• {n.firstName} {n.lastName}</p>
-                ))}
+        {hasPlacement && (
+          <div className="w-full space-y-4" style={{ maxWidth: cardMax }}>
+            {data.tableDetails && (
+              <div
+                className="rounded-[22px] border p-6"
+                style={{
+                  background: `linear-gradient(145deg, color-mix(in srgb, ${primary} 14%, #fff), #ffffff)`,
+                  borderColor: `color-mix(in srgb, ${primary} 24%, #e2e8f0)`,
+                  boxShadow: '0 10px 40px rgba(15, 23, 42, 0.05)',
+                }}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: primary }}>
+                      Votre place
+                    </p>
+                    <p className="text-[28px] font-black text-foreground leading-none">{data.tableDetails.tableName}</p>
+                    {typeof data.tableDetails.seatIndex === 'number' && (
+                      <p className="text-sm font-bold mt-2" style={{ color: primary }}>
+                        Siège n°{data.tableDetails.seatIndex + 1}
+                      </p>
+                    )}
+                  </div>
+                  <div
+                    className="rounded-2xl px-4 py-3 text-center min-w-[88px]"
+                    style={{
+                      background: `color-mix(in srgb, ${primary} 12%, #fff)`,
+                      border: `1px solid color-mix(in srgb, ${primary} 22%, #e2e8f0)`,
+                    }}
+                  >
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-muted">Table</p>
+                    <p className="text-lg font-black text-foreground mt-0.5">
+                      {typeof data.tableDetails.seatIndex === 'number' ? data.tableDetails.seatIndex + 1 : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                {data.tableDetails.neighbors && data.tableDetails.neighbors.length > 0 && (
+                  <div
+                    className="mt-5 pt-4 border-t space-y-2"
+                    style={{ borderColor: `color-mix(in srgb, ${primary} 18%, #e2e8f0)` }}
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: primary }}>
+                      À votre table
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {data.tableDetails.neighbors.map((n, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 rounded-xl px-3 py-2 bg-white/80 border text-sm"
+                          style={{ borderColor: '#e2e8f0' }}
+                        >
+                          <span
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0"
+                            style={{
+                              background: `color-mix(in srgb, ${primary} 12%, #fff)`,
+                              color: primary,
+                            }}
+                          >
+                            {n.firstName[0]}{n.lastName[0]}
+                          </span>
+                          <span className="font-medium text-foreground">{n.firstName} {n.lastName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {data.tablePlanOverview && data.tablePlanOverview.length > 0 && (
-          <div
-            className="w-full rounded-2xl border bg-white overflow-hidden"
-            style={{ maxWidth: cardMax, borderColor: '#e2e8f0' }}
-          >
-            <div className="px-5 py-3 border-b" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>
-                Plan de la salle
-              </p>
-              <p className="text-[10px] text-muted mt-0.5">Votre table est mise en évidence</p>
-            </div>
-            <GuestRoomPlanCanvas
-              tables={data.tablePlanOverview}
-              fixtures={data.planFixtures}
-              roomOutline={data.roomOutline}
-              roomThemeId={data.roomThemeId}
-              floorType={data.floorType}
-              floorImageUrl={data.floorImageUrl}
-              depthAmount={data.depthAmount}
-              depthView={data.depthView}
-              guestTableId={guestTableId}
-              guestFullName={`${data.firstName} ${data.lastName}`}
-              neighborNames={neighborNames}
-              height={300}
-              className="rounded-none border-0"
-            />
+            {data.tablePlanOverview && data.tablePlanOverview.length > 0 && (
+              <GuestPrintPlanSection
+                tables={data.tablePlanOverview}
+                fixtures={data.planFixtures}
+                roomOutline={data.roomOutline}
+                roomThemeId={data.roomThemeId}
+                floorType={data.floorType}
+                floorImageUrl={data.floorImageUrl}
+                depthAmount={data.depthAmount}
+                depthView={data.depthView}
+                roomLayoutPreview={data.roomLayoutPreview ?? null}
+                sourceRoomType={data.sourceRoomType}
+                previewLightingPreset={data.previewLightingPreset}
+                guestTableId={guestTableId}
+                guestFullName={`${data.firstName} ${data.lastName}`}
+                neighborNames={neighborNames}
+                primaryColor={primary}
+                onCaptureStateChange={handlePlanCaptureState}
+              />
+            )}
           </div>
         )}
 
         {showQr && (
           <div
-            className="w-full rounded-2xl border bg-white p-6 text-center space-y-3"
-            style={{ maxWidth: cardMax, borderColor: '#e2e8f0' }}
+            className="w-full rounded-[22px] border bg-white p-7 text-center space-y-4"
+            style={{
+              maxWidth: cardMax,
+              borderColor: '#e2e8f0',
+              boxShadow: '0 10px 40px rgba(15, 23, 42, 0.05)',
+            }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>
-              Badge QR
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: primary }}>
+              Badge d&apos;entrée
             </p>
             <div className="flex justify-center">
-              <div className="p-3 bg-white rounded-2xl border shadow-sm" style={{ borderColor: '#e2e8f0' }}>
+              <div
+                className="p-4 bg-white rounded-[20px] border"
+                style={{
+                  borderColor: '#e2e8f0',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.8), 0 8px 24px rgba(15,23,42,0.08)',
+                }}
+              >
                 <img
-                  src={buildQrCodeUrl(data.guestId, 180)}
+                  src={buildQrCodeUrl(data.guestId, 200)}
                   alt="QR Code de confirmation de présence"
-                  width={180}
-                  height={180}
-                  className="w-[180px] h-[180px]"
+                  width={200}
+                  height={200}
+                  className="w-[200px] h-[200px]"
                 />
               </div>
             </div>
-            <p className="text-[11px] text-muted leading-relaxed max-w-xs mx-auto">
-              Présentez ce code à l&apos;entrée pour valider votre présence.
+            <p className="text-xs text-muted leading-relaxed max-w-sm mx-auto">
+              Présentez ce code à l&apos;accueil le jour de l&apos;événement.
             </p>
           </div>
         )}
@@ -481,8 +583,15 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
           </div>
         )}
 
-        <div className="text-center text-[10px] text-muted pb-4">
-          Pour {data.firstName} {data.lastName} — envoyé par {orgName}
+        <div
+          className="w-full text-center pt-2 pb-6 space-y-2"
+          style={{ maxWidth: cardMax }}
+        >
+          <div className="mx-auto h-px w-24" style={{ background: `color-mix(in srgb, ${primary} 35%, #e2e8f0)` }} />
+          <p className="text-[10px] text-muted tracking-wide">
+            Document personnel · {data.firstName} {data.lastName}
+          </p>
+          <p className="text-[10px] text-muted/80">Envoyé par {orgName}</p>
         </div>
       </div>
     </div>
