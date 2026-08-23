@@ -20,6 +20,15 @@ import { seedAccountsMatrix } from './seed/accountsMatrix';
 import { seedEventsVolume } from './seed/eventsVolume';
 import { seedRoomBlueprint } from './seed/roomBlueprints';
 import { eventPhotos } from './seed/rdcMedia';
+import {
+  buildSeedTablePlan,
+  SEED_EVENT_PROGRAM_GALA,
+  SEED_GALA_PRICING_ZONES,
+  assignSeatOnPlan,
+  findAvailableSeat,
+  resolveOrderPricing,
+  cloneTablePlan as cloneTablePlanForSeed,
+} from './seed/ticketingPlan';
 
 const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   FREE: 0,
@@ -65,6 +74,7 @@ async function clearDatabase() {
   await prisma.roomStaff.deleteMany({});
   await prisma.invitation.deleteMany({});
   await prisma.guest.deleteMany({});
+  await prisma.seatHold.deleteMany({});
   await prisma.ticketOrder.deleteMany({});
   await prisma.event.deleteMany({});
   await prisma.adminAuditLog.deleteMany({});
@@ -428,12 +438,15 @@ async function main() {
 
   // ─── Événements ───────────────────────────────────────────────────
   console.log('Événements...');
+  const galaBlueprint = seedRoomBlueprint('BANQUET', 1);
+  const galaTablePlan = buildSeedTablePlan(galaBlueprint, SEED_GALA_PRICING_ZONES);
+
   const eventGala = await prisma.event.create({
     data: {
       tenantId: tenantPrestige.id,
       roomId: roomPrestige.id,
       title: "Gala de Charité d'Élite",
-      description: 'Collecte de fonds annuelle pour les orphelinats de Kinshasa.',
+      description: 'Collecte de fonds annuelle pour les orphelinats de Kinshasa. Billets par zones (VIP, Standard, Fosse) avec choix de place sur le plan.',
       date: new Date('2026-09-25T19:00:00Z'),
       location: 'Hôtel Fleuve Congo, Gombe, Kinshasa',
       reminderFrequency: 'EVERY_5_DAYS',
@@ -444,9 +457,13 @@ async function main() {
       slug: 'gala-de-charite-elite-kinshasa',
       publishedAt: new Date(),
       ticketingEnabled: true,
+      ticketPricingMode: 'by_zone',
       ticketPriceFc: 150_000,
+      seatSelectionEnabled: true,
       ticketsTotal: 200,
       ticketsSold: 0,
+      tablePlan: galaTablePlan as object,
+      eventProgram: SEED_EVENT_PROGRAM_GALA,
       guestGuidelines: seedGuestGuidelines(1),
       themeId: 'royal-gold',
     },
@@ -504,17 +521,32 @@ async function main() {
     },
   });
 
+  const amphiTablePlan = buildSeedTablePlan(
+    seedRoomBlueprint('AMPHITHEATER', 2),
+    undefined,
+  );
+
   const eventSeminar = await prisma.event.create({
     data: {
       tenantId: tenantGlobalCorp.id,
       roomId: roomGlobal.id,
       title: 'Séminaire Annuel des Dirigeants',
-      description: 'Planification stratégique annuelle.',
+      description: 'Planification stratégique annuelle. Billetterie prix unique avec réservation de siège sur le plan.',
       date: new Date('2026-10-10T09:00:00Z'),
       location: 'Pullman Grand Hôtel, Gombe',
       latitude: -4.3032,
       longitude: 15.2861,
       photos: eventPhotos(5),
+      isPublic: true,
+      slug: 'seminaire-dirigeants-globalcorp-2026',
+      publishedAt: new Date(),
+      ticketingEnabled: true,
+      ticketPricingMode: 'global',
+      ticketPriceFc: 95_000,
+      seatSelectionEnabled: true,
+      ticketsTotal: 100,
+      ticketsSold: 0,
+      tablePlan: amphiTablePlan as object,
       guestGuidelines: seedGuestGuidelines(5),
       themeId: 'obsidian-silver',
     },
@@ -613,6 +645,109 @@ async function main() {
     for (const g of batch.guests) {
       await prisma.guest.create({ data: { eventId: batch.eventId, ...g } });
     }
+  }
+
+  // ─── Billets démo (zones tarifaires + sièges) ─────────────────────
+  console.log('Billets démo (tarifs par zone & choix de place)...');
+  let galaPlan = cloneTablePlanForSeed(galaTablePlan);
+
+  const galaGuestsForSeats = await prisma.guest.findMany({
+    where: { eventId: eventGala.id, rsvp: 'ACCEPTED' },
+    take: 2,
+  });
+  for (const g of galaGuestsForSeats) {
+    const seat = findAvailableSeat(galaPlan);
+    if (!seat) break;
+    galaPlan = assignSeatOnPlan(galaPlan, seat.tableId, seat.seatIndex, g.id);
+  }
+
+  const galaBuyers = [
+    { first: 'Éric', last: 'Mwamba', email: 'eric.mwamba@tickets.demo.cd' },
+    { first: 'Sandrine', last: 'Ilunga', email: 'sandrine.ilunga@tickets.demo.cd' },
+  ];
+  let galaTicketsSold = 0;
+  for (const buyer of galaBuyers) {
+    const seat = findAvailableSeat(galaPlan);
+    if (!seat) break;
+    const pricing = resolveOrderPricing(
+      { ticketPricingMode: 'by_zone', ticketPriceFc: 150_000, tablePlan: galaPlan },
+      { tableId: seat.tableId, seatIndex: seat.seatIndex },
+    );
+    const order = await prisma.ticketOrder.create({
+      data: {
+        eventId: eventGala.id,
+        buyerName: `${buyer.first} ${buyer.last}`,
+        buyerEmail: buyer.email,
+        quantity: 1,
+        amountFc: pricing.amountFc,
+        unitPriceFc: pricing.unitPriceFc,
+        pricingZoneId: pricing.pricingZoneId,
+        tableId: seat.tableId,
+        seatIndex: seat.seatIndex,
+        status: 'PAID',
+        paidAt: new Date(),
+        stripeCheckoutSessionId: `seed_gala_${buyer.email.replace(/[@.+]/g, '_')}`,
+      },
+    });
+    const ticketGuest = await prisma.guest.create({
+      data: {
+        eventId: eventGala.id,
+        firstName: buyer.first,
+        lastName: buyer.last,
+        email: buyer.email,
+        category: 'Billet',
+        rsvp: 'ACCEPTED',
+        ticketOrderId: order.id,
+      },
+    });
+    galaPlan = assignSeatOnPlan(galaPlan, seat.tableId, seat.seatIndex, ticketGuest.id);
+    galaTicketsSold += 1;
+  }
+
+  await prisma.event.update({
+    where: { id: eventGala.id },
+    data: { tablePlan: galaPlan as object, ticketsSold: galaTicketsSold },
+  });
+
+  let seminarPlan = cloneTablePlanForSeed(amphiTablePlan);
+  const seminarBuyer = { first: 'Nadia', last: 'Tshilombo', email: 'nadia.tshilombo@tickets.demo.cd' };
+  const seminarSeat = findAvailableSeat(seminarPlan);
+  if (seminarSeat) {
+    const pricing = resolveOrderPricing(
+      { ticketPricingMode: 'global', ticketPriceFc: 95_000, tablePlan: seminarPlan },
+      { tableId: seminarSeat.tableId, seatIndex: seminarSeat.seatIndex },
+    );
+    const seminarOrder = await prisma.ticketOrder.create({
+      data: {
+        eventId: eventSeminar.id,
+        buyerName: `${seminarBuyer.first} ${seminarBuyer.last}`,
+        buyerEmail: seminarBuyer.email,
+        quantity: 1,
+        amountFc: pricing.amountFc,
+        unitPriceFc: pricing.unitPriceFc,
+        tableId: seminarSeat.tableId,
+        seatIndex: seminarSeat.seatIndex,
+        status: 'PAID',
+        paidAt: new Date(),
+        stripeCheckoutSessionId: 'seed_seminar_nadia',
+      },
+    });
+    const seminarGuest = await prisma.guest.create({
+      data: {
+        eventId: eventSeminar.id,
+        firstName: seminarBuyer.first,
+        lastName: seminarBuyer.last,
+        email: seminarBuyer.email,
+        category: 'Billet',
+        rsvp: 'ACCEPTED',
+        ticketOrderId: seminarOrder.id,
+      },
+    });
+    seminarPlan = assignSeatOnPlan(seminarPlan, seminarSeat.tableId, seminarSeat.seatIndex, seminarGuest.id);
+    await prisma.event.update({
+      where: { id: eventSeminar.id },
+      data: { tablePlan: seminarPlan as object, ticketsSold: 1 },
+    });
   }
 
   // ─── Mur social événement ─────────────────────────────────────────
@@ -785,6 +920,8 @@ async function main() {
     }),
     ticketOrders: await prisma.ticketOrder.count({ where: { status: 'PAID' } }),
     publicEvents: await prisma.event.count({ where: { isPublic: true } }),
+    eventsByZonePricing: await prisma.event.count({ where: { ticketPricingMode: 'by_zone' } }),
+    eventsWithSeatSelection: await prisma.event.count({ where: { seatSelectionEnabled: true } }),
   };
 
   console.log('\n=== Seed terminé ===');
@@ -793,6 +930,9 @@ async function main() {
   console.log('  Super Admin  : superadmin@eventmaster.cd');
   console.log('  Commercial   : commercial@eventmaster.cd');
   console.log('  Prestige     : admin@prestige.cd');
+  console.log('  Gala démo    : /marketplace/evenements/gala-de-charite-elite-kinshasa (zones VIP/Standard/Fosse + plan)');
+  console.log('  Séminaire    : /marketplace/evenements/seminaire-dirigeants-globalcorp-2026 (prix global + siège)');
+  console.log('  Acheteurs    : eric.mwamba@tickets.demo.cd · sandrine.ilunga@tickets.demo.cd · nadia.tshilombo@tickets.demo.cd');
   console.log('  Entrepreneurs: contact@entrepreneurs.cd');
   console.log('  Mariage      : claire@mariagereve.cd');
   console.log('  Global Corp  : event@globalcorp.cd');

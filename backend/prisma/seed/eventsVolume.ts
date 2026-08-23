@@ -4,6 +4,14 @@ import { seedGuestGuidelines } from './helpers';
 import { marketplacePlaceFor, slugify } from './marketplaceCatalog';
 import { eventPhotos, rdcTicketPriceFc } from './rdcMedia';
 import type { OrganizerSeed } from './accountsMatrix';
+import {
+  assignSeatOnPlan,
+  enrichTablePlanWithZones,
+  findAvailableSeat,
+  pricingZonesForVolumeSeed,
+  resolveOrderPricing,
+  type TablePlanLike,
+} from './ticketingPlan';
 
 const TITLES = [
   'Concert live',
@@ -94,10 +102,14 @@ export async function seedEventsVolume(
     id: string;
     isPublic: boolean;
     ticketingEnabled: boolean;
+    ticketPricingMode: string;
     ticketPriceFc: number;
     ticketsTotal: number | null;
+    seatSelectionEnabled: boolean;
     title: string;
   }> = [];
+
+  let tablePlanEventCounter = 0;
 
   for (let i = 0; i < hosts.length; i++) {
     const host = hosts[i];
@@ -116,9 +128,18 @@ export async function seedEventsVolume(
 
     const room: RoomRow | undefined =
       host.tenantId === opts.agendaTenantId ? agendaRooms[i % Math.max(1, agendaRooms.length)] : undefined;
-    const tablePlan = room?.layoutBlueprint
-      ? blueprintToTablePlan(room.layoutBlueprint as Parameters<typeof blueprintToTablePlan>[0])
+
+    let tablePlan: TablePlanLike | undefined = room?.layoutBlueprint
+      ? (blueprintToTablePlan(room.layoutBlueprint as Parameters<typeof blueprintToTablePlan>[0]) as TablePlanLike)
       : undefined;
+
+    const byZone = Boolean(paid && isPublic && tablePlan && tablePlanEventCounter % 3 === 0);
+    const seatSelection = Boolean(paid && isPublic && tablePlan && (tablePlanEventCounter % 2 === 0 || byZone));
+    if (tablePlan) tablePlanEventCounter += 1;
+
+    if (byZone && tablePlan) {
+      tablePlan = enrichTablePlanWithZones(tablePlan, pricingZonesForVolumeSeed(i));
+    }
 
     const location = room?.location || `${place.neighborhood}, ${place.commune.name}, ${place.city.name}`;
     const event = await prisma.event.create({
@@ -128,7 +149,11 @@ export async function seedEventsVolume(
         title,
         description: `${title} — ${place.commune.name}, ${place.neighborhood}. ${
           paid
-            ? 'Billets en ligne, places limitées.'
+            ? byZone
+              ? 'Billets par zones (VIP, Standard…), choix de place sur le plan.'
+              : seatSelection
+                ? 'Billets en ligne avec réservation de siège.'
+                : 'Billets en ligne, places limitées.'
             : isPublic
               ? 'Entrée libre, inscription en ligne obligatoire.'
               : 'Événement privé sur liste d’invités.'
@@ -142,7 +167,9 @@ export async function seedEventsVolume(
         slug,
         publishedAt: isPublic ? new Date() : null,
         ticketingEnabled: paid,
+        ticketPricingMode: byZone ? 'by_zone' : 'global',
         ticketPriceFc,
+        seatSelectionEnabled: seatSelection,
         ticketsTotal,
         ticketsSold: 0,
         photos: eventPhotos(i),
@@ -154,8 +181,10 @@ export async function seedEventsVolume(
       id: event.id,
       isPublic,
       ticketingEnabled: paid,
+      ticketPricingMode: byZone ? 'by_zone' : 'global',
       ticketPriceFc,
       ticketsTotal,
+      seatSelectionEnabled: seatSelection,
       title: event.title,
     });
 
@@ -194,36 +223,83 @@ export async function seedEventsVolume(
   console.log(`Billets — commandes payées sur ${ticketed.length} événements publics…`);
 
   for (let e = 0; e < ticketed.length; e++) {
-    const event = ticketed[e];
+    const meta = ticketed[e];
+    const eventRow = await prisma.event.findUnique({
+      where: { id: meta.id },
+      select: {
+        id: true,
+        ticketPricingMode: true,
+        ticketPriceFc: true,
+        seatSelectionEnabled: true,
+        tablePlan: true,
+        ticketsTotal: true,
+      },
+    });
+    if (!eventRow) continue;
+
     const orderCount = 2 + (e % 4);
     let sold = 0;
+    let livePlan = eventRow.tablePlan as TablePlanLike | null;
+
     for (let o = 0; o < orderCount; o++) {
-      const quantity = 1 + (o % 3);
-      if (event.ticketsTotal != null && sold + quantity > event.ticketsTotal) break;
+      const quantity = eventRow.seatSelectionEnabled ? 1 : 1 + (o % 3);
+      if (eventRow.ticketsTotal != null && sold + quantity > eventRow.ticketsTotal) break;
+
       const first = pick(FIRST_NAMES, e * 5 + o);
       const last = pick(LAST_NAMES, e * 3 + o);
       const buyerEmail = `acheteur.${e + 1}.${o + 1}@tickets.seed.cd`;
+
       const soldOutEvent = e % 9 === 0 && o === orderCount - 1;
-      const qty = soldOutEvent && event.ticketsTotal != null
-        ? Math.max(1, event.ticketsTotal - sold)
+      const qty = soldOutEvent && eventRow.ticketsTotal != null
+        ? Math.max(1, eventRow.ticketsTotal - sold)
         : quantity;
+
+      let tableId: string | null = null;
+      let seatIndex: number | null = null;
+      let pricingZoneId: string | null = null;
+      let unitPriceFc = eventRow.ticketPriceFc;
+      let amountFc = unitPriceFc * qty;
+
+      if (eventRow.seatSelectionEnabled && livePlan) {
+        const seat = findAvailableSeat(livePlan);
+        if (!seat) break;
+        tableId = seat.tableId;
+        seatIndex = seat.seatIndex;
+        const pricing = resolveOrderPricing(eventRow, { tableId, seatIndex });
+        unitPriceFc = pricing.unitPriceFc;
+        pricingZoneId = pricing.pricingZoneId;
+        amountFc = pricing.amountFc;
+      } else if (eventRow.ticketPricingMode === 'by_zone' && livePlan?.pricingZones?.length) {
+        const zone = livePlan.pricingZones[o % livePlan.pricingZones.length];
+        const pricing = resolveOrderPricing(eventRow, { pricingZoneId: zone.id });
+        unitPriceFc = pricing.unitPriceFc;
+        pricingZoneId = pricing.pricingZoneId;
+        amountFc = pricing.unitPriceFc * qty;
+      } else {
+        amountFc = eventRow.ticketPriceFc * qty;
+      }
+
       const order = await prisma.ticketOrder.create({
         data: {
-          eventId: event.id,
+          eventId: eventRow.id,
           buyerName: `${first} ${last}`,
           buyerEmail,
           buyerPhone: `+24381${String(4000000 + e * 10 + o).slice(0, 7)}`,
           quantity: qty,
-          amountFc: event.ticketPriceFc * qty,
+          amountFc,
+          unitPriceFc,
+          pricingZoneId,
+          tableId,
+          seatIndex,
           status: 'PAID',
-          stripeCheckoutSessionId: `seed_cs_${event.id.slice(0, 8)}_${o}`,
-          stripePaymentIntentId: `seed_pi_${event.id.slice(0, 8)}_${o}`,
+          stripeCheckoutSessionId: `seed_cs_${eventRow.id.slice(0, 8)}_${o}`,
+          stripePaymentIntentId: `seed_pi_${eventRow.id.slice(0, 8)}_${o}`,
           paidAt: new Date(),
         },
       });
 
       const guests = Array.from({ length: qty }, (_, g) => ({
-        eventId: event.id,
+        eventId: eventRow.id,
         firstName: g === 0 ? first : `Invité ${g + 1}`,
         lastName: last,
         email: g === 0 ? buyerEmail : `acheteur.${e + 1}.${o + 1}+${g}@tickets.seed.cd`,
@@ -232,13 +308,24 @@ export async function seedEventsVolume(
         rsvp: 'ACCEPTED' as const,
         ticketOrderId: order.id,
       }));
-      await prisma.guest.createMany({ data: guests });
+      const createdGuests = [];
+      for (const data of guests) {
+        createdGuests.push(await prisma.guest.create({ data }));
+      }
+
+      if (tableId != null && seatIndex != null && livePlan && createdGuests[0]) {
+        livePlan = assignSeatOnPlan(livePlan, tableId, seatIndex, createdGuests[0].id);
+      }
+
       sold += qty;
     }
 
     await prisma.event.update({
-      where: { id: event.id },
-      data: { ticketsSold: sold },
+      where: { id: eventRow.id },
+      data: {
+        ticketsSold: sold,
+        ...(livePlan ? { tablePlan: livePlan as object } : {}),
+      },
     });
   }
 
@@ -260,5 +347,9 @@ export async function seedEventsVolume(
   const events = await prisma.event.count();
   const orders = await prisma.ticketOrder.count({ where: { status: 'PAID' } });
   const ticketGuests = await prisma.guest.count({ where: { ticketOrderId: { not: null } } });
-  console.log(`  → ${events} événements, ${orders} commandes payées, ${ticketGuests} billets (invités liés)`);
+  const zoneEvents = await prisma.event.count({ where: { ticketPricingMode: 'by_zone' } });
+  const seatEvents = await prisma.event.count({ where: { seatSelectionEnabled: true } });
+  console.log(
+    `  → ${events} événements, ${orders} commandes payées, ${ticketGuests} billets, ${zoneEvents} tarifs par zone, ${seatEvents} avec choix de place`,
+  );
 }
