@@ -343,6 +343,8 @@ export interface RoomLayoutBlueprint {
     customTemplates?: SavedRoomTemplate[];
     /** Ambiances personnalisées sauvegardées par l’utilisateur. */
     customAmbiences?: SavedRoomAmbience[];
+    /** Dernières ambiances appliquées sur ce plan. */
+    ambienceHistory?: AmbienceHistoryEntry[];
     depthView?: boolean;
     /** 0 = vue à plat, 100 = perspective 2,5D maximale. */
     depthAmount?: number;
@@ -1020,6 +1022,14 @@ export type SavedRoomAmbience = {
   preset: RoomAmbiencePreset;
 };
 
+export type AmbienceHistoryEntry = {
+  id: string;
+  label: string;
+  appliedAt: string;
+  presetId?: string;
+  preset?: RoomAmbiencePreset;
+};
+
 export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
   {
     id: 'mariage-chiavari',
@@ -1237,6 +1247,27 @@ export function applyRoomAmbiencePreset(
     furniture,
   };
   return refreshBlueprintMetadata(next);
+}
+
+export function recordAmbienceHistory(
+  blueprint: RoomLayoutBlueprint,
+  preset: RoomAmbiencePreset,
+): RoomLayoutBlueprint {
+  const entry: AmbienceHistoryEntry = {
+    id: `hist-${Date.now().toString(36)}`,
+    label: preset.label,
+    appliedAt: new Date().toISOString(),
+    presetId: preset.id,
+    preset: { ...preset },
+  };
+  const history = blueprint.metadata.ambienceHistory ?? [];
+  return {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      ambienceHistory: [entry, ...history.filter((h) => h.presetId !== preset.id)].slice(0, 10),
+    },
+  };
 }
 
 export function captureRoomAmbienceFromBlueprint(

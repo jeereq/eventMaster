@@ -221,6 +221,7 @@ model User {
   listingFavorites      ListingFavorite[]
   savedEventPacks       SavedEventPack[]
   savedEventBriefs      SavedEventBrief[]
+  savedRoomAmbiences    SavedRoomAmbience[]
   ticketOrders          TicketOrder[]
 }
 
@@ -769,6 +770,18 @@ model SavedEventPack {
   items      Json
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model SavedRoomAmbience {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  preset    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }

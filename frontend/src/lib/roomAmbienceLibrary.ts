@@ -27,6 +27,12 @@ function persistAmbienceLibrary(items: SavedRoomAmbience[]) {
   localStorage.setItem(STORAGE_KEY, exportAmbiencesPayload(items.slice(0, MAX_LIBRARY_SIZE)));
 }
 
+export function replaceAmbienceLibrary(items: SavedRoomAmbience[]): SavedRoomAmbience[] {
+  const next = items.slice(0, MAX_LIBRARY_SIZE);
+  persistAmbienceLibrary(next);
+  return next;
+}
+
 export function addAmbienceToLibrary(item: SavedRoomAmbience): SavedRoomAmbience[] {
   const existing = loadAmbienceLibrary().filter((row) => row.id !== item.id);
   const next = [item, ...existing].slice(0, MAX_LIBRARY_SIZE);

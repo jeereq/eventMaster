@@ -2,8 +2,9 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
 import RoomWebGLViewer, { type RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
@@ -29,6 +30,7 @@ import {
   importCustomAmbiencesToBlueprint,
   roomAmbienceMatchesBlueprint,
   parseAmbienceImport,
+  recordAmbienceHistory,
   applyTableStyleToAll,
   autoArrangeTables,
   arrangeDensityLabels,
@@ -81,7 +83,14 @@ import {
   loadAmbienceLibrary,
   mergeAmbienceLibraryImport,
   removeAmbienceFromLibrary,
+  replaceAmbienceLibrary,
 } from '@/lib/roomAmbienceLibrary';
+import {
+  deleteCloudAmbience,
+  isCloudAmbienceId,
+  pushCloudAmbience,
+  syncAmbienceLibraryWithCloud,
+} from '@/lib/roomAmbienceCloud';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import {
   downloadDataUrl,
@@ -183,6 +192,7 @@ export default function RoomLayoutEditor({
   allowThemesFixtures = true,
   editorLevel = 'complete',
 }: RoomLayoutEditorProps) {
+  const { user } = useAuth();
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
@@ -209,6 +219,7 @@ export default function RoomLayoutEditor({
   const [customAmbienceName, setCustomAmbienceName] = useState('');
   const [ambienceLibrary, setAmbienceLibrary] = useState<import('@/lib/roomLayoutUtils').SavedRoomAmbience[]>([]);
   const [ambiencePreviewPreset, setAmbiencePreviewPreset] = useState<import('@/lib/roomLayoutUtils').RoomAmbiencePreset | null>(null);
+  const [ambienceCloudSyncing, setAmbienceCloudSyncing] = useState(false);
   const ambienceImportRef = useRef<HTMLInputElement>(null);
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
@@ -884,15 +895,57 @@ export default function RoomLayoutEditor({
   };
 
   const applyAmbience = (preset: import('@/lib/roomLayoutUtils').RoomAmbiencePreset, scope?: AmbienceApplyScope) => {
-    const next = applyRoomAmbiencePreset(blueprint, preset, scope);
+    const applied = applyRoomAmbiencePreset(blueprint, preset, scope);
+    const next = recordAmbienceHistory(applied, preset);
     updateBlueprint(next, { message: `Ambiance : ${preset.label}`, kind: 'settings' });
     if (preset.roomThemeId && (scope?.theme ?? true)) applyTheme(preset.roomThemeId);
     setAmbiencePreviewPreset(null);
   };
 
+  const syncCloudLibrary = useCallback(async () => {
+    if (!user) return;
+    setAmbienceCloudSyncing(true);
+    try {
+      const merged = await syncAmbienceLibraryWithCloud();
+      setAmbienceLibrary(merged);
+      updateBlueprint(blueprint, { message: 'Bibliothèque synchronisée avec le cloud', kind: 'settings' });
+    } catch {
+      updateBlueprint(blueprint, { message: 'Synchronisation cloud indisponible', kind: 'settings' });
+    } finally {
+      setAmbienceCloudSyncing(false);
+    }
+  }, [user, blueprint, updateBlueprint]);
+
+  const captureAmbienceForLibrary = useCallback(async (name: string) => {
+    const trimmed = name.trim() || 'Ambiance capturée';
+    let local = captureAmbienceToLibrary(blueprint, trimmed);
+    setAmbienceLibrary(local);
+    if (!user) return;
+    const latest = local[0];
+    if (!latest) return;
+    try {
+      const cloud = await pushCloudAmbience(latest);
+      if (cloud) {
+        local = replaceAmbienceLibrary([cloud, ...local.filter((row) => row.id !== latest.id)]);
+        setAmbienceLibrary(local);
+      }
+    } catch {
+      // conserve la copie locale
+    }
+  }, [blueprint, user]);
+
   useEffect(() => {
     setAmbienceLibrary(loadAmbienceLibrary());
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setAmbienceCloudSyncing(true);
+    void syncAmbienceLibraryWithCloud()
+      .then(setAmbienceLibrary)
+      .catch(() => {})
+      .finally(() => setAmbienceCloudSyncing(false));
+  }, [user?.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1518,14 +1571,24 @@ export default function RoomLayoutEditor({
                         <button
                           type="button"
                           onClick={() => {
-                            const name = customAmbienceName.trim() || 'Ambiance capturée';
-                            setAmbienceLibrary(captureAmbienceToLibrary(blueprint, name));
+                            void captureAmbienceForLibrary(customAmbienceName);
                             if (!customAmbienceName.trim()) setCustomAmbienceName('');
                           }}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary"
                         >
                           <Copy className="w-3 h-3" /> Capturer la salle
                         </button>
+                        {user ? (
+                          <button
+                            type="button"
+                            disabled={ambienceCloudSyncing}
+                            onClick={() => void syncCloudLibrary()}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted disabled:opacity-40"
+                          >
+                            <Cloud className={`w-3 h-3 ${ambienceCloudSyncing ? 'animate-pulse' : ''}`} />
+                            {ambienceCloudSyncing ? 'Sync…' : 'Sync cloud'}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => downloadAmbienceExport(ambienceLibrary)}
@@ -1546,7 +1609,9 @@ export default function RoomLayoutEditor({
                         </button>
                       </div>
                       <p className="text-[9px] text-muted leading-snug">
-                        Réutilisable sur toutes vos salles (stockage local navigateur).
+                        {user
+                          ? 'Synchronisée avec votre compte et disponible sur tous vos appareils.'
+                          : 'Stockage local navigateur — connectez-vous pour la sync cloud.'}
                       </p>
                       {ambienceLibrary.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-0.5">
@@ -1591,7 +1656,12 @@ export default function RoomLayoutEditor({
                                 title="Supprimer de la bibliothèque"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setAmbienceLibrary(removeAmbienceFromLibrary(saved.id));
+                                  void (async () => {
+                                    if (isCloudAmbienceId(saved.id)) {
+                                      try { await deleteCloudAmbience(saved.id); } catch { /* ignore */ }
+                                    }
+                                    setAmbienceLibrary(removeAmbienceFromLibrary(saved.id));
+                                  })();
                                 }}
                                 className="absolute top-1 right-1 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-red-600"
                               >
@@ -1615,6 +1685,27 @@ export default function RoomLayoutEditor({
                         }}
                       />
                     </div>
+                    {(blueprint.metadata.ambienceHistory?.length ?? 0) > 0 ? (
+                      <div className="rounded-[var(--radius-button)] border border-border/70 p-2.5 space-y-2">
+                        <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
+                          <History className="w-3 h-3" /> Historique récent
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {blueprint.metadata.ambienceHistory!.map((entry) => (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              disabled={!entry.preset}
+                              onClick={() => entry.preset && applyAmbience(entry.preset)}
+                              className="px-2 py-1 rounded-full border border-border bg-white text-[9px] font-semibold text-foreground hover:border-primary/40 disabled:opacity-40"
+                              title={new Date(entry.appliedAt).toLocaleString('fr-FR')}
+                            >
+                              {entry.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
                     <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
