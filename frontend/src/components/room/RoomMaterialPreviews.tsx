@@ -319,11 +319,13 @@ export function RoomAmbienceCard({
   onClick,
   onPreview,
   active = false,
+  authorName,
 }: {
   preset: RoomAmbiencePreset;
   onClick: () => void;
   onPreview?: () => void;
   active?: boolean;
+  authorName?: string;
 }) {
   return (
     <div className="relative group w-full">
@@ -356,6 +358,9 @@ export function RoomAmbienceCard({
         ) : null}
       </p>
       <p className="text-[9px] text-muted leading-snug line-clamp-2">{preset.description}</p>
+      {authorName ? (
+        <p className="text-[8px] text-muted">Par {authorName}</p>
+      ) : null}
       {preset.lightingPreset ? (
         <p className="text-[8px] font-semibold text-muted flex flex-wrap gap-x-1.5 gap-y-0.5">
           <span className="inline-flex items-center gap-0.5 rounded bg-surface-muted px-1 py-0.5">

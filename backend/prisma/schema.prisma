@@ -167,6 +167,7 @@ model Tenant {
   marketplaceInquiries MarketplaceInquiry[] @relation("InquiryFromTenant")
   vendorBookings MarketplaceBooking[] @relation("BookingVendor")
   organizerBookings MarketplaceBooking[] @relation("BookingOrganizer")
+  orgRoomAmbiences OrgRoomAmbience[]
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -222,6 +223,7 @@ model User {
   savedEventPacks       SavedEventPack[]
   savedEventBriefs      SavedEventBrief[]
   savedRoomAmbiences    SavedRoomAmbience[]
+  orgRoomAmbiences      OrgRoomAmbience[]
   ticketOrders          TicketOrder[]
 }
 
@@ -784,6 +786,22 @@ model SavedRoomAmbience {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model OrgRoomAmbience {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  preset      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([createdById])
 }
 
 model SavedEventBrief {

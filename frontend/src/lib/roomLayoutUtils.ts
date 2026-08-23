@@ -1022,6 +1022,12 @@ export type SavedRoomAmbience = {
   preset: RoomAmbiencePreset;
 };
 
+export type SharedRoomAmbience = SavedRoomAmbience & {
+  scope?: 'user' | 'org';
+  authorName?: string;
+  description?: string;
+};
+
 export type AmbienceHistoryEntry = {
   id: string;
   label: string;

@@ -14,6 +14,9 @@ import {
   createSavedAmbience,
   syncSavedAmbiences,
   deleteSavedAmbience,
+  listOrgAmbiences,
+  createOrgAmbience,
+  deleteOrgAmbience,
 } from '../controllers/roomAmbienceController';
 import { upsertRoomListing } from '../controllers/marketplaceController';
 
@@ -23,6 +26,9 @@ router.use(requireAuth);
 router.use(requireActiveLicense);
 
 router.get('/', getRooms);
+router.get('/ambiences/org', listOrgAmbiences);
+router.post('/ambiences/org', createOrgAmbience);
+router.delete('/ambiences/org/:ambienceId', deleteOrgAmbience);
 router.get('/ambiences', listSavedAmbiences);
 router.post('/ambiences/sync', syncSavedAmbiences);
 router.post('/ambiences', createSavedAmbience);

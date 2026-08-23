@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -32,6 +32,7 @@ import {
   parseAmbienceImport,
   recordAmbienceHistory,
   applyTableStyleToAll,
+  captureRoomAmbienceFromBlueprint,
   autoArrangeTables,
   arrangeDensityLabels,
   chairTypeLabels,
@@ -91,6 +92,12 @@ import {
   pushCloudAmbience,
   syncAmbienceLibraryWithCloud,
 } from '@/lib/roomAmbienceCloud';
+import {
+  deleteOrgAmbience,
+  fetchOrgAmbiences,
+  publishBlueprintAmbienceToOrg,
+  publishOrgAmbience,
+} from '@/lib/roomAmbienceOrg';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import {
   downloadDataUrl,
@@ -192,7 +199,7 @@ export default function RoomLayoutEditor({
   allowThemesFixtures = true,
   editorLevel = 'complete',
 }: RoomLayoutEditorProps) {
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
@@ -220,6 +227,8 @@ export default function RoomLayoutEditor({
   const [ambienceLibrary, setAmbienceLibrary] = useState<import('@/lib/roomLayoutUtils').SavedRoomAmbience[]>([]);
   const [ambiencePreviewPreset, setAmbiencePreviewPreset] = useState<import('@/lib/roomLayoutUtils').RoomAmbiencePreset | null>(null);
   const [ambienceCloudSyncing, setAmbienceCloudSyncing] = useState(false);
+  const [orgAmbiences, setOrgAmbiences] = useState<import('@/lib/roomLayoutUtils').SharedRoomAmbience[]>([]);
+  const [ambiencePresetQuery, setAmbiencePresetQuery] = useState('');
   const ambienceImportRef = useRef<HTMLInputElement>(null);
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
@@ -959,14 +968,36 @@ export default function RoomLayoutEditor({
     if (item) setAmbiencePreviewPreset(item.preset);
   }, []);
 
+  useEffect(() => {
+    if (!tenant?.id) {
+      setOrgAmbiences([]);
+      return;
+    }
+    void fetchOrgAmbiences()
+      .then(setOrgAmbiences)
+      .catch(() => setOrgAmbiences([]));
+  }, [tenant?.id]);
+
+  const filteredAmbiencePresets = useMemo(() => {
+    const q = ambiencePresetQuery.trim().toLowerCase();
+    if (!q) return ROOM_AMBIENCE_PRESETS;
+    return ROOM_AMBIENCE_PRESETS.filter((preset) =>
+      preset.label.toLowerCase().includes(q)
+      || preset.description.toLowerCase().includes(q)
+      || (preset.tableSurface && preset.tableSurface.includes(q as TableSurfaceStyle)),
+    );
+  }, [ambiencePresetQuery]);
+
   const activeAmbienceId = useMemo(() => {
     const builtin = ROOM_AMBIENCE_PRESETS.find((preset) => roomAmbienceMatchesBlueprint(blueprint, preset));
     if (builtin) return builtin.id;
     const custom = blueprint.metadata.customAmbiences?.find((saved) => roomAmbienceMatchesBlueprint(blueprint, saved.preset));
     if (custom) return custom.id;
     const library = ambienceLibrary.find((saved) => roomAmbienceMatchesBlueprint(blueprint, saved.preset));
-    return library?.id ?? null;
-  }, [blueprint, ambienceLibrary]);
+    if (library) return library.id;
+    const org = orgAmbiences.find((saved) => roomAmbienceMatchesBlueprint(blueprint, saved.preset));
+    return org?.id ?? null;
+  }, [blueprint, ambienceLibrary, orgAmbiences]);
 
   const [ambienceImportTarget, setAmbienceImportTarget] = useState<'room' | 'library'>('library');
 
@@ -1450,8 +1481,18 @@ export default function RoomLayoutEditor({
                     <p className="text-[10px] text-muted leading-snug">
                       Applique murs, sol, thème et style de chaises / tables en un clic.
                     </p>
+                    <label className="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-button)] border border-border bg-white">
+                      <Search className="w-3.5 h-3.5 text-muted shrink-0" />
+                      <input
+                        type="search"
+                        value={ambiencePresetQuery}
+                        onChange={(e) => setAmbiencePresetQuery(e.target.value)}
+                        placeholder="Rechercher un preset (mariage, industriel…)"
+                        className="flex-1 min-w-0 text-[11px] bg-transparent outline-none"
+                      />
+                    </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-0.5">
-                      {ROOM_AMBIENCE_PRESETS.map((preset) => (
+                      {filteredAmbiencePresets.map((preset) => (
                         <RoomAmbienceCard
                           key={preset.id}
                           preset={preset}
@@ -1460,6 +1501,9 @@ export default function RoomLayoutEditor({
                           onPreview={() => setAmbiencePreviewPreset(preset)}
                         />
                       ))}
+                      {filteredAmbiencePresets.length === 0 ? (
+                        <p className="text-[10px] text-muted col-span-full py-2">Aucun preset ne correspond à votre recherche.</p>
+                      ) : null}
                     </div>
                     <div className="rounded-[var(--radius-button)] border border-dashed border-border p-2.5 space-y-2">
                       <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
@@ -1517,6 +1561,23 @@ export default function RoomLayoutEditor({
                                 onClick={() => applyAmbience(saved.preset)}
                                 onPreview={() => setAmbiencePreviewPreset(saved.preset)}
                               />
+                              {tenant?.id ? (
+                                <button
+                                  type="button"
+                                  title="Publier pour l’équipe"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void publishOrgAmbience(saved).then((row) => {
+                                      if (!row) return;
+                                      setOrgAmbiences((prev) => [row, ...prev.filter((item) => item.id !== row.id)]);
+                                      updateBlueprint(blueprint, { message: `Publié pour l’équipe : ${saved.name}`, kind: 'settings' });
+                                    });
+                                  }}
+                                  className="absolute top-1 right-[6.5rem] p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-indigo-700"
+                                >
+                                  <Building2 className="w-3 h-3" />
+                                </button>
+                              ) : null}
                               <button
                                 type="button"
                                 title="Copier le lien de partage"
@@ -1685,6 +1746,64 @@ export default function RoomLayoutEditor({
                         }}
                       />
                     </div>
+                    {tenant?.id ? (
+                      <div className="rounded-[var(--radius-button)] border border-indigo-200 bg-indigo-50/40 p-2.5 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[10px] font-bold uppercase text-indigo-900 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" /> Bibliothèque organisation
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const name = customAmbienceName.trim() || 'Ambiance équipe';
+                              const preset = captureRoomAmbienceFromBlueprint(blueprint, `org-${Date.now().toString(36)}`, name);
+                              void publishBlueprintAmbienceToOrg(name, preset).then((row) => {
+                                if (!row) return;
+                                setOrgAmbiences((prev) => [row, ...prev.filter((item) => item.id !== row.id)]);
+                                updateBlueprint(blueprint, { message: `Ambiance publiée pour l’équipe : ${name}`, kind: 'settings' });
+                                if (!customAmbienceName.trim()) setCustomAmbienceName('');
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-indigo-300 bg-white text-[10px] font-bold text-indigo-800"
+                          >
+                            <Building2 className="w-3 h-3" /> Publier pour l’équipe
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-indigo-900/70 leading-snug">
+                          Partagée avec tous les membres de votre organisation.
+                        </p>
+                        {orgAmbiences.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-0.5">
+                            {orgAmbiences.map((saved) => (
+                              <div key={saved.id} className="relative group">
+                                <RoomAmbienceCard
+                                  preset={saved.preset}
+                                  active={activeAmbienceId === saved.id}
+                                  authorName={saved.authorName}
+                                  onClick={() => applyAmbience(saved.preset)}
+                                  onPreview={() => setAmbiencePreviewPreset(saved.preset)}
+                                />
+                                <button
+                                  type="button"
+                                  title="Supprimer (équipe)"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void deleteOrgAmbience(saved.id)
+                                      .then(() => setOrgAmbiences((prev) => prev.filter((item) => item.id !== saved.id)))
+                                      .catch(() => updateBlueprint(blueprint, { message: 'Suppression non autorisée', kind: 'settings' }));
+                                  }}
+                                  className="absolute top-1 right-1 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-red-600"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[9px] text-indigo-900/60">Aucune ambiance partagée par l’équipe.</p>
+                        )}
+                      </div>
+                    ) : null}
                     {(blueprint.metadata.ambienceHistory?.length ?? 0) > 0 ? (
                       <div className="rounded-[var(--radius-button)] border border-border/70 p-2.5 space-y-2">
                         <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
