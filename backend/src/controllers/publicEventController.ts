@@ -19,6 +19,12 @@ import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 import { haversineKm, toDateKey } from '../utils/marketplaceDates';
 import { normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
 import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
+import {
+  createFlexPayCardCheckout,
+  getPublicApiBaseUrl,
+  isFlexPayCardMock,
+  resolveTicketCheckoutProvider,
+} from '../services/flexPayCardService';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -357,6 +363,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
 
     const paid = event.ticketingEnabled && unitPriceFc > 0 && isOnlinePaymentsEnabled();
     const amountFc = paid ? unitPriceFc * quantity : 0;
+    const paymentProvider = paid ? resolveTicketCheckoutProvider() : null;
 
     const order = await prisma.ticketOrder.create({
       data: {
@@ -370,6 +377,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         pricingZoneId,
         status: paid ? 'PENDING' : 'PAID',
         paidAt: paid ? null : new Date(),
+        paymentProvider,
         userId,
         tableId: event.seatSelectionEnabled ? tableId : null,
         seatIndex: event.seatSelectionEnabled ? seatIndex : null,
@@ -402,6 +410,61 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
         message: 'Inscription confirmée. Conservez le lien de votre badge QR.',
       });
+    }
+
+    if (paymentProvider === 'flexpay_card') {
+      if (isFlexPayCardMock()) {
+        const fulfilled = await fulfillTicketOrder(order.id);
+        const primary =
+          fulfilled?.guests?.find((g) => g.email.toLowerCase() === buyerEmail) || fulfilled?.guests?.[0];
+        return res.status(201).json({
+          paid: true,
+          mock: true,
+          provider: 'flexpay_card',
+          orderId: order.id,
+          guestId: primary?.id,
+          rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+          message: 'Paiement FlexPay simulé (credentials absents). Billet confirmé.',
+        });
+      }
+
+      const apiBase = getPublicApiBaseUrl();
+      const reference = order.id;
+      try {
+        const flex = await createFlexPayCardCheckout({
+          reference,
+          amount: amountFc,
+          currency: 'CDF',
+          description: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`,
+          callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+          approveUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=approve`,
+          cancelUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=cancel`,
+          declineUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=decline`,
+          language: 'fr',
+        });
+
+        await prisma.ticketOrder.update({
+          where: { id: order.id },
+          data: {
+            paymentProvider: 'flexpay_card',
+            flexPayOrderNumber: flex.orderNumber,
+            flexPayReference: reference,
+          },
+        });
+
+        return res.json({
+          paid: true,
+          mock: false,
+          provider: 'flexpay_card',
+          orderId: order.id,
+          checkoutUrl: flex.redirectUrl,
+        });
+      } catch (err: any) {
+        await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+        return res.status(502).json({
+          error: err?.message || 'Impossible d’ouvrir le paiement FlexPay.',
+        });
+      }
     }
 
     if (isStripeMock()) {
@@ -452,12 +515,16 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
 
     await prisma.ticketOrder.update({
       where: { id: order.id },
-      data: { stripeCheckoutSessionId: session.id },
+      data: {
+        paymentProvider: 'stripe',
+        stripeCheckoutSessionId: session.id,
+      },
     });
 
     return res.json({
       paid: true,
       mock: false,
+      provider: 'stripe',
       orderId: order.id,
       checkoutUrl: session.url,
     });

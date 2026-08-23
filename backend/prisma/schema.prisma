@@ -340,8 +340,14 @@ model TicketOrder {
   unitPriceFc             Int?
   pricingZoneId           String?
   status                  String    @default("PENDING") // PENDING, PAID, CANCELLED
+  /** stripe | flexpay_card */
+  paymentProvider         String?
   stripeCheckoutSessionId String?   @unique
   stripePaymentIntentId   String?
+  /** orderNumber renvoyé par FlexPay Card. */
+  flexPayOrderNumber      String?   @unique
+  /** Référence marchand envoyée à FlexPay (= souvent id commande). */
+  flexPayReference        String?
   paidAt                  DateTime?
   userId                  String?
   user                    User?     @relation(fields: [userId], references: [id], onDelete: SetNull)

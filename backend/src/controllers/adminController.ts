@@ -28,6 +28,7 @@ import {
   loadPlatformSettings,
   savePlatformSettings,
   mergeSettingsUpdate,
+  maskSecretsForAdmin,
   DEFAULT_PLATFORM_SETTINGS,
 } from '../services/platformSettingsService';
 import { auditReq } from '../services/adminAuditService';
@@ -1562,7 +1563,7 @@ export async function getAdminSettings(req: AuthenticatedRequest, res: Response)
 
     return res.json({
       ...DEFAULT_PLATFORM_SETTINGS,
-      ...settings,
+      ...maskSecretsForAdmin(settings),
       plans,
     });
   } catch (error: any) {
@@ -1617,12 +1618,16 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
           from: current.onlinePaymentsEnabled,
           to: updatedSettings.onlinePaymentsEnabled,
         },
+        ticketPaymentProvider: {
+          from: current.ticketPaymentProvider,
+          to: updatedSettings.ticketPaymentProvider,
+        },
       },
     });
 
     return res.json({
       message: 'Paramètres mis à jour avec succès',
-      settings: { ...updatedSettings, plans },
+      settings: { ...maskSecretsForAdmin(updatedSettings), plans },
     });
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour des paramètres:', error);

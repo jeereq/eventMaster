@@ -19,6 +19,12 @@ export interface PlatformSettings {
   maintenanceMessage: string;
   allowRegistration: boolean;
   onlinePaymentsEnabled: boolean;
+  /** Provider billets publics : stripe | flexpay_card */
+  ticketPaymentProvider: 'stripe' | 'flexpay_card';
+  flexPayCardToken: string;
+  flexPayCardMerchant: string;
+  flexPayCardPayUrl: string;
+  flexPayCardCheckUrl: string;
   brandPrimary: string;
   brandAccent: string;
   ultramsgInstanceId: string;
@@ -54,6 +60,7 @@ export interface PublicSiteConfig {
   maintenanceMessage: string;
   allowRegistration: boolean;
   onlinePaymentsEnabled: boolean;
+  ticketPaymentProvider: 'stripe' | 'flexpay_card';
   brandPrimary: string;
   brandAccent: string;
   marketplaceCommissionRate: number;
@@ -82,6 +89,11 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
     'La plateforme est temporairement en maintenance. Merci de réessayer dans quelques instants.',
   allowRegistration: true,
   onlinePaymentsEnabled: true,
+  ticketPaymentProvider: 'stripe',
+  flexPayCardToken: process.env.FLEXPAY_CARD_TOKEN || '',
+  flexPayCardMerchant: process.env.FLEXPAY_CARD_MERCHANT || '',
+  flexPayCardPayUrl: process.env.FLEXPAY_CARD_PAY_URL || '',
+  flexPayCardCheckUrl: process.env.FLEXPAY_CARD_CHECK_URL || '',
   brandPrimary: '',
   brandAccent: '',
   ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || '',
@@ -112,6 +124,12 @@ function phoneToHref(phone: string): string {
 /** Paiements en ligne (billets événements + abonnements Stripe réels). */
 export function isOnlinePaymentsEnabled(settings = loadPlatformSettings()): boolean {
   return settings.onlinePaymentsEnabled !== false;
+}
+
+export type TicketPaymentProvider = 'stripe' | 'flexpay_card';
+
+export function getTicketPaymentProvider(settings = loadPlatformSettings()): TicketPaymentProvider {
+  return settings.ticketPaymentProvider === 'flexpay_card' ? 'flexpay_card' : 'stripe';
 }
 
 export function loadPlatformSettings(): PlatformSettings {
@@ -157,6 +175,9 @@ export function savePlatformSettings(
   next.marketplaceDepositRate = parseRateInput(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
   next.commercialFirstCommissionRate = parseRateInput(next.commercialFirstCommissionRate, 0.3, 0, 1);
   next.commercialRenewalCommissionRate = parseRateInput(next.commercialRenewalCommissionRate, 0.2, 0, 1);
+  next.ticketPaymentProvider =
+    next.ticketPaymentProvider === 'flexpay_card' ? 'flexpay_card' : 'stripe';
+  next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
 
   fs.writeFileSync(settingsFilePath, JSON.stringify(next, null, 2), 'utf-8');
   return next;
@@ -178,6 +199,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     maintenanceMessage: settings.maintenanceMessage,
     allowRegistration: settings.allowRegistration !== false,
     onlinePaymentsEnabled: isOnlinePaymentsEnabled(settings),
+    ticketPaymentProvider: getTicketPaymentProvider(settings),
     brandPrimary: settings.brandPrimary || '',
     brandAccent: settings.brandAccent || '',
     marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
@@ -216,6 +238,7 @@ export function maskSecretsForAdmin(settings: PlatformSettings): PlatformSetting
     sendgridApiKey: settings.sendgridApiKey ? mask(settings.sendgridApiKey) : '',
     ultramsgToken: settings.ultramsgToken ? mask(settings.ultramsgToken) : '',
     twilioAuthToken: settings.twilioAuthToken ? mask(settings.twilioAuthToken) : '',
+    flexPayCardToken: settings.flexPayCardToken ? mask(settings.flexPayCardToken) : '',
     sendgridConfigured: Boolean(settings.sendgridApiKey?.trim() && settings.sendgridFrom?.trim()),
     ultramsgConfigured: Boolean(settings.ultramsgInstanceId?.trim() && settings.ultramsgToken?.trim()),
   };
@@ -233,6 +256,7 @@ export function mergeSettingsUpdate(
     'sendgridApiKey',
     'ultramsgToken',
     'twilioAuthToken',
+    'flexPayCardToken',
   ];
   const next: Record<string, unknown> = { ...body };
   for (const key of secretKeys) {

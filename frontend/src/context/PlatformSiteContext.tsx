@@ -19,6 +19,7 @@ export interface PublicSiteConfig {
   maintenanceMessage: string;
   allowRegistration: boolean;
   onlinePaymentsEnabled: boolean;
+  ticketPaymentProvider: 'stripe' | 'flexpay_card';
   brandPrimary: string;
   brandAccent: string;
   marketplaceCommissionRate: number;
@@ -47,6 +48,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
     'La plateforme est temporairement en maintenance. Merci de réessayer dans quelques instants.',
   allowRegistration: true,
   onlinePaymentsEnabled: true,
+  ticketPaymentProvider: 'stripe',
   brandPrimary: '',
   brandAccent: '',
   marketplaceCommissionRate: 0.08,

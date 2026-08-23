@@ -2975,12 +2975,66 @@ function DashboardPageContent() {
  className="w-4.5 h-4.5 text-primary border-border rounded focus:ring-primary"
  />
  <div>
- <span className="text-sm font-bold text-foreground dark:text-foreground block">Paiements en ligne (Stripe)</span>
+ <span className="text-sm font-bold text-foreground dark:text-foreground block">Paiements en ligne</span>
  <span className="text-xs text-muted font-medium">
  Billets événements publics et abonnements forfaits. Désactivé = inscriptions gratuites uniquement.
  </span>
  </div>
  </label>
+ {adminSettings.onlinePaymentsEnabled !== false && (
+ <>
+ <div className="space-y-1.5 md:col-span-2">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Provider billets publics</label>
+ <select
+ value={adminSettings.ticketPaymentProvider === 'flexpay_card' ? 'flexpay_card' : 'stripe'}
+ onChange={(e) =>
+ setAdminSettings({
+ ...adminSettings,
+ ticketPaymentProvider: e.target.value === 'flexpay_card' ? 'flexpay_card' : 'stripe',
+ })
+ }
+ className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm"
+ >
+ <option value="stripe">Stripe (carte internationale)</option>
+ <option value="flexpay_card">FlexPay Card (Visa / Mastercard RDC)</option>
+ </select>
+ <p className="text-xs text-muted">
+ Les abonnements forfaits restent sur Stripe. Ce réglage concerne uniquement l’achat de billets publics.
+ </p>
+ </div>
+ {adminSettings.ticketPaymentProvider === 'flexpay_card' && (
+ <>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">FlexPay — token API</label>
+ <input
+ type="password"
+ autoComplete="off"
+ value={adminSettings.flexPayCardToken || ''}
+ onChange={(e) => setAdminSettings({ ...adminSettings, flexPayCardToken: e.target.value })}
+ placeholder="Bearer … ou jeton"
+ className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm"
+ />
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">FlexPay — code marchand</label>
+ <input
+ type="text"
+ value={adminSettings.flexPayCardMerchant || ''}
+ onChange={(e) => setAdminSettings({ ...adminSettings, flexPayCardMerchant: e.target.value })}
+ placeholder="MERCHANT"
+ className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm"
+ />
+ </div>
+ <div className="space-y-1.5 md:col-span-2">
+ <p className="text-xs text-muted">
+ Sans credentials, le checkout FlexPay est simulé (confirmation immédiate). Variables d’environnement alternatives :{' '}
+ <code className="text-[11px]">FLEXPAY_CARD_TOKEN</code>, <code className="text-[11px]">FLEXPAY_CARD_MERCHANT</code>.
+ </p>
+ </div>
+ </>
+ )}
+ </>
+ )}
  </div>
 
  {adminSettings.maintenanceMode && (

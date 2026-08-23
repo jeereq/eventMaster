@@ -26,6 +26,11 @@ import {
   getTicketOrderBySession,
   listPublicEventSeats,
 } from '../controllers/publicEventController';
+import {
+  flexPayCardCallback,
+  flexPayCardReturn,
+  verifyFlexPayCardOrder,
+} from '../controllers/flexPayController';
 
 const router = Router();
 
@@ -102,6 +107,11 @@ router.get('/events/:slug', getPublicEvent);
 router.get('/events/:slug/seats', listPublicEventSeats);
 router.post('/events/:slug/checkout', requireAuth, checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
+
+router.post('/payments/flexpay/callback', flexPayCardCallback);
+router.get('/payments/flexpay/callback', flexPayCardCallback);
+router.get('/payments/flexpay/return', flexPayCardReturn);
+router.get('/payments/flexpay/orders/:orderId/verify', verifyFlexPayCardOrder);
 
 // POST /api/public/contact
 router.post('/contact', async (req: Request, res: Response) => {

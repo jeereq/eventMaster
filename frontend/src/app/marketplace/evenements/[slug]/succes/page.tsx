@@ -14,16 +14,31 @@ function SuccessInner() {
   const search = useSearchParams();
   const slug = params.slug as string;
   const sessionId = search.get('session_id');
+  const orderId = search.get('order');
+  const provider = search.get('provider');
   const rsvpFromQuery = search.get('rsvp');
   const [rsvpUrl, setRsvpUrl] = useState(rsvpFromQuery || '');
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (rsvpFromQuery || !sessionId) return;
+    if (rsvpFromQuery) return;
     let cancelled = false;
+
     (async () => {
       try {
+        if (provider === 'flexpay' && orderId) {
+          const data = await api.get(`/public/payments/flexpay/orders/${orderId}/verify`);
+          if (cancelled) return;
+          setRsvpUrl(data.rsvpUrl || '');
+          setTitle(data.event?.title || '');
+          if (!data.paid) {
+            setError('Paiement encore en cours. Rechargez cette page dans un instant.');
+          }
+          return;
+        }
+
+        if (!sessionId) return;
         const data = await api.get(`/public/ticket-orders/session/${sessionId}`);
         if (cancelled) return;
         setRsvpUrl(data.rsvpUrl || '');
@@ -35,8 +50,11 @@ function SuccessInner() {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Commande introuvable.');
       }
     })();
-    return () => { cancelled = true; };
-  }, [sessionId, rsvpFromQuery]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, orderId, provider, rsvpFromQuery]);
 
   return (
     <PublicPageShell>
