@@ -176,11 +176,137 @@ export function CatalogueChair({
     );
   }
 
+  if (chairType === 'CROSSBACK') {
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        {([-1, 1] as const).flatMap((sx) =>
+          ([-1, 1] as const).map((sz) => (
+            <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.36, seatH / 2, sz * sd * 0.34]} castShadow>
+              <cylinderGeometry args={[0.018, 0.022, seatH, 10]} />
+              <Mat color={visual.frameColor} roughness={0.5} metalness={0.15} />
+            </mesh>
+          )),
+        )}
+        <mesh position={[0, seatH, 0]} castShadow receiveShadow>
+          <boxGeometry args={[sw, sh * 1.1, sd]} />
+          <Mat color={seatTint} map={map} roughness={fabric.roughness} metalness={fabric.metalness} />
+        </mesh>
+        <mesh position={[0, seatH + backH * 0.45, -sd * 0.38]} castShadow>
+          <boxGeometry args={[sw * 0.88, backH, 0.04]} />
+          <Mat color={seatTint} map={map} roughness={fabric.roughness} />
+        </mesh>
+        {/* Cross-back en X */}
+        <mesh position={[0, seatH + backH * 0.55, -sd * 0.4]} rotation={[0.15, 0, 0.55]} castShadow>
+          <boxGeometry args={[0.025, backH * 0.85, 0.025]} />
+          <Mat color={visual.frameColor} roughness={0.48} />
+        </mesh>
+        <mesh position={[0, seatH + backH * 0.55, -sd * 0.4]} rotation={[0.15, 0, -0.55]} castShadow>
+          <boxGeometry args={[0.025, backH * 0.85, 0.025]} />
+          <Mat color={visual.frameColor} roughness={0.48} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (chairType === 'GHOST') {
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        <mesh position={[0, seatH * 0.5, 0]} castShadow>
+          <cylinderGeometry args={[0.015, 0.015, seatH, 8]} />
+          <meshStandardMaterial color="#e2e8f0" transparent opacity={0.35} roughness={0.1} metalness={0.05} />
+        </mesh>
+        <mesh position={[0, seatH + 0.02, 0]} castShadow receiveShadow>
+          <boxGeometry args={[sw, 0.04, sd]} />
+          <meshStandardMaterial color="#f8fafc" transparent opacity={0.42} roughness={0.08} metalness={0.12} />
+        </mesh>
+        <mesh position={[0, seatH + backH * 0.45, -sd * 0.35]} castShadow>
+          <boxGeometry args={[sw * 0.92, backH, 0.035]} />
+          <meshStandardMaterial color="#f1f5f9" transparent opacity={0.4} roughness={0.08} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, seatH + backH * 0.75, -sd * 0.33]} castShadow>
+          <torusGeometry args={[sw * 0.3, 0.012, 8, 20, Math.PI]} />
+          <meshStandardMaterial color="#e2e8f0" transparent opacity={0.38} roughness={0.1} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (chairType === 'MESH') {
+    const meshMat = resolveSeatFabricMap('mesh', visual.seatColor);
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        <mesh position={[0, seatH * 0.4, 0]} castShadow>
+          <boxGeometry args={[sw * 1.02, seatH * 0.8, sd * 0.95]} />
+          <Mat color="#1e293b" metalness={0.25} roughness={0.55} />
+        </mesh>
+        <mesh position={[0, seatH + 0.03, 0.02]} castShadow receiveShadow>
+          <boxGeometry args={[sw * 0.92, sh * 1.1, sd * 0.85]} />
+          <Mat color={seatTint} map={meshMat.map} roughness={meshMat.roughness} metalness={meshMat.metalness} />
+        </mesh>
+        <mesh position={[0, seatH + backH * 0.48, -sd * 0.36]} castShadow>
+          <boxGeometry args={[sw * 0.95, backH, 0.06]} />
+          <Mat color={seatTint} map={meshMat.map} roughness={meshMat.roughness} />
+        </mesh>
+        {([-1, 1] as const).map((side) => (
+          <mesh key={side} position={[side * sw * 0.5, seatH + 0.12, 0]} castShadow>
+            <boxGeometry args={[0.04, 0.08, sd * 0.65]} />
+            <Mat color="#334155" metalness={0.4} roughness={0.45} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (chairType === 'BARSTOOL') {
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        <mesh position={[0, seatH * 0.5, 0]} castShadow>
+          <cylinderGeometry args={[0.028, 0.04, seatH * 1.1, 14]} />
+          <Mat color={visual.frameColor} metalness={0.7} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, 0.35, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <torusGeometry args={[0.24, 0.016, 10, 24]} />
+          <Mat color="#52525b" metalness={0.75} roughness={0.22} />
+        </mesh>
+        <mesh position={[0, 0.04, 0]} castShadow>
+          <cylinderGeometry args={[0.26, 0.3, 0.06, 20]} />
+          <Mat color="#3f3f46" metalness={0.45} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, seatH + 0.02, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[sw * 0.48, sw * 0.5, sh * 1.4, 24]} />
+          <Mat color={seatTint} map={map} roughness={fabric.roughness} metalness={fabric.metalness} />
+        </mesh>
+        {backH > 0.1 && (
+          <mesh position={[0, seatH + backH * 0.45, -sd * 0.28]} castShadow>
+            <boxGeometry args={[sw * 0.75, backH, 0.04]} />
+            <Mat color={seatTint} map={map} roughness={fabric.roughness} />
+          </mesh>
+        )}
+      </group>
+    );
+  }
+
+  if (chairType === 'POUF') {
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        <mesh position={[0, sh * 0.55, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[sw * 0.5, sw * 0.52, sh * 1.1, 28]} />
+          <Mat color={seatTint} map={map} roughness={0.92} metalness={0.02} />
+        </mesh>
+        <mesh position={[0, sh * 1.05, 0]} castShadow>
+          <cylinderGeometry args={[sw * 0.48, sw * 0.5, 0.04, 28]} />
+          <Mat color={seatTint} map={map} roughness={0.95} metalness={0.02} />
+        </mesh>
+      </group>
+    );
+  }
+
   // Chiavari / banquet / fauteuil / modern
-  const isChiavari = style === 'chiavari';
+  const isChiavari = style === 'chiavari' || (chairType === 'BANQUET' && style === 'napoleon');
+  const isTolix = style === 'tolix';
   const isArmchair = chairType === 'ARMCHAIR' || style === 'lounge' || style === 'club' || style === 'bergere';
   const isBanquet = chairType === 'BANQUET' && !isChiavari;
-  const legR = isChiavari ? 0.011 : isArmchair ? 0.028 : 0.02;
+  const legR = isChiavari ? 0.011 : isTolix ? 0.014 : isArmchair ? 0.028 : 0.02;
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
@@ -190,8 +316,8 @@ export function CatalogueChair({
             <cylinderGeometry args={[legR, legR * 1.15, seatH, isChiavari ? 8 : 12]} />
             <Mat
               color={visual.frameColor}
-              metalness={isChiavari ? 0.85 : 0.35}
-              roughness={isChiavari ? 0.2 : 0.45}
+              metalness={isChiavari ? 0.85 : isTolix ? 0.82 : 0.35}
+              roughness={isChiavari ? 0.2 : isTolix ? 0.25 : 0.45}
             />
           </mesh>
         )),

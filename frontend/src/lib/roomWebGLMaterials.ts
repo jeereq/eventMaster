@@ -1,7 +1,7 @@
 'use client';
 
 import * as THREE from 'three';
-import type { ChairType, ChairStyle, SeatMaterial, TableShape, WallTextureStyle, ZoneMaterial } from '@/lib/roomLayoutUtils';
+import type { ChairType, ChairStyle, SeatMaterial, TableShape, WallTextureStyle, ZoneMaterial, OpeningMaterial } from '@/lib/roomLayoutUtils';
 import { SEAT_MATERIAL_COLORS, WALL_TEXTURE_COLORS } from '@/lib/roomLayoutUtils';
 import { getFloorAsset, FLOOR_TEXTURE_REPEAT_M } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
@@ -269,6 +269,75 @@ export function resolveSeatFabricMap(material?: SeatMaterial, tint?: string): {
       return;
     }
 
+    if (mat === 'boucle') {
+      for (let y = 0; y < size; y += 2) {
+        for (let x = 0; x < size; x += 2) {
+          const curl = ((x * 7 + y * 13) % 5) / 5;
+          ctx.fillStyle = shadeRgb(r, g, b, 0.72 + curl * 0.35);
+          ctx.fillRect(x, y, 2.5, 2.5);
+        }
+      }
+      noise(ctx, size, 0.14);
+      return;
+    }
+
+    if (mat === 'suede') {
+      const grad = ctx.createLinearGradient(0, 0, size * 0.6, size);
+      grad.addColorStop(0, shadeRgb(r, g, b, 1.1));
+      grad.addColorStop(1, shadeRgb(r, g, b, 0.75));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 80; i += 1) {
+        ctx.fillStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.04})`;
+        ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 3, 0.8);
+      }
+      noise(ctx, size, 0.2);
+      return;
+    }
+
+    if (mat === 'mesh') {
+      ctx.fillStyle = shadeRgb(r, g, b, 0.9);
+      ctx.fillRect(0, 0, size, size);
+      const step = size / 16;
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i <= 16; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * step, 0);
+        ctx.lineTo(i * step, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * step);
+        ctx.lineTo(size, i * step);
+        ctx.stroke();
+      }
+      noise(ctx, size, 0.06);
+      return;
+    }
+
+    if (mat === 'rattan') {
+      ctx.fillStyle = shadeRgb(r, g, b, 0.95);
+      ctx.fillRect(0, 0, size, size);
+      const step = size / 8;
+      for (let row = 0; row < 8; row += 1) {
+        for (let col = 0; col < 8; col += 1) {
+          const x = col * step;
+          const y = row * step;
+          ctx.strokeStyle = shadeRgb(r, g, b, row % 2 === 0 ? 0.65 : 1.15);
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          if (row % 2 === 0) {
+            ctx.arc(x + step / 2, y + step / 2, step * 0.38, 0, Math.PI);
+          } else {
+            ctx.arc(x + step / 2, y + step / 2, step * 0.38, Math.PI, Math.PI * 2);
+          }
+          ctx.stroke();
+        }
+      }
+      noise(ctx, size, 0.1);
+      return;
+    }
+
     // fabric weave
     for (let y = 0; y < size; y += 4) {
       for (let x = 0; x < size; x += 4) {
@@ -287,9 +356,16 @@ export function resolveSeatFabricMap(material?: SeatMaterial, tint?: string): {
     mat === 'velvet' ? 0.95 :
     mat === 'plastic' ? 0.35 :
     mat === 'wood' ? 0.65 :
-    mat === 'linen' ? 0.88 : 0.82;
+    mat === 'linen' ? 0.88 :
+    mat === 'boucle' ? 0.92 :
+    mat === 'suede' ? 0.88 :
+    mat === 'mesh' ? 0.45 :
+    mat === 'rattan' ? 0.78 : 0.82;
 
-  const metalness = mat === 'plastic' ? 0.12 : mat === 'leather' ? 0.08 : 0.02;
+  const metalness =
+    mat === 'plastic' ? 0.12 :
+    mat === 'leather' ? 0.08 :
+    mat === 'mesh' ? 0.15 : 0.02;
   return { map, roughness, metalness };
 }
 
@@ -316,37 +392,71 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     };
   }
 
+  if (style === 'woodPanel') {
+    const photo = loadTiledTexture('/floors/wood-panel.png', 1.8, 2.2);
+    return {
+      map: photo,
+      color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
+      roughness: 0.52,
+      metalness: 0.04,
+    };
+  }
+
+  if (style === 'travertine') {
+    const photo = loadTiledTexture('/floors/marble-calacatta.png', 2.8, 2.8);
+    return {
+      map: photo,
+      color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#f5f5f4',
+      roughness: 0.28,
+      metalness: 0.08,
+    };
+  }
+
   const key = `wall:${style}:${base}`;
 
   const map = makeCanvasTexture(key, (ctx, size) => {
-    if (style === 'brick') {
-      ctx.fillStyle = '#c4b5a5';
+    if (style === 'brick' || style === 'paintedBrick') {
+      const mortar = style === 'paintedBrick' ? '#e2e8f0' : '#c4b5a5';
+      ctx.fillStyle = mortar;
       ctx.fillRect(0, 0, size, size);
       const bh = size / 10;
       const bw = size / 5;
+      const tones = style === 'paintedBrick'
+        ? ['#f1f5f9', '#e2e8f0', '#f8fafc', '#cbd5e1', '#f1f5f9']
+        : ['#9a4a32', '#b4533c', '#8b3a2a', '#a65d45', '#7c3a28'];
       for (let row = 0; row < 10; row += 1) {
         const offset = row % 2 === 0 ? 0 : bw / 2;
         for (let col = -1; col < 6; col += 1) {
           const x = col * bw + offset;
           const y = row * bh;
           const shade = 0.85 + Math.random() * 0.25;
-          const tones = ['#9a4a32', '#b4533c', '#8b3a2a', '#a65d45', '#7c3a28'];
           ctx.fillStyle = tones[(row + col + Math.floor(Math.random() * 3)) % tones.length];
           ctx.globalAlpha = shade;
           ctx.fillRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
           ctx.globalAlpha = 1;
-          // mortar highlight
           ctx.fillStyle = 'rgba(255,248,240,0.35)';
           ctx.fillRect(x + 2, y + 2, bw - 4, 1.2);
         }
       }
-      noise(ctx, size, 0.14);
+      noise(ctx, size, style === 'paintedBrick' ? 0.08 : 0.14);
       return;
     }
 
-    if (style === 'concrete') {
-      ctx.fillStyle = '#a8a29e';
+    if (style === 'concrete' || style === 'boardConcrete') {
+      ctx.fillStyle = style === 'boardConcrete' ? '#9ca3af' : '#a8a29e';
       ctx.fillRect(0, 0, size, size);
+      if (style === 'boardConcrete') {
+        const plankH = size / 6;
+        for (let row = 0; row < 6; row += 1) {
+          ctx.fillStyle = row % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+          ctx.fillRect(0, row * plankH, size, plankH);
+          ctx.strokeStyle = 'rgba(40,40,50,0.12)';
+          ctx.beginPath();
+          ctx.moveTo(0, row * plankH);
+          ctx.lineTo(size, row * plankH);
+          ctx.stroke();
+        }
+      }
       noise(ctx, size, 0.32);
       for (let i = 0; i < 8; i += 1) {
         ctx.strokeStyle = `rgba(60,60,70,${0.08 + Math.random() * 0.1})`;
@@ -360,14 +470,17 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
       return;
     }
 
-    if (style === 'stone') {
-      ctx.fillStyle = '#5c574f';
+    if (style === 'stone' || style === 'slate') {
+      ctx.fillStyle = style === 'slate' ? '#3f3f46' : '#5c574f';
       ctx.fillRect(0, 0, size, size);
-      for (let i = 0; i < 55; i += 1) {
+      const count = style === 'slate' ? 40 : 55;
+      const tones = style === 'slate'
+        ? ['#52525b', '#3f3f46', '#27272a', '#71717a', '#18181b']
+        : ['#8a8278', '#57534e', '#78716c', '#a8a29e', '#44403c'];
+      for (let i = 0; i < count; i += 1) {
         const x = Math.random() * size;
         const y = Math.random() * size;
-        const r = 6 + Math.random() * 32;
-        const tones = ['#8a8278', '#57534e', '#78716c', '#a8a29e', '#44403c'];
+        const r = 6 + Math.random() * (style === 'slate' ? 28 : 32);
         ctx.fillStyle = tones[i % tones.length];
         ctx.beginPath();
         ctx.ellipse(x, y, r, r * (0.55 + Math.random() * 0.4), Math.random(), 0, Math.PI * 2);
@@ -396,21 +509,210 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
       return;
     }
 
+    if (style === 'limewash') {
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 12; i += 1) {
+        const g = ctx.createRadialGradient(
+          Math.random() * size, Math.random() * size, 0,
+          Math.random() * size, Math.random() * size, size * 0.35,
+        );
+        g.addColorStop(0, 'rgba(255,255,255,0.25)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, size, size);
+      }
+      noise(ctx, size, 0.1);
+      return;
+    }
+
+    if (style === 'tadelakt') {
+      const grad = ctx.createLinearGradient(0, 0, size, size);
+      grad.addColorStop(0, shadeRgb(...hexToRgb(base), 1.08));
+      grad.addColorStop(0.5, base);
+      grad.addColorStop(1, shadeRgb(...hexToRgb(base), 0.92));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      for (let y = 0; y < size; y += 6) {
+        ctx.strokeStyle = `rgba(255,255,255,${0.04 + (y % 12 === 0 ? 0.06 : 0)})`;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.bezierCurveTo(size * 0.3, y + 2, size * 0.7, y - 2, size, y + 1);
+        ctx.stroke();
+      }
+      noise(ctx, size, 0.06);
+      return;
+    }
+
+    if (style === 'fluted') {
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      const fluteW = size / 14;
+      for (let i = 0; i < 14; i += 1) {
+        const x = i * fluteW;
+        const grad = ctx.createLinearGradient(x, 0, x + fluteW, 0);
+        grad.addColorStop(0, 'rgba(0,0,0,0.12)');
+        grad.addColorStop(0.45, 'rgba(255,255,255,0.14)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.1)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, 0, fluteW, size);
+      }
+      noise(ctx, size, 0.04);
+      return;
+    }
+
+    if (style === 'metalCorrugated') {
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(0, 0, size, size);
+      const waveW = size / 12;
+      for (let i = 0; i < 12; i += 1) {
+        const x = i * waveW;
+        const grad = ctx.createLinearGradient(x, 0, x + waveW, 0);
+        grad.addColorStop(0, '#475569');
+        grad.addColorStop(0.5, '#94a3b8');
+        grad.addColorStop(1, '#475569');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, 0, waveW + 0.5, size);
+      }
+      noise(ctx, size, 0.08);
+      return;
+    }
+
+    if (style === 'metroTile') {
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, size, size);
+      const tileW = size / 4;
+      const tileH = size / 8;
+      for (let row = 0; row < 8; row += 1) {
+        for (let col = 0; col < 4; col += 1) {
+          const x = col * tileW;
+          const y = row * tileH;
+          const shade = 0.96 + Math.random() * 0.08;
+          ctx.fillStyle = `rgba(226,232,240,${shade})`;
+          ctx.fillRect(x + 2, y + 2, tileW - 4, tileH - 4);
+        }
+      }
+      ctx.strokeStyle = 'rgba(148,163,184,0.55)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i <= 4; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * tileW, 0);
+        ctx.lineTo(i * tileW, size);
+        ctx.stroke();
+      }
+      for (let i = 0; i <= 8; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * tileH);
+        ctx.lineTo(size, i * tileH);
+        ctx.stroke();
+      }
+      noise(ctx, size, 0.04);
+      return;
+    }
+
     // plaster default
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, size, size);
     noise(ctx, size, 0.14);
-  });
+  }, style === 'brick' || style === 'paintedBrick' ? 512 : 512);
 
-  map.repeat.set(style === 'brick' ? 4 : 3, style === 'brick' ? 3 : 2);
+  const repeatX =
+    style === 'brick' || style === 'paintedBrick' ? 4 :
+    style === 'metroTile' ? 3 :
+    style === 'fluted' ? 2 :
+    style === 'metalCorrugated' ? 2.5 : 3;
+  const repeatY =
+    style === 'brick' || style === 'paintedBrick' ? 3 :
+    style === 'metroTile' ? 4 :
+    style === 'fluted' ? 2 :
+    style === 'metalCorrugated' ? 2 : 2;
+  map.repeat.set(repeatX, repeatY);
 
   const roughness =
-    style === 'concrete' ? 0.9 :
-    style === 'stone' ? 0.92 :
+    style === 'concrete' || style === 'boardConcrete' ? 0.9 :
+    style === 'stone' || style === 'slate' ? 0.92 :
     style === 'wallpaper' ? 0.8 :
-    style === 'brick' ? 0.95 : 0.88;
+    style === 'brick' || style === 'paintedBrick' ? 0.95 :
+    style === 'tadelakt' ? 0.22 :
+    style === 'limewash' ? 0.85 :
+    style === 'fluted' ? 0.55 :
+    style === 'metalCorrugated' ? 0.35 :
+    style === 'metroTile' ? 0.25 : 0.88;
 
-  return { map, color: '#ffffff', roughness, metalness: style === 'concrete' ? 0.08 : 0.02 };
+  const metalness =
+    style === 'concrete' || style === 'boardConcrete' ? 0.08 :
+    style === 'metalCorrugated' ? 0.82 :
+    style === 'metroTile' ? 0.04 :
+    style === 'tadelakt' ? 0.06 : 0.02;
+
+  return { map, color: '#ffffff', roughness, metalness };
+}
+
+/** Texture et PBR pour battants de porte selon le matériau. */
+export function getDoorMaterialProps(
+  material: OpeningMaterial | undefined,
+  color?: string,
+): {
+  color: string;
+  map?: THREE.Texture;
+  roughness: number;
+  metalness: number;
+  transparent?: boolean;
+  opacity?: number;
+} {
+  const mat = material ?? 'wood';
+  if (mat === 'glass') {
+    return {
+      color: color ?? '#93c5fd',
+      roughness: 0.08,
+      metalness: 0.35,
+      transparent: true,
+      opacity: 0.5,
+    };
+  }
+  if (mat === 'metal' || mat === 'blackSteel') {
+    return {
+      color: color ?? (mat === 'blackSteel' ? '#1e293b' : '#64748b'),
+      roughness: mat === 'blackSteel' ? 0.28 : 0.22,
+      metalness: 0.9,
+    };
+  }
+  if (mat === 'brass') {
+    return {
+      color: color ?? '#c9a227',
+      roughness: 0.18,
+      metalness: 0.92,
+    };
+  }
+  if (mat === 'lacquer') {
+    return {
+      color: color ?? '#f8fafc',
+      roughness: 0.12,
+      metalness: 0.15,
+    };
+  }
+  if (mat === 'painted') {
+    return {
+      color: color ?? '#f1f5f9',
+      roughness: 0.55,
+      metalness: 0.04,
+    };
+  }
+  if (mat === 'oak') {
+    const wood = getWallTexture('wood', '#c4a06a');
+    return { color: color ?? '#ffffff', map: wood.map, roughness: 0.5, metalness: 0.06 };
+  }
+  if (mat === 'walnut') {
+    const wood = getWallTexture('wood', '#5c4030');
+    return { color: color ?? '#d4c4a8', map: wood.map, roughness: 0.48, metalness: 0.06 };
+  }
+  const wood = getWallTexture('wood');
+  return {
+    color: color ?? '#6b4423',
+    map: wood.map,
+    roughness: 0.55,
+    metalness: 0.08,
+  };
 }
 
 export const TABLE_DEFAULT_TEXTURE = '/floors/table-wood.svg';
@@ -506,6 +808,51 @@ export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
     cushion: true,
     scale: 1.1,
   },
+  CROSSBACK: {
+    seatColor: '#f5f0e8',
+    frameColor: '#92400e',
+    backHeight: 0.58,
+    seatSize: [0.4, 0.05, 0.38],
+    hasArms: false,
+    cushion: true,
+    scale: 1,
+  },
+  GHOST: {
+    seatColor: '#e2e8f0',
+    frameColor: '#cbd5e1',
+    backHeight: 0.52,
+    seatSize: [0.42, 0.06, 0.4],
+    hasArms: false,
+    cushion: false,
+    scale: 1,
+  },
+  MESH: {
+    seatColor: '#334155',
+    frameColor: '#1e293b',
+    backHeight: 0.48,
+    seatSize: [0.44, 0.06, 0.42],
+    hasArms: true,
+    cushion: false,
+    scale: 1,
+  },
+  BARSTOOL: {
+    seatColor: '#44403c',
+    frameColor: '#292524',
+    backHeight: 0.35,
+    seatSize: [0.34, 0.05, 0.34],
+    hasArms: false,
+    cushion: true,
+    scale: 1.05,
+  },
+  POUF: {
+    seatColor: '#7c2d12',
+    frameColor: '#57534e',
+    backHeight: 0,
+    seatSize: [0.42, 0.22, 0.42],
+    hasArms: false,
+    cushion: true,
+    scale: 0.95,
+  },
 };
 
 const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
@@ -515,6 +862,11 @@ const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
   bergere: { backHeight: 0.78, seatSize: [0.54, 0.12, 0.5], scale: 1.18, hasArms: true },
   modern: { backHeight: 0.48, seatSize: [0.48, 0.08, 0.48], scale: 1.05, hasArms: false },
   chiavari: { backHeight: 0.58, seatSize: [0.36, 0.05, 0.36], scale: 0.95, hasArms: false, cushion: false },
+  napoleon: { backHeight: 0.62, seatSize: [0.42, 0.06, 0.4], scale: 1.02, hasArms: false, cushion: true },
+  crossback: { backHeight: 0.58, seatSize: [0.4, 0.05, 0.38], scale: 1, hasArms: false, cushion: true },
+  tolix: { backHeight: 0.42, seatSize: [0.38, 0.04, 0.36], scale: 0.98, hasArms: false, cushion: false },
+  ghost: { backHeight: 0.5, seatSize: [0.42, 0.06, 0.4], scale: 1, hasArms: false, cushion: false },
+  panton: { backHeight: 0.55, seatSize: [0.46, 0.08, 0.44], scale: 1.05, hasArms: false, cushion: false },
 };
 
 export function resolveChairVisual(
@@ -523,7 +875,7 @@ export function resolveChairVisual(
   material?: SeatMaterial,
 ): ChairVisual {
   const base = { ...CHAIR_VISUALS[chairType] };
-  if (chairType === 'ARMCHAIR' || style) {
+  if (chairType === 'ARMCHAIR' || style || chairType === 'CROSSBACK' || chairType === 'GHOST' || chairType === 'BARSTOOL') {
     const tweak = CHAIR_STYLE_TWEAKS[style ?? 'classic'];
     Object.assign(base, tweak);
   }
@@ -531,8 +883,17 @@ export function resolveChairVisual(
     const colors = SEAT_MATERIAL_COLORS[material];
     base.seatColor = colors.seat;
     base.frameColor = colors.frame;
-    if (material === 'leather' || material === 'velvet') base.cushion = true;
-    if (material === 'wood' || material === 'plastic') base.cushion = false;
+    if (material === 'leather' || material === 'velvet' || material === 'boucle' || material === 'suede') base.cushion = true;
+    if (material === 'wood' || material === 'plastic' || material === 'mesh') base.cushion = false;
+  }
+  if (chairType === 'GHOST') {
+    base.seatColor = '#e2e8f0';
+    base.frameColor = '#cbd5e1';
+    base.cushion = false;
+  }
+  if (chairType === 'POUF') {
+    base.backHeight = 0;
+    base.cushion = true;
   }
   return base;
 }

@@ -1,10 +1,42 @@
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
-export type ChairType = 'BANQUET' | 'FOLDING' | 'THEATER' | 'STOOL' | 'ARMCHAIR' | 'WHEELCHAIR';
+export type ChairType =
+  | 'BANQUET'
+  | 'FOLDING'
+  | 'THEATER'
+  | 'STOOL'
+  | 'ARMCHAIR'
+  | 'WHEELCHAIR'
+  | 'CROSSBACK'
+  | 'GHOST'
+  | 'MESH'
+  | 'BARSTOOL'
+  | 'POUF';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop';
 /** Style de fauteuil / chaise (surtout fauteuils). */
-export type ChairStyle = 'classic' | 'lounge' | 'club' | 'bergere' | 'modern' | 'chiavari';
+export type ChairStyle =
+  | 'classic'
+  | 'lounge'
+  | 'club'
+  | 'bergere'
+  | 'modern'
+  | 'chiavari'
+  | 'napoleon'
+  | 'crossback'
+  | 'tolix'
+  | 'ghost'
+  | 'panton';
 /** Matériau d’assise. */
-export type SeatMaterial = 'velvet' | 'leather' | 'linen' | 'fabric' | 'wood' | 'plastic';
+export type SeatMaterial =
+  | 'velvet'
+  | 'leather'
+  | 'linen'
+  | 'fabric'
+  | 'wood'
+  | 'plastic'
+  | 'boucle'
+  | 'suede'
+  | 'mesh'
+  | 'rattan';
 export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
 export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'capacity' | 'hasCouverts';
@@ -35,13 +67,48 @@ export type ZoneKind = 'dance' | 'vip' | 'buffet' | 'carpet' | 'custom';
 export type ZoneMaterial = 'wood' | 'carpet' | 'vinyl' | 'led' | 'marble' | 'concrete' | 'parquet' | 'epoxy';
 
 /** Styles de texture murale pour le rendu WebGL. */
-export type WallTextureStyle = 'plaster' | 'brick' | 'wood' | 'concrete' | 'wallpaper' | 'stone';
+export type WallTextureStyle =
+  | 'plaster'
+  | 'brick'
+  | 'wood'
+  | 'concrete'
+  | 'wallpaper'
+  | 'stone'
+  | 'limewash'
+  | 'tadelakt'
+  | 'boardConcrete'
+  | 'paintedBrick'
+  | 'fluted'
+  | 'travertine'
+  | 'slate'
+  | 'metalCorrugated'
+  | 'metroTile'
+  | 'woodPanel';
 /** Styles de porte configurables. */
-export type DoorStyle = 'single' | 'double' | 'sliding' | 'arch' | 'glass';
+export type DoorStyle =
+  | 'single'
+  | 'double'
+  | 'sliding'
+  | 'arch'
+  | 'glass'
+  | 'panel'
+  | 'pivot'
+  | 'folding'
+  | 'fireExit'
+  | 'frenchDoor';
 /** Styles de fenêtre configurables. */
 export type WindowStyle = 'rectangular' | 'arched' | 'bay' | 'french';
 /** Matériau d’ouverture (porte / fenêtre). */
-export type OpeningMaterial = 'wood' | 'glass' | 'metal' | 'painted';
+export type OpeningMaterial =
+  | 'wood'
+  | 'glass'
+  | 'metal'
+  | 'painted'
+  | 'oak'
+  | 'walnut'
+  | 'lacquer'
+  | 'brass'
+  | 'blackSteel';
 
 export interface RoomWallOpening {
   id: string;
@@ -657,6 +724,11 @@ export const chairStyleLabels: Record<ChairStyle, string> = {
   bergere: 'Bergère',
   modern: 'Moderne',
   chiavari: 'Chiavari',
+  napoleon: 'Napoléon III',
+  crossback: 'Cross-back',
+  tolix: 'Tolix (métal)',
+  ghost: 'Ghost (transparent)',
+  panton: 'Panton',
 };
 
 export const seatMaterialLabels: Record<SeatMaterial, string> = {
@@ -666,6 +738,10 @@ export const seatMaterialLabels: Record<SeatMaterial, string> = {
   fabric: 'Tissu',
   wood: 'Bois',
   plastic: 'Plastique',
+  boucle: 'Bouclé',
+  suede: 'Suède',
+  mesh: 'Mesh / résille',
+  rattan: 'Rotin',
 };
 
 export const SEAT_MATERIAL_COLORS: Record<SeatMaterial, { seat: string; frame: string }> = {
@@ -675,6 +751,10 @@ export const SEAT_MATERIAL_COLORS: Record<SeatMaterial, { seat: string; frame: s
   fabric: { seat: '#1e3a5f', frame: '#78716c' },
   wood: { seat: '#92400e', frame: '#78350f' },
   plastic: { seat: '#64748b', frame: '#94a3b8' },
+  boucle: { seat: '#d6d3d1', frame: '#78716c' },
+  suede: { seat: '#a16207', frame: '#44403c' },
+  mesh: { seat: '#334155', frame: '#1e293b' },
+  rattan: { seat: '#ca8a04', frame: '#92400e' },
 };
 
 export const zoneKindLabels: Record<ZoneKind, string> = {
@@ -804,6 +884,16 @@ export const wallTextureLabels: Record<WallTextureStyle, string> = {
   concrete: 'Béton',
   wallpaper: 'Papier peint',
   stone: 'Pierre',
+  limewash: 'Chaux / enduit minéral',
+  tadelakt: 'Tadelakt (plâtre poli)',
+  boardConcrete: 'Béton coulé (planches)',
+  paintedBrick: 'Brique peinte',
+  fluted: 'Panneaux cannelés',
+  travertine: 'Travertin',
+  slate: 'Ardoise',
+  metalCorrugated: 'Tôle ondulée',
+  metroTile: 'Carrelage métro',
+  woodPanel: 'Lambris bois',
 };
 
 export const doorStyleLabels: Record<DoorStyle, string> = {
@@ -812,6 +902,11 @@ export const doorStyleLabels: Record<DoorStyle, string> = {
   sliding: 'Coulissante',
   arch: 'Arche',
   glass: 'Vitrée (panneaux)',
+  panel: 'À panneaux moulurés',
+  pivot: 'Pivot centrale',
+  folding: 'Pliante (accordéon)',
+  fireExit: 'Issue de secours',
+  frenchDoor: 'Porte-fenêtre',
 };
 
 export const windowStyleLabels: Record<WindowStyle, string> = {
@@ -826,6 +921,11 @@ export const openingMaterialLabels: Record<OpeningMaterial, string> = {
   glass: 'Vitre / verre',
   metal: 'Métal',
   painted: 'Peint',
+  oak: 'Chêne',
+  walnut: 'Noyer',
+  lacquer: 'Laqué',
+  brass: 'Laiton',
+  blackSteel: 'Acier noir',
 };
 
 export const WALL_TEXTURE_COLORS: Record<WallTextureStyle, string> = {
@@ -835,6 +935,16 @@ export const WALL_TEXTURE_COLORS: Record<WallTextureStyle, string> = {
   concrete: '#9ca3af',
   wallpaper: '#c4b5a0',
   stone: '#78716c',
+  limewash: '#f5f0e8',
+  tadelakt: '#e7e0d4',
+  boardConcrete: '#a8a29e',
+  paintedBrick: '#f1f5f9',
+  fluted: '#e2e8f0',
+  travertine: '#d6d3d1',
+  slate: '#44403c',
+  metalCorrugated: '#64748b',
+  metroTile: '#f8fafc',
+  woodPanel: '#c4a06a',
 };
 
 export function createWallOpening(
@@ -847,11 +957,21 @@ export function createWallOpening(
       id: makeLayoutId('door'),
       kind: 'door',
       t: partial.t ?? 0.5,
-      widthM: partial.widthM ?? (style === 'double' ? 1.6 : style === 'sliding' ? 1.2 : 0.9),
-      heightM: partial.heightM ?? (style === 'arch' ? 2.4 : 2.1),
+      widthM: partial.widthM ?? (
+        style === 'double' || style === 'frenchDoor' ? 1.6
+          : style === 'folding' ? 2.4
+            : style === 'sliding' ? 1.2
+              : style === 'fireExit' ? 1.1
+                : 0.9
+      ),
+      heightM: partial.heightM ?? (style === 'arch' ? 2.4 : style === 'fireExit' ? 2.2 : 2.1),
       sillM: partial.sillM ?? 0,
       style,
-      material: partial.material ?? (style === 'glass' ? 'glass' : 'wood'),
+      material: partial.material ?? (
+        style === 'glass' ? 'glass'
+          : style === 'fireExit' ? 'blackSteel'
+            : 'wood'
+      ),
       color: partial.color ?? '#6b4423',
       frameColor: partial.frameColor ?? '#3f2a1a',
       hasMat: partial.hasMat ?? true,
@@ -2303,6 +2423,11 @@ export const chairTypeLabels: Record<ChairType, string> = {
   STOOL: 'Tabouret',
   ARMCHAIR: 'Fauteuil',
   WHEELCHAIR: 'Place PMR',
+  CROSSBACK: 'Cross-back (mariage)',
+  GHOST: 'Chaise Ghost',
+  MESH: 'Siège mesh conférence',
+  BARSTOOL: 'Tabouret de bar',
+  POUF: 'Pouf / ottoman',
 };
 
 export const tableShapeLabels: Record<TableShape, string> = {
@@ -2341,6 +2466,16 @@ export function getChairVisualClass(chairType: ChairType): string {
       return `${base} em-chair-top--armchair`;
     case 'WHEELCHAIR':
       return `${base} em-chair-top--pmr`;
+    case 'CROSSBACK':
+      return `${base} em-chair-top--crossback`;
+    case 'GHOST':
+      return `${base} em-chair-top--ghost`;
+    case 'MESH':
+      return `${base} em-chair-top--mesh`;
+    case 'BARSTOOL':
+      return `${base} em-chair-top--barstool`;
+    case 'POUF':
+      return `${base} em-chair-top--pouf`;
     default:
       return `${base} em-chair-top--banquet`;
   }

@@ -25,6 +25,7 @@ import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
 import {
   getWallTexture,
+  getDoorMaterialProps,
   getStairWoodMap,
   resolveChairMap,
   resolveFloorMap,
@@ -707,13 +708,11 @@ function OpeningMesh({
   /** Face extérieure du mur (hors volume) pour que style / couleur soient visibles. */
   const faceZ = thick / 2 + 0.04;
   const frameT = 0.055;
-  const woodMap = useMemo(() => {
-    if (typeof document === 'undefined') return null;
-    if (material === 'wood' || (isDoor && material !== 'glass' && material !== 'metal' && material !== 'painted')) {
-      return getWallTexture('wood').map;
-    }
-    return null;
-  }, [material, isDoor]);
+  const doorMat = useMemo(
+    () => getDoorMaterialProps(material, leafColor),
+    [material, leafColor],
+  );
+  const woodMap = doorMat.map ?? null;
 
   const glassProps = {
     color: leafColor,
@@ -726,41 +725,21 @@ function OpeningMesh({
   const leafMatProps = (() => {
     if (material === 'glass' || style === 'glass') {
       return {
-        color: leafColor,
+        color: doorMat.color,
         transparent: true,
-        opacity: 0.5,
-        roughness: 0.08,
-        metalness: 0.35,
-        map: undefined as THREE.Texture | undefined,
-      };
-    }
-    if (material === 'metal') {
-      return {
-        color: leafColor,
-        transparent: false,
-        opacity: 1,
-        roughness: 0.22,
-        metalness: 0.9,
-        map: undefined as THREE.Texture | undefined,
-      };
-    }
-    if (material === 'painted') {
-      return {
-        color: leafColor,
-        transparent: false,
-        opacity: 1,
-        roughness: 0.55,
-        metalness: 0.04,
+        opacity: doorMat.opacity ?? 0.5,
+        roughness: doorMat.roughness,
+        metalness: doorMat.metalness,
         map: undefined as THREE.Texture | undefined,
       };
     }
     return {
-      color: leafColor,
-      transparent: false,
-      opacity: 1,
-      roughness: 0.55,
-      metalness: 0.08,
-      map: woodMap ?? undefined,
+      color: doorMat.color,
+      transparent: doorMat.transparent ?? false,
+      opacity: doorMat.opacity ?? 1,
+      roughness: doorMat.roughness,
+      metalness: doorMat.metalness,
+      map: doorMat.map,
     };
   })();
 
@@ -769,7 +748,33 @@ function OpeningMesh({
   const archR = w * 0.48;
   const localY = sill + h / 2 - wallHeightM / 2;
   const leafZ = faceZ + 0.01;
-  const panelColor = material === 'wood' ? leafColor : '#3f2a1a';
+  const panelColor = material === 'wood' || material === 'oak' || material === 'walnut' ? leafColor : '#3f2a1a';
+
+  const renderDoorPanels = (leafW: number, leafHeight: number, z: number) => (
+    <>
+      <mesh position={[0, leafHeight * 0.22, z]}>
+        <boxGeometry args={[leafW * 0.78, leafHeight * 0.28, 0.02]} />
+        <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
+      </mesh>
+      <mesh position={[0, -leafHeight * 0.22, z]}>
+        <boxGeometry args={[leafW * 0.78, leafHeight * 0.28, 0.02]} />
+        <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
+      </mesh>
+    </>
+  );
+
+  const renderFrenchPanes = (leafW: number, leafHeight: number, z: number) => (
+    <>
+      {([-0.22, 0.22] as const).map((tx) =>
+        ([-0.2, 0.2] as const).map((ty) => (
+          <mesh key={`${tx}-${ty}`} position={[leafW * tx, leafHeight * ty, z]}>
+            <boxGeometry args={[leafW * 0.28, leafHeight * 0.28, 0.015]} />
+            <meshStandardMaterial {...glassProps} />
+          </mesh>
+        )),
+      )}
+    </>
+  );
 
   const jambDepth = thick + 0.06;
   const frameMat = {
@@ -818,7 +823,7 @@ function OpeningMesh({
         </mesh>
       )}
 
-      {isDoor && style === 'double' && (
+      {isDoor && (style === 'double' || style === 'frenchDoor') && (
         <>
           {([-1, 1] as const).map((side) => (
             <group key={side} position={[side * (w * 0.25 + 0.01), -h / 2 + leafH / 2, leafZ]}>
@@ -826,23 +831,15 @@ function OpeningMesh({
                 <boxGeometry args={[w * 0.46, leafH * 0.98, 0.055]} />
                 <meshStandardMaterial {...leafMatProps} />
               </mesh>
-              {material === 'glass' && (
+              {style === 'frenchDoor' && renderFrenchPanes(w * 0.46, leafH, 0.035)}
+              {style === 'double' && material === 'glass' && (
                 <mesh position={[0, 0.08, 0.035]}>
                   <boxGeometry args={[w * 0.32, leafH * 0.55, 0.02]} />
                   <meshStandardMaterial {...glassProps} />
                 </mesh>
               )}
-              {material === 'wood' && (
-                <>
-                  <mesh position={[0, leafH * 0.18, 0.035]}>
-                    <boxGeometry args={[w * 0.36, leafH * 0.28, 0.02]} />
-                    <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
-                  </mesh>
-                  <mesh position={[0, -leafH * 0.22, 0.035]}>
-                    <boxGeometry args={[w * 0.36, leafH * 0.28, 0.02]} />
-                    <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
-                  </mesh>
-                </>
+              {(style === 'double') && (material === 'wood' || material === 'oak' || material === 'walnut') && (
+                renderDoorPanels(w * 0.46, leafH, 0.035)
               )}
               <mesh position={[side * -w * 0.15, 0, 0.045]}>
                 <sphereGeometry args={[0.035, 10, 10]} />
@@ -874,8 +871,41 @@ function OpeningMesh({
         </>
       )}
 
-      {isDoor && style !== 'double' && style !== 'sliding' && (
+      {isDoor && style === 'folding' && (
+        <>
+          {([-1.5, -0.5, 0.5, 1.5] as const).map((slot) => (
+            <mesh
+              key={slot}
+              position={[slot * w * 0.18, -h / 2 + leafH / 2, leafZ + Math.abs(slot) * 0.008]}
+              rotation={[0, slot * 0.08, 0]}
+              castShadow
+            >
+              <boxGeometry args={[w * 0.22, leafH * 0.96, 0.04]} />
+              <meshStandardMaterial {...leafMatProps} />
+            </mesh>
+          ))}
+        </>
+      )}
+
+      {isDoor && style === 'fireExit' && (
         <group position={[0, -h / 2 + leafH / 2, leafZ]}>
+          <mesh castShadow>
+            <boxGeometry args={[w * 0.92, leafH * 0.98, 0.05]} />
+            <meshStandardMaterial {...leafMatProps} />
+          </mesh>
+          <mesh position={[0, 0, 0.04]}>
+            <boxGeometry args={[w * 0.75, 0.06, 0.03]} />
+            <meshStandardMaterial color="#c9a227" metalness={0.85} roughness={0.2} />
+          </mesh>
+          <mesh position={[w * 0.28, 0, 0.05]}>
+            <boxGeometry args={[0.08, 0.12, 0.04]} />
+            <meshStandardMaterial color="#ef4444" roughness={0.5} />
+          </mesh>
+        </group>
+      )}
+
+      {isDoor && style !== 'double' && style !== 'frenchDoor' && style !== 'sliding' && style !== 'folding' && style !== 'fireExit' && (
+        <group position={[0, -h / 2 + leafH / 2, leafZ]} rotation={style === 'pivot' ? [0, 0.35, 0] : [0, 0, 0]}>
           <mesh castShadow>
             <boxGeometry args={[w * 0.92, leafH * 0.98, 0.055]} />
             <meshStandardMaterial {...leafMatProps} />
@@ -892,22 +922,15 @@ function OpeningMesh({
               </mesh>
             </>
           )}
-          {material === 'wood' && style !== 'glass' && (
-            <>
-              <mesh position={[0, leafH * 0.2, 0.035]}>
-                <boxGeometry args={[w * 0.7, leafH * 0.32, 0.02]} />
-                <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
-              </mesh>
-              <mesh position={[0, -leafH * 0.22, 0.035]}>
-                <boxGeometry args={[w * 0.7, leafH * 0.32, 0.02]} />
-                <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
-              </mesh>
-            </>
+          {(style === 'panel' || material === 'wood' || material === 'oak' || material === 'walnut') && style !== 'glass' && material !== 'glass' && (
+            renderDoorPanels(w * 0.92, leafH, 0.035)
           )}
-          <mesh position={[w * 0.32, 0, 0.045]}>
-            <sphereGeometry args={[0.04, 10, 10]} />
-            <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.15} />
-          </mesh>
+          {style !== 'pivot' && (
+            <mesh position={[w * 0.32, 0, 0.045]}>
+              <sphereGeometry args={[0.04, 10, 10]} />
+              <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.15} />
+            </mesh>
+          )}
         </group>
       )}
 

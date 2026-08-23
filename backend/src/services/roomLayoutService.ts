@@ -1,5 +1,16 @@
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
-export type ChairType = 'BANQUET' | 'FOLDING' | 'THEATER' | 'STOOL' | 'ARMCHAIR' | 'WHEELCHAIR';
+export type ChairType =
+  | 'BANQUET'
+  | 'FOLDING'
+  | 'THEATER'
+  | 'STOOL'
+  | 'ARMCHAIR'
+  | 'WHEELCHAIR'
+  | 'CROSSBACK'
+  | 'GHOST'
+  | 'MESH'
+  | 'BARSTOOL'
+  | 'POUF';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
 export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
 export type ColumnShape = 'round' | 'square';
