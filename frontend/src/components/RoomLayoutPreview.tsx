@@ -5,6 +5,7 @@ import {
   RoomLayoutBlueprint,
   getRoomOutlineClipPath,
   resolveTableColor,
+  resolveZonePreviewBackground,
   roomTypeLabels,
   ensureBlueprintDefaults,
 } from '@/lib/roomLayoutUtils';
@@ -105,7 +106,7 @@ function ThumbPreview({
                 top: `${item.y}%`,
                 width: `${item.w}%`,
                 height: `${item.h}%`,
-                background: item.color ?? 'rgba(99,102,241,0.35)',
+                background: resolveZonePreviewBackground(item, item.color ?? 'rgba(99,102,241,0.35)'),
                 transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
               }}
             />
@@ -235,7 +236,7 @@ function FlatShowcasePreview({
                 top: `${item.y}%`,
                 width: `${item.w}%`,
                 height: `${item.h}%`,
-                background: item.color ?? 'rgba(49,46,129,0.45)',
+                background: resolveZonePreviewBackground(item, item.color ?? 'rgba(49,46,129,0.45)'),
                 transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
                 ...furnitureDepthStyle(item.y + item.h / 2, amount),
               }}

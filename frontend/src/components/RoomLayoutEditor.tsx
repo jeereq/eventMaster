@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -25,6 +25,9 @@ import {
   ROOM_AMBIENCE_PRESETS,
   saveCustomAmbienceToBlueprint,
   deleteCustomAmbienceFromBlueprint,
+  importCustomAmbiencesToBlueprint,
+  roomAmbienceMatchesBlueprint,
+  parseAmbienceImport,
   applyTableStyleToAll,
   autoArrangeTables,
   arrangeDensityLabels,
@@ -65,6 +68,14 @@ import {
   type ZoneKind,
   type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
+import {
+  addAmbienceToLibrary,
+  captureAmbienceToLibrary,
+  downloadAmbienceExport,
+  loadAmbienceLibrary,
+  mergeAmbienceLibraryImport,
+  removeAmbienceFromLibrary,
+} from '@/lib/roomAmbienceLibrary';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import {
   downloadDataUrl,
@@ -190,6 +201,8 @@ export default function RoomLayoutEditor({
   const [elementsOpen, setElementsOpen] = useState(true);
   const [groupStyleColor, setGroupStyleColor] = useState('#c4a06a');
   const [customAmbienceName, setCustomAmbienceName] = useState('');
+  const [ambienceLibrary, setAmbienceLibrary] = useState<import('@/lib/roomLayoutUtils').SavedRoomAmbience[]>([]);
+  const ambienceImportRef = useRef<HTMLInputElement>(null);
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -869,6 +882,41 @@ export default function RoomLayoutEditor({
     if (preset.roomThemeId) applyTheme(preset.roomThemeId);
   };
 
+  useEffect(() => {
+    setAmbienceLibrary(loadAmbienceLibrary());
+  }, []);
+
+  const activeAmbienceId = useMemo(() => {
+    const builtin = ROOM_AMBIENCE_PRESETS.find((preset) => roomAmbienceMatchesBlueprint(blueprint, preset));
+    if (builtin) return builtin.id;
+    const custom = blueprint.metadata.customAmbiences?.find((saved) => roomAmbienceMatchesBlueprint(blueprint, saved.preset));
+    if (custom) return custom.id;
+    const library = ambienceLibrary.find((saved) => roomAmbienceMatchesBlueprint(blueprint, saved.preset));
+    return library?.id ?? null;
+  }, [blueprint, ambienceLibrary]);
+
+  const [ambienceImportTarget, setAmbienceImportTarget] = useState<'room' | 'library'>('library');
+
+  const handleAmbienceFileImport = async (file: File) => {
+    try {
+      const text = await file.text();
+      if (ambienceImportTarget === 'library') {
+        const next = mergeAmbienceLibraryImport(text);
+        setAmbienceLibrary(next);
+        return;
+      }
+      const items = parseAmbienceImport(text);
+      if (!items.length) return;
+      const next = importCustomAmbiencesToBlueprint(blueprint, items, 'merge');
+      updateBlueprint(next, {
+        message: `${items.length} ambiance(s) importée(s) dans cette salle`,
+        kind: 'settings',
+      });
+    } catch {
+      updateBlueprint(blueprint, { message: 'Fichier d’ambiance invalide', kind: 'settings' });
+    }
+  };
+
   const canvasInventory = (() => {
     const kindLabel: Record<LayoutSelectionItem['kind'], string> = {
       table: 'Table',
@@ -1334,6 +1382,7 @@ export default function RoomLayoutEditor({
                         <RoomAmbienceCard
                           key={preset.id}
                           preset={preset}
+                          active={activeAmbienceId === preset.id}
                           onClick={() => applyAmbience(preset)}
                         />
                       ))}
@@ -1342,7 +1391,7 @@ export default function RoomLayoutEditor({
                       <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
                         <BookmarkPlus className="w-3 h-3" /> Mes ambiances
                       </p>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 flex-wrap">
                         <input
                           type="text"
                           value={customAmbienceName}
@@ -1365,6 +1414,24 @@ export default function RoomLayoutEditor({
                         >
                           Sauver
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadAmbienceExport(blueprint.metadata.customAmbiences ?? [], 'ambiances-salle.json')}
+                          disabled={(blueprint.metadata.customAmbiences?.length ?? 0) === 0}
+                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted disabled:opacity-40"
+                        >
+                          <Download className="w-3 h-3" /> Export
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAmbienceImportTarget('room');
+                            ambienceImportRef.current?.click();
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted"
+                        >
+                          <Upload className="w-3 h-3" /> Import
+                        </button>
                       </div>
                       {(blueprint.metadata.customAmbiences?.length ?? 0) > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-0.5">
@@ -1372,8 +1439,20 @@ export default function RoomLayoutEditor({
                             <div key={saved.id} className="relative group">
                               <RoomAmbienceCard
                                 preset={saved.preset}
+                                active={activeAmbienceId === saved.id}
                                 onClick={() => applyAmbience(saved.preset)}
                               />
+                              <button
+                                type="button"
+                                title="Ajouter à la bibliothèque globale"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAmbienceLibrary(addAmbienceToLibrary(saved));
+                                }}
+                                className="absolute top-1 right-8 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                              >
+                                <BookmarkPlus className="w-3 h-3" />
+                              </button>
                               <button
                                 type="button"
                                 title="Supprimer"
@@ -1392,6 +1471,94 @@ export default function RoomLayoutEditor({
                       ) : (
                         <p className="text-[9px] text-muted">Enregistrez la configuration actuelle (murs, sol, chaises, éclairage).</p>
                       )}
+                    </div>
+                    <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-2.5 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
+                          <Layers className="w-3 h-3" /> Bibliothèque globale
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const name = customAmbienceName.trim() || 'Ambiance capturée';
+                            setAmbienceLibrary(captureAmbienceToLibrary(blueprint, name));
+                            if (!customAmbienceName.trim()) setCustomAmbienceName('');
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary"
+                        >
+                          <Copy className="w-3 h-3" /> Capturer la salle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadAmbienceExport(ambienceLibrary)}
+                          disabled={ambienceLibrary.length === 0}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted disabled:opacity-40"
+                        >
+                          <Download className="w-3 h-3" /> Export
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAmbienceImportTarget('library');
+                            ambienceImportRef.current?.click();
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted"
+                        >
+                          <Upload className="w-3 h-3" /> Import
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-muted leading-snug">
+                        Réutilisable sur toutes vos salles (stockage local navigateur).
+                      </p>
+                      {ambienceLibrary.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-0.5">
+                          {ambienceLibrary.map((saved) => (
+                            <div key={saved.id} className="relative group">
+                              <RoomAmbienceCard
+                                preset={saved.preset}
+                                active={activeAmbienceId === saved.id}
+                                onClick={() => applyAmbience(saved.preset)}
+                              />
+                              <button
+                                type="button"
+                                title="Importer dans cette salle"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const next = importCustomAmbiencesToBlueprint(blueprint, [saved], 'merge');
+                                  updateBlueprint(next, { message: `Ambiance ajoutée à la salle : ${saved.name}`, kind: 'settings' });
+                                }}
+                                className="absolute top-1 right-8 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Supprimer de la bibliothèque"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAmbienceLibrary(removeAmbienceFromLibrary(saved.id));
+                                }}
+                                className="absolute top-1 right-1 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-red-600"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[9px] text-muted">Aucune ambiance globale pour l’instant.</p>
+                      )}
+                      <input
+                        ref={ambienceImportRef}
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = '';
+                          if (file) void handleAmbienceFileImport(file);
+                        }}
+                      />
                     </div>
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">

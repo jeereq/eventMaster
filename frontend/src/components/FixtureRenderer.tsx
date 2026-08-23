@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { RoomLayoutBlueprint, getFixtureClass } from '@/lib/roomLayoutUtils';
+import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import FlowerRenderer from '@/components/FlowerRenderer';
 
@@ -19,6 +20,7 @@ export default function FixtureRenderer({ fixture, className = '', showLabel = t
   const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
   const isStage = fixture.kind === 'stage' || fixture.kind === 'podium';
   const isFlower = fixture.kind === 'flower';
+  const usesZoneMaterial = fixture.kind === 'stage' || fixture.kind === 'podium' || fixture.kind === 'buffet' || fixture.kind === 'stairs';
   const colShape = fixture.columnShape ?? 'round';
   const hasImage = Boolean(fixture.imageUrl);
 
@@ -53,12 +55,16 @@ export default function FixtureRenderer({ fixture, className = '', showLabel = t
     );
   }
 
+  const materialTint = usesZoneMaterial && fixture.material && !hasImage
+    ? ZONE_MATERIAL_COLORS[fixture.material]
+    : undefined;
+
   return (
     <div
       className={`${fill ? 'relative' : 'absolute'} border-2 text-[9px] font-bold flex items-center justify-center px-1 text-center overflow-hidden ${getFixtureClass(fixture.kind)} ${className} ${isColumn && colShape === 'round' && !hasImage ? 'rounded-full' : isColumn && !hasImage ? 'rounded-md' : ''}`}
       style={{
         ...positionStyle,
-        backgroundColor: !hasImage && isColumn && fixture.color ? fixture.color : undefined,
+        backgroundColor: materialTint ?? (!hasImage && isColumn && fixture.color ? fixture.color : undefined),
         ...imageStyle,
       }}
     >

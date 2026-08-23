@@ -316,15 +316,22 @@ export function ZoneMaterialPicker({
 export function RoomAmbienceCard({
   preset,
   onClick,
+  active = false,
 }: {
   preset: RoomAmbiencePreset;
   onClick: () => void;
+  active?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="text-left p-2.5 rounded-[var(--radius-button)] border border-border hover:border-primary/40 hover:bg-surface-muted transition space-y-1.5"
+      className={cn(
+        'text-left p-2.5 rounded-[var(--radius-button)] border transition space-y-1.5 w-full',
+        active
+          ? 'border-primary ring-2 ring-primary/25 bg-primary/5'
+          : 'border-border hover:border-primary/40 hover:bg-surface-muted',
+      )}
     >
       <div className="flex gap-1 h-8">
         <WallTextureSwatch texture={preset.wallTexture} className="flex-1" />
@@ -336,7 +343,14 @@ export function RoomAmbienceCard({
           <TableSurfaceSwatch surface={preset.tableSurface} className="w-8 shrink-0" />
         ) : null}
       </div>
-      <p className="text-[10px] font-bold text-foreground">{preset.label}</p>
+      <p className="text-[10px] font-bold text-foreground flex items-center gap-1">
+        {preset.label}
+        {active ? (
+          <span className="text-[8px] font-bold uppercase text-primary bg-primary/10 px-1 py-0.5 rounded">
+            Active
+          </span>
+        ) : null}
+      </p>
       <p className="text-[9px] text-muted leading-snug line-clamp-2">{preset.description}</p>
       {preset.lightingPreset ? (
         <p className="text-[8px] font-semibold text-muted flex flex-wrap gap-x-1.5 gap-y-0.5">

@@ -1267,6 +1267,165 @@ export function deleteCustomAmbienceFromBlueprint(
   };
 }
 
+export const AMBIENCE_EXPORT_VERSION = 1;
+
+export type AmbienceExportPayload = {
+  version: number;
+  exportedAt: string;
+  ambiences: SavedRoomAmbience[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function sanitizeAmbiencePreset(raw: unknown): RoomAmbiencePreset | null {
+  if (!isRecord(raw)) return null;
+  const wallTexture = raw.wallTexture;
+  const floorType = raw.floorType;
+  const chairType = raw.chairType;
+  if (typeof wallTexture !== 'string' || !(wallTexture in wallTextureLabels)) return null;
+  if (typeof floorType !== 'string') return null;
+  if (typeof chairType !== 'string' || !(chairType in chairTypeLabels)) return null;
+
+  const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : `amb-${Date.now().toString(36)}`;
+  const label = typeof raw.label === 'string' && raw.label.trim() ? raw.label.trim() : 'Ambiance importée';
+  const description = typeof raw.description === 'string' ? raw.description : label;
+
+  const preset: RoomAmbiencePreset = {
+    id,
+    label,
+    description,
+    wallTexture: wallTexture as WallTextureStyle,
+    floorType: floorType as import('@/lib/roomThemeUtils').FloorType,
+    chairType: chairType as ChairType,
+  };
+
+  if (typeof raw.wallColor === 'string') preset.wallColor = raw.wallColor;
+  if (typeof raw.wallPaintColor === 'string') preset.wallPaintColor = raw.wallPaintColor;
+  if (typeof raw.floorColor === 'string') preset.floorColor = raw.floorColor;
+  if (typeof raw.roomThemeId === 'string') preset.roomThemeId = raw.roomThemeId as import('@/lib/roomThemeUtils').BuiltInRoomThemeId;
+  if (typeof raw.chairStyle === 'string' && raw.chairStyle in chairStyleLabels) preset.chairStyle = raw.chairStyle as ChairStyle;
+  if (typeof raw.seatMaterial === 'string' && raw.seatMaterial in seatMaterialLabels) preset.seatMaterial = raw.seatMaterial as SeatMaterial;
+  if (typeof raw.tableSurface === 'string' && raw.tableSurface in tableSurfaceLabels) preset.tableSurface = raw.tableSurface as TableSurfaceStyle;
+  if (typeof raw.defaultTableColor === 'string') preset.defaultTableColor = raw.defaultTableColor;
+  if (typeof raw.lightingPreset === 'string') preset.lightingPreset = raw.lightingPreset as import('@/lib/roomRenderQuality').LightingPreset;
+  if (typeof raw.showChandeliers === 'boolean') preset.showChandeliers = raw.showChandeliers;
+  if (typeof raw.chandelierType === 'string') preset.chandelierType = raw.chandelierType as import('@/lib/roomCeilingUtils').ChandelierType;
+
+  return preset;
+}
+
+function sanitizeSavedAmbience(raw: unknown): SavedRoomAmbience | null {
+  if (!isRecord(raw)) return null;
+  const preset = sanitizeAmbiencePreset(raw.preset ?? raw);
+  if (!preset) return null;
+  const name = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : preset.label;
+  const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : preset.id;
+  return {
+    id,
+    name,
+    preset: { ...preset, id, label: name },
+  };
+}
+
+export function exportAmbiencesPayload(ambiences: SavedRoomAmbience[]): string {
+  const payload: AmbienceExportPayload = {
+    version: AMBIENCE_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    ambiences,
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+export function parseAmbienceImport(raw: string): SavedRoomAmbience[] {
+  const data = JSON.parse(raw) as unknown;
+  if (Array.isArray(data)) {
+    return data.map(sanitizeSavedAmbience).filter((item): item is SavedRoomAmbience => item !== null);
+  }
+  if (isRecord(data) && Array.isArray(data.ambiences)) {
+    return data.ambiences
+      .map(sanitizeSavedAmbience)
+      .filter((item): item is SavedRoomAmbience => item !== null);
+  }
+  const single = sanitizeSavedAmbience(data);
+  return single ? [single] : [];
+}
+
+export function importCustomAmbiencesToBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  items: SavedRoomAmbience[],
+  mode: 'merge' | 'replace' = 'merge',
+): RoomLayoutBlueprint {
+  const sanitized = items.slice(0, 24);
+  if (mode === 'replace') {
+    return {
+      ...blueprint,
+      metadata: { ...blueprint.metadata, customAmbiences: sanitized.slice(0, 12) },
+    };
+  }
+  const merged = new Map((blueprint.metadata.customAmbiences ?? []).map((item) => [item.id, item]));
+  for (const item of sanitized) merged.set(item.id, item);
+  return {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      customAmbiences: Array.from(merged.values()).slice(0, 12),
+    },
+  };
+}
+
+const AMBIENCE_COMPARE_KEYS: (keyof RoomAmbiencePreset)[] = [
+  'wallTexture',
+  'wallColor',
+  'wallPaintColor',
+  'floorType',
+  'floorColor',
+  'roomThemeId',
+  'chairType',
+  'chairStyle',
+  'seatMaterial',
+  'tableSurface',
+  'defaultTableColor',
+  'lightingPreset',
+  'showChandeliers',
+  'chandelierType',
+];
+
+export function roomAmbienceMatchesBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  preset: RoomAmbiencePreset,
+): boolean {
+  const snap = captureRoomAmbienceFromBlueprint(blueprint, preset.id, preset.label);
+  return AMBIENCE_COMPARE_KEYS.every((key) => {
+    const current = snap[key];
+    const expected = preset[key];
+    if (current === undefined && expected === undefined) return true;
+    return current === expected;
+  });
+}
+
+export function resolveZonePreviewBackground(
+  zone: { material?: ZoneMaterial; color?: string },
+  fallback = 'rgba(49,46,129,0.45)',
+): string {
+  if (zone.color) return zone.color;
+  if (zone.material) {
+    const tones: Record<ZoneMaterial, string> = {
+      wood: 'rgba(139,105,20,0.55)',
+      carpet: 'rgba(30,58,95,0.6)',
+      vinyl: 'rgba(231,229,228,0.75)',
+      led: 'rgba(251,191,36,0.65)',
+      marble: 'rgba(231,229,228,0.7)',
+      concrete: 'rgba(156,163,175,0.65)',
+      parquet: 'rgba(196,160,106,0.6)',
+      epoxy: 'rgba(203,213,225,0.7)',
+    };
+    return tones[zone.material];
+  }
+  return fallback;
+}
+
 export function createWallOpening(
   kind: 'door' | 'window',
   partial: Partial<RoomWallOpening> = {},
