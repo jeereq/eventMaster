@@ -11,6 +11,7 @@ import {
   getTenantPlanSnapshot,
 } from '../services/planFeaturesService';
 import { fulfillTicketOrder } from '../services/ticketOrderService';
+import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -242,6 +243,12 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
     }
 
     // Real Stripe Integration
+    if (!isOnlinePaymentsEnabled()) {
+      return res.status(503).json({
+        error: 'Les paiements en ligne sont temporairement désactivés. Contactez le support ou réessayez plus tard.',
+      });
+    }
+
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     
     // Define Stripe prices (mock IDs or from config)

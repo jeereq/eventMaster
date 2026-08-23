@@ -18,6 +18,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 import { haversineKm, toDateKey } from '../utils/marketplaceDates';
 import { normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
+import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -98,7 +99,9 @@ function serializePublicEvent(event: {
   const remaining = ticketsRemaining(event);
   const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
   const pricingZones = pricingZonesFromPlan(event.tablePlan);
+  const onlinePayments = isOnlinePaymentsEnabled();
   const paid =
+    onlinePayments &&
     event.ticketingEnabled &&
     (event.ticketPriceFc > 0 || (pricingMode === 'by_zone' && pricingZones.some((z) => z.priceFc > 0)));
   const photos = parsePhotoUrls(event.photos);
@@ -120,6 +123,7 @@ function serializePublicEvent(event: {
     ticketPricingMode: pricingMode,
     priceFromFc,
     pricingZones: pricingMode === 'by_zone' ? pricingZones : [],
+    onlinePaymentsEnabled: onlinePayments,
     paid,
     ticketsTotal: event.ticketsTotal,
     ticketsSold: event.ticketsSold,
@@ -351,7 +355,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       return res.status(400).json({ error: 'Cet e-mail a déjà une inscription pour cet événement.' });
     }
 
-    const paid = event.ticketingEnabled && unitPriceFc > 0;
+    const paid = event.ticketingEnabled && unitPriceFc > 0 && isOnlinePaymentsEnabled();
     const amountFc = paid ? unitPriceFc * quantity : 0;
 
     const order = await prisma.ticketOrder.create({

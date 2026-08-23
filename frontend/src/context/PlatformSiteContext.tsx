@@ -18,6 +18,7 @@ export interface PublicSiteConfig {
   maintenanceMode: boolean;
   maintenanceMessage: string;
   allowRegistration: boolean;
+  onlinePaymentsEnabled: boolean;
   brandPrimary: string;
   brandAccent: string;
   marketplaceCommissionRate: number;
@@ -45,6 +46,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   maintenanceMessage:
     'La plateforme est temporairement en maintenance. Merci de réessayer dans quelques instants.',
   allowRegistration: true,
+  onlinePaymentsEnabled: true,
   brandPrimary: '',
   brandAccent: '',
   marketplaceCommissionRate: 0.08,

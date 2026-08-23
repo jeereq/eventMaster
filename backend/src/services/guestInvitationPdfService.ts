@@ -33,12 +33,13 @@ export async function buildGuestInvitationPdfFromPrintPage(guestId: string): Pro
     await page.goto(printUrl, { waitUntil: 'load', timeout: 120000 });
     await page.waitForSelector('[data-pdf-ready="true"]', { timeout: 90000 });
     await page.waitForFunction(
-      () => {
+      // Exécuté dans le navigateur (Puppeteer) — pas dans le runtime Node.
+      `(() => {
         const plan = document.querySelector('[data-plan-capture]');
         if (!plan) return true;
         const state = plan.getAttribute('data-plan-capture');
         return state === 'ready' || state === 'skipped';
-      },
+      })()`,
       { timeout: 90000 },
     );
     await new Promise((r) => setTimeout(r, 800));

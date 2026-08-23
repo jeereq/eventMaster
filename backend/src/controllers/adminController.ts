@@ -1613,6 +1613,10 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
           from: current.commercialRenewalCommissionRate,
           to: updatedSettings.commercialRenewalCommissionRate,
         },
+        onlinePaymentsEnabled: {
+          from: current.onlinePaymentsEnabled,
+          to: updatedSettings.onlinePaymentsEnabled,
+        },
       },
     });
 

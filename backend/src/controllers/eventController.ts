@@ -10,10 +10,23 @@ import {
 } from '../services/permissionsService';
 import { blueprintToTablePlan, mergeBlueprintIntoTablePlan } from '../services/roomLayoutService';
 import { mergePricingZonesIntoTablePlan } from '../services/ticketPricingService';
+import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
 import { parsePhotoUrls } from '../utils/publicVenue';
+
+function rejectPaidTicketingIfDisabled(body: Record<string, unknown>, res: Response): boolean {
+  const wantsPublic = body.isPublic === true || body.isPublic === 'true';
+  const wantsPaid = body.ticketingEnabled === true || body.ticketingEnabled === 'true';
+  if (wantsPublic && wantsPaid && !isOnlinePaymentsEnabled()) {
+    res.status(403).json({
+      error: 'Les paiements en ligne sont désactivés par la plateforme. Utilisez l’inscription gratuite.',
+    });
+    return true;
+  }
+  return false;
+}
 
 function serializeEvent<T extends { _count?: { posts: number } }>(event: T) {
   const { _count, ...rest } = event;
@@ -179,6 +192,8 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
     }
 
+    if (rejectPaidTicketingIfDisabled(req.body, res)) return;
+
     const visibility = await eventVisibilityData(title, req.body);
 
     // Check Plan / Quota before creating event (will be integrated in Phase 4, but let's add a placeholder or simple check)
@@ -315,6 +330,8 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     if (!existingEvent) {
       return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
     }
+
+    if (rejectPaidTicketingIfDisabled(req.body, res)) return;
 
     const visibility =
       req.body.isPublic !== undefined

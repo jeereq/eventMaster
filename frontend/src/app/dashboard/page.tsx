@@ -2966,6 +2966,23 @@ function DashboardPageContent() {
  </label>
  </div>
 
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+ <label className="flex items-center gap-3 cursor-pointer bg-white dark:bg-background p-4 border border-border dark:border-border rounded-xl hover:bg-surface-muted/50 dark:hover:bg-background transition md:col-span-2">
+ <input
+ type="checkbox"
+ checked={adminSettings.onlinePaymentsEnabled !== false}
+ onChange={(e) => setAdminSettings({ ...adminSettings, onlinePaymentsEnabled: e.target.checked })}
+ className="w-4.5 h-4.5 text-primary border-border rounded focus:ring-primary"
+ />
+ <div>
+ <span className="text-sm font-bold text-foreground dark:text-foreground block">Paiements en ligne (Stripe)</span>
+ <span className="text-xs text-muted font-medium">
+ Billets événements publics et abonnements forfaits. Désactivé = inscriptions gratuites uniquement.
+ </span>
+ </div>
+ </label>
+ </div>
+
  {adminSettings.maintenanceMode && (
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Message de maintenance</label>

@@ -61,6 +61,7 @@ import {
   type PricingZone,
   type TicketPricingMode,
 } from '@/lib/ticketPricing';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 const SELECT_CLASS =
   'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
@@ -162,6 +163,12 @@ export default function EventConfigForm({
 
   const complete = mode === 'complete';
   const kinds = complete ? EVENT_KINDS_PRO : EVENT_KINDS_SIMPLE;
+  const { site } = usePlatformSite();
+  const onlinePaymentsEnabled = site.onlinePaymentsEnabled !== false;
+
+  useEffect(() => {
+    if (!onlinePaymentsEnabled && ticketing) setTicketing(false);
+  }, [onlinePaymentsEnabled, ticketing]);
 
   useEffect(() => {
     if (!open) return;
@@ -1018,10 +1025,11 @@ export default function EventConfigForm({
           <section className="space-y-3">
             {complete && isPublic && (
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm">
+                <label className={`flex items-center gap-2 text-sm ${!onlinePaymentsEnabled ? 'opacity-60' : ''}`}>
                   <input
                     type="checkbox"
                     checked={ticketing}
+                    disabled={!onlinePaymentsEnabled}
                     onChange={(e) => setTicketing(e.target.checked)}
                     className="rounded border-border"
                   />
@@ -1030,6 +1038,11 @@ export default function EventConfigForm({
                     Billets payants en ligne
                   </span>
                 </label>
+                {!onlinePaymentsEnabled && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
+                  </p>
+                )}
                 {ticketing && (
                   <div className="space-y-3">
                     <fieldset className="space-y-2">

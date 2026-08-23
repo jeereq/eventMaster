@@ -18,6 +18,7 @@ export interface PlatformSettings {
   maintenanceMode: boolean;
   maintenanceMessage: string;
   allowRegistration: boolean;
+  onlinePaymentsEnabled: boolean;
   brandPrimary: string;
   brandAccent: string;
   ultramsgInstanceId: string;
@@ -52,6 +53,7 @@ export interface PublicSiteConfig {
   maintenanceMode: boolean;
   maintenanceMessage: string;
   allowRegistration: boolean;
+  onlinePaymentsEnabled: boolean;
   brandPrimary: string;
   brandAccent: string;
   marketplaceCommissionRate: number;
@@ -79,6 +81,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   maintenanceMessage:
     'La plateforme est temporairement en maintenance. Merci de réessayer dans quelques instants.',
   allowRegistration: true,
+  onlinePaymentsEnabled: true,
   brandPrimary: '',
   brandAccent: '',
   ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || '',
@@ -104,6 +107,11 @@ function ensureSettingsDir() {
 function phoneToHref(phone: string): string {
   const digits = phone.replace(/[^\d+]/g, '');
   return digits ? `tel:${digits}` : 'tel:';
+}
+
+/** Paiements en ligne (billets événements + abonnements Stripe réels). */
+export function isOnlinePaymentsEnabled(settings = loadPlatformSettings()): boolean {
+  return settings.onlinePaymentsEnabled !== false;
 }
 
 export function loadPlatformSettings(): PlatformSettings {
@@ -169,6 +177,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     maintenanceMode: Boolean(settings.maintenanceMode),
     maintenanceMessage: settings.maintenanceMessage,
     allowRegistration: settings.allowRegistration !== false,
+    onlinePaymentsEnabled: isOnlinePaymentsEnabled(settings),
     brandPrimary: settings.brandPrimary || '',
     brandAccent: settings.brandAccent || '',
     marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
