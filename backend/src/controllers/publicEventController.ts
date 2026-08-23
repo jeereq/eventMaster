@@ -6,6 +6,13 @@ import {
   ticketsRemaining,
 } from '../services/ticketOrderService';
 import { createSeatHold, listSeatInventory } from '../services/seatSelectionService';
+import {
+  normalizeTicketPricingMode,
+  priceFromFcForEvent,
+  pricingZonesFromPlan,
+  resolveSeatPrice,
+  resolveZoneTicketPrice,
+} from '../services/ticketPricingService';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
@@ -74,6 +81,7 @@ function serializePublicEvent(event: {
   ticketsTotal: number | null;
   ticketsSold: number;
   seatSelectionEnabled?: boolean;
+  ticketPricingMode?: string;
   tablePlan?: unknown;
   eventProgram?: unknown;
   photos?: unknown;
@@ -88,10 +96,15 @@ function serializePublicEvent(event: {
   }>;
 }) {
   const remaining = ticketsRemaining(event);
-  const paid = event.ticketingEnabled && event.ticketPriceFc > 0;
+  const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
+  const pricingZones = pricingZonesFromPlan(event.tablePlan);
+  const paid =
+    event.ticketingEnabled &&
+    (event.ticketPriceFc > 0 || (pricingMode === 'by_zone' && pricingZones.some((z) => z.priceFc > 0)));
   const photos = parsePhotoUrls(event.photos);
   const plan = event.tablePlan as { tables?: unknown[] } | null;
   const hasTablePlan = Boolean(plan?.tables && plan.tables.length > 0);
+  const priceFromFc = priceFromFcForEvent(event);
   return {
     id: event.id,
     slug: event.slug,
@@ -104,6 +117,9 @@ function serializePublicEvent(event: {
     orgName: event.tenant.name,
     ticketingEnabled: event.ticketingEnabled,
     ticketPriceFc: event.ticketPriceFc,
+    ticketPricingMode: pricingMode,
+    priceFromFc,
+    pricingZones: pricingMode === 'by_zone' ? pricingZones : [],
     paid,
     ticketsTotal: event.ticketsTotal,
     ticketsSold: event.ticketsSold,
@@ -282,11 +298,37 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       return res.status(400).json({ error: 'Cet événement est déjà passé.' });
     }
 
+    const bodyPricingZoneId = req.body?.pricingZoneId ? String(req.body.pricingZoneId) : null;
+
     if (event.seatSelectionEnabled) {
       quantity = 1;
       if (!tableId || seatIndex == null || !Number.isFinite(seatIndex)) {
         return res.status(400).json({ error: 'Choisissez une table et un siège sur le plan.' });
       }
+    }
+
+    const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
+    let unitPriceFc = 0;
+    let pricingZoneId: string | null = null;
+
+    try {
+      if (pricingMode === 'by_zone') {
+        if (event.seatSelectionEnabled && tableId != null && seatIndex != null) {
+          const resolved = resolveSeatPrice(event, tableId, seatIndex);
+          unitPriceFc = resolved.priceFc;
+          pricingZoneId = resolved.pricingZoneId;
+        } else if (bodyPricingZoneId) {
+          const resolved = resolveZoneTicketPrice(event, bodyPricingZoneId);
+          unitPriceFc = resolved.priceFc;
+          pricingZoneId = resolved.pricingZoneId;
+        } else {
+          return res.status(400).json({ error: 'Choisissez une zone tarifaire.' });
+        }
+      } else {
+        unitPriceFc = Math.max(0, event.ticketPriceFc);
+      }
+    } catch (err: any) {
+      return res.status(400).json({ error: err?.message || 'Tarif invalide.' });
     }
 
     const remaining = ticketsRemaining(event);
@@ -309,8 +351,8 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       return res.status(400).json({ error: 'Cet e-mail a déjà une inscription pour cet événement.' });
     }
 
-    const paid = event.ticketingEnabled && event.ticketPriceFc > 0;
-    const amountFc = paid ? event.ticketPriceFc * quantity : 0;
+    const paid = event.ticketingEnabled && unitPriceFc > 0;
+    const amountFc = paid ? unitPriceFc * quantity : 0;
 
     const order = await prisma.ticketOrder.create({
       data: {
@@ -320,6 +362,8 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         buyerPhone,
         quantity,
         amountFc,
+        unitPriceFc: paid ? unitPriceFc : null,
+        pricingZoneId,
         status: paid ? 'PENDING' : 'PAID',
         paidAt: paid ? null : new Date(),
         userId,

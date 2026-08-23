@@ -1,4 +1,5 @@
 import { normalizeGuestGuidelines, type GuestGuidelines } from '@/lib/guestGuidelines';
+import type { PricingZone, TicketPricingMode } from '@/lib/ticketPricing';
 
 export const EVENT_KIND_IDS = [
   'WEDDING',
@@ -50,6 +51,8 @@ export type EventConfigSource = {
   isPublic?: boolean;
   ticketingEnabled?: boolean;
   ticketPriceFc?: number | null;
+  ticketPricingMode?: TicketPricingMode | string | null;
+  tablePlan?: { pricingZones?: PricingZone[] } | null;
   ticketsTotal?: number | null;
   photos?: string[] | null;
   guestGuidelines?: GuestGuidelines | null;
@@ -74,6 +77,8 @@ export type EventConfigPayload = {
   isPublic: boolean;
   ticketingEnabled: boolean;
   ticketPriceFc: number;
+  ticketPricingMode?: TicketPricingMode;
+  pricingZones?: PricingZone[];
   ticketsTotal: number | null;
   photos: string[];
   guestGuidelines: GuestGuidelines;

@@ -263,6 +263,8 @@ model Event {
   adminBlockReason  String?
   ticketingEnabled  Boolean      @default(false)
   ticketPriceFc     Int          @default(0)
+  /** global = prix unique ; by_zone = tarifs dans tablePlan.pricingZones */
+  ticketPricingMode String       @default("global")
   ticketsTotal      Int?
   ticketsSold       Int          @default(0)
   /** Achat billet pour une place précise (plan de table requis). */
@@ -334,6 +336,9 @@ model TicketOrder {
   buyerPhone              String?
   quantity                Int       @default(1)
   amountFc                Int
+  /** Prix unitaire facturé (audit si tarifs par zone). */
+  unitPriceFc             Int?
+  pricingZoneId           String?
   status                  String    @default("PENDING") // PENDING, PAID, CANCELLED
   stripeCheckoutSessionId String?   @unique
   stripePaymentIntentId   String?

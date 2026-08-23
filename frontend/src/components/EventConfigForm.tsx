@@ -54,6 +54,13 @@ import {
   type EventConfigTab,
   type EventKindId,
 } from '@/lib/eventConfig';
+import {
+  createEmptyPricingZone,
+  normalizeTicketPricingMode,
+  pricingZonesFromTablePlan,
+  type PricingZone,
+  type TicketPricingMode,
+} from '@/lib/ticketPricing';
 
 const SELECT_CLASS =
   'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
@@ -132,6 +139,8 @@ export default function EventConfigForm({
   const [isPublic, setIsPublic] = useState(false);
   const [ticketing, setTicketing] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
+  const [ticketPricingMode, setTicketPricingMode] = useState<TicketPricingMode>('global');
+  const [pricingZones, setPricingZones] = useState<PricingZone[]>([]);
   const [ticketsTotal, setTicketsTotal] = useState('');
   const [seatSelection, setSeatSelection] = useState(false);
   const [eventProgram, setEventProgram] = useState<EventProgram>(() => createEmptyProgram());
@@ -178,6 +187,8 @@ export default function EventConfigForm({
       setIsPublic(false);
       setTicketing(false);
       setTicketPrice('');
+      setTicketPricingMode('global');
+      setPricingZones([]);
       setTicketsTotal('');
       setSeatSelection(false);
       setEventProgram(createEmptyProgram());
@@ -216,6 +227,8 @@ export default function EventConfigForm({
         ? String(initialEvent.ticketPriceFc)
         : '',
     );
+    setTicketPricingMode(normalizeTicketPricingMode(initialEvent.ticketPricingMode));
+    setPricingZones(pricingZonesFromTablePlan(initialEvent.tablePlan));
     setTicketsTotal(initialEvent.ticketsTotal != null ? String(initialEvent.ticketsTotal) : '');
     setSeatSelection(Boolean((initialEvent as { seatSelectionEnabled?: boolean }).seatSelectionEnabled));
     setEventProgram(normalizeEventProgram((initialEvent as { eventProgram?: unknown }).eventProgram));
@@ -486,9 +499,13 @@ export default function EventConfigForm({
       ticketingEnabled: paid,
       ticketPriceFc: complete
         ? paid
-          ? Number(ticketPrice) || 0
+          ? ticketPricingMode === 'global'
+            ? Number(ticketPrice) || 0
+            : Number(ticketPrice) || 0
           : 0
         : initialEvent?.ticketPriceFc ?? 0,
+      ticketPricingMode: complete && paid ? ticketPricingMode : normalizeTicketPricingMode(initialEvent?.ticketPricingMode),
+      pricingZones: complete && paid && ticketPricingMode === 'by_zone' ? pricingZones : pricingZonesFromTablePlan(initialEvent?.tablePlan),
       ticketsTotal: complete
         ? publicEvent && ticketsTotal
           ? Number(ticketsTotal)
@@ -529,10 +546,18 @@ export default function EventConfigForm({
       );
       return;
     }
-    if (complete && isPublic && ticketing && !ticketPrice) {
+    if (complete && isPublic && ticketing && ticketPricingMode === 'global' && !ticketPrice) {
       setTab('access');
       setFormError('Indiquez le prix du billet.');
       return;
+    }
+    if (complete && isPublic && ticketing && ticketPricingMode === 'by_zone') {
+      const validZones = pricingZones.filter((z) => z.name.trim() && z.priceFc > 0);
+      if (validZones.length === 0 && !ticketPrice) {
+        setTab('access');
+        setFormError('Ajoutez au moins une zone avec un prix, ou un prix par défaut.');
+        return;
+      }
     }
     setFormError('');
     await onSave(buildPayload());
@@ -1006,23 +1031,119 @@ export default function EventConfigForm({
                   </span>
                 </label>
                 {ticketing && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Input
-                      label="Prix du billet (FC)"
-                      type="number"
-                      min={0}
-                      value={ticketPrice}
-                      onChange={(e) => setTicketPrice(e.target.value)}
-                      placeholder="ex. 25000"
-                    />
-                    <Input
-                      label="Nombre de places (optionnel)"
-                      type="number"
-                      min={1}
-                      value={ticketsTotal}
-                      onChange={(e) => setTicketsTotal(e.target.value)}
-                      placeholder="Illimité"
-                    />
+                  <div className="space-y-3">
+                    <fieldset className="space-y-2">
+                      <legend className="text-xs font-semibold text-foreground">Mode tarifaire</legend>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="ticketPricingMode"
+                          checked={ticketPricingMode === 'global'}
+                          onChange={() => setTicketPricingMode('global')}
+                        />
+                        <span>Prix unique pour tous les billets</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="ticketPricingMode"
+                          checked={ticketPricingMode === 'by_zone'}
+                          onChange={() => {
+                            setTicketPricingMode('by_zone');
+                            if (pricingZones.length === 0) {
+                              setPricingZones([createEmptyPricingZone(0), createEmptyPricingZone(1)]);
+                            }
+                          }}
+                        />
+                        <span>Prix par zones (VIP, fosse, balcon…)</span>
+                      </label>
+                    </fieldset>
+
+                    {ticketPricingMode === 'global' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Input
+                          label="Prix du billet (FC)"
+                          type="number"
+                          min={0}
+                          value={ticketPrice}
+                          onChange={(e) => setTicketPrice(e.target.value)}
+                          placeholder="ex. 25000"
+                        />
+                        <Input
+                          label="Nombre de places (optionnel)"
+                          type="number"
+                          min={1}
+                          value={ticketsTotal}
+                          onChange={(e) => setTicketsTotal(e.target.value)}
+                          placeholder="Illimité"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-foreground">Zones tarifaires</p>
+                          <button
+                            type="button"
+                            className="text-[11px] font-semibold text-primary hover:underline"
+                            onClick={() => setPricingZones((prev) => [...prev, createEmptyPricingZone(prev.length)])}
+                          >
+                            + Ajouter une zone
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-muted">
+                          Les tables du plan sont associées automatiquement selon leur position. Prix par défaut si non assignée :
+                        </p>
+                        <Input
+                          label="Prix par défaut (FC, optionnel)"
+                          type="number"
+                          min={0}
+                          value={ticketPrice}
+                          onChange={(e) => setTicketPrice(e.target.value)}
+                          placeholder="ex. 15000"
+                        />
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {pricingZones.map((zone, index) => (
+                            <div key={zone.id} className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-end p-2 rounded border border-border">
+                              <input
+                                type="color"
+                                value={zone.color || '#c4a35a'}
+                                onChange={(e) => setPricingZones((prev) => prev.map((z, i) => (i === index ? { ...z, color: e.target.value } : z)))}
+                                className="w-9 h-9 rounded border border-border cursor-pointer"
+                                aria-label={`Couleur ${zone.name}`}
+                              />
+                              <Input
+                                label="Nom"
+                                value={zone.name}
+                                onChange={(e) => setPricingZones((prev) => prev.map((z, i) => (i === index ? { ...z, name: e.target.value } : z)))}
+                              />
+                              <Input
+                                label="Prix (FC)"
+                                type="number"
+                                min={0}
+                                value={zone.priceFc > 0 ? String(zone.priceFc) : ''}
+                                onChange={(e) => setPricingZones((prev) => prev.map((z, i) => (i === index ? { ...z, priceFc: Number(e.target.value) || 0 } : z)))}
+                              />
+                              <button
+                                type="button"
+                                disabled={pricingZones.length <= 1}
+                                onClick={() => setPricingZones((prev) => prev.filter((_, i) => i !== index))}
+                                className="text-[11px] text-muted hover:text-red-500 disabled:opacity-30 pb-2"
+                              >
+                                Retirer
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <Input
+                          label="Nombre de places total (optionnel)"
+                          type="number"
+                          min={1}
+                          value={ticketsTotal}
+                          onChange={(e) => setTicketsTotal(e.target.value)}
+                          placeholder="Illimité"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
                 {!ticketing && (

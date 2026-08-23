@@ -9,6 +9,7 @@ import {
   resolveOrgAccess,
 } from '../services/permissionsService';
 import { blueprintToTablePlan, mergeBlueprintIntoTablePlan } from '../services/roomLayoutService';
+import { mergePricingZonesIntoTablePlan } from '../services/ticketPricingService';
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
@@ -102,6 +103,8 @@ async function eventVisibilityData(
     });
   }
   const ticketingEnabled = isPublic && (body.ticketingEnabled === true || body.ticketingEnabled === 'true');
+  const ticketPricingMode =
+    isPublic && ticketingEnabled && body.ticketPricingMode === 'by_zone' ? 'by_zone' : 'global';
   const ticketPriceFc = ticketingEnabled
     ? Math.max(0, Math.round(Number(body.ticketPriceFc) || 0))
     : 0;
@@ -117,6 +120,7 @@ async function eventVisibilityData(
     publishedAt: isPublic ? existing?.publishedAt || new Date() : null,
     ticketingEnabled: isPublic ? ticketingEnabled : false,
     ticketPriceFc: isPublic ? ticketPriceFc : 0,
+    ticketPricingMode: isPublic && ticketingEnabled ? ticketPricingMode : 'global',
     ticketsTotal: isPublic ? ticketsTotal : existing?.ticketsTotal ?? null,
     seatSelectionEnabled:
       isPublic && (body.seatSelectionEnabled === true || body.seatSelectionEnabled === 'true'),
@@ -204,6 +208,12 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       if (room?.layoutBlueprint) {
         tablePlanData = blueprintToTablePlan(room.layoutBlueprint as any);
       }
+    }
+    if (req.body.pricingZones !== undefined) {
+      tablePlanData = mergePricingZonesIntoTablePlan(
+        tablePlanData ?? { tables: [] },
+        Array.isArray(req.body.pricingZones) ? req.body.pricingZones : [],
+      ) as object;
     }
 
     const event = await prisma.event.create({
@@ -311,6 +321,15 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         ? await eventVisibilityData(title || existingEvent.title, req.body, existingEvent)
         : {};
 
+    let mergedTablePlan = tablePlan !== undefined ? tablePlan : undefined;
+    if (req.body.pricingZones !== undefined) {
+      const base = tablePlan !== undefined ? tablePlan : existingEvent.tablePlan;
+      mergedTablePlan = mergePricingZonesIntoTablePlan(
+        base,
+        Array.isArray(req.body.pricingZones) ? req.body.pricingZones : [],
+      );
+    }
+
     const updatedEvent = await prisma.event.update({
       where: { id },
       data: {
@@ -321,7 +340,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         reminderFrequency: reminderFrequency !== undefined ? reminderFrequency : existingEvent.reminderFrequency,
         latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
         longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
-        tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
+        tablePlan: mergedTablePlan !== undefined ? mergedTablePlan : existingEvent.tablePlan,
         roomId: roomId !== undefined ? roomId : existingEvent.roomId,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
         rsvpForm: rsvpForm !== undefined ? toPrismaJson(rsvpForm) : existingEvent.rsvpForm ?? undefined,
@@ -342,17 +361,17 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
 
     let assignmentNotifications = null;
     let eventForResponse = updatedEvent;
-    if (tablePlan !== undefined) {
+    if (mergedTablePlan !== undefined) {
       assignmentNotifications = await notifyTableAssignmentChanges({
         eventId: id,
         tenantId,
         oldPlan: existingEvent.tablePlan,
-        newPlan: tablePlan,
+        newPlan: mergedTablePlan,
       });
 
       if ((assignmentNotifications?.notified ?? 0) > 0) {
         const planWithMeta = {
-          ...(typeof tablePlan === 'object' && tablePlan !== null ? tablePlan : {}),
+          ...(typeof mergedTablePlan === 'object' && mergedTablePlan !== null ? mergedTablePlan : {}),
           placementNotifiedAt: new Date().toISOString(),
         };
         eventForResponse = await prisma.event.update({

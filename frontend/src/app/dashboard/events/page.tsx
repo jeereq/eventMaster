@@ -103,6 +103,7 @@ interface EventItem {
  publishedAt?: string | null;
  ticketingEnabled?: boolean;
  ticketPriceFc?: number;
+ ticketPricingMode?: string;
  ticketsTotal?: number | null;
  ticketsSold?: number;
  photos?: string[] | null;
@@ -923,7 +924,11 @@ Merci de confirmer votre présence :
  isPublic: form.isPublic,
  ticketingEnabled: form.ticketingEnabled,
  ticketPriceFc: form.ticketPriceFc,
+ ticketPricingMode: form.ticketPricingMode,
+ pricingZones: form.pricingZones,
  ticketsTotal: form.ticketsTotal,
+ seatSelectionEnabled: form.seatSelectionEnabled,
+ eventProgram: form.eventProgram,
  photos: form.photos,
  guestGuidelines: form.guestGuidelines,
  eventKind: form.eventKind,
@@ -3011,6 +3016,7 @@ Merci de confirmer votre présence :
  editorLevel={planFeatures?.roomEditorLevel}
  onImportRoomLayout={handleImportRoomLayout}
  importingLayout={importingLayout}
+ ticketPricingMode={(selectedEvent.ticketPricingMode as 'global' | 'by_zone' | undefined) ?? 'global'}
  />
  </div>
  )}

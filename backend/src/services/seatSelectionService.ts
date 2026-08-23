@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import { toPrismaJson } from '../utils/prismaJson';
+import { resolveSeatPrice } from './ticketPricingService';
 
 const HOLD_TTL_MS = 10 * 60 * 1000;
 
@@ -12,6 +13,9 @@ export type SeatInventoryItem = {
   shape: string;
   capacity: number;
   available: boolean;
+  priceFc: number;
+  pricingZoneId: string | null;
+  pricingZoneName: string | null;
 };
 
 type PlanTable = {
@@ -51,7 +55,7 @@ export async function listSeatInventory(eventId: string): Promise<{
   await purgeExpiredSeatHolds(eventId);
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { tablePlan: true },
+    select: { tablePlan: true, ticketPricingMode: true, ticketPriceFc: true },
   });
   const plan = event?.tablePlan as Record<string, unknown> | null;
   const tables = planTables(plan);
@@ -67,6 +71,17 @@ export async function listSeatInventory(eventId: string): Promise<{
     for (let i = 0; i < cap; i++) {
       const taken = Boolean(table.seats?.[i] ?? table.seats?.[String(i)]);
       const held = holdKeys.has(`${table.id}:${i}`);
+      const pricing = event
+        ? resolveSeatPrice(
+            {
+              ticketPricingMode: event.ticketPricingMode,
+              ticketPriceFc: event.ticketPriceFc,
+              tablePlan: event.tablePlan,
+            },
+            table.id,
+            i,
+          )
+        : { priceFc: 0, pricingZoneId: null, pricingZoneName: null };
       seats.push({
         tableId: table.id,
         tableName: table.name,
@@ -76,6 +91,9 @@ export async function listSeatInventory(eventId: string): Promise<{
         shape: table.shape || 'round',
         capacity: cap,
         available: !taken && !held,
+        priceFc: pricing.priceFc,
+        pricingZoneId: pricing.pricingZoneId,
+        pricingZoneName: pricing.pricingZoneName,
       });
     }
   }

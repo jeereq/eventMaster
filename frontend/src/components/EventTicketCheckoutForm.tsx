@@ -13,6 +13,8 @@ import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
 import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventProgram';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
+import { normalizeTicketPricingMode } from '@/lib/ticketPricing';
+import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
 
 type SeatRow = {
   tableId: string;
@@ -21,6 +23,19 @@ type SeatRow = {
   available: boolean;
   x: number;
   y: number;
+  shape: string;
+  capacity: number;
+  priceFc: number;
+  pricingZoneId: string | null;
+  pricingZoneName: string | null;
+};
+
+type SeatInventoryMeta = {
+  fixtures: unknown[];
+  roomOutline: unknown;
+  roomThemeId: string | null;
+  floorType: string | null;
+  floorImageUrl: string | null;
 };
 
 export default function EventTicketCheckoutForm({ event }: { event: PublicEventCard }) {
@@ -36,10 +51,16 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const [buyerPhone, setBuyerPhone] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [seats, setSeats] = useState<SeatRow[]>([]);
+  const [planMeta, setPlanMeta] = useState<SeatInventoryMeta | null>(null);
   const [selected, setSelected] = useState<{ tableId: string; seatIndex: number } | null>(null);
+  const [selectedZoneId, setSelectedZoneId] = useState('');
   const [seatsLoading, setSeatsLoading] = useState(false);
 
+  const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
+  const zonePricing = pricingMode === 'by_zone';
   const seatMode = Boolean(event.seatSelectionEnabled);
+  const pricingZones = event.pricingZones ?? [];
+
   const programHint = useMemo(() => {
     const lighting = resolveLightingFromProgram(
       normalizeEventProgram(event.eventProgram),
@@ -63,6 +84,13 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
       .then((data) => {
         if (cancelled) return;
         setSeats(Array.isArray(data.seats) ? data.seats : []);
+        setPlanMeta({
+          fixtures: Array.isArray(data.fixtures) ? data.fixtures : [],
+          roomOutline: data.roomOutline ?? null,
+          roomThemeId: data.roomThemeId ?? null,
+          floorType: data.floorType ?? null,
+          floorImageUrl: data.floorImageUrl ?? null,
+        });
       })
       .catch(() => {
         if (!cancelled) setError('Impossible de charger les places disponibles.');
@@ -83,6 +111,33 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     return [...map.entries()];
   }, [seats]);
 
+  const selectedSeat = useMemo(() => {
+    if (!selected) return null;
+    return seats.find((s) => s.tableId === selected.tableId && s.seatIndex === selected.seatIndex) ?? null;
+  }, [seats, selected]);
+
+  const selectedZone = useMemo(
+    () => pricingZones.find((z) => z.id === selectedZoneId) ?? null,
+    [pricingZones, selectedZoneId],
+  );
+
+  const unitPriceFc = useMemo(() => {
+    if (seatMode && selectedSeat) return selectedSeat.priceFc;
+    if (zonePricing && !seatMode && selectedZone) return selectedZone.priceFc;
+    if (zonePricing && event.priceFromFc) return event.priceFromFc;
+    return event.ticketPriceFc;
+  }, [seatMode, selectedSeat, zonePricing, selectedZone, event.priceFromFc, event.ticketPriceFc]);
+
+  const totalFc = unitPriceFc * (seatMode ? 1 : quantity);
+
+  const zoneColorById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const z of pricingZones) {
+      if (z.color) map.set(z.id, z.color);
+    }
+    return map;
+  }, [pricingZones]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -93,11 +148,17 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         setBusy(false);
         return;
       }
+      if (zonePricing && !seatMode && !selectedZoneId) {
+        setError('Choisissez une zone tarifaire.');
+        setBusy(false);
+        return;
+      }
       const data = await api.post(`/public/events/${slug}/checkout`, {
         buyerName,
         buyerPhone,
         quantity: seatMode ? 1 : quantity,
         ...(selected ? { tableId: selected.tableId, seatIndex: selected.seatIndex } : {}),
+        ...(zonePricing && !seatMode && selectedZoneId ? { pricingZoneId: selectedZoneId } : {}),
       });
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
@@ -120,6 +181,16 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         <Ticket className="w-4 h-4" />
         {event.paid ? 'Acheter un billet' : 'S’inscrire'}
       </h2>
+      {zonePricing && event.priceFromFc != null && (
+        <p className="text-[11px] text-muted">
+          Tarifs à partir de {formatFc(event.priceFromFc)}
+          {pricingZones.length > 0 && (
+            <span className="ml-1">
+              ({pricingZones.map((z) => `${z.name} ${formatFc(z.priceFc)}`).join(' · ')})
+            </span>
+          )}
+        </p>
+      )}
       {programHint && (
         <p className="text-[10px] text-muted">Ambiance programme actuelle : {programHint}</p>
       )}
@@ -144,50 +215,115 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           )}
           <Input label="Nom complet" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} required />
           <Input label="Téléphone" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} />
+
+          {zonePricing && !seatMode && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-foreground">Catégorie de place</p>
+              <div className="grid gap-2">
+                {pricingZones.map((zone) => {
+                  const active = selectedZoneId === zone.id;
+                  return (
+                    <button
+                      key={zone.id}
+                      type="button"
+                      onClick={() => setSelectedZoneId(zone.id)}
+                      className={`flex items-center justify-between gap-2 p-2.5 rounded border text-left text-sm transition ${
+                        active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-2 font-medium">
+                        <span
+                          className="w-3 h-3 rounded-full shrink-0 border border-border"
+                          style={{ backgroundColor: zone.color || '#c4a35a' }}
+                        />
+                        {zone.name}
+                      </span>
+                      <span className="text-xs font-bold text-primary">{formatFc(zone.priceFc)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {seatMode ? (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-foreground">Choisissez votre place</p>
+              <p className="text-xs font-semibold text-foreground">Choisissez votre place sur le plan</p>
               {seatsLoading ? (
                 <p className="text-xs text-muted">Chargement du plan…</p>
-              ) : tables.length === 0 ? (
+              ) : seats.length === 0 ? (
                 <p className="text-xs text-muted">Aucune place libre sur le plan.</p>
               ) : (
-                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                  {tables.map(([tableId, info]) => (
-                    <div key={tableId} className="rounded border border-border p-2">
-                      <p className="text-[11px] font-bold text-foreground mb-1.5">{info.name}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {info.seats.map((s) => {
-                          const active = selected?.tableId === s.tableId && selected.seatIndex === s.seatIndex;
-                          return (
-                            <button
-                              key={`${s.tableId}-${s.seatIndex}`}
-                              type="button"
-                              disabled={!s.available}
-                              onClick={() => setSelected({ tableId: s.tableId, seatIndex: s.seatIndex })}
-                              className={`min-w-[2rem] px-2 py-1 rounded text-[10px] font-bold border transition ${
-                                !s.available
-                                  ? 'opacity-40 cursor-not-allowed border-border text-muted'
-                                  : active
-                                    ? 'bg-primary text-white border-primary'
-                                    : 'border-border hover:border-primary text-foreground'
-                              }`}
-                            >
-                              {s.seatIndex + 1}
-                            </button>
-                          );
-                        })}
-                      </div>
+                <>
+                  <SeatSelectionPlanCanvas
+                    seats={seats}
+                    fixtures={planMeta?.fixtures as SeatSelectionPlanCanvasProps['fixtures']}
+                    roomOutline={planMeta?.roomOutline as SeatSelectionPlanCanvasProps['roomOutline']}
+                    roomThemeId={planMeta?.roomThemeId}
+                    floorType={planMeta?.floorType}
+                    floorImageUrl={planMeta?.floorImageUrl}
+                    pricingZones={pricingZones}
+                    selected={selected}
+                    onSelect={(tableId, seatIndex) => setSelected({ tableId, seatIndex })}
+                    zoneColorById={zoneColorById}
+                    showZonePricing={zonePricing}
+                    height={320}
+                  />
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-muted hover:text-foreground font-medium">
+                      Liste des places par table
+                    </summary>
+                    <div className="mt-2 max-h-40 overflow-y-auto space-y-2 pr-1">
+                      {tables.map(([tableId, info]) => (
+                        <div key={tableId} className="rounded border border-border p-2">
+                          <p className="text-[11px] font-bold text-foreground mb-1.5">{info.name}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {info.seats.map((s) => {
+                              const active = selected?.tableId === s.tableId && selected.seatIndex === s.seatIndex;
+                              const zoneColor = s.pricingZoneId ? zoneColorById.get(s.pricingZoneId) : undefined;
+                              return (
+                                <button
+                                  key={`${s.tableId}-${s.seatIndex}`}
+                                  type="button"
+                                  disabled={!s.available}
+                                  onClick={() => setSelected({ tableId: s.tableId, seatIndex: s.seatIndex })}
+                                  className={`min-w-[2rem] px-2 py-1 rounded text-[10px] font-bold border transition ${
+                                    !s.available
+                                      ? 'opacity-40 cursor-not-allowed border-border text-muted'
+                                      : active
+                                        ? 'bg-primary text-white border-primary'
+                                        : 'border-border hover:border-primary text-foreground'
+                                  }`}
+                                  style={!active && zoneColor ? { borderColor: zoneColor } : undefined}
+                                >
+                                  {s.seatIndex + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </details>
+                </>
               )}
-              {selected && (
+              {selectedSeat && (
                 <p className="text-[11px] text-primary font-semibold">
-                  Place sélectionnée : siège {selected.seatIndex + 1}
+                  Place : siège {selectedSeat.seatIndex + 1}
+                  {selectedSeat.pricingZoneName ? ` · ${selectedSeat.pricingZoneName}` : ''}
+                  {zonePricing && selectedSeat.priceFc > 0 ? ` · ${formatFc(selectedSeat.priceFc)}` : ''}
                 </p>
               )}
             </div>
+          ) : !zonePricing ? (
+            <Input
+              label="Quantité"
+              type="number"
+              min={1}
+              max={8}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value) || 1)}
+            />
           ) : (
             <Input
               label="Quantité"
@@ -198,9 +334,10 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
               onChange={(e) => setQuantity(Number(e.target.value) || 1)}
             />
           )}
+
           {event.paid && (
             <p className="text-xs text-muted">
-              Total : {formatFc(event.ticketPriceFc * (seatMode ? 1 : quantity))}
+              Total : {formatFc(totalFc)}
             </p>
           )}
           <Button type="submit" loading={busy} fullWidth className="min-h-11">

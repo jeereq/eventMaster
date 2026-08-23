@@ -2,6 +2,8 @@ import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import { formatFc } from '@/config/landingPricing';
 import { findRdcCommune, isAllowedRdcCity, neighborhoodsFor, pointInRdcCity } from '@/lib/rdcCities';
 import { eventPublicHref } from '@/lib/safeAppPath';
+import { priceFromFcForEvent } from '@/lib/ticketPricing';
+import type { PricingZone, TicketPricingMode } from '@/lib/ticketPricing';
 
 export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
 export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
@@ -1111,6 +1113,9 @@ export interface PublicEventCard {
   orgName: string;
   ticketingEnabled: boolean;
   ticketPriceFc: number;
+  ticketPricingMode?: TicketPricingMode;
+  priceFromFc?: number | null;
+  pricingZones?: PricingZone[];
   paid: boolean;
   ticketsTotal: number | null;
   ticketsSold: number;
@@ -1212,6 +1217,7 @@ export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
 export function eventToCatalogueItem(event: PublicEventCard): CatalogueItem | null {
   if (!event.slug) return null;
   const paid = event.paid || (event.ticketingEnabled && event.ticketPriceFc > 0);
+  const priceFrom = priceFromFcForEvent(event);
   const dateLabel = event.date
     ? new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
     : 'Événement';
@@ -1226,8 +1232,8 @@ export function eventToCatalogueItem(event: PublicEventCard): CatalogueItem | nu
     location: event.location,
     coverUrl: event.coverUrl || coverFromMedia(event.photos || []),
     photos: event.photos || [],
-    priceFromFc: paid ? event.ticketPriceFc : null,
-    priceUnitLabel: paid ? '/ personne' : 'Entrée libre',
+    priceFromFc: priceFrom,
+    priceUnitLabel: paid ? (event.ticketPricingMode === 'by_zone' ? 'à partir de' : '/ personne') : 'Entrée libre',
     latitude: event.latitude ?? null,
     longitude: event.longitude ?? null,
     capacity: event.ticketsTotal ?? event.ticketsRemaining ?? null,

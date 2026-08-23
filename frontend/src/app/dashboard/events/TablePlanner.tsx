@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { 
  Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
  HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box
@@ -19,6 +19,8 @@ import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
+import type { PricingZone, TicketPricingMode } from '@/lib/ticketPricing';
+import { pricingZonesFromTablePlan } from '@/lib/ticketPricing';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import Link from 'next/link';
@@ -47,6 +49,7 @@ interface Table {
  chairType?: string;
  tableColor?: string;
  rotation?: number;
+ pricingZoneId?: string;
 }
 
 interface TablePlannerProps {
@@ -66,8 +69,9 @@ interface TablePlannerProps {
    sourceRoomType?: string | null;
    lightingPreset?: LightingPreset | null;
    renderQuality?: 'draft' | 'standard' | 'showcase' | null;
+   pricingZones?: PricingZone[];
  } | null | undefined;
- onSave: (newTablePlan: { tables: Table[]; fixtures?: unknown[] }) => Promise<void>;
+ onSave: (newTablePlan: { tables: Table[]; fixtures?: unknown[]; pricingZones?: PricingZone[] }) => Promise<void>;
  roomName?: string | null;
  roomLayoutBlueprint?: RoomLayoutBlueprint | null;
  previewLightingPreset?: Exclude<LightingPreset, 'auto'>;
@@ -75,6 +79,7 @@ interface TablePlannerProps {
  onImportRoomLayout?: (replaceExisting: boolean) => Promise<void>;
  importingLayout?: boolean;
  editorLevel?: string | null;
+ ticketPricingMode?: TicketPricingMode;
 }
 
 export default function TablePlanner({
@@ -88,14 +93,22 @@ export default function TablePlanner({
  onImportRoomLayout,
  importingLayout,
  editorLevel = 'complete',
+ ticketPricingMode = 'global',
 }: TablePlannerProps) {
  const caps = roomEditorCapabilities(editorLevel, true);
+ const zonePricing = ticketPricingMode === 'by_zone';
+ const [pricingZones, setPricingZones] = useState<PricingZone[]>(() =>
+   pricingZonesFromTablePlan(initialTablePlan),
+ );
  const [tables, setTables] = useState<Table[]>(() => {
  if (initialTablePlan && Array.isArray(initialTablePlan.tables)) {
  return initialTablePlan.tables;
  }
  return [];
  });
+ useEffect(() => {
+   setPricingZones(pricingZonesFromTablePlan(initialTablePlan));
+ }, [initialTablePlan]);
  const [fixtures] = useState(() => initialTablePlan?.fixtures ?? []);
  const floorStyle = useMemo(
    () => resolveFloorStyle(
@@ -237,6 +250,7 @@ export default function TablePlanner({
  chairType: editingTable.chairType,
  locked: editingTable.locked,
  rotation: editingTable.rotation || 0,
+ pricingZoneId: editingTable.pricingZoneId,
  seats: updatedSeats
  };
  }
@@ -482,7 +496,12 @@ export default function TablePlanner({
  const handleSavePlan = async () => {
  setSaving(true);
  try {
- await onSave({ tables, fixtures: fixtures.length ? fixtures : undefined });
+ await onSave({
+   ...(initialTablePlan && typeof initialTablePlan === 'object' ? initialTablePlan : {}),
+   tables,
+   fixtures: fixtures.length ? fixtures : undefined,
+   pricingZones,
+ });
  alert('Plan de table sauvegardé avec succès !');
  } catch (err) {
  console.error('Error saving table plan:', err);
@@ -656,7 +675,25 @@ export default function TablePlanner({
  )}
  style={floorStyle}
  >
- {fixtures.map((fixture) => (
+ {zonePricing && pricingZones.map((zone) => {
+   if (zone.x == null || zone.y == null || zone.w == null || zone.h == null) return null;
+   return (
+     <div
+       key={zone.id}
+       className="absolute pointer-events-none z-[1] rounded-md border"
+       style={{
+         left: `${zone.x}%`,
+         top: `${zone.y}%`,
+         width: `${zone.w}%`,
+         height: `${zone.h}%`,
+         backgroundColor: zone.color ? `${zone.color}18` : 'rgba(196,163,90,0.1)',
+         borderColor: zone.color ? `${zone.color}66` : 'rgba(196,163,90,0.3)',
+       }}
+       title={zone.name}
+     />
+   );
+ })}
+ {(fixtures ?? []).map((fixture) => (
  <div
  key={fixture.id}
  className={`absolute pointer-events-none border text-[9px] font-semibold flex items-center justify-center px-1 text-center opacity-70 ${getFixtureClass(fixture.kind)}`}
@@ -691,6 +728,7 @@ export default function TablePlanner({
  const isDragging = draggingTableId === table.id;
  const assignedGuests = getTableAssignedGuests(table);
  const occupiedCount = getOccupiedSeatCount(table);
+ const zone = zonePricing ? pricingZones.find((z) => z.id === table.pricingZoneId) : null;
  const visual = getTableVisualStyle(table.shape, isActive, table.tableColor);
 
  return (
@@ -719,6 +757,7 @@ export default function TablePlanner({
  <p className="font-semibold text-sm leading-tight">{table.name}</p>
  <p className="text-[11px] text-primary font-medium">
  {getTableShapeLabel(table.shape)} · {occupiedCount}/{table.capacity} places
+ {zone ? ` · ${zone.name}` : ''}
  </p>
  {assignedGuests.length > 0 ? (
  <div className="pt-1 border-t border-border space-y-0.5">
@@ -750,6 +789,14 @@ export default function TablePlanner({
  <div className="text-[9px] opacity-80 mt-0.5 tabular-nums">
  {occupiedCount}/{table.capacity}
  </div>
+ {zone && (
+ <div
+ className="text-[8px] font-bold mt-0.5 px-1 py-0.5 rounded text-white truncate max-w-[80px]"
+ style={{ backgroundColor: zone.color || '#c4a35a' }}
+ >
+ {zone.name}
+ </div>
+ )}
  </div>
 
  {isActive && (
@@ -860,6 +907,22 @@ export default function TablePlanner({
 
  return (
  <div className="space-y-6 animate-fade-in">
+ {zonePricing && pricingZones.length > 0 && (
+ <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/60">
+ <div>
+ <p className="text-xs font-semibold text-foreground">Tarification par zones</p>
+ <p className="text-[11px] text-muted">Assignez une zone à chaque table via « Modifier la table ».</p>
+ </div>
+ <div className="flex flex-wrap gap-2">
+ {pricingZones.map((z) => (
+ <span key={z.id} className="inline-flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full border border-border bg-surface">
+ <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: z.color || '#c4a35a' }} />
+ {z.name}
+ </span>
+ ))}
+ </div>
+ </div>
+ )}
  {canImportRoomLayout && onImportRoomLayout && (
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-surface-muted border border-border rounded-[var(--radius-card)]">
  <div className="text-sm">
@@ -1434,6 +1497,24 @@ export default function TablePlanner({
  className="rounded border-border text-primary focus:ring-primary/30 h-4 w-4"
  />
  </label>
+ ) : null}
+ {zonePricing && pricingZones.length > 0 ? (
+ <div>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Zone tarifaire</label>
+ <select
+ value={editingTable.pricingZoneId || ''}
+ onChange={(e) => setEditingTable({
+   ...editingTable,
+   pricingZoneId: e.target.value || undefined,
+ })}
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ >
+ <option value="">Automatique / prix par défaut</option>
+ {pricingZones.map((z) => (
+ <option key={z.id} value={z.id}>{z.name}</option>
+ ))}
+ </select>
+ </div>
  ) : null}
  </div>
 

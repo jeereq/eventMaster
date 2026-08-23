@@ -160,7 +160,9 @@ function MarketplaceEventDetailInner() {
             )}
             <p className="text-sm text-muted">
               {event.paid
-                ? `Billet : ${formatFc(event.ticketPriceFc)} · paiement en ligne (carte).`
+                ? event.ticketPricingMode === 'by_zone' && event.priceFromFc != null
+                  ? `Billets à partir de ${formatFc(event.priceFromFc)} · paiement en ligne (carte).`
+                  : `Billet : ${formatFc(event.ticketPriceFc)} · paiement en ligne (carte).`
                 : 'Entrée libre : inscrivez-vous pour recevoir votre badge QR.'}
             </p>
             {posts.length > 0 && (
