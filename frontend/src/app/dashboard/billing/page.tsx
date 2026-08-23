@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -8,9 +8,11 @@ import {
   Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck, FileText,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Alert, SkeletonBillingView } from '@/components/ui';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
+import PaymentPendingView from '@/components/PaymentPendingView';
 import { formatQuotaRemaining } from '@/lib/quotaDisplay';
 import {
   LANDING_PLANS,
@@ -93,8 +95,9 @@ const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
   { label: 'Business Enterprise (B2B)', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'] },
 ];
 
-export default function BillingPage() {
+function BillingPageInner() {
   const { tenant } = useAuth();
+  const searchParams = useSearchParams();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [dynamicPlans, setDynamicPlans] = useState<Record<string, any> | null>(null);
   const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
@@ -110,6 +113,7 @@ export default function BillingPage() {
   const [payMethod, setPayMethod] = useState<'card' | 'mobile'>('card');
   const [payPhone, setPayPhone] = useState('');
   const [pendingFlexPayRequestId, setPendingFlexPayRequestId] = useState<string | null>(null);
+  const [pendingPayMethod, setPendingPayMethod] = useState<'card' | 'mobile'>('card');
 
   const loadBillingStatus = async () => {
     try {
@@ -139,6 +143,41 @@ export default function BillingPage() {
   useEffect(() => {
     loadBillingStatus();
   }, []);
+
+  useEffect(() => {
+    const flexpay = searchParams.get('flexpay');
+    const requestId = searchParams.get('requestId');
+    if (flexpay === 'canceled') {
+      setError('Paiement annulé. Vous pouvez réessayer quand vous voulez.');
+      return;
+    }
+    if (flexpay === 'error') {
+      setError('Retour FlexPay invalide. Contactez le support si le montant a été débité.');
+      return;
+    }
+    if (requestId && (flexpay === 'return' || flexpay === 'pending')) {
+      setPendingFlexPayRequestId(requestId);
+      setPendingPayMethod('card');
+      setSuccessMsg('');
+    }
+  }, [searchParams]);
+
+  const pollPendingFlexPay = useCallback(async () => {
+    if (!pendingFlexPayRequestId) {
+      return { status: 'error' as const, message: 'Demande manquante.' };
+    }
+    const data = await api.get(`/subscriptions/requests/${pendingFlexPayRequestId}/verify`);
+    if (data.paid) {
+      setSuccessMsg('Paiement confirmé. Forfait activé.');
+      setPendingFlexPayRequestId(null);
+      await loadBillingStatus();
+      return { status: 'paid' as const };
+    }
+    return {
+      status: 'pending' as const,
+      message: data.message || 'Paiement encore en cours…',
+    };
+  }, [pendingFlexPayRequestId]);
 
   const allowedPaidIds = useMemo(
     () => paidPlanIdsForAccountKind(tenant?.accountKind),
@@ -208,10 +247,8 @@ export default function BillingPage() {
         }
         if (data.requestId) {
           setPendingFlexPayRequestId(data.requestId);
-          setSuccessMsg(
-            data.message ||
-              'Paiement Mobile Money initié. Confirmez sur votre téléphone, puis cliquez sur « Vérifier le paiement ».',
-          );
+          setPendingPayMethod(payMethod);
+          setSuccessMsg('');
           return;
         }
         setSuccessMsg(data.message || 'Paiement initié.');
@@ -228,26 +265,6 @@ export default function BillingPage() {
       await loadBillingStatus();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la demande.');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const verifyPendingFlexPay = async () => {
-    if (!pendingFlexPayRequestId) return;
-    setError('');
-    setActionLoading('verify');
-    try {
-      const data = await api.get(`/subscriptions/requests/${pendingFlexPayRequestId}/verify`);
-      if (data.paid) {
-        setSuccessMsg('Paiement confirmé. Forfait activé.');
-        setPendingFlexPayRequestId(null);
-        await loadBillingStatus();
-      } else {
-        setError('Paiement encore en cours. Réessayez dans un instant après confirmation sur le téléphone.');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Vérification impossible.');
     } finally {
       setActionLoading(null);
     }
@@ -420,14 +437,19 @@ export default function BillingPage() {
             />
           )}
           {pendingFlexPayRequestId && (
-            <button
-              type="button"
-              onClick={() => void verifyPendingFlexPay()}
-              disabled={actionLoading === 'verify'}
-              className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 text-white disabled:opacity-60"
-            >
-              {actionLoading === 'verify' ? 'Vérification…' : 'Vérifier le paiement'}
-            </button>
+            <PaymentPendingView
+              method={pendingPayMethod}
+              title="Paiement FlexPay en cours"
+              description={
+                pendingPayMethod === 'mobile'
+                  ? 'Confirmez sur votre téléphone (USSD / app). Cette zone se met à jour automatiquement.'
+                  : 'Nous confirmons votre paiement carte. Cette zone se met à jour automatiquement.'
+              }
+              onPoll={pollPendingFlexPay}
+              onPaid={() => {
+                setPendingFlexPayRequestId(null);
+              }}
+            />
           )}
         </div>
       )}
@@ -650,5 +672,13 @@ export default function BillingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={<SkeletonBillingView />}>
+      <BillingPageInner />
+    </Suspense>
   );
 }

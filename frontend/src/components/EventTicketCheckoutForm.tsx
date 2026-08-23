@@ -177,8 +177,19 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         return;
       }
       const rsvp = data.rsvpUrl ? `&rsvp=${encodeURIComponent(data.rsvpUrl)}` : '';
-      const provider = data.provider === 'flexpay_mobile' ? '&provider=flexpay' : '';
-      router.push(`${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}${provider}`);
+      const isFlex =
+        data.provider === 'flexpay_mobile' || data.provider === 'flexpay_card';
+      const provider = isFlex ? '&provider=flexpay' : '';
+      const methodQ =
+        data.provider === 'flexpay_mobile'
+          ? '&method=mobile'
+          : data.provider === 'flexpay_card'
+            ? '&method=card'
+            : '';
+      const pendingQ = isFlex && data.orderId && !data.rsvpUrl ? '&pending=1' : '';
+      router.push(
+        `${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}${provider}${methodQ}${pendingQ}`,
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Inscription impossible.');
     } finally {

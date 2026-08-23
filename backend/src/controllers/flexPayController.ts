@@ -203,7 +203,7 @@ export async function flexPayCardReturn(req: Request, res: Response) {
     }
 
     return res.redirect(
-      `${FRONTEND_URL}/marketplace/evenements/${slug}/succes?order=${order.id}&provider=flexpay`,
+      `${FRONTEND_URL}/marketplace/evenements/${slug}/succes?order=${order.id}&provider=flexpay&method=card&pending=1`,
     );
   } catch (error) {
     console.error('[FlexPay] return', error);
