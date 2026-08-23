@@ -8,7 +8,7 @@ import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
 import RoomWebGLViewer, { type RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
-import { ChairTypePicker, SeatMaterialPicker } from '@/components/room/RoomMaterialPreviews';
+import { ChairTypePicker, SeatMaterialPicker, RoomAmbienceCard, TableSurfacePicker, ZoneMaterialPicker } from '@/components/room/RoomMaterialPreviews';
 import {
   ChairType,
   ColumnShape,
@@ -21,6 +21,8 @@ import {
   ROOM_LAYOUT_TEMPLATES,
   applyRoomTemplate,
   applySavedRoomTemplate,
+  applyRoomAmbiencePreset,
+  ROOM_AMBIENCE_PRESETS,
   applyTableStyleToAll,
   autoArrangeTables,
   arrangeDensityLabels,
@@ -57,6 +59,7 @@ import {
   type LayoutParams,
   type SeatMaterial,
   type TableArrangePreset,
+  type TableSurfaceStyle,
   type ZoneKind,
   type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
@@ -1309,6 +1312,27 @@ export default function RoomLayoutEditor({
                     activeThemeId={blueprint.metadata.roomThemeId}
                   />
                 ) : null}
+                  </div>
+                  <div className="space-y-3 pt-4 border-t border-border/50">
+                    <p className="text-xs font-bold uppercase text-muted flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" /> Ambiances complètes
+                    </p>
+                    <p className="text-[10px] text-muted leading-snug">
+                      Applique murs, sol, thème et style de chaises / tables en un clic.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-0.5">
+                      {ROOM_AMBIENCE_PRESETS.map((preset) => (
+                        <RoomAmbienceCard
+                          key={preset.id}
+                          preset={preset}
+                          onClick={() => {
+                            const next = applyRoomAmbiencePreset(blueprint, preset);
+                            updateBlueprint(next, { message: `Ambiance : ${preset.label}`, kind: 'settings' });
+                            if (preset.roomThemeId) applyTheme(preset.roomThemeId);
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
                     <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
@@ -2588,6 +2612,13 @@ export default function RoomLayoutEditor({
                 </button>
               </div>
             </label>
+            <div className="block text-xs space-y-1.5">
+              <span className="font-semibold text-muted">Plateau / finition</span>
+              <TableSurfacePicker
+                value={selectedFurniture.tableSurface ?? blueprint.metadata.defaultTableSurface ?? 'linen'}
+                onChange={(tableSurface) => updateFurniture(selectedFurniture.id, { tableSurface }, 'Finition de table')}
+              />
+            </div>
             <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
               <input
                 type="checkbox"
@@ -2725,6 +2756,13 @@ export default function RoomLayoutEditor({
                 </button>
                 <button
                   type="button"
+                  onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['tableSurface']), { message: 'Finition appliquée à toutes les tables', kind: 'edit' })}
+                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-white"
+                >
+                  Plateau
+                </button>
+                <button
+                  type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['capacity']), { message: 'Places appliquées à toutes les tables', kind: 'edit' })}
                   className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-white"
                 >
@@ -2811,15 +2849,10 @@ export default function RoomLayoutEditor({
             </label>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Matériau / sol</span>
-              <select
+              <ZoneMaterialPicker
                 value={selectedFurniture.material ?? 'vinyl'}
-                onChange={(e) => updateFurniture(selectedFurniture.id, { material: e.target.value as ZoneMaterial }, 'Matériau de zone modifié')}
-                className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-              >
-                {(Object.keys(zoneMaterialLabels) as ZoneMaterial[]).map((k) => (
-                  <option key={k} value={k}>{zoneMaterialLabels[k]}</option>
-                ))}
-              </select>
+                onChange={(material) => updateFurniture(selectedFurniture.id, { material }, 'Matériau de zone modifié')}
+              />
             </label>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Teinte</span>

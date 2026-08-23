@@ -1,7 +1,7 @@
 'use client';
 
 import * as THREE from 'three';
-import type { ChairType, ChairStyle, SeatMaterial, TableShape, WallTextureStyle, ZoneMaterial, OpeningMaterial } from '@/lib/roomLayoutUtils';
+import type { ChairType, ChairStyle, SeatMaterial, TableShape, TableSurfaceStyle, WallTextureStyle, ZoneMaterial, OpeningMaterial } from '@/lib/roomLayoutUtils';
 import { SEAT_MATERIAL_COLORS, WALL_TEXTURE_COLORS } from '@/lib/roomLayoutUtils';
 import { getFloorAsset, FLOOR_TEXTURE_REPEAT_M } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
@@ -837,7 +837,15 @@ export function resolveTableMaterial(
   shape: TableShape,
   color?: string,
   imageUrl?: string,
-): { map: THREE.Texture | null; color: string; roughness: number; metalness: number } {
+  surface?: TableSurfaceStyle,
+): {
+  map: THREE.Texture | null;
+  color: string;
+  roughness: number;
+  metalness: number;
+  transparent?: boolean;
+  opacity?: number;
+} {
   if (imageUrl) {
     return {
       map: loadTiledTexture(imageUrl, 1.2, 1.2),
@@ -846,15 +854,57 @@ export function resolveTableMaterial(
       metalness: 0.08,
     };
   }
-  const url =
+
+  const resolvedSurface = surface ?? (
     shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop'
-      ? TABLE_LINEN_TEXTURE
-      : TABLE_DEFAULT_TEXTURE;
+      ? 'linen'
+      : 'wood'
+  );
+
+  if (resolvedSurface === 'glass') {
+    return {
+      map: null,
+      color: color && color !== '#ffffff' ? color : '#e2e8f0',
+      roughness: 0.06,
+      metalness: 0.22,
+      transparent: true,
+      opacity: 0.42,
+    };
+  }
+
+  if (resolvedSurface === 'whiteLacquer') {
+    return {
+      map: null,
+      color: color && color !== '#ffffff' ? color : '#fafafa',
+      roughness: 0.12,
+      metalness: 0.18,
+    };
+  }
+
+  const textureBySurface: Record<Exclude<TableSurfaceStyle, 'glass' | 'whiteLacquer'>, string> = {
+    wood: TABLE_DEFAULT_TEXTURE,
+    linen: TABLE_LINEN_TEXTURE,
+    walnut: '/floors/wood-charcoal.png',
+    marble: '/floors/marble-calacatta.png',
+    darkWood: '/floors/wood-rustic.png',
+  };
+
+  const url = textureBySurface[resolvedSurface as keyof typeof textureBySurface] ?? TABLE_DEFAULT_TEXTURE;
+  const defaultColors: Record<TableSurfaceStyle, string> = {
+    wood: '#f5f0e8',
+    linen: '#faf7f2',
+    walnut: '#d4c4a8',
+    marble: '#f5f5f4',
+    darkWood: '#44403c',
+    whiteLacquer: '#fafafa',
+    glass: '#e2e8f0',
+  };
+
   return {
     map: loadTiledTexture(url, 1.4, 1.4),
-    color: color && color !== '#ffffff' ? color : '#f5f0e8',
-    roughness: 0.45,
-    metalness: 0.08,
+    color: color && color !== '#ffffff' ? color : defaultColors[resolvedSurface],
+    roughness: resolvedSurface === 'marble' ? 0.22 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.48 : 0.45,
+    metalness: resolvedSurface === 'marble' ? 0.12 : 0.08,
   };
 }
 

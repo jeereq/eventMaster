@@ -12,6 +12,8 @@ export type ChairType =
   | 'BARSTOOL'
   | 'POUF';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop';
+/** Finition du plateau de table (3D). */
+export type TableSurfaceStyle = 'wood' | 'linen' | 'walnut' | 'marble' | 'darkWood' | 'whiteLacquer' | 'glass';
 /** Style de fauteuil / chaise (surtout fauteuils). */
 export type ChairStyle =
   | 'classic'
@@ -39,7 +41,7 @@ export type SeatMaterial =
   | 'rattan';
 export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
-export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'capacity' | 'hasCouverts';
+export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts';
 
 export type RoomOutlineShape =
   | 'rectangle'
@@ -243,6 +245,7 @@ export interface RoomLayoutBlueprint {
         seatMaterial?: SeatMaterial;
         chairImageUrl?: string;
         tableColor?: string;
+        tableSurface?: TableSurfaceStyle;
         tableImageUrl?: string;
         /** Nappe / couverts sur la table. */
         hasCouverts?: boolean;
@@ -312,6 +315,7 @@ export interface RoomLayoutBlueprint {
     rowCount?: number;
     totalSeats: number;
     defaultTableColor?: string;
+    defaultTableSurface?: TableSurfaceStyle;
     roomThemeId?: string;
     floorType?: import('@/lib/roomThemeUtils').FloorType;
     floorImageUrl?: string;
@@ -976,6 +980,193 @@ export const WALL_STYLE_PRESETS: Array<{
   { id: 'hotel', label: 'Hôtel premium', texture: 'travertine' },
   { id: 'bistro', label: 'Bistro / metro', texture: 'metroTile' },
 ];
+
+export const tableSurfaceLabels: Record<TableSurfaceStyle, string> = {
+  wood: 'Bois clair',
+  linen: 'Nappe lin',
+  walnut: 'Noyer',
+  marble: 'Marbre',
+  darkWood: 'Bois foncé',
+  whiteLacquer: 'Laqué blanc',
+  glass: 'Verre',
+};
+
+/** Ambiance complète : murs + sol + mobilier par défaut. */
+export type RoomAmbiencePreset = {
+  id: string;
+  label: string;
+  description: string;
+  wallTexture: WallTextureStyle;
+  wallColor?: string;
+  wallPaintColor?: string;
+  floorType: import('@/lib/roomThemeUtils').FloorType;
+  floorColor?: string;
+  roomThemeId?: import('@/lib/roomThemeUtils').BuiltInRoomThemeId;
+  chairType: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
+  tableSurface?: TableSurfaceStyle;
+  defaultTableColor?: string;
+};
+
+export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
+  {
+    id: 'mariage-chiavari',
+    label: 'Mariage Chiavari',
+    description: 'Murs cannelés, parquet, chaises dorées et nappes lin.',
+    wallTexture: 'fluted',
+    wallColor: '#faf7f2',
+    wallPaintColor: '#faf7f2',
+    floorType: 'parquet',
+    floorColor: '#f5f0e8',
+    roomThemeId: 'wedding',
+    chairType: 'BANQUET',
+    chairStyle: 'chiavari',
+    seatMaterial: 'linen',
+    tableSurface: 'linen',
+    defaultTableColor: '#faf7f2',
+  },
+  {
+    id: 'gala-velours',
+    label: 'Gala velours',
+    description: 'Tadelakt, marbre, fauteuils club et plateau marbre.',
+    wallTexture: 'tadelakt',
+    wallPaintColor: '#f5f0e8',
+    floorType: 'marbreCalacatta',
+    roomThemeId: 'gala',
+    chairType: 'ARMCHAIR',
+    chairStyle: 'club',
+    seatMaterial: 'velvet',
+    tableSurface: 'marble',
+    defaultTableColor: '#f8fafc',
+  },
+  {
+    id: 'seminaire-mesh',
+    label: 'Séminaire pro',
+    description: 'Plâtre neutre, moquette, sièges mesh conférence.',
+    wallTexture: 'plaster',
+    floorType: 'moquette',
+    floorColor: '#1e3a5f',
+    roomThemeId: 'modern',
+    chairType: 'MESH',
+    seatMaterial: 'mesh',
+    tableSurface: 'whiteLacquer',
+    defaultTableColor: '#ffffff',
+  },
+  {
+    id: 'loft-industriel',
+    label: 'Loft industriel',
+    description: 'Tôle ondulée, béton, tabourets Tolix.',
+    wallTexture: 'metalCorrugated',
+    floorType: 'beton',
+    roomThemeId: 'loft',
+    chairType: 'BARSTOOL',
+    chairStyle: 'tolix',
+    seatMaterial: 'leather',
+    tableSurface: 'darkWood',
+    defaultTableColor: '#44403c',
+  },
+  {
+    id: 'cocktail-ghost',
+    label: 'Cocktail design',
+    description: 'Chaux minérale, résine, chaises Ghost et verre.',
+    wallTexture: 'limewash',
+    floorType: 'epoxy',
+    floorColor: '#e7e5e4',
+    roomThemeId: 'soiree',
+    chairType: 'GHOST',
+    chairStyle: 'ghost',
+    seatMaterial: 'plastic',
+    tableSurface: 'glass',
+    defaultTableColor: '#f8fafc',
+  },
+  {
+    id: 'rustique-crossback',
+    label: 'Rustique champêtre',
+    description: 'Brique, bois rustique, cross-back et plateau bois.',
+    wallTexture: 'brick',
+    floorType: 'boisRustique',
+    roomThemeId: 'rustique',
+    chairType: 'CROSSBACK',
+    chairStyle: 'crossback',
+    seatMaterial: 'linen',
+    tableSurface: 'wood',
+    defaultTableColor: '#e8d5a3',
+  },
+  {
+    id: 'hotel-travertin',
+    label: 'Hôtel premium',
+    description: 'Travertin, parquet chevron, banquet classique.',
+    wallTexture: 'travertine',
+    floorType: 'chevronGreige',
+    roomThemeId: 'champagne',
+    chairType: 'BANQUET',
+    chairStyle: 'napoleon',
+    seatMaterial: 'velvet',
+    tableSurface: 'walnut',
+    defaultTableColor: '#d6c4a0',
+  },
+  {
+    id: 'bistro-metro',
+    label: 'Bistro parisien',
+    description: 'Carrelage métro, damier, chaises bistrot.',
+    wallTexture: 'metroTile',
+    floorType: 'damier',
+    roomThemeId: 'classic',
+    chairType: 'BANQUET',
+    chairStyle: 'classic',
+    seatMaterial: 'leather',
+    tableSurface: 'darkWood',
+    defaultTableColor: '#292524',
+  },
+];
+
+export function applyRoomAmbiencePreset(
+  blueprint: RoomLayoutBlueprint,
+  preset: RoomAmbiencePreset,
+): RoomLayoutBlueprint {
+  const next: RoomLayoutBlueprint = {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      floorType: preset.floorType,
+      floorColor: preset.floorColor,
+      floorImageUrl: undefined,
+      floorImageFit: undefined,
+      roomThemeId: preset.roomThemeId ?? blueprint.metadata.roomThemeId,
+      wallPaintColor: preset.wallPaintColor ?? preset.wallColor,
+      defaultTableColor: preset.defaultTableColor,
+      defaultTableSurface: preset.tableSurface,
+    },
+    walls: (blueprint.walls ?? []).map((w) => ({
+      ...w,
+      texture: preset.wallTexture,
+      color: preset.wallColor,
+    })),
+    furniture: blueprint.furniture.map((item) => {
+      if (item.kind === 'table') {
+        return {
+          ...item,
+          chairType: preset.chairType,
+          chairStyle: preset.chairStyle,
+          seatMaterial: preset.seatMaterial,
+          tableSurface: preset.tableSurface,
+          tableColor: preset.defaultTableColor ?? item.tableColor,
+        };
+      }
+      if (item.kind === 'row' || item.kind === 'chair') {
+        return {
+          ...item,
+          chairType: preset.chairType,
+          chairStyle: preset.chairStyle,
+          seatMaterial: preset.seatMaterial,
+        };
+      }
+      return item;
+    }),
+  };
+  return refreshBlueprintMetadata(next);
+}
 
 export function createWallOpening(
   kind: 'door' | 'window',
@@ -1690,6 +1881,7 @@ export function applyTableStyleToAll(
       chairStyle: fields.includes('chairStyle') ? source.chairStyle : item.chairStyle,
       seatMaterial: fields.includes('seatMaterial') ? source.seatMaterial : item.seatMaterial,
       tableColor: fields.includes('tableColor') ? source.tableColor : item.tableColor,
+      tableSurface: fields.includes('tableSurface') ? source.tableSurface : item.tableSurface,
       capacity: fields.includes('capacity') ? source.capacity : item.capacity,
       hasCouverts: fields.includes('hasCouverts') ? source.hasCouverts : item.hasCouverts,
     };

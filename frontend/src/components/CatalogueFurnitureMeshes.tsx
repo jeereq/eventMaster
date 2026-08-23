@@ -15,15 +15,19 @@ type MatProps = {
   map?: THREE.Texture | null;
   roughness?: number;
   metalness?: number;
+  transparent?: boolean;
+  opacity?: number;
 };
 
-function Mat({ color, map, roughness = 0.6, metalness = 0.05 }: MatProps) {
+function Mat({ color, map, roughness = 0.6, metalness = 0.05, transparent, opacity }: MatProps) {
   return (
     <meshStandardMaterial
       color={color}
       map={map ?? undefined}
       roughness={roughness}
       metalness={metalness}
+      transparent={transparent}
+      opacity={opacity}
     />
   );
 }
@@ -444,7 +448,14 @@ export function CatalogueTableStructure({
       <group>
         <mesh position={[0, topY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.05, segments]} />
-          <Mat color={topColor} map={mat.map} roughness={0.35} metalness={0.12} />
+          <Mat
+            color={topColor}
+            map={mat.map}
+            roughness={mat.roughness ?? 0.35}
+            metalness={mat.metalness ?? 0.12}
+            transparent={mat.transparent}
+            opacity={mat.opacity}
+          />
         </mesh>
         <mesh position={[0, topY / 2, 0]} castShadow>
           <cylinderGeometry args={[0.04, 0.07, topY - 0.06, 14]} />
@@ -468,7 +479,7 @@ export function CatalogueTableStructure({
       <group>
         <mesh position={[0, topY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.055, segments]} />
-          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} />
+          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
         </mesh>
         <mesh position={[0, topY * 0.52, 0]} castShadow>
           <cylinderGeometry args={[0.045, 0.07, topY - 0.1, 16]} />
@@ -496,7 +507,7 @@ export function CatalogueTableStructure({
       <group>
         <mesh position={[0, topY, 0]} scale={[1, 1, size[1] / size[0]]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.06, segments]} />
-          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} />
+          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
         </mesh>
         <mesh position={[0, topY - 0.04, 0]} scale={[1, 1, size[1] / size[0]]} castShadow>
           <cylinderGeometry args={[size[0] / 2 * 1.01, size[0] / 2 * 0.96, 0.035, segments]} />
@@ -525,7 +536,7 @@ export function CatalogueTableStructure({
       <group>
         <mesh position={[0, topY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.06, segments]} />
-          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} />
+          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
         </mesh>
         <mesh position={[0, topY - 0.035, 0]} castShadow>
           <cylinderGeometry args={[size[0] / 2 * 1.015, size[0] / 2 * 0.97, 0.03, segments]} />
@@ -562,7 +573,7 @@ export function CatalogueTableStructure({
     <group>
       <mesh position={[0, topY, 0]} castShadow receiveShadow>
         <boxGeometry args={[size[0], 0.055, size[1]]} />
-        <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} />
+        <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
       </mesh>
       <mesh position={[0, topY - 0.08, 0]} castShadow>
         <boxGeometry args={[size[0] * 0.96, 0.1, size[1] * 0.96]} />

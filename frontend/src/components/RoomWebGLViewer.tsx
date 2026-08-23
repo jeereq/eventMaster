@@ -1138,6 +1138,7 @@ function TableMesh({
   seatMaterial,
   chairImageUrl,
   tableImageUrl,
+  tableSurface,
   hasCouverts = false,
   attachedChairs = true,
   rotation,
@@ -1161,6 +1162,7 @@ function TableMesh({
   seatMaterial?: SeatMaterial;
   chairImageUrl?: string;
   tableImageUrl?: string;
+  tableSurface?: import('@/lib/roomLayoutUtils').TableSurfaceStyle;
   hasCouverts?: boolean;
   attachedChairs?: boolean;
   rotation?: number;
@@ -1176,8 +1178,8 @@ function TableMesh({
   const [wx, wz] = pctToWorld(xPct, yPct, widthM, heightM);
   const { gl } = useThree();
   const mat = useMemo(
-    () => resolveTableMaterial(shape, color, tableImageUrl),
-    [shape, color, tableImageUrl],
+    () => resolveTableMaterial(shape, color, tableImageUrl, tableSurface),
+    [shape, color, tableImageUrl, tableSurface],
   );
 
   const size =
@@ -2105,6 +2107,7 @@ function SceneContent({
             seatMaterial={item.seatMaterial}
             chairImageUrl={item.chairImageUrl}
             tableImageUrl={item.tableImageUrl}
+            tableSurface={item.tableSurface ?? blueprint.metadata.defaultTableSurface}
             hasCouverts={item.hasCouverts}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}
