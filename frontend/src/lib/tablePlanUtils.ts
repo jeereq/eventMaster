@@ -1,6 +1,7 @@
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop';
 
 import type React from 'react';
+import type { TableSurfaceStyle } from '@/lib/roomLayoutUtils';
 
 export interface TablePlanTable {
   id: string;
@@ -79,11 +80,20 @@ export function getTableVisualClasses(shape: TableShape | string, active = false
   return `${tableSizeClass(shape)} em-table-realistic em-table-realistic--${shape}${active ? ' em-table-realistic--active' : ''}`;
 }
 
+const TABLE_SURFACE_2D: Partial<Record<TableSurfaceStyle, string>> = {
+  wood: '/floors/table-wood.svg',
+  linen: '/floors/table-linen.svg',
+  walnut: '/floors/wood-charcoal.png',
+  marble: '/floors/marble-calacatta.png',
+  darkWood: '/floors/wood-rustic.png',
+};
+
 export function getTableVisualStyle(
   shape: TableShape | string,
   active = false,
   tableColor?: string,
   tableImageUrl?: string,
+  tableSurface?: TableSurfaceStyle,
 ): { className: string; style?: React.CSSProperties } {
   const size = tableSizeClass(shape);
   const shapeKey = ['round', 'oval', 'square', 'rectangular', 'cocktail', 'highTop'].includes(String(shape))
@@ -94,6 +104,11 @@ export function getTableVisualStyle(
   const wood = 'url(/floors/table-wood.svg)';
   const dark = isDarkTableColor(tableColor);
   const tint = tableColor || (dark ? '#1e293b' : '#f3e6c8');
+  const resolvedSurface: TableSurfaceStyle | undefined = tableSurface ?? (
+    shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop'
+      ? 'linen'
+      : 'wood'
+  );
 
   if (tableImageUrl) {
     return {
@@ -103,6 +118,46 @@ export function getTableVisualStyle(
         backgroundImage: `radial-gradient(ellipse at 34% 28%, rgba(255,255,255,0.28) 0%, transparent 42%), url(${tableImageUrl})`,
         backgroundSize: '100% 100%, cover',
         backgroundPosition: 'center',
+      },
+    };
+  }
+
+  if (resolvedSurface === 'glass') {
+    return {
+      className,
+      style: {
+        backgroundColor: tint,
+        backgroundImage: 'linear-gradient(135deg, rgba(248,250,252,0.92) 0%, rgba(203,213,225,0.45) 100%)',
+        boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.35)',
+        color: dark ? '#f8fafc' : '#334155',
+      },
+    };
+  }
+
+  if (resolvedSurface === 'whiteLacquer') {
+    return {
+      className,
+      style: {
+        backgroundColor: tint,
+        backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(226,232,240,0.7) 100%)',
+        color: dark ? '#f8fafc' : '#475569',
+      },
+    };
+  }
+
+  const surfaceUrl = TABLE_SURFACE_2D[resolvedSurface];
+  if (surfaceUrl) {
+    const highlight = dark
+      ? 'radial-gradient(ellipse at 36% 30%, rgba(255,255,255,0.16) 0%, transparent 46%)'
+      : 'radial-gradient(ellipse at 34% 28%, rgba(255,255,255,0.42) 0%, transparent 44%)';
+    return {
+      className,
+      style: {
+        backgroundColor: tint,
+        backgroundImage: `${highlight}, url(${surfaceUrl})`,
+        backgroundSize: '100% 100%, cover',
+        backgroundBlendMode: 'soft-light, multiply',
+        color: dark ? '#f8fafc' : '#3f2a12',
       },
     };
   }

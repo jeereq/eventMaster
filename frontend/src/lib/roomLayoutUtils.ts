@@ -341,6 +341,8 @@ export interface RoomLayoutBlueprint {
     wallPaintColor?: string;
     customThemes?: import('@/lib/roomThemeUtils').CustomRoomTheme[];
     customTemplates?: SavedRoomTemplate[];
+    /** Ambiances personnalisées sauvegardées par l’utilisateur. */
+    customAmbiences?: SavedRoomAmbience[];
     depthView?: boolean;
     /** 0 = vue à plat, 100 = perspective 2,5D maximale. */
     depthAmount?: number;
@@ -1007,6 +1009,15 @@ export type RoomAmbiencePreset = {
   seatMaterial?: SeatMaterial;
   tableSurface?: TableSurfaceStyle;
   defaultTableColor?: string;
+  lightingPreset?: import('@/lib/roomRenderQuality').LightingPreset;
+  showChandeliers?: boolean;
+  chandelierType?: import('@/lib/roomCeilingUtils').ChandelierType;
+};
+
+export type SavedRoomAmbience = {
+  id: string;
+  name: string;
+  preset: RoomAmbiencePreset;
 };
 
 export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
@@ -1025,6 +1036,8 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'linen',
     tableSurface: 'linen',
     defaultTableColor: '#faf7f2',
+    lightingPreset: 'day',
+    showChandeliers: true,
   },
   {
     id: 'gala-velours',
@@ -1039,6 +1052,9 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'velvet',
     tableSurface: 'marble',
     defaultTableColor: '#f8fafc',
+    lightingPreset: 'night',
+    showChandeliers: true,
+    chandelierType: 'crystal',
   },
   {
     id: 'seminaire-mesh',
@@ -1052,6 +1068,8 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'mesh',
     tableSurface: 'whiteLacquer',
     defaultTableColor: '#ffffff',
+    lightingPreset: 'conference',
+    showChandeliers: false,
   },
   {
     id: 'loft-industriel',
@@ -1065,6 +1083,8 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'leather',
     tableSurface: 'darkWood',
     defaultTableColor: '#44403c',
+    lightingPreset: 'dusk',
+    showChandeliers: false,
   },
   {
     id: 'cocktail-ghost',
@@ -1079,6 +1099,9 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'plastic',
     tableSurface: 'glass',
     defaultTableColor: '#f8fafc',
+    lightingPreset: 'night',
+    showChandeliers: true,
+    chandelierType: 'modern',
   },
   {
     id: 'rustique-crossback',
@@ -1092,6 +1115,9 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'linen',
     tableSurface: 'wood',
     defaultTableColor: '#e8d5a3',
+    lightingPreset: 'banquet',
+    showChandeliers: true,
+    chandelierType: 'lantern',
   },
   {
     id: 'hotel-travertin',
@@ -1105,6 +1131,9 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'velvet',
     tableSurface: 'walnut',
     defaultTableColor: '#d6c4a0',
+    lightingPreset: 'day',
+    showChandeliers: true,
+    chandelierType: 'classic',
   },
   {
     id: 'bistro-metro',
@@ -1118,6 +1147,9 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     seatMaterial: 'leather',
     tableSurface: 'darkWood',
     defaultTableColor: '#292524',
+    lightingPreset: 'dusk',
+    showChandeliers: true,
+    chandelierType: 'industrial',
   },
 ];
 
@@ -1137,6 +1169,9 @@ export function applyRoomAmbiencePreset(
       wallPaintColor: preset.wallPaintColor ?? preset.wallColor,
       defaultTableColor: preset.defaultTableColor,
       defaultTableSurface: preset.tableSurface,
+      lightingPreset: preset.lightingPreset ?? blueprint.metadata.lightingPreset,
+      showChandeliers: preset.showChandeliers ?? blueprint.metadata.showChandeliers,
+      chandelierType: preset.chandelierType ?? blueprint.metadata.chandelierType,
     },
     walls: (blueprint.walls ?? []).map((w) => ({
       ...w,
@@ -1166,6 +1201,70 @@ export function applyRoomAmbiencePreset(
     }),
   };
   return refreshBlueprintMetadata(next);
+}
+
+export function captureRoomAmbienceFromBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  id: string,
+  label: string,
+  description?: string,
+): RoomAmbiencePreset {
+  const wall = blueprint.walls?.[0];
+  const table = blueprint.furniture.find((f) => f.kind === 'table');
+  return {
+    id,
+    label,
+    description: description?.trim() || `Ambiance « ${label} »`,
+    wallTexture: wall?.texture ?? 'plaster',
+    wallColor: wall?.color,
+    wallPaintColor: blueprint.metadata.wallPaintColor,
+    floorType: blueprint.metadata.floorType ?? 'parquet',
+    floorColor: blueprint.metadata.floorColor,
+    roomThemeId: blueprint.metadata.roomThemeId as import('@/lib/roomThemeUtils').BuiltInRoomThemeId | undefined,
+    chairType: table && table.kind === 'table' ? table.chairType : 'BANQUET',
+    chairStyle: table && table.kind === 'table' ? table.chairStyle : undefined,
+    seatMaterial: table && table.kind === 'table' ? table.seatMaterial : undefined,
+    tableSurface: table && table.kind === 'table'
+      ? table.tableSurface ?? blueprint.metadata.defaultTableSurface
+      : blueprint.metadata.defaultTableSurface,
+    defaultTableColor: table && table.kind === 'table'
+      ? table.tableColor ?? blueprint.metadata.defaultTableColor
+      : blueprint.metadata.defaultTableColor,
+    lightingPreset: blueprint.metadata.lightingPreset,
+    showChandeliers: blueprint.metadata.showChandeliers,
+    chandelierType: blueprint.metadata.chandelierType,
+  };
+}
+
+export function saveCustomAmbienceToBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  name: string,
+): RoomLayoutBlueprint {
+  const trimmed = name.trim();
+  if (!trimmed) return blueprint;
+  const id = `amb-${Date.now().toString(36)}`;
+  const preset = captureRoomAmbienceFromBlueprint(blueprint, id, trimmed);
+  const existing = blueprint.metadata.customAmbiences ?? [];
+  return {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      customAmbiences: [{ id, name: trimmed, preset }, ...existing].slice(0, 12),
+    },
+  };
+}
+
+export function deleteCustomAmbienceFromBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  ambienceId: string,
+): RoomLayoutBlueprint {
+  return {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      customAmbiences: (blueprint.metadata.customAmbiences ?? []).filter((a) => a.id !== ambienceId),
+    },
+  };
 }
 
 export function createWallOpening(

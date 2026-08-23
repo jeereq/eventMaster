@@ -118,6 +118,7 @@ function ThumbPreview({
             false,
             tableColor,
             item.tableImageUrl,
+            item.tableSurface ?? blueprint.metadata.defaultTableSurface,
           );
           return (
             <div
@@ -277,7 +278,13 @@ function FlatShowcasePreview({
         }
         if (item.kind !== 'table') return null;
         const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
-        const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor, item.tableImageUrl);
+        const { className: tableClass, style: tableStyle } = getTableVisualStyle(
+          item.shape,
+          false,
+          tableColor,
+          item.tableImageUrl,
+          item.tableSurface ?? blueprint.metadata.defaultTableSurface,
+        );
         const depthScale = depthScaleForY(item.y, amount);
         return (
           <div

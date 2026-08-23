@@ -415,7 +415,31 @@ export function getStairWoodMap(): THREE.Texture {
   return getWallTexture('wood').map;
 }
 
-/** Taille réelle d’une tuile texture (m) pour calibrer l’échelle sur les murs. */
+function bumpFromAlbedo(tex: THREE.Texture): THREE.Texture {
+  const bump = tex.clone();
+  bump.colorSpace = THREE.NoColorSpace;
+  return bump;
+}
+
+function photoWallMaterial(
+  url: string,
+  repeatX: number,
+  repeatY: number,
+  color: string,
+  roughness: number,
+  metalness: number,
+  bumpScale: number,
+): WallSurfaceMaterial {
+  const map = loadTiledTexture(url, repeatX, repeatY);
+  return {
+    map,
+    bumpMap: bumpFromAlbedo(map),
+    color,
+    roughness,
+    metalness,
+    bumpScale,
+  };
+}
 export const WALL_TEXTURE_TILE_M: Record<WallTextureStyle, { w: number; h: number }> = {
   plaster: { w: 2.4, h: 2.4 },
   brick: { w: 0.65, h: 0.32 },
@@ -464,36 +488,39 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
   const base = colorOverride ?? WALL_TEXTURE_COLORS[style];
 
   if (style === 'wood') {
-    const photo = loadTiledTexture('/floors/wood-amber.png', 2.4, 2.4);
-    return {
-      map: photo,
-      color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
-      roughness: 0.55,
-      metalness: 0.05,
-      bumpScale: WALL_BUMP_SCALE.wood ?? 0,
-    };
+    return photoWallMaterial(
+      '/floors/wood-amber.png',
+      2.4,
+      2.4,
+      colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
+      0.55,
+      0.05,
+      WALL_BUMP_SCALE.wood ?? 0.008,
+    );
   }
 
   if (style === 'woodPanel') {
-    const photo = loadTiledTexture('/floors/wood-panel.png', 1.8, 2.2);
-    return {
-      map: photo,
-      color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
-      roughness: 0.52,
-      metalness: 0.04,
-      bumpScale: WALL_BUMP_SCALE.woodPanel ?? 0,
-    };
+    return photoWallMaterial(
+      '/floors/wood-panel.png',
+      1.8,
+      2.2,
+      colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
+      0.52,
+      0.04,
+      WALL_BUMP_SCALE.woodPanel ?? 0.01,
+    );
   }
 
   if (style === 'travertine') {
-    const photo = loadTiledTexture('/floors/marble-calacatta.png', 2.8, 2.8);
-    return {
-      map: photo,
-      color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#f5f5f4',
-      roughness: 0.28,
-      metalness: 0.08,
-      bumpScale: WALL_BUMP_SCALE.travertine ?? 0,
-    };
+    return photoWallMaterial(
+      '/floors/marble-calacatta.png',
+      2.8,
+      2.8,
+      colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#f5f5f4',
+      0.28,
+      0.08,
+      WALL_BUMP_SCALE.travertine ?? 0.006,
+    );
   }
 
   const key = `wall:${style}:${base}`;
@@ -759,8 +786,11 @@ export function wallTextureForSurface(
     bumpMap = base.bumpMap.clone();
     bumpMap.repeat.set(repeatX, repeatY);
     bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+  } else if (!base.bumpMap && base.map) {
+    bumpMap = bumpFromAlbedo(map);
+    bumpMap.repeat.set(repeatX, repeatY);
   }
-  return { ...base, map, bumpMap };
+  return { ...base, map, bumpMap, bumpScale: base.bumpScale || (bumpMap ? 0.006 : 0) };
 }
 
 /** Texture et PBR pour battants de porte selon le matériau. */
@@ -845,6 +875,8 @@ export function resolveTableMaterial(
   metalness: number;
   transparent?: boolean;
   opacity?: number;
+  bumpMap?: THREE.Texture;
+  bumpScale?: number;
 } {
   if (imageUrl) {
     return {
@@ -900,8 +932,16 @@ export function resolveTableMaterial(
     glass: '#e2e8f0',
   };
 
+  const map = loadTiledTexture(url, 1.4, 1.4);
+  const bumpScale =
+    resolvedSurface === 'marble' ? 0.008 :
+    resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.012 :
+    resolvedSurface === 'wood' ? 0.01 : 0.006;
+
   return {
-    map: loadTiledTexture(url, 1.4, 1.4),
+    map,
+    bumpMap: bumpFromAlbedo(map),
+    bumpScale,
     color: color && color !== '#ffffff' ? color : defaultColors[resolvedSurface],
     roughness: resolvedSurface === 'marble' ? 0.22 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.48 : 0.45,
     metalness: resolvedSurface === 'marble' ? 0.12 : 0.08,

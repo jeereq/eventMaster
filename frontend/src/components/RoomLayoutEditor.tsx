@@ -23,6 +23,8 @@ import {
   applySavedRoomTemplate,
   applyRoomAmbiencePreset,
   ROOM_AMBIENCE_PRESETS,
+  saveCustomAmbienceToBlueprint,
+  deleteCustomAmbienceFromBlueprint,
   applyTableStyleToAll,
   autoArrangeTables,
   arrangeDensityLabels,
@@ -187,6 +189,7 @@ export default function RoomLayoutEditor({
   const [elementsQuery, setElementsQuery] = useState('');
   const [elementsOpen, setElementsOpen] = useState(true);
   const [groupStyleColor, setGroupStyleColor] = useState('#c4a06a');
+  const [customAmbienceName, setCustomAmbienceName] = useState('');
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -860,6 +863,12 @@ export default function RoomLayoutEditor({
     }, { message: `Éclairage : ${lightingPresetLabels[p]}`, kind: 'settings' });
   };
 
+  const applyAmbience = (preset: import('@/lib/roomLayoutUtils').RoomAmbiencePreset) => {
+    const next = applyRoomAmbiencePreset(blueprint, preset);
+    updateBlueprint(next, { message: `Ambiance : ${preset.label}`, kind: 'settings' });
+    if (preset.roomThemeId) applyTheme(preset.roomThemeId);
+  };
+
   const canvasInventory = (() => {
     const kindLabel: Record<LayoutSelectionItem['kind'], string> = {
       table: 'Table',
@@ -1325,13 +1334,64 @@ export default function RoomLayoutEditor({
                         <RoomAmbienceCard
                           key={preset.id}
                           preset={preset}
-                          onClick={() => {
-                            const next = applyRoomAmbiencePreset(blueprint, preset);
-                            updateBlueprint(next, { message: `Ambiance : ${preset.label}`, kind: 'settings' });
-                            if (preset.roomThemeId) applyTheme(preset.roomThemeId);
-                          }}
+                          onClick={() => applyAmbience(preset)}
                         />
                       ))}
+                    </div>
+                    <div className="rounded-[var(--radius-button)] border border-dashed border-border p-2.5 space-y-2">
+                      <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
+                        <BookmarkPlus className="w-3 h-3" /> Mes ambiances
+                      </p>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={customAmbienceName}
+                          onChange={(e) => setCustomAmbienceName(e.target.value)}
+                          placeholder="Nom de l’ambiance…"
+                          className="flex-1 min-w-0 px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
+                          maxLength={48}
+                        />
+                        <button
+                          type="button"
+                          disabled={!customAmbienceName.trim()}
+                          onClick={() => {
+                            const trimmed = customAmbienceName.trim();
+                            if (!trimmed) return;
+                            const next = saveCustomAmbienceToBlueprint(blueprint, trimmed);
+                            updateBlueprint(next, { message: `Ambiance enregistrée : ${trimmed}`, kind: 'settings' });
+                            setCustomAmbienceName('');
+                          }}
+                          className="shrink-0 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary disabled:opacity-40"
+                        >
+                          Sauver
+                        </button>
+                      </div>
+                      {(blueprint.metadata.customAmbiences?.length ?? 0) > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-0.5">
+                          {blueprint.metadata.customAmbiences!.map((saved) => (
+                            <div key={saved.id} className="relative group">
+                              <RoomAmbienceCard
+                                preset={saved.preset}
+                                onClick={() => applyAmbience(saved.preset)}
+                              />
+                              <button
+                                type="button"
+                                title="Supprimer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const next = deleteCustomAmbienceFromBlueprint(blueprint, saved.id);
+                                  updateBlueprint(next, { message: `Ambiance supprimée : ${saved.name}`, kind: 'settings' });
+                                }}
+                                className="absolute top-1 right-1 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-red-600"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[9px] text-muted">Enregistrez la configuration actuelle (murs, sol, chaises, éclairage).</p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
@@ -2182,18 +2242,13 @@ export default function RoomLayoutEditor({
             </div>
 
             {(isStage || isBuffet || isStairs) && (
-              <label className="block text-xs space-y-1">
-                <span className="font-semibold text-muted">Matériau</span>
-                <select
-                  value={selectedFixture.material ?? 'wood'}
-                  onChange={(e) => updateFixture(selectedFixture.id, { material: e.target.value as ZoneMaterial }, 'Matériau modifié')}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                >
-                  {(Object.keys(zoneMaterialLabels) as ZoneMaterial[]).map((k) => (
-                    <option key={k} value={k}>{zoneMaterialLabels[k]}</option>
-                  ))}
-                </select>
-              </label>
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-muted">Matériau</span>
+                <ZoneMaterialPicker
+                  value={(selectedFixture.material ?? 'wood') as ZoneMaterial}
+                  onChange={(material) => updateFixture(selectedFixture.id, { material }, 'Matériau modifié')}
+                />
+              </div>
             )}
 
             {isStairs && (() => {

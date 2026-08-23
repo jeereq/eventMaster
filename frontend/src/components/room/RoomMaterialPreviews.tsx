@@ -28,6 +28,8 @@ import {
   type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
+import { lightingPresetLabels } from '@/lib/roomRenderQuality';
+import { chandelierTypeLabels } from '@/lib/roomCeilingUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 
 function texturePreviewStyle(tex: THREE.Texture | undefined | null): string | undefined {
@@ -336,6 +338,18 @@ export function RoomAmbienceCard({
       </div>
       <p className="text-[10px] font-bold text-foreground">{preset.label}</p>
       <p className="text-[9px] text-muted leading-snug line-clamp-2">{preset.description}</p>
+      {preset.lightingPreset ? (
+        <p className="text-[8px] font-semibold text-muted flex flex-wrap gap-x-1.5 gap-y-0.5">
+          <span className="inline-flex items-center gap-0.5 rounded bg-surface-muted px-1 py-0.5">
+            {lightingPresetLabels[preset.lightingPreset]}
+          </span>
+          {preset.showChandeliers && preset.chandelierType ? (
+            <span className="inline-flex items-center gap-0.5 rounded bg-surface-muted px-1 py-0.5">
+              {chandelierTypeLabels[preset.chandelierType]}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
     </button>
   );
 }

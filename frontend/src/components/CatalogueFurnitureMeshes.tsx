@@ -17,9 +17,11 @@ type MatProps = {
   metalness?: number;
   transparent?: boolean;
   opacity?: number;
+  bumpMap?: THREE.Texture;
+  bumpScale?: number;
 };
 
-function Mat({ color, map, roughness = 0.6, metalness = 0.05, transparent, opacity }: MatProps) {
+function Mat({ color, map, roughness = 0.6, metalness = 0.05, transparent, opacity, bumpMap, bumpScale }: MatProps) {
   return (
     <meshStandardMaterial
       color={color}
@@ -28,6 +30,8 @@ function Mat({ color, map, roughness = 0.6, metalness = 0.05, transparent, opaci
       metalness={metalness}
       transparent={transparent}
       opacity={opacity}
+      bumpMap={bumpMap}
+      bumpScale={bumpScale}
     />
   );
 }
@@ -440,6 +444,15 @@ export function CatalogueTableStructure({
   selected: boolean;
 }) {
   const topColor = selected ? '#c7d2fe' : mat.color;
+  const topMat = {
+    map: mat.map,
+    roughness: mat.roughness,
+    metalness: mat.metalness,
+    transparent: mat.transparent,
+    opacity: mat.opacity,
+    bumpMap: mat.bumpMap,
+    bumpScale: mat.bumpScale,
+  };
   const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
   const segments = shape === 'oval' ? 40 : 48;
 
@@ -450,11 +463,9 @@ export function CatalogueTableStructure({
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.05, segments]} />
           <Mat
             color={topColor}
-            map={mat.map}
+            {...topMat}
             roughness={mat.roughness ?? 0.35}
             metalness={mat.metalness ?? 0.12}
-            transparent={mat.transparent}
-            opacity={mat.opacity}
           />
         </mesh>
         <mesh position={[0, topY / 2, 0]} castShadow>
@@ -479,7 +490,7 @@ export function CatalogueTableStructure({
       <group>
         <mesh position={[0, topY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.055, segments]} />
-          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
+          <Mat color={topColor} {...topMat} />
         </mesh>
         <mesh position={[0, topY * 0.52, 0]} castShadow>
           <cylinderGeometry args={[0.045, 0.07, topY - 0.1, 16]} />
@@ -507,7 +518,7 @@ export function CatalogueTableStructure({
       <group>
         <mesh position={[0, topY, 0]} scale={[1, 1, size[1] / size[0]]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.06, segments]} />
-          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
+          <Mat color={topColor} {...topMat} />
         </mesh>
         <mesh position={[0, topY - 0.04, 0]} scale={[1, 1, size[1] / size[0]]} castShadow>
           <cylinderGeometry args={[size[0] / 2 * 1.01, size[0] / 2 * 0.96, 0.035, segments]} />
@@ -536,7 +547,7 @@ export function CatalogueTableStructure({
       <group>
         <mesh position={[0, topY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.06, segments]} />
-          <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
+          <Mat color={topColor} {...topMat} />
         </mesh>
         <mesh position={[0, topY - 0.035, 0]} castShadow>
           <cylinderGeometry args={[size[0] / 2 * 1.015, size[0] / 2 * 0.97, 0.03, segments]} />
@@ -573,7 +584,7 @@ export function CatalogueTableStructure({
     <group>
       <mesh position={[0, topY, 0]} castShadow receiveShadow>
         <boxGeometry args={[size[0], 0.055, size[1]]} />
-        <Mat color={topColor} map={mat.map} roughness={mat.roughness} metalness={mat.metalness} transparent={mat.transparent} opacity={mat.opacity} />
+        <Mat color={topColor} {...topMat} />
       </mesh>
       <mesh position={[0, topY - 0.08, 0]} castShadow>
         <boxGeometry args={[size[0] * 0.96, 0.1, size[1] * 0.96]} />
