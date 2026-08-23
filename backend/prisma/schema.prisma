@@ -543,9 +543,16 @@ model SubscriptionRequest {
   specialDiscountPercent Float?
   baseAmount             Float?
   approvedAmount         Float?
+  /** manual | flexpay_card | flexpay_mobile */
+  paymentProvider        String?
+  flexPayOrderNumber     String?                   @unique
+  flexPayReference       String?
+  paidAt                 DateTime?
   platformInvoice        PlatformInvoice?
   createdAt              DateTime                  @default(now())
   updatedAt              DateTime                  @updatedAt
+
+  @@index([flexPayReference])
 }
 
 model GuestMessageTemplate {

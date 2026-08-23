@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import Stripe from 'stripe';
 import { getPlanLimitsForTenant, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
 import { assertCanViewBilling, assertCanViewInvoices } from '../services/permissionsService';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from '../services/commercialService';
@@ -10,13 +9,7 @@ import {
   formatPlanFeaturesResponse,
   getTenantPlanSnapshot,
 } from '../services/planFeaturesService';
-import { fulfillTicketOrder } from '../services/ticketOrderService';
 import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
-
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2025-11-13' as any, // standard latest api version
-});
 
 function getPlansFromSettings() {
   return getPlansConfiguration();
@@ -193,8 +186,8 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
       return res.status(403).json({ error: planAudienceMismatchMessage(planType, tenant.accountKind) });
     }
 
-    // If Stripe is mock mode or we want to support easy upgrades:
-    if (STRIPE_SECRET_KEY === 'sk_test_mock' || req.body.mock === true) {
+    // Mock upgrade local (dev) — forfaits réels : demande manuelle ou FlexPay.
+    if (req.body.mock === true) {
       // Direct mock upgrade for local dev convenience - also activate and extend license
       const durationDays = resolveDurationDaysForPlan(planType);
       const expiryDate = new Date();
@@ -242,159 +235,26 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
       });
     }
 
-    // Real Stripe Integration
-    if (!isOnlinePaymentsEnabled()) {
-      return res.status(503).json({
-        error: 'Les paiements en ligne sont temporairement désactivés. Contactez le support ou réessayez plus tard.',
-      });
-    }
-
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-    
-    // Define Stripe prices (mock IDs or from config)
-    const priceId = planType.startsWith('ENTERPRISE') ? 'price_enterprise_id' : 'price_premium_id';
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${FRONTEND_URL}/dashboard/billing?success=true`,
-      cancel_url: `${FRONTEND_URL}/dashboard/billing?canceled=true`,
-      client_reference_id: tenantId,
-      customer_email: req.user?.id ? (await prisma.user.findUnique({ where: { id: req.user.id } }))?.email : undefined,
+    // Stripe n’est plus utilisé pour les forfaits : demande manuelle ou FlexPay.
+    const { getSaasPaymentMode } = await import('../services/platformSettingsService');
+    const mode = getSaasPaymentMode();
+    return res.status(400).json({
+      error:
+        mode === 'flexpay'
+          ? 'Utilisez POST /api/subscriptions/checkout pour payer le forfait via FlexPay (Visa ou Mobile Money).'
+          : 'Utilisez POST /api/subscriptions/request pour soumettre une demande d’abonnement manuelle.',
+      saasPaymentMode: mode,
     });
-
-    return res.json({ id: session.id, url: session.url });
   } catch (error: any) {
-    console.error('Erreur Stripe Checkout:', error);
-    return res.status(500).json({ error: 'Erreur lors de la création de la session de paiement Stripe' });
+    console.error('Erreur checkout billing:', error);
+    return res.status(500).json({ error: 'Erreur lors de la création de la session de paiement' });
   }
 }
 
-// Stripe Webhook handler to sync subscriptions status
+// Ancien webhook Stripe — désactivé (paiements via FlexPay uniquement)
 export async function handleStripeWebhook(req: Request, res: Response) {
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock';
-
-  let event: Stripe.Event;
-
-  try {
-    if (!sig) {
-      return res.status(400).send('Signature Stripe manquante');
-    }
-    
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err: any) {
-    console.error('Erreur signature webhook Stripe:', err.message);
-    return res.status(400).send(`Erreur de webhook: ${err.message}`);
-  }
-
-  try {
-    // Handle events
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        if (session.metadata?.purpose === 'event_ticket' && session.metadata.orderId) {
-          await fulfillTicketOrder(session.metadata.orderId, {
-            id: session.id,
-            payment_intent: typeof session.payment_intent === 'string'
-              ? session.payment_intent
-              : session.payment_intent?.id,
-          });
-          console.log(`[Stripe Webhook] Billet payé commande ${session.metadata.orderId}`);
-          break;
-        }
-        const tenantId = session.client_reference_id;
-        
-        if (tenantId) {
-          const expiryDate = new Date();
-          expiryDate.setDate(expiryDate.getDate() + 30); // 30 days of active license
-
-          // Check what item they subscribed to, or default to PREMIUM_2 for simplicity
-          await prisma.tenant.update({
-            where: { id: tenantId },
-            data: {
-              plan: 'PREMIUM_2',
-              stripeCustId: session.customer as string,
-              licenseActive: true,
-              licenseExpiresAt: expiryDate,
-              licenseExpiryWarningFor: null,
-            },
-          });
-
-          const periodStart = new Date();
-          const invoice = await createAndSendInvoice({
-            tenantId,
-            plan: 'PREMIUM_2',
-            type: 'PAYMENT',
-            periodStart,
-            periodEnd: expiryDate,
-            durationDays: 30,
-            includeManagers: true,
-            status: 'PAID',
-          });
-
-          const commissionRecords = await recordCommercialCommission({
-            tenantId,
-            plan: 'PREMIUM_2',
-            source: 'STRIPE_WEBHOOK',
-            invoiceAmount: invoice?.amount,
-            platformInvoiceId: invoice?.id,
-          });
-          const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-          if (tenant && invoice) {
-            await notifyCommercialsOnSubscriptionApproval({
-              tenantId,
-              tenantName: tenant.name,
-              plan: 'PREMIUM_2',
-              durationDays: 30,
-              baseAmount: invoice.amount,
-              finalAmount: invoice.amount,
-              discountPercent: 0,
-              discountAmount: 0,
-              invoiceNumber: invoice.invoiceNumber,
-              event: 'ADMIN_ACTIVATION',
-              commissionsByUserId: Object.fromEntries(
-                commissionRecords.map((r) => [r.commercialId, r.commissionAmount]),
-              ),
-            });
-          }
-          console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM_2 and license extended`);
-        }
-        break;
-      }
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const tenant = await prisma.tenant.findFirst({
-          where: { stripeCustId: subscription.customer as string },
-        });
-
-        if (tenant) {
-          await prisma.tenant.update({
-            where: { id: tenant.id },
-            data: { 
-              plan: 'FREE',
-              licenseActive: false, // Deactivate license upon subscription cancelation
-            },
-          });
-          console.log(`[Stripe Webhook] Tenant ${tenant.id} downgraded to FREE and license deactivated due to cancelation`);
-        }
-        break;
-      }
-      default:
-        console.log(`[Stripe Webhook] Event non traité: ${event.type}`);
-    }
-
-    return res.json({ received: true });
-  } catch (error: any) {
-    console.error('Erreur lors du traitement du webhook Stripe:', error);
-    return res.status(500).json({ error: 'Erreur interne du webhook' });
-  }
+  console.warn('[Billing] Webhook Stripe reçu mais ignoré (FlexPay uniquement).');
+  return res.json({ received: true, ignored: true, reason: 'stripe_disabled' });
 }
 
 // Simple direct mock upgrade for development (used by the frontend)

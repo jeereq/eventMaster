@@ -138,6 +138,9 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     return map;
   }, [pricingZones]);
 
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mobile'>('card');
+  const [mmPhone, setMmPhone] = useState('');
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -153,10 +156,19 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         setBusy(false);
         return;
       }
+      if (event.paid && paymentMethod === 'mobile' && !mmPhone.trim() && !buyerPhone.trim()) {
+        setError('Indiquez un numéro Mobile Money (243…).');
+        setBusy(false);
+        return;
+      }
       const data = await api.post(`/public/events/${slug}/checkout`, {
         buyerName,
         buyerPhone,
         quantity: seatMode ? 1 : quantity,
+        ...(event.paid ? { paymentMethod } : {}),
+        ...(event.paid && paymentMethod === 'mobile'
+          ? { phone: mmPhone.trim() || buyerPhone.trim() }
+          : {}),
         ...(selected ? { tableId: selected.tableId, seatIndex: selected.seatIndex } : {}),
         ...(zonePricing && !seatMode && selectedZoneId ? { pricingZoneId: selectedZoneId } : {}),
       });
@@ -165,7 +177,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         return;
       }
       const rsvp = data.rsvpUrl ? `&rsvp=${encodeURIComponent(data.rsvpUrl)}` : '';
-      router.push(`${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}`);
+      const provider = data.provider === 'flexpay_mobile' ? '&provider=flexpay' : '';
+      router.push(`${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}${provider}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Inscription impossible.');
     } finally {
@@ -336,9 +349,38 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           )}
 
           {event.paid && (
-            <p className="text-xs text-muted">
-              Total : {formatFc(totalFc)}
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-foreground">Mode de paiement</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('card')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                    paymentMethod === 'card' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+                  }`}
+                >
+                  Visa / Mastercard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('mobile')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                    paymentMethod === 'mobile' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+                  }`}
+                >
+                  Mobile Money
+                </button>
+              </div>
+              {paymentMethod === 'mobile' && (
+                <Input
+                  label="Numéro Mobile Money"
+                  value={mmPhone}
+                  onChange={(e) => setMmPhone(e.target.value)}
+                  placeholder="243XXXXXXXXX"
+                />
+              )}
+              <p className="text-xs text-muted">Total : {formatFc(totalFc)}</p>
+            </div>
           )}
           <Button type="submit" loading={busy} fullWidth className="min-h-11">
             {event.paid ? 'Payer et réserver' : 'Confirmer l’inscription'}

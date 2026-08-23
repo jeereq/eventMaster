@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { fulfillTicketOrder } from '../services/ticketOrderService';
+import { activateSubscriptionRequest } from '../services/subscriptionActivationService';
 import {
   checkFlexPayCardOrder,
   parseFlexPayCallbackPayload,
 } from '../services/flexPayCardService';
 
-async function findOrderForFlexPay(opts: { reference?: string; orderNumber?: string }) {
+async function findTicketOrderForFlexPay(opts: { reference?: string; orderNumber?: string }) {
   if (opts.orderNumber) {
     const byNumber = await prisma.ticketOrder.findFirst({
       where: { flexPayOrderNumber: opts.orderNumber },
@@ -26,6 +27,37 @@ async function findOrderForFlexPay(opts: { reference?: string; orderNumber?: str
   return null;
 }
 
+async function findSubscriptionRequestForFlexPay(opts: { reference?: string; orderNumber?: string }) {
+  if (opts.orderNumber) {
+    const byNumber = await prisma.subscriptionRequest.findFirst({
+      where: { flexPayOrderNumber: opts.orderNumber },
+    });
+    if (byNumber) return byNumber;
+  }
+  if (opts.reference) {
+    const byRef = await prisma.subscriptionRequest.findFirst({
+      where: {
+        OR: [{ id: opts.reference }, { flexPayReference: opts.reference }],
+      },
+    });
+    if (byRef) return byRef;
+  }
+  return null;
+}
+
+async function confirmFlexPaySuccess(orderNumber: string | null | undefined, parsedSuccess: boolean) {
+  let success = parsedSuccess;
+  if (orderNumber) {
+    try {
+      const checked = await checkFlexPayCardOrder(orderNumber);
+      if (checked.found) success = checked.status === 'success';
+    } catch (err) {
+      console.warn('[FlexPay] check échoué:', err);
+    }
+  }
+  return success;
+}
+
 /** Callback serveur FlexPay — POST/GET /api/public/payments/flexpay/callback */
 export async function flexPayCardCallback(req: Request, res: Response) {
   try {
@@ -34,45 +66,66 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       (req.query || {}) as Record<string, unknown>,
     );
 
-    const order = await findOrderForFlexPay({
+    // 1) Billet événement
+    const order = await findTicketOrderForFlexPay({
       reference: parsed.reference || undefined,
       orderNumber: parsed.orderNumber || undefined,
     });
 
-    if (!order) {
-      console.warn('[FlexPay] callback sans commande', parsed);
-      return res.status(404).json({ error: 'Commande introuvable.' });
-    }
-
-    if (order.status === 'PAID') {
-      return res.json({ ok: true, alreadyPaid: true, orderId: order.id });
-    }
-
-    let success = parsed.success;
-    const orderNumber = order.flexPayOrderNumber || parsed.orderNumber;
-    if (orderNumber) {
-      try {
-        const checked = await checkFlexPayCardOrder(orderNumber);
-        if (checked.found) success = checked.status === 'success';
-      } catch (err) {
-        console.warn('[FlexPay] check après callback échoué:', err);
+    if (order) {
+      if (order.status === 'PAID') {
+        return res.json({ ok: true, alreadyPaid: true, kind: 'ticket', orderId: order.id });
       }
-    }
 
-    if (!success) {
-      await prisma.ticketOrder.update({
-        where: { id: order.id },
-        data: { status: 'CANCELLED' },
+      const orderNumber = order.flexPayOrderNumber || parsed.orderNumber;
+      const success = await confirmFlexPaySuccess(orderNumber, parsed.success);
+
+      if (!success) {
+        await prisma.ticketOrder.update({
+          where: { id: order.id },
+          data: { status: 'CANCELLED' },
+        });
+        return res.json({ ok: true, paid: false, kind: 'ticket', orderId: order.id });
+      }
+
+      await fulfillTicketOrder(order.id, {
+        id: orderNumber || order.id,
+        payment_intent: orderNumber || null,
       });
-      return res.json({ ok: true, paid: false, orderId: order.id });
+      return res.json({ ok: true, paid: true, kind: 'ticket', orderId: order.id });
     }
 
-    await fulfillTicketOrder(order.id, {
-      id: orderNumber || order.id,
-      payment_intent: orderNumber || null,
+    // 2) Forfait SaaS
+    const sub = await findSubscriptionRequestForFlexPay({
+      reference: parsed.reference || undefined,
+      orderNumber: parsed.orderNumber || undefined,
     });
 
-    return res.json({ ok: true, paid: true, orderId: order.id });
+    if (sub) {
+      if (sub.status === 'APPROVED') {
+        return res.json({ ok: true, alreadyPaid: true, kind: 'subscription', requestId: sub.id });
+      }
+
+      const orderNumber = sub.flexPayOrderNumber || parsed.orderNumber;
+      const success = await confirmFlexPaySuccess(orderNumber, parsed.success);
+
+      if (!success) {
+        await prisma.subscriptionRequest.update({
+          where: { id: sub.id },
+          data: { status: 'REJECTED' },
+        });
+        return res.json({ ok: true, paid: false, kind: 'subscription', requestId: sub.id });
+      }
+
+      await activateSubscriptionRequest(sub.id, {
+        approvedAmount: sub.approvedAmount ?? undefined,
+        markPaid: true,
+      });
+      return res.json({ ok: true, paid: true, kind: 'subscription', requestId: sub.id });
+    }
+
+    console.warn('[FlexPay] callback sans commande / demande', parsed);
+    return res.status(404).json({ error: 'Commande ou demande introuvable.' });
   } catch (error: any) {
     console.error('[FlexPay] callback', error);
     return res.status(500).json({ error: error?.message || 'Callback FlexPay impossible.' });
@@ -83,9 +136,40 @@ export async function flexPayCardCallback(req: Request, res: Response) {
 export async function flexPayCardReturn(req: Request, res: Response) {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
   try {
-    const orderId = String(req.query.orderId || '');
+    const kind = String(req.query.kind || 'ticket');
     const result = String(req.query.result || 'approve');
 
+    if (kind === 'subscription') {
+      const requestId = String(req.query.requestId || '');
+      if (result === 'cancel' || result === 'decline') {
+        return res.redirect(`${FRONTEND_URL}/dashboard/billing?flexpay=canceled`);
+      }
+
+      const sub = await prisma.subscriptionRequest.findUnique({ where: { id: requestId } });
+      if (!sub) {
+        return res.redirect(`${FRONTEND_URL}/dashboard/billing?flexpay=error`);
+      }
+
+      if (sub.status !== 'APPROVED' && sub.flexPayOrderNumber) {
+        try {
+          const checked = await checkFlexPayCardOrder(sub.flexPayOrderNumber);
+          if (checked.status === 'success') {
+            await activateSubscriptionRequest(sub.id, {
+              approvedAmount: sub.approvedAmount ?? undefined,
+              markPaid: true,
+            });
+          }
+        } catch (err) {
+          console.warn('[FlexPay] verify subscription on return:', err);
+        }
+      }
+
+      return res.redirect(
+        `${FRONTEND_URL}/dashboard/billing?flexpay=return&requestId=${encodeURIComponent(requestId)}`,
+      );
+    }
+
+    const orderId = String(req.query.orderId || '');
     const order = await prisma.ticketOrder.findUnique({
       where: { id: orderId },
       include: { event: { select: { slug: true } } },
@@ -127,7 +211,7 @@ export async function flexPayCardReturn(req: Request, res: Response) {
   }
 }
 
-/** Vérifie une commande — GET /api/public/payments/flexpay/orders/:orderId/verify */
+/** Vérifie une commande billet — GET /api/public/payments/flexpay/orders/:orderId/verify */
 export async function verifyFlexPayCardOrder(req: Request, res: Response) {
   try {
     const orderId = String(req.params.orderId || '');

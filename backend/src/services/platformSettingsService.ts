@@ -19,12 +19,20 @@ export interface PlatformSettings {
   maintenanceMessage: string;
   allowRegistration: boolean;
   onlinePaymentsEnabled: boolean;
-  /** Provider billets publics : stripe | flexpay_card */
-  ticketPaymentProvider: 'stripe' | 'flexpay_card';
+  /**
+   * Mode d’achat des forfaits SaaS :
+   * - manual : demande + approbation Super Admin
+   * - flexpay : paiement immédiat Visa / Mobile Money via FlexPay
+   */
+  saasPaymentMode: 'manual' | 'flexpay';
+  /** Billets publics : toujours FlexPay (visa + mobile money). */
+  ticketPaymentProvider: 'flexpay_card';
   flexPayCardToken: string;
   flexPayCardMerchant: string;
   flexPayCardPayUrl: string;
   flexPayCardCheckUrl: string;
+  flexPayMobilePayUrl: string;
+  flexPayMobileCheckUrl: string;
   brandPrimary: string;
   brandAccent: string;
   ultramsgInstanceId: string;
@@ -60,7 +68,8 @@ export interface PublicSiteConfig {
   maintenanceMessage: string;
   allowRegistration: boolean;
   onlinePaymentsEnabled: boolean;
-  ticketPaymentProvider: 'stripe' | 'flexpay_card';
+  saasPaymentMode: 'manual' | 'flexpay';
+  ticketPaymentProvider: 'flexpay_card';
   brandPrimary: string;
   brandAccent: string;
   marketplaceCommissionRate: number;
@@ -89,11 +98,14 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
     'La plateforme est temporairement en maintenance. Merci de réessayer dans quelques instants.',
   allowRegistration: true,
   onlinePaymentsEnabled: true,
-  ticketPaymentProvider: 'stripe',
+  saasPaymentMode: 'manual',
+  ticketPaymentProvider: 'flexpay_card',
   flexPayCardToken: process.env.FLEXPAY_CARD_TOKEN || '',
   flexPayCardMerchant: process.env.FLEXPAY_CARD_MERCHANT || '',
   flexPayCardPayUrl: process.env.FLEXPAY_CARD_PAY_URL || '',
   flexPayCardCheckUrl: process.env.FLEXPAY_CARD_CHECK_URL || '',
+  flexPayMobilePayUrl: process.env.FLEXPAY_MOBILE_PAY_URL || '',
+  flexPayMobileCheckUrl: process.env.FLEXPAY_MOBILE_CHECK_URL || '',
   brandPrimary: '',
   brandAccent: '',
   ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || '',
@@ -121,15 +133,20 @@ function phoneToHref(phone: string): string {
   return digits ? `tel:${digits}` : 'tel:';
 }
 
-/** Paiements en ligne (billets événements + abonnements Stripe réels). */
+/** Paiements en ligne (billets événements + forfaits SaaS si mode FlexPay). */
 export function isOnlinePaymentsEnabled(settings = loadPlatformSettings()): boolean {
   return settings.onlinePaymentsEnabled !== false;
 }
 
-export type TicketPaymentProvider = 'stripe' | 'flexpay_card';
+export type TicketPaymentProvider = 'flexpay_card';
+export type SaasPaymentMode = 'manual' | 'flexpay';
 
-export function getTicketPaymentProvider(settings = loadPlatformSettings()): TicketPaymentProvider {
-  return settings.ticketPaymentProvider === 'flexpay_card' ? 'flexpay_card' : 'stripe';
+export function getTicketPaymentProvider(_settings = loadPlatformSettings()): TicketPaymentProvider {
+  return 'flexpay_card';
+}
+
+export function getSaasPaymentMode(settings = loadPlatformSettings()): SaasPaymentMode {
+  return settings.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
 }
 
 export function loadPlatformSettings(): PlatformSettings {
@@ -175,8 +192,8 @@ export function savePlatformSettings(
   next.marketplaceDepositRate = parseRateInput(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
   next.commercialFirstCommissionRate = parseRateInput(next.commercialFirstCommissionRate, 0.3, 0, 1);
   next.commercialRenewalCommissionRate = parseRateInput(next.commercialRenewalCommissionRate, 0.2, 0, 1);
-  next.ticketPaymentProvider =
-    next.ticketPaymentProvider === 'flexpay_card' ? 'flexpay_card' : 'stripe';
+  next.ticketPaymentProvider = 'flexpay_card';
+  next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
 
   fs.writeFileSync(settingsFilePath, JSON.stringify(next, null, 2), 'utf-8');
@@ -199,6 +216,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     maintenanceMessage: settings.maintenanceMessage,
     allowRegistration: settings.allowRegistration !== false,
     onlinePaymentsEnabled: isOnlinePaymentsEnabled(settings),
+    saasPaymentMode: getSaasPaymentMode(settings),
     ticketPaymentProvider: getTicketPaymentProvider(settings),
     brandPrimary: settings.brandPrimary || '',
     brandAccent: settings.brandAccent || '',

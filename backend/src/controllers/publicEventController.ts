@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import Stripe from 'stripe';
 import { prisma } from '../db';
 import {
   fulfillTicketOrder,
@@ -21,30 +20,12 @@ import { normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
 import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
 import {
   createFlexPayCardCheckout,
+  createFlexPayMobileCheckout,
   getPublicApiBaseUrl,
   isFlexPayCardMock,
-  resolveTicketCheckoutProvider,
 } from '../services/flexPayCardService';
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2025-11-13' as any,
-});
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const STRIPE_TICKET_CURRENCY = (process.env.STRIPE_TICKET_CURRENCY || 'usd').toLowerCase();
-const FC_PER_USD = Number(process.env.FC_PER_USD || 2800);
-
-function isStripeMock() {
-  return !STRIPE_SECRET_KEY || STRIPE_SECRET_KEY.includes('mock');
-}
-
-function fcToStripeUnitAmount(amountFc: number): number {
-  if (STRIPE_TICKET_CURRENCY === 'cdf') {
-    return Math.max(1, Math.round(amountFc));
-  }
-  const usd = amountFc / Math.max(1, FC_PER_USD);
-  return Math.max(50, Math.round(usd * 100));
-}
 
 function serializePublicPost(post: {
   id: string;
@@ -363,7 +344,11 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
 
     const paid = event.ticketingEnabled && unitPriceFc > 0 && isOnlinePaymentsEnabled();
     const amountFc = paid ? unitPriceFc * quantity : 0;
-    const paymentProvider = paid ? resolveTicketCheckoutProvider() : null;
+    const rawMethod = String(req.body?.paymentMethod || 'card').toLowerCase();
+    const paymentMethod = rawMethod === 'mobile' ? 'mobile' : 'card';
+    const paymentProvider = paid
+      ? (paymentMethod === 'mobile' ? 'flexpay_mobile' : 'flexpay_card')
+      : null;
 
     const order = await prisma.ticketOrder.create({
       data: {
@@ -412,7 +397,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       });
     }
 
-    if (paymentProvider === 'flexpay_card') {
+    if (paymentProvider === 'flexpay_card' || paymentProvider === 'flexpay_mobile') {
       if (isFlexPayCardMock()) {
         const fulfilled = await fulfillTicketOrder(order.id);
         const primary =
@@ -420,12 +405,52 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         return res.status(201).json({
           paid: true,
           mock: true,
-          provider: 'flexpay_card',
+          provider: paymentProvider,
           orderId: order.id,
           guestId: primary?.id,
           rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
           message: 'Paiement FlexPay simulé (credentials absents). Billet confirmé.',
         });
+      }
+
+      if (paymentProvider === 'flexpay_mobile') {
+        const phone = String(req.body?.phone || buyerPhone || '').trim();
+        if (!phone) {
+          await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+          return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
+        }
+        const apiBase = getPublicApiBaseUrl();
+        try {
+          const flex = await createFlexPayMobileCheckout({
+            reference: order.id,
+            amount: amountFc,
+            currency: 'CDF',
+            phone,
+            callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+          });
+          await prisma.ticketOrder.update({
+            where: { id: order.id },
+            data: {
+              paymentProvider: 'flexpay_mobile',
+              flexPayOrderNumber: flex.orderNumber,
+              flexPayReference: order.id,
+            },
+          });
+          return res.json({
+            paid: false,
+            mock: false,
+            provider: 'flexpay_mobile',
+            orderId: order.id,
+            orderNumber: flex.orderNumber,
+            message:
+              'Demande envoyée sur votre téléphone. Confirmez le paiement Mobile Money, puis ouvrez la page de succès.',
+          });
+        } catch (err: any) {
+          await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+          return res.status(502).json({
+            error: err?.message || 'Impossible d’ouvrir le paiement Mobile Money FlexPay.',
+          });
+        }
       }
 
       const apiBase = getPublicApiBaseUrl();
@@ -467,67 +492,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       }
     }
 
-    if (isStripeMock()) {
-      const fulfilled = await fulfillTicketOrder(order.id);
-      const primary = fulfilled?.guests?.find((g) => g.email.toLowerCase() === buyerEmail) || fulfilled?.guests?.[0];
-      return res.status(201).json({
-        paid: true,
-        mock: true,
-        orderId: order.id,
-        guestId: primary?.id,
-        rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
-        message: 'Paiement simulé (mode développement). Billet confirmé.',
-      });
-    }
-
-    const seatHint =
-      event.seatSelectionEnabled && tableId != null && seatIndex != null
-        ? ` · siège ${seatIndex + 1}`
-        : '';
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      customer_email: buyerEmail,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: STRIPE_TICKET_CURRENCY,
-            unit_amount: fcToStripeUnitAmount(amountFc),
-            product_data: {
-              name: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}${seatHint}`,
-              description: `${amountFc.toLocaleString('fr-FR')} FC`,
-            },
-          },
-        },
-      ],
-      success_url: `${FRONTEND_URL}/marketplace/evenements/${event.slug}/succes?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${FRONTEND_URL}/marketplace/evenements/${event.slug}?canceled=1`,
-      client_reference_id: order.id,
-      metadata: {
-        purpose: 'event_ticket',
-        orderId: order.id,
-        ...(tableId ? { tableId } : {}),
-        ...(seatIndex != null ? { seatIndex: String(seatIndex) } : {}),
-      },
-    });
-
-    await prisma.ticketOrder.update({
-      where: { id: order.id },
-      data: {
-        paymentProvider: 'stripe',
-        stripeCheckoutSessionId: session.id,
-      },
-    });
-
-    return res.json({
-      paid: true,
-      mock: false,
-      provider: 'stripe',
-      orderId: order.id,
-      checkoutUrl: session.url,
-    });
+    return res.status(400).json({ error: 'Mode de paiement non supporté. Utilisez Visa ou Mobile Money.' });
   } catch (error: any) {
     console.error('[Public events] checkout', error);
     return res.status(500).json({ error: error?.message || 'Inscription impossible.' });
@@ -539,31 +504,15 @@ export async function getTicketOrderBySession(req: Request, res: Response) {
     const sessionId = String(req.params.sessionId || '');
     if (!sessionId) return res.status(400).json({ error: 'Session manquante.' });
 
-    let order = await prisma.ticketOrder.findFirst({
-      where: { stripeCheckoutSessionId: sessionId },
+    const order = await prisma.ticketOrder.findFirst({
+      where: {
+        OR: [{ stripeCheckoutSessionId: sessionId }, { id: sessionId }, { flexPayOrderNumber: sessionId }],
+      },
       include: {
         event: { select: { title: true, slug: true, date: true, location: true } },
         guests: { select: { id: true, email: true, firstName: true } },
       },
     });
-
-    if (!order && !isStripeMock()) {
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      const orderId = session.metadata?.orderId || session.client_reference_id;
-      if (orderId && session.payment_status === 'paid') {
-        await fulfillTicketOrder(orderId, {
-          id: session.id,
-          payment_intent: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
-        });
-        order = await prisma.ticketOrder.findFirst({
-          where: { id: orderId },
-          include: {
-            event: { select: { title: true, slug: true, date: true, location: true } },
-            guests: { select: { id: true, email: true, firstName: true } },
-          },
-        });
-      }
-    }
 
     if (!order) return res.status(404).json({ error: 'Commande introuvable.' });
     const primary = order.guests[0];

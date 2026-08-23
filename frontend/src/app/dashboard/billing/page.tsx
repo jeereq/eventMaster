@@ -106,6 +106,11 @@ export default function BillingPage() {
   const [showComparison, setShowComparison] = useState(false);
   const [invoices, setInvoices] = useState<PlatformInvoiceItem[]>([]);
 
+  const [saasPaymentMode, setSaasPaymentMode] = useState<'manual' | 'flexpay'>('manual');
+  const [payMethod, setPayMethod] = useState<'card' | 'mobile'>('card');
+  const [payPhone, setPayPhone] = useState('');
+  const [pendingFlexPayRequestId, setPendingFlexPayRequestId] = useState<string | null>(null);
+
   const loadBillingStatus = async () => {
     try {
       const [billingData, plansData, requestsData, invoicesData] = await Promise.all([
@@ -116,6 +121,9 @@ export default function BillingPage() {
       ]);
       setBilling(billingData);
       setDynamicPlans(plansData || billingData.plans || null);
+      if (plansData?.saasPaymentMode === 'flexpay' || plansData?.saasPaymentMode === 'manual') {
+        setSaasPaymentMode(plansData.saasPaymentMode);
+      }
       if (billingData?.billingCycle === 'annual' || billingData?.billingCycle === 'monthly') {
         setBillingCycle(billingData.billingCycle);
       }
@@ -173,20 +181,73 @@ export default function BillingPage() {
       setError('Ce forfait ne correspond pas à votre type de compte.');
       return;
     }
+    if (saasPaymentMode === 'flexpay' && payMethod === 'mobile' && !payPhone.trim()) {
+      setError('Saisissez votre numéro Mobile Money (243…).');
+      return;
+    }
     setError('');
     setSuccessMsg('');
     setActionLoading(plan);
     try {
+      const durationDays = durationDaysForPlan(plan, billingCycle);
+      if (saasPaymentMode === 'flexpay') {
+        const data = await api.post('/subscriptions/checkout', {
+          requestedPlan: plan,
+          durationDays,
+          paymentMethod: payMethod,
+          ...(payMethod === 'mobile' ? { phone: payPhone.trim() } : {}),
+        });
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        if (data.paid) {
+          setSuccessMsg(data.message || `Forfait ${plan} activé.`);
+          await loadBillingStatus();
+          return;
+        }
+        if (data.requestId) {
+          setPendingFlexPayRequestId(data.requestId);
+          setSuccessMsg(
+            data.message ||
+              'Paiement Mobile Money initié. Confirmez sur votre téléphone, puis cliquez sur « Vérifier le paiement ».',
+          );
+          return;
+        }
+        setSuccessMsg(data.message || 'Paiement initié.');
+        return;
+      }
+
       await api.post('/subscriptions/request', {
         requestedPlan: plan,
-        durationDays: durationDaysForPlan(plan, billingCycle),
+        durationDays,
       });
       setSuccessMsg(
-        `Demande ${plan} soumise (${durationDaysForPlan(plan, billingCycle) === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
+        `Demande ${plan} soumise (${durationDays === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
       );
       await loadBillingStatus();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la demande.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const verifyPendingFlexPay = async () => {
+    if (!pendingFlexPayRequestId) return;
+    setError('');
+    setActionLoading('verify');
+    try {
+      const data = await api.get(`/subscriptions/requests/${pendingFlexPayRequestId}/verify`);
+      if (data.paid) {
+        setSuccessMsg('Paiement confirmé. Forfait activé.');
+        setPendingFlexPayRequestId(null);
+        await loadBillingStatus();
+      } else {
+        setError('Paiement encore en cours. Réessayez dans un instant après confirmation sur le téléphone.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Vérification impossible.');
     } finally {
       setActionLoading(null);
     }
@@ -322,6 +383,54 @@ export default function BillingPage() {
             : ` L’annuel facture 12 mois ou 4 trimestres d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`}
         </p>
       </div>
+
+      {saasPaymentMode === 'flexpay' && (
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-3 max-w-xl mx-auto w-full">
+          <p className="text-sm font-semibold text-foreground">Paiement FlexPay</p>
+          <p className="text-xs text-muted">
+            Choisissez Visa/Mastercard ou Mobile Money, puis cliquez sur le forfait souhaité.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setPayMethod('card')}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border ${
+                payMethod === 'card' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              }`}
+            >
+              Visa / Mastercard
+            </button>
+            <button
+              type="button"
+              onClick={() => setPayMethod('mobile')}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border ${
+                payMethod === 'mobile' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              }`}
+            >
+              Mobile Money
+            </button>
+          </div>
+          {payMethod === 'mobile' && (
+            <input
+              type="tel"
+              value={payPhone}
+              onChange={(e) => setPayPhone(e.target.value)}
+              placeholder="243XXXXXXXXX"
+              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white"
+            />
+          )}
+          {pendingFlexPayRequestId && (
+            <button
+              type="button"
+              onClick={() => void verifyPendingFlexPay()}
+              disabled={actionLoading === 'verify'}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 text-white disabled:opacity-60"
+            >
+              {actionLoading === 'verify' ? 'Vérification…' : 'Vérifier le paiement'}
+            </button>
+          )}
+        </div>
+      )}
 
       {visibleTiers.map(({ label, ids }) => (
         <div key={label}>

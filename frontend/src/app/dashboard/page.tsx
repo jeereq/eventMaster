@@ -2984,26 +2984,24 @@ function DashboardPageContent() {
  {adminSettings.onlinePaymentsEnabled !== false && (
  <>
  <div className="space-y-1.5 md:col-span-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Provider billets publics</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Forfaits SaaS — mode d’achat</label>
  <select
- value={adminSettings.ticketPaymentProvider === 'flexpay_card' ? 'flexpay_card' : 'stripe'}
+ value={adminSettings.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual'}
  onChange={(e) =>
  setAdminSettings({
  ...adminSettings,
- ticketPaymentProvider: e.target.value === 'flexpay_card' ? 'flexpay_card' : 'stripe',
+ saasPaymentMode: e.target.value === 'flexpay' ? 'flexpay' : 'manual',
  })
  }
  className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm"
  >
- <option value="stripe">Stripe (carte internationale)</option>
- <option value="flexpay_card">FlexPay Card (Visa / Mastercard RDC)</option>
+ <option value="manual">Demande manuelle (approbation Super Admin)</option>
+ <option value="flexpay">Paiement FlexPay (Visa / Mobile Money)</option>
  </select>
  <p className="text-xs text-muted">
- Les abonnements forfaits restent sur Stripe. Ce réglage concerne uniquement l’achat de billets publics.
+ Les billets publics sont toujours payés via FlexPay (Visa ou Mobile Money). Ce réglage concerne uniquement les forfaits SaaS.
  </p>
  </div>
- {adminSettings.ticketPaymentProvider === 'flexpay_card' && (
- <>
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">FlexPay — token API</label>
  <input
@@ -3027,12 +3025,10 @@ function DashboardPageContent() {
  </div>
  <div className="space-y-1.5 md:col-span-2">
  <p className="text-xs text-muted">
- Sans credentials, le checkout FlexPay est simulé (confirmation immédiate). Variables d’environnement alternatives :{' '}
+ Sans credentials, les paiements FlexPay sont simulés (confirmation immédiate). Env :{' '}
  <code className="text-[11px]">FLEXPAY_CARD_TOKEN</code>, <code className="text-[11px]">FLEXPAY_CARD_MERCHANT</code>.
  </p>
  </div>
- </>
- )}
  </>
  )}
  </div>
