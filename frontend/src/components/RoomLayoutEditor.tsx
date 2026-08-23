@@ -8,6 +8,7 @@ import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
 import RoomWebGLViewer, { type RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
+import { ChairTypePicker, SeatMaterialPicker } from '@/components/room/RoomMaterialPreviews';
 import {
   ChairType,
   ColumnShape,
@@ -2611,14 +2612,13 @@ export default function RoomLayoutEditor({
                 </p>
               );
             })()}
-            <label className="block text-xs space-y-1">
+            <div className="block text-xs space-y-1.5">
               <span className="font-semibold text-muted">Type de chaise</span>
-              <select value={selectedFurniture.chairType} onChange={(e) => updateFurniture(selectedFurniture.id, { chairType: e.target.value as ChairType })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm">
-                {Object.entries(chairTypeLabels).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </label>
+              <ChairTypePicker
+                value={selectedFurniture.chairType}
+                onChange={(chairType) => updateFurniture(selectedFurniture.id, { chairType }, 'Type de chaise')}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Style</span>
@@ -2632,18 +2632,13 @@ export default function RoomLayoutEditor({
                   ))}
                 </select>
               </label>
-              <label className="text-xs space-y-1">
+              <div className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Matériau</span>
-                <select
+                <SeatMaterialPicker
                   value={selectedFurniture.seatMaterial ?? 'fabric'}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { seatMaterial: e.target.value as SeatMaterial }, 'Matériau chaise')}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                >
-                  {(Object.keys(seatMaterialLabels) as SeatMaterial[]).map((k) => (
-                    <option key={k} value={k}>{seatMaterialLabels[k]}</option>
-                  ))}
-                </select>
-              </label>
+                  onChange={(seatMaterial) => updateFurniture(selectedFurniture.id, { seatMaterial }, 'Matériau chaise')}
+                />
+              </div>
             </div>
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
             {caps.canCustomImages ? renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl) : null}
@@ -2756,14 +2751,13 @@ export default function RoomLayoutEditor({
               <span className="font-semibold text-muted">Places</span>
               <input type="number" min={2} max={60} value={selectedFurniture.seatCount} onChange={(e) => updateFurniture(selectedFurniture.id, { seatCount: parseInt(e.target.value, 10) })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
             </label>
-            <label className="block text-xs space-y-1">
+            <div className="block text-xs space-y-1.5">
               <span className="font-semibold text-muted">Type de siège</span>
-              <select value={selectedFurniture.chairType} onChange={(e) => updateFurniture(selectedFurniture.id, { chairType: e.target.value as ChairType })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm">
-                {Object.entries(chairTypeLabels).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </label>
+              <ChairTypePicker
+                value={selectedFurniture.chairType}
+                onChange={(chairType) => updateFurniture(selectedFurniture.id, { chairType })}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Style</span>
@@ -2777,18 +2771,13 @@ export default function RoomLayoutEditor({
                   ))}
                 </select>
               </label>
-              <label className="text-xs space-y-1">
+              <div className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Matériau</span>
-                <select
+                <SeatMaterialPicker
                   value={selectedFurniture.seatMaterial ?? 'fabric'}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { seatMaterial: e.target.value as SeatMaterial })}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                >
-                  {(Object.keys(seatMaterialLabels) as SeatMaterial[]).map((k) => (
-                    <option key={k} value={k}>{seatMaterialLabels[k]}</option>
-                  ))}
-                </select>
-              </label>
+                  onChange={(seatMaterial) => updateFurniture(selectedFurniture.id, { seatMaterial })}
+                />
+              </div>
             </div>
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
           </div>
@@ -2934,14 +2923,13 @@ export default function RoomLayoutEditor({
               <span className="font-semibold text-muted">Libellé</span>
               <input value={selectedFurniture.label ?? ''} onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
             </label>
-            <label className="block text-xs space-y-1">
+            <div className="block text-xs space-y-1.5">
               <span className="font-semibold text-muted">Type</span>
-              <select value={selectedFurniture.chairType} onChange={(e) => updateFurniture(selectedFurniture.id, { chairType: e.target.value as ChairType })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm">
-                {Object.entries(chairTypeLabels).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </label>
+              <ChairTypePicker
+                value={selectedFurniture.chairType}
+                onChange={(chairType) => updateFurniture(selectedFurniture.id, { chairType })}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Style</span>
@@ -2955,18 +2943,13 @@ export default function RoomLayoutEditor({
                   ))}
                 </select>
               </label>
-              <label className="text-xs space-y-1">
+              <div className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Matériau</span>
-                <select
+                <SeatMaterialPicker
                   value={selectedFurniture.seatMaterial ?? 'velvet'}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { seatMaterial: e.target.value as SeatMaterial }, 'Matériau siège')}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                >
-                  {(Object.keys(seatMaterialLabels) as SeatMaterial[]).map((k) => (
-                    <option key={k} value={k}>{seatMaterialLabels[k]}</option>
-                  ))}
-                </select>
-              </label>
+                  onChange={(seatMaterial) => updateFurniture(selectedFurniture.id, { seatMaterial }, 'Matériau siège')}
+                />
+              </div>
             </div>
             {caps.canRotate ? (
               <label className="block text-xs space-y-1">

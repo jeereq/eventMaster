@@ -133,13 +133,53 @@ export function resolveFloorMap(
   };
 }
 
+function canvasToBumpTexture(source: HTMLCanvasElement, key: string): THREE.CanvasTexture {
+  const cached = canvasCache.get(key);
+  if (cached) return cached;
+
+  const size = source.width;
+  const bumpCanvas = document.createElement('canvas');
+  bumpCanvas.width = size;
+  bumpCanvas.height = size;
+  const ctx = bumpCanvas.getContext('2d');
+  if (!ctx) {
+    const empty = new THREE.CanvasTexture(bumpCanvas);
+    canvasCache.set(key, empty);
+    return empty;
+  }
+  const srcCtx = source.getContext('2d');
+  if (!srcCtx) {
+    const empty = new THREE.CanvasTexture(bumpCanvas);
+    canvasCache.set(key, empty);
+    return empty;
+  }
+  const src = srcCtx.getImageData(0, 0, size, size);
+  const dst = ctx.createImageData(size, size);
+  for (let i = 0; i < src.data.length; i += 4) {
+    const lum = src.data[i] * 0.299 + src.data[i + 1] * 0.587 + src.data[i + 2] * 0.114;
+    dst.data[i] = dst.data[i + 1] = dst.data[i + 2] = lum;
+    dst.data[i + 3] = 255;
+  }
+  ctx.putImageData(dst, 0, 0);
+  const tex = new THREE.CanvasTexture(bumpCanvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.anisotropy = 8;
+  canvasCache.set(key, tex);
+  return tex;
+}
+
 function makeCanvasTexture(
   key: string,
   draw: (ctx: CanvasRenderingContext2D, size: number) => void,
   size = 256,
-): THREE.CanvasTexture {
+  withBump = false,
+): { map: THREE.CanvasTexture; bumpMap?: THREE.CanvasTexture } {
   const cached = canvasCache.get(key);
-  if (cached) return cached;
+  if (cached) {
+    const bump = withBump ? canvasCache.get(`bump:${key}`) : undefined;
+    return { map: cached, bumpMap: bump };
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -148,7 +188,7 @@ function makeCanvasTexture(
   if (!ctx) {
     const empty = new THREE.CanvasTexture(canvas);
     canvasCache.set(key, empty);
-    return empty;
+    return { map: empty };
   }
   draw(ctx, size);
   const tex = new THREE.CanvasTexture(canvas);
@@ -156,7 +196,8 @@ function makeCanvasTexture(
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
   canvasCache.set(key, tex);
-  return tex;
+  const bumpMap = withBump ? canvasToBumpTexture(canvas, `bump:${key}`) : undefined;
+  return { map: tex, bumpMap };
 }
 
 function noise(ctx: CanvasRenderingContext2D, size: number, alpha = 0.08) {
@@ -190,7 +231,7 @@ export function resolveSeatFabricMap(material?: SeatMaterial, tint?: string): {
   const mat = material ?? 'fabric';
   const base = tint ?? '#1e3a5f';
   const key = `seat:${mat}:${base}`;
-  const map = makeCanvasTexture(key, (ctx, size) => {
+  const { map } = makeCanvasTexture(key, (ctx, size) => {
     const [r, g, b] = hexToRgb(base);
     ctx.fillStyle = shadeRgb(r, g, b, 0.85);
     ctx.fillRect(0, 0, size, size);
@@ -374,12 +415,52 @@ export function getStairWoodMap(): THREE.Texture {
   return getWallTexture('wood').map;
 }
 
-export function getWallTexture(style: WallTextureStyle, colorOverride?: string): {
+/** Taille réelle d’une tuile texture (m) pour calibrer l’échelle sur les murs. */
+export const WALL_TEXTURE_TILE_M: Record<WallTextureStyle, { w: number; h: number }> = {
+  plaster: { w: 2.4, h: 2.4 },
+  brick: { w: 0.65, h: 0.32 },
+  wood: { w: 1.2, h: 1.2 },
+  concrete: { w: 2, h: 2 },
+  wallpaper: { w: 0.55, h: 0.55 },
+  stone: { w: 1.4, h: 1.4 },
+  limewash: { w: 3, h: 3 },
+  tadelakt: { w: 2.5, h: 2.5 },
+  boardConcrete: { w: 2.8, h: 0.45 },
+  paintedBrick: { w: 0.65, h: 0.32 },
+  fluted: { w: 0.28, h: 2.6 },
+  travertine: { w: 0.6, h: 0.6 },
+  slate: { w: 0.9, h: 0.9 },
+  metalCorrugated: { w: 0.35, h: 2.4 },
+  metroTile: { w: 0.2, h: 0.1 },
+  woodPanel: { w: 0.35, h: 2.4 },
+};
+
+const WALL_BUMP_SCALE: Partial<Record<WallTextureStyle, number>> = {
+  brick: 0.022,
+  paintedBrick: 0.018,
+  concrete: 0.012,
+  boardConcrete: 0.02,
+  stone: 0.025,
+  slate: 0.028,
+  fluted: 0.035,
+  metalCorrugated: 0.04,
+  metroTile: 0.015,
+  wallpaper: 0.01,
+  wood: 0.008,
+  woodPanel: 0.01,
+  travertine: 0.006,
+};
+
+export type WallSurfaceMaterial = {
   map: THREE.Texture;
+  bumpMap?: THREE.Texture;
   color: string;
   roughness: number;
   metalness: number;
-} {
+  bumpScale: number;
+};
+
+export function getWallTexture(style: WallTextureStyle, colorOverride?: string): WallSurfaceMaterial {
   const base = colorOverride ?? WALL_TEXTURE_COLORS[style];
 
   if (style === 'wood') {
@@ -389,6 +470,7 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
       color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
       roughness: 0.55,
       metalness: 0.05,
+      bumpScale: WALL_BUMP_SCALE.wood ?? 0,
     };
   }
 
@@ -399,6 +481,7 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
       color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
       roughness: 0.52,
       metalness: 0.04,
+      bumpScale: WALL_BUMP_SCALE.woodPanel ?? 0,
     };
   }
 
@@ -409,12 +492,14 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
       color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#f5f5f4',
       roughness: 0.28,
       metalness: 0.08,
+      bumpScale: WALL_BUMP_SCALE.travertine ?? 0,
     };
   }
 
   const key = `wall:${style}:${base}`;
+  const useBump = style !== 'limewash' && style !== 'tadelakt' && style !== 'plaster';
 
-  const map = makeCanvasTexture(key, (ctx, size) => {
+  const { map, bumpMap } = makeCanvasTexture(key, (ctx, size) => {
     if (style === 'brick' || style === 'paintedBrick') {
       const mortar = style === 'paintedBrick' ? '#e2e8f0' : '#c4b5a5';
       ctx.fillStyle = mortar;
@@ -614,7 +699,7 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, size, size);
     noise(ctx, size, 0.14);
-  }, style === 'brick' || style === 'paintedBrick' ? 512 : 512);
+  }, 512, useBump);
 
   const repeatX =
     style === 'brick' || style === 'paintedBrick' ? 4 :
@@ -627,6 +712,7 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     style === 'fluted' ? 2 :
     style === 'metalCorrugated' ? 2 : 2;
   map.repeat.set(repeatX, repeatY);
+  if (bumpMap) bumpMap.repeat.set(repeatX, repeatY);
 
   const roughness =
     style === 'concrete' || style === 'boardConcrete' ? 0.9 :
@@ -645,7 +731,36 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     style === 'metroTile' ? 0.04 :
     style === 'tadelakt' ? 0.06 : 0.02;
 
-  return { map, color: '#ffffff', roughness, metalness };
+  return {
+    map,
+    bumpMap,
+    color: '#ffffff',
+    roughness,
+    metalness,
+    bumpScale: WALL_BUMP_SCALE[style] ?? 0,
+  };
+}
+
+/** Texture murale calibrée à la taille réelle du segment (évite tuiles trop grosses / fines). */
+export function wallTextureForSurface(
+  style: WallTextureStyle,
+  widthM: number,
+  heightM: number,
+  colorOverride?: string,
+): WallSurfaceMaterial {
+  const base = getWallTexture(style, colorOverride);
+  const tile = WALL_TEXTURE_TILE_M[style];
+  const repeatX = Math.max(0.5, widthM / tile.w);
+  const repeatY = Math.max(0.5, heightM / tile.h);
+  const map = base.map.clone();
+  configureMap(map, repeatX, repeatY);
+  let bumpMap: THREE.Texture | undefined;
+  if (base.bumpMap) {
+    bumpMap = base.bumpMap.clone();
+    bumpMap.repeat.set(repeatX, repeatY);
+    bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+  }
+  return { ...base, map, bumpMap };
 }
 
 /** Texture et PBR pour battants de porte selon le matériau. */
@@ -922,7 +1037,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   const mat = material ?? 'wood';
   const color = ZONE_MATERIAL_COLORS[mat];
   if (mat === 'carpet') {
-    const pile = makeCanvasTexture('zone:carpet-pile', (ctx, size) => {
+    const { map: pile } = makeCanvasTexture('zone:carpet-pile', (ctx, size) => {
       ctx.fillStyle = '#1a2744';
       ctx.fillRect(0, 0, size, size);
       for (let i = 0; i < 4000; i += 1) {
@@ -943,7 +1058,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
     };
   }
   if (mat === 'vinyl') {
-    const dance = makeCanvasTexture('zone:dance-vinyl-v2', (ctx, size) => {
+    const { map: dance } = makeCanvasTexture('zone:dance-vinyl-v2', (ctx, size) => {
       // Damier disco classique (noir / ivoire) — pas de cyan « piscine »
       const cell = size / 10;
       for (let row = 0; row < 10; row += 1) {

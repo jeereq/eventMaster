@@ -18,8 +18,9 @@ import {
   wallTextureLabels,
   wallsFromRoomOutline,
   windowStyleLabels,
-  WALL_TEXTURE_COLORS,
+  WALL_STYLE_PRESETS,
 } from '@/lib/roomLayoutUtils';
+import { WallTextureSwatch, OpeningMaterialSwatch } from '@/components/room/RoomMaterialPreviews';
 import type { LayoutActionEntry } from '@/lib/layoutActionLog';
 import { cn } from '@/lib/cn';
 
@@ -107,6 +108,13 @@ export default function RoomWallEditorPanel({
     setWalls(walls.map((w) => ({ ...w, thicknessM })), `Épaisseur : ${thicknessM.toFixed(2)} m`);
   };
 
+  const applyWallPreset = (texture: WallTextureStyle, color?: string) => {
+    setWalls(
+      walls.map((w) => ({ ...w, texture, color: color ?? undefined })),
+      `Ambiance : ${wallTextureLabels[texture]}`,
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">
@@ -175,23 +183,37 @@ export default function RoomWallEditorPanel({
         </label>
       </div>
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-bold uppercase text-muted">Ambiances prêtes</p>
+        <div className="flex flex-wrap gap-1.5">
+          {WALL_STYLE_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => applyWallPreset(preset.texture, preset.color)}
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-button)] border border-border text-[9px] font-semibold hover:bg-surface-muted"
+            >
+              <WallTextureSwatch texture={preset.texture} className="h-4 w-4 shrink-0" />
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-1.5 max-h-52 overflow-y-auto pr-0.5">
         {(Object.keys(wallTextureLabels) as WallTextureStyle[]).map((tex) => (
           <button
             key={tex}
             type="button"
             onClick={() => applyTextureToAll(tex)}
             className={cn(
-              'py-2 px-1 rounded-[var(--radius-button)] border text-[9px] font-bold transition',
+              'py-1.5 px-1 rounded-[var(--radius-button)] border text-[8px] font-bold transition text-center leading-tight',
               (walls[0]?.texture ?? 'plaster') === tex
                 ? 'border-primary ring-1 ring-primary/30'
                 : 'border-border hover:bg-surface-muted',
             )}
           >
-            <span
-              className="block h-6 rounded mb-1 border border-black/10"
-              style={{ background: WALL_TEXTURE_COLORS[tex] }}
-            />
+            <WallTextureSwatch texture={tex} className="h-7 w-full mb-1" />
             {wallTextureLabels[tex]}
           </button>
         ))}
@@ -428,10 +450,15 @@ export default function RoomWallEditorPanel({
                         const style = e.target.value as DoorStyle | WindowStyle;
                         const patch: Partial<RoomWallOpening> = { style };
                         if (op.kind === 'door') {
-                          if (style === 'double') patch.widthM = Math.max(op.widthM, 1.6);
+                          if (style === 'double' || style === 'frenchDoor') patch.widthM = Math.max(op.widthM, 1.6);
+                          if (style === 'folding') patch.widthM = Math.max(op.widthM, 2.2);
                           if (style === 'sliding') patch.widthM = Math.max(op.widthM, 1.2);
                           if (style === 'arch') patch.heightM = Math.max(op.heightM, 2.4);
-                          if (style === 'glass') patch.material = 'glass';
+                          if (style === 'fireExit') {
+                            patch.widthM = Math.max(op.widthM, 1.1);
+                            patch.material = 'blackSteel';
+                          }
+                          if (style === 'glass' || style === 'frenchDoor') patch.material = style === 'glass' ? 'glass' : 'wood';
                         }
                         if (op.kind === 'window' && style === 'bay') {
                           patch.widthM = Math.max(op.widthM, 1.8);
@@ -463,6 +490,24 @@ export default function RoomWallEditorPanel({
                       ))}
                     </select>
                   </label>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {(Object.keys(openingMaterialLabels) as OpeningMaterial[]).map((mat) => (
+                    <button
+                      key={mat}
+                      type="button"
+                      title={openingMaterialLabels[mat]}
+                      onClick={() => updateOpening(selected.id, op.id, { material: mat })}
+                      className={cn(
+                        'p-1 rounded border transition',
+                        (op.material ?? (op.kind === 'door' ? 'wood' : 'glass')) === mat
+                          ? 'border-primary ring-1 ring-primary/30'
+                          : 'border-border hover:bg-surface-muted',
+                      )}
+                    >
+                      <OpeningMaterialSwatch material={mat} className="h-5 w-5" />
+                    </button>
+                  ))}
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   <label className="text-[9px] space-y-0.5">

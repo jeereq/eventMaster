@@ -947,6 +947,36 @@ export const WALL_TEXTURE_COLORS: Record<WallTextureStyle, string> = {
   woodPanel: '#c4a06a',
 };
 
+/** Aperçu couleur pour matériaux de porte / fenêtre. */
+export const OPENING_MATERIAL_COLORS: Record<OpeningMaterial, string> = {
+  wood: '#6b4423',
+  glass: '#93c5fd',
+  metal: '#64748b',
+  painted: '#f1f5f9',
+  oak: '#c4a06a',
+  walnut: '#5c4030',
+  lacquer: '#f8fafc',
+  brass: '#c9a227',
+  blackSteel: '#1e293b',
+};
+
+/** Presets muraux pour salles d’événement. */
+export const WALL_STYLE_PRESETS: Array<{
+  id: string;
+  label: string;
+  texture: WallTextureStyle;
+  color?: string;
+}> = [
+  { id: 'reception', label: 'Réception classique', texture: 'limewash' },
+  { id: 'mariage', label: 'Mariage élégant', texture: 'fluted', color: '#faf7f2' },
+  { id: 'loft', label: 'Loft industriel', texture: 'metalCorrugated' },
+  { id: 'seminaire', label: 'Séminaire', texture: 'plaster' },
+  { id: 'gala', label: 'Gala / banquet', texture: 'tadelakt', color: '#f5f0e8' },
+  { id: 'terrasse', label: 'Terrasse couverte', texture: 'boardConcrete' },
+  { id: 'hotel', label: 'Hôtel premium', texture: 'travertine' },
+  { id: 'bistro', label: 'Bistro / metro', texture: 'metroTile' },
+];
+
 export function createWallOpening(
   kind: 'door' | 'window',
   partial: Partial<RoomWallOpening> = {},

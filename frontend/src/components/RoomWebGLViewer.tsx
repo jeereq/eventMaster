@@ -26,6 +26,7 @@ import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
 import {
   getWallTexture,
   getDoorMaterialProps,
+  wallTextureForSurface,
   getStairWoodMap,
   resolveChairMap,
   resolveFloorMap,
@@ -1045,8 +1046,8 @@ function WallMesh({
   const openings = wall.openings ?? [];
 
   const mat = useMemo(
-    () => getWallTexture(wall.texture, wall.color ?? paintColor),
-    [wall.texture, wall.color, paintColor],
+    () => wallTextureForSurface(wall.texture, length, wallH, wall.color ?? paintColor),
+    [wall.texture, wall.color, paintColor, length, wallH],
   );
 
   const bricks = useMemo(
@@ -1076,6 +1077,8 @@ function WallMesh({
             <meshStandardMaterial
               color={selected ? '#c7d2fe' : mat.color}
               map={mat.map}
+              bumpMap={mat.bumpMap}
+              bumpScale={mat.bumpScale}
               roughness={mat.roughness}
               metalness={mat.metalness}
               emissive={selected ? '#312e81' : '#000000'}
