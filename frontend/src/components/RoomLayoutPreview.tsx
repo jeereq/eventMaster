@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import {
   RoomLayoutBlueprint,
   getRoomOutlineClipPath,
@@ -36,6 +38,49 @@ interface RoomLayoutPreviewProps {
   force2d?: boolean;
   /** Remplace metadata.lightingPreset (ex. créneau programme événement). */
   lightingPreset?: LightingPreset;
+  /** Bouton plein écran sur mobile (showcase WebGL). */
+  allowMobileExpand?: boolean;
+}
+
+function useIsMobileViewport(maxWidthPx = 639) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${maxWidthPx}px)`);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, [maxWidthPx]);
+
+  return isMobile;
+}
+
+type WebGLPreviewProps = {
+  webglBlueprint: RoomLayoutBlueprint;
+  quality: RoomPreviewQuality;
+  lightingPreset: LightingPreset;
+  className?: string;
+};
+
+function WebGLPreviewCanvas({
+  webglBlueprint,
+  quality,
+  lightingPreset,
+  className,
+}: Omit<WebGLPreviewProps, 'blueprint'>) {
+  return (
+    <RoomWebGLViewer
+      blueprint={webglBlueprint}
+      selected={[]}
+      onSelect={() => {}}
+      readOnly
+      previewMode
+      renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
+      lightingPreset={lightingPreset}
+      className={cn('absolute inset-0 h-full w-full shadow-[var(--shadow-soft)] touch-none', className)}
+    />
+  );
 }
 
 /** Miniatures / listes : rendu 2D léger, teintes alignées sur le style WebGL. */
@@ -333,19 +378,33 @@ export default function RoomLayoutPreview({
   showMeta,
   force2d = false,
   lightingPreset: lightingPresetOverride,
+  allowMobileExpand,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
   const [mounted, setMounted] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const isMobile = useIsMobileViewport();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!expanded) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [expanded]);
+
   const canvasClass = useMemo(() => {
     if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
-    if (quality === 'showcase') return 'aspect-[16/10] min-h-[280px] sm:min-h-[360px]';
-    return 'aspect-[4/3] min-h-[200px]';
+    if (quality === 'showcase') {
+      return 'aspect-[16/10] min-h-[200px] max-h-[min(52vh,420px)] sm:min-h-[360px] sm:max-h-none';
+    }
+    return 'aspect-[4/3] min-h-[180px] sm:min-h-[200px]';
   }, [quality]);
 
   if (!blueprint) {
@@ -359,6 +418,7 @@ export default function RoomLayoutPreview({
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const lightingPreset = lightingPresetOverride ?? blueprint.metadata.lightingPreset ?? 'auto';
   const useWebGL = !force2d && quality !== 'thumb' && mounted;
+  const canExpand = (allowMobileExpand ?? quality === 'showcase') && useWebGL && isMobile;
 
   const webglBlueprint = quality === 'showcase'
     ? {
@@ -378,11 +438,11 @@ export default function RoomLayoutPreview({
   return (
     <div className={cn('space-y-2', className)}>
       {showHeader && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-muted">
-          <span>{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
-          <span>
+        <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
+          <span className="truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
+          <span className="shrink-0 tabular-nums">
             {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
-            {useWebGL ? ' · WebGL' : ''}
+            {useWebGL ? ' · 3D' : ''}
           </span>
         </div>
       )}
@@ -390,23 +450,17 @@ export default function RoomLayoutPreview({
       {quality === 'thumb' ? (
         <ThumbPreview blueprint={blueprint} className={className} />
       ) : (
-        <div className={cn('relative overflow-hidden rounded-2xl', canvasClass, className)}>
-          {!useWebGL && (
+        <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-[#1a1410]', canvasClass, className)}>
+          {useWebGL ? (
+            <WebGLPreviewCanvas
+              webglBlueprint={webglBlueprint}
+              quality={quality}
+              lightingPreset={lightingPreset}
+            />
+          ) : (
             <FlatShowcasePreview
               blueprint={blueprint}
               className="absolute inset-0 h-full w-full rounded-2xl"
-            />
-          )}
-          {useWebGL && (
-            <RoomWebGLViewer
-              blueprint={webglBlueprint}
-              selected={[]}
-              onSelect={() => {}}
-              readOnly
-              previewMode
-              renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
-              lightingPreset={lightingPreset}
-              className="absolute inset-0 h-full w-full shadow-[var(--shadow-soft)]"
             />
           )}
           {!mounted && (
@@ -416,14 +470,69 @@ export default function RoomLayoutPreview({
               </span>
             </div>
           )}
+          {canExpand ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 min-h-[44px] text-[11px] font-bold text-white backdrop-blur-sm border border-white/15 active:scale-[0.98] transition"
+              aria-label="Agrandir la vue 3D"
+            >
+              <Maximize2 className="w-4 h-4 shrink-0" />
+              Agrandir
+            </button>
+          ) : null}
         </div>
       )}
 
-      {quality === 'showcase' && useWebGL && (
+      {quality === 'showcase' && useWebGL ? (
         <p className="text-[10px] text-muted leading-relaxed">
-          Visualisation <span className="font-semibold text-foreground">3D showcase</span> : textures, bloom, vignette et architecture.
-          Orbitez pour inspecter la salle.
+          <span className="hidden sm:inline">
+            Visualisation <span className="font-semibold text-foreground">3D showcase</span> : textures, bloom, vignette et architecture.
+            Orbitez pour inspecter la salle.
+          </span>
+          <span className="sm:hidden">
+            Vue 3D interactive — utilisez <span className="font-semibold text-foreground">Agrandir</span> pour le plein écran et orbiter la salle.
+          </span>
         </p>
+      ) : null}
+
+      {expanded && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[250] flex flex-col bg-[#0c0a09]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vue 3D plein écran"
+        >
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10 pt-[max(0.5rem,env(safe-area-inset-top))]">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-white truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
+              <p className="text-[10px] text-white/60 tabular-nums">
+                {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 min-h-[44px] min-w-[44px] text-[11px] font-bold text-white border border-white/15 shrink-0"
+              aria-label="Réduire la vue 3D"
+            >
+              <Minimize2 className="w-4 h-4" />
+              <span className="sr-only sm:not-sr-only">Réduire</span>
+            </button>
+          </div>
+          <div className="relative flex-1 min-h-0">
+            <WebGLPreviewCanvas
+              webglBlueprint={webglBlueprint}
+              quality={quality}
+              lightingPreset={lightingPreset}
+              className="rounded-none"
+            />
+          </div>
+          <p className="text-[10px] text-white/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            Glissez pour orbiter · pincez pour zoomer
+          </p>
+        </div>,
+        document.body,
       )}
     </div>
   );
