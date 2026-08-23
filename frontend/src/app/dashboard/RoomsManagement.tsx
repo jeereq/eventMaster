@@ -23,6 +23,8 @@ import {
   LayoutParams,
   RoomLayoutBlueprint,
   RoomType,
+  applyRoomAmbiencePreset,
+  captureRoomAmbienceFromBlueprint,
   chairTypeLabels,
   generateRoomBlueprint,
   refreshBlueprintMetadata,
@@ -1597,6 +1599,35 @@ export default function RoomsManagement() {
                 />
               </label>
             </div>
+            {rooms.filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint).length > 0 ? (
+              <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
+                <span className="font-semibold text-muted shrink-0">Copier le style depuis</span>
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const roomId = e.target.value;
+                    e.target.value = '';
+                    if (!roomId || !editBlueprint) return;
+                    const source = rooms.find((room) => room.id === roomId);
+                    if (!source?.layoutBlueprint) return;
+                    const preset = captureRoomAmbienceFromBlueprint(
+                      source.layoutBlueprint as RoomLayoutBlueprint,
+                      `copy-${source.id}`,
+                      source.name,
+                    );
+                    setEditBlueprint(applyRoomAmbiencePreset(editBlueprint, preset));
+                  }}
+                  className="px-2 py-1.5 rounded-[var(--radius-button)] border text-xs max-w-md"
+                >
+                  <option value="">Choisir une salle…</option>
+                  {rooms
+                    .filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint)
+                    .map((room) => (
+                      <option key={room.id} value={room.id}>{room.name}</option>
+                    ))}
+                </select>
+              </label>
+            ) : null}
             <RoomLayoutEditor
               blueprint={editBlueprint}
               onChange={setEditBlueprint}

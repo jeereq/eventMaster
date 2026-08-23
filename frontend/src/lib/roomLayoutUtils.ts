@@ -1153,52 +1153,88 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
   },
 ];
 
+export type AmbienceApplyScope = {
+  walls: boolean;
+  floor: boolean;
+  theme: boolean;
+  furniture: boolean;
+  lighting: boolean;
+};
+
+export const DEFAULT_AMBIENCE_SCOPE: AmbienceApplyScope = {
+  walls: true,
+  floor: true,
+  theme: true,
+  furniture: true,
+  lighting: true,
+};
+
 export function applyRoomAmbiencePreset(
   blueprint: RoomLayoutBlueprint,
   preset: RoomAmbiencePreset,
+  scope: AmbienceApplyScope = DEFAULT_AMBIENCE_SCOPE,
 ): RoomLayoutBlueprint {
+  const metadata = { ...blueprint.metadata };
+
+  if (scope.floor) {
+    metadata.floorType = preset.floorType;
+    metadata.floorColor = preset.floorColor;
+    metadata.floorImageUrl = undefined;
+    metadata.floorImageFit = undefined;
+  }
+  if (scope.theme) {
+    metadata.roomThemeId = preset.roomThemeId ?? blueprint.metadata.roomThemeId;
+  }
+  if (scope.walls) {
+    metadata.wallPaintColor = preset.wallPaintColor ?? preset.wallColor;
+  }
+  if (scope.furniture) {
+    metadata.defaultTableColor = preset.defaultTableColor;
+    metadata.defaultTableSurface = preset.tableSurface;
+  }
+  if (scope.lighting) {
+    metadata.lightingPreset = preset.lightingPreset ?? blueprint.metadata.lightingPreset;
+    metadata.showChandeliers = preset.showChandeliers ?? blueprint.metadata.showChandeliers;
+    metadata.chandelierType = preset.chandelierType ?? blueprint.metadata.chandelierType;
+  }
+
+  const walls = scope.walls
+    ? (blueprint.walls ?? []).map((w) => ({
+        ...w,
+        texture: preset.wallTexture,
+        color: preset.wallColor,
+      }))
+    : blueprint.walls;
+
+  const furniture = scope.furniture
+    ? blueprint.furniture.map((item) => {
+        if (item.kind === 'table') {
+          return {
+            ...item,
+            chairType: preset.chairType,
+            chairStyle: preset.chairStyle,
+            seatMaterial: preset.seatMaterial,
+            tableSurface: preset.tableSurface,
+            tableColor: preset.defaultTableColor ?? item.tableColor,
+          };
+        }
+        if (item.kind === 'row' || item.kind === 'chair') {
+          return {
+            ...item,
+            chairType: preset.chairType,
+            chairStyle: preset.chairStyle,
+            seatMaterial: preset.seatMaterial,
+          };
+        }
+        return item;
+      })
+    : blueprint.furniture;
+
   const next: RoomLayoutBlueprint = {
     ...blueprint,
-    metadata: {
-      ...blueprint.metadata,
-      floorType: preset.floorType,
-      floorColor: preset.floorColor,
-      floorImageUrl: undefined,
-      floorImageFit: undefined,
-      roomThemeId: preset.roomThemeId ?? blueprint.metadata.roomThemeId,
-      wallPaintColor: preset.wallPaintColor ?? preset.wallColor,
-      defaultTableColor: preset.defaultTableColor,
-      defaultTableSurface: preset.tableSurface,
-      lightingPreset: preset.lightingPreset ?? blueprint.metadata.lightingPreset,
-      showChandeliers: preset.showChandeliers ?? blueprint.metadata.showChandeliers,
-      chandelierType: preset.chandelierType ?? blueprint.metadata.chandelierType,
-    },
-    walls: (blueprint.walls ?? []).map((w) => ({
-      ...w,
-      texture: preset.wallTexture,
-      color: preset.wallColor,
-    })),
-    furniture: blueprint.furniture.map((item) => {
-      if (item.kind === 'table') {
-        return {
-          ...item,
-          chairType: preset.chairType,
-          chairStyle: preset.chairStyle,
-          seatMaterial: preset.seatMaterial,
-          tableSurface: preset.tableSurface,
-          tableColor: preset.defaultTableColor ?? item.tableColor,
-        };
-      }
-      if (item.kind === 'row' || item.kind === 'chair') {
-        return {
-          ...item,
-          chairType: preset.chairType,
-          chairStyle: preset.chairStyle,
-          seatMaterial: preset.seatMaterial,
-        };
-      }
-      return item;
-    }),
+    metadata,
+    walls,
+    furniture,
   };
   return refreshBlueprintMetadata(next);
 }

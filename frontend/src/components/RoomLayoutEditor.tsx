@@ -2,13 +2,14 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
 import RoomWebGLViewer, { type RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import { ChairTypePicker, SeatMaterialPicker, RoomAmbienceCard, TableSurfacePicker, ZoneMaterialPicker } from '@/components/room/RoomMaterialPreviews';
+import RoomAmbiencePreviewModal from '@/components/room/RoomAmbiencePreviewModal';
 import {
   ChairType,
   ColumnShape,
@@ -67,7 +68,12 @@ import {
   type TableSurfaceStyle,
   type ZoneKind,
   type ZoneMaterial,
+  type AmbienceApplyScope,
 } from '@/lib/roomLayoutUtils';
+import {
+  copyAmbienceShareLink,
+  decodeAmbienceShareToken,
+} from '@/lib/roomAmbienceUtils';
 import {
   addAmbienceToLibrary,
   captureAmbienceToLibrary,
@@ -202,6 +208,7 @@ export default function RoomLayoutEditor({
   const [groupStyleColor, setGroupStyleColor] = useState('#c4a06a');
   const [customAmbienceName, setCustomAmbienceName] = useState('');
   const [ambienceLibrary, setAmbienceLibrary] = useState<import('@/lib/roomLayoutUtils').SavedRoomAmbience[]>([]);
+  const [ambiencePreviewPreset, setAmbiencePreviewPreset] = useState<import('@/lib/roomLayoutUtils').RoomAmbiencePreset | null>(null);
   const ambienceImportRef = useRef<HTMLInputElement>(null);
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
@@ -876,14 +883,27 @@ export default function RoomLayoutEditor({
     }, { message: `Éclairage : ${lightingPresetLabels[p]}`, kind: 'settings' });
   };
 
-  const applyAmbience = (preset: import('@/lib/roomLayoutUtils').RoomAmbiencePreset) => {
-    const next = applyRoomAmbiencePreset(blueprint, preset);
+  const applyAmbience = (preset: import('@/lib/roomLayoutUtils').RoomAmbiencePreset, scope?: AmbienceApplyScope) => {
+    const next = applyRoomAmbiencePreset(blueprint, preset, scope);
     updateBlueprint(next, { message: `Ambiance : ${preset.label}`, kind: 'settings' });
-    if (preset.roomThemeId) applyTheme(preset.roomThemeId);
+    if (preset.roomThemeId && (scope?.theme ?? true)) applyTheme(preset.roomThemeId);
+    setAmbiencePreviewPreset(null);
   };
 
   useEffect(() => {
     setAmbienceLibrary(loadAmbienceLibrary());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('ambience');
+    if (!token) return;
+    const item = decodeAmbienceShareToken(token);
+    params.delete('ambience');
+    const qs = params.toString();
+    window.history.replaceState({}, '', qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
+    if (item) setAmbiencePreviewPreset(item.preset);
   }, []);
 
   const activeAmbienceId = useMemo(() => {
@@ -1384,6 +1404,7 @@ export default function RoomLayoutEditor({
                           preset={preset}
                           active={activeAmbienceId === preset.id}
                           onClick={() => applyAmbience(preset)}
+                          onPreview={() => setAmbiencePreviewPreset(preset)}
                         />
                       ))}
                     </div>
@@ -1441,7 +1462,24 @@ export default function RoomLayoutEditor({
                                 preset={saved.preset}
                                 active={activeAmbienceId === saved.id}
                                 onClick={() => applyAmbience(saved.preset)}
+                                onPreview={() => setAmbiencePreviewPreset(saved.preset)}
                               />
+                              <button
+                                type="button"
+                                title="Copier le lien de partage"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void copyAmbienceShareLink(saved).then((ok) => {
+                                    updateBlueprint(blueprint, {
+                                      message: ok ? `Lien copié : ${saved.name}` : 'Impossible de copier le lien',
+                                      kind: 'settings',
+                                    });
+                                  });
+                                }}
+                                className="absolute top-1 right-[4.25rem] p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                              >
+                                <Link2 className="w-3 h-3" />
+                              </button>
                               <button
                                 type="button"
                                 title="Ajouter à la bibliothèque globale"
@@ -1518,7 +1556,24 @@ export default function RoomLayoutEditor({
                                 preset={saved.preset}
                                 active={activeAmbienceId === saved.id}
                                 onClick={() => applyAmbience(saved.preset)}
+                                onPreview={() => setAmbiencePreviewPreset(saved.preset)}
                               />
+                              <button
+                                type="button"
+                                title="Copier le lien de partage"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void copyAmbienceShareLink(saved).then((ok) => {
+                                    updateBlueprint(blueprint, {
+                                      message: ok ? `Lien copié : ${saved.name}` : 'Impossible de copier le lien',
+                                      kind: 'settings',
+                                    });
+                                  });
+                                }}
+                                className="absolute top-1 right-[4.25rem] p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                              >
+                                <Link2 className="w-3 h-3" />
+                              </button>
                               <button
                                 type="button"
                                 title="Importer dans cette salle"
@@ -3937,9 +3992,22 @@ export default function RoomLayoutEditor({
     </div>
   );
 
+  const ambiencePreviewModal = (
+    <RoomAmbiencePreviewModal
+      open={Boolean(ambiencePreviewPreset)}
+      onClose={() => setAmbiencePreviewPreset(null)}
+      blueprint={blueprint}
+      preset={ambiencePreviewPreset ?? ROOM_AMBIENCE_PRESETS[0]}
+      onApply={(scope) => {
+        if (ambiencePreviewPreset) applyAmbience(ambiencePreviewPreset, scope);
+      }}
+    />
+  );
+
   if (isExpanded) {
     return (
       <>
+        {ambiencePreviewModal}
         <ImageCropModal
           open={Boolean(cropTarget)}
           onClose={() => setCropTarget(null)}
@@ -3977,6 +4045,7 @@ export default function RoomLayoutEditor({
 
   return (
     <>
+      {ambiencePreviewModal}
       <ImageCropModal
         open={Boolean(cropTarget)}
         onClose={() => setCropTarget(null)}

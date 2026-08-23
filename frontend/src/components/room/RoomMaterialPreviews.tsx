@@ -30,6 +30,7 @@ import {
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
 import { chandelierTypeLabels } from '@/lib/roomCeilingUtils';
+import { Eye } from 'lucide-react';
 import type { FloorType } from '@/lib/roomThemeUtils';
 
 function texturePreviewStyle(tex: THREE.Texture | undefined | null): string | undefined {
@@ -316,23 +317,26 @@ export function ZoneMaterialPicker({
 export function RoomAmbienceCard({
   preset,
   onClick,
+  onPreview,
   active = false,
 }: {
   preset: RoomAmbiencePreset;
   onClick: () => void;
+  onPreview?: () => void;
   active?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'text-left p-2.5 rounded-[var(--radius-button)] border transition space-y-1.5 w-full',
-        active
-          ? 'border-primary ring-2 ring-primary/25 bg-primary/5'
-          : 'border-border hover:border-primary/40 hover:bg-surface-muted',
-      )}
-    >
+    <div className="relative group w-full">
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'text-left p-2.5 rounded-[var(--radius-button)] border transition space-y-1.5 w-full',
+          active
+            ? 'border-primary ring-2 ring-primary/25 bg-primary/5'
+            : 'border-border hover:border-primary/40 hover:bg-surface-muted',
+        )}
+      >
       <div className="flex gap-1 h-8">
         <WallTextureSwatch texture={preset.wallTexture} className="flex-1" />
         <span
@@ -364,6 +368,20 @@ export function RoomAmbienceCard({
           ) : null}
         </p>
       ) : null}
-    </button>
+      </button>
+      {onPreview ? (
+        <button
+          type="button"
+          title="Aperçu avant application"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPreview();
+          }}
+          className="absolute bottom-2 right-2 p-1 rounded-full border border-border bg-white/95 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition shadow-sm"
+        >
+          <Eye className="w-3 h-3" />
+        </button>
+      ) : null}
+    </div>
   );
 }
