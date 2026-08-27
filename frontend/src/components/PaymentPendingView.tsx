@@ -17,6 +17,9 @@ type PaymentPendingViewProps = {
   /** Nombre max de tentatives auto (ensuite bouton manuel). */
   maxAttempts?: number;
   onPaid?: () => void;
+  /** Relancer une nouvelle session de paiement (FlexPay). */
+  onRetry?: () => Promise<void> | void;
+  retryLabel?: string;
   className?: string;
 };
 
@@ -28,12 +31,15 @@ export default function PaymentPendingView({
   intervalMs = 4000,
   maxAttempts = 45,
   onPaid,
+  onRetry,
+  retryLabel = 'Relancer le paiement',
   className = '',
 }: PaymentPendingViewProps) {
   const [status, setStatus] = useState<PaymentPendingStatus>('pending');
   const [message, setMessage] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [checking, setChecking] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const paidRef = useRef(false);
 
   const runCheck = async (manual = false) => {
@@ -155,19 +161,45 @@ export default function PaymentPendingView({
         </Alert>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
         <Button
           type="button"
           onClick={() => void runCheck(true)}
-          disabled={checking}
+          disabled={checking || retrying}
           className="inline-flex items-center gap-2"
         >
           {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           {checking ? 'Vérification…' : 'Vérifier maintenant'}
         </Button>
+        {onRetry && (status === 'failed' || status === 'error' || attempts >= Math.min(8, maxAttempts)) && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={checking || retrying}
+            className="inline-flex items-center gap-2"
+            onClick={async () => {
+              setRetrying(true);
+              try {
+                await onRetry();
+                paidRef.current = false;
+                setStatus('pending');
+                setMessage('Nouvelle tentative envoyée…');
+                setAttempts(0);
+              } catch (err: unknown) {
+                setStatus('error');
+                setMessage(err instanceof Error ? err.message : 'Relance impossible.');
+              } finally {
+                setRetrying(false);
+              }
+            }}
+          >
+            {retrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {retrying ? 'Relance…' : retryLabel}
+          </Button>
+        )}
         {attempts >= maxAttempts && status === 'pending' && (
           <p className="text-xs text-muted self-center">
-            Toujours en attente ? Vérifiez sur le téléphone puis cliquez à nouveau.
+            Toujours en attente ? Vérifiez sur le téléphone puis cliquez à nouveau, ou relancez le paiement.
           </p>
         )}
       </div>

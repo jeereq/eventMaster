@@ -79,6 +79,8 @@ interface SubscriptionRequest {
   durationDays: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
+  paymentProvider?: string | null;
+  approvedAmount?: number | null;
 }
 
 function FeatureCell({ value }: { value: string | boolean }) {
@@ -131,7 +133,18 @@ function BillingPageInner() {
       if (billingData?.billingCycle === 'annual' || billingData?.billingCycle === 'monthly') {
         setBillingCycle(billingData.billingCycle);
       }
-      if (requestsData) setRequests(requestsData);
+      if (requestsData) {
+        setRequests(requestsData);
+        const openFlex = (requestsData as SubscriptionRequest[]).find(
+          (r) =>
+            (r.status === 'PENDING' || r.status === 'REJECTED') &&
+            (r.paymentProvider === 'flexpay_card' || r.paymentProvider === 'flexpay_mobile'),
+        );
+        if (openFlex && !searchParams.get('requestId')) {
+          setPendingFlexPayRequestId(openFlex.id);
+          setPendingPayMethod(openFlex.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card');
+        }
+      }
       setInvoices(invoicesData.invoices || []);
     } catch (err: any) {
       setError('Impossible de charger les informations de facturation.');
@@ -173,11 +186,41 @@ function BillingPageInner() {
       await loadBillingStatus();
       return { status: 'paid' as const };
     }
+    if (data.status === 'failed' || data.canRetry) {
+      return {
+        status: (data.status === 'failed' ? 'failed' : 'pending') as 'failed' | 'pending',
+        message: data.message || 'Paiement non confirmé. Vous pouvez relancer.',
+      };
+    }
     return {
       status: 'pending' as const,
       message: data.message || 'Paiement encore en cours…',
     };
   }, [pendingFlexPayRequestId]);
+
+  const retryPendingFlexPay = useCallback(async () => {
+    if (!pendingFlexPayRequestId) return;
+    if (payMethod === 'mobile' && !payPhone.trim()) {
+      throw new Error('Saisissez votre numéro Mobile Money (243…) pour relancer.');
+    }
+    const data = await api.post(`/subscriptions/requests/${pendingFlexPayRequestId}/retry-payment`, {
+      paymentMethod: payMethod,
+      ...(payMethod === 'mobile' ? { phone: payPhone.trim() } : {}),
+    });
+    setPendingPayMethod(payMethod);
+    if (data.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
+      return;
+    }
+    if (data.paid) {
+      setSuccessMsg(data.message || 'Paiement confirmé. Forfait activé.');
+      setPendingFlexPayRequestId(null);
+      await loadBillingStatus();
+      return;
+    }
+    setSuccessMsg(data.message || 'Nouvelle tentative initiée.');
+    await loadBillingStatus();
+  }, [pendingFlexPayRequestId, payMethod, payPhone]);
 
   const allowedPaidIds = useMemo(
     () => paidPlanIdsForAccountKind(tenant?.accountKind),
@@ -241,6 +284,7 @@ function BillingPageInner() {
     setSuccessMsg('');
     setActionLoading(plan);
     try {
+      const isRenew = billing?.plan === plan;
       const durationDays = durationDaysForPlan(plan, billingCycle);
       if (saasPaymentMode === 'flexpay') {
         const data = await api.post('/subscriptions/checkout', {
@@ -254,7 +298,10 @@ function BillingPageInner() {
           return;
         }
         if (data.paid) {
-          setSuccessMsg(data.message || `Forfait ${plan} activé.`);
+          setSuccessMsg(
+            data.message ||
+              (isRenew ? `Renouvellement ${plan} activé.` : `Forfait ${plan} activé.`),
+          );
           await loadBillingStatus();
           return;
         }
@@ -273,7 +320,9 @@ function BillingPageInner() {
         durationDays,
       });
       setSuccessMsg(
-        `Demande ${plan} soumise (${durationDays === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
+        isRenew
+          ? `Demande de renouvellement ${plan} soumise (${durationDays === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}).`
+          : `Demande ${plan} soumise (${durationDays === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
       );
       await loadBillingStatus();
     } catch (err: any) {
@@ -459,6 +508,7 @@ function BillingPageInner() {
                   : 'Nous confirmons votre paiement carte. Cette zone se met à jour automatiquement.'
               }
               onPoll={pollPendingFlexPay}
+              onRetry={() => retryPendingFlexPay()}
               onPaid={() => {
                 setPendingFlexPayRequestId(null);
               }}
@@ -542,22 +592,28 @@ function BillingPageInner() {
                     )}
                     <button
                       disabled={
-                        isCurrent ||
+                        (isCurrent && plan.id === 'FREE') ||
                         plan.id === 'FREE' ||
                         actionLoading !== null ||
                         !allowedPaidIds.includes(plan.id)
                       }
                       onClick={() => handleUpgrade(plan.id)}
                       className={`w-full py-2.5 mt-5 font-semibold rounded-xl text-xs disabled:opacity-50 ${
-                        plan.highlighted ? 'bg-primary text-white' : 'bg-foreground text-background'
+                        plan.highlighted || (isCurrent && plan.id !== 'FREE')
+                          ? 'bg-primary text-white'
+                          : 'bg-foreground text-background'
                       }`}
                     >
                       {actionLoading === plan.id ? (
                         <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                      ) : isCurrent && plan.id === 'FREE' ? (
+                        'Forfait actuel (gratuit)'
                       ) : isCurrent ? (
-                        billing?.plan === 'FREE' ? 'Forfait actuel (gratuit)' : 'Forfait actuel'
+                        saasPaymentMode === 'flexpay' ? 'Renouveler maintenant' : 'Demander un renouvellement'
                       ) : plan.id === 'FREE' ? (
                         'Gratuit'
+                      ) : saasPaymentMode === 'flexpay' ? (
+                        `Payer ${plan.displayName}`
                       ) : (
                         `Demander ${plan.displayName}`
                       )}
@@ -634,25 +690,46 @@ function BillingPageInner() {
         ) : (
           <>
             <div className="md:hidden space-y-3 mt-4">
-              {requests.map((req) => (
-                <div key={req.id} className="rounded-xl border border-border p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-sm">{req.requestedPlan}</span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        req.status === 'APPROVED'
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : req.status === 'REJECTED'
-                            ? 'bg-rose-50 text-rose-700'
-                            : 'bg-amber-50 text-amber-700'
-                      }`}
-                    >
-                      {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
-                    </span>
+              {requests.map((req) => {
+                const canRetryFlex =
+                  saasPaymentMode === 'flexpay' &&
+                  (req.status === 'PENDING' || req.status === 'REJECTED') &&
+                  (req.paymentProvider === 'flexpay_card' || req.paymentProvider === 'flexpay_mobile');
+                return (
+                  <div key={req.id} className="rounded-xl border border-border p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm">{req.requestedPlan}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          req.status === 'APPROVED'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : req.status === 'REJECTED'
+                              ? 'bg-rose-50 text-rose-700'
+                              : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
+                        {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted">{req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}</p>
+                    {canRetryFlex && (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-primary"
+                        onClick={() => {
+                          setPendingFlexPayRequestId(req.id);
+                          setPendingPayMethod(req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card');
+                          setError('');
+                          setSuccessMsg('Demande sélectionnée — vous pouvez vérifier ou relancer le paiement ci-dessus.');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                      >
+                        Reprendre / relancer le paiement
+                      </button>
+                    )}
                   </div>
-                  <p className="text-xs text-muted">{req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs mt-4">
@@ -662,29 +739,55 @@ function BillingPageInner() {
                     <th className="py-2 text-left">Durée</th>
                     <th className="py-2 text-left">Date</th>
                     <th className="py-2 text-left">Statut</th>
+                    <th className="py-2 text-left">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.map((req) => (
-                    <tr key={req.id} className="border-t border-border">
-                      <td className="py-2 font-bold">{req.requestedPlan}</td>
-                      <td className="py-2">{req.durationDays} j</td>
-                      <td className="py-2">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
-                      <td className="py-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            req.status === 'APPROVED'
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : req.status === 'REJECTED'
-                                ? 'bg-rose-50 text-rose-700'
-                                : 'bg-amber-50 text-amber-700'
-                          }`}
-                        >
-                          {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {requests.map((req) => {
+                    const canRetryFlex =
+                      saasPaymentMode === 'flexpay' &&
+                      (req.status === 'PENDING' || req.status === 'REJECTED') &&
+                      (req.paymentProvider === 'flexpay_card' || req.paymentProvider === 'flexpay_mobile');
+                    return (
+                      <tr key={req.id} className="border-t border-border">
+                        <td className="py-2 font-bold">{req.requestedPlan}</td>
+                        <td className="py-2">{req.durationDays} j</td>
+                        <td className="py-2">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
+                        <td className="py-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              req.status === 'APPROVED'
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : req.status === 'REJECTED'
+                                  ? 'bg-rose-50 text-rose-700'
+                                  : 'bg-amber-50 text-amber-700'
+                            }`}
+                          >
+                            {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
+                          </span>
+                        </td>
+                        <td className="py-2">
+                          {canRetryFlex ? (
+                            <button
+                              type="button"
+                              className="font-semibold text-primary"
+                              onClick={() => {
+                                setPendingFlexPayRequestId(req.id);
+                                setPendingPayMethod(req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card');
+                                setError('');
+                                setSuccessMsg('Demande sélectionnée — vérifiez ou relancez le paiement ci-dessus.');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                            >
+                              Relancer
+                            </button>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
