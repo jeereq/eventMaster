@@ -10,6 +10,7 @@ const platformSettingsService_1 = require("../services/platformSettingsService")
 const auth_1 = require("../middleware/auth");
 const marketplaceController_1 = require("../controllers/marketplaceController");
 const publicEventController_1 = require("../controllers/publicEventController");
+const flexPayController_1 = require("../controllers/flexPayController");
 const router = (0, express_1.Router)();
 /** GET /api/public/site — identité & contact (sans secrets) */
 router.get('/site', (_req, res) => {
@@ -77,8 +78,14 @@ router.post('/services/:slug/inquire', auth_1.requireAuth, marketplaceController
 router.get('/vendors/:slug', marketplaceController_1.getPublicVendor);
 router.get('/events', publicEventController_1.listPublicEvents);
 router.get('/events/:slug', publicEventController_1.getPublicEvent);
+router.get('/events/:slug/seats', publicEventController_1.listPublicEventSeats);
 router.post('/events/:slug/checkout', auth_1.requireAuth, publicEventController_1.checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', publicEventController_1.getTicketOrderBySession);
+router.post('/payments/flexpay/callback', flexPayController_1.flexPayCardCallback);
+router.get('/payments/flexpay/callback', flexPayController_1.flexPayCardCallback);
+router.get('/payments/flexpay/return', flexPayController_1.flexPayCardReturn);
+router.get('/payments/flexpay/orders/:orderId/verify', flexPayController_1.verifyFlexPayCardOrder);
+router.post('/payments/flexpay/orders/:orderId/retry', auth_1.requireAuth, flexPayController_1.retryFlexPayTicketOrder);
 // POST /api/public/contact
 router.post('/contact', async (req, res) => {
     try {

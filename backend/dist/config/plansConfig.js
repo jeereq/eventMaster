@@ -30,6 +30,7 @@ exports.annualPayableFromPeriod = annualPayableFromPeriod;
 exports.annualPromoPayableFromPeriod = annualPromoPayableFromPeriod;
 exports.getPlanBaseAmount = getPlanBaseAmount;
 exports.resolveDefaultPromoApprovedAmount = resolveDefaultPromoApprovedAmount;
+exports.resolveDefaultSubscriptionDiscountOptions = resolveDefaultSubscriptionDiscountOptions;
 exports.billingCycleFromDurationDays = billingCycleFromDurationDays;
 exports.durationDaysFromBillingCycle = durationDaysFromBillingCycle;
 /** Réduction appliquée au total annuel (12 mois B2B / 4 trimestres B2C). */
@@ -113,10 +114,10 @@ function personalPlan(rest) {
 function getDefaultPlans() {
     return {
         FREE: organizerPlan({
-            name: 'Essentials',
+            name: 'Essentiel',
             price: '0 FC',
             monthlyPriceFc: 0,
-            description: 'Découverte : tester EventMaster — flux invitations complet (RSVP, plan de table, QR, PDF/GPS) ou 1 salle / 1 prestation.',
+            description: 'Découverte : tester EventMaster — flux invitations (RSVP, plan de table, QR, PDF/GPS) ou 1 salle / 1 prestation.',
             audience: 'B2B',
             maxEvents: 3,
             maxGuests: 50,
@@ -138,28 +139,28 @@ function getDefaultPlans() {
             name: 'Particulier 50',
             price: '60.000 FC',
             monthlyPriceFc: 60000,
-            description: 'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
+            description: 'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
             maxGuests: 50,
         }),
         PERSONAL_100: personalPlan({
             name: 'Particulier 100',
             price: '90.000 FC',
             monthlyPriceFc: 90000,
-            description: 'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
+            description: 'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
             maxGuests: 100,
         }),
         PERSONAL_200: personalPlan({
             name: 'Particulier 200',
             price: '120.000 FC',
             monthlyPriceFc: 120000,
-            description: 'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
+            description: 'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D/3D complet), 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
             maxGuests: 200,
         }),
         PERSONAL_PLUS: personalPlan({
             name: 'Particulier +200',
             price: '180.000 FC',
             monthlyPriceFc: 180000,
-            description: 'Grande fête privée (plus de 200 invités) : organisation complète, invités illimités, 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
+            description: 'Grande fête privée (plus de 200 invités) : organisation complète avec éditeur 2D/3D complet, invités illimités, 3 événements, 2 salles — sans catalogue. Facturation trimestrielle.',
             maxGuests: 99999,
         }),
         STANDARD: organizerPlan({
@@ -184,10 +185,10 @@ function getDefaultPlans() {
             supportLevel: 'email',
         }),
         PREMIUM_1: organizerPlan({
-            name: 'Business Premium 1',
+            name: 'Premium',
             price: '55.000 FC',
             monthlyPriceFc: 55000,
-            description: 'B2B — salles 2D avancées, modèles personnalisés et équipe élargie.',
+            description: 'B2B — salles 2D avancées (thèmes, scénographie), modèles personnalisés et équipe élargie.',
             audience: 'B2B',
             maxEvents: 12,
             maxGuests: 500,
@@ -205,10 +206,10 @@ function getDefaultPlans() {
             supportLevel: 'email',
         }),
         PREMIUM_2: organizerPlan({
-            name: 'Business Premium 2',
+            name: 'Premium Plus',
             price: '85.000 FC',
             monthlyPriceFc: 85000,
-            description: 'B2B — protocole complet, notifications siège et gestion multi-salles.',
+            description: 'B2B — protocole complet, OCR maquette, notifications siège et gestion multi-salles.',
             audience: 'B2B',
             maxEvents: 20,
             maxGuests: 1000,
@@ -226,10 +227,10 @@ function getDefaultPlans() {
             supportLevel: 'priority',
         }),
         ENTERPRISE_1: organizerPlan({
-            name: 'Business Enterprise 1',
+            name: 'Enterprise',
             price: '350.000 FC',
             monthlyPriceFc: 350000,
-            description: 'B2B — grandes organisations : volume élevé, rapports et support prioritaire.',
+            description: 'B2B — grandes organisations : volume élevé, éditeur de salle complet, rapports et support prioritaire.',
             audience: 'B2B',
             maxEvents: 40,
             maxGuests: 3500,
@@ -247,10 +248,10 @@ function getDefaultPlans() {
             supportLevel: 'priority',
         }),
         ENTERPRISE_2: organizerPlan({
-            name: 'Business Enterprise 2',
+            name: 'Enterprise Pro',
             price: '525.000 FC',
             monthlyPriceFc: 525000,
-            description: 'B2B — agences événementielles avec réseau commercial (30 % puis 20 %).',
+            description: 'B2B — agences événementielles : volume élevé, éditeur complet et support dédié.',
             audience: 'B2B',
             maxEvents: 70,
             maxGuests: 5000,
@@ -264,11 +265,11 @@ function getDefaultPlans() {
             roomThemesFixtures: true,
             adminReports: true,
             roomEditorLevel: 'complete',
-            commercialNetwork: true,
+            commercialNetwork: false,
             supportLevel: 'dedicated',
         }),
         ENTERPRISE_3: organizerPlan({
-            name: 'Business Enterprise 3',
+            name: 'Enterprise Unlimited',
             price: '700.000 FC',
             monthlyPriceFc: 700000,
             description: 'B2B — illimité, multi-agences, SLA 24/7 et onboarding dédié.',
@@ -285,37 +286,37 @@ function getDefaultPlans() {
             roomThemesFixtures: true,
             adminReports: true,
             roomEditorLevel: 'complete',
-            commercialNetwork: true,
+            commercialNetwork: false,
             supportLevel: 'sla247',
         }),
         VENUE: {
             name: 'Salle',
             price: '14.900 FC',
             monthlyPriceFc: 14900,
-            description: 'Gestionnaire de salles : publiez jusqu’à 5 lieux, éditeur 2D complet (banquet, tente, custom) et protocole QR sur place — sans prestations marketplace.',
+            description: 'Gestionnaire de salles : salles illimitées, éditeur 2D/3D complet — sans prestations, sans événements ni invités.',
             audience: 'VENUE',
-            maxEvents: 3,
-            maxGuests: 100,
-            maxTemplates: 2,
-            maxRooms: 5,
+            maxEvents: 0,
+            maxGuests: 0,
+            maxTemplates: 0,
+            maxRooms: 9999,
             maxServices: 0,
             maxOrgManagers: 3,
             customTemplates: false,
             mockupOcr: false,
-            protocolQr: true,
-            seatNotifications: true,
+            protocolQr: false,
+            seatNotifications: false,
             roomThemesFixtures: true,
             adminReports: false,
             roomEditorLevel: 'complete',
             commercialNetwork: false,
             supportLevel: 'email',
-            customRsvpFields: true,
+            customRsvpFields: false,
         },
         SERVICE: {
             name: 'Prestataire',
             price: '9.900 FC',
             monthlyPriceFc: 9900,
-            description: 'Prestataire : fiches illimitées (traiteur, photo, DJ…) avec photos, vidéos, rayon d’intervention et calendrier, dès l’abonnement payé.',
+            description: 'Prestataire : prestations illimitées (traiteur, photo, DJ…) avec photos, vidéos, rayon et calendrier — sans salles, sans événements ni invités.',
             audience: 'SERVICE',
             maxEvents: 0,
             maxGuests: 0,
@@ -338,24 +339,24 @@ function getDefaultPlans() {
             name: 'Salle & presta',
             price: '19.900 FC',
             monthlyPriceFc: 19900,
-            description: 'Les deux : 5 salles (éditeur complet) et 5 prestations, pour les lieux qui proposent aussi un service.',
+            description: 'Les deux : salles et prestations illimitées (éditeur complet) — sans événements ni invités.',
             audience: 'CATALOG',
-            maxEvents: 3,
-            maxGuests: 100,
-            maxTemplates: 2,
-            maxRooms: 5,
-            maxServices: 5,
+            maxEvents: 0,
+            maxGuests: 0,
+            maxTemplates: 0,
+            maxRooms: 9999,
+            maxServices: 9999,
             maxOrgManagers: 3,
             customTemplates: false,
             mockupOcr: false,
-            protocolQr: true,
-            seatNotifications: true,
+            protocolQr: false,
+            seatNotifications: false,
             roomThemesFixtures: true,
             adminReports: false,
             roomEditorLevel: 'complete',
             commercialNetwork: false,
             supportLevel: 'email',
-            customRsvpFields: true,
+            customRsvpFields: false,
         },
     };
 }
@@ -583,6 +584,26 @@ function resolveDefaultPromoApprovedAmount(planKey, durationDays, promoPeriodFc)
         return annualPromoPayableFromPeriod(getCatalogMonthlyPriceFc(planKey), promoPeriodFc, planKey);
     }
     return Math.max(0, Math.round(promoPeriodFc));
+}
+/**
+ * Remises par défaut pour checkout / facture / renouvellement :
+ * 1) promo catalogue (période ou annuel = min(promo×N, catalogue annuel −10 %))
+ * 2) sinon annuel → −ANNUAL_DISCOUNT_PERCENT sur la base catalogue
+ * 3) sinon aucune remise
+ */
+function resolveDefaultSubscriptionDiscountOptions(planKey, durationDays) {
+    if (normalizePlanKey(planKey) === 'FREE')
+        return {};
+    const planDef = getPlanLimits(planKey);
+    if (planDef.promoActive && planDef.promoMonthlyPriceFc != null && planDef.promoMonthlyPriceFc >= 0) {
+        return {
+            approvedAmount: resolveDefaultPromoApprovedAmount(planKey, durationDays, planDef.promoMonthlyPriceFc),
+        };
+    }
+    if (isAnnualDurationDays(durationDays)) {
+        return { discountPercent: exports.ANNUAL_DISCOUNT_PERCENT };
+    }
+    return {};
 }
 function billingCycleFromDurationDays(durationDays) {
     return isAnnualDurationDays(durationDays) ? 'ANNUAL' : 'PERIOD';

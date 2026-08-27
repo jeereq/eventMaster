@@ -106,18 +106,12 @@ async function createTeamMember(req, res) {
             return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
         }
         if (!(0, permissionsService_1.isValidOrgRole)(orgRole)) {
-            return res.status(400).json({ error: 'orgRole doit être MANAGER, PROTOCOL ou COMMERCIAL.' });
+            return res.status(400).json({ error: 'orgRole doit être MANAGER ou PROTOCOL.' });
         }
         if (orgRole === 'COMMERCIAL') {
-            try {
-                await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'commercialNetwork');
-            }
-            catch (err) {
-                if (err instanceof planFeaturesService_1.PlanFeatureError) {
-                    return res.status(403).json({ error: err.message });
-                }
-                throw err;
-            }
+            return res.status(403).json({
+                error: 'Le rôle de commercial organisationnel n’est plus disponible. Les rôles d’équipe sont MANAGER et PROTOCOL.',
+            });
         }
         if (orgRole === 'MANAGER') {
             try {
@@ -137,22 +131,7 @@ async function createTeamMember(req, res) {
         if (existingUser) {
             return res.status(400).json({ error: 'Un utilisateur avec cette adresse e-mail existe déjà.' });
         }
-        const tenant = await db_1.prisma.tenant.findUnique({
-            where: { id: tenantId },
-            select: {
-                defaultOrgCommercialCommissionRate: true,
-                defaultOrgCommercialRenewalCommissionRate: true,
-            },
-        });
         const passwordHash = await bcryptjs_1.default.hash(password, 10);
-        const rates = orgRole === 'COMMERCIAL'
-            ? (0, commercialService_1.resolveCommissionRates)({
-                first: commissionRate,
-                renewal: renewalCommissionRate,
-                firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE,
-                renewalFallback: tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE,
-            })
-            : null;
         const newUser = await db_1.prisma.user.create({
             data: {
                 name,
@@ -163,16 +142,13 @@ async function createTeamMember(req, res) {
                 role: 'USER',
                 orgRole,
                 tenantId,
-                commissionRate: rates?.first ?? null,
-                renewalCommissionRate: rates?.renewal ?? null,
+                commissionRate: null,
+                renewalCommissionRate: null,
                 isEmailVerified: false,
                 verificationMethod: method,
             },
             select: userSelect,
         });
-        if (orgRole === 'COMMERCIAL') {
-            await (0, commercialService_1.ensureOrgCommercialReferralCode)(newUser.id, tenantId);
-        }
         await (0, authController_1.setupUserOtpVerification)({
             userId: newUser.id,
             name,
@@ -193,8 +169,8 @@ async function createTeamMember(req, res) {
                 ...refreshed,
                 isOwner: false,
                 orgRoleLabel: orgRole,
-                commissionRate: rates?.first ?? null,
-                renewalCommissionRate: rates?.renewal ?? null,
+                commissionRate: null,
+                renewalCommissionRate: null,
             },
         });
     }
@@ -221,24 +197,18 @@ async function updateTeamMember(req, res) {
         }
         const { orgRole } = req.body;
         if (!(0, permissionsService_1.isValidOrgRole)(orgRole)) {
-            return res.status(400).json({ error: 'orgRole doit être MANAGER, PROTOCOL ou COMMERCIAL.' });
+            return res.status(400).json({ error: 'orgRole doit être MANAGER ou PROTOCOL.' });
+        }
+        if (orgRole === 'COMMERCIAL') {
+            return res.status(403).json({
+                error: 'Le rôle de commercial organisationnel n’est plus disponible. Les rôles d’équipe sont MANAGER et PROTOCOL.',
+            });
         }
         const member = await db_1.prisma.user.findFirst({
             where: { id: memberId, tenantId, role: 'USER' },
         });
         if (!member) {
             return res.status(404).json({ error: 'Utilisateur introuvable.' });
-        }
-        if (orgRole === 'COMMERCIAL' && member.orgRole !== 'COMMERCIAL') {
-            try {
-                await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'commercialNetwork');
-            }
-            catch (err) {
-                if (err instanceof planFeaturesService_1.PlanFeatureError) {
-                    return res.status(403).json({ error: err.message });
-                }
-                throw err;
-            }
         }
         if (orgRole === 'MANAGER' && member.orgRole !== 'MANAGER') {
             try {
@@ -251,26 +221,16 @@ async function updateTeamMember(req, res) {
                 throw err;
             }
         }
-        const updateData = { orgRole };
-        if (orgRole === 'COMMERCIAL' && member.commissionRate == null) {
-            updateData.commissionRate = tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE;
-        }
-        if (orgRole === 'COMMERCIAL' && member.renewalCommissionRate == null) {
-            updateData.renewalCommissionRate =
-                tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE;
-        }
-        if (orgRole !== 'COMMERCIAL') {
-            updateData.commissionRate = null;
-            updateData.renewalCommissionRate = null;
-        }
+        const updateData = {
+            orgRole,
+            commissionRate: null,
+            renewalCommissionRate: null,
+        };
         const updated = await db_1.prisma.user.update({
             where: { id: memberId },
             data: updateData,
             select: userSelect,
         });
-        if (orgRole === 'COMMERCIAL') {
-            await (0, commercialService_1.ensureOrgCommercialReferralCode)(updated.id, tenantId);
-        }
         const finalUser = await db_1.prisma.user.findUnique({ where: { id: memberId }, select: userSelect });
         return res.json({
             message: 'Rôle mis à jour.',
@@ -306,6 +266,15 @@ async function updateMemberCommissionRate(req, res) {
         const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
         if (!access.canManageTeam) {
             return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent modifier les commissions.' });
+        }
+        try {
+            await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'commercialNetwork');
+        }
+        catch (err) {
+            if (err instanceof planFeaturesService_1.PlanFeatureError) {
+                return res.status(403).json({ error: err.message });
+            }
+            throw err;
         }
         const { commissionRate, renewalCommissionRate } = req.body;
         if (commissionRate === undefined && renewalCommissionRate === undefined) {

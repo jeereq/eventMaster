@@ -16,6 +16,8 @@ router.post('/invoices/:id/send', invoiceController_1.sendInvoiceByEmail);
 router.get('/plan-features', billingController_1.getPlanFeatures);
 router.get('/payouts', orgPayoutController_1.listOrgBillingPayouts);
 router.patch('/payouts', orgPayoutController_1.settleOrgBillingPayout);
+router.post('/payouts/flexpay', orgPayoutController_1.initiateOrgBillingFlexPayPayout);
+router.get('/payouts/flexpay/:transferId/verify', orgPayoutController_1.verifyOrgBillingFlexPayPayout);
 router.get('/branding', brandingController_1.getMyBranding);
 router.put('/branding', brandingController_1.updateMyBranding);
 router.post('/checkout', billingController_1.createCheckoutSession);

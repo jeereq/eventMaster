@@ -52,13 +52,15 @@ async function issueTenantPlanInvoice(params) {
             return d;
         })();
     const baseAmount = (0, invoiceService_1.getPlanAmount)(params.plan, durationDays);
-    const planDef = (0, plansConfig_1.getPlanLimits)(params.plan);
     let approvedAmount = params.billing.approvedAmount;
     let discountPercent = params.billing.discountPercent;
-    const hasExplicitDiscount = (discountPercent !== undefined && discountPercent > 0) ||
-        approvedAmount !== undefined;
-    if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-        approvedAmount = (0, plansConfig_1.resolveDefaultPromoApprovedAmount)(params.plan, durationDays, planDef.promoMonthlyPriceFc);
+    const hasExplicitDiscount = discountPercent !== undefined || approvedAmount !== undefined;
+    if (!hasExplicitDiscount) {
+        const defaults = (0, plansConfig_1.resolveDefaultSubscriptionDiscountOptions)(params.plan, durationDays);
+        if (defaults.approvedAmount !== undefined)
+            approvedAmount = defaults.approvedAmount;
+        if (defaults.discountPercent !== undefined)
+            discountPercent = defaults.discountPercent;
     }
     const pricing = (0, invoiceService_1.computeApprovedAmount)(baseAmount, {
         discountPercent,
@@ -110,9 +112,9 @@ async function issueTenantPlanInvoice(params) {
 }
 function resolveRenewalTerms(plan, billingCycle) {
     const durationDays = billingCycle === 'ANNUAL' ? plansConfig_1.YEAR_DURATION_DAYS : (0, plansConfig_1.resolveDurationDaysForPlan)(plan);
-    const discountPercent = billingCycle === 'ANNUAL' ? plansConfig_1.ANNUAL_DISCOUNT_PERCENT : 0;
     const baseAmount = (0, invoiceService_1.getPlanAmount)(plan, durationDays);
-    const pricing = (0, invoiceService_1.computeApprovedAmount)(baseAmount, { discountPercent });
+    const defaults = (0, plansConfig_1.resolveDefaultSubscriptionDiscountOptions)(plan, durationDays);
+    const pricing = (0, invoiceService_1.computeApprovedAmount)(baseAmount, defaults);
     return { durationDays, ...pricing };
 }
 function computeExtendedExpiry(currentExpiry, durationDays, fromDate = new Date()) {

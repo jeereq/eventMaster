@@ -299,10 +299,8 @@ async function sendLicenseExpiryWarning(params) {
     const planDef = (0, plansConfig_1.getPlanLimits)(params.plan);
     const durationDays = params.durationDays ?? undefined;
     const amount = getPlanAmount(params.plan, durationDays);
-    const discountPercent = (0, plansConfig_1.isAnnualDurationDays)(durationDays) ? plansConfig_1.ANNUAL_DISCOUNT_PERCENT : 0;
-    const payable = discountPercent > 0
-        ? computeApprovedAmount(amount, { discountPercent }).finalAmount
-        : amount;
+    const defaults = (0, plansConfig_1.resolveDefaultSubscriptionDiscountOptions)(params.plan, durationDays);
+    const payable = computeApprovedAmount(amount, defaults).finalAmount;
     const expiryStr = (0, invoiceText_1.formatFrenchDate)(params.expiresAt);
     const subject = 'EventMaster - Votre abonnement expire dans 7 jours';
     const safeTenant = (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.tenantName));

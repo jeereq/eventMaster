@@ -4,6 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.settingsFilePath = exports.DEFAULT_PLATFORM_SETTINGS = void 0;
+exports.isOnlinePaymentsEnabled = isOnlinePaymentsEnabled;
+exports.getTicketPaymentProvider = getTicketPaymentProvider;
+exports.getSaasPaymentMode = getSaasPaymentMode;
 exports.loadPlatformSettings = loadPlatformSettings;
 exports.savePlatformSettings = savePlatformSettings;
 exports.getPublicSiteConfig = getPublicSiteConfig;
@@ -30,6 +33,15 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     maintenanceMode: false,
     maintenanceMessage: 'La plateforme est temporairement en maintenance. Merci de réessayer dans quelques instants.',
     allowRegistration: true,
+    onlinePaymentsEnabled: true,
+    saasPaymentMode: 'manual',
+    ticketPaymentProvider: 'flexpay_card',
+    flexPayCardToken: process.env.FLEXPAY_CARD_TOKEN || '',
+    flexPayCardMerchant: process.env.FLEXPAY_CARD_MERCHANT || '',
+    flexPayCardPayUrl: process.env.FLEXPAY_CARD_PAY_URL || '',
+    flexPayCardCheckUrl: process.env.FLEXPAY_CARD_CHECK_URL || '',
+    flexPayMobilePayUrl: process.env.FLEXPAY_MOBILE_PAY_URL || '',
+    flexPayMobileCheckUrl: process.env.FLEXPAY_MOBILE_CHECK_URL || '',
     brandPrimary: '',
     brandAccent: '',
     ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || '',
@@ -53,6 +65,16 @@ function ensureSettingsDir() {
 function phoneToHref(phone) {
     const digits = phone.replace(/[^\d+]/g, '');
     return digits ? `tel:${digits}` : 'tel:';
+}
+/** Paiements en ligne (billets événements + forfaits SaaS si mode FlexPay). */
+function isOnlinePaymentsEnabled(settings = loadPlatformSettings()) {
+    return settings.onlinePaymentsEnabled !== false;
+}
+function getTicketPaymentProvider(_settings = loadPlatformSettings()) {
+    return 'flexpay_card';
+}
+function getSaasPaymentMode(settings = loadPlatformSettings()) {
+    return settings.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
 }
 function loadPlatformSettings() {
     try {
@@ -92,6 +114,9 @@ function savePlatformSettings(partial) {
     next.marketplaceDepositRate = (0, ratePercent_1.parseRateInput)(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
     next.commercialFirstCommissionRate = (0, ratePercent_1.parseRateInput)(next.commercialFirstCommissionRate, 0.3, 0, 1);
     next.commercialRenewalCommissionRate = (0, ratePercent_1.parseRateInput)(next.commercialRenewalCommissionRate, 0.2, 0, 1);
+    next.ticketPaymentProvider = 'flexpay_card';
+    next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
+    next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
     fs_1.default.writeFileSync(settingsFilePath, JSON.stringify(next, null, 2), 'utf-8');
     return next;
 }
@@ -110,6 +135,9 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         maintenanceMode: Boolean(settings.maintenanceMode),
         maintenanceMessage: settings.maintenanceMessage,
         allowRegistration: settings.allowRegistration !== false,
+        onlinePaymentsEnabled: isOnlinePaymentsEnabled(settings),
+        saasPaymentMode: getSaasPaymentMode(settings),
+        ticketPaymentProvider: getTicketPaymentProvider(settings),
         brandPrimary: settings.brandPrimary || '',
         brandAccent: settings.brandAccent || '',
         marketplaceCommissionRate: (0, ratePercent_1.parseRateInput)(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
@@ -137,6 +165,7 @@ function maskSecretsForAdmin(settings) {
         sendgridApiKey: settings.sendgridApiKey ? mask(settings.sendgridApiKey) : '',
         ultramsgToken: settings.ultramsgToken ? mask(settings.ultramsgToken) : '',
         twilioAuthToken: settings.twilioAuthToken ? mask(settings.twilioAuthToken) : '',
+        flexPayCardToken: settings.flexPayCardToken ? mask(settings.flexPayCardToken) : '',
         sendgridConfigured: Boolean(settings.sendgridApiKey?.trim() && settings.sendgridFrom?.trim()),
         ultramsgConfigured: Boolean(settings.ultramsgInstanceId?.trim() && settings.ultramsgToken?.trim()),
     };
@@ -150,6 +179,7 @@ function mergeSettingsUpdate(current, body) {
         'sendgridApiKey',
         'ultramsgToken',
         'twilioAuthToken',
+        'flexPayCardToken',
     ];
     const next = { ...body };
     for (const key of secretKeys) {

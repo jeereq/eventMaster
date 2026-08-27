@@ -6,6 +6,9 @@ exports.getAdminSubscriptionRequests = getAdminSubscriptionRequests;
 exports.approveSubscriptionRequest = approveSubscriptionRequest;
 exports.rejectSubscriptionRequest = rejectSubscriptionRequest;
 exports.getSubscriptionPlans = getSubscriptionPlans;
+exports.checkoutSubscriptionFlexPay = checkoutSubscriptionFlexPay;
+exports.retrySubscriptionFlexPay = retrySubscriptionFlexPay;
+exports.verifySubscriptionFlexPay = verifySubscriptionFlexPay;
 const db_1 = require("../db");
 const platformAccess_1 = require("../middleware/platformAccess");
 const platformCommercialScope_1 = require("../services/platformCommercialScope");
@@ -15,6 +18,10 @@ const invoiceService_1 = require("../services/invoiceService");
 const adminAuditService_1 = require("../services/adminAuditService");
 const platformNotificationService_1 = require("../services/platformNotificationService");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
+const platformSettingsService_1 = require("../services/platformSettingsService");
+const subscriptionActivationService_1 = require("../services/subscriptionActivationService");
+const subscriptionFlexPayCheckoutService_1 = require("../services/subscriptionFlexPayCheckoutService");
+const flexPayCardService_1 = require("../services/flexPayCardService");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 // 1. Submit a subscription request (Tenant)
 async function submitSubscriptionRequest(req, res) {
@@ -193,13 +200,15 @@ async function approveSubscriptionRequest(req, res) {
         }
         const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(request.requestedPlan, request.durationDays);
         const baseAmount = (0, invoiceService_1.getPlanAmount)(request.requestedPlan, durationDays);
-        const planDef = (0, plansConfig_1.getPlanLimits)(request.requestedPlan);
         let resolvedApproved = parsedApproved;
         let resolvedDiscount = parsedDiscount;
-        const hasExplicitDiscount = (resolvedDiscount !== undefined && resolvedDiscount > 0) ||
-            resolvedApproved !== undefined;
-        if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-            resolvedApproved = (0, plansConfig_1.resolveDefaultPromoApprovedAmount)(request.requestedPlan, durationDays, planDef.promoMonthlyPriceFc);
+        const hasExplicitDiscount = resolvedDiscount !== undefined || resolvedApproved !== undefined;
+        if (!hasExplicitDiscount) {
+            const defaults = (0, plansConfig_1.resolveDefaultSubscriptionDiscountOptions)(request.requestedPlan, durationDays);
+            if (defaults.approvedAmount !== undefined)
+                resolvedApproved = defaults.approvedAmount;
+            if (defaults.discountPercent !== undefined)
+                resolvedDiscount = defaults.discountPercent;
         }
         const pricing = (0, invoiceService_1.computeApprovedAmount)(baseAmount, {
             discountPercent: resolvedDiscount,
@@ -370,5 +379,258 @@ async function rejectSubscriptionRequest(req, res) {
 }
 // 6. Get public/authenticated subscription plans from settings
 async function getSubscriptionPlans(req, res) {
-    return res.json((0, plansConfig_1.getPlansConfiguration)());
+    return res.json({
+        ...(0, plansConfig_1.getPlansConfiguration)(),
+        saasPaymentMode: (0, platformSettingsService_1.getSaasPaymentMode)(),
+        onlinePaymentsEnabled: (0, platformSettingsService_1.isOnlinePaymentsEnabled)(),
+    });
+}
+/**
+ * Checkout forfait SaaS via FlexPay (Visa ou Mobile Money).
+ * POST /api/subscriptions/checkout
+ * body: { requestedPlan, durationDays?, paymentMethod: 'card'|'mobile', phone? }
+ */
+async function checkoutSubscriptionFlexPay(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        if (!tenantId) {
+            return res.status(403).json({ error: 'Tenant non identifié.' });
+        }
+        if ((0, platformSettingsService_1.getSaasPaymentMode)() !== 'flexpay') {
+            return res.status(400).json({
+                error: 'Le paiement FlexPay des forfaits est désactivé. Soumettez une demande manuelle.',
+                saasPaymentMode: 'manual',
+            });
+        }
+        if (!(0, platformSettingsService_1.isOnlinePaymentsEnabled)()) {
+            return res.status(503).json({
+                error: 'Les paiements en ligne sont temporairement désactivés.',
+            });
+        }
+        if (!(0, flexPayCardService_1.isFlexPayCardConfigured)()) {
+            return res.status(503).json({
+                error: 'Paiements FlexPay non configurés. Contactez le support.',
+            });
+        }
+        const { requestedPlan, durationDays, paymentMethod, phone } = req.body || {};
+        const method = paymentMethod === 'mobile' ? 'mobile' : 'card';
+        if (!requestedPlan || !plansConfig_1.PAID_PLAN_KEYS.includes(requestedPlan)) {
+            return res.status(400).json({ error: 'Le forfait demandé est invalide.' });
+        }
+        const tenant = await db_1.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { accountKind: true, name: true },
+        });
+        if (!tenant || !(0, plansConfig_1.isPlanAllowedForAccountKind)(requestedPlan, tenant.accountKind)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planAudienceMismatchMessage)(requestedPlan, tenant?.accountKind),
+            });
+        }
+        const days = (0, plansConfig_1.resolveDurationDaysForPlan)(requestedPlan, durationDays != null ? parseInt(String(durationDays), 10) : null);
+        if (isNaN(days) || days <= 0) {
+            return res.status(400).json({ error: 'La durée demandée est invalide.' });
+        }
+        const { baseAmount, amountFc } = (0, subscriptionActivationService_1.computeSubscriptionCheckoutAmount)(requestedPlan, days);
+        if (amountFc <= 0) {
+            return res.status(400).json({ error: 'Montant de forfait invalide.' });
+        }
+        if (method === 'mobile' && !phone) {
+            return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
+        }
+        const request = await db_1.prisma.subscriptionRequest.create({
+            data: {
+                tenantId,
+                requestedPlan: requestedPlan,
+                durationDays: days,
+                status: 'PENDING',
+                baseAmount,
+                approvedAmount: amountFc,
+                paymentProvider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
+                flexPayReference: null,
+            },
+        });
+        try {
+            const result = await (0, subscriptionFlexPayCheckoutService_1.initiateFlexPaySessionForRequest)({
+                request,
+                tenantName: tenant.name,
+                method,
+                phone,
+            });
+            return res.status(201).json(result);
+        }
+        catch (err) {
+            await db_1.prisma.subscriptionRequest.update({
+                where: { id: request.id },
+                data: { status: 'REJECTED' },
+            });
+            return res.status(502).json({
+                error: err?.message || 'Impossible d’ouvrir le paiement FlexPay.',
+            });
+        }
+    }
+    catch (error) {
+        console.error('[Subscription] checkout FlexPay', error);
+        return res.status(500).json({ error: error?.message || 'Checkout forfait impossible.' });
+    }
+}
+/**
+ * Relance un paiement FlexPay sur une demande PENDING ou REJECTED.
+ * POST /api/subscriptions/requests/:id/retry-payment
+ * body: { paymentMethod?: 'card'|'mobile', phone? }
+ */
+async function retrySubscriptionFlexPay(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const requestId = String(req.params.id || '');
+        if (!tenantId)
+            return res.status(403).json({ error: 'Tenant non identifié.' });
+        if ((0, platformSettingsService_1.getSaasPaymentMode)() !== 'flexpay') {
+            return res.status(400).json({
+                error: 'Le paiement FlexPay des forfaits est désactivé.',
+                saasPaymentMode: 'manual',
+            });
+        }
+        if (!(0, platformSettingsService_1.isOnlinePaymentsEnabled)()) {
+            return res.status(503).json({ error: 'Les paiements en ligne sont temporairement désactivés.' });
+        }
+        const request = await db_1.prisma.subscriptionRequest.findFirst({
+            where: { id: requestId, tenantId },
+            include: { tenant: { select: { name: true } } },
+        });
+        if (!request)
+            return res.status(404).json({ error: 'Demande introuvable.' });
+        if (request.status === 'APPROVED') {
+            return res.status(400).json({ error: 'Cette demande est déjà payée et approuvée.' });
+        }
+        if (request.status !== 'PENDING' && request.status !== 'REJECTED') {
+            return res.status(400).json({ error: 'Cette demande ne peut pas être relancée.' });
+        }
+        const rawMethod = String(req.body?.paymentMethod || '').toLowerCase();
+        const fallback = request.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card';
+        const method = rawMethod === 'mobile' || rawMethod === 'card' ? rawMethod : fallback;
+        const phone = req.body?.phone ?? null;
+        try {
+            const result = await (0, subscriptionFlexPayCheckoutService_1.initiateFlexPaySessionForRequest)({
+                request,
+                tenantName: request.tenant.name,
+                method: method,
+                phone,
+            });
+            return res.json({
+                ...result,
+                retried: true,
+                message: result.message || 'Nouvelle tentative de paiement initiée.',
+            });
+        }
+        catch (err) {
+            await db_1.prisma.subscriptionRequest.update({
+                where: { id: request.id },
+                data: { status: 'REJECTED' },
+            });
+            return res.status(502).json({
+                error: err?.message || 'Impossible de relancer le paiement FlexPay.',
+            });
+        }
+    }
+    catch (error) {
+        console.error('[Subscription] retry FlexPay', error);
+        return res.status(500).json({ error: error?.message || 'Relance impossible.' });
+    }
+}
+/** Vérifie / finalise un paiement forfait FlexPay. */
+async function verifySubscriptionFlexPay(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const requestId = String(req.params.id || '');
+        if (!tenantId)
+            return res.status(403).json({ error: 'Tenant non identifié.' });
+        const request = await db_1.prisma.subscriptionRequest.findFirst({
+            where: { id: requestId, tenantId },
+        });
+        if (!request)
+            return res.status(404).json({ error: 'Demande introuvable.' });
+        if (request.status === 'APPROVED') {
+            return res.json({
+                paid: true,
+                requestId: request.id,
+                status: request.status,
+                channel: request.flexPayChannel,
+            });
+        }
+        if (request.status === 'REJECTED') {
+            return res.json({
+                paid: false,
+                status: 'failed',
+                requestId: request.id,
+                message: 'Paiement refusé ou annulé. Vous pouvez relancer une tentative.',
+                canRetry: true,
+                channel: request.flexPayChannel,
+            });
+        }
+        if (!request.flexPayOrderNumber) {
+            return res.json({
+                paid: false,
+                status: 'pending',
+                requestId: request.id,
+                message: 'Aucun paiement FlexPay associé. Relancez une tentative.',
+                canRetry: true,
+            });
+        }
+        if (!(0, flexPayCardService_1.isFlexPayCardConfigured)()) {
+            return res.status(503).json({
+                error: 'Paiements FlexPay non configurés.',
+                canRetry: true,
+            });
+        }
+        const checked = await (0, flexPayCardService_1.checkFlexPayCardOrder)(request.flexPayOrderNumber);
+        const meta = (0, flexPayCardService_1.buildFlexPayMetadataUpdate)({
+            channel: checked.channel,
+            amountCustomer: checked.amountCustomer,
+            providerReference: checked.providerReference,
+        });
+        if (checked.status === 'failed') {
+            await db_1.prisma.subscriptionRequest.update({
+                where: { id: request.id },
+                data: { status: 'REJECTED', ...meta },
+            });
+            return res.json({
+                paid: false,
+                status: 'failed',
+                requestId: request.id,
+                message: 'Le paiement a échoué. Vous pouvez relancer une tentative.',
+                canRetry: true,
+                channel: checked.channel || request.flexPayChannel,
+            });
+        }
+        if (checked.status !== 'success') {
+            if (Object.keys(meta).length) {
+                await db_1.prisma.subscriptionRequest.update({ where: { id: request.id }, data: meta });
+            }
+            return res.json({
+                paid: false,
+                status: checked.status === 'pending' ? 'pending' : checked.status,
+                requestId: request.id,
+                canRetry: checked.status === 'unknown',
+                channel: checked.channel || request.flexPayChannel,
+            });
+        }
+        if (Object.keys(meta).length) {
+            await db_1.prisma.subscriptionRequest.update({ where: { id: request.id }, data: meta });
+        }
+        const activated = await (0, subscriptionActivationService_1.activateSubscriptionRequest)(request.id, {
+            approvedAmount: request.approvedAmount ?? undefined,
+            markPaid: true,
+        });
+        return res.json({
+            paid: true,
+            requestId: request.id,
+            status: 'APPROVED',
+            tenant: activated.alreadyProcessed ? undefined : activated.tenant,
+            channel: checked.channel || request.flexPayChannel,
+        });
+    }
+    catch (error) {
+        console.error('[Subscription] verify FlexPay', error);
+        return res.status(500).json({ error: error?.message || 'Vérification impossible.' });
+    }
 }

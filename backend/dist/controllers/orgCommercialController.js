@@ -3,12 +3,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getOrgCommercialDashboard = getOrgCommercialDashboard;
 const db_1 = require("../db");
 const commercialService_1 = require("../services/commercialService");
+const planFeaturesService_1 = require("../services/planFeaturesService");
 async function getOrgCommercialDashboard(req, res) {
     try {
         const tenantId = req.user?.tenantId;
         const userId = req.user?.id;
         if (!tenantId || !userId || req.user?.role !== 'USER') {
             return res.status(403).json({ error: 'Accès réservé aux commerciaux organisation.' });
+        }
+        try {
+            await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'commercialNetwork');
+        }
+        catch (err) {
+            if (err instanceof planFeaturesService_1.PlanFeatureError) {
+                return res.status(403).json({ error: err.message });
+            }
+            throw err;
         }
         const user = await db_1.prisma.user.findFirst({
             where: { id: userId, tenantId, orgRole: 'COMMERCIAL' },

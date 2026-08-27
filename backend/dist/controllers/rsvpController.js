@@ -21,6 +21,7 @@ const qrCode_1 = require("../utils/qrCode");
 const brandedMessaging_1 = require("../utils/brandedMessaging");
 const brandingUtils_1 = require("../utils/brandingUtils");
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
+const publicVenue_1 = require("../utils/publicVenue");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function isEventDatePassed(eventDate) {
     return new Date(eventDate).getTime() < Date.now();
@@ -170,6 +171,7 @@ async function getGuestRsvpDetails(req, res) {
                         latitude: true,
                         longitude: true,
                         tablePlan: true,
+                        eventProgram: true,
                         guestGuidelines: true,
                         rsvpForm: true,
                         room: {
@@ -207,6 +209,9 @@ async function getGuestRsvpDetails(req, res) {
         let floorImageUrl = null;
         let depthAmount = 0;
         let depthView = false;
+        let roomLayoutPreview = null;
+        let sourceRoomType = null;
+        let previewLightingPreset = null;
         const eventObj = guest.event;
         if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
             const plan = eventObj.tablePlan;
@@ -220,6 +225,10 @@ async function getGuestRsvpDetails(req, res) {
                     y: table.y,
                     occupiedCount: Object.values(table.seats || {}).filter(Boolean).length,
                     isGuestTable: Object.values(table.seats || {}).includes(guestId),
+                    guestSeatIndex: (() => {
+                        const entry = Object.entries(table.seats || {}).find(([, id]) => id === guestId);
+                        return entry ? parseInt(entry[0], 10) : undefined;
+                    })(),
                     chairType: table.chairType,
                     chairImageUrl: table.chairImageUrl,
                     tableColor: table.tableColor,
@@ -269,6 +278,21 @@ async function getGuestRsvpDetails(req, res) {
                 }
             }
             const room = eventObj.room;
+            if (room?.layoutBlueprint) {
+                roomLayoutPreview = (0, publicVenue_1.sanitizeLayoutBlueprint)(room.layoutBlueprint);
+            }
+            if (plan.sourceRoomType) {
+                sourceRoomType = String(plan.sourceRoomType);
+            }
+            else if (room?.layoutBlueprint?.roomType) {
+                sourceRoomType = String(room.layoutBlueprint.roomType);
+            }
+            const program = eventObj.eventProgram;
+            if (program && typeof program === 'object' && Array.isArray(program.slots)) {
+                const firstSlot = program.slots[0];
+                if (firstSlot?.lighting)
+                    previewLightingPreset = firstSlot.lighting;
+            }
             if (room?.layoutBlueprint?.roomOutline) {
                 roomOutline = room.layoutBlueprint.roomOutline;
             }
@@ -344,6 +368,9 @@ async function getGuestRsvpDetails(req, res) {
             floorImageUrl,
             depthAmount,
             depthView,
+            roomLayoutPreview,
+            sourceRoomType,
+            previewLightingPreset,
             eventPassed: isEventDatePassed(guest.event.date),
             rsvpLocked: isEventDatePassed(guest.event.date),
         });

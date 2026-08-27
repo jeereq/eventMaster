@@ -4,8 +4,11 @@ exports.processSubscriptionExpiryTasks = processSubscriptionExpiryTasks;
 exports.startSubscriptionExpiryWorker = startSubscriptionExpiryWorker;
 const db_1 = require("../db");
 const invoiceService_1 = require("./invoiceService");
-const commercialService_1 = require("./commercialService");
 const tenantBillingService_1 = require("./tenantBillingService");
+const platformNotificationService_1 = require("./platformNotificationService");
+const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
+const notificationService_1 = require("./notificationService");
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function startOfDay(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
@@ -27,15 +30,16 @@ async function processSubscriptionExpiryTasks() {
         const now = new Date();
         const tenants = await db_1.prisma.tenant.findMany({
             where: {
-                licenseActive: true,
                 plan: { not: 'FREE' },
                 licenseExpiresAt: { not: null },
+                OR: [{ licenseActive: true }, { licenseActive: false }],
             },
             select: {
                 id: true,
                 name: true,
                 plan: true,
                 billingCycle: true,
+                licenseActive: true,
                 licenseExpiresAt: true,
                 licenseExpiryWarningFor: true,
             },
@@ -44,8 +48,10 @@ async function processSubscriptionExpiryTasks() {
             const expiresAt = tenant.licenseExpiresAt;
             const remaining = daysUntil(expiresAt, now);
             const renewal = (0, tenantBillingService_1.resolveRenewalTerms)(tenant.plan, tenant.billingCycle);
-            // J-7 : avertir le propriétaire une seule fois par date d'expiration
-            if (remaining === 7 && !isSameExpiryDate(tenant.licenseExpiryWarningFor, expiresAt)) {
+            // J-7 : avertir une seule fois par date d'expiration
+            if (remaining === 7 &&
+                tenant.licenseActive &&
+                !isSameExpiryDate(tenant.licenseExpiryWarningFor, expiresAt)) {
                 const owner = await (0, invoiceService_1.getTenantOwner)(tenant.id);
                 if (owner) {
                     await (0, invoiceService_1.sendLicenseExpiryWarning)({
@@ -65,56 +71,45 @@ async function processSubscriptionExpiryTasks() {
                     console.log(`[Subscription Expiry] Rappel J-7 envoyé pour ${tenant.name}`);
                 }
             }
-            // Jour J : facture de renouvellement (même cycle que la période en cours)
-            if (remaining === 0) {
-                const existing = await db_1.prisma.platformInvoice.findFirst({
-                    where: {
-                        tenantId: tenant.id,
-                        type: 'RENEWAL',
-                        periodEnd: expiresAt,
-                    },
+            // Jour J ou déjà dépassé : désactiver + notifier (pas de facture PAID sans paiement)
+            if (remaining <= 0 && tenant.licenseActive) {
+                await db_1.prisma.tenant.update({
+                    where: { id: tenant.id },
+                    data: { licenseActive: false },
                 });
-                if (!existing) {
-                    const periodStart = new Date(expiresAt);
-                    periodStart.setDate(periodStart.getDate() - renewal.durationDays);
-                    const invoice = await (0, invoiceService_1.createAndSendInvoice)({
+                const renewHref = `${FRONTEND_URL}/dashboard/billing`;
+                const expiryLabel = expiresAt.toLocaleDateString('fr-FR');
+                const amountHint = renewal.finalAmount.toLocaleString('fr-FR');
+                void (0, platformNotificationService_1.notifyTenantOperators)(tenant.id, {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
+                    title: `Licence expirée — ${tenant.name}`,
+                    message: `Votre forfait ${tenant.plan} a expiré le ${expiryLabel}. Renouvelez depuis Facturation (≈ ${amountHint} FC).`,
+                    metadata: {
                         tenantId: tenant.id,
                         plan: tenant.plan,
-                        type: 'RENEWAL',
-                        periodStart,
-                        periodEnd: expiresAt,
-                        durationDays: renewal.durationDays,
-                        amount: renewal.finalAmount,
-                        baseAmount: renewal.baseAmount,
-                        discountPercent: renewal.discountPercent,
-                        discountAmount: renewal.discountAmount,
-                        includeManagers: true,
-                    });
-                    if (invoice) {
-                        const commissionRecords = await (0, commercialService_1.recordCommercialCommission)({
-                            tenantId: tenant.id,
-                            plan: tenant.plan,
-                            source: 'LICENSE_RENEWAL',
-                            invoiceAmount: invoice.amount,
-                            platformInvoiceId: invoice.id,
-                        });
-                        const commissionsByUserId = Object.fromEntries(commissionRecords.map((r) => [r.commercialId, r.commissionAmount]));
-                        await (0, commercialService_1.notifyCommercialsOnSubscriptionApproval)({
-                            tenantId: tenant.id,
-                            tenantName: tenant.name,
-                            plan: tenant.plan,
-                            durationDays: renewal.durationDays,
-                            baseAmount: renewal.baseAmount,
-                            finalAmount: renewal.finalAmount,
-                            discountPercent: renewal.discountPercent,
-                            discountAmount: renewal.discountAmount,
-                            invoiceNumber: invoice.invoiceNumber,
-                            event: 'LICENSE_RENEWAL',
-                            commissionsByUserId,
-                        });
-                        console.log(`[Subscription Expiry] Facture renouvellement ${invoice.invoiceNumber} pour ${tenant.name}`);
-                    }
+                        href: renewHref,
+                    },
+                    channels: ['IN_APP', 'PUSH', 'WHATSAPP'],
+                });
+                void (0, platformNotificationService_1.notifyPlatformStaff)({
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
+                    title: `Licence expirée — ${tenant.name}`,
+                    message: `Forfait ${tenant.plan} expiré le ${expiryLabel}. En attente de renouvellement.`,
+                    metadata: { tenantId: tenant.id, plan: tenant.plan, href: renewHref },
+                    includeCommercials: true,
+                });
+                const owner = await (0, invoiceService_1.getTenantOwner)(tenant.id);
+                if (owner?.email) {
+                    void (0, notificationService_1.sendRealEmail)(owner.email, 'EventMaster — Votre abonnement a expiré', [
+                        `L'abonnement de « ${tenant.name} » (${tenant.plan}) a expiré le ${expiryLabel}.`,
+                        `Montant estimé du renouvellement : ${amountHint} FC.`,
+                        '',
+                        `Renouvelez ici : ${renewHref}`,
+                    ].join('\n'), `<p>L'abonnement de <strong>${tenant.name}</strong> (<strong>${tenant.plan}</strong>) a expiré le <strong>${expiryLabel}</strong>.</p>
+<p>Montant estimé : <strong>${amountHint} FC</strong>.</p>
+<p><a href="${renewHref}">Renouveler mon forfait</a></p>`).catch((err) => console.warn('[Subscription Expiry] email:', err));
                 }
+                console.log(`[Subscription Expiry] Licence désactivée pour ${tenant.name} (expirée ${expiryLabel})`);
             }
         }
     }
@@ -127,7 +122,6 @@ function startSubscriptionExpiryWorker() {
     setTimeout(() => {
         processSubscriptionExpiryTasks();
     }, 15000);
-    // Toutes les 6 heures
     setInterval(() => {
         processSubscriptionExpiryTasks();
     }, 6 * 60 * 60 * 1000);

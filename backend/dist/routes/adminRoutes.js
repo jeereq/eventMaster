@@ -33,6 +33,8 @@ router.post('/reports/revenue/notify-payouts', revenueReportController_1.notifyR
 router.post('/reports/revenue/mark-paid', revenueReportController_1.markRevenuePayoutPaid);
 router.get('/payouts', saasPayoutController_1.listAdminSaasPayouts);
 router.patch('/payouts', saasPayoutController_1.settleAdminSaasPayout);
+router.post('/payouts/flexpay', (0, auth_1.requireRole)(['SUPER_ADMIN']), saasPayoutController_1.initiateAdminSaasFlexPayPayout);
+router.get('/payouts/flexpay/:transferId/verify', (0, auth_1.requireRole)(['SUPER_ADMIN']), saasPayoutController_1.verifyAdminSaasFlexPayPayout);
 router.get('/ops-overview', adminOpsController_1.getOpsOverview);
 router.get('/insights', adminOpsController_1.getPlatformInsights);
 router.get('/audit-logs', adminOpsController_1.getAuditLogs);

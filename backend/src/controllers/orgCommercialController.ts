@@ -7,6 +7,7 @@ import {
   DEFAULT_RENEWAL_COMMISSION_RATE,
   resolveCommissionRates,
 } from '../services/commercialService';
+import { assertPlanFeature, PlanFeatureError } from '../services/planFeaturesService';
 
 export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: Response) {
   try {
@@ -15,6 +16,15 @@ export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: 
 
     if (!tenantId || !userId || req.user?.role !== 'USER') {
       return res.status(403).json({ error: 'Accès réservé aux commerciaux organisation.' });
+    }
+
+    try {
+      await assertPlanFeature(tenantId, 'commercialNetwork');
+    } catch (err) {
+      if (err instanceof PlanFeatureError) {
+        return res.status(403).json({ error: err.message });
+      }
+      throw err;
     }
 
     const user = await prisma.user.findFirst({

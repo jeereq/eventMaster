@@ -1,36 +1,21 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.listPublicEvents = listPublicEvents;
 exports.getPublicEvent = getPublicEvent;
+exports.listPublicEventSeats = listPublicEventSeats;
 exports.checkoutPublicEvent = checkoutPublicEvent;
 exports.getTicketOrderBySession = getTicketOrderBySession;
-const stripe_1 = __importDefault(require("stripe"));
 const db_1 = require("../db");
 const ticketOrderService_1 = require("../services/ticketOrderService");
+const seatSelectionService_1 = require("../services/seatSelectionService");
+const ticketPricingService_1 = require("../services/ticketPricingService");
 const plansConfig_1 = require("../config/plansConfig");
 const publicVenue_1 = require("../utils/publicVenue");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
 const rdcCities_1 = require("../utils/rdcCities");
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
-const stripe = new stripe_1.default(STRIPE_SECRET_KEY, {
-    apiVersion: '2025-11-13',
-});
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const STRIPE_TICKET_CURRENCY = (process.env.STRIPE_TICKET_CURRENCY || 'usd').toLowerCase();
-const FC_PER_USD = Number(process.env.FC_PER_USD || 2800);
-function isStripeMock() {
-    return !STRIPE_SECRET_KEY || STRIPE_SECRET_KEY.includes('mock');
-}
-function fcToStripeUnitAmount(amountFc) {
-    if (STRIPE_TICKET_CURRENCY === 'cdf') {
-        return Math.max(1, Math.round(amountFc));
-    }
-    const usd = amountFc / Math.max(1, FC_PER_USD);
-    return Math.max(50, Math.round(usd * 100));
-}
+const platformSettingsService_1 = require("../services/platformSettingsService");
+const flexPayCardService_1 = require("../services/flexPayCardService");
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 function serializePublicPost(post) {
     let media = [];
     if (Array.isArray(post.mediaUrls)) {
@@ -54,8 +39,16 @@ function serializePublicPost(post) {
 }
 function serializePublicEvent(event) {
     const remaining = (0, ticketOrderService_1.ticketsRemaining)(event);
-    const paid = event.ticketingEnabled && event.ticketPriceFc > 0;
+    const pricingMode = (0, ticketPricingService_1.normalizeTicketPricingMode)(event.ticketPricingMode);
+    const pricingZones = (0, ticketPricingService_1.pricingZonesFromPlan)(event.tablePlan);
+    const onlinePayments = (0, platformSettingsService_1.isOnlinePaymentsEnabled)();
+    const paid = onlinePayments &&
+        event.ticketingEnabled &&
+        (event.ticketPriceFc > 0 || (pricingMode === 'by_zone' && pricingZones.some((z) => z.priceFc > 0)));
     const photos = (0, publicVenue_1.parsePhotoUrls)(event.photos);
+    const plan = event.tablePlan;
+    const hasTablePlan = Boolean(plan?.tables && plan.tables.length > 0);
+    const priceFromFc = (0, ticketPricingService_1.priceFromFcForEvent)(event);
     return {
         id: event.id,
         slug: event.slug,
@@ -68,11 +61,17 @@ function serializePublicEvent(event) {
         orgName: event.tenant.name,
         ticketingEnabled: event.ticketingEnabled,
         ticketPriceFc: event.ticketPriceFc,
+        ticketPricingMode: pricingMode,
+        priceFromFc,
+        pricingZones: pricingMode === 'by_zone' ? pricingZones : [],
+        onlinePaymentsEnabled: onlinePayments,
         paid,
         ticketsTotal: event.ticketsTotal,
         ticketsSold: event.ticketsSold,
         ticketsRemaining: remaining,
         soldOut: remaining === 0,
+        seatSelectionEnabled: Boolean(event.seatSelectionEnabled) && hasTablePlan,
+        eventProgram: event.eventProgram ?? null,
         photos,
         coverUrl: (0, publicVenue_1.coverFromMedia)(photos),
         posts: (event.posts || []).map(serializePublicPost),
@@ -183,6 +182,26 @@ async function getPublicEvent(req, res) {
         return res.status(500).json({ error: 'Impossible de charger l’événement.' });
     }
 }
+async function listPublicEventSeats(req, res) {
+    try {
+        const slug = String(req.params.slug || '');
+        const event = await db_1.prisma.event.findFirst({
+            where: { slug, isPublic: true, isBlockedByAdmin: false },
+            select: { id: true, seatSelectionEnabled: true, tablePlan: true },
+        });
+        if (!event)
+            return res.status(404).json({ error: 'Événement introuvable ou privé.' });
+        if (!event.seatSelectionEnabled) {
+            return res.status(400).json({ error: 'Sélection de siège non activée.' });
+        }
+        const inventory = await (0, seatSelectionService_1.listSeatInventory)(event.id);
+        return res.json(inventory);
+    }
+    catch (error) {
+        console.error('[Public events] seats', error);
+        return res.status(500).json({ error: 'Impossible de charger les places.' });
+    }
+}
 async function checkoutPublicEvent(req, res) {
     try {
         if (!req.user?.id) {
@@ -199,7 +218,14 @@ async function checkoutPublicEvent(req, res) {
         const buyerEmail = account.email.trim().toLowerCase();
         const buyerName = String(req.body?.buyerName || account.name || '').trim();
         const buyerPhone = String(req.body?.buyerPhone || account.phone || '').trim() || null;
-        const quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+        let quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+        const tableId = req.body?.tableId ? String(req.body.tableId) : null;
+        const seatIndexRaw = req.body?.seatIndex;
+        const seatIndex = seatIndexRaw === 0 || seatIndexRaw === '0'
+            ? 0
+            : seatIndexRaw != null && seatIndexRaw !== ''
+                ? Number(seatIndexRaw)
+                : null;
         const userId = account.id;
         if (!buyerName || !buyerEmail || !buyerEmail.includes('@')) {
             return res.status(400).json({ error: 'Nom et e-mail valides requis.' });
@@ -212,6 +238,39 @@ async function checkoutPublicEvent(req, res) {
             return res.status(404).json({ error: 'Événement introuvable ou privé.' });
         if (new Date(event.date).getTime() < Date.now()) {
             return res.status(400).json({ error: 'Cet événement est déjà passé.' });
+        }
+        const bodyPricingZoneId = req.body?.pricingZoneId ? String(req.body.pricingZoneId) : null;
+        if (event.seatSelectionEnabled) {
+            quantity = 1;
+            if (!tableId || seatIndex == null || !Number.isFinite(seatIndex)) {
+                return res.status(400).json({ error: 'Choisissez une table et un siège sur le plan.' });
+            }
+        }
+        const pricingMode = (0, ticketPricingService_1.normalizeTicketPricingMode)(event.ticketPricingMode);
+        let unitPriceFc = 0;
+        let pricingZoneId = null;
+        try {
+            if (pricingMode === 'by_zone') {
+                if (event.seatSelectionEnabled && tableId != null && seatIndex != null) {
+                    const resolved = (0, ticketPricingService_1.resolveSeatPrice)(event, tableId, seatIndex);
+                    unitPriceFc = resolved.priceFc;
+                    pricingZoneId = resolved.pricingZoneId;
+                }
+                else if (bodyPricingZoneId) {
+                    const resolved = (0, ticketPricingService_1.resolveZoneTicketPrice)(event, bodyPricingZoneId);
+                    unitPriceFc = resolved.priceFc;
+                    pricingZoneId = resolved.pricingZoneId;
+                }
+                else {
+                    return res.status(400).json({ error: 'Choisissez une zone tarifaire.' });
+                }
+            }
+            else {
+                unitPriceFc = Math.max(0, event.ticketPriceFc);
+            }
+        }
+        catch (err) {
+            return res.status(400).json({ error: err?.message || 'Tarif invalide.' });
         }
         const remaining = (0, ticketOrderService_1.ticketsRemaining)(event);
         if (remaining != null && remaining < quantity) {
@@ -230,8 +289,13 @@ async function checkoutPublicEvent(req, res) {
         if (existing) {
             return res.status(400).json({ error: 'Cet e-mail a déjà une inscription pour cet événement.' });
         }
-        const paid = event.ticketingEnabled && event.ticketPriceFc > 0;
-        const amountFc = paid ? event.ticketPriceFc * quantity : 0;
+        const paid = event.ticketingEnabled && unitPriceFc > 0 && (0, platformSettingsService_1.isOnlinePaymentsEnabled)();
+        const amountFc = paid ? unitPriceFc * quantity : 0;
+        const rawMethod = String(req.body?.paymentMethod || 'card').toLowerCase();
+        const paymentMethod = rawMethod === 'mobile' ? 'mobile' : 'card';
+        const paymentProvider = paid
+            ? (paymentMethod === 'mobile' ? 'flexpay_mobile' : 'flexpay_card')
+            : null;
         const order = await db_1.prisma.ticketOrder.create({
             data: {
                 eventId: event.id,
@@ -240,71 +304,126 @@ async function checkoutPublicEvent(req, res) {
                 buyerPhone,
                 quantity,
                 amountFc,
+                unitPriceFc: paid ? unitPriceFc : null,
+                pricingZoneId,
                 status: paid ? 'PENDING' : 'PAID',
                 paidAt: paid ? null : new Date(),
+                paymentProvider,
                 userId,
+                tableId: event.seatSelectionEnabled ? tableId : null,
+                seatIndex: event.seatSelectionEnabled ? seatIndex : null,
             },
         });
+        if (event.seatSelectionEnabled && tableId != null && seatIndex != null) {
+            try {
+                await (0, seatSelectionService_1.createSeatHold)({
+                    eventId: event.id,
+                    tableId,
+                    seatIndex,
+                    buyerEmail,
+                    orderId: order.id,
+                });
+            }
+            catch (err) {
+                await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                return res.status(409).json({ error: err?.message || 'Siège indisponible.' });
+            }
+        }
         if (!paid) {
             const fulfilled = await (0, ticketOrderService_1.fulfillTicketOrder)(order.id);
             const primary = fulfilled?.guests?.find((g) => g.email.toLowerCase() === buyerEmail) || fulfilled?.guests?.[0];
             return res.status(201).json({
                 paid: false,
-                mock: true,
                 orderId: order.id,
                 guestId: primary?.id,
                 rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
                 message: 'Inscription confirmée. Conservez le lien de votre badge QR.',
             });
         }
-        if (isStripeMock()) {
-            const fulfilled = await (0, ticketOrderService_1.fulfillTicketOrder)(order.id);
-            const primary = fulfilled?.guests?.find((g) => g.email.toLowerCase() === buyerEmail) || fulfilled?.guests?.[0];
-            return res.status(201).json({
-                paid: true,
-                mock: true,
-                orderId: order.id,
-                guestId: primary?.id,
-                rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
-                message: 'Paiement simulé (mode développement). Billet confirmé.',
-            });
-        }
-        const session = await stripe.checkout.sessions.create({
-            mode: 'payment',
-            payment_method_types: ['card'],
-            customer_email: buyerEmail,
-            line_items: [
-                {
-                    quantity: 1,
-                    price_data: {
-                        currency: STRIPE_TICKET_CURRENCY,
-                        unit_amount: fcToStripeUnitAmount(amountFc),
-                        product_data: {
-                            name: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`,
-                            description: `${amountFc.toLocaleString('fr-FR')} FC`,
+        if (paymentProvider === 'flexpay_card' || paymentProvider === 'flexpay_mobile') {
+            if (!(0, flexPayCardService_1.isFlexPayCardConfigured)()) {
+                await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                return res.status(503).json({
+                    error: 'Paiements FlexPay non configurés. Réessayez plus tard ou contactez le support.',
+                });
+            }
+            if (paymentProvider === 'flexpay_mobile') {
+                const phone = String(req.body?.phone || buyerPhone || '').trim();
+                if (!phone) {
+                    await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                    return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
+                }
+                const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
+                try {
+                    const flex = await (0, flexPayCardService_1.createFlexPayMobileCheckout)({
+                        reference: order.id,
+                        amount: amountFc,
+                        currency: 'CDF',
+                        phone,
+                        callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+                    });
+                    await db_1.prisma.ticketOrder.update({
+                        where: { id: order.id },
+                        data: {
+                            paymentProvider: 'flexpay_mobile',
+                            flexPayOrderNumber: flex.orderNumber,
+                            flexPayReference: order.id,
                         },
+                    });
+                    return res.json({
+                        paid: false,
+                        mock: false,
+                        provider: 'flexpay_mobile',
+                        orderId: order.id,
+                        orderNumber: flex.orderNumber,
+                        message: 'Demande envoyée sur votre téléphone. Confirmez le paiement Mobile Money, puis ouvrez la page de succès.',
+                    });
+                }
+                catch (err) {
+                    await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                    return res.status(502).json({
+                        error: err?.message || 'Impossible d’ouvrir le paiement Mobile Money FlexPay.',
+                    });
+                }
+            }
+            const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
+            const reference = order.id;
+            try {
+                const flex = await (0, flexPayCardService_1.createFlexPayCardCheckout)({
+                    reference,
+                    amount: amountFc,
+                    currency: 'CDF',
+                    description: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`,
+                    callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+                    approveUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=approve`,
+                    cancelUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=cancel`,
+                    declineUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=decline`,
+                    language: 'fr',
+                });
+                await db_1.prisma.ticketOrder.update({
+                    where: { id: order.id },
+                    data: {
+                        paymentProvider: 'flexpay_card',
+                        flexPayOrderNumber: flex.orderNumber,
+                        flexPayReference: reference,
                     },
-                },
-            ],
-            success_url: `${FRONTEND_URL}/marketplace/evenements/${event.slug}/succes?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${FRONTEND_URL}/marketplace/evenements/${event.slug}?canceled=1`,
-            client_reference_id: order.id,
-            metadata: {
-                purpose: 'event_ticket',
-                orderId: order.id,
-                eventId: event.id,
-            },
-        });
-        await db_1.prisma.ticketOrder.update({
-            where: { id: order.id },
-            data: { stripeCheckoutSessionId: session.id },
-        });
-        return res.json({
-            paid: true,
-            mock: false,
-            orderId: order.id,
-            checkoutUrl: session.url,
-        });
+                });
+                return res.json({
+                    paid: true,
+                    mock: false,
+                    provider: 'flexpay_card',
+                    orderId: order.id,
+                    checkoutUrl: flex.redirectUrl,
+                });
+            }
+            catch (err) {
+                await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                return res.status(502).json({
+                    error: err?.message || 'Impossible d’ouvrir le paiement FlexPay.',
+                });
+            }
+        }
+        return res.status(400).json({ error: 'Mode de paiement non supporté. Utilisez Visa ou Mobile Money.' });
     }
     catch (error) {
         console.error('[Public events] checkout', error);
@@ -316,30 +435,15 @@ async function getTicketOrderBySession(req, res) {
         const sessionId = String(req.params.sessionId || '');
         if (!sessionId)
             return res.status(400).json({ error: 'Session manquante.' });
-        let order = await db_1.prisma.ticketOrder.findFirst({
-            where: { stripeCheckoutSessionId: sessionId },
+        const order = await db_1.prisma.ticketOrder.findFirst({
+            where: {
+                OR: [{ stripeCheckoutSessionId: sessionId }, { id: sessionId }, { flexPayOrderNumber: sessionId }],
+            },
             include: {
                 event: { select: { title: true, slug: true, date: true, location: true } },
                 guests: { select: { id: true, email: true, firstName: true } },
             },
         });
-        if (!order && !isStripeMock()) {
-            const session = await stripe.checkout.sessions.retrieve(sessionId);
-            const orderId = session.metadata?.orderId || session.client_reference_id;
-            if (orderId && session.payment_status === 'paid') {
-                await (0, ticketOrderService_1.fulfillTicketOrder)(orderId, {
-                    id: session.id,
-                    payment_intent: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
-                });
-                order = await db_1.prisma.ticketOrder.findFirst({
-                    where: { id: orderId },
-                    include: {
-                        event: { select: { title: true, slug: true, date: true, location: true } },
-                        guests: { select: { id: true, email: true, firstName: true } },
-                    },
-                });
-            }
-        }
         if (!order)
             return res.status(404).json({ error: 'Commande introuvable.' });
         const primary = order.guests[0];

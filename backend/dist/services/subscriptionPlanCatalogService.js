@@ -2,8 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.rowToPlanDefinition = rowToPlanDefinition;
 exports.planDefinitionToDbData = planDefinitionToDbData;
-exports.loadSubscriptionPlansFromDb = loadSubscriptionPlansFromDb;
 exports.seedDefaultSubscriptionPlans = seedDefaultSubscriptionPlans;
+exports.syncSubscriptionPlanPolicyFromCode = syncSubscriptionPlanPolicyFromCode;
+exports.loadSubscriptionPlansFromDb = loadSubscriptionPlansFromDb;
 exports.saveSubscriptionPlansToDb = saveSubscriptionPlansToDb;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
@@ -94,17 +95,6 @@ function rowsToConfiguration(rows) {
     }
     return result;
 }
-/** Charge le catalogue depuis la BD (crée les forfaits manquants) et met à jour le cache. */
-async function loadSubscriptionPlansFromDb() {
-    await seedDefaultSubscriptionPlans();
-    const rows = await db_1.prisma.subscriptionPlan.findMany({
-        orderBy: { sortOrder: 'asc' },
-    });
-    const config = rowsToConfiguration(rows);
-    (0, plansConfig_1.setPlansCache)(config);
-    console.log(`[SubscriptionPlan] ${rows.length} forfait(s) chargés depuis la base.`);
-    return config;
-}
 async function seedDefaultSubscriptionPlans() {
     const defaults = (0, plansConfig_1.getDefaultPlans)();
     const existing = await db_1.prisma.subscriptionPlan.findMany({ select: { id: true } });
@@ -117,6 +107,52 @@ async function seedDefaultSubscriptionPlans() {
             data: { id: key, ...data },
         });
     }
+}
+/**
+ * Aligne les quotas / flags produit depuis le code sans écraser prix & promos admin.
+ * Appelé au démarrage après seed des forfaits manquants.
+ */
+async function syncSubscriptionPlanPolicyFromCode() {
+    const defaults = (0, plansConfig_1.getDefaultPlans)();
+    for (const key of plansConfig_1.PLAN_KEYS) {
+        const d = defaults[key];
+        await db_1.prisma.subscriptionPlan.updateMany({
+            where: { id: key },
+            data: {
+                name: d.name,
+                description: d.description,
+                maxEvents: d.maxEvents,
+                maxGuests: d.maxGuests,
+                maxTemplates: d.maxTemplates,
+                maxRooms: d.maxRooms,
+                maxServices: d.maxServices,
+                maxOrgManagers: d.maxOrgManagers,
+                customTemplates: d.customTemplates,
+                customRsvpFields: d.customRsvpFields,
+                mockupOcr: d.mockupOcr,
+                protocolQr: d.protocolQr,
+                seatNotifications: d.seatNotifications,
+                roomThemesFixtures: d.roomThemesFixtures,
+                adminReports: d.adminReports,
+                roomEditorLevel: d.roomEditorLevel,
+                commercialNetwork: d.commercialNetwork,
+                supportLevel: d.supportLevel,
+                sortOrder: PLAN_SORT_ORDER[key],
+            },
+        });
+    }
+}
+/** Charge le catalogue depuis la BD (crée les forfaits manquants) et met à jour le cache. */
+async function loadSubscriptionPlansFromDb() {
+    await seedDefaultSubscriptionPlans();
+    await syncSubscriptionPlanPolicyFromCode();
+    const rows = await db_1.prisma.subscriptionPlan.findMany({
+        orderBy: { sortOrder: 'asc' },
+    });
+    const config = rowsToConfiguration(rows);
+    (0, plansConfig_1.setPlansCache)(config);
+    console.log(`[SubscriptionPlan] ${rows.length} forfait(s) chargés depuis la base.`);
+    return config;
 }
 /** Persiste un catalogue complet (admin) et rafraîchit le cache. */
 async function saveSubscriptionPlansToDb(incoming) {

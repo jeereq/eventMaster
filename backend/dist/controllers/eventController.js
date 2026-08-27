@@ -11,10 +11,23 @@ const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const permissionsService_1 = require("../services/permissionsService");
 const roomLayoutService_1 = require("../services/roomLayoutService");
+const ticketPricingService_1 = require("../services/ticketPricingService");
+const platformSettingsService_1 = require("../services/platformSettingsService");
 const tableAssignmentNotificationService_1 = require("../services/tableAssignmentNotificationService");
 const prismaJson_1 = require("../utils/prismaJson");
 const slug_1 = require("../utils/slug");
 const publicVenue_1 = require("../utils/publicVenue");
+function rejectPaidTicketingIfDisabled(body, res) {
+    const wantsPublic = body.isPublic === true || body.isPublic === 'true';
+    const wantsPaid = body.ticketingEnabled === true || body.ticketingEnabled === 'true';
+    if (wantsPublic && wantsPaid && !(0, platformSettingsService_1.isOnlinePaymentsEnabled)()) {
+        res.status(403).json({
+            error: 'Les paiements en ligne sont désactivés par la plateforme. Utilisez l’inscription gratuite.',
+        });
+        return true;
+    }
+    return false;
+}
 function serializeEvent(event) {
     const { _count, ...rest } = event;
     return { ...rest, feedPostCount: _count?.posts ?? 0 };
@@ -98,6 +111,7 @@ async function eventVisibilityData(title, body, existing) {
         });
     }
     const ticketingEnabled = isPublic && (body.ticketingEnabled === true || body.ticketingEnabled === 'true');
+    const ticketPricingMode = isPublic && ticketingEnabled && body.ticketPricingMode === 'by_zone' ? 'by_zone' : 'global';
     const ticketPriceFc = ticketingEnabled
         ? Math.max(0, Math.round(Number(body.ticketPriceFc) || 0))
         : 0;
@@ -111,7 +125,9 @@ async function eventVisibilityData(title, body, existing) {
         publishedAt: isPublic ? existing?.publishedAt || new Date() : null,
         ticketingEnabled: isPublic ? ticketingEnabled : false,
         ticketPriceFc: isPublic ? ticketPriceFc : 0,
+        ticketPricingMode: isPublic && ticketingEnabled ? ticketPricingMode : 'global',
         ticketsTotal: isPublic ? ticketsTotal : existing?.ticketsTotal ?? null,
+        seatSelectionEnabled: isPublic && (body.seatSelectionEnabled === true || body.seatSelectionEnabled === 'true'),
     };
 }
 // List all events for the current tenant
@@ -158,6 +174,8 @@ async function createEvent(req, res) {
         if (!title || !date || !location) {
             return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
         }
+        if (rejectPaidTicketingIfDisabled(req.body, res))
+            return;
         const visibility = await eventVisibilityData(title, req.body);
         // Check Plan / Quota before creating event (will be integrated in Phase 4, but let's add a placeholder or simple check)
         const tenant = await db_1.prisma.tenant.findUnique({
@@ -169,8 +187,8 @@ async function createEvent(req, res) {
             if (limits.maxEvents <= 0 || tenant._count.events >= limits.maxEvents) {
                 return res.status(403).json({
                     error: limits.maxEvents <= 0
-                        ? `La création d’événements n’est pas incluse dans ${limits.name}. Choisissez un forfait organisateur.`
-                        : `Quota d'événements atteint pour le plan ${tenant.plan} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
+                        ? `La création d’événements n’est pas incluse dans votre forfait ${limits.name}. Choisissez un forfait organisateur.`
+                        : `Quota d'événements atteint pour votre forfait ${limits.name} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
                 });
             }
         }
@@ -183,6 +201,9 @@ async function createEvent(req, res) {
             if (room?.layoutBlueprint) {
                 tablePlanData = (0, roomLayoutService_1.blueprintToTablePlan)(room.layoutBlueprint);
             }
+        }
+        if (req.body.pricingZones !== undefined) {
+            tablePlanData = (0, ticketPricingService_1.mergePricingZonesIntoTablePlan)(tablePlanData ?? { tables: [] }, Array.isArray(req.body.pricingZones) ? req.body.pricingZones : []);
         }
         const event = await db_1.prisma.event.create({
             data: {
@@ -200,6 +221,9 @@ async function createEvent(req, res) {
                 rsvpForm: rsvpForm !== undefined ? (0, prismaJson_1.toPrismaJson)(rsvpForm) : undefined,
                 themeId: themeId || null,
                 photos: (0, prismaJson_1.toPrismaJson)((0, publicVenue_1.parsePhotoUrls)(req.body.photos)),
+                ...(req.body.eventProgram !== undefined
+                    ? { eventProgram: (0, prismaJson_1.toPrismaJson)(req.body.eventProgram) }
+                    : {}),
                 ...visibility,
                 ...eventDossierData(req.body, true),
             },
@@ -269,9 +293,16 @@ async function updateEvent(req, res) {
         if (!existingEvent) {
             return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
         }
+        if (rejectPaidTicketingIfDisabled(req.body, res))
+            return;
         const visibility = req.body.isPublic !== undefined
             ? await eventVisibilityData(title || existingEvent.title, req.body, existingEvent)
             : {};
+        let mergedTablePlan = tablePlan !== undefined ? tablePlan : undefined;
+        if (req.body.pricingZones !== undefined) {
+            const base = tablePlan !== undefined ? tablePlan : existingEvent.tablePlan;
+            mergedTablePlan = (0, ticketPricingService_1.mergePricingZonesIntoTablePlan)(base, Array.isArray(req.body.pricingZones) ? req.body.pricingZones : []);
+        }
         const updatedEvent = await db_1.prisma.event.update({
             where: { id },
             data: {
@@ -282,13 +313,16 @@ async function updateEvent(req, res) {
                 reminderFrequency: reminderFrequency !== undefined ? reminderFrequency : existingEvent.reminderFrequency,
                 latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
                 longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
-                tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
+                tablePlan: mergedTablePlan !== undefined ? mergedTablePlan : existingEvent.tablePlan,
                 roomId: roomId !== undefined ? roomId : existingEvent.roomId,
                 guestGuidelines: guestGuidelines !== undefined ? (0, prismaJson_1.toPrismaJson)(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
                 rsvpForm: rsvpForm !== undefined ? (0, prismaJson_1.toPrismaJson)(rsvpForm) : existingEvent.rsvpForm ?? undefined,
                 eventPrep: eventPrep !== undefined ? (0, prismaJson_1.toPrismaJson)(eventPrep) : existingEvent.eventPrep ?? undefined,
                 themeId: themeId !== undefined ? (themeId || null) : existingEvent.themeId,
                 ...(req.body.photos !== undefined ? { photos: (0, prismaJson_1.toPrismaJson)((0, publicVenue_1.parsePhotoUrls)(req.body.photos)) } : {}),
+                ...(req.body.eventProgram !== undefined
+                    ? { eventProgram: (0, prismaJson_1.toPrismaJson)(req.body.eventProgram) }
+                    : {}),
                 ...visibility,
                 ...eventDossierData(req.body, false),
             },
@@ -299,16 +333,16 @@ async function updateEvent(req, res) {
         });
         let assignmentNotifications = null;
         let eventForResponse = updatedEvent;
-        if (tablePlan !== undefined) {
+        if (mergedTablePlan !== undefined) {
             assignmentNotifications = await (0, tableAssignmentNotificationService_1.notifyTableAssignmentChanges)({
                 eventId: id,
                 tenantId,
                 oldPlan: existingEvent.tablePlan,
-                newPlan: tablePlan,
+                newPlan: mergedTablePlan,
             });
             if ((assignmentNotifications?.notified ?? 0) > 0) {
                 const planWithMeta = {
-                    ...(typeof tablePlan === 'object' && tablePlan !== null ? tablePlan : {}),
+                    ...(typeof mergedTablePlan === 'object' && mergedTablePlan !== null ? mergedTablePlan : {}),
                     placementNotifiedAt: new Date().toISOString(),
                 };
                 eventForResponse = await db_1.prisma.event.update({
@@ -364,7 +398,7 @@ async function importRoomLayout(req, res) {
         const tenantId = req.user?.tenantId;
         const userId = req.user?.id;
         const id = req.params.id;
-        const { replaceExisting } = req.body;
+        const { replaceExisting, preserveAssignments } = req.body;
         if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
@@ -383,16 +417,19 @@ async function importRoomLayout(req, res) {
         if (!event.roomId || !event.room?.layoutBlueprint) {
             return res.status(400).json({ error: 'Cet événement n\'est pas lié à une salle avec un plan configuré.' });
         }
-        if (event.tablePlan && !replaceExisting) {
-            const plan = event.tablePlan;
-            if (plan.tables && plan.tables.length > 0) {
-                return res.status(409).json({
-                    error: 'Un plan de table existe déjà. Confirmez le remplacement avec replaceExisting: true.',
-                    hasExistingPlan: true,
-                });
-            }
+        const existingPlan = event.tablePlan;
+        const hasTables = Boolean(existingPlan?.tables && existingPlan.tables.length > 0);
+        if (hasTables && !replaceExisting && preserveAssignments !== true) {
+            return res.status(409).json({
+                error: 'Un plan de table existe déjà. Utilisez replaceExisting ou preserveAssignments.',
+                hasExistingPlan: true,
+            });
         }
-        const tablePlan = (0, roomLayoutService_1.blueprintToTablePlan)(event.room.layoutBlueprint);
+        const blueprint = event.room.layoutBlueprint;
+        const keepSeats = preserveAssignments === true || (replaceExisting && preserveAssignments !== false);
+        const tablePlan = keepSeats && hasTables
+            ? (0, roomLayoutService_1.mergeBlueprintIntoTablePlan)(existingPlan, blueprint)
+            : (0, roomLayoutService_1.blueprintToTablePlan)(blueprint);
         const updatedEvent = await db_1.prisma.event.update({
             where: { id },
             data: { tablePlan: (0, prismaJson_1.toPrismaJson)(tablePlan) },

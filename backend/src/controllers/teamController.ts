@@ -120,18 +120,13 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
     }
 
     if (!isValidOrgRole(orgRole)) {
-      return res.status(400).json({ error: 'orgRole doit être MANAGER, PROTOCOL ou COMMERCIAL.' });
+      return res.status(400).json({ error: 'orgRole doit être MANAGER ou PROTOCOL.' });
     }
 
     if (orgRole === 'COMMERCIAL') {
-      try {
-        await assertPlanFeature(tenantId, 'commercialNetwork');
-      } catch (err) {
-        if (err instanceof PlanFeatureError) {
-          return res.status(403).json({ error: err.message });
-        }
-        throw err;
-      }
+      return res.status(403).json({
+        error: 'Le rôle de commercial organisationnel n’est plus disponible. Les rôles d’équipe sont MANAGER et PROTOCOL.',
+      });
     }
 
     if (orgRole === 'MANAGER') {
@@ -154,26 +149,7 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       return res.status(400).json({ error: 'Un utilisateur avec cette adresse e-mail existe déjà.' });
     }
 
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        defaultOrgCommercialCommissionRate: true,
-        defaultOrgCommercialRenewalCommissionRate: true,
-      },
-    });
-
     const passwordHash = await bcrypt.hash(password, 10);
-    const rates =
-      orgRole === 'COMMERCIAL'
-        ? resolveCommissionRates({
-            first: commissionRate,
-            renewal: renewalCommissionRate,
-            firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
-            renewalFallback:
-              tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
-          })
-        : null;
-
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -184,17 +160,13 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
         role: 'USER',
         orgRole,
         tenantId,
-        commissionRate: rates?.first ?? null,
-        renewalCommissionRate: rates?.renewal ?? null,
+        commissionRate: null,
+        renewalCommissionRate: null,
         isEmailVerified: false,
         verificationMethod: method,
       },
       select: userSelect,
     });
-
-    if (orgRole === 'COMMERCIAL') {
-      await ensureOrgCommercialReferralCode(newUser.id, tenantId);
-    }
 
     await setupUserOtpVerification({
       userId: newUser.id,
@@ -220,8 +192,8 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
         ...refreshed,
         isOwner: false,
         orgRoleLabel: orgRole,
-        commissionRate: rates?.first ?? null,
-        renewalCommissionRate: rates?.renewal ?? null,
+        commissionRate: null,
+        renewalCommissionRate: null,
       },
     });
   } catch (error: any) {
@@ -252,7 +224,13 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
 
     const { orgRole } = req.body;
     if (!isValidOrgRole(orgRole)) {
-      return res.status(400).json({ error: 'orgRole doit être MANAGER, PROTOCOL ou COMMERCIAL.' });
+      return res.status(400).json({ error: 'orgRole doit être MANAGER ou PROTOCOL.' });
+    }
+
+    if (orgRole === 'COMMERCIAL') {
+      return res.status(403).json({
+        error: 'Le rôle de commercial organisationnel n’est plus disponible. Les rôles d’équipe sont MANAGER et PROTOCOL.',
+      });
     }
 
     const member = await prisma.user.findFirst({
@@ -260,17 +238,6 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
     });
     if (!member) {
       return res.status(404).json({ error: 'Utilisateur introuvable.' });
-    }
-
-    if (orgRole === 'COMMERCIAL' && member.orgRole !== 'COMMERCIAL') {
-      try {
-        await assertPlanFeature(tenantId, 'commercialNetwork');
-      } catch (err) {
-        if (err instanceof PlanFeatureError) {
-          return res.status(403).json({ error: err.message });
-        }
-        throw err;
-      }
     }
 
     if (orgRole === 'MANAGER' && member.orgRole !== 'MANAGER') {
@@ -288,29 +255,17 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
       orgRole: typeof orgRole;
       commissionRate?: number | null;
       renewalCommissionRate?: number | null;
-    } = { orgRole };
-
-    if (orgRole === 'COMMERCIAL' && member.commissionRate == null) {
-      updateData.commissionRate = tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE;
-    }
-    if (orgRole === 'COMMERCIAL' && member.renewalCommissionRate == null) {
-      updateData.renewalCommissionRate =
-        tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE;
-    }
-    if (orgRole !== 'COMMERCIAL') {
-      updateData.commissionRate = null;
-      updateData.renewalCommissionRate = null;
-    }
+    } = {
+      orgRole,
+      commissionRate: null,
+      renewalCommissionRate: null,
+    };
 
     const updated = await prisma.user.update({
       where: { id: memberId },
       data: updateData,
       select: userSelect,
     });
-
-    if (orgRole === 'COMMERCIAL') {
-      await ensureOrgCommercialReferralCode(updated.id, tenantId);
-    }
 
     const finalUser = await prisma.user.findUnique({ where: { id: memberId }, select: userSelect });
 
@@ -351,6 +306,15 @@ export async function updateMemberCommissionRate(req: AuthenticatedRequest, res:
     const access = await resolveOrgAccess(userId, tenantId);
     if (!access.canManageTeam) {
       return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent modifier les commissions.' });
+    }
+
+    try {
+      await assertPlanFeature(tenantId, 'commercialNetwork');
+    } catch (err) {
+      if (err instanceof PlanFeatureError) {
+        return res.status(403).json({ error: err.message });
+      }
+      throw err;
     }
 
     const { commissionRate, renewalCommissionRate } = req.body;

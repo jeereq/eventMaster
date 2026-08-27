@@ -208,8 +208,8 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         return res.status(403).json({
           error:
             limits.maxEvents <= 0
-              ? `La création d’événements n’est pas incluse dans ${limits.name}. Choisissez un forfait organisateur.`
-              : `Quota d'événements atteint pour le plan ${tenant.plan} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
+              ? `La création d’événements n’est pas incluse dans votre forfait ${limits.name}. Choisissez un forfait organisateur.`
+              : `Quota d'événements atteint pour votre forfait ${limits.name} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
         });
       }
     }

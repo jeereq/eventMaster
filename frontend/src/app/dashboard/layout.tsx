@@ -111,7 +111,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Guide utilisateur': 'Documentation et visite guidée',
  'Mon compte': 'Profil et sécurité du compte',
  Salles: 'Plans 2D, publication et disponibilités',
- Équipe: 'Managers, protocole et commerciaux',
+ Équipe: 'Managers et protocole d’accueil',
  Marketplace: 'Prestations, locations et réservations reçues',
  'Devis & réservations': 'Devis envoyés, réservations, packs et favoris',
  'Parrainage & commissions': 'Code parrainage et gains',

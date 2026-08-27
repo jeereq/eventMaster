@@ -78,9 +78,12 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
 
     if (tenant) {
       const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
-      if (guestCount >= limits.maxGuests) {
+      if (limits.maxGuests <= 0 || guestCount >= limits.maxGuests) {
         return res.status(403).json({
-          error: `Quota total d'invités atteint pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+          error:
+            limits.maxGuests <= 0
+              ? `La gestion des invités n’est pas incluse dans votre forfait ${limits.name}. Choisissez un forfait organisateur.`
+              : `Quota total d'invités atteint pour votre forfait ${limits.name} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
         });
       }
     }
@@ -258,9 +261,12 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
 
     if (tenant) {
       const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
-      if (guestCount + guests.length > limits.maxGuests) {
+      if (limits.maxGuests <= 0 || guestCount + guests.length > limits.maxGuests) {
         return res.status(403).json({
-          error: `Quota total d'invités dépassé pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+          error:
+            limits.maxGuests <= 0
+              ? `La gestion des invités n’est pas incluse dans votre forfait ${limits.name}. Choisissez un forfait organisateur.`
+              : `Quota total d'invités dépassé pour votre forfait ${limits.name} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
         });
       }
     }

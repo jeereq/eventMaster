@@ -7,6 +7,7 @@ exports.fulfillTicketOrder = fulfillTicketOrder;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const notificationService_1 = require("./notificationService");
+const seatSelectionService_1 = require("./seatSelectionService");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function splitBuyerName(fullName) {
     const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -104,10 +105,21 @@ async function fulfillTicketOrder(orderId, stripeSession) {
         include: { guests: { select: { id: true, email: true, firstName: true, lastName: true } } },
     });
     const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
+    if (primary && order.tableId != null && order.seatIndex != null) {
+        try {
+            await (0, seatSelectionService_1.assignSeatInTablePlan)(event.id, order.tableId, order.seatIndex, primary.id);
+        }
+        catch (err) {
+            console.error('[Ticket] assignSeatInTablePlan', err);
+        }
+    }
     if (primary) {
         const rsvpUrl = `${FRONTEND_URL}/rsvp/${primary.id}`;
+        const seatLine = order.tableId != null && order.seatIndex != null
+            ? `\nPlace réservée : table ${order.tableId} · siège ${order.seatIndex + 1}\n`
+            : '';
         const subject = `Votre billet — ${event.title}`;
-        const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).\n\nAccédez à votre espace invité (badge QR) :\n${rsvpUrl}\n\nOrganisé par ${event.tenant.name}.\n`;
+        const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR) :\n${rsvpUrl}\n\nOrganisé par ${event.tenant.name}.\n`;
         void (0, notificationService_1.sendRealEmail)(order.buyerEmail, subject, text).catch(() => undefined);
     }
     return paid;

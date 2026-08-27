@@ -1360,7 +1360,7 @@ async function getAdminSettings(req, res) {
         const settings = (0, platformSettingsService_1.loadPlatformSettings)();
         return res.json({
             ...platformSettingsService_1.DEFAULT_PLATFORM_SETTINGS,
-            ...settings,
+            ...(0, platformSettingsService_1.maskSecretsForAdmin)(settings),
             plans,
         });
     }
@@ -1409,11 +1409,19 @@ async function updateAdminSettings(req, res) {
                     from: current.commercialRenewalCommissionRate,
                     to: updatedSettings.commercialRenewalCommissionRate,
                 },
+                onlinePaymentsEnabled: {
+                    from: current.onlinePaymentsEnabled,
+                    to: updatedSettings.onlinePaymentsEnabled,
+                },
+                ticketPaymentProvider: {
+                    from: current.ticketPaymentProvider,
+                    to: updatedSettings.ticketPaymentProvider,
+                },
             },
         });
         return res.json({
             message: 'Paramètres mis à jour avec succès',
-            settings: { ...updatedSettings, plans },
+            settings: { ...(0, platformSettingsService_1.maskSecretsForAdmin)(updatedSettings), plans },
         });
     }
     catch (error) {
