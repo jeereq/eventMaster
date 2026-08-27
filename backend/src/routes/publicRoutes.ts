@@ -30,6 +30,7 @@ import {
   flexPayCardCallback,
   flexPayCardReturn,
   verifyFlexPayCardOrder,
+  retryFlexPayTicketOrder,
 } from '../controllers/flexPayController';
 
 const router = Router();
@@ -112,6 +113,7 @@ router.post('/payments/flexpay/callback', flexPayCardCallback);
 router.get('/payments/flexpay/callback', flexPayCardCallback);
 router.get('/payments/flexpay/return', flexPayCardReturn);
 router.get('/payments/flexpay/orders/:orderId/verify', verifyFlexPayCardOrder);
+router.post('/payments/flexpay/orders/:orderId/retry', requireAuth, retryFlexPayTicketOrder);
 
 // POST /api/public/contact
 router.post('/contact', async (req: Request, res: Response) => {

@@ -9,6 +9,10 @@ import {
   previousBillingPeriod,
   unsettlePlatformPeriodPayout,
 } from '../services/commercialPayoutService';
+import {
+  initiateCommercialFlexPayPayout,
+  verifyCommercialFlexPayPayout,
+} from '../services/commercialFlexPayPayoutService';
 import { parseBillingPeriod } from '../services/revenueReportService';
 
 function csvEscape(value: string | number | null | undefined): string {
@@ -184,5 +188,98 @@ export async function settleAdminSaasPayout(req: AuthenticatedRequest, res: Resp
   } catch (error) {
     console.error('Erreur versement SaaS:', error);
     return res.status(500).json({ error: 'Impossible de mettre à jour le versement.' });
+  }
+}
+
+/** POST /api/admin/payouts/flexpay — initie un Pay Out FlexPay réel */
+export async function initiateAdminSaasFlexPayPayout(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN' || !req.user.id) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    }
+
+    const commercialId = String(req.body?.commercialId || '');
+    const period = parseBillingPeriod(req.body?.period as string | undefined);
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone : null;
+
+    if (!commercialId) {
+      return res.status(400).json({ error: 'commercialId requis.' });
+    }
+
+    const result = await initiateCommercialFlexPayPayout({
+      kind: 'platform',
+      commercialId,
+      period,
+      initiatedByUserId: req.user.id,
+      phone,
+    });
+
+    if (result.error === 'NOT_PLATFORM') {
+      return res.status(403).json({
+        error: 'EventMaster ne verse que les commerciaux plateforme via FlexPay.',
+      });
+    }
+    if (result.error === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'Commercial introuvable.' });
+    }
+    if (result.error === 'NOTHING_DUE') {
+      return res.status(404).json({ error: 'Aucune commission due pour cette période.' });
+    }
+    if (result.error === 'PHONE_REQUIRED') {
+      return res.status(400).json({
+        error: 'Numéro Mobile Money requis (243…). Renseignez-le sur le profil du commercial ou dans la requête.',
+      });
+    }
+    if (result.error === 'ALREADY_PENDING') {
+      return res.status(409).json({
+        error: 'Un versement FlexPay est déjà en cours pour ce dossier.',
+        transferId: result.transfer?.id,
+        status: result.transfer?.status,
+      });
+    }
+
+    await auditReq(req, {
+      action: 'SAAS_PAYOUT_FLEXPAY',
+      targetType: 'commercial_payout',
+      targetId: commercialId,
+      summary: `Pay Out FlexPay ${formatBillingPeriodLabel(period)} — ${result.transfer?.amountFc} FC`,
+      metadata: {
+        period,
+        transferId: result.transfer?.id,
+        orderNumber: result.transfer?.flexPayOrderNumber,
+      },
+    });
+
+    return res.status(201).json({
+      message: result.message,
+      transferId: result.transfer?.id,
+      amountFc: result.transfer?.amountFc,
+      phone: result.transfer?.phone,
+      orderNumber: result.transfer?.flexPayOrderNumber,
+      status: result.transfer?.status,
+    });
+  } catch (error: any) {
+    console.error('Erreur Pay Out FlexPay SaaS:', error);
+    return res.status(502).json({
+      error: error?.message || 'Impossible d’initier le versement FlexPay.',
+    });
+  }
+}
+
+/** GET /api/admin/payouts/flexpay/:transferId/verify */
+export async function verifyAdminSaasFlexPayPayout(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Accès refusé.' });
+    }
+    const transferId = String(req.params.transferId || '');
+    const result = await verifyCommercialFlexPayPayout(transferId);
+    if (result.error === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'Versement introuvable.' });
+    }
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Erreur verify Pay Out:', error);
+    return res.status(500).json({ error: error?.message || 'Vérification impossible.' });
   }
 }

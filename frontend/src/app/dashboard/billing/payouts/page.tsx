@@ -63,6 +63,9 @@ export default function OrgCommercialPayoutsPage() {
   const [data, setData] = useState<PayoutsResponse | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [modal, setModal] = useState<{ row: PayoutRow; settle: boolean } | null>(null);
+  const [flexModal, setFlexModal] = useState<PayoutRow | null>(null);
+  const [flexPhone, setFlexPhone] = useState('');
+  const [pendingTransferId, setPendingTransferId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [proofUrl, setProofUrl] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -162,6 +165,68 @@ export default function OrgCommercialPayoutsPage() {
     }
   };
 
+  const openFlexPay = (row: PayoutRow) => {
+    setFlexModal(row);
+    setFlexPhone('');
+    setPendingTransferId(null);
+  };
+
+  const submitFlexPay = async () => {
+    if (!flexModal) return;
+    const key = `flex:${flexModal.commercialId}:${flexModal.period}`;
+    setBusyKey(key);
+    try {
+      const data = await api.post('/billing/payouts/flexpay', {
+        commercialId: flexModal.commercialId,
+        period: flexModal.period,
+        phone: flexPhone.trim() || undefined,
+      });
+      setPendingTransferId(data.transferId || null);
+      alert(data.message || 'Versement FlexPay initié.');
+      if (data.transferId) {
+        try {
+          const verified = await api.get(`/billing/payouts/flexpay/${data.transferId}/verify`);
+          if (verified.paid) {
+            setFlexModal(null);
+            await load();
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      await load();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Versement FlexPay impossible.');
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const verifyPendingFlex = async () => {
+    if (!pendingTransferId) return;
+    setBusyKey(`verify:${pendingTransferId}`);
+    try {
+      const verified = await api.get(`/billing/payouts/flexpay/${pendingTransferId}/verify`);
+      if (verified.paid) {
+        setFlexModal(null);
+        setPendingTransferId(null);
+        await load();
+        alert('Versement confirmé.');
+      } else {
+        alert(
+          verified.status === 'FAILED'
+            ? 'Le versement a échoué. Vous pouvez réessayer.'
+            : 'Toujours en attente de confirmation FlexPay…',
+        );
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Vérification impossible.');
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
   if (authLoading || !access?.canViewBilling) {
     return (
       <div className="flex justify-center py-16">
@@ -179,7 +244,7 @@ export default function OrgCommercialPayoutsPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Versements commerciaux"
-        description={`Commissions de vos commerciaux org. (${firstPct} % premier paiement, ${renewPct} % renouvellement). Votre organisation verse hors plateforme, puis vous joignez une preuve. Distinct du réseau EventMaster (Super Admin).`}
+        description={`Commissions de vos commerciaux org. (${firstPct} % premier paiement, ${renewPct} % renouvellement). Préférez « Verser via FlexPay » ; le marquage manuel avec preuve reste disponible. Distinct du réseau EventMaster (Super Admin).`}
         breadcrumbs={
           <Breadcrumbs
             items={[
@@ -211,7 +276,7 @@ export default function OrgCommercialPayoutsPage() {
         </div>
         <div className="bg-surface-muted border border-border rounded-xl p-4 col-span-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Payeur</p>
-          <p className="text-sm font-semibold text-foreground mt-1">{data?.payerName || 'Votre organisation'}, hors plateforme</p>
+          <p className="text-sm font-semibold text-foreground mt-1">{data?.payerName || 'Votre organisation'} via FlexPay (ou hors plateforme)</p>
           <p className="text-[11px] text-muted mt-1">
             Taux par défaut dans{' '}
             <Link href="/dashboard/team" className="text-primary hover:underline">Équipe</Link>
@@ -283,14 +348,26 @@ export default function OrgCommercialPayoutsPage() {
                     </a>
                   )}
                 </div>
-                <Button
-                  size="sm"
-                  variant={due ? 'primary' : 'secondary'}
-                  loading={busyKey === key}
-                  onClick={() => openSettle(row, due)}
-                >
-                  {due ? 'Marquer versée' : 'Remettre due'}
-                </Button>
+                <div className="flex flex-wrap gap-1.5 shrink-0">
+                  {due && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      loading={busyKey === `flex:${key}`}
+                      onClick={() => openFlexPay(row)}
+                    >
+                      Verser via FlexPay
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={busyKey === key}
+                    onClick={() => openSettle(row, due)}
+                  >
+                    {due ? 'Marquer manuellement' : 'Remettre due'}
+                  </Button>
+                </div>
               </li>
             );
           })}
@@ -362,6 +439,60 @@ export default function OrgCommercialPayoutsPage() {
                 placeholder="Ex. Virement Airtel Money du 3 août, reçu n°…"
               />
             </label>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(flexModal)}
+        onClose={() => setFlexModal(null)}
+        title="Verser via FlexPay"
+        description="Pay Out Mobile Money vers le téléphone du commercial. La commission n’est marquée versée qu’après confirmation FlexPay."
+        footer={
+          <div className="flex w-full flex-wrap justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setFlexModal(null)}>Fermer</Button>
+            {pendingTransferId && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void verifyPendingFlex()}
+                loading={busyKey?.startsWith('verify:')}
+              >
+                Vérifier le statut
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={() => void submitFlexPay()}
+              loading={busyKey?.startsWith('flex:')}
+              disabled={Boolean(pendingTransferId)}
+            >
+              Lancer le versement
+            </Button>
+          </div>
+        }
+      >
+        {flexModal && (
+          <div className="space-y-3">
+            <p className="text-sm text-foreground">
+              {flexModal.name || flexModal.email} · {flexModal.period} · {formatFc(flexModal.unpaidCommission)}
+            </p>
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted">
+                Téléphone Mobile Money (optionnel si déjà sur le profil)
+              </span>
+              <input
+                value={flexPhone}
+                onChange={(e) => setFlexPhone(e.target.value)}
+                placeholder="243XXXXXXXXX"
+                className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm"
+              />
+            </label>
+            {pendingTransferId && (
+              <p className="text-xs text-muted">
+                Versement en cours. Demandez au commercial de confirmer sur son téléphone, puis vérifiez.
+              </p>
+            )}
           </div>
         )}
       </Modal>

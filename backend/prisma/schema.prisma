@@ -216,6 +216,7 @@ model User {
   guestSeatVerifications Guest[] @relation("GuestSeatVerifications")
   protocolNotes  GuestProtocolNote[]
   commercialCommissions CommercialCommission[]
+  commercialPayoutTransfers CommercialPayoutTransfer[]
   platformNotifications PlatformNotification[]
   notificationPreferences NotificationPreference[]
   pushDeviceTokens      PushDeviceToken[]
@@ -423,6 +424,32 @@ model CommercialCommission {
   @@unique([commercialId, tenantId, billingPeriod])
   @@index([commercialId])
   @@index([platformInvoiceId])
+}
+
+/** Session de versement FlexPay (Pay Out) pour un dossier commercial × période. */
+model CommercialPayoutTransfer {
+  id                       String   @id @default(uuid())
+  /** platform | org */
+  kind                     String
+  commercialId             String
+  commercial               User     @relation(fields: [commercialId], references: [id], onDelete: Cascade)
+  /** Rempli pour les versements org (tenant payeur). */
+  tenantId                 String?
+  billingPeriod            String
+  amountFc                 Int
+  phone                    String
+  /** PENDING | SUCCESS | FAILED */
+  status                   String   @default("PENDING")
+  flexPayOrderNumber       String?  @unique
+  flexPayReference         String   @unique
+  flexPayChannel           String?
+  flexPayProviderReference String?
+  initiatedByUserId        String
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([commercialId, billingPeriod, kind])
+  @@index([status])
 }
 
 enum InvoiceType {

@@ -15,6 +15,10 @@ import {
   previousBillingPeriod,
   unsettleOrgPeriodPayout,
 } from '../services/commercialPayoutService';
+import {
+  initiateCommercialFlexPayPayout,
+  verifyCommercialFlexPayPayout,
+} from '../services/commercialFlexPayPayoutService';
 import { parseBillingPeriod } from '../services/revenueReportService';
 
 function csvEscape(value: string | number | null | undefined): string {
@@ -240,5 +244,106 @@ export async function settleOrgBillingPayout(req: AuthenticatedRequest, res: Res
   } catch (error) {
     console.error('Erreur versement org.:', error);
     return res.status(500).json({ error: 'Impossible de mettre à jour le versement.' });
+  }
+}
+
+/** POST /api/billing/payouts/flexpay — Pay Out FlexPay vers commercial org. */
+export async function initiateOrgBillingFlexPayPayout(req: AuthenticatedRequest, res: Response) {
+  try {
+    const auth = await requireBillingOwner(req, res);
+    if (!auth) return;
+
+    const commercialId = String(req.body?.commercialId || '');
+    const period = parseBillingPeriod(req.body?.period as string | undefined);
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone : null;
+
+    if (!commercialId) {
+      return res.status(400).json({ error: 'commercialId requis.' });
+    }
+
+    const result = await initiateCommercialFlexPayPayout({
+      kind: 'org',
+      commercialId,
+      period,
+      tenantId: auth.tenantId,
+      initiatedByUserId: auth.userId,
+      phone,
+    });
+
+    if (result.error === 'NOT_ORG' || result.error === 'TENANT_REQUIRED') {
+      return res.status(403).json({
+        error: 'Vous ne versez que les commerciaux de votre organisation.',
+      });
+    }
+    if (result.error === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'Commercial introuvable.' });
+    }
+    if (result.error === 'NOTHING_DUE') {
+      return res.status(404).json({ error: 'Aucune commission due pour cette période.' });
+    }
+    if (result.error === 'PHONE_REQUIRED') {
+      return res.status(400).json({
+        error: 'Numéro Mobile Money requis (243…). Renseignez-le sur le profil du commercial ou dans la requête.',
+      });
+    }
+    if (result.error === 'ALREADY_PENDING') {
+      return res.status(409).json({
+        error: 'Un versement FlexPay est déjà en cours pour ce dossier.',
+        transferId: result.transfer?.id,
+        status: result.transfer?.status,
+      });
+    }
+
+    await auditReq(req, {
+      action: 'ORG_PAYOUT_FLEXPAY',
+      targetType: 'commercial_payout',
+      targetId: commercialId,
+      tenantId: auth.tenantId,
+      summary: `Pay Out FlexPay org. ${formatBillingPeriodLabel(period)} — ${result.transfer?.amountFc} FC`,
+      metadata: {
+        period,
+        transferId: result.transfer?.id,
+        orderNumber: result.transfer?.flexPayOrderNumber,
+      },
+    });
+
+    return res.status(201).json({
+      message: result.message,
+      transferId: result.transfer?.id,
+      amountFc: result.transfer?.amountFc,
+      phone: result.transfer?.phone,
+      orderNumber: result.transfer?.flexPayOrderNumber,
+      status: result.transfer?.status,
+    });
+  } catch (error: any) {
+    console.error('Erreur Pay Out FlexPay org.:', error);
+    return res.status(502).json({
+      error: error?.message || 'Impossible d’initier le versement FlexPay.',
+    });
+  }
+}
+
+/** GET /api/billing/payouts/flexpay/:transferId/verify */
+export async function verifyOrgBillingFlexPayPayout(req: AuthenticatedRequest, res: Response) {
+  try {
+    const auth = await requireBillingOwner(req, res);
+    if (!auth) return;
+
+    const transferId = String(req.params.transferId || '');
+    const transfer = await prisma.commercialPayoutTransfer.findFirst({
+      where: { id: transferId, tenantId: auth.tenantId, kind: 'org' },
+    });
+    if (!transfer) {
+      return res.status(404).json({ error: 'Versement introuvable.' });
+    }
+
+    const result = await verifyCommercialFlexPayPayout(transferId);
+    if (result.error === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'Versement introuvable.' });
+    }
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Erreur verify Pay Out org.:', error);
+    return res.status(500).json({ error: error?.message || 'Vérification impossible.' });
   }
 }

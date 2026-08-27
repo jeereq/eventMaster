@@ -126,7 +126,8 @@ function envOrSetting(envKey: string, settingValue?: string): string {
 }
 
 function authHeader(token: string): string {
-  return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  const t = token.trim();
+  return t.startsWith('Bearer ') ? t : `Bearer ${t}`;
 }
 
 /** Normalise un numéro RDC vers 243XXXXXXXXX. */
@@ -143,16 +144,19 @@ export function normalizeFlexPayPhone(input: string): string | null {
 
 export function getFlexPayCardConfig() {
   const settings = loadPlatformSettings();
-  const token =
+  const token = (
     envOrSetting('FLEXPAY_CARD_TOKEN', settings.flexPayCardToken) ||
-    envOrSetting('FLEXPAY_TOKEN', '');
-  const merchant =
+    envOrSetting('FLEXPAY_TOKEN', '')
+  ).trim();
+  const merchant = (
     envOrSetting('FLEXPAY_CARD_MERCHANT', settings.flexPayCardMerchant) ||
-    envOrSetting('FLEXPAY_MERCHANT', '');
+    envOrSetting('FLEXPAY_MERCHANT', '')
+  ).trim();
   const payUrl = envOrSetting('FLEXPAY_CARD_PAY_URL', settings.flexPayCardPayUrl);
   const checkUrlBase = envOrSetting('FLEXPAY_CARD_CHECK_URL', settings.flexPayCardCheckUrl);
   const mobilePayUrl = envOrSetting('FLEXPAY_MOBILE_PAY_URL', settings.flexPayMobilePayUrl);
   const mobileCheckUrl = envOrSetting('FLEXPAY_MOBILE_CHECK_URL', settings.flexPayMobileCheckUrl);
+  const payoutUrl = envOrSetting('FLEXPAY_PAYOUT_URL', '');
 
   return {
     token,
@@ -161,16 +165,26 @@ export function getFlexPayCardConfig() {
     checkUrlBase: checkUrlBase || 'https://cardpayment.flexpay.cd/api/rest/v1/check',
     mobilePayUrl: mobilePayUrl || 'https://backend.flexpay.cd/api/rest/v1/paymentService',
     mobileCheckUrlBase: mobileCheckUrl || 'https://backend.flexpay.cd/api/rest/v1/check',
+    payoutUrl: payoutUrl || 'https://backend.flexpay.cd/api/rest/v1/merchantPayOutService',
   };
 }
 
 export function isFlexPayCardConfigured(): boolean {
   const { token, merchant } = getFlexPayCardConfig();
-  return Boolean(token && merchant && !token.toLowerCase().includes('mock'));
+  if (!token || !merchant) return false;
+  const bare = token.replace(/^Bearer\s+/i, '').trim().toLowerCase();
+  return bare.length > 0 && !bare.includes('mock');
 }
 
+/** @deprecated Ne plus utiliser pour court-circuiter un paiement — préférer isFlexPayCardConfigured(). */
 export function isFlexPayCardMock(): boolean {
   return !isFlexPayCardConfigured();
+}
+
+export function assertFlexPayConfigured(): void {
+  if (!isFlexPayCardConfigured()) {
+    throw new Error('Paiements FlexPay non configurés (token / merchant manquants).');
+  }
 }
 
 /** Billets : uniquement FlexPay (plus de Stripe). */
@@ -183,10 +197,8 @@ export function resolveTicketCheckoutProvider(): TicketPaymentProvider {
  * Doc : POST /v1.1/pay (JSON) → { code: "0", orderNumber, url }
  */
 export async function createFlexPayCardCheckout(input: FlexPayPayRequest): Promise<FlexPayPayResult> {
+  assertFlexPayConfigured();
   const cfg = getFlexPayCardConfig();
-  if (!cfg.token || !cfg.merchant) {
-    throw new Error('FlexPay Card non configuré (token / merchant manquants).');
-  }
 
   const body = {
     authorization: authHeader(cfg.token),
@@ -234,10 +246,8 @@ export async function createFlexPayCardCheckout(input: FlexPayPayRequest): Promi
 export async function createFlexPayMobileCheckout(
   input: FlexPayMobilePayRequest,
 ): Promise<FlexPayPayResult> {
+  assertFlexPayConfigured();
   const cfg = getFlexPayCardConfig();
-  if (!cfg.token || !cfg.merchant) {
-    throw new Error('FlexPay Mobile Money non configuré (token / merchant manquants).');
-  }
 
   const phone = normalizeFlexPayPhone(input.phone);
   if (!phone) {
@@ -275,6 +285,57 @@ export async function createFlexPayMobileCheckout(
   const orderNumber = String(raw.orderNumber || raw.order_number || '');
   if (!orderNumber) {
     throw new Error('Réponse FlexPay Mobile Money incomplète (orderNumber manquant).');
+  }
+
+  return { orderNumber, redirectUrl: null, raw };
+}
+
+/**
+ * Décaissement marchand → Mobile Money (Pay Out).
+ * Doc API Paiement v1.5 : POST …/merchantPayOutService
+ */
+export async function createFlexPayMobilePayout(
+  input: FlexPayMobilePayRequest,
+): Promise<FlexPayPayResult> {
+  assertFlexPayConfigured();
+  const cfg = getFlexPayCardConfig();
+
+  const phone = normalizeFlexPayPhone(input.phone);
+  if (!phone) {
+    throw new Error('Numéro Mobile Money invalide. Utilisez le format 243XXXXXXXXX.');
+  }
+
+  const body = {
+    merchant: cfg.merchant,
+    type: '1',
+    phone,
+    reference: input.reference,
+    amount: String(Math.max(1, Math.round(input.amount))),
+    currency: input.currency || 'CDF',
+    callbackUrl: input.callbackUrl,
+  };
+
+  const res = await fetch(cfg.payoutUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: authHeader(cfg.token),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const raw = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const code = String(raw.code ?? '');
+  if (!res.ok || (code !== '0' && code !== '0.0')) {
+    throw new Error(
+      String(raw.message || `FlexPay Pay Out a refusé le versement (HTTP ${res.status}).`),
+    );
+  }
+
+  const orderNumber = String(raw.orderNumber || raw.order_number || '');
+  if (!orderNumber) {
+    throw new Error('Réponse FlexPay Pay Out incomplète (orderNumber manquant).');
   }
 
   return { orderNumber, redirectUrl: null, raw };
@@ -372,5 +433,7 @@ export function getPublicApiBaseUrl(): string {
     process.env.BACKEND_PUBLIC_URL ||
     process.env.BACKEND_URL ||
     `http://localhost:${process.env.PORT || 5001}`
-  ).replace(/\/$/, '');
+  )
+    .trim()
+    .replace(/\/$/, '');
 }

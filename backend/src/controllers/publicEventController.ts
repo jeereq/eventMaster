@@ -22,10 +22,10 @@ import {
   createFlexPayCardCheckout,
   createFlexPayMobileCheckout,
   getPublicApiBaseUrl,
-  isFlexPayCardMock,
+  isFlexPayCardConfigured,
 } from '../services/flexPayCardService';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 
 function serializePublicPost(post: {
   id: string;
@@ -389,7 +389,6 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       const primary = fulfilled?.guests?.find((g) => g.email.toLowerCase() === buyerEmail) || fulfilled?.guests?.[0];
       return res.status(201).json({
         paid: false,
-        mock: true,
         orderId: order.id,
         guestId: primary?.id,
         rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
@@ -398,18 +397,10 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
     }
 
     if (paymentProvider === 'flexpay_card' || paymentProvider === 'flexpay_mobile') {
-      if (isFlexPayCardMock()) {
-        const fulfilled = await fulfillTicketOrder(order.id);
-        const primary =
-          fulfilled?.guests?.find((g) => g.email.toLowerCase() === buyerEmail) || fulfilled?.guests?.[0];
-        return res.status(201).json({
-          paid: true,
-          mock: true,
-          provider: paymentProvider,
-          orderId: order.id,
-          guestId: primary?.id,
-          rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
-          message: 'Paiement FlexPay simulé (credentials absents). Billet confirmé.',
+      if (!isFlexPayCardConfigured()) {
+        await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+        return res.status(503).json({
+          error: 'Paiements FlexPay non configurés. Réessayez plus tard ou contactez le support.',
         });
       }
 

@@ -24,9 +24,9 @@ import {
 } from '../services/subscriptionActivationService';
 import { initiateFlexPaySessionForRequest } from '../services/subscriptionFlexPayCheckoutService';
 import {
-  isFlexPayCardMock,
   checkFlexPayCardOrder,
   buildFlexPayMetadataUpdate,
+  isFlexPayCardConfigured,
 } from '../services/flexPayCardService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -470,6 +470,12 @@ export async function checkoutSubscriptionFlexPay(req: AuthenticatedRequest, res
       });
     }
 
+    if (!isFlexPayCardConfigured()) {
+      return res.status(503).json({
+        error: 'Paiements FlexPay non configurés. Contactez le support.',
+      });
+    }
+
     const { requestedPlan, durationDays, paymentMethod, phone } = req.body || {};
     const method = paymentMethod === 'mobile' ? 'mobile' : 'card';
 
@@ -651,17 +657,10 @@ export async function verifySubscriptionFlexPay(req: AuthenticatedRequest, res: 
       });
     }
 
-    if (isFlexPayCardMock()) {
-      const activated = await activateSubscriptionRequest(request.id, {
-        approvedAmount: request.approvedAmount ?? undefined,
-        markPaid: true,
-      });
-      return res.json({
-        paid: true,
-        requestId: request.id,
-        status: 'APPROVED',
-        mock: true,
-        tenant: activated.alreadyProcessed ? undefined : activated.tenant,
+    if (!isFlexPayCardConfigured()) {
+      return res.status(503).json({
+        error: 'Paiements FlexPay non configurés.',
+        canRetry: true,
       });
     }
 

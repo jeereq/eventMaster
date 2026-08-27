@@ -4,18 +4,15 @@ import {
   createFlexPayCardCheckout,
   createFlexPayMobileCheckout,
   getPublicApiBaseUrl,
-  isFlexPayCardMock,
+  assertFlexPayConfigured,
 } from './flexPayCardService';
-import {
-  activateSubscriptionRequest,
-  computeSubscriptionCheckoutAmount,
-} from './subscriptionActivationService';
+import { computeSubscriptionCheckoutAmount } from './subscriptionActivationService';
 
 export type FlexPaySubscriptionMethod = 'card' | 'mobile';
 
 /**
  * Relance / démarre une session FlexPay sur une SubscriptionRequest existante.
- * Met à jour montants, provider, orderNumber ; en mock active immédiatement.
+ * Met à jour montants, provider, orderNumber.
  */
 export async function initiateFlexPaySessionForRequest(params: {
   request: SubscriptionRequest;
@@ -32,6 +29,8 @@ export async function initiateFlexPaySessionForRequest(params: {
   message?: string;
   tenant?: unknown;
 }> {
+  assertFlexPayConfigured();
+
   const { request, tenantName, method, phone } = params;
   const days = request.durationDays;
   const plan = request.requestedPlan as PlanType;
@@ -58,21 +57,6 @@ export async function initiateFlexPaySessionForRequest(params: {
       specialDiscountPercent: null,
     },
   });
-
-  if (isFlexPayCardMock()) {
-    const activated = await activateSubscriptionRequest(request.id, {
-      approvedAmount: amountFc,
-      markPaid: true,
-    });
-    return {
-      paid: true,
-      mock: true,
-      provider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
-      requestId: request.id,
-      message: 'Paiement FlexPay simulé (credentials absents). Forfait activé.',
-      tenant: activated.alreadyProcessed ? undefined : activated.tenant,
-    };
-  }
 
   const apiBase = getPublicApiBaseUrl();
   const callbackUrl = `${apiBase}/api/public/payments/flexpay/callback`;

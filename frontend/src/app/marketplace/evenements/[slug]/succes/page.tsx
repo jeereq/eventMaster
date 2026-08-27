@@ -52,6 +52,19 @@ function SuccessInner() {
     };
   }, [orderId]);
 
+  const retryFlexPay = useCallback(async () => {
+    if (!orderId) return;
+    const data = await api.post(`/public/payments/flexpay/orders/${orderId}/retry`, {
+      paymentMethod: method === 'card' ? 'card' : 'mobile',
+    });
+    if (data.checkoutUrl && typeof window !== 'undefined') {
+      window.location.href = data.checkoutUrl;
+      return;
+    }
+    setPending(true);
+    setError('');
+  }, [orderId, method]);
+
   const pollSession = useCallback(async () => {
     if (!sessionId) return { status: 'error' as const, message: 'Session manquante.' };
     const data = await api.get(`/public/ticket-orders/session/${sessionId}`);
@@ -96,6 +109,7 @@ function SuccessInner() {
                 : 'Nous confirmons votre paiement carte FlexPay…'
             }
             onPoll={orderId && provider === 'flexpay' ? pollFlexPay : pollSession}
+            onRetry={orderId && provider === 'flexpay' ? retryFlexPay : undefined}
             onPaid={() => {
               setPaid(true);
               setPending(false);

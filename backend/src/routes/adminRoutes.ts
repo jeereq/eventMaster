@@ -41,7 +41,12 @@ import {
   rejectSubscriptionRequest 
 } from '../controllers/subscriptionController';
 import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
-import { listAdminSaasPayouts, settleAdminSaasPayout } from '../controllers/saasPayoutController';
+import {
+  initiateAdminSaasFlexPayPayout,
+  listAdminSaasPayouts,
+  settleAdminSaasPayout,
+  verifyAdminSaasFlexPayPayout,
+} from '../controllers/saasPayoutController';
 import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail, markAdminInvoicePaid } from '../controllers/invoiceController';
 import {
   getOpsOverview,
@@ -94,6 +99,12 @@ router.post('/reports/revenue/notify-payouts', notifyRevenuePayouts);
 router.post('/reports/revenue/mark-paid', markRevenuePayoutPaid);
 router.get('/payouts', listAdminSaasPayouts);
 router.patch('/payouts', settleAdminSaasPayout);
+router.post('/payouts/flexpay', requireRole(['SUPER_ADMIN']), initiateAdminSaasFlexPayPayout);
+router.get(
+  '/payouts/flexpay/:transferId/verify',
+  requireRole(['SUPER_ADMIN']),
+  verifyAdminSaasFlexPayPayout,
+);
 
 router.get('/ops-overview', getOpsOverview);
 router.get('/insights', getPlatformInsights);
