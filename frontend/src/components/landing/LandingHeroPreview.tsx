@@ -14,27 +14,35 @@ import {
   Eye,
   ShieldCheck,
   Smartphone,
+  Maximize2,
+  Move,
+  Sun,
+  Moon,
+  Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export type PreviewTab = 'room' | 'rsvp' | 'qr';
+export type LightingTheme = 'gala' | 'romantic' | 'night';
 
 export default function LandingHeroPreview() {
   const [activeTab, setActiveTab] = useState<PreviewTab>('room');
   const [viewMode3D, setViewMode3D] = useState(false);
+  const [lightingTheme, setLightingTheme] = useState<LightingTheme>('gala');
+  const [showGuestNames, setShowGuestNames] = useState(true);
 
   return (
     <div className="relative w-full max-w-lg mx-auto lg:max-w-none">
       {/* Halo festif d'arrière plan */}
       <div
-        className="absolute -inset-2 rounded-3xl bg-gradient-to-tr from-primary/15 via-[color:var(--festive-accent-soft)] to-transparent blur-2xl -z-10 opacity-70 pointer-events-none"
+        className="absolute -inset-3 rounded-3xl bg-gradient-to-tr from-primary/20 via-[color:var(--festive-accent-soft)] to-indigo-500/10 blur-2xl -z-10 opacity-80 pointer-events-none"
         aria-hidden
       />
 
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden transition-all duration-300">
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-[0_12px_36px_-10px_rgba(0,0,0,0.12)] overflow-hidden transition-all duration-300">
         {/* En-tête des onglets d'aperçu */}
-        <div className="flex items-center justify-between border-b border-border bg-surface-muted/60 p-2 gap-1 overflow-x-auto [scrollbar-width:none]">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between border-b border-border bg-surface-muted/70 px-3 py-2 gap-1 overflow-x-auto [scrollbar-width:none]">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setActiveTab('room')}
@@ -46,7 +54,7 @@ export default function LandingHeroPreview() {
               )}
             >
               <LayoutGrid className="w-3.5 h-3.5 text-primary" />
-              <span>Plan de salle 2D/3D</span>
+              <span>Plan de salle 2D / 3D</span>
             </button>
 
             <button
@@ -78,128 +86,305 @@ export default function LandingHeroPreview() {
             </button>
           </div>
 
-          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-medium text-muted px-2 py-0.5 rounded-full bg-background border border-border">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-medium text-muted px-2 py-0.5 rounded-full bg-background border border-border">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            En direct
+            Temps réel
           </span>
         </div>
 
         {/* Contenu dynamique selon l'onglet */}
-        <div className="p-4 sm:p-5 min-h-[340px] flex flex-col justify-between">
+        <div className="p-4 sm:p-5 min-h-[380px] flex flex-col justify-between">
           {activeTab === 'room' && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center justify-between gap-2">
+            <div className="space-y-3.5 animate-fade-in">
+              {/* Barre d'outils de la salle */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-foreground">Grande Salle des Fêtes</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-foreground">Palais des Congrès · Salon Victoria</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">
                       Éditeur complet
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted">Niveau 1 · 12 tables · 48 / 50 placés</p>
+                  <p className="text-[11px] text-muted">
+                    Étage 1 · 48 / 50 placés (96%) · 24m × 16m
+                  </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setViewMode3D(!viewMode3D)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-medium border border-border bg-surface hover:bg-surface-muted transition text-foreground"
-                >
-                  <Eye className="w-3 h-3 text-primary" />
-                  {viewMode3D ? 'Vue Plan 2D' : 'Aperçu Rendu 3D'}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {viewMode3D && (
+                    <div className="flex items-center bg-surface-muted rounded-[var(--radius-button)] p-0.5 border border-border text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setLightingTheme('gala')}
+                        title="Ambiance Gala Or"
+                        className={cn(
+                          'p-1 rounded transition',
+                          lightingTheme === 'gala' ? 'bg-surface text-amber-500 shadow-xs' : 'text-muted hover:text-foreground',
+                        )}
+                      >
+                        <Flame className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLightingTheme('romantic')}
+                        title="Ambiance Romantique"
+                        className={cn(
+                          'p-1 rounded transition',
+                          lightingTheme === 'romantic' ? 'bg-surface text-rose-500 shadow-xs' : 'text-muted hover:text-foreground',
+                        )}
+                      >
+                        <Sun className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLightingTheme('night')}
+                        title="Ambiance Nocturne & Spotlights"
+                        className={cn(
+                          'p-1 rounded transition',
+                          lightingTheme === 'night' ? 'bg-surface text-indigo-400 shadow-xs' : 'text-muted hover:text-foreground',
+                        )}
+                      >
+                        <Moon className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode3D(!viewMode3D)}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition shadow-xs',
+                      viewMode3D
+                        ? 'bg-primary text-white border-primary hover:bg-primary-hover'
+                        : 'bg-surface hover:bg-surface-muted text-foreground border-border',
+                    )}
+                  >
+                    <Eye className="w-3 h-3" />
+                    {viewMode3D ? 'Vue Rendu 3D' : 'Basculer en 3D'}
+                  </button>
+                </div>
               </div>
 
-              {/* Simulation interactive du plan */}
+              {/* CANEVAS DE RENDU 2D / 3D */}
               <div
                 className={cn(
-                  'relative h-56 rounded-xl border border-border overflow-hidden p-3 transition-all duration-500',
+                  'relative h-[255px] rounded-xl border border-border overflow-hidden transition-all duration-500 select-none',
                   viewMode3D
-                    ? 'bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white shadow-inner'
-                    : 'bg-surface-muted/40 grid grid-cols-6 grid-rows-4 gap-2',
+                    ? lightingTheme === 'gala'
+                      ? 'bg-radial-[at_50%_40%] from-amber-950/90 via-slate-950 to-black text-amber-100 shadow-inner'
+                      : lightingTheme === 'romantic'
+                        ? 'bg-radial-[at_50%_40%] from-rose-950/80 via-slate-950 to-black text-rose-100 shadow-inner'
+                        : 'bg-radial-[at_50%_40%] from-indigo-950/90 via-slate-950 to-black text-indigo-100 shadow-inner'
+                    : 'bg-[#fcfbf9] dark:bg-[#15171a] text-foreground',
                 )}
               >
+                {/* ────────────────────────────────────────────────────────── */}
+                {/* MODE RENDU 3D ISOMETRIQUE / AMBIANCE SHOWCASE             */}
+                {/* ────────────────────────────────────────────────────────── */}
                 {viewMode3D ? (
-                  <div className="h-full flex flex-col justify-between p-2">
-                    <div className="flex items-center justify-between text-[10px] text-white/70">
-                      <span className="inline-flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded">
-                        <Sparkles className="w-3 h-3 text-amber-400" />
-                        Ambiance Soirée Gala & Lustres
+                  <div className="h-full w-full relative flex flex-col justify-between p-3 overflow-hidden">
+                    {/* Faisceau lumineux 3D (Spotlights) */}
+                    <div
+                      className={cn(
+                        'absolute inset-0 pointer-events-none opacity-40 mix-blend-screen bg-gradient-to-b',
+                        lightingTheme === 'gala'
+                          ? 'from-amber-400/30 via-transparent to-transparent'
+                          : lightingTheme === 'romantic'
+                            ? 'from-rose-400/30 via-transparent to-transparent'
+                            : 'from-cyan-400/30 via-transparent to-transparent',
+                      )}
+                    />
+
+                    {/* Barre d'état haute 3D */}
+                    <div className="relative z-10 flex items-center justify-between text-[10px] text-white/80">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-amber-300" />
+                        {lightingTheme === 'gala'
+                          ? 'Ambiance Soirée Gala · Chandelles & Lustres'
+                          : lightingTheme === 'romantic'
+                            ? 'Ambiance Poudrée · Lumière Tamisée'
+                            : 'Ambiance Clubbing · Éclairage LED'}
                       </span>
-                      <span>Éclairage tamisé</span>
+                      <span className="bg-black/40 px-2 py-0.5 rounded text-[9px] text-white/70">
+                        Rendu 3D Stéréo 60 FPS
+                      </span>
                     </div>
 
-                    <div className="text-center space-y-1">
-                      <div className="inline-block px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border border-amber-400/40 text-amber-300 font-semibold text-xs shadow-lg">
-                        ✦ Scène d’Honneur & Table d’Honneur ✦
+                    {/* Scène 3D Isométrique centrale */}
+                    <div className="relative z-10 my-auto flex flex-col items-center justify-center">
+                      {/* Estre & Scène d'Honneur surélevée */}
+                      <div
+                        className={cn(
+                          'w-3/4 max-w-[280px] py-1.5 px-3 rounded-lg border flex items-center justify-between text-[10px] font-bold shadow-lg transition-transform duration-300 hover:scale-[1.02]',
+                          lightingTheme === 'gala'
+                            ? 'bg-gradient-to-r from-amber-600/40 via-amber-400/40 to-amber-600/40 border-amber-300/50 text-amber-100 shadow-amber-500/20'
+                            : lightingTheme === 'romantic'
+                              ? 'bg-gradient-to-r from-rose-600/40 via-rose-400/40 to-rose-600/40 border-rose-300/50 text-rose-100 shadow-rose-500/20'
+                              : 'bg-gradient-to-r from-indigo-600/40 via-cyan-400/40 to-indigo-600/40 border-cyan-300/50 text-cyan-100 shadow-cyan-500/20',
+                        )}
+                      >
+                        <span className="flex items-center gap-1 text-[9px]">
+                          ✦ Scène Principale & Pupitre
+                        </span>
+                        <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded uppercase font-semibold tracking-wider">
+                          Niveau +0.6m
+                        </span>
                       </div>
-                      <div className="flex justify-center gap-3 pt-2">
-                        <div className="w-12 h-12 rounded-full border-2 border-primary/60 bg-primary/20 flex items-center justify-center text-[9px] font-bold text-white shadow-md">
-                          VIP 1
+
+                      {/* Tables d'Honneur et Tables Rondes 3D */}
+                      <div className="grid grid-cols-3 gap-5 sm:gap-8 pt-3 items-center">
+                        {/* Table 1 */}
+                        <div className="relative group cursor-pointer flex flex-col items-center">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-amber-300/60 bg-gradient-to-b from-amber-100/30 to-amber-950/60 shadow-[0_8px_16px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center backdrop-blur-xs transition-transform duration-200 group-hover:scale-105">
+                            <span className="text-[9px] font-bold text-white leading-none">VIP 1</span>
+                            <span className="text-[7px] text-amber-300 font-medium mt-0.5">8 placés</span>
+                          </div>
+                          {/* Chaises autour */}
+                          <div className="absolute -inset-1 border border-dashed border-amber-300/30 rounded-full pointer-events-none" />
                         </div>
-                        <div className="w-12 h-12 rounded-full border-2 border-amber-400/60 bg-amber-500/20 flex items-center justify-center text-[9px] font-bold text-white shadow-md">
-                          Mariés
+
+                        {/* Table Centrale Mariés / Présidence */}
+                        <div className="relative group cursor-pointer flex flex-col items-center">
+                          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-white/80 bg-gradient-to-b from-white/40 to-amber-900/80 shadow-[0_10px_20px_rgba(0,0,0,0.6)] flex flex-col items-center justify-center text-center ring-2 ring-amber-400/50 transition-transform duration-200 group-hover:scale-105">
+                            <span className="text-[10px] font-black text-amber-200 leading-none">MARIÉS</span>
+                            <span className="text-[8px] text-white/90 font-semibold mt-0.5">Table d’Honneur</span>
+                          </div>
+                          <div className="absolute -inset-1.5 border border-amber-400/40 rounded-full animate-spin-slow pointer-events-none" />
                         </div>
-                        <div className="w-12 h-12 rounded-full border-2 border-primary/60 bg-primary/20 flex items-center justify-center text-[9px] font-bold text-white shadow-md">
-                          VIP 2
+
+                        {/* Table 3 */}
+                        <div className="relative group cursor-pointer flex flex-col items-center">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-amber-300/60 bg-gradient-to-b from-amber-100/30 to-amber-950/60 shadow-[0_8px_16px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center backdrop-blur-xs transition-transform duration-200 group-hover:scale-105">
+                            <span className="text-[9px] font-bold text-white leading-none">VIP 2</span>
+                            <span className="text-[7px] text-amber-300 font-medium mt-0.5">8 placés</span>
+                          </div>
+                          <div className="absolute -inset-1 border border-dashed border-amber-300/30 rounded-full pointer-events-none" />
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-white/60 pt-1 border-t border-white/10">
-                      <span>Piste de danse centrale</span>
-                      <span>Capacité maximale : 100 %</span>
+                    {/* Pied de scène 3D */}
+                    <div className="relative z-10 flex items-center justify-between text-[10px] text-white/60 pt-1 border-t border-white/10">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Piste de danse centrale & tapis d’honneur
+                      </span>
+                      <span className="text-amber-200/90 font-medium">Vue animée 3D active</span>
                     </div>
                   </div>
                 ) : (
-                  <>
+                  /* ────────────────────────────────────────────────────────── */
+                  /* MODE RENDU 2D PLAN ARCHITECTURAL & PLACEMENT               */
+                  /* ────────────────────────────────────────────────────────── */
+                  <div className="h-full w-full relative p-2.5 flex flex-col justify-between">
+                    {/* Trame de fond millimétrée blueprint */}
+                    <div
+                      className="absolute inset-0 pointer-events-none opacity-40 bg-[linear-gradient(to_right,#0000000a_1px,transparent_1px),linear-gradient(to_bottom,#0000000a_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:14px_14px]"
+                    />
+
                     {/* Scène en haut */}
-                    <div className="col-span-6 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between px-3 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
-                      <span className="flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> Scène Principale & DJ
+                    <div className="relative z-10 mx-auto w-4/5 h-8 rounded-lg border border-amber-500/40 bg-amber-500/10 flex items-center justify-between px-3 text-[10px] font-bold text-amber-800 dark:text-amber-300 shadow-xs">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-amber-500" />
+                        Estre d’Honneur & Scène DJ (8m × 3m)
                       </span>
-                      <span className="text-[9px] font-normal text-muted">Étage 1</span>
+                      <span className="text-[9px] font-semibold text-muted bg-surface/80 dark:bg-background/80 px-1.5 py-0.5 rounded border border-border">
+                        Niveau 1
+                      </span>
                     </div>
 
-                    {/* Tables rondes */}
-                    <div className="col-span-2 row-span-2 rounded-full border-2 border-primary/30 bg-primary/5 flex flex-col items-center justify-center p-1 text-center hover:border-primary transition cursor-pointer">
-                      <span className="text-[10px] font-bold text-primary">Table 1</span>
-                      <span className="text-[9px] text-muted">8 / 8 placés</span>
+                    {/* Grille des Tables avec Chaises disposées */}
+                    <div className="relative z-10 grid grid-cols-4 gap-2.5 my-auto px-1 items-center">
+                      {/* Table Ronde 1 */}
+                      <div className="relative flex flex-col items-center justify-center p-1 rounded-xl bg-surface dark:bg-surface/50 border border-primary/30 shadow-xs hover:border-primary transition group cursor-pointer">
+                        {/* 4 Chaises satellites */}
+                        <span className="absolute -top-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+                        <span className="absolute -bottom-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+                        <span className="absolute -left-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+                        <span className="absolute -right-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+
+                        <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex flex-col items-center justify-center text-center">
+                          <span className="text-[9px] font-bold text-primary leading-none">T1</span>
+                          <span className="text-[7px] text-muted">8 pl.</span>
+                        </div>
+                        <span className="text-[8px] font-bold text-foreground mt-0.5 truncate max-w-[55px]">
+                          Orchidée
+                        </span>
+                      </div>
+
+                      {/* Table Ronde 2 (Table d'Honneur) */}
+                      <div className="relative flex flex-col items-center justify-center p-1 rounded-xl bg-[color:var(--festive-accent-soft)] border border-[color:var(--festive-accent)] shadow-xs hover:scale-105 transition cursor-pointer">
+                        <span className="absolute -top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-600" />
+                        <span className="absolute -bottom-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-600" />
+                        <span className="absolute -left-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-600" />
+                        <span className="absolute -right-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-600" />
+
+                        <div className="w-11 h-11 rounded-full bg-amber-500/20 border border-amber-500 flex flex-col items-center justify-center text-center">
+                          <span className="text-[10px] font-black text-amber-700 dark:text-amber-300 leading-none">
+                            HONNEUR
+                          </span>
+                          <span className="text-[7px] font-bold text-amber-800 dark:text-amber-200">10 / 10</span>
+                        </div>
+                        <span className="text-[8px] font-black text-amber-800 dark:text-amber-300 mt-0.5">
+                          Mariés
+                        </span>
+                      </div>
+
+                      {/* Piste de danse centrale */}
+                      <div className="h-14 rounded-lg border border-dashed border-border bg-surface-muted/50 flex flex-col items-center justify-center text-center p-1">
+                        <span className="text-[8px] font-bold text-foreground uppercase tracking-wider">
+                          Piste
+                        </span>
+                        <span className="text-[7px] text-muted">Centrale</span>
+                      </div>
+
+                      {/* Table Ronde 3 */}
+                      <div className="relative flex flex-col items-center justify-center p-1 rounded-xl bg-surface dark:bg-surface/50 border border-primary/30 shadow-xs hover:border-primary transition group cursor-pointer">
+                        <span className="absolute -top-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+                        <span className="absolute -bottom-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+                        <span className="absolute -left-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+                        <span className="absolute -right-1 w-2 h-2 rounded-full bg-primary/40 border border-primary/60" />
+
+                        <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex flex-col items-center justify-center text-center">
+                          <span className="text-[9px] font-bold text-primary leading-none">T2</span>
+                          <span className="text-[7px] text-muted">8 pl.</span>
+                        </div>
+                        <span className="text-[8px] font-bold text-foreground mt-0.5 truncate max-w-[55px]">
+                          Jasmin
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="col-span-2 row-span-2 rounded-lg border border-dashed border-border bg-surface flex flex-col items-center justify-center p-1 text-center">
-                      <span className="text-[9px] font-medium text-foreground">Piste de Danse</span>
-                      <span className="text-[8px] text-muted">Centrale</span>
+                    {/* Zone basse : Buffet, Bar et Entrée Protocole QR */}
+                    <div className="relative z-10 grid grid-cols-12 gap-2 text-[9px] pt-1">
+                      <div className="col-span-4 h-6 rounded bg-surface border border-border flex items-center justify-center font-medium text-muted">
+                        Buffet Traiteur (6m)
+                      </div>
+                      <div className="col-span-3 h-6 rounded bg-surface border border-border flex items-center justify-center font-medium text-muted">
+                        Bar & Vins
+                      </div>
+                      <div className="col-span-5 h-6 rounded bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-700 dark:text-emerald-300">
+                        🚪 Entrée & Scan QR
+                      </div>
                     </div>
-
-                    <div className="col-span-2 row-span-2 rounded-full border-2 border-primary/30 bg-primary/5 flex flex-col items-center justify-center p-1 text-center hover:border-primary transition cursor-pointer">
-                      <span className="text-[10px] font-bold text-primary">Table 2</span>
-                      <span className="text-[9px] text-muted">8 / 8 placés</span>
-                    </div>
-
-                    {/* Buffet et entrée */}
-                    <div className="col-span-3 bg-surface border border-border rounded-md flex items-center justify-center text-[9px] font-medium text-muted">
-                      Buffet Gastronomique
-                    </div>
-                    <div className="col-span-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md flex items-center justify-center text-[9px] font-medium text-emerald-700 dark:text-emerald-400">
-                      Entrée & Accueil QR
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between text-[11px] text-muted pt-1">
+              {/* Barre de statut et fonctionnalités sous le plan */}
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-muted pt-0.5">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-primary" /> Tables rondes
+                    <span className="w-2 h-2 rounded-full bg-primary" /> Tables & Chaises
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" /> Scénographie
+                    <span className="w-2 h-2 rounded-full bg-amber-500" /> Scène d’Honneur
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Portes & QR
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Accueil Protocole
                   </span>
                 </div>
-                <span className="font-semibold text-foreground">Glissez-déposez vos invités</span>
+                <span className="font-semibold text-foreground">Édition en temps réel</span>
               </div>
             </div>
           )}
