@@ -73,7 +73,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     sectionId: 'parcours',
     exploreCta: { href: '#parcours', label: 'Voir les étapes' },
     cta: { href: '/register', label: 'Créer mon événement (Gratuit)' },
-    registerHint: 'Compte organisateur. Forfait selon le nombre d’invités.',
+    registerHint: 'Compte particulier. Éditeur 2D/3D complet inclus, selon le nombre d’invités.',
     results: [
       { icon: Shirt, label: 'Infos invités' },
       { icon: Mail, label: 'RSVP' },
@@ -133,7 +133,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     sectionId: 'parcours',
     exploreCta: { href: '#parcours', label: 'Voir les étapes' },
     cta: { href: '/register', label: 'Ouvrir mon espace pro' },
-    registerHint: 'Compte organisateur. Forfaits Business, Premium ou Enterprise.',
+    registerHint: 'Compte organisateur B2B. Forfaits Essentiel, Business, Premium ou Enterprise.',
     results: [
       { icon: Users, label: 'Équipe' },
       { icon: Building2, label: 'Salles' },
@@ -146,7 +146,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       {
         title: 'Créer l’organisation',
         description: 'Un espace pour tous vos événements, avec quotas selon le forfait.',
-        detail: 'Essentials pour démarrer, Business / Premium / Enterprise pour le volume, l’éditeur et le réseau commercial.',
+        detail: 'Essentiel pour démarrer, Business / Premium / Enterprise pour le volume d’invités, l’éditeur avancé ou complet et le protocole d’accueil.',
         outcome: 'Tableau de bord prêt pour plusieurs événements.',
         icon: CalendarCheck,
       },
@@ -246,7 +246,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     sectionId: 'tarifs',
     exploreCta: { href: '#tarifs', label: 'Voir les tarifs' },
     cta: { href: '/register?kind=VENDOR', label: 'Développer mon activité' },
-    registerHint: 'Compte prestataire. Forfaits Salle, Prestataire, ou les deux.',
+    registerHint: 'Compte marketplace. Forfaits Salle (salles illimitées), Prestataire (prestas illimitées) ou Salle & presta.',
     results: [
       { icon: Building2, label: 'Fiche publique' },
       { icon: MessageSquare, label: 'Devis' },
@@ -259,7 +259,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       {
         title: 'Publier',
         description: 'Photos, tarif, ville, GPS. Salle, métier ou location.',
-        detail: 'Dès l’abonnement payé, les fiches sont illimitées. Distinguez métier (traiteur, DJ) et location (habits, véhicules, matériel).',
+        detail: 'Dès l’abonnement payé, vos salles et/ou prestations sont illimitées selon le forfait choisi. Éditeur 2D/3D complet inclus pour les salles.',
         outcome: 'Vos offres sont visibles et filtrables.',
         icon: Briefcase,
       },

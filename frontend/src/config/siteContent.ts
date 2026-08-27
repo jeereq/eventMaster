@@ -63,7 +63,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'placement-delivery',
     question: 'Quand l\'invité reçoit-il son plan de table, PDF et localisation GPS ?',
     answer:
-      'Le premier message (e-mail ou WhatsApp) contient seulement le lien pour répondre. Le PDF, le plan de table et le pin GPS partent dès que l’invité dit oui ET qu’une place lui est attribuée — pas avant. Automatique à partir de Premium 1.',
+      'Le premier message (e-mail ou WhatsApp) contient seulement le lien pour répondre. Le PDF, le plan de table et le pin GPS partent dès que l’invité dit oui ET qu’une place lui est attribuée — pas avant. Inclus sur tous les forfaits particuliers et organisations.',
   },
   {
     id: 'public-events',
@@ -135,13 +135,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'protocol-qr',
     question: 'Comment fonctionne le protocole QR ?',
     answer:
-      'Chaque invité qui dit oui reçoit un badge QR. Le jour J, vous le scannez à l’entrée depuis le navigateur du téléphone. Présence enregistrée, siège validé. Pas d’app à installer. Disponible à partir du forfait Business.',
+      'Chaque invité qui dit oui reçoit un badge QR. Le jour J, vous le scannez à l’entrée depuis le navigateur du téléphone. Présence enregistrée, siège validé. Pas d’app à installer. Inclus sur tous les forfaits particuliers et organisations.',
   },
   {
     id: 'roles',
     question: 'Puis-je ajouter des managers ou du personnel protocole ?',
     answer:
-      'Oui. Le propriétaire peut inviter des managers, du personnel protocole, des responsables de salle ou d’événement, et — selon le forfait — des commerciaux organisation. Chaque rôle n’accède qu’aux ressources autorisées. Un manager salle employé d’une organisation n’est pas le forfait Salle du marketplace.',
+      'Oui. Le propriétaire peut inviter des managers, du personnel protocole, et des responsables de salle ou d’événement selon les quotas du forfait. Chaque rôle n’accède qu’aux ressources autorisées. Un manager salle interne à une organisation est distinct du forfait Salle du marketplace.',
   },
   {
     id: 'upgrade',

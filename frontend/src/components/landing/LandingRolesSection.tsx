@@ -45,7 +45,7 @@ export default function LandingRolesSection() {
                   ['Manager salle', 'Événements de la salle', 'Non'],
                   ['Protocole événement', 'Invités de l\'événement', 'Non'],
                   ['Client marketplace', 'Favoris, packs & résa.', 'Non'],
-                  ['Commercial', 'Parrainage', 'N/A'],
+                  ['Commercial plateforme', 'Parrainage d\'organisations', 'N/A'],
                 ].map(([role, scope, create]) => (
                   <div key={role} className="grid grid-cols-3 border-b border-border last:border-0 bg-surface">
                     <div className="p-3 font-medium text-foreground">{role}</div>

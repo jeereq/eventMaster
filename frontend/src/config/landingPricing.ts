@@ -599,7 +599,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Salles & plans',
-    label: 'Éditeur de salle 2D',
+    label: 'Éditeur de salle 2D / 3D',
     values: {
       FREE: 'Basique',
       ...b2cSame('Complet'),
@@ -616,13 +616,115 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Salles & plans',
-    label: 'Thèmes & fixtures (scène, fleurs…)',
+    label: 'Formes de tables & agencements',
+    values: {
+      FREE: '2 formes',
+      ...b2cSame('Toutes formes'),
+      STANDARD: '4 formes + grille',
+      PREMIUM_1: 'Toutes formes',
+      PREMIUM_2: 'Toutes formes',
+      ENTERPRISE_1: 'Toutes formes',
+      ENTERPRISE_2: 'Toutes formes',
+      ENTERPRISE_3: 'Toutes formes',
+      VENUE: 'Toutes formes',
+      SERVICE: '—',
+      CATALOG: 'Toutes formes',
+    },
+  },
+  {
+    category: 'Salles & plans',
+    label: 'Thèmes d’ambiance & éclairage (12 presets)',
     values: {
       FREE: false,
       ...b2cSame(true),
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
+    },
+  },
+  {
+    category: 'Salles & plans',
+    label: 'Scénographie & décors (scène, buffet, VIP, fleurs)',
+    values: {
+      FREE: false,
+      ...b2cSame(true),
+      STANDARD: false,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
+    },
+  },
+  {
+    category: 'Salles & plans',
+    label: 'Escaliers & balcons (liaisons multi-niveaux)',
+    values: {
+      FREE: false,
+      ...b2cSame(true),
+      STANDARD: false,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
+    },
+  },
+  {
+    category: 'Salles & plans',
+    label: 'Bâtiments multi-étages (Duplex, Villa, Chapiteau)',
+    values: {
+      FREE: true,
+      ...b2cSame(true),
+      STANDARD: true,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
+    },
+  },
+  {
+    category: 'Salles & plans',
+    label: 'Rendu 3D showcase & vue animée',
+    values: {
+      FREE: false,
+      ...b2cSame(true),
+      STANDARD: false,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
+    },
+  },
+  {
+    category: 'Salles & plans',
+    label: 'Thèmes personnalisés & images sur-mesure',
+    values: {
+      FREE: false,
+      ...b2cSame(true),
+      STANDARD: false,
+      PREMIUM_1: false,
+      PREMIUM_2: false,
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
@@ -770,9 +872,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
-      VENUE: true,
+      VENUE: false,
       SERVICE: false,
-      CATALOG: true,
+      CATALOG: false,
     },
   },
   {
@@ -787,9 +889,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
-      VENUE: true,
+      VENUE: false,
       SERVICE: false,
-      CATALOG: true,
+      CATALOG: false,
     },
   },
   {
@@ -804,11 +906,14 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: false,
+      SERVICE: false,
+      CATALOG: false,
     },
   },
   {
     category: 'Invités',
-    label: 'WhatsApp / E-mail',
+    label: 'Envoi invitations (WhatsApp & E-mail)',
     values: {
       FREE: true,
       ...b2cSame(true),
@@ -818,23 +923,6 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
-      VENUE: true,
-      SERVICE: true,
-      CATALOG: true,
-    },
-  },
-  {
-    category: 'Commercial',
-    label: 'Réseau commercial & commissions 30 %',
-    values: {
-      FREE: false,
-      ...b2cSame(false),
-      STANDARD: false,
-      PREMIUM_1: false,
-      PREMIUM_2: false,
-      ENTERPRISE_1: false,
-      ENTERPRISE_2: false,
-      ENTERPRISE_3: false,
       VENUE: false,
       SERVICE: false,
       CATALOG: false,
@@ -852,6 +940,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: false,
+      SERVICE: false,
+      CATALOG: false,
     },
   },
   {
@@ -966,23 +1057,43 @@ export interface PlanCapabilityBadge {
 
 export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   const badges: PlanCapabilityBadge[] = [];
+
+  if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
+  if (B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'b2c', label: 'Particulier', tone: 'amber' });
+  if (planId === 'VENUE') badges.push({ id: 'venue', label: 'Salles illimitées', tone: 'emerald' });
+  if (planId === 'SERVICE') badges.push({ id: 'service', label: 'Prestas illimitées', tone: 'indigo' });
+  if (planId === 'CATALOG') badges.push({ id: 'catalog', label: 'Salles & prestas ∞', tone: 'violet' });
+
+  if (
+    [
+      'PERSONAL_50',
+      'PERSONAL_100',
+      'PERSONAL_200',
+      'PERSONAL_PLUS',
+      'ENTERPRISE_1',
+      'ENTERPRISE_2',
+      'ENTERPRISE_3',
+      'VENUE',
+      'CATALOG',
+    ].includes(planId)
+  ) {
+    badges.push({ id: 'editorComplete', label: 'Éditeur complet', tone: 'indigo' });
+  } else if (['PREMIUM_1', 'PREMIUM_2'].includes(planId)) {
+    badges.push({ id: 'editorAdvanced', label: 'Éditeur avancé', tone: 'indigo' });
+  } else if (planId === 'STANDARD') {
+    badges.push({ id: 'editorStandard', label: 'Éditeur Business', tone: 'indigo' });
+  }
+
   const custom = FEATURE_COMPARISON.find((r) => r.label === 'Modèles personnalisés')?.values[planId];
   const mockup = FEATURE_COMPARISON.find((r) => r.label === 'Import maquette (image + palette)')?.values[planId];
   const ocr = FEATURE_COMPARISON.find((r) => r.label === 'OCR texte sur maquette')?.values[planId];
-  const commercial = FEATURE_COMPARISON.find((r) => r.label === 'Réseau commercial & commissions 30 %')?.values[planId];
   const rsvpAnalytics = FEATURE_COMPARISON.find((r) => r.label === 'Formulaires RSVP analytiques (export CSV)')?.values[planId];
 
-  if (custom) badges.push({ id: 'custom', label: 'Éditeur visuel', tone: 'indigo' });
-  if (mockup) badges.push({ id: 'mockup', label: 'Import maquette', tone: 'violet' });
-  if (ocr) badges.push({ id: 'ocr', label: 'OCR maquette', tone: 'violet' });
-  if (rsvpAnalytics) badges.push({ id: 'rsvp', label: 'RSVP analytique', tone: 'emerald' });
-  if (commercial) badges.push({ id: 'commercial', label: 'Réseau commercial', tone: 'amber' });
-  if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
-  if (B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'b2c', label: 'Particulier B2C', tone: 'amber' });
-  if (planId === 'VENUE') badges.push({ id: 'venue', label: 'Gestionnaire de salles', tone: 'emerald' });
-  if (planId === 'SERVICE') badges.push({ id: 'service', label: 'Prestataire', tone: 'indigo' });
-  if (planId === 'CATALOG') badges.push({ id: 'catalog', label: 'Salles & prestas', tone: 'violet' });
-  if (planId.startsWith('ENTERPRISE_3')) badges.push({ id: 'unlimited', label: 'Illimité', tone: 'rose' });
+  if (custom && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'custom', label: 'Modèles custom', tone: 'violet' });
+  if (mockup && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'mockup', label: 'Import maquette', tone: 'violet' });
+  if (ocr && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'ocr', label: 'OCR maquette', tone: 'violet' });
+  if (rsvpAnalytics && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'rsvp', label: 'RSVP analytique', tone: 'emerald' });
+  if (planId.startsWith('ENTERPRISE_3')) badges.push({ id: 'unlimited', label: 'Volume illimité', tone: 'rose' });
 
   return badges;
 }

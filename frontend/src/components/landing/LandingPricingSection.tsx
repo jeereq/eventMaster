@@ -159,44 +159,44 @@ export default function LandingPricingSection({
  );
 
  const tiers: Array<{ label: string; ids: PlanId[]; description?: string }> =
- audience === 'B2C'
-  ? [
-      {
-        label: 'Particuliers',
-        ids: [...B2C_PLAN_IDS],
-        description: 'La tranquillité absolue pour votre événement, facturation sur 90 jours ou annuel (−10 %).',
-      },
-    ]
-  : audience === 'VENDOR'
-  ? [
-      {
-        label: 'Essai marketplace',
-        ids: ['FREE'],
-        description: '1 salle simple et 1 prestation pour tester la publication',
-      },
-      {
-        label: 'Salles & prestataires',
-        ids: [...VENDOR_PLAN_IDS],
-        description: 'Forfaits adaptés aux gestionnaires de salles et aux prestataires — pas un abonnement organisateur',
-      },
-    ]
-  : [
-      {
-        label: 'Agences & Pros',
-        ids: ['FREE', 'STANDARD'],
-        description: 'Pour maîtriser vos premiers événements clients avec professionnalisme',
-      },
-      {
-        label: 'Business Premium',
-        ids: ['PREMIUM_1', 'PREMIUM_2'],
-        description: 'Éditeur visuel, import de maquette 2D, statistiques pointues sur les invités',
-      },
-      {
-        label: 'Business Enterprise',
-        ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
-        description: 'Contrôle total pour les agences à fort volume, avec réseau commercial et suivi dédié',
-      },
-    ];
+    audience === 'B2C'
+      ? [
+          {
+            label: 'Particuliers',
+            ids: [...B2C_PLAN_IDS],
+            description: 'La tranquillité absolue pour votre fête avec éditeur 2D/3D complet inclus, facturation sur 90 jours ou annuel (−10 %).',
+          },
+        ]
+      : audience === 'VENDOR'
+        ? [
+            {
+              label: 'Essai gratuit',
+              ids: ['FREE'],
+              description: '1 salle simple et 1 prestation pour tester la publication sans engagement',
+            },
+            {
+              label: 'Salles & prestataires',
+              ids: [...VENDOR_PLAN_IDS],
+              description: 'Salles ou prestations illimitées avec éditeur complet — pas de frais d’organisation événement',
+            },
+          ]
+        : [
+            {
+              label: 'Essentiel & Business',
+              ids: ['FREE', 'STANDARD'],
+              description: 'Démarrage gratuit ou 150 invités avec protocole QR et éditeur Business',
+            },
+            {
+              label: 'Premium & Premium Plus',
+              ids: ['PREMIUM_1', 'PREMIUM_2'],
+              description: 'Éditeur avancé (thèmes, scènes, escaliers), modèles sur-mesure, OCR maquette et protocole',
+            },
+            {
+              label: 'Enterprise',
+              ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
+              description: 'Volume élevé, éditeur complet, multi-salles, rapports et accompagnement dédié',
+            },
+          ];
 
  const comparisonIds: PlanId[] =
  audience === 'B2C'
@@ -481,9 +481,9 @@ export default function LandingPricingSection({
  <span className="font-bold text-foreground dark:text-foreground text-sm block">
  Comparer tous les forfaits EventMaster
  </span>
- <span className="text-xs text-muted mt-0.5 block">
- Modèles custom, OCR, RSVP analytique, protocole, commercial…
- </span>
+                <span className="text-xs text-muted mt-0.5 block">
+                  Éditeur 2D/3D détaillé, modèles custom, OCR, protocole QR, multi-étages…
+                </span>
  </div>
  {showComparison ? (
  <ChevronUp className="w-5 h-5 text-muted shrink-0" />
