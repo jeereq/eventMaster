@@ -4,7 +4,7 @@ import {
   createAndSendInvoice,
   getPlanAmount,
 } from './invoiceService';
-import { getPlanLimits, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount, YEAR_DURATION_DAYS, ANNUAL_DISCOUNT_PERCENT, type TenantBillingCycleKey } from '../config/plansConfig';
+import { resolveDurationDaysForPlan, resolveDefaultSubscriptionDiscountOptions, YEAR_DURATION_DAYS, type TenantBillingCycleKey } from '../config/plansConfig';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from './commercialService';
 import type { CommercialBillingEvent } from './platformNotificationService';
 
@@ -76,20 +76,16 @@ export async function issueTenantPlanInvoice(params: {
     })();
 
   const baseAmount = getPlanAmount(params.plan, durationDays);
-  const planDef = getPlanLimits(params.plan);
   let approvedAmount = params.billing.approvedAmount;
   let discountPercent = params.billing.discountPercent;
 
   const hasExplicitDiscount =
-    (discountPercent !== undefined && discountPercent > 0) ||
-    approvedAmount !== undefined;
+    discountPercent !== undefined || approvedAmount !== undefined;
 
-  if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-    approvedAmount = resolveDefaultPromoApprovedAmount(
-      params.plan,
-      durationDays,
-      planDef.promoMonthlyPriceFc,
-    );
+  if (!hasExplicitDiscount) {
+    const defaults = resolveDefaultSubscriptionDiscountOptions(params.plan, durationDays);
+    if (defaults.approvedAmount !== undefined) approvedAmount = defaults.approvedAmount;
+    if (defaults.discountPercent !== undefined) discountPercent = defaults.discountPercent;
   }
 
   const pricing = computeApprovedAmount(baseAmount, {
@@ -153,9 +149,9 @@ export async function issueTenantPlanInvoice(params: {
 export function resolveRenewalTerms(plan: PlanType, billingCycle?: TenantBillingCycleKey | null) {
   const durationDays =
     billingCycle === 'ANNUAL' ? YEAR_DURATION_DAYS : resolveDurationDaysForPlan(plan);
-  const discountPercent = billingCycle === 'ANNUAL' ? ANNUAL_DISCOUNT_PERCENT : 0;
   const baseAmount = getPlanAmount(plan, durationDays);
-  const pricing = computeApprovedAmount(baseAmount, { discountPercent });
+  const defaults = resolveDefaultSubscriptionDiscountOptions(plan, durationDays);
+  const pricing = computeApprovedAmount(baseAmount, defaults);
   return { durationDays, ...pricing };
 }
 

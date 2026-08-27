@@ -1,7 +1,7 @@
 import { InvoiceType, PlanType } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
-import { getPlanLimits, getEffectiveMonthlyPriceFc, getPlanBaseAmount, periodAmountToInvoiceBase, ANNUAL_DISCOUNT_PERCENT, isAnnualDurationDays } from '../config/plansConfig';
+import { getPlanLimits, getEffectiveMonthlyPriceFc, getPlanBaseAmount, periodAmountToInvoiceBase, resolveDefaultSubscriptionDiscountOptions } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
 import { sendRealEmail } from './notificationService';
 import { notifyTenantOperators, notifyPlatformStaff } from './platformNotificationService';
@@ -400,11 +400,8 @@ export async function sendLicenseExpiryWarning(params: {
   const planDef = getPlanLimits(params.plan);
   const durationDays = params.durationDays ?? undefined;
   const amount = getPlanAmount(params.plan, durationDays);
-  const discountPercent = isAnnualDurationDays(durationDays) ? ANNUAL_DISCOUNT_PERCENT : 0;
-  const payable =
-    discountPercent > 0
-      ? computeApprovedAmount(amount, { discountPercent }).finalAmount
-      : amount;
+  const defaults = resolveDefaultSubscriptionDiscountOptions(params.plan, durationDays);
+  const payable = computeApprovedAmount(amount, defaults).finalAmount;
   const expiryStr = formatFrenchDate(params.expiresAt);
 
   const subject = 'EventMaster - Votre abonnement expire dans 7 jours';

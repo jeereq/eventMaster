@@ -1,10 +1,9 @@
 import { PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import {
-  getPlanLimits,
   isPlanAllowedForAccountKind,
   resolveDurationDaysForPlan,
-  resolveDefaultPromoApprovedAmount,
+  resolveDefaultSubscriptionDiscountOptions,
   billingCycleFromDurationDays,
 } from '../config/plansConfig';
 import {
@@ -53,24 +52,22 @@ export async function activateSubscriptionRequest(
 
   const durationDays = resolveDurationDaysForPlan(request.requestedPlan, request.durationDays);
   const baseAmount = getPlanAmount(request.requestedPlan, durationDays);
-  const planDef = getPlanLimits(request.requestedPlan);
 
   let resolvedApproved = opts?.approvedAmount;
   let resolvedDiscount = opts?.discountPercent;
 
   const hasExplicitDiscount =
-    (resolvedDiscount !== undefined && resolvedDiscount > 0) || resolvedApproved !== undefined;
+    resolvedDiscount !== undefined || resolvedApproved !== undefined;
 
-  if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-    resolvedApproved = resolveDefaultPromoApprovedAmount(
-      request.requestedPlan,
-      durationDays,
-      planDef.promoMonthlyPriceFc,
-    );
-  }
-
+  // Montant déjà figé sur la demande (ex. checkout FlexPay) = source de vérité du débit.
   if (resolvedApproved == null && request.approvedAmount != null) {
     resolvedApproved = request.approvedAmount;
+  }
+
+  if (!hasExplicitDiscount && resolvedApproved == null) {
+    const defaults = resolveDefaultSubscriptionDiscountOptions(request.requestedPlan, durationDays);
+    if (defaults.approvedAmount !== undefined) resolvedApproved = defaults.approvedAmount;
+    if (defaults.discountPercent !== undefined) resolvedDiscount = defaults.discountPercent;
   }
 
   const pricing = computeApprovedAmount(baseAmount, {
@@ -165,11 +162,7 @@ export function computeSubscriptionCheckoutAmount(
   durationDays: number,
 ): { baseAmount: number; amountFc: number } {
   const baseAmount = getPlanAmount(plan, durationDays);
-  const planDef = getPlanLimits(plan);
-  let approved: number | undefined;
-  if (planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-    approved = resolveDefaultPromoApprovedAmount(plan, durationDays, planDef.promoMonthlyPriceFc);
-  }
-  const pricing = computeApprovedAmount(baseAmount, { approvedAmount: approved });
+  const defaults = resolveDefaultSubscriptionDiscountOptions(plan, durationDays);
+  const pricing = computeApprovedAmount(baseAmount, defaults);
   return { baseAmount: pricing.baseAmount, amountFc: pricing.finalAmount };
 }

@@ -664,6 +664,33 @@ export function resolveDefaultPromoApprovedAmount(
   return Math.max(0, Math.round(promoPeriodFc));
 }
 
+/**
+ * Remises par défaut pour checkout / facture / renouvellement :
+ * 1) promo catalogue (période ou annuel = min(promo×N, catalogue annuel −10 %))
+ * 2) sinon annuel → −ANNUAL_DISCOUNT_PERCENT sur la base catalogue
+ * 3) sinon aucune remise
+ */
+export function resolveDefaultSubscriptionDiscountOptions(
+  planKey: string,
+  durationDays?: number | null,
+): { discountPercent?: number; approvedAmount?: number } {
+  if (normalizePlanKey(planKey) === 'FREE') return {};
+  const planDef = getPlanLimits(planKey);
+  if (planDef.promoActive && planDef.promoMonthlyPriceFc != null && planDef.promoMonthlyPriceFc >= 0) {
+    return {
+      approvedAmount: resolveDefaultPromoApprovedAmount(
+        planKey,
+        durationDays,
+        planDef.promoMonthlyPriceFc,
+      ),
+    };
+  }
+  if (isAnnualDurationDays(durationDays)) {
+    return { discountPercent: ANNUAL_DISCOUNT_PERCENT };
+  }
+  return {};
+}
+
 export type TenantBillingCycleKey = 'PERIOD' | 'ANNUAL';
 
 export function billingCycleFromDurationDays(durationDays?: number | null): TenantBillingCycleKey {

@@ -200,15 +200,28 @@ function BillingPageInner() {
   const plans = useMemo(() => {
     return LANDING_PLANS.map((plan) => {
       const db = dynamicPlans?.[plan.id];
+      const promoActive = Boolean(db?.promoActive && db?.promoMonthlyPriceFc != null && plan.id !== 'FREE');
+      const promoFc = promoActive ? Number(db.promoMonthlyPriceFc) : null;
+      const catalogPrice = getPlanDisplayPrice(
+        plan,
+        billingCycle,
+        db?.price,
+        db?.monthlyPriceFc,
+      );
+      const price = getPlanDisplayPrice(
+        plan,
+        billingCycle,
+        db?.price,
+        db?.monthlyPriceFc,
+        promoFc,
+      );
       return {
         ...plan,
         displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
-        price: getPlanDisplayPrice(
-          plan,
-          billingCycle,
-          db?.price,
-          db?.monthlyPriceFc,
-        ),
+        price,
+        catalogPrice: promoActive ? catalogPrice : null,
+        promoActive,
+        promoLabel: (db?.promoLabel as string) || 'Offre promotionnelle',
         description: db?.description || plan.tagline,
       };
     });
@@ -482,6 +495,11 @@ function BillingPageInner() {
                     <h3 className="text-lg font-bold">{plan.displayName}</h3>
                     <p className="text-xs text-muted mt-1">{plan.description}</p>
                     <div className="mt-4 mb-4">
+                      {plan.promoActive && plan.catalogPrice && (
+                        <p className="text-[10px] font-semibold text-amber-700 mb-1">
+                          {plan.promoLabel} · <span className="line-through text-muted">{plan.catalogPrice}</span>
+                        </p>
+                      )}
                       <span className="text-3xl font-extrabold">{plan.price}</span>
                       {plan.id !== 'FREE' && <span className="text-sm text-muted ml-1">{planPricePeriodSuffix(plan.id, billingCycle)}</span>}
                       {billingCycle === 'annual' && plan.id !== 'FREE' && (
@@ -490,7 +508,9 @@ function BillingPageInner() {
                             {isB2cPlanId(plan.id) ? 'Soit le trimestre déjà réduit' : 'Soit le mois déjà réduit'}
                           </p>
                           <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
-                            Facturé {isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup · −{ANNUAL_DISCOUNT_PERCENT} % vs période de base
+                            {plan.promoActive
+                              ? `Facturé ${isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} · meilleur tarif (promo ou −${ANNUAL_DISCOUNT_PERCENT} % annuel)`
+                              : `Facturé ${isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup · −${ANNUAL_DISCOUNT_PERCENT} % vs période de base`}
                           </p>
                         </>
                       )}

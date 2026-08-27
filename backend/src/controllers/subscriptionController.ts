@@ -8,7 +8,7 @@ import {
   commercialReferredTenantFilter,
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
-import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount, billingCycleFromDurationDays } from '../config/plansConfig';
+import { getPlansConfiguration, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan, resolveDefaultSubscriptionDiscountOptions, billingCycleFromDurationDays } from '../config/plansConfig';
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 import { auditReq } from '../services/adminAuditService';
@@ -236,20 +236,16 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
 
     const durationDays = resolveDurationDaysForPlan(request.requestedPlan, request.durationDays);
     const baseAmount = getPlanAmount(request.requestedPlan, durationDays);
-    const planDef = getPlanLimits(request.requestedPlan);
     let resolvedApproved = parsedApproved;
     let resolvedDiscount = parsedDiscount;
 
     const hasExplicitDiscount =
-      (resolvedDiscount !== undefined && resolvedDiscount > 0) ||
-      resolvedApproved !== undefined;
+      resolvedDiscount !== undefined || resolvedApproved !== undefined;
 
-    if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-      resolvedApproved = resolveDefaultPromoApprovedAmount(
-        request.requestedPlan,
-        durationDays,
-        planDef.promoMonthlyPriceFc,
-      );
+    if (!hasExplicitDiscount) {
+      const defaults = resolveDefaultSubscriptionDiscountOptions(request.requestedPlan, durationDays);
+      if (defaults.approvedAmount !== undefined) resolvedApproved = defaults.approvedAmount;
+      if (defaults.discountPercent !== undefined) resolvedDiscount = defaults.discountPercent;
     }
 
     const pricing = computeApprovedAmount(baseAmount, {
