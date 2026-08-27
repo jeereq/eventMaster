@@ -18,7 +18,8 @@ import {
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award,
   Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle,
-  ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp, Download, Clock, Navigation
+  ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp, Download, Clock, Navigation,
+  QrCode, Maximize2
 } from 'lucide-react';
 import {
   type RsvpField,
@@ -182,6 +183,7 @@ export default function RsvpPage() {
   const [guestbookShares, setGuestbookShares] = useState<any[]>([]);
   const [loadingGuestbook, setLoadingGuestbook] = useState(false);
   const [rsvpLocked, setRsvpLocked] = useState(false);
+  const [showFullScreenQr, setShowFullScreenQr] = useState(false);
 
   const guestTabIds = ['badge', 'table', 'route', 'guestbook', 'feed'] as const;
   const goGuestTab = (id: string) => {
@@ -661,15 +663,24 @@ export default function RsvpPage() {
                   </div>
 
                   <div className="px-6 py-6 sm:px-8 flex flex-col items-center gap-4 bg-gradient-to-b from-surface to-surface-muted/40">
-                    <div
-                      className="p-4 bg-white rounded-[1.25rem] border border-border shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
+                    <button
+                      type="button"
+                      onClick={() => setShowFullScreenQr(true)}
+                      className="p-4 bg-white rounded-[1.25rem] border border-border shadow-[0_12px_40px_rgba(15,23,42,0.08)] hover:scale-105 active:scale-95 transition-all group relative cursor-pointer"
+                      title="Toucher pour agrandir en plein écran"
                     >
                       <img
                         src={getGuestQrImageUrl(guest.id, 200)}
                         alt="QR Code Pass"
                         className="w-44 h-44 sm:w-48 sm:h-48"
                       />
-                    </div>
+                      <span className="absolute inset-0 rounded-[1.25rem] bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <span className="bg-slate-900/80 text-white text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-xs">
+                          <Maximize2 className="w-3 h-3" />
+                          Plein écran
+                        </span>
+                      </span>
+                    </button>
                     <div className="text-center space-y-1">
                       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Badge d&apos;entrée</p>
                       <p className="text-[11px] font-mono text-muted tracking-widest">
@@ -1247,6 +1258,93 @@ export default function RsvpPage() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Bouton sticky Pass Express en bas d'écran */}
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-sm px-4">
+          <button
+            type="button"
+            onClick={() => setShowFullScreenQr(true)}
+            className="w-full py-3 px-4 rounded-2xl bg-slate-900 text-white shadow-2xl flex items-center justify-between border border-white/15 active:scale-95 transition-all hover:bg-slate-800 cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow-xs">
+                <QrCode className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold leading-tight">Mon Pass d&apos;entrée QR</p>
+                <p className="text-[11px] text-white/70">
+                  {guest.tableDetails?.tableName
+                    ? `${guest.tableDetails.tableName}${guest.tableDetails.seatIndex != null ? ` • Place ${guest.tableDetails.seatIndex + 1}` : ''}`
+                    : 'Toucher pour afficher le pass'}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white">
+              Plein écran
+            </span>
+          </button>
+        </div>
+
+        {/* Modal QR Code Plein Écran & Contraste Élevé pour le scan d'accueil */}
+        {showFullScreenQr && (
+          <div
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fade-in"
+            onClick={() => setShowFullScreenQr(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setShowFullScreenQr(false)}
+              className="absolute top-5 right-5 p-2.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
+              aria-label="Fermer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div
+              className="bg-white rounded-3xl p-6 sm:p-8 text-center max-w-sm w-full shadow-2xl space-y-4 animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-1">
+                <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                  Pass Invité Jour J
+                </span>
+                <h3 className="text-xl font-bold text-slate-900">
+                  {guest.firstName} {guest.lastName}
+                </h3>
+              </div>
+
+              {guest.tableDetails?.tableName && (
+                <div className="py-2.5 px-4 rounded-xl bg-slate-50 border border-slate-200 text-left">
+                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Placement assigné</p>
+                  <p className="text-base font-extrabold text-slate-900">
+                    {guest.tableDetails.tableName}
+                    {guest.tableDetails.seatIndex != null ? ` • Siège n° ${guest.tableDetails.seatIndex + 1}` : ''}
+                  </p>
+                </div>
+              )}
+
+              <div className="p-4 bg-white border-2 border-slate-900 rounded-2xl inline-block shadow-inner">
+                <img
+                  src={getGuestQrImageUrl(guest.id, 320)}
+                  alt="Pass QR"
+                  className="w-56 h-56 sm:w-64 sm:h-64 object-contain"
+                />
+              </div>
+
+              <p className="text-xs text-slate-500 leading-snug">
+                Présentez ce QR Code directement à l&apos;équipe d&apos;accueil à l&apos;entrée de la salle.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowFullScreenQr(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
+              >
+                Fermer
+              </button>
             </div>
           </div>
         )}

@@ -20,8 +20,9 @@ import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 import { LANDING_SLOGAN } from '@/lib/landingProfiles';
 
 const SIGNUP_FLOWS: Record<
-  TenantAccountKind,
+  string,
   {
+    badge: string;
     title: string;
     description: string;
     features: Array<{
@@ -32,7 +33,30 @@ const SIGNUP_FLOWS: Record<
     }>;
   }
 > = {
+  personal: {
+    badge: 'Fête & Mariage',
+    title: 'Votre fête réussie de A à Z',
+    description:
+      'Créez votre événement, invitez vos proches sur WhatsApp et placez-les sur plan de salle 2D/3D.',
+    features: [
+      { step: 1, icon: Calendar, title: 'Créer la fête', desc: 'Date, lieu et dress code en 1 clic.' },
+      { step: 2, icon: Mail, title: 'Inviter sur WhatsApp', desc: 'Lien direct avec RSVP et choix de repas.' },
+      { step: 3, icon: ScanLine, title: 'Accueillir Jour J', desc: 'Badge QR et plan de table instantanés.' },
+    ],
+  },
+  pro: {
+    badge: 'Pro & Agence',
+    title: 'Billetterie et gestion multi-événements',
+    description:
+      'Vendez vos billets par zone, encaissez par Mobile Money/Carte et coordonnez votre desk protocole.',
+    features: [
+      { step: 1, icon: Wallet, title: 'Billetterie FlexPay', desc: 'Ventes multi-zones en Franc Congolais (CDF).' },
+      { step: 2, icon: LayoutGrid, title: 'Équipe & Salles', desc: 'Gestion des rôles et modélisation de salle.' },
+      { step: 3, icon: ScanLine, title: 'Scan Protocole', desc: 'Contrôle des billets et orientation des invités.' },
+    ],
+  },
   ORGANIZER: {
+    badge: 'Organisateur',
     title: LANDING_SLOGAN.full,
     description:
       'Créez l’événement, invitez, accueillez. Retrouvez la sérénité avec un centre de commande unifié pour toutes vos célébrations.',
@@ -43,26 +67,29 @@ const SIGNUP_FLOWS: Record<
     ],
   },
   CLIENT: {
+    badge: 'Client marketplace',
     title: 'Trouvez la perle rare, tout simplement.',
     description:
-      'Compte gratuit. Cherchez, comparez et demandez un devis sans engagement. L’acompte ({depositPercent} %) se verse directement au professionnel.',
+      'Compte gratuit. Cherchez, comparez et demandez un devis sans engagement.',
     features: [
-      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles, métiers, locations. Trouvez exactement ce qu\'il vous faut.' },
+      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, métiers, locations. Trouvez exactement ce qu\'il vous faut.' },
       { step: 2, icon: Wallet, title: 'Composer', desc: 'Un pack sur mesure. Rien n’est réservé tant que le devis n\'est pas envoyé.' },
-      { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Versez l’acompte ({depositPercent} %) au pro, hors plateforme, et sécurisez votre date.' },
+      { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Versez l’acompte directement au pro et sécurisez votre date.' },
     ],
   },
   VENDOR: {
+    badge: 'Salle & Prestataire',
     title: 'Donnez de la visibilité à votre activité.',
     description:
-      'Publiez votre fiche, recevez des demandes qualifiées et bloquez vos dates. Commission vendeur {commissionPercent} % sur les réservations confirmées.',
+      'Publiez votre fiche 3D, recevez des demandes qualifiées et bloquez vos dates.',
     features: [
-      { step: 1, icon: Store, title: 'Publier', desc: 'Photos, tarif, ville. Une belle vitrine pour vos salles ou vos talents.' },
+      { step: 1, icon: Store, title: 'Publier', desc: 'Photos HD, visite 3D et tarifs pour séduire vos clients.' },
       { step: 2, icon: MessageSquare, title: 'Répondre', desc: 'Recevez les demandes et discutez avec vos futurs clients.' },
-      { step: 3, icon: CalendarCheck, title: 'Bloquer la date', desc: 'Acceptez l\'acompte, confirmez la réservation et préparez l\'événement.' },
+      { step: 3, icon: CalendarCheck, title: 'Bloquer la date', desc: 'Confirmez les réservations et synchronisez vos plannings.' },
     ],
   },
   BOTH: {
+    badge: 'Espace complet',
     title: 'Le meilleur des deux mondes.',
     description:
       'Organisez vos événements et proposez vos propres services. Maîtrisez tout depuis un seul compte.',
@@ -74,8 +101,17 @@ const SIGNUP_FLOWS: Record<
   },
 };
 
-function featuresForKind(kind: TenantAccountKind, site?: Parameters<typeof interpolateRates>[1]) {
-  return SIGNUP_FLOWS[kind].features.map((item) => ({
+function resolveSignupFlowKey(intent: string | null, accountKind: TenantAccountKind, isClientFlow: boolean): string {
+  if (intent === 'personal') return 'personal';
+  if (intent === 'pro') return 'pro';
+  if (intent === 'vendor') return 'VENDOR';
+  if (intent === 'seeker' || isClientFlow) return 'CLIENT';
+  return accountKind in SIGNUP_FLOWS ? accountKind : 'ORGANIZER';
+}
+
+function featuresForFlow(flowKey: string, site?: Parameters<typeof interpolateRates>[1]) {
+  const flow = SIGNUP_FLOWS[flowKey] || SIGNUP_FLOWS.ORGANIZER;
+  return flow.features.map((item) => ({
     ...item,
     desc: interpolateRates(item.desc, site),
   }));
@@ -85,7 +121,7 @@ export default function RegisterPage() {
  return (
  <Suspense
  fallback={
- <AuthSplitLayout badge="Inscription" title="Chargement…" description="" features={featuresForKind('ORGANIZER')} backHref="/" backLabel="Retour au site">
+ <AuthSplitLayout badge="Inscription" title="Chargement…" description="" features={featuresForFlow('ORGANIZER')} backHref="/" backLabel="Retour au site">
  <Card padding="lg" className="shadow-xl animate-pulse h-96">
  <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
  </Card>
@@ -118,19 +154,26 @@ function RegisterPageContent() {
  const [successMessage, setSuccessMessage] = useState('');
  const [loading, setLoading] = useState(false);
  const nextPath = safeAppPath(searchParams.get('next'));
+ const intentParam = searchParams.get('intent');
  const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
 
  useEffect(() => {
- const fromUrl = parseReferralFromSearchParams(searchParams);
- if (fromUrl) {
- setReferralCode(fromUrl);
- setReferralFromLink(true);
- }
- const kind = searchParams.get('kind');
- if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'BOTH' || kind === 'ORGANIZER') {
- setAccountKind(kind);
- }
- }, [searchParams]);
+   const fromUrl = parseReferralFromSearchParams(searchParams);
+   if (fromUrl) {
+     setReferralCode(fromUrl);
+     setReferralFromLink(true);
+   }
+   const kind = searchParams.get('kind');
+   if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'BOTH' || kind === 'ORGANIZER') {
+     setAccountKind(kind);
+   } else if (intentParam === 'vendor') {
+     setAccountKind('VENDOR');
+   } else if (intentParam === 'seeker') {
+     setAccountKind('CLIENT');
+   } else if (intentParam === 'personal' || intentParam === 'pro') {
+     setAccountKind('ORGANIZER');
+   }
+ }, [searchParams, intentParam]);
 
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
@@ -184,14 +227,15 @@ function RegisterPageContent() {
  }
  };
 
- const panel = SIGNUP_FLOWS[isClientFlow ? 'CLIENT' : accountKind];
+ const activeFlowKey = resolveSignupFlowKey(intentParam, accountKind, isClientFlow);
+ const panel = SIGNUP_FLOWS[activeFlowKey] || SIGNUP_FLOWS.ORGANIZER;
 
  return (
  <AuthSplitLayout
- badge="Inscription"
+ badge={panel.badge || 'Inscription'}
  title={panel.title}
  description={interpolateRates(panel.description, site)}
- features={featuresForKind(isClientFlow ? 'CLIENT' : accountKind, site)}
+ features={featuresForFlow(activeFlowKey, site)}
  backHref="/"
  backLabel="Retour au site"
  >

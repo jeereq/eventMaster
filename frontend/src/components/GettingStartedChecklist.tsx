@@ -156,24 +156,16 @@ export default function GettingStartedChecklist({
       : '/dashboard/events';
     return [
       {
-        id: 'guide',
-        title: 'Faire la visite guidée',
-        description: '1 minute pour découvrir le menu et votre première action.',
-        href: '/dashboard/guide?view=tour&start=1',
-        done: Boolean(flow.guideDone),
-        markOnClick: 'guideDone' as const,
-      },
-      {
         id: 'event',
-        title: 'Créer un événement',
-        description: 'Titre, date et lieu suffisent pour commencer.',
+        title: '1. Créer votre événement',
+        description: 'Titre, date et lieu en 1 clic.',
         href: '/dashboard/events',
         done: hasEvents,
       },
       {
         id: 'guests',
-        title: 'Ajouter des invités',
-        description: 'E-mail ou WhatsApp — un contact suffit.',
+        title: '2. Ajouter des invités & placer',
+        description: 'Liste de contacts et disposition des tables.',
         href: guestsHref,
         done: (hasGuests || Boolean(flow.guestsDone)) && hasEvents,
         markOnClick: 'guestsDone' as const,
@@ -181,11 +173,20 @@ export default function GettingStartedChecklist({
       },
       {
         id: 'invite',
-        title: 'Envoyer les invitations',
-        description: 'Rédigez le message, puis diffusez le lien RSVP.',
+        title: '3. Partager les invitations WhatsApp',
+        description: 'Diffusez le lien direct avec confirmation RSVP.',
         href: inviteHref,
         done: (hasInvitations || Boolean(flow.inviteDone)) && hasEvents,
+        markOnClick: 'inviteDone' as const,
         disabled: !hasEvents,
+      },
+      {
+        id: 'guide',
+        title: '4. Découvrir le scan protocole',
+        description: 'Accueil rapide le jour J depuis votre téléphone.',
+        href: '/dashboard/guide?view=tour&start=1',
+        done: Boolean(flow.guideDone),
+        markOnClick: 'guideDone' as const,
       },
     ];
   }, [variant, hasRooms, hasServices, preferServices, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone, flow.templateDone]);
