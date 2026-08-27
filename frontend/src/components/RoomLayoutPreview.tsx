@@ -289,10 +289,16 @@ function FlatShowcasePreview({
           );
         }
         if (item.kind === 'row') {
+          const count = Math.min(item.seatCount, 24);
+          const curveVal = item.curve ?? 0;
+          const half = (count - 1) / 2;
+          const hasAisle = !!item.aisleSplit;
+          const midIdx = Math.floor(count / 2);
+
           return (
             <div
               key={item.id}
-              className="absolute z-[2] flex gap-0.5"
+              className="absolute z-[2] flex items-center justify-center pointer-events-none"
               style={{
                 left: `${item.x}%`,
                 top: `${item.y}%`,
@@ -300,9 +306,23 @@ function FlatShowcasePreview({
                 ...furnitureDepthStyle(item.y, amount),
               }}
             >
-              {Array.from({ length: Math.min(item.seatCount, 12) }).map((_, i) => (
-                <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
-              ))}
+              {Array.from({ length: count }).map((_, i) => {
+                const offset = half > 0 ? (i - half) / half : 0;
+                const arcY = Math.abs(curveVal) * (offset * offset) * 0.4;
+                const chairRot = curveVal * offset * 0.6;
+
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      transform: `translateY(${arcY}px) rotate(${chairRot}deg)`,
+                      marginRight: hasAisle && i === midIdx - 1 ? '14px' : '2px',
+                    }}
+                  >
+                    <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
+                  </div>
+                );
+              })}
             </div>
           );
         }

@@ -25,7 +25,7 @@ export type RoomEditorCapabilities = {
   /** Qualité showcase + mode présentation. */
   canShowcaseRender: boolean;
   tableShapes: TableShape[];
-  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet' | 'stairs' | 'balcony'>;
+  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet' | 'stairs' | 'balcony'>;
 };
 
 const LEVEL_ORDER: RoomEditorLevel[] = ['basic', 'standard', 'advanced', 'complete'];
@@ -79,7 +79,7 @@ export function roomEditorCapabilities(
       canTemplates: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval'] as TableShape[],
       canFixtures: themesFixtures,
-      fixtureKinds: themesFixtures ? ['entrance', 'aisle', 'corridor'] : [],
+      fixtureKinds: themesFixtures ? ['entrance', 'door', 'aisle', 'corridor'] : [],
     } satisfies Partial<RoomEditorCapabilities>);
   } else if (parsed === 'advanced') {
     Object.assign(base, {
@@ -102,7 +102,7 @@ export function roomEditorCapabilities(
       canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'column', 'flower', 'buffet', 'stairs', 'balcony']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   } else if (parsed === 'complete') {
@@ -128,7 +128,7 @@ export function roomEditorCapabilities(
       canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   }

@@ -40,6 +40,14 @@ import {
   seatMaterialLabels,
   zoneKindLabels,
   zoneMaterialLabels,
+  doorStyleLabels,
+  doorStyleHints,
+  aisleStyleLabels,
+  aisleStyleHints,
+  chandelierFixtureStyleLabels,
+  chandelierFixtureStyleHints,
+  amphitheaterStyleLabels,
+  generateAmphitheaterRows,
   createBlueprintChair,
   createBlueprintFixture,
   createBlueprintRow,
@@ -72,6 +80,10 @@ import {
   type ZoneKind,
   type ZoneMaterial,
   type AmbienceApplyScope,
+  type DoorStyle,
+  type AisleStyle,
+  type ChandelierFixtureStyle,
+  type AmphitheaterStyle,
 } from '@/lib/roomLayoutUtils';
 import {
   copyAmbienceShareLink,
@@ -214,11 +226,21 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors'>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
   const [seatsPerRow, setSeatsPerRow] = useState(12);
+  const [amphiStyle, setAmphiStyle] = useState<AmphitheaterStyle>('modernFan');
+  const [amphiTiers, setAmphiTiers] = useState(4);
+  const [amphiSeatsPerRow, setAmphiSeatsPerRow] = useState(12);
+  const [amphiChairType, setAmphiChairType] = useState<ChairType>('THEATER');
+  const [amphiChairStyle, setAmphiChairStyle] = useState<ChairStyle>('napoleon');
+  const [amphiSeatMaterial, setAmphiSeatMaterial] = useState<SeatMaterial>('velvet');
+  const [amphiAisleSplit, setAmphiAisleSplit] = useState(true);
+  const [quickChandelierStyle, setQuickChandelierStyle] = useState<ChandelierFixtureStyle>('crystalCascade');
+  const [quickDoorStyle, setQuickDoorStyle] = useState<DoorStyle>('frenchDoor');
+  const [quickAisleStyle, setQuickAisleStyle] = useState<AisleStyle>('royalRed');
   const [elementsFilter, setElementsFilter] = useState<'all' | LayoutSelectionItem['kind']>('all');
   const [elementsQuery, setElementsQuery] = useState('');
   const [elementsOpen, setElementsOpen] = useState(true);
@@ -606,6 +628,72 @@ export default function RoomLayoutEditor({
     updateBlueprint({ ...blueprint, walls: [] }, { message: 'Tous les murs ont été retirés', kind: 'settings' });
     setSelection([]);
     setWallEditMode(false);
+  };
+
+  const addAmphitheaterQuick = () => {
+    const activeStoryId = resolveActiveStoryId(blueprint);
+    const rows = generateAmphitheaterRows({
+      style: amphiStyle,
+      tierCount: amphiTiers,
+      seatsPerRow: amphiSeatsPerRow,
+      chairType: amphiChairType,
+      chairStyle: amphiChairStyle,
+      seatMaterial: amphiSeatMaterial,
+      aisleSplit: amphiAisleSplit,
+    }).map((r) => ({ ...r, storyId: activeStoryId }));
+
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, ...rows] },
+      { message: `Amphithéâtre ${amphitheaterStyleLabels[amphiStyle]} créé (${rows.length} gradins)`, kind: 'add' },
+    );
+    setQuickCreate(null);
+    setSelection(rows.map((r) => ({ kind: 'row' as const, id: r.id })));
+  };
+
+  const addChandelierFixture = (style: ChandelierFixtureStyle = quickChandelierStyle) => {
+    const fixture = {
+      ...createBlueprintFixture('chandelier'),
+      chandelierStyle: style,
+      label: chandelierFixtureStyleLabels[style],
+      storyId: resolveActiveStoryId(blueprint),
+    };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `Lustre « ${fixture.label} » ajouté`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+    setQuickCreate(null);
+  };
+
+  const addDoorFixture = (style: DoorStyle = quickDoorStyle) => {
+    const isGrand = style === 'grandPortal';
+    const fixture = {
+      ...createBlueprintFixture(isGrand ? 'entrance' : 'door'),
+      doorStyle: style,
+      label: doorStyleLabels[style],
+      storyId: resolveActiveStoryId(blueprint),
+    };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `Porte « ${fixture.label} » ajoutée`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+    setQuickCreate(null);
+  };
+
+  const addAisleCustomStyle = (style: AisleStyle = quickAisleStyle) => {
+    const fixture = {
+      ...createBlueprintFixture('aisle'),
+      aisleStyle: style,
+      label: aisleStyleLabels[style],
+      storyId: resolveActiveStoryId(blueprint),
+    };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `Allée « ${fixture.label} » ajoutée`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+    setQuickCreate(null);
   };
 
   const addFixture = (kind: RoomLayoutBlueprint['fixtures'][number]['kind']) => {
@@ -2650,13 +2738,36 @@ export default function RoomLayoutEditor({
       const isBuffet = selectedFixture.kind === 'buffet';
       const isStairs = selectedFixture.kind === 'stairs';
       const isBalcony = selectedFixture.kind === 'balcony';
-      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs;
+      const isDoor = selectedFixture.kind === 'door' || selectedFixture.kind === 'entrance';
+      const isAisle = selectedFixture.kind === 'aisle' || selectedFixture.kind === 'carpet';
+      const isChandelier = selectedFixture.kind === 'chandelier';
+      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle;
 
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
             <p className="text-xs font-bold uppercase text-muted">
-              {isBalcony ? 'Balcon' : isStairs ? 'Escalier' : isBuffet ? 'Buffet' : isPodium ? 'Podium' : isFlower ? 'Décoration florale' : isColumn ? 'Colonne / Poteau' : isStage ? 'Scène' : `Fixe — ${selectedFixture.kind}`}
+              {isDoor
+                ? 'Porte & Entrée'
+                : isAisle
+                  ? 'Allée & Tapis'
+                  : isChandelier
+                    ? 'Lustre & Éclairage'
+                    : isBalcony
+                      ? 'Balcon'
+                      : isStairs
+                        ? 'Escalier'
+                        : isBuffet
+                          ? 'Buffet'
+                          : isPodium
+                            ? 'Podium'
+                            : isFlower
+                              ? 'Décoration florale'
+                              : isColumn
+                                ? 'Colonne / Poteau'
+                                : isStage
+                                  ? 'Scène'
+                                  : `Fixe — ${selectedFixture.kind}`}
             </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
@@ -2672,6 +2783,190 @@ export default function RoomLayoutEditor({
                 <input type="number" min={1} max={100} value={Math.round(selectedFixture.h)} onChange={(e) => updateFixture(selectedFixture.id, { h: parseFloat(e.target.value) })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
               </label>
             </div>
+
+            {/* ───────── PORTES & ENTRÉES D’ACCUEIL ───────── */}
+            {isDoor && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <DoorOpen className="w-3.5 h-3.5 text-amber-600" /> Style de porte (Pinterest)
+                </p>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Modèle architectural</span>
+                  <select
+                    value={selectedFixture.doorStyle ?? (selectedFixture.kind === 'entrance' ? 'grandPortal' : 'frenchDoor')}
+                    onChange={(e) => updateFixture(selectedFixture.id, { doorStyle: e.target.value as DoorStyle }, `Style porte : ${doorStyleLabels[e.target.value as DoorStyle]}`)}
+                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs font-semibold bg-surface"
+                  >
+                    {(Object.keys(doorStyleLabels) as DoorStyle[]).map((st) => (
+                      <option key={st} value={st}>
+                        {doorStyleLabels[st]}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedFixture.doorStyle && doorStyleHints[selectedFixture.doorStyle] && (
+                    <p className="text-[10px] text-muted italic">{doorStyleHints[selectedFixture.doorStyle]}</p>
+                  )}
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Sens battant</span>
+                    <select
+                      value={selectedFixture.doorSwing ?? 'double'}
+                      onChange={(e) => updateFixture(selectedFixture.id, { doorSwing: e.target.value as any }, 'Sens ouverture porte')}
+                      className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs bg-surface"
+                    >
+                      <option value="double">Double battant</option>
+                      <option value="left">Gauche (tirant)</option>
+                      <option value="right">Droite (tirant)</option>
+                      <option value="sliding">Coulissant</option>
+                      <option value="arch">Cintré / Arche</option>
+                    </select>
+                  </label>
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Couleur porte</span>
+                    <input
+                      type="color"
+                      value={selectedFixture.color ?? '#78350f'}
+                      onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })}
+                      className="w-full h-8 rounded-[var(--radius-button)] border cursor-pointer"
+                    />
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded bg-surface border border-border">
+                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedFixture.hasMat !== false}
+                      onChange={(e) => updateFixture(selectedFixture.id, { hasMat: e.target.checked }, e.target.checked ? 'Paillasson ajouté' : 'Paillasson masqué')}
+                      className="rounded border-border text-primary"
+                    />
+                    <span>Paillasson d’accueil VIP</span>
+                  </label>
+                  {selectedFixture.hasMat !== false && (
+                    <input
+                      type="color"
+                      value={selectedFixture.matColor ?? '#451a03'}
+                      onChange={(e) => updateFixture(selectedFixture.id, { matColor: e.target.value })}
+                      title="Couleur paillasson"
+                      className="w-6 h-6 rounded border cursor-pointer"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ───────── ALLÉES & TAPIS DE PRESTIGE ───────── */}
+            {isAisle && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Style de l’allée d’honneur
+                </p>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Thème de tapis (Pinterest)</span>
+                  <select
+                    value={selectedFixture.aisleStyle ?? 'royalRed'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { aisleStyle: e.target.value as AisleStyle }, `Allée : ${aisleStyleLabels[e.target.value as AisleStyle]}`)}
+                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs font-semibold bg-surface"
+                  >
+                    {(Object.keys(aisleStyleLabels) as AisleStyle[]).map((st) => (
+                      <option key={st} value={st}>
+                        {aisleStyleLabels[st]}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedFixture.aisleStyle && aisleStyleHints[selectedFixture.aisleStyle] && (
+                    <p className="text-[10px] text-muted italic">{aisleStyleHints[selectedFixture.aisleStyle]}</p>
+                  )}
+                </label>
+
+                <div className="space-y-1.5 p-2 rounded bg-surface border border-border">
+                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedFixture.hasGoldBorder !== false}
+                      onChange={(e) => updateFixture(selectedFixture.id, { hasGoldBorder: e.target.checked }, 'Bordure dorée')}
+                      className="rounded border-border text-primary"
+                    />
+                    <span>Ganse / liseré doré sur les bords</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedFixture.hasSideLanterns !== false}
+                      onChange={(e) => updateFixture(selectedFixture.id, { hasSideLanterns: e.target.checked }, 'Lanternes latérales')}
+                      className="rounded border-border text-primary"
+                    />
+                    <span>Lanternes & bougies latérales</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedFixture.hasPetals !== false}
+                      onChange={(e) => updateFixture(selectedFixture.id, { hasPetals: e.target.checked }, 'Pétales de fleurs')}
+                      className="rounded border-border text-primary"
+                    />
+                    <span>Pétales de roses parsemés</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* ───────── LUSTRES & SUSPENSIONS DE CRISTAL ───────── */}
+            {isChandelier && (
+              <div className="space-y-2.5 pt-2 border-t border-border">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Suspension & Éclairage (Pinterest)
+                </p>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Type de lustre</span>
+                  <select
+                    value={selectedFixture.chandelierStyle ?? 'crystalCascade'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { chandelierStyle: e.target.value as ChandelierFixtureStyle }, `Lustre : ${chandelierFixtureStyleLabels[e.target.value as ChandelierFixtureStyle]}`)}
+                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs font-semibold bg-surface"
+                  >
+                    {(Object.keys(chandelierFixtureStyleLabels) as ChandelierFixtureStyle[]).map((st) => (
+                      <option key={st} value={st}>
+                        {chandelierFixtureStyleLabels[st]}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedFixture.chandelierStyle && chandelierFixtureStyleHints[selectedFixture.chandelierStyle] && (
+                    <p className="text-[10px] text-muted italic">{chandelierFixtureStyleHints[selectedFixture.chandelierStyle]}</p>
+                  )}
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Ambiance lumineuse</span>
+                    <select
+                      value={selectedFixture.lightWarmth ?? 'gold'}
+                      onChange={(e) => updateFixture(selectedFixture.id, { lightWarmth: e.target.value as any }, 'Teinte lumière')}
+                      className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs bg-surface"
+                    >
+                      <option value="gold">Or & Ambre (2700K)</option>
+                      <option value="candle">Flamme bougie chaleureuse</option>
+                      <option value="neutral">Blanc pur (4000K)</option>
+                      <option value="rose">Rose poudré romantique</option>
+                      <option value="night">Nocturne & tamisé</option>
+                    </select>
+                  </label>
+
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Intensité ({selectedFixture.lightIntensity ?? 85}%)</span>
+                    <input
+                      type="range"
+                      min={10}
+                      max={100}
+                      value={selectedFixture.lightIntensity ?? 85}
+                      onChange={(e) => updateFixture(selectedFixture.id, { lightIntensity: parseInt(e.target.value, 10) }, 'Intensité lustre')}
+                      className="w-full mt-2"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
 
             {(isStage || isBuffet || isStairs) && (
               <div className="space-y-1">
@@ -3267,15 +3562,92 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
-            <p className="text-xs font-bold uppercase text-muted">Rangée</p>
+            <p className="text-xs font-bold uppercase text-muted flex items-center justify-between">
+              <span>Rangée / Gradin</span>
+              {selectedFurniture.elevationM ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-bold">
+                  +{selectedFurniture.elevationM}m
+                </span>
+              ) : null}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Libellé</span>
+                <input value={selectedFurniture.label} onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })} className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+              </label>
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Nom de rang</span>
+                <input
+                  value={selectedFurniture.rowName ?? ''}
+                  placeholder="ex: Rang A"
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { rowName: e.target.value })}
+                  className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                />
+              </label>
+            </div>
+
             <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted">Libellé</span>
-              <input value={selectedFurniture.label} onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
-            </label>
-            <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted">Places</span>
+              <span className="font-semibold text-muted">Nombre de sièges</span>
               <input type="number" min={2} max={60} value={selectedFurniture.seatCount} onChange={(e) => updateFurniture(selectedFurniture.id, { seatCount: parseInt(e.target.value, 10) })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
             </label>
+
+            {/* Courbure & Gradin (Amphithéâtre Pinterest) */}
+            <div className="space-y-2 p-2.5 rounded bg-surface border border-border">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground">Courbure de rangée</span>
+                <span className="text-[10px] font-mono text-muted">{selectedFurniture.curve ?? 0}%</span>
+              </div>
+              <input
+                type="range"
+                min={-80}
+                max={100}
+                value={selectedFurniture.curve ?? 0}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { curve: parseInt(e.target.value, 10) }, 'Courbure rangée')}
+                className="w-full"
+              />
+
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFurniture.aisleSplit === true}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { aisleSplit: e.target.checked }, 'Allée de passage')}
+                    className="rounded border-border text-primary"
+                  />
+                  <span>Allée centrale de passage</span>
+                </label>
+                {selectedFurniture.aisleSplit && (
+                  <span className="text-[10px] text-muted">Largeur 14%</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
+                <label className="block text-xs space-y-0.5">
+                  <span className="text-[10px] font-semibold text-muted">Élévation gradin (m)</span>
+                  <input
+                    type="number"
+                    step={0.05}
+                    min={0}
+                    max={4}
+                    value={selectedFurniture.elevationM ?? 0}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { elevationM: parseFloat(e.target.value) || 0 }, 'Élévation gradin')}
+                    className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+                  />
+                </label>
+
+                <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer pt-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedFurniture.showSeatNumbers !== false}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { showSeatNumbers: e.target.checked }, 'Numéros sièges')}
+                    className="rounded border-border text-primary"
+                  />
+                  <span className="text-[10px]">Numéros de siège</span>
+                </label>
+              </div>
+            </div>
+
             <div className="block text-xs space-y-1.5">
               <span className="font-semibold text-muted">Type de siège</span>
               <ChairTypePicker
@@ -3843,6 +4215,19 @@ export default function RoomLayoutEditor({
           </button>
           <button
             type="button"
+            onClick={() => setQuickCreate(quickCreate === 'amphitheater' ? null : 'amphitheater')}
+            className={cn(
+              'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border shadow-xs',
+              quickCreate === 'amphitheater'
+                ? 'bg-amber-500 text-white border-amber-600'
+                : 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100',
+            )}
+            title="Générateur d’amphithéâtre et gradins en arc (Pinterest)"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Amphithéâtre…
+          </button>
+          <button
+            type="button"
             onClick={() => setQuickCreate(quickCreate === 'chairs' ? null : 'chairs')}
             className={cn(
               'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
@@ -3871,6 +4256,51 @@ export default function RoomLayoutEditor({
       ) : null}
       {caps.fixtureKinds.includes('podium') ? (
         <button type="button" onClick={() => addFixture('podium')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-[var(--radius-button)] text-xs font-bold">Podium</button>
+      ) : null}
+      {caps.fixtureKinds.includes('door') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'doors' ? null : 'doors')}
+          className={cn(
+            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+            quickCreate === 'doors'
+              ? 'bg-amber-200 border-amber-400 text-amber-950'
+              : 'bg-amber-50/80 border-amber-200 text-amber-900',
+          )}
+          title="Ajouter une porte ouvrante ou grand portail"
+        >
+          <DoorOpen className="w-3.5 h-3.5" /> Portes…
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('chandelier') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'chandeliers' ? null : 'chandeliers')}
+          className={cn(
+            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+            quickCreate === 'chandeliers'
+              ? 'bg-amber-300 border-amber-500 text-amber-950 shadow-xs'
+              : 'bg-amber-100/60 border-amber-300 text-amber-900',
+          )}
+          title="Lustres de cristal, halos dorés, suspensions pampa"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Lustres…
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('aisle') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
+          className={cn(
+            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+            quickCreate === 'aisles'
+              ? 'bg-rose-100 border-rose-300 text-rose-950'
+              : 'bg-rose-50 border-rose-200 text-rose-900',
+          )}
+          title="Tapis rouge royal, allée miroir blanc, lin & pétales"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-rose-500" /> Allées VIP…
+        </button>
       ) : null}
       {caps.fixtureKinds.includes('stairs') ? (
         <button
@@ -3914,21 +4344,6 @@ export default function RoomLayoutEditor({
           <Flower2 className="w-3.5 h-3.5" /> Fleurs
         </button>
       ) : null}
-      {caps.fixtureKinds.includes('aisle') ? (
-        <button
-          type="button"
-          onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
-          className={cn(
-            'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-            quickCreate === 'aisles'
-              ? 'bg-slate-200 border-slate-400 text-slate-900'
-              : 'bg-surface-muted border-border text-muted',
-          )}
-          title="Définir le nombre d’allées"
-        >
-          Allées…
-        </button>
-      ) : null}
       {caps.fixtureKinds.includes('corridor') ? (
         <button
           type="button"
@@ -3938,9 +4353,6 @@ export default function RoomLayoutEditor({
         >
           Couloir
         </button>
-      ) : null}
-      {caps.fixtureKinds.includes('entrance') ? (
-        <button type="button" onClick={() => addFixture('entrance')} className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[var(--radius-button)] text-xs font-bold">Entrée</button>
       ) : null}
       {caps.fixtureKinds.includes('perimeter') ? (
         <button type="button" onClick={() => addFixture('perimeter')} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-[var(--radius-button)] text-xs font-bold">Périmètre</button>
@@ -3960,27 +4372,285 @@ export default function RoomLayoutEditor({
 
   const quickCreatePanel = quickCreate ? (
     <div className="flex flex-wrap items-end gap-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/60">
+      {/* ───────── GÉNÉRATEUR D’AMPHITHÉÂTRE & GRADINS (PINTEREST) ───────── */}
+      {quickCreate === 'amphitheater' && (
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                Générateur d’Amphithéâtre & Gradins Étagés
+              </h4>
+              <p className="text-[10px] text-muted">
+                Disposition fluide en arcs concentriques avec élévation et allée centrale de passage
+              </p>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 font-bold">
+              Design Scénique
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+              <span>Configuration d’arc</span>
+              <select
+                value={amphiStyle}
+                onChange={(e) => setAmphiStyle(e.target.value as AmphitheaterStyle)}
+                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+              >
+                {(Object.keys(amphitheaterStyleLabels) as AmphitheaterStyle[]).map((st) => (
+                  <option key={st} value={st}>
+                    {amphitheaterStyleLabels[st]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+              <span>Nombre de gradins</span>
+              <input
+                type="number"
+                min={2}
+                max={10}
+                value={amphiTiers}
+                onChange={(e) => setAmphiTiers(Math.max(2, Math.min(10, parseInt(e.target.value, 10) || 2)))}
+                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+              />
+            </label>
+
+            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+              <span>Sièges de base / rang</span>
+              <input
+                type="number"
+                min={4}
+                max={30}
+                value={amphiSeatsPerRow}
+                onChange={(e) => setAmphiSeatsPerRow(Math.max(4, Math.min(30, parseInt(e.target.value, 10) || 4)))}
+                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+              />
+            </label>
+
+            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+              <span>Type de siège</span>
+              <select
+                value={amphiChairType}
+                onChange={(e) => setAmphiChairType(e.target.value as ChairType)}
+                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+              >
+                <option value="THEATER">Fauteuil Théâtre velours</option>
+                <option value="ARMCHAIR">Fauteuil Club VIP</option>
+                <option value="BANQUET">Chaise Banquet</option>
+                <option value="CROSSBACK">Crossback Bois</option>
+                <option value="GHOST">Ghost transparent</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border">
+            <div className="flex items-center gap-4 text-xs">
+              <label className="flex items-center gap-1.5 font-semibold text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={amphiAisleSplit}
+                  onChange={(e) => setAmphiAisleSplit(e.target.checked)}
+                  className="rounded border-border text-primary"
+                />
+                <span>Allée centrale de passage</span>
+              </label>
+
+              <span className="text-[11px] text-muted">
+                Capacité totale estimée : <strong className="text-foreground">{amphiTiers * amphiSeatsPerRow + (amphiStyle === 'modernFan' ? amphiTiers * (amphiTiers - 1) : 0)} places</strong>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={addAmphitheaterQuick}
+              className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white rounded-[var(--radius-button)] text-xs font-bold shadow-md inline-flex items-center gap-1.5"
+            >
+              <Sparkles className="w-4 h-4" />
+              Générer l’amphithéâtre
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ───────── PORTES & ENTRÉES D’ACCUEIL (PINTEREST) ───────── */}
+      {quickCreate === 'doors' && (
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <DoorOpen className="w-4 h-4 text-amber-600" />
+                Styles de Portes & Entrées (Inspiration Pinterest)
+              </h4>
+              <p className="text-[10px] text-muted">
+                Portails royaux, doubles portes françaises à croisillons, portes de grange et sas VIP
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setQuickCreate(null)}
+              className="text-xs font-bold text-muted hover:text-foreground"
+            >
+              ✕ Fermer
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {(
+              [
+                ['frenchDoor', 'Porte française', 'Croisillons chic'],
+                ['grandPortal', 'Portail royal doré', 'Ornements or'],
+                ['barnDoor', 'Bois de grange', 'Rail métal noir'],
+                ['velvetCurtain', 'Sas velours VIP', 'Drapé théâtral'],
+                ['double', 'Double battante', 'Classique mouluré'],
+                ['fireExit', 'Sortie secours', 'Badge vert LED'],
+              ] as const
+            ).map(([style, label, hint]) => (
+              <button
+                key={style}
+                type="button"
+                onClick={() => addDoorFixture(style)}
+                className="p-2.5 rounded-lg border border-border bg-surface hover:border-amber-400 hover:bg-amber-50/50 text-left transition flex flex-col justify-between group"
+              >
+                <div>
+                  <p className="text-xs font-bold text-foreground group-hover:text-amber-900">{label}</p>
+                  <p className="text-[10px] text-muted mt-0.5">{hint}</p>
+                </div>
+                <span className="text-[10px] font-bold text-primary mt-2 group-hover:underline">
+                  + Placer
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ───────── LUSTRES & SUSPENSIONS (PINTEREST) ───────── */}
+      {quickCreate === 'chandeliers' && (
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                Lustres & Suspensions Décoratives (Inspiration Pinterest)
+              </h4>
+              <p className="text-[10px] text-muted">
+                Cascades de cristal scintillantes, suspensions rotin pampa, halos dorés et couronnes florales
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setQuickCreate(null)}
+              className="text-xs font-bold text-muted hover:text-foreground"
+            >
+              ✕ Fermer
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {(
+              [
+                ['crystalCascade', 'Cascade Cristal', 'Pampilles scintillantes'],
+                ['brassRings', 'Halos Laiton', 'Anneaux d’or brossé'],
+                ['bohoPampas', 'Rotin & Pampa', 'Bohème chic naturel'],
+                ['botanicalHalo', 'Couronne Florale', 'Roses & feuillages'],
+                ['fairyCanopy', 'Ciel Étoilé', 'Micro-LEDs féériques'],
+                ['candleCandelabra', 'Candélabre Grand Siècle', 'Bougies château'],
+              ] as const
+            ).map(([style, label, hint]) => (
+              <button
+                key={style}
+                type="button"
+                onClick={() => addChandelierFixture(style)}
+                className="p-2.5 rounded-lg border border-border bg-surface hover:border-amber-400 hover:bg-amber-50/50 text-left transition flex flex-col justify-between group"
+              >
+                <div>
+                  <p className="text-xs font-bold text-foreground group-hover:text-amber-900">{label}</p>
+                  <p className="text-[10px] text-muted mt-0.5">{hint}</p>
+                </div>
+                <span className="text-[10px] font-bold text-amber-600 mt-2 group-hover:underline">
+                  + Suspendre
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ───────── ALLÉES & TAPIS DE PRESTIGE (PINTEREST) ───────── */}
       {quickCreate === 'aisles' && (
-        <>
-          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
-            <span>Nombre d’allées</span>
-            <input
-              type="number"
-              min={1}
-              max={12}
-              value={aisleCount}
-              onChange={(e) => setAisleCount(Math.max(1, Math.min(12, parseInt(e.target.value, 10) || 1)))}
-              className="block w-24 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={addAislesQuick}
-            className="px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold"
-          >
-            Créer {aisleCount} allée{aisleCount > 1 ? 's' : ''}
-          </button>
-        </>
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-rose-500" />
+                Allées d’Honneur & Tapis de Cérémonie (Inspiration Pinterest)
+              </h4>
+              <p className="text-[10px] text-muted">
+                Tapis rouge royal avec ganse or, allée miroir blanc, lin poudré & pétales, plancher chêne
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setQuickCreate(null)}
+              className="text-xs font-bold text-muted hover:text-foreground"
+            >
+              ✕ Fermer
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            {(
+              [
+                ['royalRed', 'Tapis Rouge Royal', 'Ganse or & velours'],
+                ['whiteMirror', 'Miroir Blanc Laqué', 'Reflet haute couture'],
+                ['botanicalRunner', 'Lin & Pétales', 'Bohème romantique'],
+                ['rusticWood', 'Plancher Chêne', 'Lames de bois vintage'],
+                ['damaskGold', 'Brocart Damas Or', 'Baroque prestigieux'],
+                ['ledRunway', 'Catwalk LED', 'Bandes néon modernes'],
+                ['blackVelvet', 'Velours Noir', 'Gala contrasté'],
+              ] as const
+            ).map(([style, label, hint]) => (
+              <button
+                key={style}
+                type="button"
+                onClick={() => addAisleCustomStyle(style)}
+                className="p-2 rounded-lg border border-border bg-surface hover:border-rose-400 hover:bg-rose-50/50 text-left transition flex flex-col justify-between group"
+              >
+                <div>
+                  <p className="text-[11px] font-bold text-foreground group-hover:text-rose-900">{label}</p>
+                  <p className="text-[9px] text-muted mt-0.5">{hint}</p>
+                </div>
+                <span className="text-[10px] font-bold text-rose-600 mt-1.5 group-hover:underline">
+                  + Poser
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 pt-1 border-t border-border text-xs">
+            <label className="text-[10px] font-bold uppercase text-muted flex items-center gap-2">
+              <span>Nombre d’allées parallèles :</span>
+              <input
+                type="number"
+                min={1}
+                max={12}
+                value={aisleCount}
+                onChange={(e) => setAisleCount(Math.max(1, Math.min(12, parseInt(e.target.value, 10) || 1)))}
+                className="w-16 px-2 py-1 rounded border border-border text-xs font-bold text-foreground bg-surface"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={addAislesQuick}
+              className="px-3 py-1 bg-surface-muted hover:bg-surface border border-border text-foreground rounded text-[11px] font-bold"
+            >
+              Générer {aisleCount} allée{aisleCount > 1 ? 's' : ''} standard
+            </button>
+          </div>
+        </div>
       )}
       {quickCreate === 'chairs' && (
         <>

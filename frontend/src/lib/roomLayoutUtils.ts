@@ -97,7 +97,119 @@ export type DoorStyle =
   | 'pivot'
   | 'folding'
   | 'fireExit'
-  | 'frenchDoor';
+  | 'frenchDoor'
+  | 'barnDoor'
+  | 'grandPortal'
+  | 'velvetCurtain';
+
+export const doorStyleLabels: Record<DoorStyle, string> = {
+  single: 'Simple battante',
+  double: 'Double battante',
+  frenchDoor: 'Porte française (croisillons)',
+  sliding: 'Coulissante moderne',
+  barnDoor: 'Porte de grange bois rustique',
+  grandPortal: 'Grand portail royal doré',
+  velvetCurtain: 'Sas rideaux velours VIP',
+  arch: 'Arche florale / cintrée',
+  glass: 'Vitrée contemporaine',
+  panel: 'Moulurée classique',
+  pivot: 'Pivotante XXL',
+  folding: 'Baie accordéon',
+  fireExit: 'Issue de secours (sécurisée)',
+};
+
+export const doorStyleHints: Record<DoorStyle, string> = {
+  single: 'Battant standard avec poignée laiton',
+  double: 'Double battant symétrique',
+  frenchDoor: 'Verre et petits carreaux chic',
+  sliding: 'Discrète, gain de place',
+  barnDoor: 'Style champêtre Pinterest sur rail noir',
+  grandPortal: 'Finition dorée & colonnes d’honneur',
+  velvetCurtain: 'Drapé théâtral rouge ou ivoire',
+  arch: 'Cintrée avec composition florale',
+  glass: 'Transparence et cadre fin',
+  panel: 'Boiserie traditionnelle',
+  pivot: 'Design minimaliste de prestige',
+  folding: 'Ouverture panoramique',
+  fireExit: 'Signalétique réglementaire rétroéclairée',
+};
+
+/** Styles d’allées centrales et tapis d’honneur (inspiré Pinterest & Galas). */
+export type AisleStyle =
+  | 'royalRed'
+  | 'whiteMirror'
+  | 'botanicalRunner'
+  | 'rusticWood'
+  | 'damaskGold'
+  | 'ledRunway'
+  | 'blackVelvet';
+
+export const aisleStyleLabels: Record<AisleStyle, string> = {
+  royalRed: 'Tapis rouge royal (ganse or)',
+  whiteMirror: 'Allée miroir blanc laqué',
+  botanicalRunner: 'Allée lin poudré & pétales',
+  rusticWood: 'Plancher chêne vintage',
+  damaskGold: 'Brocart jacquard or & ivoire',
+  ledRunway: 'Catwalk lumineux LED',
+  blackVelvet: 'Velours noir haute couture',
+};
+
+export const aisleStyleHints: Record<AisleStyle, string> = {
+  royalRed: 'Velours pourpre avec liseré doré',
+  whiteMirror: 'Reflets laqués prestige immaculé',
+  botanicalRunner: 'Romantique avec pétales et lanternes',
+  rusticWood: 'Lames de parquet chevron chaleureux',
+  damaskGold: 'Motifs baroques grand siècle',
+  ledRunway: 'Podium moderne avec bande néon',
+  blackVelvet: 'Gala contemporain contrasté',
+};
+
+/** Styles de lustres et suspensions décoratives. */
+export type ChandelierFixtureStyle =
+  | 'crystalCascade'
+  | 'brassRings'
+  | 'bohoPampas'
+  | 'botanicalHalo'
+  | 'fairyCanopy'
+  | 'candleCandelabra'
+  | 'modernMinimal'
+  | 'lantern';
+
+export const chandelierFixtureStyleLabels: Record<ChandelierFixtureStyle, string> = {
+  crystalCascade: 'Cascade de cristal royal',
+  brassRings: 'Halos géométriques laiton brossé',
+  bohoPampas: 'Suspension rotin & herbe de pampa',
+  botanicalHalo: 'Couronne végétale suspendue',
+  fairyCanopy: 'Ciel étoilé micro-LED',
+  candleCandelabra: 'Candélabre grand siècle (bougies)',
+  modernMinimal: 'Cylindre épuré architectural',
+  lantern: 'Lanterne suspendue fer forgé',
+};
+
+export const chandelierFixtureStyleHints: Record<ChandelierFixtureStyle, string> = {
+  crystalCascade: 'Pampilles scintillantes et reflets dorés',
+  brassRings: 'Anneaux d’or imbriqués tendance',
+  bohoPampas: 'Esprit bohème chic naturel',
+  botanicalHalo: 'Orchidées, roses et feuillages suspendus',
+  fairyCanopy: 'Nappe féérique lumineuse',
+  candleCandelabra: 'Ambiance château et lueurs chaudes',
+  modernMinimal: 'Lumière ciblée contemporaine',
+  lantern: 'Élégance classique intemporelle',
+};
+
+/** Styles de disposition pour amphithéâtre / gradins. */
+export type AmphitheaterStyle =
+  | 'modernFan'
+  | 'romanSemiCircle'
+  | 'tieredSteps'
+  | 'horseshoeU';
+
+export const amphitheaterStyleLabels: Record<AmphitheaterStyle, string> = {
+  modernFan: 'Éventail royal (Arc étagé)',
+  romanSemiCircle: 'Théâtre antique (Demi-cercle 180°)',
+  tieredSteps: 'Gradins droits étagés',
+  horseshoeU: 'Fer à cheval (U-shape immersif)',
+};
 /** Styles de fenêtre configurables. */
 export type WindowStyle = 'rectangular' | 'arched' | 'bay' | 'french';
 /** Matériau d’ouverture (porte / fenêtre). */
@@ -197,7 +309,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs' | 'balcony';
+    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs' | 'balcony';
     x: number;
     y: number;
     w: number;
@@ -228,6 +340,29 @@ export interface RoomLayoutBlueprint {
     connectsToStoryId?: string;
     /** Balcon : façade d’attache. */
     balconySide?: 'north' | 'south' | 'east' | 'west';
+    /** Style de porte / ouverture d’accès. */
+    doorStyle?: DoorStyle;
+    /** Sens d’ouverture porte (gauche, droite, double, coulissant, cintre). */
+    doorSwing?: 'left' | 'right' | 'double' | 'sliding' | 'arch';
+    /** Paillasson d’accueil pour porte / entrée. */
+    hasMat?: boolean;
+    matColor?: string;
+    /** Style d’allée centrale / tapis d’honneur (Pinterest). */
+    aisleStyle?: AisleStyle;
+    /** Bordure dorée / satinée sur l’allée. */
+    hasGoldBorder?: boolean;
+    /** Lanternes / bougies disposées sur les bords de l’allée. */
+    hasSideLanterns?: boolean;
+    /** Pétales de roses éparpillés sur l’allée. */
+    hasPetals?: boolean;
+    /** Style de lustre / suspension au plafond. */
+    chandelierStyle?: ChandelierFixtureStyle;
+    /** Rayon de diffusion de la lumière (en % ou mètres). */
+    lightRadius?: number;
+    /** Chaleur et teinte lumineuse du lustre. */
+    lightWarmth?: 'warm' | 'candle' | 'neutral' | 'gold' | 'rose' | 'night';
+    /** Intensité lumineuse (0–100). */
+    lightIntensity?: number;
     /** Groupe de sélection / alignement. */
     groupId?: string;
     /** Étage du bâtiment (maison multi-niveaux). */
@@ -286,6 +421,18 @@ export interface RoomLayoutBlueprint {
         y: number;
         curve?: number;
         rotation?: number;
+        /** Division avec allée centrale de passage. */
+        aisleSplit?: boolean;
+        /** Largeur de l’allée centrale en % de la rangée (5–30%). */
+        aisleWidthPct?: number;
+        /** Nom / lettre de la rangée (ex: "Rang A"). */
+        rowName?: string;
+        /** Disposition des chaises en quinconce. */
+        staggered?: boolean;
+        /** Afficher les numéros de sièges sur le plan (1, 2, 3...). */
+        showSeatNumbers?: boolean;
+        /** Style d’amphithéâtre / gradin associé. */
+        amphitheaterStyle?: AmphitheaterStyle;
         /** Élévation du gradin (m) — amphithéâtre en pente. */
         elevationM?: number;
         /** Point de visée en % (scène) pour orienter les sièges. */
@@ -687,9 +834,11 @@ export function createBlueprintFixture(
   const defaults: Record<string, { x: number; y: number; w: number; h: number; label: string }> = {
     stage: { x: 25, y: 4, w: 50, h: 8, label: 'Scène' },
     podium: { x: 40, y: 6, w: 20, h: 10, label: 'Podium' },
-    aisle: { x: 48, y: 18, w: 4, h: 72, label: 'Allée' },
+    aisle: { x: 46, y: 14, w: 8, h: 72, label: 'Allée d’honneur' },
+    door: { x: 45, y: 1, w: 10, h: 5, label: 'Porte' },
+    chandelier: { x: 50, y: 45, w: 8, h: 8, label: 'Lustre' },
     corridor: { x: 42, y: 18, w: 14, h: 64, label: 'Couloir' },
-    entrance: { x: 42, y: 2, w: 16, h: 6, label: 'Entrée' },
+    entrance: { x: 42, y: 1, w: 16, h: 6, label: 'Entrée d’accueil' },
     pillar: { x: 48, y: 48, w: 4, h: 4, label: 'Poteau' },
     column: { x: 30, y: 40, w: 3, h: 3, label: 'Colonne' },
     perimeter: { x: 8, y: 10, w: 84, h: 80, label: 'Périmètre' },
@@ -705,24 +854,116 @@ export function createBlueprintFixture(
     kind,
     ...d,
     columnShape: kind === 'pillar' || kind === 'column' ? 'round' as ColumnShape : undefined,
-    color: kind === 'pillar' || kind === 'column' ? '#78716c' : kind === 'carpet' ? '#1e3a5f' : kind === 'buffet' ? '#8b6914' : kind === 'stairs' ? '#a8a29e' : kind === 'balcony' ? '#d6d3d1' : undefined,
+    color:
+      kind === 'pillar' || kind === 'column' ? '#78716c' :
+      kind === 'carpet' ? '#1e3a5f' :
+      kind === 'aisle' ? '#991b1b' :
+      kind === 'buffet' ? '#8b6914' :
+      kind === 'stairs' ? '#a8a29e' :
+      kind === 'balcony' ? '#d6d3d1' :
+      kind === 'chandelier' ? '#f59e0b' :
+      undefined,
     flowerType: kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'flower' ? '#e11d48' : undefined,
     material:
       kind === 'carpet' ? 'carpet' :
+      kind === 'aisle' ? 'carpet' :
       kind === 'stage' || kind === 'podium' ? 'wood' :
       kind === 'buffet' ? 'wood' :
       kind === 'stairs' ? 'wood' :
       kind === 'balcony' ? 'concrete' :
       undefined,
-    heightM: kind === 'podium' ? 0.6 : kind === 'stage' ? 0.45 : kind === 'stairs' ? 1.2 : kind === 'balcony' ? 0.12 : undefined,
+    heightM:
+      kind === 'podium' ? 0.6 :
+      kind === 'stage' ? 0.45 :
+      kind === 'stairs' ? 1.2 :
+      kind === 'balcony' ? 0.12 :
+      kind === 'chandelier' ? 3.5 :
+      undefined,
     steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
     buffetStyle: kind === 'buffet' ? 'straight' : undefined,
     stairDirection: kind === 'stairs' ? 0 : undefined,
     stairStyle: kind === 'stairs' ? 'straight' : undefined,
     balconySide: kind === 'balcony' ? 'south' : undefined,
+    doorStyle: kind === 'door' || kind === 'entrance' ? (kind === 'entrance' ? 'grandPortal' : 'frenchDoor') : undefined,
+    doorSwing: kind === 'door' || kind === 'entrance' ? 'double' : undefined,
+    hasMat: kind === 'door' || kind === 'entrance' ? true : undefined,
+    matColor: kind === 'door' || kind === 'entrance' ? '#78350f' : undefined,
+    aisleStyle: kind === 'aisle' ? 'royalRed' : undefined,
+    hasGoldBorder: kind === 'aisle' ? true : undefined,
+    hasSideLanterns: kind === 'aisle' ? true : undefined,
+    hasPetals: kind === 'aisle' ? true : undefined,
+    chandelierStyle: kind === 'chandelier' ? 'crystalCascade' : undefined,
+    lightRadius: kind === 'chandelier' ? 25 : undefined,
+    lightWarmth: kind === 'chandelier' ? 'gold' : undefined,
+    lightIntensity: kind === 'chandelier' ? 85 : undefined,
   };
+}
+
+/**
+ * Génère des rangées d’amphithéâtre / gradins étagés de haute précision (style Pinterest).
+ */
+export function generateAmphitheaterRows(options: {
+  style?: AmphitheaterStyle;
+  tierCount?: number;
+  seatsPerRow?: number;
+  chairType?: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
+  centerX?: number;
+  startY?: number;
+  aisleSplit?: boolean;
+}): Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> {
+  const {
+    style = 'modernFan',
+    tierCount = 4,
+    seatsPerRow = 12,
+    chairType = 'THEATER',
+    chairStyle = 'napoleon',
+    seatMaterial = 'velvet',
+    centerX = 50,
+    startY = 35,
+    aisleSplit = true,
+  } = options;
+
+  const rows: Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> = [];
+  const baseCurve =
+    style === 'romanSemiCircle' ? 65 :
+    style === 'modernFan' ? 38 :
+    style === 'horseshoeU' ? 85 :
+    0;
+
+  for (let t = 0; t < tierCount; t++) {
+    const y = startY + t * 11;
+    const curve = baseCurve > 0 ? Math.max(15, baseCurve - t * 4) : 0;
+    const elevationM = Number((0.25 * (t + 1)).toFixed(2));
+    const letter = String.fromCharCode(65 + t);
+
+    rows.push({
+      id: makeLayoutId('row'),
+      kind: 'row',
+      label: `Rangée ${letter}`,
+      rowName: `Rang ${letter}`,
+      seatCount: seatsPerRow + (style === 'modernFan' || style === 'romanSemiCircle' ? t * 2 : 0),
+      chairType,
+      chairStyle,
+      seatMaterial,
+      tier: t + 1,
+      x: centerX,
+      y,
+      curve,
+      aisleSplit,
+      aisleWidthPct: 14,
+      elevationM,
+      focusX: centerX,
+      focusY: 10,
+      showSeatNumbers: true,
+      amphitheaterStyle: style,
+    });
+  }
+
+  return rows;
 }
 
 export const chairStyleLabels: Record<ChairStyle, string> = {
@@ -902,19 +1143,6 @@ export const wallTextureLabels: Record<WallTextureStyle, string> = {
   metalCorrugated: 'Tôle ondulée',
   metroTile: 'Carrelage métro',
   woodPanel: 'Lambris bois',
-};
-
-export const doorStyleLabels: Record<DoorStyle, string> = {
-  single: 'Porte simple',
-  double: 'Porte double',
-  sliding: 'Coulissante',
-  arch: 'Arche',
-  glass: 'Vitrée (panneaux)',
-  panel: 'À panneaux moulurés',
-  pivot: 'Pivot centrale',
-  folding: 'Pliante (accordéon)',
-  fireExit: 'Issue de secours',
-  frenchDoor: 'Porte-fenêtre',
 };
 
 export const windowStyleLabels: Record<WindowStyle, string> = {
@@ -3046,8 +3274,14 @@ export function getFixtureClass(kind: string): string {
       return 'bg-stone-100 border-stone-400 text-stone-700';
     case 'balcony':
       return 'bg-sky-50 border-sky-300 text-sky-800';
+    case 'door':
+      return 'bg-amber-50 border-amber-600/60 text-amber-900';
+    case 'entrance':
+      return 'bg-emerald-50 border-emerald-500 text-emerald-800';
     case 'aisle':
-      return 'bg-slate-100 border-slate-200 border-dashed text-slate-400';
+      return 'bg-red-50 border-amber-500/50 text-red-900';
+    case 'chandelier':
+      return 'bg-amber-50/50 border-amber-400 text-amber-800 shadow-md';
     case 'corridor':
       return 'bg-stone-100 border-stone-300 text-stone-700';
     case 'pillar':

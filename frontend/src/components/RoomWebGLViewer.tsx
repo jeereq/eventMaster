@@ -18,6 +18,9 @@ import {
   type TableShape,
   type ZoneMaterial,
   type ZoneKind,
+  type DoorStyle,
+  type AisleStyle,
+  type ChandelierFixtureStyle,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
@@ -48,7 +51,12 @@ import {
   EventStage,
   EventZoneSurface,
 } from '@/components/CatalogueEventArchitecture';
-import { RoomAmbiance } from '@/components/CatalogueAmbiance';
+import {
+  RoomAmbiance,
+  CatalogueDoor,
+  CatalogueChandelierFixture,
+  CatalogueAisle,
+} from '@/components/CatalogueAmbiance';
 import { RowSeatsLOD } from '@/components/RowSeatsLOD';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
@@ -1481,6 +1489,18 @@ function FixtureMesh({
   stairStyle,
   balconySide,
   columnShape,
+  doorStyle,
+  doorSwing,
+  hasMat,
+  matColor,
+  aisleStyle,
+  hasGoldBorder,
+  hasSideLanterns,
+  hasPetals,
+  chandelierStyle,
+  lightWarmth,
+  lightIntensity,
+  lightRadius,
   widthM,
   roomDepthM,
   selected,
@@ -1506,6 +1526,18 @@ function FixtureMesh({
   stairStyle?: 'straight' | 'open' | 'compact';
   balconySide?: 'north' | 'south' | 'east' | 'west';
   columnShape?: 'round' | 'square';
+  doorStyle?: DoorStyle;
+  doorSwing?: 'left' | 'right' | 'double' | 'sliding' | 'arch';
+  hasMat?: boolean;
+  matColor?: string;
+  aisleStyle?: AisleStyle;
+  hasGoldBorder?: boolean;
+  hasSideLanterns?: boolean;
+  hasPetals?: boolean;
+  chandelierStyle?: ChandelierFixtureStyle;
+  lightWarmth?: 'warm' | 'candle' | 'neutral' | 'gold' | 'rose' | 'night' | 'golden' | 'cool';
+  lightIntensity?: number;
+  lightRadius?: number;
   widthM: number;
   roomDepthM: number;
   selected: boolean;
@@ -1638,31 +1670,57 @@ function FixtureMesh({
           selected={selected}
           hasCouverts={hasCouverts}
         />
-      ) : kind === 'aisle' || kind === 'corridor' ? (
+      ) : kind === 'door' ? (
+        <CatalogueDoor
+          w={w}
+          d={d}
+          height={2.3}
+          style={doorStyle ?? 'frenchDoor'}
+          doorSwing={doorSwing ?? 'double'}
+          hasMat={hasMat ?? true}
+          matColor={matColor}
+          color={baseColor}
+          selected={selected}
+        />
+      ) : kind === 'chandelier' ? (
+        <CatalogueChandelierFixture
+          style={chandelierStyle ?? 'crystalCascade'}
+          lightWarmth={lightWarmth ?? 'warm'}
+          lightIntensity={lightIntensity ?? 1.5}
+          lightRadius={lightRadius ?? 8}
+          selected={selected}
+        />
+      ) : kind === 'aisle' ? (
+        <CatalogueAisle
+          w={w}
+          d={d}
+          style={aisleStyle ?? 'royalRed'}
+          hasGoldBorder={hasGoldBorder ?? true}
+          hasSideLanterns={hasSideLanterns ?? false}
+          hasPetals={hasPetals ?? false}
+          selected={selected}
+        />
+      ) : kind === 'corridor' ? (
         <group>
           <mesh position={[0, 0.02, 0]} receiveShadow>
             <boxGeometry args={[w, 0.04, d]} />
             <meshStandardMaterial
-              color={selected ? '#c7d2fe' : kind === 'corridor' ? '#d6d3d1' : '#e7e5e4'}
+              color={selected ? '#c7d2fe' : '#d6d3d1'}
               roughness={0.85}
             />
           </mesh>
           <mesh position={[0, 0.045, 0]} receiveShadow>
-            <boxGeometry args={[w * (kind === 'corridor' ? 0.72 : 0.55), 0.015, d * 0.98]} />
-            <meshStandardMaterial color={kind === 'corridor' ? '#fafaf9' : '#f8fafc'} roughness={0.7} />
+            <boxGeometry args={[w * 0.72, 0.015, d * 0.98]} />
+            <meshStandardMaterial color="#fafaf9" roughness={0.7} />
           </mesh>
-          {kind === 'corridor' ? (
-            <>
-              <mesh position={[-w * 0.48, 1.1, 0]} castShadow>
-                <boxGeometry args={[0.08, 2.2, d * 0.98]} />
-                <meshStandardMaterial color="#a8a29e" roughness={0.9} />
-              </mesh>
-              <mesh position={[w * 0.48, 1.1, 0]} castShadow>
-                <boxGeometry args={[0.08, 2.2, d * 0.98]} />
-                <meshStandardMaterial color="#a8a29e" roughness={0.9} />
-              </mesh>
-            </>
-          ) : null}
+          <mesh position={[-w * 0.48, 1.1, 0]} castShadow>
+            <boxGeometry args={[0.08, 2.2, d * 0.98]} />
+            <meshStandardMaterial color="#a8a29e" roughness={0.9} />
+          </mesh>
+          <mesh position={[w * 0.48, 1.1, 0]} castShadow>
+            <boxGeometry args={[0.08, 2.2, d * 0.98]} />
+            <meshStandardMaterial color="#a8a29e" roughness={0.9} />
+          </mesh>
         </group>
       ) : kind === 'entrance' ? (
         <group>
@@ -1954,6 +2012,18 @@ function SceneContent({
             stairStyle={f.stairStyle}
             balconySide={f.balconySide}
             columnShape={f.columnShape}
+            doorStyle={f.doorStyle}
+            doorSwing={f.doorSwing}
+            hasMat={f.hasMat}
+            matColor={f.matColor}
+            aisleStyle={f.aisleStyle}
+            hasGoldBorder={f.hasGoldBorder}
+            hasSideLanterns={f.hasSideLanterns}
+            hasPetals={f.hasPetals}
+            chandelierStyle={f.chandelierStyle}
+            lightWarmth={f.lightWarmth}
+            lightIntensity={f.lightIntensity}
+            lightRadius={f.lightRadius}
             widthM={widthM}
             roomDepthM={heightM}
             selected={selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
