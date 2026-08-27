@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Alert, Button } from '@/components/ui';
 import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
 
@@ -21,6 +22,10 @@ type PaymentPendingViewProps = {
   /** Relancer une nouvelle session de paiement (FlexPay). */
   onRetry?: () => Promise<void> | void;
   retryLabel?: string;
+  /** Lien ou action retour */
+  backHref?: string;
+  backLabel?: string;
+  onBack?: () => void;
   className?: string;
 };
 
@@ -34,6 +39,9 @@ export default function PaymentPendingView({
   onPaid,
   onRetry,
   retryLabel = 'Relancer le paiement',
+  backHref,
+  backLabel = 'Retour',
+  onBack,
   className = '',
 }: PaymentPendingViewProps) {
   const [status, setStatus] = useState<PaymentPendingStatus>('pending');
@@ -199,6 +207,29 @@ export default function PaymentPendingView({
           >
             {retrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             {retrying ? 'Relance…' : retryLabel}
+          </Button>
+        )}
+        {backHref && (
+          <Link href={backHref} className="inline-flex">
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {backLabel}
+            </Button>
+          </Link>
+        )}
+        {onBack && !backHref && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onBack}
+            className="inline-flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {backLabel}
           </Button>
         )}
         {attempts >= maxAttempts && status === 'pending' && (

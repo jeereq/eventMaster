@@ -8,7 +8,7 @@ import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PaymentPendingView from '@/components/PaymentPendingView';
 import { Alert, Button } from '@/components/ui';
 import { eventPublicHref, eventPublicListHref } from '@/lib/safeAppPath';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ArrowLeft } from 'lucide-react';
 
 function SuccessInner() {
   const params = useParams();
@@ -101,20 +101,36 @@ function SuccessInner() {
       />
       <section className="page-container py-10 max-w-lg space-y-4">
         {showPending && (
-          <PaymentPendingView
-            method={method || (provider === 'flexpay' ? 'mobile' : 'card')}
-            description={
-              method === 'mobile' || (!method && provider === 'flexpay')
-                ? 'Une demande Mobile Money a été envoyée. Confirmez sur votre téléphone : cette page se met à jour toute seule.'
-                : 'Nous confirmons votre paiement carte FlexPay…'
-            }
-            onPoll={orderId && provider === 'flexpay' ? pollFlexPay : pollSession}
-            onRetry={orderId && provider === 'flexpay' ? retryFlexPay : undefined}
-            onPaid={() => {
-              setPaid(true);
-              setPending(false);
-            }}
-          />
+          <div className="space-y-3">
+            <PaymentPendingView
+              method={method || (provider === 'flexpay' ? 'mobile' : 'card')}
+              description={
+                method === 'mobile' || (!method && provider === 'flexpay')
+                  ? 'Une demande Mobile Money a été envoyée. Confirmez sur votre téléphone : cette page se met à jour toute seule.'
+                  : 'Nous confirmons votre paiement carte FlexPay…'
+              }
+              backHref={eventPublicHref(slug)}
+              backLabel="Retour à l’événement"
+              onPoll={orderId && provider === 'flexpay' ? pollFlexPay : pollSession}
+              onRetry={orderId && provider === 'flexpay' ? retryFlexPay : undefined}
+              onPaid={() => {
+                setPaid(true);
+                setPending(false);
+              }}
+            />
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1 text-xs text-muted">
+              <Link
+                href={eventPublicHref(slug)}
+                className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Retourner à la fiche de l’événement
+              </Link>
+              <Link href={eventPublicListHref()} className="text-muted hover:text-foreground">
+                Tous les événements
+              </Link>
+            </div>
+          </div>
         )}
 
         {paid && (
@@ -130,8 +146,12 @@ function SuccessInner() {
                 <Button>Ouvrir mon badge QR</Button>
               </a>
             )}
-            <div className="flex flex-col gap-2">
-              <Link href={eventPublicHref(slug)} className="text-sm font-semibold text-primary">
+            <div className="flex flex-col gap-2 pt-2 border-t border-border">
+              <Link
+                href={eventPublicHref(slug)}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
                 Retour à l’événement
               </Link>
               <Link href={eventPublicListHref()} className="text-sm text-muted hover:text-foreground">
@@ -148,7 +168,11 @@ function SuccessInner() {
             ) : (
               <p className="text-sm text-muted">Chargement de la confirmation…</p>
             )}
-            <Link href={eventPublicHref(slug)} className="text-sm font-semibold text-primary">
+            <Link
+              href={eventPublicHref(slug)}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
               Retour à l’événement
             </Link>
           </div>
