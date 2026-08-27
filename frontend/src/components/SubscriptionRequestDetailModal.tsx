@@ -16,6 +16,10 @@ export interface AdminSubscriptionRequestItem {
   baseAmount?: number | null;
   approvedAmount?: number | null;
   specialDiscountPercent?: number | null;
+  paymentProvider?: string | null;
+  flexPayChannel?: string | null;
+  flexPayAmountCustomer?: number | null;
+  flexPayProviderReference?: string | null;
   tenant?: {
     name?: string;
     plan?: string;
@@ -174,6 +178,18 @@ export default function SubscriptionRequestDetailModal({
             )}
             {request.approvedAmount != null && (
               <Row label="Montant approuvé">{formatFc(request.approvedAmount)}</Row>
+            )}
+            {request.paymentProvider && (
+              <Row label="Paiement">{request.paymentProvider}</Row>
+            )}
+            {request.flexPayChannel && (
+              <Row label="Canal FlexPay">{request.flexPayChannel}</Row>
+            )}
+            {request.flexPayAmountCustomer != null && (
+              <Row label="Payé client">{formatFc(request.flexPayAmountCustomer)}</Row>
+            )}
+            {request.flexPayProviderReference && (
+              <Row label="Réf. opérateur">{request.flexPayProviderReference}</Row>
             )}
           </div>
 

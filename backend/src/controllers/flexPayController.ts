@@ -3,8 +3,12 @@ import { prisma } from '../db';
 import { fulfillTicketOrder } from '../services/ticketOrderService';
 import { activateSubscriptionRequest } from '../services/subscriptionActivationService';
 import {
+  buildFlexPayMetadataUpdate,
   checkFlexPayCardOrder,
   parseFlexPayCallbackPayload,
+  type FlexPayCallbackParsed,
+  type FlexPayCheckResult,
+  type FlexPayMetadataUpdate,
 } from '../services/flexPayCardService';
 
 async function findTicketOrderForFlexPay(opts: { reference?: string; orderNumber?: string }) {
@@ -45,17 +49,42 @@ async function findSubscriptionRequestForFlexPay(opts: { reference?: string; ord
   return null;
 }
 
-async function confirmFlexPaySuccess(orderNumber: string | null | undefined, parsedSuccess: boolean) {
+function metadataFromCallback(parsed: FlexPayCallbackParsed): FlexPayMetadataUpdate {
+  return buildFlexPayMetadataUpdate({
+    channel: parsed.channel,
+    amountCustomer: parsed.amountCustomer,
+    providerReference: parsed.providerReference,
+  });
+}
+
+function metadataFromCheck(checked: FlexPayCheckResult): FlexPayMetadataUpdate {
+  return buildFlexPayMetadataUpdate({
+    channel: checked.channel,
+    amountCustomer: checked.amountCustomer,
+    providerReference: checked.providerReference,
+  });
+}
+
+function mergeMetadata(...parts: FlexPayMetadataUpdate[]): FlexPayMetadataUpdate {
+  return Object.assign({}, ...parts.filter((p) => Object.keys(p).length > 0));
+}
+
+async function confirmFlexPaySuccess(
+  orderNumber: string | null | undefined,
+  parsedSuccess: boolean,
+): Promise<{ success: boolean; checkMeta: FlexPayMetadataUpdate }> {
   let success = parsedSuccess;
+  let checkMeta: FlexPayMetadataUpdate = {};
   if (orderNumber) {
     try {
       const checked = await checkFlexPayCardOrder(orderNumber);
+      checkMeta = metadataFromCheck(checked);
       if (checked.found) success = checked.status === 'success';
     } catch (err) {
       console.warn('[FlexPay] check échoué:', err);
     }
   }
-  return success;
+  return { success, checkMeta };
 }
 
 /** Callback serveur FlexPay — POST/GET /api/public/payments/flexpay/callback */
@@ -65,6 +94,7 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       (req.body || {}) as Record<string, unknown>,
       (req.query || {}) as Record<string, unknown>,
     );
+    const callbackMeta = metadataFromCallback(parsed);
 
     // 1) Billet événement
     const order = await findTicketOrderForFlexPay({
@@ -74,20 +104,28 @@ export async function flexPayCardCallback(req: Request, res: Response) {
 
     if (order) {
       if (order.status === 'PAID') {
+        const meta = mergeMetadata(callbackMeta);
+        if (Object.keys(meta).length) {
+          await prisma.ticketOrder.update({ where: { id: order.id }, data: meta });
+        }
         return res.json({ ok: true, alreadyPaid: true, kind: 'ticket', orderId: order.id });
       }
 
       const orderNumber = order.flexPayOrderNumber || parsed.orderNumber;
-      const success = await confirmFlexPaySuccess(orderNumber, parsed.success);
+      const { success, checkMeta } = await confirmFlexPaySuccess(orderNumber, parsed.success);
+      const meta = mergeMetadata(callbackMeta, checkMeta);
 
       if (!success) {
         await prisma.ticketOrder.update({
           where: { id: order.id },
-          data: { status: 'CANCELLED' },
+          data: { status: 'CANCELLED', ...meta },
         });
         return res.json({ ok: true, paid: false, kind: 'ticket', orderId: order.id });
       }
 
+      if (Object.keys(meta).length) {
+        await prisma.ticketOrder.update({ where: { id: order.id }, data: meta });
+      }
       await fulfillTicketOrder(order.id, {
         id: orderNumber || order.id,
         payment_intent: orderNumber || null,
@@ -103,20 +141,28 @@ export async function flexPayCardCallback(req: Request, res: Response) {
 
     if (sub) {
       if (sub.status === 'APPROVED') {
+        const meta = mergeMetadata(callbackMeta);
+        if (Object.keys(meta).length) {
+          await prisma.subscriptionRequest.update({ where: { id: sub.id }, data: meta });
+        }
         return res.json({ ok: true, alreadyPaid: true, kind: 'subscription', requestId: sub.id });
       }
 
       const orderNumber = sub.flexPayOrderNumber || parsed.orderNumber;
-      const success = await confirmFlexPaySuccess(orderNumber, parsed.success);
+      const { success, checkMeta } = await confirmFlexPaySuccess(orderNumber, parsed.success);
+      const meta = mergeMetadata(callbackMeta, checkMeta);
 
       if (!success) {
         await prisma.subscriptionRequest.update({
           where: { id: sub.id },
-          data: { status: 'REJECTED' },
+          data: { status: 'REJECTED', ...meta },
         });
         return res.json({ ok: true, paid: false, kind: 'subscription', requestId: sub.id });
       }
 
+      if (Object.keys(meta).length) {
+        await prisma.subscriptionRequest.update({ where: { id: sub.id }, data: meta });
+      }
       await activateSubscriptionRequest(sub.id, {
         approvedAmount: sub.approvedAmount ?? undefined,
         markPaid: true,
@@ -153,6 +199,10 @@ export async function flexPayCardReturn(req: Request, res: Response) {
       if (sub.status !== 'APPROVED' && sub.flexPayOrderNumber) {
         try {
           const checked = await checkFlexPayCardOrder(sub.flexPayOrderNumber);
+          const meta = metadataFromCheck(checked);
+          if (Object.keys(meta).length) {
+            await prisma.subscriptionRequest.update({ where: { id: sub.id }, data: meta });
+          }
           if (checked.status === 'success') {
             await activateSubscriptionRequest(sub.id, {
               approvedAmount: sub.approvedAmount ?? undefined,
@@ -191,6 +241,10 @@ export async function flexPayCardReturn(req: Request, res: Response) {
     if (order.status !== 'PAID' && order.flexPayOrderNumber) {
       try {
         const checked = await checkFlexPayCardOrder(order.flexPayOrderNumber);
+        const meta = metadataFromCheck(checked);
+        if (Object.keys(meta).length) {
+          await prisma.ticketOrder.update({ where: { id: order.id }, data: meta });
+        }
         if (checked.status === 'success') {
           await fulfillTicketOrder(order.id, {
             id: order.flexPayOrderNumber,
@@ -233,6 +287,7 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
         guestId: primary?.id,
         rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
         event: order.event,
+        channel: order.flexPayChannel,
       });
     }
 
@@ -241,12 +296,33 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
     }
 
     const checked = await checkFlexPayCardOrder(order.flexPayOrderNumber);
+    const meta = metadataFromCheck(checked);
+    if (Object.keys(meta).length) {
+      await prisma.ticketOrder.update({ where: { id: order.id }, data: meta });
+    }
+
+    if (checked.status === 'failed') {
+      await prisma.ticketOrder.update({
+        where: { id: order.id },
+        data: { status: 'CANCELLED', ...meta },
+      });
+      return res.json({
+        paid: false,
+        status: 'failed',
+        orderId: order.id,
+        event: order.event,
+        channel: checked.channel || order.flexPayChannel,
+        canRetry: true,
+      });
+    }
+
     if (checked.status !== 'success') {
       return res.json({
         paid: false,
-        status: checked.status,
+        status: checked.status === 'pending' ? 'pending' : checked.status,
         orderId: order.id,
         event: order.event,
+        channel: checked.channel || order.flexPayChannel,
       });
     }
 
@@ -264,6 +340,7 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
       guestId: primary?.id,
       rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
       event: order.event,
+      channel: checked.channel || order.flexPayChannel,
     });
   } catch (error: any) {
     console.error('[FlexPay] verify', error);

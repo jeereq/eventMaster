@@ -15,6 +15,7 @@ import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventPr
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
 import { normalizeTicketPricingMode } from '@/lib/ticketPricing';
 import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
+import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
 
 type SeatRow = {
   tableId: string;
@@ -383,12 +384,17 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                 </button>
               </div>
               {paymentMethod === 'mobile' && (
-                <Input
-                  label="Numéro Mobile Money"
-                  value={mmPhone}
-                  onChange={(e) => setMmPhone(e.target.value)}
-                  placeholder="243XXXXXXXXX"
-                />
+                <>
+                  <p className="text-[11px] text-muted">
+                    Opérateurs : {FLEXPAY_MOBILE_OPERATORS_LABEL}
+                  </p>
+                  <Input
+                    label="Numéro Mobile Money"
+                    value={mmPhone}
+                    onChange={(e) => setMmPhone(e.target.value)}
+                    placeholder="243XXXXXXXXX"
+                  />
+                </>
               )}
               <p className="text-xs text-muted">Total : {formatFc(totalFc)}</p>
             </div>

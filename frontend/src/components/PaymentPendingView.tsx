@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Alert, Button } from '@/components/ui';
+import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
 
 export type PaymentPendingStatus = 'pending' | 'paid' | 'failed' | 'error';
 
@@ -142,6 +143,9 @@ export default function PaymentPendingView({
             <li>Ouvrez la notification ou le menu USSD sur votre téléphone</li>
             <li>Confirmez le montant avec votre code secret</li>
             <li>Attendez la confirmation ici (vérification automatique)</li>
+            <li className="list-none text-xs text-muted pl-0 mt-1">
+              Compatible : {FLEXPAY_MOBILE_OPERATORS_LABEL}
+            </li>
           </>
         ) : (
           <>

@@ -26,6 +26,8 @@ export type FlexPayMobilePayRequest = {
   callbackUrl: string;
 };
 
+export type FlexPayCheckStatus = 'success' | 'failed' | 'pending' | 'unknown';
+
 export type FlexPayPayResult = {
   orderNumber: string;
   redirectUrl: string | null;
@@ -34,14 +36,88 @@ export type FlexPayPayResult = {
 
 export type FlexPayCheckResult = {
   found: boolean;
-  status: 'success' | 'failed' | 'unknown';
+  status: FlexPayCheckStatus;
   reference: string | null;
   orderNumber: string | null;
   amount: number | null;
   amountCustomer: number | null;
   currency: string | null;
+  channel: string | null;
+  providerReference: string | null;
   raw: Record<string, unknown>;
 };
+
+export type FlexPayCallbackParsed = {
+  reference: string;
+  orderNumber: string;
+  success: boolean;
+  statusRaw: string;
+  channel: string | null;
+  amountCustomer: number | null;
+  providerReference: string | null;
+  raw: Record<string, unknown>;
+};
+
+/** Données Prisma à merger pour TicketOrder / SubscriptionRequest. */
+export type FlexPayMetadataUpdate = {
+  flexPayChannel?: string;
+  flexPayAmountCustomer?: number;
+  flexPayProviderReference?: string;
+};
+
+function parseOptionalNumber(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeFlexPayChannel(value: unknown): string | null {
+  const raw = String(value ?? '').trim().toLowerCase();
+  return raw || null;
+}
+
+function extractProviderReference(src: Record<string, unknown>): string | null {
+  const v =
+    src.provider_reference ??
+    src.providerReference ??
+    src.ProviderReference ??
+    src.providerRef;
+  const s = String(v ?? '').trim();
+  return s || null;
+}
+
+/** Mappe les codes status check FlexPay (doc API Paiement v1.5). */
+export function mapFlexPayTransactionStatus(statusCode: string): FlexPayCheckStatus {
+  switch (String(statusCode ?? '').trim()) {
+    case '0':
+      return 'success';
+    case '1':
+    case '4':
+    case '5':
+      return 'failed';
+    case '2':
+    case '3':
+      return 'pending';
+    default:
+      return 'unknown';
+  }
+}
+
+export function buildFlexPayMetadataUpdate(
+  source: {
+    channel?: string | null;
+    amountCustomer?: number | null;
+    providerReference?: string | null;
+  },
+): FlexPayMetadataUpdate {
+  const data: FlexPayMetadataUpdate = {};
+  if (source.channel) data.flexPayChannel = source.channel;
+  if (source.amountCustomer != null && Number.isFinite(source.amountCustomer)) {
+    data.flexPayAmountCustomer = source.amountCustomer;
+  }
+  if (source.providerReference) data.flexPayProviderReference = source.providerReference;
+  return data;
+}
 
 function envOrSetting(envKey: string, settingValue?: string): string {
   const fromEnv = process.env[envKey]?.trim();
@@ -229,6 +305,8 @@ async function checkOrderAt(
       amount: null,
       amountCustomer: null,
       currency: null,
+      channel: null,
+      providerReference: null,
       raw,
     };
   }
@@ -237,12 +315,14 @@ async function checkOrderAt(
   const statusCode = String(tx.status ?? '');
   return {
     found: true,
-    status: statusCode === '0' ? 'success' : statusCode === '1' ? 'failed' : 'unknown',
+    status: mapFlexPayTransactionStatus(statusCode),
     reference: tx.reference != null ? String(tx.reference) : null,
     orderNumber: tx.orderNumber != null ? String(tx.orderNumber) : orderNumber,
-    amount: tx.amount != null ? Number(tx.amount) : null,
-    amountCustomer: tx.amountCustomer != null ? Number(tx.amountCustomer) : null,
+    amount: parseOptionalNumber(tx.amount),
+    amountCustomer: parseOptionalNumber(tx.amountCustomer),
     currency: tx.currency != null ? String(tx.currency) : null,
+    channel: normalizeFlexPayChannel(tx.channel),
+    providerReference: extractProviderReference(tx),
     raw,
   };
 }
@@ -257,8 +337,11 @@ export async function checkFlexPayCardOrder(orderNumber: string): Promise<FlexPa
   return checkOrderAt(cfg.mobileCheckUrlBase, cfg.token, orderNumber);
 }
 
-/** Interprète un callback FlexPay (payload peu documenté → champs courants). */
-export function parseFlexPayCallbackPayload(body: Record<string, unknown>, query: Record<string, unknown>) {
+/** Interprète un callback FlexPay (API Paiement v1.5 + variantes Card). */
+export function parseFlexPayCallbackPayload(
+  body: Record<string, unknown>,
+  query: Record<string, unknown>,
+): FlexPayCallbackParsed {
   const src = { ...query, ...body };
   const reference = String(
     src.reference || src.Reference || src.merchantReference || src.merchant_reference || '',
@@ -271,7 +354,16 @@ export function parseFlexPayCallbackPayload(body: Record<string, unknown>, query
     statusRaw.toLowerCase() === 'approved' ||
     String(src.transactionStatus || '').toLowerCase() === 'success';
 
-  return { reference, orderNumber, success, statusRaw, raw: src };
+  return {
+    reference,
+    orderNumber,
+    success,
+    statusRaw,
+    channel: normalizeFlexPayChannel(src.channel),
+    amountCustomer: parseOptionalNumber(src.amountCustomer ?? src.amount_customer),
+    providerReference: extractProviderReference(src),
+    raw: src,
+  };
 }
 
 export function getPublicApiBaseUrl(): string {

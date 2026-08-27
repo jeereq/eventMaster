@@ -26,6 +26,7 @@ import { initiateFlexPaySessionForRequest } from '../services/subscriptionFlexPa
 import {
   isFlexPayCardMock,
   checkFlexPayCardOrder,
+  buildFlexPayMetadataUpdate,
 } from '../services/flexPayCardService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -621,7 +622,12 @@ export async function verifySubscriptionFlexPay(req: AuthenticatedRequest, res: 
     if (!request) return res.status(404).json({ error: 'Demande introuvable.' });
 
     if (request.status === 'APPROVED') {
-      return res.json({ paid: true, requestId: request.id, status: request.status });
+      return res.json({
+        paid: true,
+        requestId: request.id,
+        status: request.status,
+        channel: request.flexPayChannel,
+      });
     }
 
     if (request.status === 'REJECTED') {
@@ -631,6 +637,7 @@ export async function verifySubscriptionFlexPay(req: AuthenticatedRequest, res: 
         requestId: request.id,
         message: 'Paiement refusé ou annulé. Vous pouvez relancer une tentative.',
         canRetry: true,
+        channel: request.flexPayChannel,
       });
     }
 
@@ -659,10 +666,16 @@ export async function verifySubscriptionFlexPay(req: AuthenticatedRequest, res: 
     }
 
     const checked = await checkFlexPayCardOrder(request.flexPayOrderNumber);
+    const meta = buildFlexPayMetadataUpdate({
+      channel: checked.channel,
+      amountCustomer: checked.amountCustomer,
+      providerReference: checked.providerReference,
+    });
+
     if (checked.status === 'failed') {
       await prisma.subscriptionRequest.update({
         where: { id: request.id },
-        data: { status: 'REJECTED' },
+        data: { status: 'REJECTED', ...meta },
       });
       return res.json({
         paid: false,
@@ -670,15 +683,24 @@ export async function verifySubscriptionFlexPay(req: AuthenticatedRequest, res: 
         requestId: request.id,
         message: 'Le paiement a échoué. Vous pouvez relancer une tentative.',
         canRetry: true,
+        channel: checked.channel || request.flexPayChannel,
       });
     }
     if (checked.status !== 'success') {
+      if (Object.keys(meta).length) {
+        await prisma.subscriptionRequest.update({ where: { id: request.id }, data: meta });
+      }
       return res.json({
         paid: false,
-        status: checked.status,
+        status: checked.status === 'pending' ? 'pending' : checked.status,
         requestId: request.id,
-        canRetry: true,
+        canRetry: checked.status === 'unknown',
+        channel: checked.channel || request.flexPayChannel,
       });
+    }
+
+    if (Object.keys(meta).length) {
+      await prisma.subscriptionRequest.update({ where: { id: request.id }, data: meta });
     }
 
     const activated = await activateSubscriptionRequest(request.id, {
@@ -691,6 +713,7 @@ export async function verifySubscriptionFlexPay(req: AuthenticatedRequest, res: 
       requestId: request.id,
       status: 'APPROVED',
       tenant: activated.alreadyProcessed ? undefined : activated.tenant,
+      channel: checked.channel || request.flexPayChannel,
     });
   } catch (error: any) {
     console.error('[Subscription] verify FlexPay', error);

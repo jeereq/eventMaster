@@ -14,6 +14,7 @@ import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/Invoice
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import PaymentPendingView from '@/components/PaymentPendingView';
 import { formatQuotaRemaining } from '@/lib/quotaDisplay';
+import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
 import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
@@ -81,6 +82,7 @@ interface SubscriptionRequest {
   createdAt: string;
   paymentProvider?: string | null;
   approvedAmount?: number | null;
+  flexPayChannel?: string | null;
 }
 
 function FeatureCell({ value }: { value: string | boolean }) {
@@ -186,9 +188,9 @@ function BillingPageInner() {
       await loadBillingStatus();
       return { status: 'paid' as const };
     }
-    if (data.status === 'failed' || data.canRetry) {
+    if (data.status === 'failed') {
       return {
-        status: (data.status === 'failed' ? 'failed' : 'pending') as 'failed' | 'pending',
+        status: 'failed' as const,
         message: data.message || 'Paiement non confirmé. Vous pouvez relancer.',
       };
     }
@@ -490,13 +492,18 @@ function BillingPageInner() {
             </button>
           </div>
           {payMethod === 'mobile' && (
-            <input
-              type="tel"
-              value={payPhone}
-              onChange={(e) => setPayPhone(e.target.value)}
-              placeholder="243XXXXXXXXX"
-              className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white"
-            />
+            <>
+              <p className="text-[11px] text-muted">
+                Opérateurs : {FLEXPAY_MOBILE_OPERATORS_LABEL}
+              </p>
+              <input
+                type="tel"
+                value={payPhone}
+                onChange={(e) => setPayPhone(e.target.value)}
+                placeholder="243XXXXXXXXX"
+                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white"
+              />
+            </>
           )}
           {pendingFlexPayRequestId && (
             <PaymentPendingView
@@ -711,7 +718,10 @@ function BillingPageInner() {
                         {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
                       </span>
                     </div>
-                    <p className="text-xs text-muted">{req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-xs text-muted">
+                    {req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}
+                    {req.flexPayChannel ? ` · ${req.flexPayChannel}` : ''}
+                  </p>
                     {canRetryFlex && (
                       <button
                         type="button"

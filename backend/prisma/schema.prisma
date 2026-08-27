@@ -348,6 +348,12 @@ model TicketOrder {
   flexPayOrderNumber      String?   @unique
   /** Référence marchand envoyée à FlexPay (= souvent id commande). */
   flexPayReference        String?
+  /** Canal FlexPay (mpesa, orange, airtel, afrimoney, mastercard…). */
+  flexPayChannel          String?
+  /** Montant total payé par le client (incl. frais opérateur). */
+  flexPayAmountCustomer   Float?
+  /** Référence transaction chez l’opérateur (provider_reference). */
+  flexPayProviderReference String?
   paidAt                  DateTime?
   userId                  String?
   user                    User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -547,6 +553,12 @@ model SubscriptionRequest {
   paymentProvider        String?
   flexPayOrderNumber     String?                   @unique
   flexPayReference       String?
+  /** Canal FlexPay (mpesa, orange, airtel, afrimoney, mastercard…). */
+  flexPayChannel         String?
+  /** Montant total payé par le client (incl. frais opérateur). */
+  flexPayAmountCustomer  Float?
+  /** Référence transaction chez l’opérateur (provider_reference). */
+  flexPayProviderReference String?
   paidAt                 DateTime?
   platformInvoice        PlatformInvoice?
   createdAt              DateTime                  @default(now())
