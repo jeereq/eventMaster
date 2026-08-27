@@ -20,6 +20,7 @@ import { normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
 import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
 import { toPrismaJson } from '../utils/prismaJson';
 import {
+  buildFlexPayReference,
   createFlexPayCardCheckout,
   createFlexPayMobileCheckout,
   getPublicApiBaseUrl,
@@ -470,9 +471,10 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
           return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
         }
         const apiBase = getPublicApiBaseUrl();
+        const reference = buildFlexPayReference('tk', order.id);
         try {
           const flex = await createFlexPayMobileCheckout({
-            reference: order.id,
+            reference,
             amount: amountFc,
             currency: 'CDF',
             phone,
@@ -483,7 +485,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
             data: {
               paymentProvider: 'flexpay_mobile',
               flexPayOrderNumber: flex.orderNumber,
-              flexPayReference: order.id,
+              flexPayReference: reference,
             },
           });
           return res.json({
@@ -504,13 +506,13 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       }
 
       const apiBase = getPublicApiBaseUrl();
-      const reference = order.id;
+      const reference = buildFlexPayReference('tk', order.id);
       try {
         const flex = await createFlexPayCardCheckout({
           reference,
           amount: amountFc,
           currency: 'CDF',
-          description: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`,
+          description: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`.slice(0, 200),
           callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
           approveUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=approve`,
           cancelUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=cancel`,

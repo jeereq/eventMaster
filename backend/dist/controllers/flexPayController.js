@@ -411,6 +411,7 @@ async function retryFlexPayTicketOrder(req, res) {
         if (method === 'mobile' && !phone) {
             return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
         }
+        const reference = (0, flexPayCardService_1.buildFlexPayReference)('tk', order.id);
         // Libère l’ancien orderNumber unique avant une nouvelle session
         await db_1.prisma.ticketOrder.update({
             where: { id: order.id },
@@ -421,7 +422,7 @@ async function retryFlexPayTicketOrder(req, res) {
                 flexPayAmountCustomer: null,
                 flexPayProviderReference: null,
                 paymentProvider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
-                flexPayReference: order.id,
+                flexPayReference: reference,
             },
         });
         const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
@@ -429,7 +430,7 @@ async function retryFlexPayTicketOrder(req, res) {
         try {
             if (method === 'mobile') {
                 const flex = await (0, flexPayCardService_1.createFlexPayMobileCheckout)({
-                    reference: order.id,
+                    reference,
                     amount: order.amountFc,
                     currency: 'CDF',
                     phone,
@@ -437,7 +438,7 @@ async function retryFlexPayTicketOrder(req, res) {
                 });
                 await db_1.prisma.ticketOrder.update({
                     where: { id: order.id },
-                    data: { flexPayOrderNumber: flex.orderNumber },
+                    data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: reference },
                 });
                 return res.json({
                     paid: false,
@@ -449,7 +450,7 @@ async function retryFlexPayTicketOrder(req, res) {
                 });
             }
             const flex = await (0, flexPayCardService_1.createFlexPayCardCheckout)({
-                reference: order.id,
+                reference,
                 amount: order.amountFc,
                 currency: 'CDF',
                 description: `Billet — ${order.event.title}`.slice(0, 200),
@@ -461,7 +462,7 @@ async function retryFlexPayTicketOrder(req, res) {
             });
             await db_1.prisma.ticketOrder.update({
                 where: { id: order.id },
-                data: { flexPayOrderNumber: flex.orderNumber },
+                data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: reference },
             });
             return res.json({
                 paid: false,

@@ -370,6 +370,7 @@ model TicketOrder {
   @@index([buyerEmail])
   @@index([userId])
   @@index([eventId, tableId, seatIndex])
+  @@index([flexPayReference])
 }
 
 /** Réservation temporaire d’un siège pendant le checkout. */

@@ -409,9 +409,10 @@ async function checkoutPublicEvent(req, res) {
                     return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
                 }
                 const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
+                const reference = (0, flexPayCardService_1.buildFlexPayReference)('tk', order.id);
                 try {
                     const flex = await (0, flexPayCardService_1.createFlexPayMobileCheckout)({
-                        reference: order.id,
+                        reference,
                         amount: amountFc,
                         currency: 'CDF',
                         phone,
@@ -422,7 +423,7 @@ async function checkoutPublicEvent(req, res) {
                         data: {
                             paymentProvider: 'flexpay_mobile',
                             flexPayOrderNumber: flex.orderNumber,
-                            flexPayReference: order.id,
+                            flexPayReference: reference,
                         },
                     });
                     return res.json({
@@ -442,13 +443,13 @@ async function checkoutPublicEvent(req, res) {
                 }
             }
             const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
-            const reference = order.id;
+            const reference = (0, flexPayCardService_1.buildFlexPayReference)('tk', order.id);
             try {
                 const flex = await (0, flexPayCardService_1.createFlexPayCardCheckout)({
                     reference,
                     amount: amountFc,
                     currency: 'CDF',
-                    description: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`,
+                    description: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`.slice(0, 200),
                     callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
                     approveUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=approve`,
                     cancelUrl: `${apiBase}/api/public/payments/flexpay/return?orderId=${order.id}&result=cancel`,

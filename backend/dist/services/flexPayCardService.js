@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mapFlexPayTransactionStatus = mapFlexPayTransactionStatus;
 exports.buildFlexPayMetadataUpdate = buildFlexPayMetadataUpdate;
+exports.buildFlexPayReference = buildFlexPayReference;
 exports.normalizeFlexPayPhone = normalizeFlexPayPhone;
 exports.getFlexPayCardConfig = getFlexPayCardConfig;
 exports.isFlexPayCardConfigured = isFlexPayCardConfigured;
@@ -59,6 +60,18 @@ function buildFlexPayMetadataUpdate(source) {
     if (source.providerReference)
         data.flexPayProviderReference = source.providerReference;
     return data;
+}
+/**
+ * Construit une référence FlexPay valide et unique (max 25 caractères).
+ * FlexPay impose : le paramètre reference ne peut pas dépasser 25 caractères.
+ */
+function buildFlexPayReference(prefix, id) {
+    const cleanPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 4);
+    const cleanId = id.replace(/[^a-zA-Z0-9]/g, '');
+    const shortId = cleanId.slice(-12) || '000000000000';
+    const time = (Date.now() % 10000000).toString(36);
+    const ref = `${cleanPrefix}_${time}_${shortId}`;
+    return ref.slice(0, 25);
 }
 function envOrSetting(envKey, settingValue) {
     const fromEnv = process.env[envKey]?.trim();
@@ -134,10 +147,11 @@ function resolveTicketCheckoutProvider() {
 async function createFlexPayCardCheckout(input) {
     assertFlexPayConfigured();
     const cfg = getFlexPayCardConfig();
+    const safeReference = (input.reference.length > 25 ? input.reference.slice(0, 25) : input.reference).trim();
     const body = {
         authorization: authHeader(cfg.token),
         merchant: cfg.merchant,
-        reference: input.reference,
+        reference: safeReference,
         amount: String(Math.max(1, Math.round(input.amount))),
         currency: input.currency || 'CDF',
         language: (input.language || 'fr').toUpperCase(),
@@ -175,6 +189,7 @@ async function createFlexPayCardCheckout(input) {
 async function createFlexPayMobileCheckout(input) {
     assertFlexPayConfigured();
     const cfg = getFlexPayCardConfig();
+    const safeReference = (input.reference.length > 25 ? input.reference.slice(0, 25) : input.reference).trim();
     const phone = normalizeFlexPayPhone(input.phone);
     if (!phone) {
         throw new Error('Numéro Mobile Money invalide. Utilisez le format 243XXXXXXXXX.');
@@ -183,7 +198,7 @@ async function createFlexPayMobileCheckout(input) {
         merchant: cfg.merchant,
         type: '1',
         phone,
-        reference: input.reference,
+        reference: safeReference,
         amount: String(Math.max(1, Math.round(input.amount))),
         currency: input.currency || 'CDF',
         callbackUrl: input.callbackUrl,

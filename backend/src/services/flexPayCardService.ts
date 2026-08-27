@@ -119,6 +119,19 @@ export function buildFlexPayMetadataUpdate(
   return data;
 }
 
+/**
+ * Construit une référence FlexPay valide et unique (max 25 caractères).
+ * FlexPay impose : le paramètre reference ne peut pas dépasser 25 caractères.
+ */
+export function buildFlexPayReference(prefix: string, id: string): string {
+  const cleanPrefix = prefix.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(0, 4);
+  const cleanId = id.replace(/[^a-zA-Z0-9]/g, '');
+  const shortId = cleanId.slice(-12) || '000000000000';
+  const time = (Date.now() % 10000000).toString(36);
+  const ref = `${cleanPrefix}_${time}_${shortId}`;
+  return ref.slice(0, 25);
+}
+
 function envOrSetting(envKey: string, settingValue?: string): string {
   const fromEnv = process.env[envKey]?.trim();
   if (fromEnv) return fromEnv;
@@ -199,11 +212,12 @@ export function resolveTicketCheckoutProvider(): TicketPaymentProvider {
 export async function createFlexPayCardCheckout(input: FlexPayPayRequest): Promise<FlexPayPayResult> {
   assertFlexPayConfigured();
   const cfg = getFlexPayCardConfig();
+  const safeReference = (input.reference.length > 25 ? input.reference.slice(0, 25) : input.reference).trim();
 
   const body = {
     authorization: authHeader(cfg.token),
     merchant: cfg.merchant,
-    reference: input.reference,
+    reference: safeReference,
     amount: String(Math.max(1, Math.round(input.amount))),
     currency: input.currency || 'CDF',
     language: (input.language || 'fr').toUpperCase(),
@@ -248,6 +262,7 @@ export async function createFlexPayMobileCheckout(
 ): Promise<FlexPayPayResult> {
   assertFlexPayConfigured();
   const cfg = getFlexPayCardConfig();
+  const safeReference = (input.reference.length > 25 ? input.reference.slice(0, 25) : input.reference).trim();
 
   const phone = normalizeFlexPayPhone(input.phone);
   if (!phone) {
@@ -258,7 +273,7 @@ export async function createFlexPayMobileCheckout(
     merchant: cfg.merchant,
     type: '1',
     phone,
-    reference: input.reference,
+    reference: safeReference,
     amount: String(Math.max(1, Math.round(input.amount))),
     currency: input.currency || 'CDF',
     callbackUrl: input.callbackUrl,

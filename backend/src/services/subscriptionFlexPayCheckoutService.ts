@@ -1,6 +1,7 @@
 import { PlanType, SubscriptionRequest } from '@prisma/client';
 import { prisma } from '../db';
 import {
+  buildFlexPayReference,
   createFlexPayCardCheckout,
   createFlexPayMobileCheckout,
   getPublicApiBaseUrl,
@@ -43,6 +44,8 @@ export async function initiateFlexPaySessionForRequest(params: {
     throw new Error('Numéro Mobile Money requis (243…).');
   }
 
+  const reference = buildFlexPayReference('sub', request.id);
+
   // Libérer l’unicité de l’ancien orderNumber avant d’en créer un nouveau
   await prisma.subscriptionRequest.update({
     where: { id: request.id },
@@ -52,7 +55,7 @@ export async function initiateFlexPaySessionForRequest(params: {
       approvedAmount: amountFc,
       paymentProvider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
       flexPayOrderNumber: null,
-      flexPayReference: request.id,
+      flexPayReference: reference,
       paidAt: null,
       specialDiscountPercent: null,
     },
@@ -64,7 +67,7 @@ export async function initiateFlexPaySessionForRequest(params: {
 
   if (method === 'mobile') {
     const flex = await createFlexPayMobileCheckout({
-      reference: request.id,
+      reference,
       amount: amountFc,
       currency: 'CDF',
       phone: String(phone),
@@ -72,7 +75,7 @@ export async function initiateFlexPaySessionForRequest(params: {
     });
     await prisma.subscriptionRequest.update({
       where: { id: request.id },
-      data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: request.id },
+      data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: reference },
     });
     return {
       paid: false,
@@ -86,7 +89,7 @@ export async function initiateFlexPaySessionForRequest(params: {
   }
 
   const flex = await createFlexPayCardCheckout({
-    reference: request.id,
+    reference,
     amount: amountFc,
     currency: 'CDF',
     description,
@@ -98,7 +101,7 @@ export async function initiateFlexPaySessionForRequest(params: {
   });
   await prisma.subscriptionRequest.update({
     where: { id: request.id },
-    data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: request.id },
+    data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: reference },
   });
   return {
     paid: false,

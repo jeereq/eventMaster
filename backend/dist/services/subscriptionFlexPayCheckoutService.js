@@ -20,6 +20,7 @@ async function initiateFlexPaySessionForRequest(params) {
     if (method === 'mobile' && !phone?.trim()) {
         throw new Error('Numéro Mobile Money requis (243…).');
     }
+    const reference = (0, flexPayCardService_1.buildFlexPayReference)('sub', request.id);
     // Libérer l’unicité de l’ancien orderNumber avant d’en créer un nouveau
     await db_1.prisma.subscriptionRequest.update({
         where: { id: request.id },
@@ -29,7 +30,7 @@ async function initiateFlexPaySessionForRequest(params) {
             approvedAmount: amountFc,
             paymentProvider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
             flexPayOrderNumber: null,
-            flexPayReference: request.id,
+            flexPayReference: reference,
             paidAt: null,
             specialDiscountPercent: null,
         },
@@ -39,7 +40,7 @@ async function initiateFlexPaySessionForRequest(params) {
     const description = `Forfait ${plan} — ${days} jours — ${tenantName}`;
     if (method === 'mobile') {
         const flex = await (0, flexPayCardService_1.createFlexPayMobileCheckout)({
-            reference: request.id,
+            reference,
             amount: amountFc,
             currency: 'CDF',
             phone: String(phone),
@@ -47,7 +48,7 @@ async function initiateFlexPaySessionForRequest(params) {
         });
         await db_1.prisma.subscriptionRequest.update({
             where: { id: request.id },
-            data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: request.id },
+            data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: reference },
         });
         return {
             paid: false,
@@ -59,7 +60,7 @@ async function initiateFlexPaySessionForRequest(params) {
         };
     }
     const flex = await (0, flexPayCardService_1.createFlexPayCardCheckout)({
-        reference: request.id,
+        reference,
         amount: amountFc,
         currency: 'CDF',
         description,
@@ -71,7 +72,7 @@ async function initiateFlexPaySessionForRequest(params) {
     });
     await db_1.prisma.subscriptionRequest.update({
         where: { id: request.id },
-        data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: request.id },
+        data: { flexPayOrderNumber: flex.orderNumber, flexPayReference: reference },
     });
     return {
         paid: false,
