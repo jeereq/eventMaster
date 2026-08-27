@@ -14,6 +14,7 @@ const publicVenue_1 = require("../utils/publicVenue");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
 const rdcCities_1 = require("../utils/rdcCities");
 const platformSettingsService_1 = require("../services/platformSettingsService");
+const prismaJson_1 = require("../utils/prismaJson");
 const flexPayCardService_1 = require("../services/flexPayCardService");
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 function serializePublicPost(post) {
@@ -218,7 +219,7 @@ async function checkoutPublicEvent(req, res) {
         const buyerEmail = account.email.trim().toLowerCase();
         const buyerName = String(req.body?.buyerName || account.name || '').trim();
         const buyerPhone = String(req.body?.buyerPhone || account.phone || '').trim() || null;
-        let quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+        let quantity = 1;
         const tableId = req.body?.tableId ? String(req.body.tableId) : null;
         const seatIndexRaw = req.body?.seatIndex;
         const seatIndex = seatIndexRaw === 0 || seatIndexRaw === '0'
@@ -240,33 +241,86 @@ async function checkoutPublicEvent(req, res) {
             return res.status(400).json({ error: 'Cet événement est déjà passé.' });
         }
         const bodyPricingZoneId = req.body?.pricingZoneId ? String(req.body.pricingZoneId) : null;
+        let requestedSeats = [];
+        if (Array.isArray(req.body?.seats) && req.body.seats.length > 0) {
+            requestedSeats = req.body.seats
+                .map((s) => ({
+                tableId: String(s.tableId || ''),
+                seatIndex: Number(s.seatIndex),
+            }))
+                .filter((s) => s.tableId && Number.isFinite(s.seatIndex) && s.seatIndex >= 0);
+        }
+        else if (tableId && seatIndex != null && Number.isFinite(seatIndex) && seatIndex >= 0) {
+            requestedSeats = [{ tableId, seatIndex }];
+        }
         if (event.seatSelectionEnabled) {
-            quantity = 1;
-            if (!tableId || seatIndex == null || !Number.isFinite(seatIndex)) {
-                return res.status(400).json({ error: 'Choisissez une table et un siège sur le plan.' });
+            if (requestedSeats.length === 0) {
+                return res.status(400).json({ error: 'Sélectionnez au moins une place sur le plan.' });
             }
+            if (requestedSeats.length > 8) {
+                return res.status(400).json({ error: 'Vous pouvez réserver au maximum 8 places à la fois.' });
+            }
+            const seen = new Set();
+            for (const s of requestedSeats) {
+                const key = `${s.tableId}:${s.seatIndex}`;
+                if (seen.has(key)) {
+                    return res.status(400).json({ error: 'Vous avez sélectionné plusieurs fois le même siège.' });
+                }
+                seen.add(key);
+            }
+            quantity = requestedSeats.length;
+        }
+        else {
+            quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
         }
         const pricingMode = (0, ticketPricingService_1.normalizeTicketPricingMode)(event.ticketPricingMode);
         let unitPriceFc = 0;
+        let amountFc = 0;
         let pricingZoneId = null;
+        let seatsWithPricing = [];
         try {
-            if (pricingMode === 'by_zone') {
-                if (event.seatSelectionEnabled && tableId != null && seatIndex != null) {
-                    const resolved = (0, ticketPricingService_1.resolveSeatPrice)(event, tableId, seatIndex);
-                    unitPriceFc = resolved.priceFc;
-                    pricingZoneId = resolved.pricingZoneId;
-                }
-                else if (bodyPricingZoneId) {
-                    const resolved = (0, ticketPricingService_1.resolveZoneTicketPrice)(event, bodyPricingZoneId);
-                    unitPriceFc = resolved.priceFc;
-                    pricingZoneId = resolved.pricingZoneId;
-                }
-                else {
+            if (event.seatSelectionEnabled) {
+                let sum = 0;
+                seatsWithPricing = requestedSeats.map((s) => {
+                    if (pricingMode === 'by_zone') {
+                        const resolved = (0, ticketPricingService_1.resolveSeatPrice)(event, s.tableId, s.seatIndex);
+                        sum += resolved.priceFc;
+                        return {
+                            tableId: s.tableId,
+                            seatIndex: s.seatIndex,
+                            priceFc: resolved.priceFc,
+                            pricingZoneId: resolved.pricingZoneId,
+                            pricingZoneName: resolved.pricingZoneName,
+                        };
+                    }
+                    else {
+                        const price = Math.max(0, event.ticketPriceFc);
+                        sum += price;
+                        return {
+                            tableId: s.tableId,
+                            seatIndex: s.seatIndex,
+                            priceFc: price,
+                            pricingZoneId: null,
+                            pricingZoneName: null,
+                        };
+                    }
+                });
+                amountFc = sum;
+                unitPriceFc = quantity > 0 ? Math.round(sum / quantity) : 0;
+                pricingZoneId = seatsWithPricing[0]?.pricingZoneId || null;
+            }
+            else if (pricingMode === 'by_zone') {
+                if (!bodyPricingZoneId) {
                     return res.status(400).json({ error: 'Choisissez une zone tarifaire.' });
                 }
+                const resolved = (0, ticketPricingService_1.resolveZoneTicketPrice)(event, bodyPricingZoneId);
+                unitPriceFc = resolved.priceFc;
+                pricingZoneId = resolved.pricingZoneId;
+                amountFc = unitPriceFc * quantity;
             }
             else {
                 unitPriceFc = Math.max(0, event.ticketPriceFc);
+                amountFc = unitPriceFc * quantity;
             }
         }
         catch (err) {
@@ -289,8 +343,9 @@ async function checkoutPublicEvent(req, res) {
         if (existing) {
             return res.status(400).json({ error: 'Cet e-mail a déjà une inscription pour cet événement.' });
         }
-        const paid = event.ticketingEnabled && unitPriceFc > 0 && (0, platformSettingsService_1.isOnlinePaymentsEnabled)();
-        const amountFc = paid ? unitPriceFc * quantity : 0;
+        const paid = event.ticketingEnabled && amountFc > 0 && (0, platformSettingsService_1.isOnlinePaymentsEnabled)();
+        if (!paid)
+            amountFc = 0;
         const rawMethod = String(req.body?.paymentMethod || 'card').toLowerCase();
         const paymentMethod = rawMethod === 'mobile' ? 'mobile' : 'card';
         const paymentProvider = paid
@@ -310,23 +365,23 @@ async function checkoutPublicEvent(req, res) {
                 paidAt: paid ? null : new Date(),
                 paymentProvider,
                 userId,
-                tableId: event.seatSelectionEnabled ? tableId : null,
-                seatIndex: event.seatSelectionEnabled ? seatIndex : null,
+                tableId: requestedSeats[0]?.tableId || null,
+                seatIndex: requestedSeats[0]?.seatIndex ?? null,
+                selectedSeats: seatsWithPricing.length > 0 ? (0, prismaJson_1.toPrismaJson)(seatsWithPricing) : undefined,
             },
         });
-        if (event.seatSelectionEnabled && tableId != null && seatIndex != null) {
+        if (event.seatSelectionEnabled && requestedSeats.length > 0) {
             try {
-                await (0, seatSelectionService_1.createSeatHold)({
+                await (0, seatSelectionService_1.createMultipleSeatHolds)({
                     eventId: event.id,
-                    tableId,
-                    seatIndex,
+                    seats: requestedSeats,
                     buyerEmail,
                     orderId: order.id,
                 });
             }
             catch (err) {
                 await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
-                return res.status(409).json({ error: err?.message || 'Siège indisponible.' });
+                return res.status(409).json({ error: err?.message || 'Un ou plusieurs sièges sélectionnés sont indisponibles.' });
             }
         }
         if (!paid) {
@@ -449,11 +504,18 @@ async function getTicketOrderBySession(req, res) {
         const primary = order.guests[0];
         return res.json({
             status: order.status,
+            paid: order.status === 'PAID',
             quantity: order.quantity,
             amountFc: order.amountFc,
             event: order.event,
             guestId: primary?.id,
             rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+            guests: order.guests.map((g) => ({
+                id: g.id,
+                firstName: g.firstName,
+                email: g.email,
+                rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+            })),
         });
     }
     catch (error) {

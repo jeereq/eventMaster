@@ -339,8 +339,15 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
       return res.json({
         paid: true,
         orderId: order.id,
+        quantity: order.quantity,
         guestId: primary?.id,
         rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+        guests: order.guests.map((g) => ({
+          id: g.id,
+          firstName: g.firstName,
+          email: g.email,
+          rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+        })),
         event: order.event,
         channel: order.flexPayChannel,
       });
@@ -399,8 +406,15 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
     return res.json({
       paid: true,
       orderId: order.id,
+      quantity: order.quantity,
       guestId: primary?.id,
       rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+      guests: (fulfilled?.guests || []).map((g) => ({
+        id: g.id,
+        firstName: g.firstName,
+        email: g.email,
+        rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+      })),
       event: order.event,
       channel: checked.channel || order.flexPayChannel,
     });

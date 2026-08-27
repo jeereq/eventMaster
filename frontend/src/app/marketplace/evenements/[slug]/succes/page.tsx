@@ -8,7 +8,14 @@ import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PaymentPendingView from '@/components/PaymentPendingView';
 import { Alert, Button } from '@/components/ui';
 import { eventPublicHref, eventPublicListHref } from '@/lib/safeAppPath';
-import { CheckCircle2, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, QrCode, Ticket } from 'lucide-react';
+
+type SuccessGuestItem = {
+  id: string;
+  firstName: string;
+  email: string;
+  rsvpUrl: string;
+};
 
 function SuccessInner() {
   const params = useParams();
@@ -22,6 +29,7 @@ function SuccessInner() {
   const forcePending = search.get('pending') === '1';
 
   const [rsvpUrl, setRsvpUrl] = useState(rsvpFromQuery || '');
+  const [guestsList, setGuestsList] = useState<SuccessGuestItem[]>([]);
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(Boolean(rsvpFromQuery) && !forcePending);
@@ -33,6 +41,7 @@ function SuccessInner() {
     if (!orderId) return { status: 'error' as const, message: 'Commande manquante.' };
     const data = await api.get(`/public/payments/flexpay/orders/${orderId}/verify`);
     if (data.event?.title) setTitle(data.event.title);
+    if (Array.isArray(data.guests)) setGuestsList(data.guests);
     if (data.paid) {
       setRsvpUrl(data.rsvpUrl || '');
       setPaid(true);
@@ -69,6 +78,7 @@ function SuccessInner() {
     if (!sessionId) return { status: 'error' as const, message: 'Session manquante.' };
     const data = await api.get(`/public/ticket-orders/session/${sessionId}`);
     if (data.event?.title) setTitle(data.event.title);
+    if (Array.isArray(data.guests)) setGuestsList(data.guests);
     if (data.rsvpUrl) setRsvpUrl(data.rsvpUrl);
     if (data.status === 'PAID' || data.paid) {
       setPaid(true);
@@ -89,7 +99,7 @@ function SuccessInner() {
         description={
           paid
             ? title
-              ? `Votre place pour « ${title} » est enregistrée.`
+              ? `Votre réservation pour « ${title} » est enregistrée.`
               : 'Votre inscription est enregistrée.'
             : showPending
               ? 'Validez le paiement : la confirmation s’affiche ici automatiquement.'
@@ -134,28 +144,69 @@ function SuccessInner() {
         )}
 
         {paid && (
-          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-3">
-            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-4">
+            <div className="flex items-center gap-2.5 text-emerald-600 font-bold">
+              <CheckCircle2 className="w-7 h-7 shrink-0" />
+              <span>Paiement validé avec succès</span>
+            </div>
             {error && <Alert variant="error">{error}</Alert>}
             <p className="text-sm text-muted leading-relaxed">
-              Conservez le lien de votre espace invité : badge QR, consignes et, selon le forfait de
-              l’organisateur, plan de table.
+              Conservez les liens de vos espaces invités : badges QR, consignes et plan de table.
             </p>
-            {rsvpUrl && (
-              <a href={rsvpUrl} className="inline-flex">
-                <Button>Ouvrir mon badge QR</Button>
-              </a>
-            )}
-            <div className="flex flex-col gap-2 pt-2 border-t border-border">
+
+            {guestsList.length > 1 ? (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Ticket className="w-3.5 h-3.5 text-primary" />
+                  Vos {guestsList.length} billets réservés
+                </p>
+                <div className="space-y-2">
+                  {guestsList.map((g, idx) => (
+                    <div
+                      key={g.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-surface-muted"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">
+                          {idx === 0 ? `Billet 1 (Principal) · ${g.firstName}` : `Billet ${idx + 1} · ${g.firstName}`}
+                        </p>
+                        <p className="text-[11px] text-muted truncate">{g.email}</p>
+                      </div>
+                      <a href={g.rsvpUrl} className="shrink-0 inline-flex">
+                        <Button size="sm" className="inline-flex items-center gap-1 text-xs">
+                          <QrCode className="w-3.5 h-3.5" />
+                          Badge QR
+                        </Button>
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : rsvpUrl ? (
+              <div className="pt-2">
+                <a href={rsvpUrl} className="inline-flex">
+                  <Button className="inline-flex items-center gap-2">
+                    <QrCode className="w-4 h-4" />
+                    Ouvrir mon badge QR
+                  </Button>
+                </a>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-2 pt-3 border-t border-border">
+              <Link
+                href="/dashboard/tickets"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+              >
+                <Ticket className="w-3.5 h-3.5" />
+                Voir tous mes billets dans mon compte
+              </Link>
               <Link
                 href={eventPublicHref(slug)}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+                className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Retour à l’événement
-              </Link>
-              <Link href={eventPublicListHref()} className="text-sm text-muted hover:text-foreground">
-                Tous les événements
               </Link>
             </div>
           </div>

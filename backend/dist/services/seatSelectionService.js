@@ -4,7 +4,9 @@ exports.purgeExpiredSeatHolds = purgeExpiredSeatHolds;
 exports.listSeatInventory = listSeatInventory;
 exports.assertSeatAvailable = assertSeatAvailable;
 exports.createSeatHold = createSeatHold;
+exports.createMultipleSeatHolds = createMultipleSeatHolds;
 exports.assignSeatInTablePlan = assignSeatInTablePlan;
+exports.assignMultipleSeatsInTablePlan = assignMultipleSeatsInTablePlan;
 const db_1 = require("../db");
 const prismaJson_1 = require("../utils/prismaJson");
 const ticketPricingService_1 = require("./ticketPricingService");
@@ -122,6 +124,33 @@ async function createSeatHold(opts) {
         },
     });
 }
+async function createMultipleSeatHolds(opts) {
+    await purgeExpiredSeatHolds(opts.eventId);
+    for (const s of opts.seats) {
+        await assertSeatAvailable(opts.eventId, s.tableId, s.seatIndex);
+    }
+    const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+    for (const s of opts.seats) {
+        await db_1.prisma.seatHold.deleteMany({
+            where: {
+                eventId: opts.eventId,
+                tableId: s.tableId,
+                seatIndex: s.seatIndex,
+                expiresAt: { lt: new Date() },
+            },
+        });
+        await db_1.prisma.seatHold.create({
+            data: {
+                eventId: opts.eventId,
+                tableId: s.tableId,
+                seatIndex: s.seatIndex,
+                buyerEmail: opts.buyerEmail,
+                orderId: opts.orderId,
+                expiresAt,
+            },
+        });
+    }
+}
 /** Assigne le siège dans tablePlan JSON et libère le hold. */
 async function assignSeatInTablePlan(eventId, tableId, seatIndex, guestId) {
     const event = await db_1.prisma.event.findUnique({
@@ -148,4 +177,33 @@ async function assignSeatInTablePlan(eventId, tableId, seatIndex, guestId) {
     await db_1.prisma.seatHold.deleteMany({
         where: { eventId, tableId, seatIndex },
     });
+}
+/** Assigne plusieurs sièges dans tablePlan JSON et libère les holds. */
+async function assignMultipleSeatsInTablePlan(eventId, assignments) {
+    if (assignments.length === 0)
+        return;
+    const event = await db_1.prisma.event.findUnique({
+        where: { id: eventId },
+        select: { tablePlan: true },
+    });
+    const plan = (event?.tablePlan && typeof event.tablePlan === 'object'
+        ? structuredClone(event.tablePlan)
+        : { tables: [] });
+    for (const a of assignments) {
+        const table = plan.tables.find((t) => t.id === a.tableId);
+        if (!table)
+            continue;
+        if (!table.seats)
+            table.seats = {};
+        table.seats[a.seatIndex] = a.guestId;
+    }
+    await db_1.prisma.event.update({
+        where: { id: eventId },
+        data: { tablePlan: (0, prismaJson_1.toPrismaJson)(plan) },
+    });
+    for (const a of assignments) {
+        await db_1.prisma.seatHold.deleteMany({
+            where: { eventId, tableId: a.tableId, seatIndex: a.seatIndex },
+        });
+    }
 }

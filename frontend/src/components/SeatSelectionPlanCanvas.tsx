@@ -58,6 +58,7 @@ export interface SeatSelectionPlanCanvasProps {
   floorImageUrl?: string | null;
   pricingZones?: PricingZone[];
   selected?: { tableId: string; seatIndex: number } | null;
+  selectedSeats?: Array<{ tableId: string; seatIndex: number }>;
   onSelect: (tableId: string, seatIndex: number) => void;
   zoneColorById?: Map<string, string>;
   showZonePricing?: boolean;
@@ -84,6 +85,7 @@ export default function SeatSelectionPlanCanvas({
   floorImageUrl,
   pricingZones = [],
   selected,
+  selectedSeats,
   onSelect,
   zoneColorById,
   showZonePricing = false,
@@ -96,6 +98,21 @@ export default function SeatSelectionPlanCanvas({
   const theme = getRoomTheme(roomThemeId);
   const effectiveFloorType = (floorType as FloorType | undefined) ?? theme.defaultFloorType;
   const floorStyle = resolveFloorStyle(effectiveFloorType, floorImageUrl ?? undefined, theme.accentColor);
+
+  const isSeatSelected = (tableId: string, seatIndex: number) => {
+    if (selectedSeats && selectedSeats.length > 0) {
+      return selectedSeats.some((s) => s.tableId === tableId && s.seatIndex === seatIndex);
+    }
+    return selected?.tableId === tableId && selected.seatIndex === seatIndex;
+  };
+
+  const getSeatBadge = (tableId: string, seatIndex: number) => {
+    if (selectedSeats && selectedSeats.length > 1) {
+      const idx = selectedSeats.findIndex((s) => s.tableId === tableId && s.seatIndex === seatIndex);
+      return idx >= 0 ? idx + 1 : null;
+    }
+    return null;
+  };
 
   const tables = useMemo(() => {
     const map = new Map<string, PlanTable>();
@@ -234,8 +251,10 @@ export default function SeatSelectionPlanCanvas({
           ))}
 
           {tables.map((table) => {
-            const visual = getTableVisualStyle(table.shape, selected?.tableId === table.id, undefined);
-            const tableHasSelection = selected?.tableId === table.id;
+            const tableHasSelection =
+              (selectedSeats && selectedSeats.some((s) => s.tableId === table.id)) ||
+              selected?.tableId === table.id;
+            const visual = getTableVisualStyle(table.shape, Boolean(tableHasSelection), undefined);
 
             return (
               <div
@@ -261,8 +280,8 @@ export default function SeatSelectionPlanCanvas({
 
                   {table.seats.map((seat) => {
                     const coords = getSeatCoordinates(table.shape, table.capacity, seat.seatIndex);
-                    const isSelected =
-                      selected?.tableId === seat.tableId && selected.seatIndex === seat.seatIndex;
+                    const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
+                    const badge = getSeatBadge(seat.tableId, seat.seatIndex);
                     const zoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : undefined;
 
                     return (
@@ -281,15 +300,20 @@ export default function SeatSelectionPlanCanvas({
                           'absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[8px] font-bold transition z-20',
                           !seat.available && 'opacity-35 cursor-not-allowed bg-muted text-muted border-border',
                           seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
-                          isSelected && 'bg-primary text-white border-primary scale-110 shadow-md',
+                          isSelected && 'bg-primary text-white border-primary scale-110 shadow-md font-extrabold',
                         )}
                         title={
                           seat.available
-                            ? `Siège ${seat.seatIndex + 1}${seat.pricingZoneName ? ` · ${seat.pricingZoneName}` : ''}${showZonePricing && seat.priceFc ? ` · ${formatFc(seat.priceFc)}` : ''}`
+                            ? `Siège ${seat.seatIndex + 1}${seat.pricingZoneName ? ` · ${seat.pricingZoneName}` : ''}${showZonePricing && seat.priceFc ? ` · ${formatFc(seat.priceFc)}` : ''}${isSelected ? ' (Sélectionné — cliquer pour retirer)' : ''}`
                             : 'Occupé'
                         }
                       >
                         {seat.seatIndex + 1}
+                        {badge != null && (
+                          <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] font-black flex items-center justify-center border border-white">
+                            {badge}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

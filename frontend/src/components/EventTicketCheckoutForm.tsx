@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
-import { Ticket } from 'lucide-react';
+import { Ticket, Plus, Minus, X, Check, Users } from 'lucide-react';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
@@ -53,7 +53,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const [quantity, setQuantity] = useState(1);
   const [seats, setSeats] = useState<SeatRow[]>([]);
   const [planMeta, setPlanMeta] = useState<SeatInventoryMeta | null>(null);
-  const [selected, setSelected] = useState<{ tableId: string; seatIndex: number } | null>(null);
+  const [selectedSeats, setSelectedSeats] = useState<Array<{ tableId: string; seatIndex: number }>>([]);
   const [selectedZoneId, setSelectedZoneId] = useState('');
   const [seatsLoading, setSeatsLoading] = useState(false);
 
@@ -112,24 +112,51 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     return [...map.entries()];
   }, [seats]);
 
-  const selectedSeat = useMemo(() => {
-    if (!selected) return null;
-    return seats.find((s) => s.tableId === selected.tableId && s.seatIndex === selected.seatIndex) ?? null;
-  }, [seats, selected]);
+  const toggleSeat = (tableId: string, seatIndex: number) => {
+    setSelectedSeats((prev) => {
+      const exists = prev.some((s) => s.tableId === tableId && s.seatIndex === seatIndex);
+      if (exists) {
+        return prev.filter((s) => !(s.tableId === tableId && s.seatIndex === seatIndex));
+      }
+      if (prev.length >= 8) {
+        setError('Vous pouvez sélectionner au maximum 8 places à la fois.');
+        return prev;
+      }
+      setError('');
+      return [...prev, { tableId, seatIndex }];
+    });
+  };
+
+  const removeSeat = (tableId: string, seatIndex: number) => {
+    setSelectedSeats((prev) => prev.filter((s) => !(s.tableId === tableId && s.seatIndex === seatIndex)));
+  };
+
+  const selectedSeatObjects = useMemo(() => {
+    return selectedSeats
+      .map((sel) => seats.find((s) => s.tableId === sel.tableId && s.seatIndex === sel.seatIndex))
+      .filter((s): s is SeatRow => Boolean(s));
+  }, [seats, selectedSeats]);
 
   const selectedZone = useMemo(
     () => pricingZones.find((z) => z.id === selectedZoneId) ?? null,
     [pricingZones, selectedZoneId],
   );
 
-  const unitPriceFc = useMemo(() => {
-    if (seatMode && selectedSeat) return selectedSeat.priceFc;
-    if (zonePricing && !seatMode && selectedZone) return selectedZone.priceFc;
-    if (zonePricing && event.priceFromFc) return event.priceFromFc;
-    return event.ticketPriceFc;
-  }, [seatMode, selectedSeat, zonePricing, selectedZone, event.priceFromFc, event.ticketPriceFc]);
-
-  const totalFc = unitPriceFc * (seatMode ? 1 : quantity);
+  const totalFc = useMemo(() => {
+    if (seatMode) {
+      return selectedSeatObjects.reduce(
+        (acc, s) => acc + (s.priceFc > 0 ? s.priceFc : Math.max(0, event.ticketPriceFc)),
+        0,
+      );
+    }
+    if (zonePricing && selectedZone) {
+      return selectedZone.priceFc * quantity;
+    }
+    if (zonePricing && event.priceFromFc) {
+      return event.priceFromFc * quantity;
+    }
+    return Math.max(0, event.ticketPriceFc) * quantity;
+  }, [seatMode, selectedSeatObjects, zonePricing, selectedZone, quantity, event.priceFromFc, event.ticketPriceFc]);
 
   const zoneColorById = useMemo(() => {
     const map = new Map<string, string>();
@@ -147,8 +174,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     setBusy(true);
     setError('');
     try {
-      if (seatMode && !selected) {
-        setError('Sélectionnez une place sur le plan.');
+      if (seatMode && selectedSeats.length === 0) {
+        setError('Sélectionnez au moins une place sur le plan.');
         setBusy(false);
         return;
       }
@@ -165,12 +192,12 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
       const data = await api.post(`/public/events/${slug}/checkout`, {
         buyerName,
         buyerPhone,
-        quantity: seatMode ? 1 : quantity,
+        quantity: seatMode ? selectedSeats.length : quantity,
         ...(event.paid ? { paymentMethod } : {}),
         ...(event.paid && paymentMethod === 'mobile'
           ? { phone: mmPhone.trim() || buyerPhone.trim() }
           : {}),
-        ...(selected ? { tableId: selected.tableId, seatIndex: selected.seatIndex } : {}),
+        ...(seatMode && selectedSeats.length > 0 ? { seats: selectedSeats } : {}),
         ...(zonePricing && !seatMode && selectedZoneId ? { pricingZoneId: selectedZoneId } : {}),
       });
       if (data.checkoutUrl) {
@@ -272,8 +299,30 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           )}
 
           {seatMode ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-foreground">Choisissez votre place sur le plan</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-primary" />
+                    Choisissez vos places sur le plan
+                  </p>
+                  <p className="text-[11px] text-muted">
+                    {selectedSeats.length === 0
+                      ? 'Touchez un ou plusieurs sièges libres (jusqu’à 8 places)'
+                      : `${selectedSeats.length} place${selectedSeats.length > 1 ? 's' : ''} sélectionnée${selectedSeats.length > 1 ? 's' : ''} (max 8)`}
+                  </p>
+                </div>
+                {selectedSeats.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSeats([])}
+                    className="text-[11px] text-rose-600 hover:underline font-medium"
+                  >
+                    Tout désélectionner
+                  </button>
+                )}
+              </div>
+
               {seatsLoading ? (
                 <p className="text-xs text-muted">Chargement du plan…</p>
               ) : seats.length === 0 ? (
@@ -288,15 +337,68 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                     floorType={planMeta?.floorType}
                     floorImageUrl={planMeta?.floorImageUrl}
                     pricingZones={pricingZones}
-                    selected={selected}
-                    onSelect={(tableId, seatIndex) => setSelected({ tableId, seatIndex })}
+                    selectedSeats={selectedSeats}
+                    onSelect={(tableId, seatIndex) => toggleSeat(tableId, seatIndex)}
                     zoneColorById={zoneColorById}
                     showZonePricing={zonePricing}
                     height={320}
                   />
+
+                  {/* Badges des places sélectionnées */}
+                  {selectedSeatObjects.length > 0 && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+                      <p className="text-xs font-bold text-foreground flex items-center justify-between">
+                        <span>Places sélectionnées ({selectedSeatObjects.length})</span>
+                        <span className="text-primary">{formatFc(totalFc)}</span>
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedSeatObjects.map((s, idx) => {
+                          const zoneColor = s.pricingZoneId ? zoneColorById.get(s.pricingZoneId) : undefined;
+                          return (
+                            <span
+                              key={`${s.tableId}-${s.seatIndex}`}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-border text-xs font-medium text-foreground shadow-xs"
+                            >
+                              <span className="w-4 h-4 rounded-full bg-primary text-white text-[9px] font-black flex items-center justify-center">
+                                {idx + 1}
+                              </span>
+                              <span>
+                                {s.tableName} · Siège {s.seatIndex + 1}
+                              </span>
+                              {s.pricingZoneName && (
+                                <span
+                                  className="text-[10px] px-1 py-0.2 rounded font-semibold"
+                                  style={{
+                                    backgroundColor: zoneColor ? `${zoneColor}22` : undefined,
+                                    color: zoneColor || undefined,
+                                  }}
+                                >
+                                  {s.pricingZoneName}
+                                </span>
+                              )}
+                              {zonePricing && s.priceFc > 0 && (
+                                <span className="text-[10px] text-muted font-mono">
+                                  {formatFc(s.priceFc)}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeSeat(s.tableId, s.seatIndex)}
+                                className="text-muted hover:text-rose-600 ml-0.5 p-0.5 rounded"
+                                title="Retirer ce siège"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <details className="text-xs">
                     <summary className="cursor-pointer text-muted hover:text-foreground font-medium">
-                      Liste des places par table
+                      Liste des places par table ({seats.filter((s) => s.available).length} disponibles)
                     </summary>
                     <div className="mt-2 max-h-40 overflow-y-auto space-y-2 pr-1">
                       {tables.map(([tableId, info]) => (
@@ -304,24 +406,27 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                           <p className="text-[11px] font-bold text-foreground mb-1.5">{info.name}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {info.seats.map((s) => {
-                              const active = selected?.tableId === s.tableId && selected.seatIndex === s.seatIndex;
+                              const active = selectedSeats.some(
+                                (sel) => sel.tableId === s.tableId && sel.seatIndex === s.seatIndex,
+                              );
                               const zoneColor = s.pricingZoneId ? zoneColorById.get(s.pricingZoneId) : undefined;
                               return (
                                 <button
                                   key={`${s.tableId}-${s.seatIndex}`}
                                   type="button"
                                   disabled={!s.available}
-                                  onClick={() => setSelected({ tableId: s.tableId, seatIndex: s.seatIndex })}
+                                  onClick={() => toggleSeat(s.tableId, s.seatIndex)}
                                   className={`min-w-[2rem] px-2 py-1 rounded text-[10px] font-bold border transition ${
                                     !s.available
                                       ? 'opacity-40 cursor-not-allowed border-border text-muted'
                                       : active
-                                        ? 'bg-primary text-white border-primary'
+                                        ? 'bg-primary text-white border-primary shadow-xs'
                                         : 'border-border hover:border-primary text-foreground'
                                   }`}
                                   style={!active && zoneColor ? { borderColor: zoneColor } : undefined}
                                 >
                                   {s.seatIndex + 1}
+                                  {active && <Check className="w-2.5 h-2.5 inline-block ml-0.5" />}
                                 </button>
                               );
                             })}
@@ -332,32 +437,37 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                   </details>
                 </>
               )}
-              {selectedSeat && (
-                <p className="text-[11px] text-primary font-semibold">
-                  Place : siège {selectedSeat.seatIndex + 1}
-                  {selectedSeat.pricingZoneName ? ` · ${selectedSeat.pricingZoneName}` : ''}
-                  {zonePricing && selectedSeat.priceFc > 0 ? ` · ${formatFc(selectedSeat.priceFc)}` : ''}
-                </p>
-              )}
             </div>
-          ) : !zonePricing ? (
-            <Input
-              label="Quantité"
-              type="number"
-              min={1}
-              max={8}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value) || 1)}
-            />
           ) : (
-            <Input
-              label="Quantité"
-              type="number"
-              min={1}
-              max={8}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value) || 1)}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Nombre de billets</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
+                  className="w-9 h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40"
+                  aria-label="Diminuer"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <div className="w-16 h-9 rounded-lg border border-border bg-surface flex items-center justify-center font-bold text-sm text-foreground">
+                  {quantity}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.min(8, q + 1))}
+                  disabled={quantity >= 8}
+                  className="w-9 h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40"
+                  aria-label="Augmenter"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <span className="text-xs text-muted">
+                  {quantity > 1 ? `(${quantity} places)` : '(1 place)'}
+                </span>
+              </div>
+            </div>
           )}
 
           {event.paid && (

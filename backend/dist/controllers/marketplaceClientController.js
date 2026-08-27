@@ -447,6 +447,12 @@ async function listMyTickets(req, res) {
                     event: order.event,
                     guestId: primary?.id || null,
                     rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+                    guests: order.guests.map((g) => ({
+                        id: g.id,
+                        email: g.email,
+                        rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+                    })),
+                    selectedSeats: order.selectedSeats,
                     publicHref: order.event.slug && order.event.isPublic ? `/marketplace/evenements/${order.event.slug}` : null,
                 };
             }),

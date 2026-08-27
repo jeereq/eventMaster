@@ -358,12 +358,13 @@ model TicketOrder {
   paidAt                  DateTime?
   userId                  String?
   user                    User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  /** Place choisie (si seatSelectionEnabled). */
+  /** Place(s) choisie(s) (si seatSelectionEnabled). */
   tableId                 String?
   seatIndex               Int?
+  selectedSeats           Json?
   createdAt               DateTime  @default(now())
   guests                  Guest[]
-  seatHold                SeatHold?
+  seatHolds               SeatHold[]
 
   @@index([eventId, status])
   @@index([buyerEmail])
@@ -380,11 +381,12 @@ model SeatHold {
   seatIndex  Int
   buyerEmail String
   expiresAt  DateTime
-  orderId    String?     @unique
+  orderId    String?
   order      TicketOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
   createdAt  DateTime    @default(now())
 
   @@unique([eventId, tableId, seatIndex])
+  @@index([orderId])
   @@index([expiresAt])
   @@index([eventId])
 }

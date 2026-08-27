@@ -41,6 +41,7 @@ type MyTicket = {
   guestId: string | null;
   rsvpUrl: string | null;
   publicHref: string | null;
+  guests?: Array<{ id: string; email: string; rsvpUrl: string }>;
 };
 
 type WhenFilter = 'all' | 'upcoming' | 'past';

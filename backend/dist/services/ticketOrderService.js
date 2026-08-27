@@ -102,22 +102,57 @@ async function fulfillTicketOrder(orderId, stripeSession) {
     });
     const paid = await db_1.prisma.ticketOrder.findUnique({
         where: { id: order.id },
-        include: { guests: { select: { id: true, email: true, firstName: true, lastName: true } } },
+        include: {
+            guests: {
+                select: { id: true, email: true, firstName: true, lastName: true },
+                orderBy: { createdAt: 'asc' },
+            },
+        },
     });
-    const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
-    if (primary && order.tableId != null && order.seatIndex != null) {
-        try {
-            await (0, seatSelectionService_1.assignSeatInTablePlan)(event.id, order.tableId, order.seatIndex, primary.id);
+    const rawSeats = order.selectedSeats;
+    const parsedSeats = Array.isArray(rawSeats) && rawSeats.length > 0
+        ? rawSeats.map((s) => ({
+            tableId: String(s.tableId),
+            seatIndex: Number(s.seatIndex),
+        }))
+        : order.tableId != null && order.seatIndex != null
+            ? [{ tableId: order.tableId, seatIndex: order.seatIndex }]
+            : [];
+    if (paid?.guests && parsedSeats.length > 0) {
+        const assignments = [];
+        for (let i = 0; i < parsedSeats.length; i++) {
+            const g = paid.guests[i];
+            const s = parsedSeats[i];
+            if (g && s) {
+                assignments.push({ tableId: s.tableId, seatIndex: s.seatIndex, guestId: g.id });
+            }
         }
-        catch (err) {
-            console.error('[Ticket] assignSeatInTablePlan', err);
+        if (assignments.length > 0) {
+            try {
+                await (0, seatSelectionService_1.assignMultipleSeatsInTablePlan)(event.id, assignments);
+            }
+            catch (err) {
+                console.error('[Ticket] assignMultipleSeatsInTablePlan', err);
+            }
         }
     }
+    // Libérer tous les holds de cette commande
+    await db_1.prisma.seatHold.deleteMany({
+        where: { orderId: order.id },
+    }).catch(() => undefined);
+    const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
     if (primary) {
         const rsvpUrl = `${FRONTEND_URL}/rsvp/${primary.id}`;
-        const seatLine = order.tableId != null && order.seatIndex != null
-            ? `\nPlace réservée : table ${order.tableId} · siège ${order.seatIndex + 1}\n`
-            : '';
+        let seatLine = '';
+        if (parsedSeats.length === 1) {
+            seatLine = `\nPlace réservée : table ${parsedSeats[0].tableId} · siège ${parsedSeats[0].seatIndex + 1}\n`;
+        }
+        else if (parsedSeats.length > 1) {
+            seatLine =
+                `\nPlaces réservées (${parsedSeats.length}) :\n` +
+                    parsedSeats.map((s, idx) => ` - Place ${idx + 1} : table ${s.tableId} · siège ${s.seatIndex + 1}`).join('\n') +
+                    '\n';
+        }
         const subject = `Votre billet — ${event.title}`;
         const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR) :\n${rsvpUrl}\n\nOrganisé par ${event.tenant.name}.\n`;
         void (0, notificationService_1.sendRealEmail)(order.buyerEmail, subject, text).catch(() => undefined);
