@@ -50,7 +50,7 @@ function previousPeriod(): string {
 
 export default function OrgCommercialPayoutsPage() {
   const router = useRouter();
-  const { user, access, loading: authLoading } = useAuth();
+  const { user, access, loading: authLoading, planFeatures } = useAuth();
 
   const [period, setPeriod] = useState(previousPeriod());
   const [settlement, setSettlement] = useState<'due' | 'paid' | 'all'>('due');
@@ -74,7 +74,8 @@ export default function OrgCommercialPayoutsPage() {
     if (authLoading) return;
     if (!user) return;
     if (!access?.canViewBilling) router.replace('/dashboard');
-  }, [authLoading, user, access?.canViewBilling, router]);
+    if (planFeatures && !planFeatures.commercialNetwork) router.replace('/dashboard/billing');
+  }, [authLoading, user, access?.canViewBilling, planFeatures, router]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {

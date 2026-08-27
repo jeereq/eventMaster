@@ -121,7 +121,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'saas-payouts',
         title: 'Verser une commission commerciale SaaS',
         content:
-          '1. Effectuez le virement hors plateforme (Mobile Money / banque).\n2. Ouvrez Versements SaaS (ou Analyses → File versements).\n3. Filtrez la période, ouvrez le dossier dû.\n4. Joignez une preuve (URL ou photo de reçu) et un motif (≥ 8 caractères).\n5. Marquez versée — le commercial est notifié, l’action est journalisée. Les commerciaux org. sont payés par l’organisation parrainante, pas ici.',
+          '1. Effectuez le virement hors plateforme (Mobile Money / banque) ou lancez un Pay Out FlexPay.\n2. Ouvrez Versements SaaS (ou Analyses → File versements).\n3. Filtrez la période, ouvrez le dossier dû.\n4. Joignez une preuve (URL ou photo de reçu) et un motif (≥ 8 caractères), ou confirmez le versement FlexPay.\n5. Marquez versée — le commercial plateforme est notifié, l’action est journalisée.',
         links: [
           { label: 'Versements SaaS', href: '/dashboard/admin/payouts' },
           { label: 'Analyses revenus', href: '/dashboard?tab=analytics&section=revenus' },
@@ -196,13 +196,13 @@ export const USER_GUIDES: UserGuide[] = [
     summary:
       'En tant que propriétaire, vous pilotez l’organisation : équipe, salles 2D/3D (étages, escaliers selon forfait), événements, modèles, catalogue acheteur (Explorer), devis / réservations, offres vendeur (Mes offres), facturation et factures.',
     canDo: [
-      'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
+      'Gérer l\'équipe (managers, protocoles)',
       'Créer des salles multi-étages (Duplex, Villa…) et peaufiner le plan 3D selon le niveau d’éditeur du forfait',
       'Créer des événements privés ou publics (billets), tâches d’équipe et mode Protocole',
       'Explorer le catalogue acheteur (comme un client) : salles, métiers, locations',
       'Suivre séparément les demandes de devis et les réservations',
       'Publier vos offres vendeur (Mes offres) : métiers / locations ; salles via Salles',
-      'Accéder à la facturation, au forfait, aux factures et aux versements des commerciaux org.',
+      'Accéder à la facturation, au forfait et aux factures',
       'Personnaliser modèles d’invitation et messages invités',
     ],
     cannotDo: [
@@ -328,7 +328,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Éditeur : Essentiel → tables ; Business → allées ; Premium → escaliers / balcons ; Complet → perso.',
       'Commission marketplace ({commissionPercent} %) = vendeur, hors abonnement SaaS.',
       'Annuel = 12 mois (ou 4 trimestres Particulier) avec −10 %.',
-      'Versements commerciaux org. : hors plateforme, avec preuve.',
+      'Versements SaaS plateforme : hors organisation (admin EventMaster).',
     ],
   },
   {
@@ -532,35 +532,30 @@ export const USER_GUIDES: UserGuide[] = [
   },
   {
     id: 'org_commercial',
-    title: 'Guide Commercial organisation',
+    title: 'Guide Commercial organisation (obsolète)',
     badge: 'Organisation',
     summary:
-      'Vous développez le réseau commercial de votre organisation en parrainant de nouvelles organisations et en suivant vos commissions internes.',
+      'Le réseau commercial interne aux organisations n’est plus proposé. Les commissions de parrainage sont gérées par les commerciaux plateforme EventMaster.',
     canDo: [
-      'Consulter votre code de parrainage et statistiques',
-      'Suivre les organisations parrainées via votre espace dédié',
-      'Recevoir des commissions sur les souscriptions validées (dû / versé + preuve)',
+      'Consulter éventuellement un historique si votre compte existait déjà',
     ],
     cannotDo: [
+      'Créer de nouveaux commerciaux organisation',
+      'Accéder aux versements commerciaux org. (fonctionnalité retirée)',
       'Créer des événements ou gérer des invités',
-      'Modifier l\'équipe ou les salles',
-      'Accéder à la facturation de l\'organisation',
     ],
-    navLinks: [{ label: 'Réseau commercial', href: '/dashboard/org-commercial' }],
+    navLinks: [{ label: 'Tableau de bord', href: '/dashboard' }],
     workflows: [
       {
         id: 'share-referral',
-        title: 'Parrainer une nouvelle organisation',
+        title: 'Parrainage',
         content:
-          '1. Ouvrez Réseau commercial.\n2. Copiez votre code ou lien de parrainage.\n3. Transmettez-le lors de l\'inscription de la nouvelle organisation.\n4. Suivez l\'avancement des demandes d\'abonnement parrainées.',
-        links: [{ label: 'Réseau commercial', href: '/dashboard/org-commercial' }],
+          'Le parrainage d’organisations se fait désormais via les commerciaux plateforme EventMaster, pas via un rôle commercial dans votre équipe.',
+        links: [{ label: 'Tableau de bord', href: '/dashboard' }],
       },
     ],
     tips: [
-      'Le code doit être saisi à l\'inscription pour lier le parrainage.',
-      'Les commissions dépendent du taux configuré par le propriétaire.',
-      'Le versement est fait par votre organisation, hors plateforme. Une preuve apparaît une fois que le propriétaire a marqué le dossier.',
-      'Contactez le manager org. en cas de litige sur une commission.',
+      'Contactez le support si vous aviez un historique de commissions org. à clarifier.',
     ],
   },
   {

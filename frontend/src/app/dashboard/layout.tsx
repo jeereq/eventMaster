@@ -162,8 +162,9 @@ function buildDashboardNav(opts: {
  workspace: WorkspaceModules;
  accountKind?: string | null;
  isClientAccount: boolean;
+ commercialNetwork?: boolean;
 }): NavSection[] {
- const { role, access, workspace, accountKind, isClientAccount } = opts;
+ const { role, access, workspace, accountKind, isClientAccount, commercialNetwork } = opts;
  const vendorOnly = accountKind === 'VENDOR';
 
  if (role === 'SUPER_ADMIN') {
@@ -292,7 +293,7 @@ function buildDashboardNav(opts: {
   ...(access?.canViewBilling
    ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
    : []),
-  ...(access?.canViewBilling
+  ...(access?.canViewBilling && commercialNetwork
    ? [{ name: 'Versements commerciaux', href: '/dashboard/billing/payouts', tourId: 'nav-org-payouts', icon: Wallet }]
    : []),
   ...(access?.canViewInvoices
@@ -577,6 +578,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   workspace,
   accountKind: tenant?.accountKind,
   isClientAccount,
+  commercialNetwork: Boolean(planFeatures?.commercialNetwork),
  });
 
  const showNotifications = Boolean(user);
