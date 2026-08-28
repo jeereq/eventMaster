@@ -35,7 +35,7 @@ export default function LandingHeroPreview() {
     <div className="relative w-full max-w-lg mx-auto lg:max-w-none">
       {/* Halo festif d'arrière plan */}
       <div
-        className="absolute -inset-3 rounded-3xl bg-gradient-to-tr from-primary/20 via-[color:var(--festive-accent-soft)] to-indigo-500/10 blur-2xl -z-10 opacity-80 pointer-events-none"
+        className="absolute -inset-3 rounded-3xl bg-gradient-to-tr from-primary/20 via-[color:var(--festive-accent-soft)] to-amber-500/10 blur-2xl -z-10 opacity-80 pointer-events-none"
         aria-hidden
       />
 
@@ -220,7 +220,7 @@ export default function LandingHeroPreview() {
                             ? 'bg-gradient-to-r from-amber-600/40 via-amber-400/40 to-amber-600/40 border-amber-300/50 text-amber-100 shadow-amber-500/20'
                             : lightingTheme === 'romantic'
                               ? 'bg-gradient-to-r from-rose-600/40 via-rose-400/40 to-rose-600/40 border-rose-300/50 text-rose-100 shadow-rose-500/20'
-                              : 'bg-gradient-to-r from-indigo-600/40 via-cyan-400/40 to-indigo-600/40 border-cyan-300/50 text-cyan-100 shadow-cyan-500/20',
+                              : 'bg-gradient-to-r from-slate-800/70 via-indigo-950/70 to-slate-800/70 border-indigo-400/40 text-indigo-100 shadow-indigo-950/40',
                         )}
                       >
                         <span className="flex items-center gap-1 text-[9px]">

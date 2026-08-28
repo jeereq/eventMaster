@@ -62,7 +62,7 @@ interface LandingPricingSectionProps {
 
 function FeatureCell({ value }: { value: string | boolean }) {
  if (value === true) {
- return <Check className="w-4 h-4 text-emerald-600 mx-auto" aria-label="Inclus" />;
+ return <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" aria-label="Inclus" />;
  }
  if (value === false) {
  return <Minus className="w-4 h-4 text-muted dark:text-muted mx-auto" aria-label="Non inclus" />;
@@ -71,11 +71,11 @@ function FeatureCell({ value }: { value: string | boolean }) {
 }
 
 const BADGE_TONE: Record<PlanCapabilityBadge['tone'], string> = {
- indigo: 'bg-surface-muted text-foreground border-border',
- violet: 'bg-surface-muted text-foreground border-border',
- emerald: 'bg-surface-muted text-foreground border-border',
- amber: 'bg-surface-muted text-foreground border-border',
- rose: 'bg-surface-muted text-foreground border-border',
+ indigo: 'bg-primary/10 text-primary border-primary/20',
+ violet: 'bg-primary/10 text-primary border-primary/20',
+ emerald: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
+ amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
+ rose: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20',
 };
 
 const TIER_ACCENT: Record<string, string> = {
@@ -84,9 +84,9 @@ const TIER_ACCENT: Record<string, string> = {
  business: 'bg-foreground/40',
  premium: 'bg-foreground/70',
  enterprise: 'bg-foreground',
- venue: 'bg-emerald-600',
- service: 'bg-sky-600',
- catalog: 'bg-violet-600',
+ venue: 'bg-primary',
+ service: 'bg-[color:var(--festive-accent)]',
+ catalog: 'bg-foreground',
 };
 
 export default function LandingPricingSection({
