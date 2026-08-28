@@ -35,6 +35,7 @@ import ShareButton from '@/components/ShareButton';
 import { guestRsvpUrl } from '@/lib/share';
 import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface GuestRsvpData {
   id: string;
@@ -517,10 +518,24 @@ export default function RsvpPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen em-guest-page flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <p className="text-sm font-medium text-muted">Ouverture de votre invitation personnalisée...</p>
+      <div className="min-h-screen em-guest-page flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md space-y-6">
+          {/* Hero skeleton */}
+          <div className="space-y-3 text-center">
+            <Skeleton className="h-8 w-3/4 mx-auto rounded-lg" />
+            <Skeleton className="h-4 w-1/2 mx-auto rounded-full" />
+          </div>
+          {/* QR Code skeleton */}
+          <div className="flex flex-col items-center gap-4 py-6 bg-surface rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)]">
+            <Skeleton className="w-48 h-48 rounded-2xl" />
+            <Skeleton className="h-3 w-24 rounded-full" />
+          </div>
+          {/* Details skeleton */}
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full rounded-lg" />
+            <Skeleton className="h-4 w-5/6 rounded-lg" />
+            <Skeleton className="h-4 w-4/6 rounded-lg" />
+          </div>
         </div>
       </div>
     );

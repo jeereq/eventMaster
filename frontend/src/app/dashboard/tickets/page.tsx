@@ -20,6 +20,7 @@ import {
   paginateItems,
   usePageSize,
 } from '@/components/ui';
+import { SkeletonListRow } from '@/components/ui/Skeleton';
 import { formatFc } from '@/config/landingPricing';
 import { CLIENT_AGENDA_HREF } from '@/lib/marketplace';
 import { Calendar, ExternalLink, Loader2, MapPin, QrCode, Ticket } from 'lucide-react';
@@ -166,8 +167,15 @@ export default function ClientTicketsPage() {
       {error && <Alert variant="error">{error}</Alert>}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-muted">
-          <Loader2 className="w-6 h-6 animate-spin" />
+        <div className="space-y-4">
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3">
+            <div className="h-11 w-full rounded-lg bg-surface-muted animate-pulse" />
+          </div>
+          <div className={listStackClass}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonListRow key={i} />
+            ))}
+          </div>
         </div>
       ) : tickets.length === 0 ? (
         <EmptyState

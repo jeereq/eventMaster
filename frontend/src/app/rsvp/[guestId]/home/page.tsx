@@ -11,6 +11,7 @@ import {
 import GuestPortalShell, { GuestPortalCard } from '@/components/GuestPortalShell';
 import ShareButton from '@/components/ShareButton';
 import { guestRsvpUrl } from '@/lib/share';
+import { Skeleton, SkeletonListRow } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 
 interface GuestInvitationItem {
@@ -148,8 +149,24 @@ export default function GuestHomePage() {
 
   if (loading) {
     return (
-      <div className="em-guest-page flex items-center justify-center">
-        <Loader2 className="w-7 h-7 text-primary animate-spin" />
+      <div className="em-guest-page flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md space-y-5">
+          <div className="text-center space-y-2">
+            <Skeleton className="h-7 w-48 mx-auto rounded-lg" />
+            <Skeleton className="h-4 w-32 mx-auto rounded-full" />
+          </div>
+          <div className="space-y-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-3">
+                <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-2 min-w-0">
+                  <Skeleton className="h-4 w-3/5 rounded-lg" />
+                  <Skeleton className="h-3 w-2/5 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

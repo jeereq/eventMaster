@@ -344,7 +344,7 @@ export default function LandingPricingSection({
  .map((plan) => (
  <article
  key={plan.id}
- className={`relative flex flex-col rounded-[var(--radius-card)] border bg-surface overflow-hidden transition ${
+ className={`relative flex flex-col rounded-[var(--radius-card)] border bg-surface overflow-hidden em-soft-hover ${
  plan.highlighted
  ? 'border-foreground/30'
  : plan.promoActive
