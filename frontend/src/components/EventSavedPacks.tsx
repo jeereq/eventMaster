@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn';
 import { LISTING_EVENT_TYPES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
 import type { SavedEventPack, SavedPackItem } from '@/lib/eventPlan';
 import type { FavoriteListing } from '@/lib/listingFavorites';
-import { isServiceRentalCategory } from '@/lib/marketplace';
+import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 
 function favoriteToPackItem(row: FavoriteListing): SavedPackItem {
   return {
@@ -178,7 +178,7 @@ export default function EventSavedPacks({
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={item.coverUrl}
+                            src={sizedMediaUrl(item.coverUrl, 96)}
                             alt=""
                             loading="lazy"
                             decoding="async"
@@ -195,7 +195,7 @@ export default function EventSavedPacks({
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={item.coverUrl}
+                            src={sizedMediaUrl(item.coverUrl, 96)}
                             alt={item.title || 'Visuel du pack'}
                             loading="lazy"
                             decoding="async"

@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { Button } from '@/components/ui';
 import type { PlanItem, PlanMissingSlot, PlanPackage } from '@/lib/eventPlan';
-import { isServiceRentalCategory } from '@/lib/marketplace';
+import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 
 function PackItemRow({
   item,
@@ -56,7 +56,7 @@ function PackItemRow({
             {item.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={item.coverUrl}
+                src={sizedMediaUrl(item.coverUrl, 96)}
                 alt=""
                 loading="lazy"
                 decoding="async"
@@ -73,7 +73,7 @@ function PackItemRow({
             {item.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={item.coverUrl}
+                src={sizedMediaUrl(item.coverUrl, 96)}
                 alt=""
                 loading="lazy"
                 decoding="async"

@@ -2,12 +2,12 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQuery';
-import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import MarketplaceLocationsMap, { type MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
+import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
 import { Badge, Button } from '@/components/ui';
@@ -31,6 +31,18 @@ import FavoriteHeart from '@/components/FavoriteHeart';
 import { listingPublicUrl } from '@/lib/share';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import { Building2, Navigation, Sparkles } from 'lucide-react';
+
+const MarketplaceLocationsMap = dynamic(
+  () => import('@/components/MarketplaceLocationsMap'),
+  {
+    ssr: false,
+    loading: () => <div className="h-[16.5rem] sm:h-[26.25rem] bg-surface-muted" aria-hidden />,
+  },
+);
+
+const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
+  loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
+});
 
 export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'service' }) {
   const params = useParams();

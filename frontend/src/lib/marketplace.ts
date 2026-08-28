@@ -448,6 +448,27 @@ export function mediaPosterUrl(url: string): string {
   return url;
 }
 
+const CLOUDINARY_OWN_IMAGE_TF = /\/image\/upload\/(?:f_auto,q_auto,c_limit,w_\d+\/)?/;
+
+/** Redimensionne une URL Cloudinary. Laisse les autres hôtes inchangés. */
+export function sizedMediaUrl(url: string, width: number): string {
+  const poster = mediaPosterUrl(url);
+  if (!poster.includes('res.cloudinary.com/')) return poster;
+  if (/\/image\/upload\//.test(poster)) {
+    return poster.replace(CLOUDINARY_OWN_IMAGE_TF, `/image/upload/f_auto,q_auto,c_limit,w_${width}/`);
+  }
+  if (/\/video\/upload\//.test(poster) && !poster.includes(`w_${width}`)) {
+    return poster.replace('/video/upload/', `/video/upload/c_limit,w_${width}/`);
+  }
+  return poster;
+}
+
+export function listingSrcSet(url: string, widths: number[]): string | undefined {
+  const poster = mediaPosterUrl(url);
+  if (!poster.includes('res.cloudinary.com/')) return undefined;
+  return widths.map((width) => `${sizedMediaUrl(url, width)} ${width}w`).join(', ');
+}
+
 export function coverFromMedia(urls: string[]): string | null {
   const image = urls.find((item) => !isVideoUrl(item));
   if (image) return image;

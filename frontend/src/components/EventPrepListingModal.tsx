@@ -16,7 +16,9 @@ import {
   formatLocationLine,
   formatQuotaLabel,
   isServiceRentalCategory,
+  listingSrcSet,
   serviceMobilityLabel,
+  sizedMediaUrl,
   type PrepListingPipeline,
   type PublicService,
   type PublicVenue,
@@ -291,8 +293,11 @@ export default function EventPrepListingModal({
             {photos[photoIndex] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={photos[photoIndex]}
+                src={sizedMediaUrl(photos[photoIndex], 960)}
+                srcSet={listingSrcSet(photos[photoIndex], [480, 720, 960])}
+                sizes="(min-width: 640px) 42rem, 100vw"
                 alt={`Visuel de ${title}`}
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -316,7 +321,13 @@ export default function EventPrepListingModal({
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={sizedMediaUrl(url, 128)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               ))}
             </div>

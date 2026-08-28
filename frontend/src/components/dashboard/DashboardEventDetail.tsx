@@ -2,10 +2,11 @@
 
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import MarketplaceLocationsMap, { type MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
+import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import EventTicketCheckoutForm from '@/components/EventTicketCheckoutForm';
 import { Button } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
@@ -13,6 +14,7 @@ import {
   catalogueItemToMapMarker,
   CLIENT_AGENDA_HREF,
   eventToCatalogueItem,
+  sizedMediaUrl,
   type PublicEventCard,
   type PublicEventPost,
 } from '@/lib/marketplace';
@@ -20,6 +22,14 @@ import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQue
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Navigation, Ticket } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+const MarketplaceLocationsMap = dynamic(
+  () => import('@/components/MarketplaceLocationsMap'),
+  {
+    ssr: false,
+    loading: () => <div className="h-[16.5rem] sm:h-[26.25rem] bg-surface-muted" aria-hidden />,
+  },
+);
 
 function eventDateKey(iso: string) {
   return String(iso || '').slice(0, 10);
@@ -36,12 +46,12 @@ function PublicFeedPost({ post }: { post: PublicEventPost }) {
         <div className={cn('grid gap-1 rounded-[var(--radius-button)] overflow-hidden', post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
           {post.media.map((media, mIdx) =>
             media.type === 'VIDEO' ? (
-              <video key={media.url} src={media.url} controls className="w-full max-h-72 object-contain bg-black" />
+              <video key={media.url} src={media.url} controls preload="metadata" className="w-full max-h-72 object-contain bg-black" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={media.url}
-                src={media.url}
+                src={sizedMediaUrl(media.url, 720)}
                 alt={`Média publication ${mIdx + 1}`}
                 loading="lazy"
                 decoding="async"

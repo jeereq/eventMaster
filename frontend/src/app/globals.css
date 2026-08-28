@@ -1095,6 +1095,7 @@ html[data-mood="celebrate"] .font-display {
 
 .em-listing-hero {
   height: min(58vh, 22rem);
+  contain: layout paint;
 }
 
 @media (min-width: 768px) {

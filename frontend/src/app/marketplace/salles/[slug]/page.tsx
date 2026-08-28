@@ -2,13 +2,13 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import PublicPageShell from '@/components/PublicPageShell';
-import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import MarketplaceLocationsMap, { type MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
+import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
 import { Button } from '@/components/ui';
@@ -22,6 +22,18 @@ import {
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Building2, Navigation } from 'lucide-react';
+
+const MarketplaceLocationsMap = dynamic(
+  () => import('@/components/MarketplaceLocationsMap'),
+  {
+    ssr: false,
+    loading: () => <div className="h-[16.5rem] sm:h-[26.25rem] bg-surface-muted" aria-hidden />,
+  },
+);
+
+const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
+  loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
+});
 
 export default function MarketplaceVenueDetailPage() {
   const params = useParams();

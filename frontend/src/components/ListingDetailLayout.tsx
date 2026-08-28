@@ -6,7 +6,7 @@ import { Button, Skeleton, SkeletonListingDetail } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
-import { isVideoUrl, mediaPosterUrl } from '@/lib/marketplace';
+import { isVideoUrl, listingSrcSet, mediaPosterUrl, sizedMediaUrl } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Play } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
@@ -40,7 +40,9 @@ function ListingPhotoThumbs({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={mediaPosterUrl(url)}
+            src={sizedMediaUrl(url, 160)}
+            srcSet={listingSrcSet(url, [160, 280])}
+            sizes="80px"
             alt=""
             loading="lazy"
             decoding="async"
@@ -89,12 +91,16 @@ function ListingMediaGrid({
             i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
           )}
         >
-          {isVideoUrl(url) ? (
-            <video src={url} poster={mediaPosterUrl(url)} muted playsInline className="w-full h-full object-cover" />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={sizedMediaUrl(url, 480)}
+            srcSet={listingSrcSet(url, [320, 480, 800])}
+            sizes="(min-width: 640px) 33vw, 50vw"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+          />
           {isVideoUrl(url) && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/30">
               <Play className="w-6 h-6 text-white fill-white" />
@@ -291,17 +297,23 @@ export default function ListingDetailLayout({
                 isVideoUrl(heroSrc) ? (
                   <video
                     src={heroSrc}
-                    poster={mediaPosterUrl(heroSrc)}
+                    poster={sizedMediaUrl(heroSrc, 1280)}
                     className="w-full h-full object-cover"
                     muted
                     playsInline
                     controls
+                    preload="metadata"
                   />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={heroSrc}
+                    src={sizedMediaUrl(heroSrc, 1280)}
+                    srcSet={listingSrcSet(heroSrc, [640, 960, 1280, 1920])}
+                    sizes="(min-width: 1280px) 1440px, 100vw"
                     alt={title || "Visuel principal de l'établissement"}
+                    fetchPriority="high"
+                    loading="eager"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 )

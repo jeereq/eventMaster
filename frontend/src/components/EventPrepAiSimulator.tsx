@@ -8,7 +8,7 @@ import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
-import { isServiceRentalCategory } from '@/lib/marketplace';
+import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 import { communesForCity } from '@/lib/rdcCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 
@@ -356,7 +356,7 @@ function AiPickRow({
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={cover}
+            src={sizedMediaUrl(cover, 96)}
             alt={title ? `Visuel de ${title}` : 'Visuel du service'}
             loading="lazy"
             decoding="async"
