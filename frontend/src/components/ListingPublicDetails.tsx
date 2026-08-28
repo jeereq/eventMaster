@@ -23,8 +23,8 @@ function Facts({ items }: { items: Array<{ label: string; value: string }> }) {
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+    <section>
+      <h2 className="text-sm font-semibold text-foreground mb-2">{title}</h2>
       {children}
     </section>
   );
@@ -77,7 +77,7 @@ export default function ListingPublicDetails({
   const allFacts = [...facts, ...rentalFacts];
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-8">
       {allFacts.length > 0 ? <Facts items={allFacts} /> : null}
 
       {amenities.length > 0 && (

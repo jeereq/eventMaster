@@ -136,7 +136,8 @@ function MarketplaceEventDetailInner() {
         hideBooking
         inquireLabel={event?.paid ? 'Billet' : 'S’inscrire'}
         details={event ? (
-          <div className="space-y-6">
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-3 max-w-prose">
             <p className="text-sm text-muted leading-relaxed">
               {[
                 new Date(event.date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }),
@@ -166,8 +167,9 @@ function MarketplaceEventDetailInner() {
                   : `Billet : ${formatFc(event.ticketPriceFc)} · paiement en ligne (carte).`
                 : 'Entrée libre : inscrivez-vous pour recevoir votre badge QR.'}
             </p>
+            </div>
             {posts.length > 0 && (
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4">
                 <h2 className="font-semibold text-foreground text-sm">Actualités</h2>
                 {posts.map((post) => (
                   <PublicFeedPost key={post.id} post={post} />

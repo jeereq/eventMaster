@@ -164,7 +164,8 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         />
       ) : undefined}
       details={item ? (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3 max-w-prose">
           {!isPublic && (
             <Badge variant="default">Brouillon — non visible sur le marketplace public</Badge>
           )}
@@ -189,10 +190,11 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
               {venue?.description || service?.description}
             </p>
           ) : null}
+          </div>
           <ListingPublicDetails details={venue?.details || service?.details} kind={kind === 'venue' ? 'venue' : 'service'} />
           {venue?.layoutPreview ? (
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold">Plan de la salle</h2>
+            <div>
+              <h2 className="text-sm font-semibold mb-2">Plan de la salle</h2>
               <RoomLayoutPreview
                 blueprint={venue.layoutPreview as RoomLayoutBlueprint}
                 quality="showcase"

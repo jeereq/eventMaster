@@ -93,7 +93,8 @@ export default function MarketplaceVenueDetailPage() {
         priceUnitLabel={venue?.priceUnitLabel}
         quotaLabel={quotaLabel}
         details={venue && item ? (
-          <div className="space-y-6">
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-3 max-w-prose">
             <p className="text-sm text-muted leading-relaxed">
               {[
                 formatLocationLine(venue),
@@ -113,10 +114,11 @@ export default function MarketplaceVenueDetailPage() {
             {venue.description ? (
               <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{venue.description}</p>
             ) : null}
+            </div>
             <ListingPublicDetails details={venue.details} kind="venue" />
             {venue.layoutPreview ? (
-              <div className="space-y-3">
-                <h2 className="text-sm font-semibold">Plan de la salle</h2>
+              <div>
+                <h2 className="text-sm font-semibold mb-2">Plan de la salle</h2>
                 <RoomLayoutPreview
                   blueprint={venue.layoutPreview as RoomLayoutBlueprint}
                   quality="showcase"

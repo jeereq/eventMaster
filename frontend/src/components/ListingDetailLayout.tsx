@@ -76,7 +76,7 @@ function ListingMediaGrid({
     );
   }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
       {photos.map((url, i) => (
         <button
           key={url}
@@ -285,7 +285,7 @@ export default function ListingDetailLayout({
         </div>
       ) : (
         <>
-          <div className="space-y-3 mb-6 lg:mb-8">
+          <div className="flex flex-col gap-2 mb-8 lg:mb-10">
             <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-black/80 shadow-[var(--shadow-soft)]">
               {heroSrc ? (
                 isVideoUrl(heroSrc) ? (
@@ -332,12 +332,12 @@ export default function ListingDetailLayout({
                   ) : null}
                 </div>
               ) : null}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-7 text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5 pt-16 sm:px-7 sm:pb-8 sm:pt-24 text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
                 <h1 className="text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words">
                   {title}
                 </h1>
                 {(chip || subtitle) ? (
-                  <p className="mt-1.5 text-sm sm:text-base text-white line-clamp-2">
+                  <p className="mt-2 text-sm sm:text-base text-white line-clamp-2">
                     {[chip, subtitle].filter(Boolean).join(' · ')}
                   </p>
                 ) : null}
@@ -353,8 +353,8 @@ export default function ListingDetailLayout({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10 items-start">
-            <div className="lg:col-span-3 space-y-5 min-w-0">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 items-start">
+            <div className="lg:col-span-3 flex flex-col gap-4 min-w-0">
               <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
                 <MarketplaceFormTabs value={tab} onChange={onTab} />
               </div>
@@ -374,7 +374,7 @@ export default function ListingDetailLayout({
             <aside
               id="listing-contact"
               className={cn(
-                'lg:col-span-2 space-y-5 lg:sticky lg:top-24',
+                'lg:col-span-2 flex flex-col gap-6 min-w-0 lg:sticky lg:top-24',
                 embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24',
               )}
             >
@@ -382,6 +382,8 @@ export default function ListingDetailLayout({
                 {priceBlock}
               </div>
 
+              {showCommerce || availability || preview ? (
+                <div className="flex flex-col gap-3">
               {availability ? (
                 <div
                   id="listing-availability"
@@ -436,6 +438,8 @@ export default function ListingDetailLayout({
                   Aperçu interne — les demandes de devis et réservations restent sur la fiche publique.
                 </p>
               ) : null}
+                </div>
+              ) : null}
             </aside>
           </div>
         </>
@@ -450,7 +454,7 @@ export default function ListingDetailLayout({
               : 'bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
           )}
         >
-          <div className="page-container pt-3 flex items-center gap-2">
+          <div className="page-container pt-3 flex items-center gap-3">
             {loading ? (
               <>
                 <div className="min-w-0 flex-1 space-y-1.5">

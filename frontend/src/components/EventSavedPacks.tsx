@@ -136,16 +136,16 @@ export default function EventSavedPacks({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {packs.map((pack) => (
-            <article key={pack.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-3">
+            <article key={pack.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-4 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-foreground">{pack.name}</h3>
+                  <p className="text-[11px] text-muted mt-1">
                     {eventTypeLabel(pack.eventType as ListingEventTypeId)}
                     {pack.styleLabel ? ` · ${pack.styleLabel}` : ''}
                   </p>
-                  <h3 className="text-sm font-semibold text-foreground">{pack.name}</h3>
                 </div>
                 <button
                   type="button"
@@ -162,7 +162,7 @@ export default function EventSavedPacks({
                 {pack.guestCount ? ` · ${pack.guestCount} invités` : ''}
                 {pack.city ? ` · ${pack.city}` : ''}
               </p>
-              <ul className="space-y-1.5">
+              <ul className="flex flex-col gap-2.5">
                 {pack.items.map((item) => {
                   const open = () => onOpenListing?.({ kind: item.kind, slug: item.slug });
                   const titleClass = 'min-w-0 flex-1 truncate font-medium text-left hover:text-primary';

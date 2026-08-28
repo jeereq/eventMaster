@@ -44,7 +44,7 @@ function PackItemRow({
   );
 
   return (
-    <li className="rounded-xl border border-border p-2 space-y-2">
+    <li>
       <div className="flex items-center gap-3">
         {onOpenListing ? (
           <button
@@ -87,14 +87,13 @@ function PackItemRow({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] uppercase tracking-wider text-muted">
+          {titleNode}
+          <p className="text-[11px] text-muted truncate">
             {kindLabel}
             {item.favorite ? ' · favori' : ''}
             {item.match === 'exact' ? ' · adapté' : ''}
-          </p>
-          {titleNode}
-          <p className="text-[11px] text-muted truncate">
-            {item.orgName}{item.location ? ` · ${item.location}` : ''}
+            {item.orgName ? ` · ${item.orgName}` : ''}
+            {item.location ? ` · ${item.location}` : ''}
             {item.kind === 'venue' && item.capacity ? ` · ${item.capacity} places` : ''}
           </p>
         </div>
@@ -108,7 +107,7 @@ function PackItemRow({
         </div>
       </div>
       {alternatives.length > 0 || onKeep ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 pl-14 sm:pl-[3.75rem]">
           {onKeep ? (
             <button
               type="button"
@@ -133,7 +132,7 @@ function PackItemRow({
         </div>
       ) : null}
       {open && alternatives.length > 0 ? (
-        <ul className="mt-2 space-y-1.5">
+        <ul className="mt-1 space-y-1.5 pl-14 sm:pl-[3.75rem]">
           {alternatives.map((alt) => (
             <li key={alt.slug} className="flex items-stretch gap-1">
               <button
@@ -196,7 +195,7 @@ export default function EventPlanPacks({
 }) {
   const envelope = spendableFc || budgetFc;
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
       {packages.map((pack) => {
         const usedRatio = envelope > 0 ? Math.min(100, Math.round((pack.totalFc / envelope) * 100)) : 0;
         const rows = pack.venue ? [pack.venue, ...pack.services] : pack.services;
@@ -209,10 +208,10 @@ export default function EventPlanPacks({
           }));
         const allocTotal = allocation.reduce((sum, item) => sum + item.amountFc, 0) || 1;
         return (
-          <article key={pack.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
-            <div>
+          <article key={pack.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-4 flex flex-col gap-5">
+            <header className="flex flex-col gap-1.5">
               <div className="flex items-start justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-base font-semibold text-foreground">{pack.label}</h3>
                   {pack.blurb ? <p className="text-xs text-muted mt-1 leading-relaxed">{pack.blurb}</p> : null}
                 </div>
@@ -226,20 +225,20 @@ export default function EventPlanPacks({
                   </span>
                 )}
               </div>
-              <p className="text-sm font-semibold text-foreground mt-2">{formatFc(pack.totalFc)}</p>
-              <div className="mt-2 h-1.5 rounded-full bg-surface-muted overflow-hidden">
+              <p className="text-sm font-semibold text-foreground">{formatFc(pack.totalFc)}</p>
+              <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
                 <div
                   className={cn('h-full rounded-full', pack.overBudget ? 'bg-rose-500' : 'bg-primary')}
                   style={{ width: `${usedRatio}%` }}
                 />
               </div>
-              <p className={cn('text-xs mt-1', pack.overBudget ? 'text-rose-600' : 'text-muted')}>
+              <p className={cn('text-xs', pack.overBudget ? 'text-rose-600' : 'text-muted')}>
                 {pack.overBudget
                   ? `Au-dessus du budget de ${formatFc(budgetFc)} (${formatFc(pack.totalFc)})`
                   : `${usedRatio} % de l’enveloppe · ${formatFc(pack.totalFc)} sur ${formatFc(envelope)} · reste ${formatFc(pack.leftoverFc)}`}
               </p>
               {allocation.length > 1 ? (
-                <div className="mt-2 space-y-1">
+                <div className="space-y-1">
                   <div className="flex h-2 overflow-hidden rounded-full bg-surface-muted">
                     {allocation.map((item, index) => (
                       <div
@@ -258,7 +257,7 @@ export default function EventPlanPacks({
                   </p>
                 </div>
               ) : null}
-            </div>
+            </header>
 
             {pack.notes?.length ? (
               <ul className="space-y-1">
@@ -290,7 +289,7 @@ export default function EventPlanPacks({
               </ul>
             ) : null}
 
-            <ul className="space-y-2">
+            <ul className="flex flex-col [&>li+li]:mt-3 [&>li+li]:pt-3 [&>li+li]:border-t [&>li+li]:border-border">
               {rows.map((item) => (
                 <PackItemRow
                   key={`${item.kind}:${item.slug}`}
@@ -305,7 +304,7 @@ export default function EventPlanPacks({
               ))}
             </ul>
             {onSave || onChooseFinal ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
                 {onChooseFinal ? (
                   <Button size="sm" onClick={() => onChooseFinal(pack)} leftIcon={<ListChecks className="w-3.5 h-3.5" />}>
                     Retenir comme solution finale

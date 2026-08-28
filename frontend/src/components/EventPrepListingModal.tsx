@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, CalendarCheck, ExternalLink, KeyRound, Loader2, MapPin, Sparkles, Users } from 'lucide-react';
+import { Building2, CalendarCheck, ExternalLink, KeyRound, Loader2, MapPin, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Modal, StatusPill, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
@@ -274,7 +274,7 @@ export default function EventPrepListingModal({
           }}
         />
       ) : listing ? (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-6">
           {pipeline && pipeline.stage !== 'none' ? (
             <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-muted/50 px-3 py-2">
               <StatusPill tone={pipeline.tone}>{pipeline.label}</StatusPill>
@@ -286,6 +286,7 @@ export default function EventPrepListingModal({
             </div>
           ) : null}
 
+          <div className="flex flex-col gap-2">
           <div className="relative overflow-hidden rounded-2xl bg-surface-muted aspect-[16/9]">
             {photos[photoIndex] ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -320,6 +321,7 @@ export default function EventPrepListingModal({
               ))}
             </div>
           ) : null}
+          </div>
 
           {busy ? (
             <Alert variant="warning">
@@ -327,6 +329,8 @@ export default function EventPrepListingModal({
             </Alert>
           ) : null}
 
+          {(location || facts.length > 0) ? (
+            <div className="flex flex-col gap-1.5">
           {location ? (
             <p className="text-sm text-muted inline-flex items-start gap-1.5">
               <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -335,21 +339,15 @@ export default function EventPrepListingModal({
           ) : null}
 
           {facts.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {facts.map((fact) => (
-                <span
-                  key={fact}
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-muted px-2.5 py-1 text-[11px] font-medium text-foreground"
-                >
-                  {fact.includes('places') ? <Users className="w-3 h-3" /> : null}
-                  {fact}
-                </span>
-              ))}
+            <p className="text-sm text-muted leading-relaxed">
+              {facts.join(' · ')}
+            </p>
+          ) : null}
             </div>
           ) : null}
 
           {listing.description ? (
-            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line break-words">
+            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line break-words max-w-prose">
               {listing.description}
             </p>
           ) : null}

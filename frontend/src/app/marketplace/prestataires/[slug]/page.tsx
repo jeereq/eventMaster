@@ -95,7 +95,8 @@ export default function MarketplaceServiceDetailPage() {
         priceUnitLabel={service?.priceUnitLabel}
         quotaLabel={quotaLabel}
         details={service && item ? (
-          <div className="space-y-6">
+        <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-3 max-w-prose">
             <p className="text-sm text-muted leading-relaxed">
               {[
                 formatLocationLine(service),
@@ -114,6 +115,7 @@ export default function MarketplaceServiceDetailPage() {
             {service.description ? (
               <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{service.description}</p>
             ) : null}
+            </div>
             <ListingPublicDetails details={service.details} kind="service" />
           </div>
         ) : null}
