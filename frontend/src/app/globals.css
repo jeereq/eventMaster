@@ -169,6 +169,25 @@ h1, h2, h3, h4 {
   animation: slide-up 0.22s ease-out;
 }
 
+@keyframes em-laser-scan {
+  0% { top: 4%; opacity: 0.7; }
+  50% { top: 92%; opacity: 1; }
+  100% { top: 4%; opacity: 0.7; }
+}
+
+.em-laser-scan {
+  animation: em-laser-scan 2.4s ease-in-out infinite;
+}
+
+@keyframes em-pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.04); }
+}
+
+.em-pulse-glow {
+  animation: em-pulse-glow 4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .em-reveal {
     opacity: 0;
