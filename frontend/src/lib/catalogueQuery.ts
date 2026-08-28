@@ -52,6 +52,7 @@ export function catalogueReturnBackLabel(href: string): string {
   const query = href.includes('?') ? href.slice(href.indexOf('?') + 1) : '';
   const params = new URLSearchParams(query);
 
+  if (path === '/dashboard/tickets') return 'Mes billets';
   if (path === '/dashboard/bookings') return 'Réservations';
   if (path === '/dashboard/rooms') return 'Salles';
   if (path === '/dashboard/marketplace') return 'Prestations';
@@ -112,6 +113,7 @@ export function isCatalogueListPath(pathname: string): boolean {
     || pathname === '/dashboard/rooms'
     || pathname === '/dashboard/marketplace'
     || pathname === '/dashboard/bookings'
+    || pathname === '/dashboard/tickets'
     || pathname === '/dashboard/catalogue'
   );
 }

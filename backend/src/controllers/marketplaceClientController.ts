@@ -480,7 +480,7 @@ export async function listMyTickets(req: AuthenticatedRequest, res: Response) {
             rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
           })),
           selectedSeats: order.selectedSeats,
-          publicHref: order.event.slug && order.event.isPublic ? `/marketplace/evenements/${order.event.slug}` : null,
+          publicHref: order.event.slug && order.event.isPublic ? `/dashboard/catalogue/evenements/${order.event.slug}` : null,
         };
       }),
     });

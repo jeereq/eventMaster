@@ -22,8 +22,9 @@ import {
 } from '@/components/ui';
 import { SkeletonListRow } from '@/components/ui/Skeleton';
 import { formatFc } from '@/config/landingPricing';
-import { CLIENT_AGENDA_HREF } from '@/lib/marketplace';
-import { Calendar, ExternalLink, Loader2, MapPin, QrCode, Ticket } from 'lucide-react';
+import { CLIENT_AGENDA_HREF, dashboardEventHref } from '@/lib/marketplace';
+import { rememberCatalogueReturn } from '@/lib/catalogueQuery';
+import { Calendar, MapPin, QrCode, Ticket } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 type MyTicket = {
@@ -41,7 +42,6 @@ type MyTicket = {
   };
   guestId: string | null;
   rsvpUrl: string | null;
-  publicHref: string | null;
   guests?: Array<{ id: string; email: string; rsvpUrl: string }>;
 };
 
@@ -72,7 +72,7 @@ export default function ClientTicketsPage() {
   } = useViewMode('em-view-tickets', 'grid', 2);
 
   const isClient = access?.level === 'client';
-  const agendaHref = isClient ? CLIENT_AGENDA_HREF : '/marketplace/evenements';
+  const agendaHref = CLIENT_AGENDA_HREF;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,7 +123,11 @@ export default function ClientTicketsPage() {
 
   const visible = paginateItems(filtered, page, pageSize);
 
-  const ticketActions = (ticket: MyTicket) => (
+  const ticketActions = (ticket: MyTicket) => {
+    const detailsHref = ticket.event.slug && ticket.event.isPublic
+      ? dashboardEventHref(ticket.event.slug)
+      : null;
+    return (
     <div className="flex flex-wrap gap-1.5">
       {ticket.guestId ? (
         <Link href={`/rsvp/${ticket.guestId}`} className="inline-flex">
@@ -132,15 +136,20 @@ export default function ClientTicketsPage() {
           </Button>
         </Link>
       ) : null}
-      {ticket.publicHref ? (
-        <Link href={ticket.publicHref} className="inline-flex">
-          <Button size="sm" variant="secondary" leftIcon={<ExternalLink className="w-4 h-4" />}>
-            Fiche
+      {detailsHref ? (
+        <Link
+          href={detailsHref}
+          className="inline-flex"
+          onClick={() => rememberCatalogueReturn('/dashboard/tickets')}
+        >
+          <Button size="sm" variant="secondary">
+            Détails
           </Button>
         </Link>
       ) : null}
     </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6 w-full">
