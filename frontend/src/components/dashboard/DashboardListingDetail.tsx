@@ -48,28 +48,39 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
   const [pickedEndDate, setPickedEndDate] = useState('');
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       if (!slug) return;
       setLoading(true);
       setError('');
       try {
         if (kind === 'venue') {
-          setVenue(await api.get(`/public/venues/${encodeURIComponent(slug)}`));
-          setService(null);
+          const data = await api.get(`/public/venues/${encodeURIComponent(slug)}`);
+          if (!cancelled) {
+            setVenue(data);
+            setService(null);
+          }
         } else {
-          setService(await api.get(`/public/services/${encodeURIComponent(slug)}`));
-          setVenue(null);
+          const data = await api.get(`/public/services/${encodeURIComponent(slug)}`);
+          if (!cancelled) {
+            setService(data);
+            setVenue(null);
+          }
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Fiche introuvable.');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Fiche introuvable.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     void load();
-  }, [kind, slug]);
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, slug, reloadNonce]);
 
   const startRoute = (itemId: string) => {
     setWantRoute(true);
@@ -124,6 +135,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           : <Sparkles className="w-10 h-10 text-muted mx-auto mb-3" />
       }
       errorMessage={kind === 'venue' ? 'Salle introuvable.' : 'Prestation introuvable.'}
+      onRetry={() => setReloadNonce((n) => n + 1)}
       heroUrl={(venue?.photos || service?.photos || [])[0]}
       fallbackIcon={kind === 'venue' ? <Building2 className="w-12 h-12" /> : <Sparkles className="w-12 h-12" />}
       chip={

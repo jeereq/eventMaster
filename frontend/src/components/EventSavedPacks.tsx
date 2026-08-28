@@ -88,6 +88,7 @@ export default function EventSavedPacks({
   };
 
   const submit = async () => {
+    if (busy) return;
     setBusy(true);
     setError('');
     try {

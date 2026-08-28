@@ -36,21 +36,28 @@ export default function MarketplaceServiceDetailPage() {
   const [pickedEndDate, setPickedEndDate] = useState('');
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       if (!slug) return;
+      setLoading(true);
+      setError('');
       try {
         const data = await api.get(`/public/services/${encodeURIComponent(slug)}`);
-        setService(data);
+        if (!cancelled) setService(data);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Prestation introuvable.');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Prestation introuvable.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    load();
-  }, [slug]);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, reloadNonce]);
 
   const startRoute = (itemId: string) => {
     setWantRoute(true);
@@ -71,6 +78,7 @@ export default function MarketplaceServiceDetailPage() {
         error={error || (!loading && !service ? (isRental ? 'Location introuvable.' : 'Prestation introuvable.') : '')}
         errorIcon={isRental ? <KeyRound className="w-10 h-10 text-muted mx-auto mb-3" /> : <Sparkles className="w-10 h-10 text-muted mx-auto mb-3" />}
         errorMessage={isRental ? 'Location introuvable.' : 'Prestation introuvable.'}
+        onRetry={() => setReloadNonce((n) => n + 1)}
         heroUrl={service?.photos[0]}
         fallbackIcon={isRental ? <KeyRound className="w-12 h-12" /> : <Sparkles className="w-12 h-12" />}
         chip={service?.categoryLabel || ''}

@@ -35,21 +35,28 @@ export default function MarketplaceVenueDetailPage() {
   const [pickedEndDate, setPickedEndDate] = useState('');
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       if (!slug) return;
+      setLoading(true);
+      setError('');
       try {
         const data = await api.get(`/public/venues/${encodeURIComponent(slug)}`);
-        setVenue(data);
+        if (!cancelled) setVenue(data);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Salle introuvable.');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Salle introuvable.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    load();
-  }, [slug]);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, reloadNonce]);
 
   const startRoute = (itemId: string) => {
     setWantRoute(true);
@@ -69,6 +76,7 @@ export default function MarketplaceVenueDetailPage() {
         error={error || (!loading && !venue ? 'Salle introuvable.' : '')}
         errorIcon={<Building2 className="w-10 h-10 text-muted mx-auto mb-3" />}
         errorMessage="Salle introuvable."
+        onRetry={() => setReloadNonce((n) => n + 1)}
         heroUrl={venue?.photos[0]}
         fallbackIcon={<Building2 className="w-12 h-12" />}
         chip={venue ? (roomTypeLabels[venue.roomType as RoomType] || venue.roomType) : ''}

@@ -64,6 +64,9 @@ async function request(path: string, options: FetchOptions = {}) {
 
     return data;
   } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error;
+    }
     if (error instanceof TypeError) {
       throw new Error('Impossible de joindre le serveur. Vérifiez que le backend est démarré (port 5001).');
     }

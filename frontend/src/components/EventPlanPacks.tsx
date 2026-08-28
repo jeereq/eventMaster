@@ -123,6 +123,7 @@ function PackItemRow({
             <button
               type="button"
               onClick={() => setOpen((value) => !value)}
+              aria-expanded={open}
               className="inline-flex items-center gap-1 min-h-11 px-1 text-[11px] font-semibold text-primary"
             >
               <RefreshCw className="w-3 h-3" />

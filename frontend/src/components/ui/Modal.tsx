@@ -51,6 +51,9 @@ export default function Modal({
   const [mounted, setMounted] = useState(false);
   const openedAtRef = useRef(0);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   const requestClose = useCallback(() => {
     // Le tap/clic qui ouvre la fenêtre retombe parfois sur le fond (iOS / Focus / carte).
     if (Date.now() - openedAtRef.current < 450) return;
@@ -69,18 +72,25 @@ export default function Modal({
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mounted) return;
     openedAtRef.current = Date.now();
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (dismissible) {
       document.addEventListener('keydown', handleEscape);
     }
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => {
+      const closeBtn = panelRef.current?.querySelector<HTMLElement>('[data-modal-close]');
+      (closeBtn || panelRef.current)?.focus();
+    }, 0);
     return () => {
+      window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus?.();
     };
-  }, [open, handleEscape, dismissible]);
+  }, [open, mounted, handleEscape, dismissible]);
 
   if (!open || !mounted) return null;
 
@@ -100,24 +110,29 @@ export default function Modal({
       )}
       <div className="absolute inset-0 z-10 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
         <div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
+          tabIndex={-1}
           aria-labelledby={title ? 'modal-title' : undefined}
+          aria-describedby={description ? 'modal-desc' : undefined}
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-          className={cn(modalPanelClass, 'pointer-events-auto', sizeMap[size], className)}
+          className={cn(modalPanelClass, 'pointer-events-auto outline-none', sizeMap[size], className)}
         >
           {showHeader && (
             <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border shrink-0">
               <div className="min-w-0">
                 {title && (
-                  <h2 id="modal-title" className="text-lg font-bold text-foreground tracking-tight">
+                  <h2 id="modal-title" className="text-lg font-bold text-foreground tracking-tight break-words">
                     {title}
                   </h2>
                 )}
                 {description && (
-                  <p className="text-sm text-muted mt-1">{description}</p>
+                  <p id="modal-desc" className="text-sm text-muted mt-1 break-words">
+                    {description}
+                  </p>
                 )}
               </div>
               {dismissible && (
@@ -126,6 +141,7 @@ export default function Modal({
                   onClick={onClose}
                   className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
                   aria-label="Fermer la fenêtre"
+                  data-modal-close
                 >
                   <X className="w-5 h-5" />
                 </button>

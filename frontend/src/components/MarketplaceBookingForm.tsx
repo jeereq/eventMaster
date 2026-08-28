@@ -123,7 +123,9 @@ export default function MarketplaceBookingForm({
     }
   };
 
-  if (loading) return null;
+  if (loading) {
+    return <p className="text-sm text-muted py-3" aria-live="polite">Vérification de la session…</p>;
+  }
 
   const calendar = showCalendar ? (
     <AvailabilityCalendar

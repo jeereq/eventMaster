@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Building2, CalendarCheck, ExternalLink, KeyRound, Loader2, MapPin, Sparkles, Users } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button, Modal, StatusPill } from '@/components/ui';
+import { Button, Modal, StatusPill, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
@@ -76,6 +76,7 @@ export default function EventPrepListingModal({
   const [venue, setVenue] = useState<PublicVenue | null>(null);
   const [service, setService] = useState<PublicService | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
     if (!target) {
@@ -119,7 +120,7 @@ export default function EventPrepListingModal({
     return () => {
       cancelled = true;
     };
-  }, [target, initialView]);
+  }, [target, initialView, reloadNonce]);
 
   const listing = venue || service;
   const rental = Boolean(service && isServiceRentalCategory(service.category));
@@ -206,7 +207,7 @@ export default function EventPrepListingModal({
                 variant={view === 'inquire' ? 'primary' : 'secondary'}
                 className="min-h-11"
                 onClick={() => setView('inquire')}
-                disabled={loading}
+                disabled={loading || Boolean(error)}
               >
                 {pipeline?.stage === 'inquiry' ? 'Nouveau devis' : 'Devis'}
               </Button>
@@ -215,7 +216,7 @@ export default function EventPrepListingModal({
                 className="min-h-11"
                 leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
                 onClick={() => setView('book')}
-                disabled={loading}
+                disabled={loading || !listing}
               >
                 Réserver
               </Button>
@@ -224,7 +225,21 @@ export default function EventPrepListingModal({
         ) : null
       }
     >
-      {view === 'inquire' && target ? (
+      {loading ? (
+        <p className="text-sm text-muted inline-flex items-center gap-2 py-8 justify-center w-full" aria-live="polite">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Chargement de la fiche…
+        </p>
+      ) : error ? (
+        <Alert variant="error" title="Fiche indisponible">
+          <div className="space-y-3">
+            <p className="break-words">{error}</p>
+            <Button size="sm" className="min-h-11" onClick={() => setReloadNonce((n) => n + 1)}>
+              Réessayer
+            </Button>
+          </div>
+        </Alert>
+      ) : view === 'inquire' && target ? (
         <MarketplaceInquiryForm
           key={`${target.kind}:${target.slug}:inquire`}
           endpoint={
@@ -258,13 +273,6 @@ export default function EventPrepListingModal({
             onPipelineChange?.();
           }}
         />
-      ) : loading ? (
-        <p className="text-sm text-muted inline-flex items-center gap-2 py-8 justify-center w-full">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Chargement de la fiche…
-        </p>
-      ) : error ? (
-        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</p>
       ) : listing ? (
         <div className="space-y-4">
           {pipeline && pipeline.stage !== 'none' ? (
@@ -281,15 +289,16 @@ export default function EventPrepListingModal({
           <div className="relative overflow-hidden rounded-2xl bg-surface-muted aspect-[16/9]">
             {photos[photoIndex] ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photos[photoIndex]} alt="" className="w-full h-full object-cover" />
+              <img
+                src={photos[photoIndex]}
+                alt={`Visuel de ${title}`}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted">
                 <CoverFallback kind={target?.kind === 'venue' ? 'venue' : 'service'} rental={rental} />
               </div>
             )}
-            <span className="absolute top-3 left-3 rounded-full bg-black/60 text-white text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1">
-              {kindLabel}
-            </span>
           </div>
           {photos.length > 1 ? (
             <div className="flex gap-1.5 overflow-x-auto pb-0.5">
@@ -298,8 +307,10 @@ export default function EventPrepListingModal({
                   key={url}
                   type="button"
                   onClick={() => setPhotoIndex(index)}
+                  aria-label={`Photo ${index + 1} sur ${Math.min(photos.length, 8)} — ${title}`}
+                  aria-pressed={index === photoIndex}
                   className={cn(
-                    'min-w-11 min-h-11 w-16 h-11 rounded-lg overflow-hidden border shrink-0',
+                    'min-w-11 min-h-11 w-16 h-11 rounded-lg overflow-hidden border shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     index === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
                   )}
                 >
@@ -311,9 +322,9 @@ export default function EventPrepListingModal({
           ) : null}
 
           {busy ? (
-            <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <Alert variant="warning">
               Indisponible à la date de l’événement. Vous pouvez quand même demander un devis.
-            </p>
+            </Alert>
           ) : null}
 
           {location ? (
@@ -338,7 +349,7 @@ export default function EventPrepListingModal({
           ) : null}
 
           {listing.description ? (
-            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
+            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line break-words">
               {listing.description}
             </p>
           ) : null}

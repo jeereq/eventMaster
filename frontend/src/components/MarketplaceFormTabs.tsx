@@ -20,11 +20,13 @@ export default function MarketplaceFormTabs({
   onChange: (next: MarketplaceFormTab) => void;
 }) {
   return (
-    <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
+    <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Sections de la fiche">
       {TABS.map((tab) => (
         <button
           key={tab.id}
           type="button"
+          role="tab"
+          aria-selected={value === tab.id}
           onClick={() => onChange(tab.id)}
           className={cn(
             'flex-1 min-h-11 px-2 sm:px-3 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center justify-center gap-1.5',

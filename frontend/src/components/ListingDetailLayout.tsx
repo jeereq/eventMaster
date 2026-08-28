@@ -16,10 +16,12 @@ function ListingPhotoThumbs({
   photos,
   photoIndex,
   onPhotoIndex,
+  listingTitle,
 }: {
   photos: string[];
   photoIndex: number;
   onPhotoIndex: (index: number) => void;
+  listingTitle: string;
 }) {
   if (photos.length < 2) return null;
   return (
@@ -29,6 +31,8 @@ function ListingPhotoThumbs({
           key={url}
           type="button"
           onClick={() => onPhotoIndex(i)}
+          aria-label={`Photo ${i + 1} sur ${photos.length}${listingTitle ? ` — ${listingTitle}` : ''}`}
+          aria-pressed={i === photoIndex}
           className={cn(
             'relative snap-start shrink-0 w-20 min-h-11 sm:w-28 aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
             i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
@@ -37,7 +41,7 @@ function ListingPhotoThumbs({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={mediaPosterUrl(url)}
-            alt={`Miniature ${i + 1}`}
+            alt=""
             loading="lazy"
             decoding="async"
             className="w-full h-full object-cover"
@@ -78,6 +82,8 @@ function ListingMediaGrid({
           key={url}
           type="button"
           onClick={() => onPhotoIndex(i)}
+          aria-label={`${isVideoUrl(url) ? 'Vidéo' : 'Photo'} ${i + 1} sur ${photos.length}`}
+          aria-pressed={i === photoIndex}
           className={cn(
             'relative aspect-[4/3] rounded-[var(--radius-card)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
             i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
@@ -87,7 +93,7 @@ function ListingMediaGrid({
             <video src={url} poster={mediaPosterUrl(url)} muted playsInline className="w-full h-full object-cover" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt={`Média ${i + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+            <img src={url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
           )}
           {isVideoUrl(url) && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -135,6 +141,7 @@ export default function ListingDetailLayout({
   shareUrl,
   shareSlug,
   shareKind = 'venue',
+  onRetry,
 }: {
   backHref: string;
   backLabel: string;
@@ -172,6 +179,7 @@ export default function ListingDetailLayout({
   shareUrl?: string;
   shareSlug?: string;
   shareKind?: 'venue' | 'service' | 'event' | 'rental';
+  onRetry?: () => void;
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
@@ -215,7 +223,12 @@ export default function ListingDetailLayout({
 
   const scrollToContact = (action: 'inquire' | 'book') => {
     setMobileAction(action);
-    document.getElementById('listing-contact')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const reduceMotion = typeof window !== 'undefined'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('listing-contact')?.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
   };
 
   const priceBlock = (
@@ -255,9 +268,20 @@ export default function ListingDetailLayout({
       {loading ? (
         <SkeletonListingDetail />
       ) : error ? (
-        <div className="max-w-md mx-auto text-center py-16 border border-border rounded-[var(--radius-card)] bg-surface">
+        <div
+          role="alert"
+          className="max-w-md mx-auto text-center py-16 px-5 border border-border rounded-[var(--radius-card)] bg-surface"
+        >
           {errorIcon}
-          <p className="text-sm text-muted">{error || errorMessage}</p>
+          <p className="text-sm font-semibold text-foreground">{errorMessage}</p>
+          {error && error !== errorMessage ? (
+            <p className="text-sm text-muted mt-2 break-words">{error}</p>
+          ) : null}
+          {onRetry ? (
+            <Button className="mt-5 min-h-11" onClick={onRetry}>
+              Réessayer
+            </Button>
+          ) : null}
         </div>
       ) : (
         <>
@@ -286,13 +310,13 @@ export default function ListingDetailLayout({
                   {fallbackIcon}
                 </div>
               )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
               {photos.length > 1 && heroSrc && !isVideoUrl(heroSrc) ? (
                 <button
                   type="button"
                   onClick={cycleHero}
                   className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80"
-                  aria-label="Photo suivante"
+                  aria-label={`Photo suivante (${photoIndex + 1} sur ${photos.length})`}
                 />
               ) : null}
               {heroAction || title ? (
@@ -308,12 +332,12 @@ export default function ListingDetailLayout({
                   ) : null}
                 </div>
               ) : null}
-              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7 text-white">
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight drop-shadow leading-[1.1]">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-7 text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words">
                   {title}
                 </h1>
                 {(chip || subtitle) ? (
-                  <p className="mt-1.5 text-sm sm:text-base text-white/85 truncate">
+                  <p className="mt-1.5 text-sm sm:text-base text-white line-clamp-2">
                     {[chip, subtitle].filter(Boolean).join(' · ')}
                   </p>
                 ) : null}
@@ -324,6 +348,7 @@ export default function ListingDetailLayout({
                 photos={photos}
                 photoIndex={photoIndex}
                 onPhotoIndex={onPhotoIndex}
+                listingTitle={title}
               />
             ) : null}
           </div>

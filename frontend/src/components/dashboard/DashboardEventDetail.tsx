@@ -65,6 +65,7 @@ export default function DashboardEventDetail() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const defaultBackHref = CLIENT_AGENDA_HREF;
   const [backHref, setBackHref] = useState(defaultBackHref);
 
@@ -77,6 +78,7 @@ export default function DashboardEventDetail() {
     (async () => {
       if (!slug) return;
       setLoading(true);
+      setError('');
       try {
         const data = await api.get(`/public/events/${encodeURIComponent(slug)}`);
         if (!cancelled) setEvent(data.event);
@@ -87,7 +89,7 @@ export default function DashboardEventDetail() {
       }
     })();
     return () => { cancelled = true; };
-  }, [slug]);
+  }, [slug, reloadNonce]);
 
   const item = event ? eventToCatalogueItem(event) : null;
   const photos = event?.photos?.filter(Boolean) || [];
@@ -109,6 +111,7 @@ export default function DashboardEventDetail() {
       error={error || (!loading && !event ? 'Événement introuvable ou privé.' : '')}
       errorIcon={<Ticket className="w-10 h-10 text-muted mx-auto mb-3" />}
       errorMessage="Événement introuvable ou privé."
+      onRetry={() => setReloadNonce((n) => n + 1)}
       heroUrl={heroUrl}
       fallbackIcon={<Ticket className="w-12 h-12" />}
       chip={event?.orgName || 'Événement'}
