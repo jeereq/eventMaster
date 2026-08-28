@@ -31,6 +31,7 @@ import {
   CheckCircle2,
   Ticket,
   Briefcase,
+  ChevronDown,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
@@ -543,6 +544,7 @@ function RegisterPageContent() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showMobileSteps, setShowMobileSteps] = useState(false);
 
   const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
 
@@ -704,15 +706,15 @@ function RegisterPageContent() {
           </div>
         ) : (
           <>
-            {/* ─── BANDEAU CONTEXTUEL D'INTENTION D'ACTION ─── */}
-            <div className="mb-6 p-4 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-[color:var(--festive-accent-soft)]/20 to-primary/5 border border-primary/20 space-y-2 relative overflow-hidden">
+            {/* ─── BANDEAU CONTEXTUEL D'INTENTION D'ACTION (Desktop & Mobile) ─── */}
+            <div className="mb-6 p-4 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-[color:var(--festive-accent-soft)]/20 to-primary/5 border border-primary/20 space-y-2.5 relative overflow-hidden">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
                     <GoalIcon className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/15 px-2 py-0.5 rounded-md">
                         {config.goalTag}
                       </span>
@@ -738,7 +740,7 @@ function RegisterPageContent() {
                 {config.goalSubtitle}
               </p>
 
-              <div className="pl-11 pt-1 flex items-center gap-3 text-[11px] text-muted">
+              <div className="pl-11 pt-0.5 flex flex-wrap items-center gap-3 text-[11px] text-muted">
                 <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                   <CheckCircle2 className="w-3.5 h-3.5" /> 100% dans le navigateur
                 </span>
@@ -746,21 +748,55 @@ function RegisterPageContent() {
                   <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Sans carte bancaire
                 </span>
               </div>
+
+              {/* Accordéon mobile pour découvrir les 3 étapes sans encombrer l'écran */}
+              <div className="lg:hidden pl-11 pt-1.5 border-t border-primary/15 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileSteps((v) => !v)}
+                  className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 touch-manipulation cursor-pointer"
+                >
+                  <span>{showMobileSteps ? 'Masquer les 3 étapes' : 'Voir les 3 étapes clés'}</span>
+                  <ChevronDown
+                    className={cn('w-3.5 h-3.5 transition-transform duration-200', showMobileSteps && 'rotate-180')}
+                  />
+                </button>
+                {showMobileSteps && (
+                  <ol className="mt-2.5 space-y-2 animate-fade-in">
+                    {layoutFeatures.map((feat) => {
+                      const FeatIcon = feat.icon;
+                      return (
+                        <li
+                          key={feat.title}
+                          className="flex items-start gap-2 text-xs bg-surface/80 border border-border/80 p-2.5 rounded-lg"
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                            {feat.step}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-bold text-foreground text-[11px] flex items-center gap-1">
+                              <FeatIcon className="w-3 h-3 text-primary" /> {feat.title}
+                            </p>
+                            <p className="text-[10px] text-muted leading-relaxed mt-0.5">{feat.desc}</p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+              </div>
             </div>
 
             {/* En-tête formulaire */}
-            <div className="text-center lg:text-left mb-6">
-              <div className="inline-flex lg:hidden items-center justify-center bg-primary p-3 rounded-[var(--radius-button)] text-white mb-4">
-                <PartyPopper className="w-7 h-7" />
-              </div>
-              <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+            <div className="text-left mb-6">
+              <h2 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
                 {accountKind === 'CLIENT'
                   ? 'Créer mon compte client'
                   : accountKind === 'VENDOR'
                     ? 'Créer mon compte professionnel'
                     : 'Créer mon espace organisateur'}
               </h2>
-              <p className="mt-1.5 text-sm text-muted">
+              <p className="mt-1 text-xs sm:text-sm text-muted">
                 Déjà inscrit ?{' '}
                 <Link
                   href={targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login'}
@@ -804,7 +840,7 @@ function RegisterPageContent() {
                       <label
                         key={kind}
                         className={cn(
-                          'flex flex-col gap-1 p-3 rounded-[var(--radius-card)] border text-xs font-medium cursor-pointer transition-all',
+                          'flex flex-col justify-center gap-1 p-3 rounded-[var(--radius-card)] border text-xs font-medium cursor-pointer transition-all touch-manipulation active:scale-[0.99] min-h-[52px]',
                           isSelected
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/40 text-foreground shadow-xs'
                             : 'border-border text-muted hover:border-primary/40 hover:bg-surface-muted/50',
