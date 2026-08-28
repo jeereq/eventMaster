@@ -32,9 +32,12 @@ import {
   Ticket,
   Briefcase,
   ChevronDown,
+  Scale,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
+import LegalTermsPreviewModal from '@/components/LegalTermsPreviewModal';
+import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { interpolateRates } from '@/lib/platformRates';
@@ -546,6 +549,8 @@ function RegisterPageContent() {
   const [loading, setLoading] = useState(false);
   const [showMobileSteps, setShowMobileSteps] = useState(false);
   const [showAllAccountKinds, setShowAllAccountKinds] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy'>('summary');
 
   const hasExplicitAction = Boolean(actionParam || intentParam || planParam || searchParams.get('kind'));
   const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
@@ -592,16 +597,18 @@ function RegisterPageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!acceptTerms || !acceptPrivacy) {
+      setLegalModalTab(!acceptTerms ? 'terms' : 'privacy');
+      setLegalModalOpen(true);
+      setError('Veuillez examiner et approuver les conditions d’utilisation et la politique de confidentialité pour continuer.');
+      return;
+    }
+
     setLoading(true);
 
     if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
       setError('Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.');
-      setLoading(false);
-      return;
-    }
-
-    if (!acceptTerms || !acceptPrivacy) {
-      setError('Vous devez accepter les conditions d’utilisation et la politique de confidentialité.');
       setLoading(false);
       return;
     }
@@ -1001,38 +1008,145 @@ function RegisterPageContent() {
                 ]}
               />
 
-              {/* ─── CONDITIONS LÉGALES ─── */}
-              <div className="space-y-2 pt-1">
-                <label className="flex items-start gap-3 p-3 rounded-xl border border-border cursor-pointer hover:bg-surface-muted transition">
-                  <input
-                    type="checkbox"
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
-                  />
-                  <span className="text-xs text-muted">
-                    J’accepte les{' '}
-                    <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
-                      conditions d’utilisation
-                    </Link>
-                    .
+              {/* ─── CONDITIONS LÉGALES & PRÉVISUALISATION OBLIGATOIRE ─── */}
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Scale className="w-3.5 h-3.5 text-primary" />
+                    Engagements & Conditions légales
                   </span>
-                </label>
-                <label className="flex items-start gap-3 p-3 rounded-xl border border-border cursor-pointer hover:bg-surface-muted transition">
-                  <input
-                    type="checkbox"
-                    checked={acceptPrivacy}
-                    onChange={(e) => setAcceptPrivacy(e.target.checked)}
-                    className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
-                  />
-                  <span className="text-xs text-muted">
-                    J’accepte la{' '}
-                    <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">
-                      politique de confidentialité
-                    </Link>
-                    .
-                  </span>
-                </label>
+                  {(!acceptTerms || !acceptPrivacy) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLegalModalTab('summary');
+                        setLegalModalOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 touch-manipulation cursor-pointer"
+                    >
+                      <Eye className="w-3 h-3" />
+                      Tout lire & approuver
+                    </button>
+                  )}
+                </div>
+
+                {/* 1. Carte Conditions d'utilisation */}
+                <div
+                  className={cn(
+                    'p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-xs',
+                    acceptTerms
+                      ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
+                      : 'border-border bg-surface hover:border-primary/40',
+                  )}
+                >
+                  <label className="flex items-start gap-2.5 min-w-0 cursor-pointer flex-1">
+                    <input
+                      type="checkbox"
+                      checked={acceptTerms}
+                      onChange={() => {
+                        if (!acceptTerms) {
+                          setLegalModalTab('terms');
+                          setLegalModalOpen(true);
+                        } else {
+                          setAcceptTerms(false);
+                        }
+                      }}
+                      className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground flex items-center gap-1.5 truncate">
+                        Conditions d’utilisation
+                        <span className="text-[10px] font-normal text-muted">v{TERMS_VERSION}</span>
+                      </p>
+                      <p className="text-[11px] text-muted truncate">
+                        {acceptTerms ? 'Document examiné et approuvé' : 'Cliquez pour lire et valider'}
+                      </p>
+                    </div>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLegalModalTab('terms');
+                      setLegalModalOpen(true);
+                    }}
+                    className={cn(
+                      'px-2 py-1 rounded-md text-[11px] font-bold shrink-0 transition flex items-center gap-1 touch-manipulation cursor-pointer',
+                      acceptTerms
+                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
+                        : 'text-primary bg-primary/10 hover:bg-primary/20',
+                    )}
+                  >
+                    {acceptTerms ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" /> Approuvé
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3 h-3" /> Consulter
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* 2. Carte Politique de confidentialité */}
+                <div
+                  className={cn(
+                    'p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-xs',
+                    acceptPrivacy
+                      ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
+                      : 'border-border bg-surface hover:border-primary/40',
+                  )}
+                >
+                  <label className="flex items-start gap-2.5 min-w-0 cursor-pointer flex-1">
+                    <input
+                      type="checkbox"
+                      checked={acceptPrivacy}
+                      onChange={() => {
+                        if (!acceptPrivacy) {
+                          setLegalModalTab('privacy');
+                          setLegalModalOpen(true);
+                        } else {
+                          setAcceptPrivacy(false);
+                        }
+                      }}
+                      className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground flex items-center gap-1.5 truncate">
+                        Politique de confidentialité
+                        <span className="text-[10px] font-normal text-muted">v{PRIVACY_VERSION}</span>
+                      </p>
+                      <p className="text-[11px] text-muted truncate">
+                        {acceptPrivacy ? 'Document examiné et approuvé' : 'Cliquez pour lire et valider'}
+                      </p>
+                    </div>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLegalModalTab('privacy');
+                      setLegalModalOpen(true);
+                    }}
+                    className={cn(
+                      'px-2 py-1 rounded-md text-[11px] font-bold shrink-0 transition flex items-center gap-1 touch-manipulation cursor-pointer',
+                      acceptPrivacy
+                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
+                        : 'text-primary bg-primary/10 hover:bg-primary/20',
+                    )}
+                  >
+                    {acceptPrivacy ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" /> Approuvé
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3 h-3" /> Consulter
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* ─── BOUTON D'ACTION PRINCIPAL DYNAMIQUE ─── */}
@@ -1042,7 +1156,6 @@ function RegisterPageContent() {
                   fullWidth
                   size="lg"
                   loading={loading}
-                  disabled={!acceptTerms || !acceptPrivacy}
                   rightIcon={<ArrowRight className="w-4 h-4" />}
                   className="shadow-md shadow-primary/20 font-bold"
                 >
@@ -1058,6 +1171,20 @@ function RegisterPageContent() {
           </>
         )}
       </Card>
+
+      {/* ─── MODALE DE PRÉVISUALISATION ET VALIDATION LÉGALE FORCÉE ─── */}
+      <LegalTermsPreviewModal
+        open={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalModalTab}
+        acceptedTerms={acceptTerms}
+        acceptedPrivacy={acceptPrivacy}
+        onAcceptAll={() => {
+          setAcceptTerms(true);
+          setAcceptPrivacy(true);
+          setError('');
+        }}
+      />
     </AuthSplitLayout>
   );
 }
