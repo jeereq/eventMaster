@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -113,26 +112,16 @@ export default function MarketplaceInquiryForm({
 
   return (
     <form onSubmit={handleInquire} className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
-      <h2 className="text-sm font-semibold text-foreground">Demander un devis</h2>
       {showAuthChoice ? (
         <ClientAuthChoice
           nextPath={nextPath}
-          description="Connectez-vous ou créez un compte pour envoyer un devis, suivre vos demandes et réserver."
+          description="Connectez-vous pour envoyer un devis et suivre vos demandes."
         />
       ) : (
         <>
           <p className="text-xs text-muted leading-relaxed">
-            Le professionnel reçoit votre message par e-mail. Pour bloquer une date avec acompte, utilisez Réserver (paiement hors plateforme).
+            Message au professionnel. Pour bloquer une date, utilisez Réserver.
           </p>
-          {token && user && (
-            <p className="text-[11px] text-muted">
-              Connecté en tant que {user.name || user.email}. Après envoi, suivez la demande dans{' '}
-              <Link href={eventId ? `/dashboard/bookings?tab=quotes&event=${encodeURIComponent(eventId)}` : '/dashboard/bookings?tab=quotes'} className="font-semibold text-primary hover:underline">
-                Devis & réservations
-              </Link>
-              .
-            </p>
-          )}
           {formError && <Alert variant="error">{formError}</Alert>}
           {sent && <Alert variant="success">{sent}</Alert>}
           <Input label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} />

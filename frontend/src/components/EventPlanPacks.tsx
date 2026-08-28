@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Check, Eye, ListChecks, Pin, RefreshCw, Store, Bookmark } from 'lucide-react';
+import { Eye, Pin, RefreshCw, Store } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import FavoriteHeart from '@/components/FavoriteHeart';
@@ -90,11 +90,8 @@ function PackItemRow({
           {titleNode}
           <p className="text-[11px] text-muted truncate">
             {kindLabel}
-            {item.favorite ? ' · favori' : ''}
             {item.match === 'exact' ? ' · adapté' : ''}
             {item.orgName ? ` · ${item.orgName}` : ''}
-            {item.location ? ` · ${item.location}` : ''}
-            {item.kind === 'venue' && item.capacity ? ` · ${item.capacity} places` : ''}
           </p>
         </div>
         <div className="shrink-0 flex flex-col items-end gap-1">
@@ -171,7 +168,6 @@ function PackItemRow({
 export default function EventPlanPacks({
   packages,
   budgetFc,
-  spendableFc,
   isFavorite,
   onToggleFavorite,
   onReplace,
@@ -193,70 +189,21 @@ export default function EventPlanPacks({
   onWidenSlot?: (slot: PlanMissingSlot) => void;
   onOpenListing?: (item: PlanItem) => void;
 }) {
-  const envelope = spendableFc || budgetFc;
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
       {packages.map((pack) => {
-        const usedRatio = envelope > 0 ? Math.min(100, Math.round((pack.totalFc / envelope) * 100)) : 0;
         const rows = pack.venue ? [pack.venue, ...pack.services] : pack.services;
-        const allocation = pack.allocation?.length
-          ? pack.allocation
-          : rows.map((item) => ({
-            key: item.slug,
-            label: item.kind === 'venue' ? 'Salle' : item.categoryLabel || 'Presta',
-            amountFc: item.estimatedFc,
-          }));
-        const allocTotal = allocation.reduce((sum, item) => sum + item.amountFc, 0) || 1;
         return (
           <article key={pack.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-4 flex flex-col gap-5">
             <header className="flex flex-col gap-1.5">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="text-base font-semibold text-foreground">{pack.label}</h3>
-                  {pack.blurb ? <p className="text-xs text-muted mt-1 leading-relaxed">{pack.blurb}</p> : null}
-                </div>
-                {pack.complete ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-semibold">
-                    <Check className="w-3 h-3" /> Complet
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 text-[10px] font-semibold">
-                    Incomplet
-                  </span>
-                )}
-              </div>
+              <h3 className="text-base font-semibold text-foreground">{pack.label}</h3>
+              {pack.blurb ? <p className="text-xs text-muted leading-relaxed">{pack.blurb}</p> : null}
               <p className="text-sm font-semibold text-foreground">{formatFc(pack.totalFc)}</p>
-              <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
-                <div
-                  className={cn('h-full rounded-full', pack.overBudget ? 'bg-rose-500' : 'bg-primary')}
-                  style={{ width: `${usedRatio}%` }}
-                />
-              </div>
               <p className={cn('text-xs', pack.overBudget ? 'text-rose-600' : 'text-muted')}>
                 {pack.overBudget
-                  ? `Au-dessus du budget de ${formatFc(budgetFc)} (${formatFc(pack.totalFc)})`
-                  : `${usedRatio} % de l’enveloppe · ${formatFc(pack.totalFc)} sur ${formatFc(envelope)} · reste ${formatFc(pack.leftoverFc)}`}
+                  ? `Dépassement · budget ${formatFc(budgetFc)}`
+                  : `Reste ${formatFc(pack.leftoverFc)}`}
               </p>
-              {allocation.length > 1 ? (
-                <div className="space-y-1">
-                  <div className="flex h-2 overflow-hidden rounded-full bg-surface-muted">
-                    {allocation.map((item, index) => (
-                      <div
-                        key={item.key}
-                        className={cn(
-                          'h-full',
-                          index % 3 === 0 ? 'bg-primary' : index % 3 === 1 ? 'bg-primary/60' : 'bg-primary/30',
-                        )}
-                        style={{ width: `${Math.max(4, (item.amountFc / allocTotal) * 100)}%` }}
-                        title={`${item.label} · ${formatFc(item.amountFc)}`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-muted leading-relaxed">
-                    {allocation.map((item) => `${item.label} ${Math.round((item.amountFc / allocTotal) * 100)} % · ${formatFc(item.amountFc)}`).join(' · ')}
-                  </p>
-                </div>
-              ) : null}
             </header>
 
             {pack.notes?.length ? (
@@ -306,13 +253,13 @@ export default function EventPlanPacks({
             {onSave || onChooseFinal ? (
               <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
                 {onChooseFinal ? (
-                  <Button size="sm" onClick={() => onChooseFinal(pack)} leftIcon={<ListChecks className="w-3.5 h-3.5" />}>
-                    Retenir comme solution finale
+                  <Button size="sm" className="min-h-11" onClick={() => onChooseFinal(pack)}>
+                    Choisir
                   </Button>
                 ) : null}
                 {onSave ? (
-                  <Button size="sm" variant="secondary" onClick={() => onSave(pack)} leftIcon={<Bookmark className="w-3.5 h-3.5" />}>
-                    Sauvegarder ce pack
+                  <Button size="sm" variant="secondary" className="min-h-11" onClick={() => onSave(pack)}>
+                    Enregistrer
                   </Button>
                 ) : null}
               </div>

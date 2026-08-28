@@ -6,7 +6,7 @@ import { Button, Skeleton, SkeletonListingDetail } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
-import { isVideoUrl, listingSrcSet, mediaPosterUrl, sizedMediaUrl } from '@/lib/marketplace';
+import { isVideoUrl, listingSrcSet, sizedMediaUrl } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Play } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
@@ -59,59 +59,6 @@ function ListingPhotoThumbs({
   );
 }
 
-function ListingMediaGrid({
-  photos,
-  photoIndex,
-  onPhotoIndex,
-  fallback,
-}: {
-  photos: string[];
-  photoIndex: number;
-  onPhotoIndex: (index: number) => void;
-  fallback: React.ReactNode;
-}) {
-  if (!photos.length) {
-    return (
-      <div className="rounded-[var(--radius-card)] bg-surface-muted border border-border h-48 flex items-center justify-center text-muted">
-        {fallback}
-      </div>
-    );
-  }
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-      {photos.map((url, i) => (
-        <button
-          key={url}
-          type="button"
-          onClick={() => onPhotoIndex(i)}
-          aria-label={`${isVideoUrl(url) ? 'Vidéo' : 'Photo'} ${i + 1} sur ${photos.length}`}
-          aria-pressed={i === photoIndex}
-          className={cn(
-            'relative aspect-[4/3] rounded-[var(--radius-card)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-            i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
-          )}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={sizedMediaUrl(url, 480)}
-            srcSet={listingSrcSet(url, [320, 480, 800])}
-            sizes="(min-width: 640px) 33vw, 50vw"
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover"
-          />
-          {isVideoUrl(url) && (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <Play className="w-6 h-6 text-white fill-white" />
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export default function ListingDetailLayout({
   backHref,
   backLabel,
@@ -140,7 +87,7 @@ export default function ListingDetailLayout({
   preview,
   embedded,
   heroAction,
-  inquireLabel = 'Demander un devis',
+  inquireLabel = 'Devis',
   bookLabel = 'Réserver',
   hideBooking = false,
   priceCaption,
@@ -246,10 +193,7 @@ export default function ListingDetailLayout({
   );
 
   const heroSrc = (photoIndex > 0 && photos[photoIndex]) || heroUrl || photos[0] || null;
-  const cycleHero = () => {
-    if (photos.length < 2) return;
-    onPhotoIndex((photoIndex + 1) % photos.length);
-  };
+  const viewTab = tab === 'medias' ? 'details' : tab;
 
   return (
     <main
@@ -323,14 +267,6 @@ export default function ListingDetailLayout({
                 </div>
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
-              {photos.length > 1 && heroSrc && !isVideoUrl(heroSrc) ? (
-                <button
-                  type="button"
-                  onClick={cycleHero}
-                  className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80"
-                  aria-label={`Photo suivante (${photoIndex + 1} sur ${photos.length})`}
-                />
-              ) : null}
               {heroAction || title ? (
                 <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
                   {heroAction}
@@ -368,19 +304,15 @@ export default function ListingDetailLayout({
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 items-start">
             <div className="lg:col-span-3 flex flex-col gap-4 min-w-0">
               <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
-                <MarketplaceFormTabs value={tab} onChange={onTab} />
+                <MarketplaceFormTabs
+                  value={viewTab}
+                  onChange={onTab}
+                  include={['details', 'map']}
+                  icons={false}
+                />
               </div>
 
-              {tab === 'medias' ? (
-                <ListingMediaGrid
-                  photos={photos}
-                  photoIndex={photoIndex}
-                  onPhotoIndex={onPhotoIndex}
-                  fallback={fallbackIcon}
-                />
-              ) : null}
-              {tab === 'details' && details}
-              {tab === 'map' && map}
+              {viewTab === 'map' ? map : details}
             </div>
 
             <aside
@@ -390,7 +322,7 @@ export default function ListingDetailLayout({
                 embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24',
               )}
             >
-              <div className="hidden lg:block border border-border rounded-[var(--radius-card)] p-5 bg-surface">
+              <div className="hidden lg:block">
                 {priceBlock}
               </div>
 
@@ -469,8 +401,7 @@ export default function ListingDetailLayout({
           <div className="page-container pt-3 flex items-center gap-3">
             {loading ? (
               <>
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Skeleton className="h-2 w-14" />
+                <div className="min-w-0 flex-1">
                   <Skeleton className="h-4 w-28" />
                 </div>
                 <Skeleton className="h-11 w-[4.75rem] rounded-[var(--radius-button)] shrink-0" />
@@ -479,7 +410,6 @@ export default function ListingDetailLayout({
             ) : (
               <>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-muted leading-none">À partir de</p>
                   <p className="text-sm font-semibold truncate">{priceLabel}</p>
                 </div>
                 <Button size="md" className="shrink-0 min-h-11" onClick={() => scrollToContact('inquire')}>

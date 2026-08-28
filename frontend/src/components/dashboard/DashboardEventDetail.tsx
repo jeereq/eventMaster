@@ -9,7 +9,6 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import EventTicketCheckoutForm from '@/components/EventTicketCheckoutForm';
 import { Button } from '@/components/ui';
-import { formatFc } from '@/config/landingPricing';
 import {
   catalogueItemToMapMarker,
   CLIENT_AGENDA_HREF,
@@ -145,7 +144,6 @@ export default function DashboardEventDetail() {
           <p className="text-sm text-muted leading-relaxed">
             {[
               new Date(event.date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }),
-              event.location,
               event.ticketsRemaining != null
                 ? (event.soldOut ? 'Complet' : `${event.ticketsRemaining} place${event.ticketsRemaining > 1 ? 's' : ''}`)
                 : null,
@@ -164,11 +162,6 @@ export default function DashboardEventDetail() {
           ) : (
             <p className="text-sm text-muted">Inscription ouverte au public.</p>
           )}
-          <p className="text-sm text-muted">
-            {event.paid
-              ? `Billet : ${formatFc(event.ticketPriceFc)} · paiement en ligne (carte).`
-              : 'Entrée libre : inscrivez-vous pour recevoir votre badge QR.'}
-          </p>
           </div>
           {posts.length > 0 && (
             <div className="flex flex-col gap-4">

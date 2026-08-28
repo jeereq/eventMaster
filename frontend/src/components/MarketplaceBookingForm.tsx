@@ -171,10 +171,8 @@ export default function MarketplaceBookingForm({
     <form onSubmit={handleBook} className="space-y-3">
       {calendar}
       <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Réserver une date ou une période</h2>
         <p className="text-xs text-muted leading-relaxed">
-          Cliquez un jour libre, puis éventuellement le dernier jour. Demande → acceptation → acompte {depositPct} % hors
-          plateforme → confirmation.
+          Un jour libre, puis éventuellement le dernier. Acompte {depositPct} % hors plateforme, après acceptation.
         </p>
         {formError && <Alert variant="error">{formError}</Alert>}
         {sent && <Alert variant="success">{sent}</Alert>}

@@ -183,10 +183,8 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           )}
           <p className="text-sm text-muted leading-relaxed">
             {[
-              venue ? [formatLocationLine(venue), venue.address].filter(Boolean).join(' · ') : null,
+              venue ? [formatLocationLine(venue), venue.address, venue.capacity ? `${venue.capacity} places` : null].filter(Boolean).join(' · ') : null,
               service ? [formatLocationLine(service), serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)].filter(Boolean).join(' · ') : null,
-              venue?.capacity ? `${venue.capacity} places` : null,
-              quotaLabel,
             ].filter(Boolean).join(' · ')}
             {lat != null && lng != null ? (
               <>
@@ -210,7 +208,6 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
               <RoomLayoutPreview
                 blueprint={venue.layoutPreview as RoomLayoutBlueprint}
                 quality="showcase"
-                showDepthControls
               />
             </div>
           ) : null}

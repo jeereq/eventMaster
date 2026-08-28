@@ -112,7 +112,6 @@ export default function MarketplaceVenueDetailPage() {
                 formatLocationLine(venue),
                 venue.address,
                 venue.capacity ? `${venue.capacity} places` : null,
-                quotaLabel,
               ].filter(Boolean).join(' · ')}
               {venue.latitude != null && venue.longitude != null ? (
                 <>
@@ -134,7 +133,6 @@ export default function MarketplaceVenueDetailPage() {
                 <RoomLayoutPreview
                   blueprint={venue.layoutPreview as RoomLayoutBlueprint}
                   quality="showcase"
-                  showDepthControls
                 />
               </div>
             ) : null}

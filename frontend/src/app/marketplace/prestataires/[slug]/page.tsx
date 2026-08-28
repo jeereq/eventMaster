@@ -110,7 +110,6 @@ export default function MarketplaceServiceDetailPage() {
               {[
                 formatLocationLine(service),
                 serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm),
-                quotaLabel,
               ].filter(Boolean).join(' · ')}
               {service.latitude != null && service.longitude != null ? (
                 <>

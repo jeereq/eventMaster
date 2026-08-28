@@ -15,13 +15,18 @@ const TABS: Array<{ id: MarketplaceFormTab; label: string; icon: React.ReactNode
 export default function MarketplaceFormTabs({
   value,
   onChange,
+  include,
+  icons = true,
 }: {
   value: MarketplaceFormTab;
   onChange: (next: MarketplaceFormTab) => void;
+  include?: MarketplaceFormTab[];
+  icons?: boolean;
 }) {
+  const tabs = include ? TABS.filter((tab) => include.includes(tab.id)) : TABS;
   return (
     <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Sections de la fiche">
-      {TABS.map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
@@ -35,7 +40,7 @@ export default function MarketplaceFormTabs({
               : 'text-muted hover:text-foreground',
           )}
         >
-          {tab.icon}
+          {icons ? tab.icon : null}
           {tab.label}
         </button>
       ))}

@@ -2,12 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, CalendarCheck, ExternalLink, KeyRound, Loader2, MapPin, Sparkles } from 'lucide-react';
+import { Building2, ExternalLink, KeyRound, Loader2, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Modal, StatusPill, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
-import ListingPublicDetails from '@/components/ListingPublicDetails';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import {
@@ -155,7 +154,7 @@ export default function EventPrepListingModal({
         )
       : null,
     listing?.priceFromFc != null
-      ? `Dès ${formatFc(listing.priceFromFc)}${listing.priceUnitLabel ? ` · ${listing.priceUnitLabel}` : ''}`
+      ? `${formatFc(listing.priceFromFc)}${listing.priceUnitLabel ? ` · ${listing.priceUnitLabel}` : ''}`
       : 'Sur devis',
   ].filter(Boolean) as string[];
 
@@ -166,7 +165,7 @@ export default function EventPrepListingModal({
       ? 'Le professionnel reçoit votre message. Aucune réservation n’est créée.'
       : view === 'book'
         ? 'Demande de date avec acompte hors plateforme. Le professionnel doit encore accepter.'
-        : `${kindLabel}${listing?.orgName ? ` · ${listing.orgName}` : ''}`;
+        : listing?.orgName || kindLabel;
 
   const canRetain = Boolean(onRetainVenue || onRetainService);
   const retainListing = () => {
@@ -191,11 +190,11 @@ export default function EventPrepListingModal({
                 </Button>
               ) : selected && onRemove ? (
                 <Button variant="secondary" onClick={onRemove} disabled={loading || !listing}>
-                  Retirer de la préparation
+                  Retirer
                 </Button>
               ) : canRetain ? (
                 <Button variant="secondary" onClick={retainListing} disabled={loading || !listing}>
-                  Retenir pour l’événement
+                  Retenir
                 </Button>
               ) : null}
               {pipeline?.stage === 'booking' ? (
@@ -216,7 +215,6 @@ export default function EventPrepListingModal({
               <Button
                 variant={view === 'book' ? 'primary' : 'secondary'}
                 className="min-h-11"
-                leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
                 onClick={() => setView('book')}
                 disabled={loading || !listing}
               >
@@ -278,14 +276,7 @@ export default function EventPrepListingModal({
       ) : listing ? (
         <div className="flex flex-col gap-6">
           {pipeline && pipeline.stage !== 'none' ? (
-            <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-muted/50 px-3 py-2">
-              <StatusPill tone={pipeline.tone}>{pipeline.label}</StatusPill>
-              {pipeline.stage === 'booking' ? (
-                <Link href={followHref} className="text-xs font-semibold text-primary hover:underline">
-                  Ouvrir le suivi
-                </Link>
-              ) : null}
-            </div>
+            <StatusPill tone={pipeline.tone}>{pipeline.label}</StatusPill>
           ) : null}
 
           <div className="flex flex-col gap-2">
@@ -341,20 +332,9 @@ export default function EventPrepListingModal({
           ) : null}
 
           {(location || facts.length > 0) ? (
-            <div className="flex flex-col gap-1.5">
-          {location ? (
-            <p className="text-sm text-muted inline-flex items-start gap-1.5">
-              <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              <span>{location}</span>
-            </p>
-          ) : null}
-
-          {facts.length > 0 ? (
             <p className="text-sm text-muted leading-relaxed">
-              {facts.join(' · ')}
+              {[location, ...facts].filter(Boolean).join(' · ')}
             </p>
-          ) : null}
-            </div>
           ) : null}
 
           {listing.description ? (
@@ -362,11 +342,6 @@ export default function EventPrepListingModal({
               {listing.description}
             </p>
           ) : null}
-
-          <ListingPublicDetails
-            details={listing.details}
-            kind={target?.kind === 'venue' ? 'venue' : 'service'}
-          />
 
           <Link
             href={href}
