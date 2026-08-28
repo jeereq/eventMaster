@@ -27,7 +27,7 @@ export default function MarketplaceFormTabs({
           type="button"
           onClick={() => onChange(tab.id)}
           className={cn(
-            'flex-1 min-h-9 sm:min-h-11 px-2 sm:px-3 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center justify-center gap-1.5',
+            'flex-1 min-h-11 px-2 sm:px-3 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center justify-center gap-1.5',
             value === tab.id
               ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
               : 'text-muted hover:text-foreground',

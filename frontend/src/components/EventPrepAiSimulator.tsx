@@ -387,7 +387,7 @@ function AiPickRow({
           event.stopPropagation();
           onOpen();
         }}
-        className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2 text-left hover:border-primary/40 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2 min-h-11 text-left hover:border-primary/40 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
         {body}
       </button>

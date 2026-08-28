@@ -204,6 +204,7 @@ export default function EventPrepListingModal({
             <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex order-1 sm:order-2">
               <Button
                 variant={view === 'inquire' ? 'primary' : 'secondary'}
+                className="min-h-11"
                 onClick={() => setView('inquire')}
                 disabled={loading}
               >
@@ -211,6 +212,7 @@ export default function EventPrepListingModal({
               </Button>
               <Button
                 variant={view === 'book' ? 'primary' : 'secondary'}
+                className="min-h-11"
                 leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
                 onClick={() => setView('book')}
                 disabled={loading}
@@ -297,7 +299,7 @@ export default function EventPrepListingModal({
                   type="button"
                   onClick={() => setPhotoIndex(index)}
                   className={cn(
-                    'w-14 h-12 rounded-lg overflow-hidden border shrink-0',
+                    'min-w-11 min-h-11 w-16 h-11 rounded-lg overflow-hidden border shrink-0',
                     index === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
                   )}
                 >

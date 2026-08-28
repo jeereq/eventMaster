@@ -149,7 +149,7 @@ export default function EventSavedPacks({
                 <button
                   type="button"
                   onClick={() => void onDelete(pack.id)}
-                  className="text-muted hover:text-rose-600 p-1"
+                  className="inline-flex items-center justify-center min-h-11 min-w-11 text-muted hover:text-rose-600 rounded-lg"
                   aria-label="Supprimer le pack"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -171,7 +171,7 @@ export default function EventSavedPacks({
                       <button
                         type="button"
                         onClick={open}
-                        className="w-8 h-8 rounded-md overflow-hidden bg-surface-muted shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        className="w-11 h-11 rounded-md overflow-hidden bg-surface-muted shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         aria-label={`Voir la fiche ${item.title}`}
                       >
                         {item.coverUrl ? (
@@ -190,7 +190,7 @@ export default function EventSavedPacks({
                         )}
                       </button>
                     ) : (
-                      <div className="w-8 h-8 rounded-md overflow-hidden bg-surface-muted shrink-0">
+                      <div className="w-11 h-11 rounded-md overflow-hidden bg-surface-muted shrink-0">
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img

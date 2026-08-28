@@ -124,7 +124,7 @@ export default function Modal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
+                  className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
                   aria-label="Fermer la fenêtre"
                 >
                   <X className="w-5 h-5" />
@@ -134,7 +134,7 @@ export default function Modal({
           )}
           <div className="overflow-y-auto overscroll-contain flex-1 p-5 sm:p-6 touch-pan-y">{children}</div>
           {footer && (
-            <div className="border-t border-border p-4 sm:p-5 shrink-0 flex flex-wrap gap-2 justify-end bg-surface-muted/40">
+            <div className="border-t border-border p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-5 shrink-0 flex flex-wrap gap-2 justify-end bg-surface-muted/40">
               {footer}
             </div>
           )}

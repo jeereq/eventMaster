@@ -30,7 +30,7 @@ function ListingPhotoThumbs({
           type="button"
           onClick={() => onPhotoIndex(i)}
           className={cn(
-            'relative snap-start shrink-0 w-20 sm:w-28 aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+            'relative snap-start shrink-0 w-20 min-h-11 sm:w-28 aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
             i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
           )}
         >
@@ -233,11 +233,20 @@ export default function ListingDetailLayout({
   };
 
   return (
-    <main className={embedded ? 'pb-8 sm:pb-10 flex-1' : 'page-container pt-3 pb-20 sm:pt-5 lg:py-8 lg:pb-10 flex-1'}>
+    <main
+      className={cn(
+        'flex-1',
+        embedded
+          ? showCommerce
+            ? 'pb-[calc(var(--em-listing-dock)+0.75rem)] md:pb-16 lg:pb-10'
+            : 'pb-8 sm:pb-10'
+          : 'page-container pt-3 pb-20 sm:pt-5 lg:py-8 lg:pb-10',
+      )}
+    >
       <button
         type="button"
         onClick={goBack}
-        className="inline-flex items-center gap-1.5 min-h-9 -ml-1 px-1 text-xs font-semibold text-muted hover:text-foreground mb-3"
+        className="inline-flex items-center gap-1.5 min-h-11 -ml-1 px-1.5 text-xs font-semibold text-muted hover:text-foreground mb-3"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         {backLabel}
@@ -269,8 +278,7 @@ export default function ListingDetailLayout({
                   <img
                     src={heroSrc}
                     alt={title || "Visuel principal de l'établissement"}
-                    onClick={photos.length > 1 ? cycleHero : undefined}
-                    className={cn('w-full h-full object-cover', photos.length > 1 && 'cursor-pointer')}
+                    className="w-full h-full object-cover"
                   />
                 )
               ) : (
@@ -279,6 +287,14 @@ export default function ListingDetailLayout({
                 </div>
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+              {photos.length > 1 && heroSrc && !isVideoUrl(heroSrc) ? (
+                <button
+                  type="button"
+                  onClick={cycleHero}
+                  className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/80"
+                  aria-label="Photo suivante"
+                />
+              ) : null}
               {heroAction || title ? (
                 <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
                   {heroAction}
@@ -332,14 +348,20 @@ export default function ListingDetailLayout({
 
             <aside
               id="listing-contact"
-              className="lg:col-span-2 space-y-5 lg:sticky lg:top-24 scroll-mt-24"
+              className={cn(
+                'lg:col-span-2 space-y-5 lg:sticky lg:top-24',
+                embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24',
+              )}
             >
               <div className="hidden lg:block border border-border rounded-[var(--radius-card)] p-5 bg-surface">
                 {priceBlock}
               </div>
 
               {availability ? (
-                <div id="listing-availability" className="scroll-mt-24">
+                <div
+                  id="listing-availability"
+                  className={embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24'}
+                >
                   {availability}
                 </div>
               ) : null}
@@ -396,8 +418,12 @@ export default function ListingDetailLayout({
 
       {!error && showCommerce && (
         <div
-          className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-md"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+          className={cn(
+            'lg:hidden fixed inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur-md',
+            embedded
+              ? 'bottom-[var(--em-dash-bottom-nav)] pb-3 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+              : 'bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+          )}
         >
           <div className="page-container pt-3 flex items-center gap-2">
             {loading ? (
@@ -415,11 +441,11 @@ export default function ListingDetailLayout({
                   <p className="text-[10px] text-muted leading-none">À partir de</p>
                   <p className="text-sm font-semibold truncate">{priceLabel}</p>
                 </div>
-                <Button size="sm" className="shrink-0 min-h-11" onClick={() => scrollToContact('inquire')}>
+                <Button size="md" className="shrink-0 min-h-11" onClick={() => scrollToContact('inquire')}>
                   {hideBooking ? inquireLabel : 'Devis'}
                 </Button>
                 {showBooking ? (
-                <Button size="sm" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>
+                <Button size="md" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>
                   {bookLabel}
                 </Button>
                 ) : null}
