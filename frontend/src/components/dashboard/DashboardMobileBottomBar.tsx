@@ -17,6 +17,8 @@ import {
   FileText,
   Menu,
   X,
+  Sparkles,
+  Bookmark,
 } from 'lucide-react';
 import type { OrgAccess } from '@/context/AuthContext';
 import type { TenantAccountKind } from '@/lib/marketplace';
@@ -97,7 +99,9 @@ function isBottomItemActive(
     return true;
   }
   if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
-    return have.get('kind') !== 'event';
+    if (have.get('kind') === 'event') return false;
+    if (have.has('tab') && have.get('tab') !== 'explore') return false;
+    return true;
   }
 
   return true;
@@ -164,8 +168,8 @@ export function buildMobileBottomItems({
     return [
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
-      { id: 'tickets', name: 'Billets', href: '/dashboard/tickets', icon: Ticket },
-      { id: 'quotes', name: 'Mes Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
+      { id: 'simulator', name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
+      { id: 'packs', name: 'Mes packs', href: '/dashboard/catalogue?tab=packs', icon: Bookmark },
       { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }

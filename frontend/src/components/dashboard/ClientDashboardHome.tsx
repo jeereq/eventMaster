@@ -28,6 +28,11 @@ import {
   Info,
   Clock,
   ShieldCheck,
+  Bookmark,
+  Crown,
+  Gem,
+  Lock,
+  Wand2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -56,6 +61,15 @@ interface ClientIntentConfig {
   ctaHref: string;
   quickFilters: Array<{ label: string; href: string }>;
   features: string[];
+  isPaidPlanRequired?: boolean;
+  pricingNotice?: {
+    badge: string;
+    title: string;
+    description: string;
+    ctaLabel: string;
+    ctaHref: string;
+    pricingHighlight?: string;
+  };
 }
 
 const CLIENT_INTENTS: ClientIntentConfig[] = [
@@ -106,6 +120,29 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
     ],
   },
   {
+    id: 'ai-plan',
+    title: 'Simulateur de Pack Événement (IA & Budget)',
+    badge: 'Simulateur & Packs',
+    tagline: 'Composé et optimisé automatiquement selon votre budget global et vos invités',
+    description:
+      'Indiquez votre budget global en Francs Congolais (CDF/FC), votre ville et votre nombre d’invités. Notre assistant et algorithme IA assemblent pour vous la salle, le traiteur, la déco et l’animation idéale.',
+    icon: Sparkles,
+    accentColor: 'from-amber-500/10 to-emerald-500/10 border-primary/30 text-primary',
+    ctaLabel: 'Lancer le Simulateur IA de Packs',
+    ctaHref: '/dashboard/catalogue?tab=plan&planView=ai',
+    quickFilters: [
+      { label: 'Lancer une simulation IA instantanée', href: '/dashboard/catalogue?tab=plan&planView=ai' },
+      { label: 'Accéder à mes packs créés', href: '/dashboard/catalogue?tab=packs' },
+      { label: 'Simulation par critères & filtres', href: '/dashboard/catalogue?tab=plan&planView=manual' },
+      { label: 'Composer ma solution finale', href: '/dashboard/catalogue?tab=plan&planView=final' },
+    ],
+    features: [
+      'Optimisation instantanée des postes budgétaires (salle, traiteur, déco, photo, DJ)',
+      'Sélection coordonnée des prestataires disponibles en RDC',
+      'Sauvegarde dans « Mes packs » et demande de devis groupée en 1 clic',
+    ],
+  },
+  {
     id: 'event',
     title: 'Acheter des Billets d’Événements',
     badge: 'Billetterie & Accès',
@@ -131,20 +168,31 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
   {
     id: 'template',
     title: 'Créer un Faire-part & Invitations WhatsApp',
-    badge: 'Faire-part & RSVP',
-    tagline: 'Invitations interactives élégantes avec suivi des réponses',
+    badge: 'Abonnement Organisateur',
+    tagline: 'Invitations interactives élégantes, gestion des réponses RSVP et QR codes invités',
     description:
-      'Choisissez un modèle raffiné de faire-part (mariage, anniversaire, baptême), diffusez-le par WhatsApp et collectez les RSVP en direct.',
+      'La conception de faire-part numériques personnalisés, l’envoi WhatsApp nominatif et la gestion complète des listes d’invités RSVP nécessitent un abonnement Organisateur payant (formule Particulier ou Pro). En tant que client, vous pouvez découvrir les modèles et souscrire au forfait dédié.',
     icon: Mail,
     accentColor: 'from-pink-500/10 to-rose-500/10 border-pink-500/30 text-pink-600 dark:text-pink-400',
-    ctaLabel: 'Découvrir les modèles de faire-part',
+    ctaLabel: 'Découvrir les modèles (Formule payante Organisateur)',
     ctaHref: '/register?kind=ORGANIZER&intent=personal&action=template',
+    isPaidPlanRequired: true,
+    pricingNotice: {
+      badge: 'Formule Payante · Compte Organisateur',
+      title: 'Modèles de faire-part & Envoi WhatsApp sous abonnement',
+      description:
+        'L’exploration du Marketplace et les demandes de devis sont 100% gratuites avec votre compte Client. La personnalisation de faire-part interactifs, la collecte automatique des RSVP par WhatsApp et la génération des badges QR pour vos invités font partie de notre offre Organisateur d’événements avec abonnement dédié (formules Particulier dès 15$ ou Professionnel).',
+      pricingHighlight: 'Formules dès 50 invités · Envois WhatsApp illimités · Suivi RSVP & QR codes inclus',
+      ctaLabel: 'Voir les formules & Activer un abonnement Organisateur',
+      ctaHref: '/register?kind=ORGANIZER&intent=personal&action=template',
+    },
     quickFilters: [
-      { label: 'Modèles de Mariage', href: '/register?kind=ORGANIZER&intent=personal&action=template' },
-      { label: 'Anniversaires & Célébrations', href: '/register?kind=ORGANIZER&intent=personal&action=template' },
-      { label: 'Événements d’entreprise', href: '/register?kind=ORGANIZER&intent=pro&action=event' },
+      { label: 'Modèles Mariage (Payant)', href: '/register?kind=ORGANIZER&intent=personal&action=template' },
+      { label: 'Anniversaires & Baptêmes', href: '/register?kind=ORGANIZER&intent=personal&action=template' },
+      { label: 'Événements d’entreprise & Galas', href: '/register?kind=ORGANIZER&intent=pro&action=event' },
     ],
     features: [
+      'Nécessite un abonnement Organisateur payant (Particulier ou Professionnel)',
       'Envoi fluide par WhatsApp avec personnalisation nominative',
       'Livre d’or et galerie photo interactive pour les invités',
       'Validation de présence avec génération de badges d’accès QR',
@@ -173,28 +221,6 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
       'Disponibilités vérifiées avant validation',
     ],
   },
-  {
-    id: 'ai-plan',
-    title: 'Simulateur Intelligent de Pack Événement',
-    badge: 'Assistant & Budget',
-    tagline: 'Composé automatiquement selon votre budget et nombre d’invités',
-    description:
-      'Indiquez votre budget global et la nature de votre fête. Notre assistant IA assemble pour vous la salle, le traiteur et la déco idéale.',
-    icon: Sparkles,
-    accentColor: 'from-amber-500/10 to-emerald-500/10 border-primary/30 text-primary',
-    ctaLabel: 'Lancer le simulateur de pack événement',
-    ctaHref: '/dashboard/catalogue?tab=plan&planView=ai',
-    quickFilters: [
-      { label: 'Simuler un mariage complet', href: '/dashboard/catalogue?tab=plan&planView=ai' },
-      { label: 'Packs d’anniversaire clés en main', href: '/dashboard/catalogue?tab=packs' },
-      { label: 'Packs d’entreprise & galas', href: '/dashboard/catalogue?tab=plan&planView=ai' },
-    ],
-    features: [
-      'Optimisation instantanée des postes budgétaires',
-      'Sélection coordonnée des prestataires complémentaires',
-      'Sauvegarde et devis groupé en un clic',
-    ],
-  },
 ];
 
 const INTENT_STORAGE_KEY = 'em_client_primary_intent';
@@ -204,12 +230,13 @@ export default function ClientDashboardHome() {
   const router = useRouter();
   const { items: favoriteItems } = useListingFavorites();
 
-  const [selectedIntent, setSelectedIntent] = useState<ClientIntent>('venue');
+  const [selectedIntent, setSelectedIntent] = useState<ClientIntent>('ai-plan');
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     ticketsCount: 0,
     quotesCount: 0,
     bookingsCount: 0,
+    packsCount: 0,
     loading: true,
   });
 
@@ -240,11 +267,13 @@ export default function ClientDashboardHome() {
     Promise.allSettled([
       api.get('/marketplace/my-tickets'),
       api.get('/marketplace/my-bookings'),
-    ]).then(([ticketsRes, bookingsRes]) => {
+      api.get('/marketplace/event-packs'),
+    ]).then(([ticketsRes, bookingsRes, packsRes]) => {
       if (!mounted) return;
       let ticketsCount = 0;
       let quotesCount = 0;
       let bookingsCount = 0;
+      let packsCount = 0;
 
       if (ticketsRes.status === 'fulfilled' && ticketsRes.value?.tickets) {
         ticketsCount = Array.isArray(ticketsRes.value.tickets)
@@ -262,11 +291,17 @@ export default function ClientDashboardHome() {
         quotesCount = inquiries.length;
         bookingsCount = bookings.length;
       }
+      if (packsRes.status === 'fulfilled') {
+        const pVal = packsRes.value || {};
+        if (Array.isArray(pVal.packs)) packsCount = pVal.packs.length;
+        else if (Array.isArray(pVal)) packsCount = pVal.length;
+      }
 
       setStats({
         ticketsCount,
         quotesCount,
         bookingsCount,
+        packsCount,
         loading: false,
       });
     });
@@ -314,7 +349,7 @@ export default function ClientDashboardHome() {
             </h1>
             <p className="text-sm text-muted leading-relaxed">
               Définissez votre priorité du moment pour explorer nos meilleures salles, prestataires,
-              billets de spectacles ou modèles de faire-part en République Démocratique du Congo.
+              billets de spectacles ou lancer une <strong>simulation de pack événement</strong> en République Démocratique du Congo.
             </p>
           </div>
 
@@ -322,17 +357,33 @@ export default function ClientDashboardHome() {
             <Button
               variant="primary"
               size="md"
+              onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
+              leftIcon={<Sparkles className="w-4 h-4" />}
+              className="font-bold shadow-md shadow-primary/20 bg-linear-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 text-white border-0"
+            >
+              Simulateur de Pack IA
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => router.push('/dashboard/catalogue?tab=packs')}
+              leftIcon={<Bookmark className="w-4 h-4 text-primary" />}
+            >
+              Mes Packs ({stats.packsCount})
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
               onClick={() => router.push('/dashboard/catalogue')}
               leftIcon={<Store className="w-4 h-4" />}
-              className="font-bold shadow-md shadow-primary/20"
             >
-              Ouvrir la Marketplace
+              Marketplace
             </Button>
             <Button
               variant="secondary"
               size="md"
               onClick={() => router.push('/dashboard/tickets')}
-              leftIcon={<Ticket className="w-4 h-4" />}
+              leftIcon={<Ticket className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
             >
               Mes Billets ({stats.ticketsCount})
             </Button>
@@ -361,9 +412,26 @@ export default function ClientDashboardHome() {
         </form>
       </div>
 
-      {/* ─── WIDGETS D'ACTIVITÉS EN TEMPS RÉEL (4 CARTES) ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* 1. Billets */}
+      {/* ─── WIDGETS D'ACTIVITÉS EN TEMPS RÉEL (5 CARTES) ─── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        {/* 1. Simulateur & Mes Packs */}
+        <Link
+          href="/dashboard/catalogue?tab=packs"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Packs</span>
+            <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+              <Sparkles className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-black text-foreground">{stats.packsCount}</p>
+            <p className="text-xs text-muted mt-0.5">Packs créés &amp; simulateur IA</p>
+          </div>
+        </Link>
+
+        {/* 2. Billets */}
         <Link
           href="/dashboard/tickets"
           className="p-4 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between"
@@ -380,7 +448,7 @@ export default function ClientDashboardHome() {
           </div>
         </Link>
 
-        {/* 2. Devis envoyés */}
+        {/* 3. Devis envoyés */}
         <Link
           href="/dashboard/bookings?tab=quotes"
           className="p-4 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between"
@@ -393,11 +461,11 @@ export default function ClientDashboardHome() {
           </div>
           <div className="mt-3">
             <p className="text-2xl font-black text-foreground">{stats.quotesCount}</p>
-            <p className="text-xs text-muted mt-0.5">Demandes auprès des prestataires</p>
+            <p className="text-xs text-muted mt-0.5">Demandes aux prestataires</p>
           </div>
         </Link>
 
-        {/* 3. Réservations */}
+        {/* 4. Réservations */}
         <Link
           href="/dashboard/bookings?tab=bookings"
           className="p-4 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between"
@@ -414,10 +482,10 @@ export default function ClientDashboardHome() {
           </div>
         </Link>
 
-        {/* 4. Favoris */}
+        {/* 5. Favoris */}
         <Link
           href="/dashboard/catalogue?tab=favorites"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-pink-500/40 hover:bg-pink-500/5 transition group flex flex-col justify-between"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-pink-500/40 hover:bg-pink-500/5 transition group flex flex-col justify-between col-span-2 sm:col-span-1"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Favoris</span>
@@ -427,9 +495,93 @@ export default function ClientDashboardHome() {
           </div>
           <div className="mt-3">
             <p className="text-2xl font-black text-foreground">{favoriteItems.length}</p>
-            <p className="text-xs text-muted mt-0.5">Salles &amp; prestataires mis de côté</p>
+            <p className="text-xs text-muted mt-0.5">Salles &amp; pros mis de côté</p>
           </div>
         </Link>
+      </div>
+
+      {/* ─── BANNIÈRE DÉDIÉE : SIMULATEUR DE PACKS & ACCÈS DIRECT ─── */}
+      <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-primary/25 bg-linear-to-r from-primary/10 via-surface to-emerald-500/10 shadow-xs space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-primary text-white shadow-xs">
+                <Sparkles className="w-3.5 h-3.5" />
+                Simulateur Intelligent
+              </span>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                Budget en Francs Congolais (CDF)
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-foreground">
+              Créez votre Pack Événement ou retrouvez vos packs enregistrés
+            </h2>
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              Assemblez automatiquement une salle, un traiteur, un décorateur et une sonorisation selon votre enveloppe budgétaire. Comparez les totaux et lancez vos devis en 1 clic.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
+              leftIcon={<Wand2 className="w-4 h-4" />}
+              className="font-bold shadow-md shadow-primary/20"
+            >
+              Lancer la simulation IA
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => router.push('/dashboard/catalogue?tab=packs')}
+              leftIcon={<Bookmark className="w-4 h-4" />}
+            >
+              Voir mes packs ({stats.packsCount})
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-border/80">
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai"
+            className="p-3.5 rounded-xl bg-surface border border-border hover:border-primary hover:bg-primary/5 transition flex items-center gap-3 group touch-manipulation"
+          >
+            <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground truncate">1. Simulation IA Express</p>
+              <p className="text-[11px] text-muted truncate">Composé selon votre budget max</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=manual"
+            className="p-3.5 rounded-xl bg-surface border border-border hover:border-primary hover:bg-primary/5 transition flex items-center gap-3 group touch-manipulation"
+          >
+            <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+              <SlidersHorizontal className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground truncate">2. Simulation par filtres</p>
+              <p className="text-[11px] text-muted truncate">Sélection personnalisée des métiers</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/catalogue?tab=packs"
+            className="p-3.5 rounded-xl bg-surface border border-border hover:border-primary hover:bg-primary/5 transition flex items-center gap-3 group touch-manipulation"
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+              <Bookmark className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground truncate">3. Mes Packs sauvegardés</p>
+              <p className="text-[11px] text-muted truncate">{stats.packsCount} pack{stats.packsCount > 1 ? 's' : ''} disponible{stats.packsCount > 1 ? 's' : ''}</p>
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* ─── SÉLECTEUR D'OBJECTIFS / RAISON D'ÊTRE CLIENT ─── */}
@@ -471,16 +623,26 @@ export default function ClientDashboardHome() {
                     <CheckCircle2 className="w-4 h-4 text-primary" />
                   </div>
                 )}
-                <div
-                  className={cn(
-                    'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                    isSelected ? 'bg-primary text-white' : 'bg-surface-muted text-foreground',
+                <div className="flex items-center justify-between gap-1 w-full">
+                  <div
+                    className={cn(
+                      'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                      isSelected ? 'bg-primary text-white' : 'bg-surface-muted text-foreground',
+                    )}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  {intent.isPaidPlanRequired && (
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
+                      <Crown className="w-2.5 h-2.5" />
+                      Payant
+                    </span>
                   )}
-                >
-                  <Icon className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-foreground leading-tight">{intent.badge}</p>
+                  <p className="text-xs font-bold text-foreground leading-tight flex items-center gap-1">
+                    {intent.badge}
+                  </p>
                   <p className="text-[10px] text-muted truncate mt-0.5">{intent.title}</p>
                 </div>
               </button>
@@ -504,12 +666,18 @@ export default function ClientDashboardHome() {
                   <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/15 text-primary">
                     {currentConfig.badge}
                   </span>
+                  {currentConfig.isPaidPlanRequired && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                      <Crown className="w-3 h-3" />
+                      Formule Payante Organisateur
+                    </span>
+                  )}
                   <span className="text-xs text-muted">Objectif sélectionné</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-foreground">
                   {currentConfig.title}
                 </h3>
-                <p className="text-xs sm:text-sm text-muted max-w-2xl">
+                <p className="text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
                   {currentConfig.description}
                 </p>
               </div>
@@ -525,6 +693,54 @@ export default function ClientDashboardHome() {
               {currentConfig.ctaLabel}
             </Button>
           </div>
+
+          {/* ─── BANDEAU D'AVERTISSEMENT ABONNEMENT PAYANT (POUR LES FAIRE-PART) ─── */}
+          {currentConfig.pricingNotice && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-r from-amber-500/15 via-surface to-amber-500/5 border-2 border-amber-500/40 text-foreground space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-500 text-white shrink-0 shadow-xs">
+                    <Crown className="w-4 h-4" />
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/30">
+                    {currentConfig.pricingNotice.badge}
+                  </span>
+                </div>
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                  Abonnement Organisateur requis
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-sm sm:text-base font-extrabold text-foreground">
+                  {currentConfig.pricingNotice.title}
+                </h4>
+                <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                  {currentConfig.pricingNotice.description}
+                </p>
+              </div>
+
+              {currentConfig.pricingNotice.pricingHighlight && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                  <Gem className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>{currentConfig.pricingNotice.pricingHighlight}</span>
+                </div>
+              )}
+
+              <div className="pt-1 flex flex-wrap items-center gap-3">
+                <Link
+                  href={currentConfig.pricingNotice.ctaHref}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-500/20 transition touch-manipulation cursor-pointer"
+                >
+                  <span>{currentConfig.pricingNotice.ctaLabel}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <span className="text-xs text-muted">
+                  Activation instantanée · Forfaits Particulier &amp; Professionnel
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Points forts & Avantages */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
@@ -573,9 +789,9 @@ export default function ClientDashboardHome() {
             <div className="w-6 h-6 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs">
               1
             </div>
-            <h4 className="font-bold text-foreground">Explorez &amp; Comparez</h4>
+            <h4 className="font-bold text-foreground">Explorez ou Simulez un Pack</h4>
             <p className="text-muted leading-relaxed">
-              Consultez les fiches détaillées de salles, traiteurs, décorateurs et spectacles à Kinshasa et en province.
+              Consultez les fiches de salles et traiteurs ou lancez notre simulateur IA pour concevoir un pack complet selon votre budget.
             </p>
           </div>
 
@@ -585,7 +801,7 @@ export default function ClientDashboardHome() {
             </div>
             <h4 className="font-bold text-foreground">Demandez des Devis gratuits</h4>
             <p className="text-muted leading-relaxed">
-              Envoyez vos demandes de dates directement aux prestataires et suivez leurs réponses en temps réel dans vos devis.
+              Envoyez vos demandes de dates directement aux prestataires ou validez vos packs créés et suivez leurs réponses en direct.
             </p>
           </div>
 
@@ -593,9 +809,9 @@ export default function ClientDashboardHome() {
             <div className="w-6 h-6 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs">
               3
             </div>
-            <h4 className="font-bold text-foreground">Réservez en toute sécurité</h4>
+            <h4 className="font-bold text-foreground">Passez à l’Abonnement si besoin</h4>
             <p className="text-muted leading-relaxed">
-              Réglez vos billets et prestations via FlexPay (Mobile Money ou Cartes bancaires) et conservez vos justificatifs.
+              Pour envoyer des faire-part WhatsApp, gérer vos invités RSVP et scanner les badges QR à l’entrée, activez un forfait Organisateur.
             </p>
           </div>
         </div>

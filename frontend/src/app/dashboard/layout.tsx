@@ -11,7 +11,7 @@ import {
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
- Inbox,
+ Inbox, Sparkles, Bookmark, Heart,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -89,7 +89,9 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
   return true;
  }
  if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
-  return have.get('kind') !== 'event';
+  if (have.get('kind') === 'event') return false;
+  if (have.has('tab') && have.get('tab') !== 'explore') return false;
+  return true;
  }
  return true;
 }
@@ -246,13 +248,16 @@ function buildDashboardNav(opts: {
   return buildNavSections(
    navSection('Mon Espace', [
     { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Définir vos objectifs, recommandations et synthèse de vos activités' },
-    { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations, favoris et préparation d’événement' },
+    { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations et fiches publiques' },
+    { name: 'Simulateur de pack', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' },
+    { name: 'Mes packs créés', href: '/dashboard/catalogue?tab=packs', tourId: 'nav-my-packs', icon: Bookmark, description: 'Retrouver et gérer tous vos packs d’événements enregistrés' },
     { name: 'Agenda & Billets', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
    ]),
    navSection('Mes activités', [
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
     { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
     { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
+    { name: 'Mes favoris', href: '/dashboard/catalogue?tab=favorites', tourId: 'nav-favorites', icon: Heart, description: 'Salles et prestataires mis de côté' },
    ]),
    navSection('Compte', compteNavItems()),
   );
