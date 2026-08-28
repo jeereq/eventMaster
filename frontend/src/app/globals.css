@@ -99,7 +99,6 @@ html {
 
 html[data-density="compact"] .em-dashboard-content {
   padding-top: 1rem;
-  padding-bottom: 1rem;
 }
 
 html[data-density="compact"] .em-dashboard-home.space-y-6 > :not([hidden]) ~ :not([hidden]) {
@@ -109,12 +108,12 @@ html[data-density="compact"] .em-dashboard-home.space-y-6 > :not([hidden]) ~ :no
 @media (max-width: 767px) {
   .em-dashboard-content {
     padding-top: 0.75rem;
-    padding-bottom: 1rem;
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
   }
 
   html[data-density="compact"] .em-dashboard-content {
     padding-top: 0.5rem;
-    padding-bottom: 0.75rem;
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Évite l'auto-zoom forcé d'iOS Safari au focus des champs */

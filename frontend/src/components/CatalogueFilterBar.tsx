@@ -305,6 +305,11 @@ export default function CatalogueFilterBar({
   if (variant === 'float') {
     return (
       <div className="space-y-1.5">
+        {topSlot ? (
+          <div className="pointer-events-auto overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]">
+            {topSlot}
+          </div>
+        ) : null}
         <div className="flex items-center gap-1.5">
           <div className="flex-1 min-w-0 relative">
             <Search className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -312,7 +317,7 @@ export default function CatalogueFilterBar({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full h-9 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full h-10 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
           </div>
           {hasFilters && (
@@ -320,16 +325,17 @@ export default function CatalogueFilterBar({
               type="button"
               onClick={openModal}
               className={cn(
-                'relative h-9 w-9 shrink-0 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
+                'relative h-10 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation',
                 count
                   ? 'bg-primary text-white border-primary'
-                  : 'bg-surface/90 text-foreground border-white/25 dark:border-white/10',
+                  : 'bg-surface/95 text-foreground border-white/25 dark:border-white/10',
               )}
-              aria-label="Filtres"
+              aria-label="Ouvrir les filtres"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Filtres</span>
               {count > 0 ? (
-                <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-white text-primary text-[10px] font-bold leading-4">
+                <span className="inline-flex h-4 min-w-4 px-1 rounded-full bg-white text-primary text-[10px] font-bold leading-4 items-center justify-center">
                   {count}
                 </span>
               ) : null}
@@ -342,7 +348,7 @@ export default function CatalogueFilterBar({
             text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager la recherche"
             url={shareUrl}
-            className="!h-9 !w-9 !rounded-[var(--radius-button)]"
+            className="!h-10 !w-10 !rounded-[var(--radius-button)]"
           />
           ) : null}
         </div>
@@ -352,7 +358,7 @@ export default function CatalogueFilterBar({
               onChange={onViewChange}
               compact={compactToggle}
               hideMap={hideMap}
-              className="hidden sm:inline-flex w-full justify-between bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+              className="inline-flex w-full justify-between bg-surface/95 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
             />
         ) : null}
         {view === 'grid' && gridCols && onGridColsChange ? (
@@ -362,7 +368,7 @@ export default function CatalogueFilterBar({
               value={gridCols}
               onChange={onGridColsChange}
               options={gridColOptions}
-              className="bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+              className="bg-surface/95 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
             />
           </div>
         ) : null}

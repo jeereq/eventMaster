@@ -308,7 +308,7 @@ export default function CatalogueMobileExplore({
   const selected = items.find((item) => item.id === selectedId) || null;
 
   return (
-    <div className="relative isolate h-dvh overflow-hidden bg-background overscroll-none">
+    <div className="relative isolate h-full min-h-0 overflow-hidden bg-background overscroll-none">
       <div className="absolute inset-0 z-0">
         <MarketplaceLocationsMap
           ref={mapApi}

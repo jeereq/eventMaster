@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Minimize2 } from 'lucide-react';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
@@ -61,9 +62,9 @@ export function CatalogueFocusStage({
           searchOriginLabel={searchOriginLabel}
         />
       </div>
-      <div className="absolute inset-x-0 top-0 z-10 p-2 sm:p-4 space-y-1.5 sm:space-y-2 bg-gradient-to-b from-background/80 via-background/35 to-transparent pointer-events-none">
+      <div className="absolute inset-x-0 top-0 z-20 p-2 sm:p-4 space-y-2 bg-gradient-to-b from-background/85 via-background/40 to-transparent pointer-events-none">
         {header ? <div className="pointer-events-auto">{header}</div> : null}
-        {filters ? <div className="pointer-events-auto max-w-2xl em-focus-filters">{filters}</div> : null}
+        {filters ? <div className="pointer-events-auto w-full max-w-3xl em-focus-filters">{filters}</div> : null}
         {error ? (
           <p className="pointer-events-auto text-sm text-rose-600 bg-surface/95 rounded-lg px-3 py-2 shadow-lg">
             {error}
@@ -76,6 +77,45 @@ export function CatalogueFocusStage({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Plein écran dans le dashboard : sidebar, header mobile et bottom bar restent visibles. */
+export function CatalogueImmersiveStage({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setTarget(document.getElementById('em-dashboard-stage') || document.body);
+  }, []);
+
+  useEffect(() => {
+    const main = document.getElementById('main-content');
+    if (!main) return;
+    const previous = main.style.overflow;
+    main.style.overflow = 'hidden';
+    return () => {
+      main.style.overflow = previous;
+    };
+  }, []);
+
+  if (!target) return null;
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Carte marketplace"
+      className={cn(
+        'fixed z-[25] bg-background overflow-hidden flex flex-col',
+        'top-12 inset-x-0 bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))]',
+        'md:inset-y-0 md:left-[var(--em-sidebar-width,16rem)] md:right-0 md:bottom-0',
+      )}
+    >
+      <div className="relative flex-1 min-h-0 h-full">
+        {children}
+      </div>
+    </div>,
+    target,
   );
 }
 
@@ -150,6 +190,7 @@ export default function CatalogueSearchLayout({
   if (isMobile && mapMode) {
     return (
       <PublicPageShell faqHref="/faq" hideFooter hideHeader>
+        <div className="flex-1 min-h-0">
         <CatalogueMobileExplore
           items={items}
           markers={markers}
@@ -171,6 +212,7 @@ export default function CatalogueSearchLayout({
           }
           filters={renderFilters('float')}
         />
+        </div>
       </PublicPageShell>
     );
   }

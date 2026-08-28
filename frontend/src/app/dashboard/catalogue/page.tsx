@@ -22,7 +22,7 @@ import CatalogueFilterBar, {
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
-import { CatalogueFocusStage } from '@/components/CatalogueSearchLayout';
+import { CatalogueFocusStage, CatalogueImmersiveStage } from '@/components/CatalogueSearchLayout';
 import CatalogueMobileExplore from '@/components/CatalogueMobileExplore';
 import useIsMobile from '@/hooks/useIsMobile';
 import {
@@ -431,13 +431,23 @@ function ClientMarketplaceInner() {
 
   const mapMode = tab === 'explore' && mode === 'map';
   const focusMode = tab === 'explore' && mode === 'focus';
+  const immersiveExplore = tab === 'explore' && (focusMode || (isMobile && mapMode));
 
   useEffect(() => {
     if (mode === 'grid' || mode === 'list') lastBrowseRef.current = mode;
   }, [mode]);
 
+  useEffect(() => {
+    if (!immersiveExplore) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setView(lastBrowseRef.current);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [immersiveExplore, setView]);
+
   const kindPills = (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-nowrap sm:flex-wrap items-center gap-1.5">
       {KIND_FILTER_OPTIONS.map((item) => {
         const isSelected = applied.kind === item.id;
         return (
@@ -463,10 +473,10 @@ function ClientMarketplaceInner() {
               });
             }}
             className={cn(
-              'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
+              'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation shrink-0',
               isSelected
                 ? 'bg-primary text-white border-primary shadow-xs'
-                : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
+                : 'border-white/25 dark:border-white/10 bg-surface/95 text-muted hover:text-foreground hover:border-primary/40 shadow-sm',
             )}
           >
             {item.label}
@@ -479,9 +489,10 @@ function ClientMarketplaceInner() {
   const exploreFilterBar = (variant: 'card' | 'float') => (
     <CatalogueFilterBar
       variant={variant}
-      topSlot={variant === 'card' ? kindPills : undefined}
+      topSlot={kindPills}
       hideViewToggle={false}
       compactToggle={variant === 'float'}
+      hideShare={variant === 'float'}
       search={query}
       onSearchChange={setQuery}
       searchPlaceholder="Nom, organisation, ville…"
@@ -522,7 +533,60 @@ function ClientMarketplaceInner() {
   );
 
   return (
-    <div className="space-y-6 w-full">
+    <>
+      {immersiveExplore ? (
+        <CatalogueImmersiveStage>
+          {isMobile ? (
+            <CatalogueMobileExplore
+              items={visible}
+              markers={markers}
+              loading={loading}
+              error={filterError}
+              searchCenter={searchCenter}
+              radiusKm={applied.radiusKm}
+              city={applied.city}
+              searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+              onExit={() => setView(lastBrowseRef.current)}
+              filters={exploreFilterBar('float')}
+              emptyTitle="Aucune fiche géolocalisée"
+              emptyDescription="Élargissez les filtres ou changez de ville pour trouver des établissements."
+            />
+          ) : (
+            <CatalogueFocusStage
+              className="h-full w-full"
+              markers={markers}
+              loading={loading}
+              error={filterError}
+              listingSearch={false}
+              navigateOnClick={false}
+              searchCenter={searchCenter}
+              radiusKm={applied.radiusKm}
+              city={applied.city}
+              searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+              header={
+                <div className="flex items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Mode Focus · Carte interactive</span>
+                    <span className="text-muted font-normal">({visible.length} fiches)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setView(lastBrowseRef.current)}
+                    className="h-10 shrink-0 inline-flex items-center gap-1.5 px-3.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground hover:bg-surface hover:text-primary transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    <Minimize2 className="w-3.5 h-3.5" />
+                    Quitter le focus
+                  </button>
+                </div>
+              }
+              filters={exploreFilterBar('float')}
+            />
+          )}
+        </CatalogueImmersiveStage>
+      ) : null}
+
+    <div className={cn('space-y-6 w-full', immersiveExplore && 'hidden')}>
       <PageHeader
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Agenda' : 'Marketplace'}
         description={
@@ -582,75 +646,7 @@ function ClientMarketplaceInner() {
         ))}
       </div>
 
-      {tab === 'explore' ? (
-        isMobile && (mapMode || focusMode) ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-border text-xs font-bold text-foreground shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Mode Carte &amp; Explorer</span>
-                <span className="text-muted font-normal">· {visible.length} fiches</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setView(lastBrowseRef.current)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted transition touch-manipulation cursor-pointer"
-              >
-                <Minimize2 className="w-3.5 h-3.5" />
-                Quitter
-              </button>
-            </div>
-            <div className="relative w-full h-[calc(100dvh-14rem)] min-h-[460px] rounded-2xl overflow-hidden border border-border shadow-md">
-              <CatalogueMobileExplore
-                items={visible}
-                markers={markers}
-                loading={loading}
-                error={filterError}
-                searchCenter={searchCenter}
-                radiusKm={applied.radiusKm}
-                city={applied.city}
-                searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
-                onExit={() => setView(lastBrowseRef.current)}
-                filters={exploreFilterBar('float')}
-                emptyTitle="Aucune fiche géolocalisée"
-                emptyDescription="Élargissez les filtres ou changez de ville pour trouver des établissements."
-              />
-            </div>
-          </div>
-        ) : focusMode ? (
-          <div className="space-y-3">
-            <CatalogueFocusStage
-              className="h-[calc(100dvh-14rem)] min-h-[580px] w-full rounded-2xl overflow-hidden border border-border relative isolate shadow-lg"
-              markers={markers}
-              loading={loading}
-              error={filterError}
-              listingSearch={false}
-              navigateOnClick={false}
-              searchCenter={searchCenter}
-              radiusKm={applied.radiusKm}
-              city={applied.city}
-              searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
-              header={
-                <div className="flex items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Mode Focus · Carte interactive</span>
-                    <span className="text-muted font-normal">({visible.length} fiches)</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setView(lastBrowseRef.current)}
-                    className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground hover:bg-surface hover:text-primary transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  >
-                    <Minimize2 className="w-3.5 h-3.5" />
-                    Quitter le focus
-                  </button>
-                </div>
-              }
-              filters={exploreFilterBar('float')}
-            />
-          </div>
-        ) : (
+      {tab === 'explore' && !immersiveExplore ? (
           <>
             {exploreFilterBar('card')}
 
@@ -693,7 +689,6 @@ function ClientMarketplaceInner() {
               </div>
             )}
           </>
-        )
       ) : null}
 
       {tab === 'favorites' ? (
@@ -980,6 +975,7 @@ function ClientMarketplaceInner() {
         {saveError ? <Alert variant="error" className="mt-3">{saveError}</Alert> : null}
       </Modal>
     </div>
+    </>
   );
 }
 

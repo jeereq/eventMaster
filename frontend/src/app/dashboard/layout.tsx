@@ -600,7 +600,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  >
  <TourProvider>
  <SupportSessionBanner />
-      <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
+      <div
+        className="min-h-screen flex flex-col md:flex-row bg-background text-foreground"
+        style={{ ['--em-sidebar-width' as string]: sidebarCollapsed ? '4.5rem' : '16rem' }}
+      >
         {/* Overlay mobile */}
         {mobileMenuOpen && (
           <button
@@ -856,7 +859,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Contenu principal */}
       <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
         <DashboardTopBar />
-        <div className="page-container pt-3 sm:pt-6 lg:pt-8 pb-24 md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
+        <div className="page-container pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
           <UserLegalGate>
             {children}
             <FirstLoginTourHost />
@@ -875,6 +878,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         onCloseMobileMenu={() => setMobileMenuOpen(false)}
       />
+
+      <div id="em-dashboard-stage" />
 
       <ViewCustomizerEdgeHandle />
       <ViewCustomizerDrawer />
