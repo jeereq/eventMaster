@@ -243,9 +243,10 @@ function buildDashboardNav(opts: {
 
  if (isClientAccount) {
   return buildNavSections(
-   navSection('Découvrir', [
+   navSection('Mon Espace', [
+    { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Définir vos objectifs, recommandations et synthèse de vos activités' },
     { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations, favoris et préparation d’événement' },
-    { name: 'Agenda', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
+    { name: 'Agenda & Billets', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
    ]),
    navSection('Mes activités', [
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
@@ -496,11 +497,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
  if (loading || !token || !user || !isClientAccount) return;
- const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue', '/dashboard/tickets'].some(
- (p) => pathname === p || pathname.startsWith(`${p}/`),
+ const allowed = ['/dashboard', '/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue', '/dashboard/tickets'].some(
+ (p) => pathname === p || (p !== '/dashboard' && pathname.startsWith(`${p}/`)),
  );
  if (pathname.startsWith('/dashboard') && !allowed) {
- router.replace('/dashboard/bookings');
+ router.replace('/dashboard');
  }
  }, [loading, token, user, isClientAccount, pathname, router]);
 

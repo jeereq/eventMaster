@@ -180,12 +180,12 @@ function readSupportBackup(): SupportBackup | null {
   }
 }
 
-function postAuthPath(userRole?: string, access?: OrgAccess | null) {
+function postAuthPath(userRole?: string, access?: OrgAccess | null, tenant?: Tenant | null) {
   if (userRole === 'SUPER_ADMIN') return '/dashboard?tab=overview';
   if (userRole === 'COMMERCIAL') return '/dashboard?tab=tenants';
   if (access?.level === 'commercial') return '/dashboard/org-commercial';
   if (access?.isProtocolOnly) return '/dashboard';
-  if (access?.level === 'client') return '/dashboard/bookings';
+  if (access?.level === 'client' || tenant?.accountKind === 'CLIENT') return '/dashboard';
   return '/dashboard';
 }
 
@@ -256,7 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
 
-      router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null));
+      router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null));
     } catch (error: any) {
       setLoading(false);
       if (error?.data?.notVerified && error?.data?.email) {
@@ -330,7 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSupportSession(false);
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
-      const dest = safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null);
+      const dest = safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null);
       router.push(safeAppPath(options?.next) ? dest : appendFirstTourQuery(dest));
     } catch (error) {
       setLoading(false);
