@@ -18,6 +18,7 @@ import UserLegalGate from '@/components/UserLegalGate';
 import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import DashboardTopBar, { useDashboardTitle } from '@/components/DashboardTopBar';
+import DashboardMobileBottomBar from '@/components/dashboard/DashboardMobileBottomBar';
 import UserAvatar from '@/components/UserAvatar';
 import ViewCustomizerDrawer, {
  ViewCustomizerEdgeHandle,
@@ -818,21 +819,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  </div>
  </aside>
 
- {/* Contenu principal */}
- <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
- <DashboardTopBar />
- <div className="page-container py-3 sm:py-6 lg:py-8 flex-1 em-dashboard-content">
- <UserLegalGate>
-  {children}
-  <FirstLoginTourHost />
- </UserLegalGate>
- </div>
- </main>
- <ViewCustomizerEdgeHandle />
- <ViewCustomizerDrawer />
- <ProductTourOverlay />
- </div>
- </TourProvider>
+      {/* Contenu principal */}
+      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
+        <DashboardTopBar />
+        <div className="page-container pt-3 sm:pt-6 lg:pt-8 pb-24 md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
+          <UserLegalGate>
+            {children}
+            <FirstLoginTourHost />
+          </UserLegalGate>
+        </div>
+      </main>
+
+      {/* Barre de navigation mobile inférieure (Bottom Navigation Bar) */}
+      <DashboardMobileBottomBar
+        role={user?.role}
+        access={access}
+        workspace={workspace}
+        accountKind={tenant?.accountKind}
+        isClientAccount={isClientAccount}
+        mobileMenuOpen={mobileMenuOpen}
+        onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+        onCloseMobileMenu={() => setMobileMenuOpen(false)}
+      />
+
+      <ViewCustomizerEdgeHandle />
+      <ViewCustomizerDrawer />
+      <ProductTourOverlay />
+    </div>
+  </TourProvider>
  </Suspense>
  );
 }
