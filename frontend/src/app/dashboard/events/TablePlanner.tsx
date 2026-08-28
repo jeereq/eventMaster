@@ -440,57 +440,71 @@ export default function TablePlanner({
  }));
  };
 
- // Dragging logic
- const handleMouseDown = (tableId: string, e: React.MouseEvent) => {
- const table = tables.find((t) => t.id === tableId);
- if (table?.locked) return;
- if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLSelectElement) return;
- e.preventDefault();
- setDraggingTableId(tableId);
+  // Dragging logic via Pointer Events (compatible Touch, Stylus et Souris)
+  const handlePointerDown = (tableId: string, e: React.PointerEvent) => {
+    const table = tables.find((t) => t.id === tableId);
+    if (table?.locked) return;
+    if ((e.target as HTMLElement).closest('button, select, input, a, [data-no-drag]')) return;
+    
+    // Empêcher le scroll/geste natif du navigateur pendant le drag
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    setDraggingTableId(tableId);
 
- if (table && canvasRef.current) {
- const rect = canvasRef.current.getBoundingClientRect();
- const clickX = e.clientX - rect.left;
- const clickY = e.clientY - rect.top;
- 
- const currentXPixels = (table.x / 100) * rect.width;
- const currentYPixels = (table.y / 100) * rect.height;
+    if (table && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      
+      const currentXPixels = (table.x / 100) * rect.width;
+      const currentYPixels = (table.y / 100) * rect.height;
 
- setDragOffset({
- x: clickX - currentXPixels,
- y: clickY - currentYPixels
- });
- }
- };
+      setDragOffset({
+        x: clickX - currentXPixels,
+        y: clickY - currentYPixels,
+      });
+    }
+  };
 
- const handleMouseMove = (e: React.MouseEvent) => {
- if (!draggingTableId || !canvasRef.current) return;
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!draggingTableId || !canvasRef.current) return;
 
- const rect = canvasRef.current.getBoundingClientRect();
- const mouseX = e.clientX - rect.left;
- const mouseY = e.clientY - rect.top;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
- let newXPixels = mouseX - dragOffset.x;
- let newYPixels = mouseY - dragOffset.y;
+    let newXPixels = mouseX - dragOffset.x;
+    let newYPixels = mouseY - dragOffset.y;
 
- // Constrain within canvas bounds
- newXPixels = Math.max(40, Math.min(rect.width - 40, newXPixels));
- newYPixels = Math.max(40, Math.min(rect.height - 40, newYPixels));
+    // Constrain within canvas bounds
+    newXPixels = Math.max(40, Math.min(rect.width - 40, newXPixels));
+    newYPixels = Math.max(40, Math.min(rect.height - 40, newYPixels));
 
- const newXPercent = snapLayoutPct((newXPixels / rect.width) * 100, caps.canSnapGrid);
- const newYPercent = snapLayoutPct((newYPixels / rect.height) * 100, caps.canSnapGrid);
+    const newXPercent = snapLayoutPct((newXPixels / rect.width) * 100, caps.canSnapGrid);
+    const newYPercent = snapLayoutPct((newYPixels / rect.height) * 100, caps.canSnapGrid);
 
- setTables(tables.map(t => {
- if (t.id === draggingTableId) {
- return { ...t, x: newXPercent, y: newYPercent };
- }
- return t;
- }));
- };
+    setTables(tables.map(t => {
+      if (t.id === draggingTableId) {
+        return { ...t, x: newXPercent, y: newYPercent };
+      }
+      return t;
+    }));
+  };
 
- const handleMouseUp = () => {
- setDraggingTableId(null);
- };
+  const handlePointerUp = (e?: React.PointerEvent) => {
+    if (e && e.currentTarget instanceof HTMLElement && e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+    setDraggingTableId(null);
+  };
 
  // Save plan to backend
  const handleSavePlan = async () => {
@@ -662,19 +676,19 @@ export default function TablePlanner({
    </div>
  </div>
 
- <div
- ref={canvasRef}
- onMouseMove={handleMouseMove}
- onMouseUp={handleMouseUp}
- onMouseLeave={handleMouseUp}
- className={cn(
- 'em-floor-canvas em-floor-canvas--photo',
- heightClass,
- 'w-full flex-1 min-h-[400px]',
- draggingTableId && 'em-floor-canvas--dragging',
- )}
- style={floorStyle}
- >
+      <div
+        ref={canvasRef}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        className={cn(
+          'em-floor-canvas em-floor-canvas--photo touch-none select-none',
+          heightClass,
+          'w-full flex-1 min-h-[400px]',
+          draggingTableId && 'em-floor-canvas--dragging',
+        )}
+        style={{ ...floorStyle, touchAction: 'none' }}
+      >
  {zonePricing && pricingZones.map((zone) => {
    if (zone.x == null || zone.y == null || zone.w == null || zone.h == null) return null;
    return (
@@ -731,26 +745,27 @@ export default function TablePlanner({
  const zone = zonePricing ? pricingZones.find((z) => z.id === table.pricingZoneId) : null;
  const visual = getTableVisualStyle(table.shape, isActive, table.tableColor);
 
- return (
- <div
- key={table.id}
- onMouseDown={(e) => handleMouseDown(table.id, e)}
- onClick={() => setActiveTableId(table.id)}
- onMouseEnter={() => setHoveredTableId(table.id)}
- onMouseLeave={() => setHoveredTableId(null)}
- style={{
- left: `${table.x}%`,
- top: `${table.y}%`,
- transform: `translate(-50%, -50%) rotate(${table.rotation || 0}deg)`,
- }}
- className={cn(
- 'absolute select-none p-3 em-floor-item',
- table.locked ? 'cursor-not-allowed' : 'cursor-grab',
- isActive && 'em-floor-item--active',
- isDragging && 'em-floor-item--dragging',
- isHovered && !isDragging && 'z-10',
- )}
- >
+            return (
+              <div
+                key={table.id}
+                onPointerDown={(e) => handlePointerDown(table.id, e)}
+                onClick={() => setActiveTableId(table.id)}
+                onMouseEnter={() => setHoveredTableId(table.id)}
+                onMouseLeave={() => setHoveredTableId(null)}
+                style={{
+                  left: `${table.x}%`,
+                  top: `${table.y}%`,
+                  transform: `translate(-50%, -50%) rotate(${table.rotation || 0}deg)`,
+                  touchAction: 'none',
+                }}
+                className={cn(
+                  'absolute select-none p-3 em-floor-item touch-none',
+                  table.locked ? 'cursor-not-allowed' : 'cursor-grab',
+                  isActive && 'em-floor-item--active',
+                  isDragging && 'em-floor-item--dragging',
+                  isHovered && !isDragging && 'z-10',
+                )}
+              >
  {isHovered && !draggingTableId && (
  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-52 z-50 pointer-events-none animate-fade-in">
  <div className="bg-surface text-foreground rounded-[var(--radius-card)] p-3 border border-border space-y-1.5 text-left shadow-[var(--shadow-soft)]">
@@ -870,24 +885,26 @@ export default function TablePlanner({
  const assignedGuestId = table.seats[index];
  const guest = guests.find((g) => g.id === assignedGuestId);
 
- return (
- <div
- key={index}
- onClick={(e) => {
- e.stopPropagation();
- setSelectedGuestSeat({ tableId: table.id, seatIndex: index });
- }}
- style={{
- left: `calc(50% + ${coords.x}px)`,
- top: `calc(50% + ${coords.y}px)`,
- transform: 'translate(-50%, -50%)',
- }}
- className={cn(
- 'em-floor-seat absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-semibold cursor-pointer',
- guest ? 'em-floor-seat--filled' : 'em-floor-seat--empty',
- )}
- title={guest ? `${guest.firstName} ${guest.lastName}` : `Siège ${index + 1} (libre)`}
- >
+                    return (
+                      <div
+                        key={index}
+                        data-no-drag
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedGuestSeat({ tableId: table.id, seatIndex: index });
+                        }}
+                        style={{
+                          left: `calc(50% + ${coords.x}px)`,
+                          top: `calc(50% + ${coords.y}px)`,
+                          transform: 'translate(-50%, -50%)',
+                        }}
+                        className={cn(
+                          'em-floor-seat absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-semibold cursor-pointer touch-manipulation',
+                          guest ? 'em-floor-seat--filled' : 'em-floor-seat--empty',
+                        )}
+                        title={guest ? `${guest.firstName} ${guest.lastName}` : `Siège ${index + 1} (libre)`}
+                      >
  {guest ? (
  <span className="uppercase">{guest.firstName[0]}{guest.lastName[0]}</span>
  ) : (

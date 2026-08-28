@@ -297,7 +297,7 @@ export default function SeatSelectionPlanCanvas({
                           ...(zoneColor && !isSelected ? { borderColor: zoneColor, boxShadow: `0 0 0 1px ${zoneColor}55` } : {}),
                         }}
                         className={cn(
-                          'absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[8px] font-bold transition z-20',
+                          'absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2 before:rounded-full',
                           !seat.available && 'opacity-35 cursor-not-allowed bg-muted text-muted border-border',
                           seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
                           isSelected && 'bg-primary text-white border-primary scale-110 shadow-md font-extrabold',

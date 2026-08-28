@@ -57,16 +57,16 @@ export function NotificationBell({ className }: { className?: string }) {
  return () => clearInterval(interval);
  }, [load]);
 
- useEffect(() => {
- if (!open) return;
- const onClickOutside = (e: MouseEvent) => {
- if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
- setOpen(false);
- }
- };
- document.addEventListener('mousedown', onClickOutside);
- return () => document.removeEventListener('mousedown', onClickOutside);
- }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e: PointerEvent | MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onClickOutside);
+    return () => document.removeEventListener('pointerdown', onClickOutside);
+  }, [open]);
 
  const followHref = (item: PlatformNotificationItem) => {
  const href = item.metadata?.href;

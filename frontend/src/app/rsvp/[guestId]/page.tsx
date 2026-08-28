@@ -1016,7 +1016,7 @@ export default function RsvpPage() {
                                         photo,
                                         `livre-dor-${guestSlug}-${pIdx + 1}${getMediaExtension(photo, 'IMAGE')}`
                                       )}
-                                      className="absolute top-1.5 right-1.5 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                      className="absolute top-1.5 right-1.5 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10 touch-manipulation"
                                       title="Télécharger"
                                     >
                                       <Download className="w-3 h-3" />
@@ -1123,7 +1123,7 @@ export default function RsvpPage() {
                                       media.url,
                                       `feed-${sanitizeFilenamePart(post.id)}-${idx + 1}${getMediaExtension(media.url, media.type)}`
                                     )}
-                                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10 touch-manipulation"
                                     title="Télécharger"
                                   >
                                     <Download className="w-3 h-3" />

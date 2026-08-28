@@ -116,6 +116,13 @@ html[data-density="compact"] .em-dashboard-home.space-y-6 > :not([hidden]) ~ :no
     padding-top: 0.5rem;
     padding-bottom: 0.75rem;
   }
+
+  /* Évite l'auto-zoom forcé d'iOS Safari au focus des champs */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 @keyframes slide-in-right {

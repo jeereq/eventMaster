@@ -384,10 +384,11 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                               <button
                                 type="button"
                                 onClick={() => removeSeat(s.tableId, s.seatIndex)}
-                                className="text-muted hover:text-rose-600 ml-0.5 p-0.5 rounded"
+                                className="text-muted hover:text-rose-600 ml-1 p-1 -mr-1 rounded-md min-w-[24px] min-h-[24px] inline-flex items-center justify-center touch-manipulation active:scale-90 hover:bg-rose-50"
                                 title="Retirer ce siège"
+                                aria-label={`Retirer le siège ${s.tableName} n°${s.seatIndex + 1}`}
                               >
-                                <X className="w-3 h-3" />
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             </span>
                           );
@@ -397,7 +398,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                   )}
 
                   <details className="text-xs">
-                    <summary className="cursor-pointer text-muted hover:text-foreground font-medium">
+                    <summary className="cursor-pointer text-muted hover:text-foreground font-medium py-1">
                       Liste des places par table ({seats.filter((s) => s.available).length} disponibles)
                     </summary>
                     <div className="mt-2 max-h-40 overflow-y-auto space-y-2 pr-1">
@@ -416,7 +417,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                                   type="button"
                                   disabled={!s.available}
                                   onClick={() => toggleSeat(s.tableId, s.seatIndex)}
-                                  className={`min-w-[2rem] px-2 py-1 rounded text-[10px] font-bold border transition ${
+                                  className={`min-w-[2.25rem] min-h-[2.25rem] px-2.5 py-1.5 rounded-lg text-xs font-bold border transition touch-manipulation active:scale-95 ${
                                     !s.available
                                       ? 'opacity-40 cursor-not-allowed border-border text-muted'
                                       : active
