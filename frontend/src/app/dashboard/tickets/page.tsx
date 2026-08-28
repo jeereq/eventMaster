@@ -154,8 +154,8 @@ export default function ClientTicketsPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Mes billets"
-        description="Inscriptions et achats rattachés à votre compte (ou à votre e-mail). Filtrez, passez en grille ou liste, puis ouvrez le badge QR."
+        title="Mes billets & pass"
+        description="Retrouvez tous vos billets d’événements, vos justificatifs et vos pass avec QR code d’accès."
         breadcrumbs={
           <Breadcrumbs
             items={[
@@ -190,10 +190,10 @@ export default function ClientTicketsPage() {
         <EmptyState
           icon={<Ticket className="w-5 h-5" />}
           title="Aucun billet pour le moment"
-          description="Inscrivez-vous à un événement public ou achetez un billet depuis l’agenda du marketplace — il apparaîtra ici si vous êtes connecté, ou si l’e-mail du compte correspond."
+          description="Inscrivez-vous à un événement ou achetez votre place depuis l’agenda du catalogue : vos pass avec QR code apparaîtront aussitôt ici."
           action={
             <Link href={agendaHref}>
-              <Button size="sm">Voir l’agenda</Button>
+              <Button size="sm">Découvrir l’agenda</Button>
             </Link>
           }
         />

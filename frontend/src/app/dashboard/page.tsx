@@ -5224,15 +5224,15 @@ function DashboardPageContent() {
       <PageHeader
         title={
           showGreeting
-            ? `${greetingLabel}, ${(user?.name || 'là').split(' ')[0]}`
+            ? `${greetingLabel}${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`
             : 'Tableau de bord'
         }
         description={
           tenant?.name
             ? tenant.accountKind === 'VENDOR'
-              ? `Organisation ${tenant.name} · Suivez vos offres marketplace, réservations et forfaits.`
-              : `Organisation ${tenant.name} · Suivez vos événements, quotas et abonnement.`
-            : "Bienvenue dans votre espace de gestion d'événements."
+              ? `Organisation ${tenant.name} · Gérez vos prestations, vos disponibilités et vos demandes de réservation.`
+              : `Organisation ${tenant.name} · Retrouvez vos événements, le suivi de vos invités et l'état de votre compte.`
+            : "Bienvenue dans votre espace d'organisation et de gestion d'événements."
         }
         breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Tableau de bord' }]} />}
         action={
@@ -5276,23 +5276,23 @@ function DashboardPageContent() {
         <Card>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="space-y-1">
-              <h3 className="text-base font-semibold tracking-tight">Devis, réservations et packs</h3>
-              <p className="text-sm text-muted">Retrouvez les demandes envoyées aux salles et prestataires, vos dates, packs et favoris.</p>
+              <h3 className="text-base font-semibold tracking-tight">Vos devis, réservations et sélections</h3>
+              <p className="text-sm text-muted">Suivez vos échanges avec les salles et prestataires, vos dates confirmées et vos packs enregistrés.</p>
             </div>
             <Button size="sm" onClick={() => router.push('/dashboard/bookings')}>Ouvrir</Button>
           </div>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Link href="/dashboard/bookings?tab=quotes" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Devis</p>
-              <p className="text-sm font-semibold mt-0.5">Demandes envoyées</p>
+              <p className="text-sm font-semibold mt-0.5">Demandes en cours</p>
             </Link>
             <Link href="/dashboard/bookings?tab=bookings" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Réservations</p>
-              <p className="text-sm font-semibold mt-0.5">Dates et acomptes</p>
+              <p className="text-sm font-semibold mt-0.5">Dates confirmées</p>
             </Link>
             <Link href="/dashboard/bookings?tab=packs" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Packs & favoris</p>
-              <p className="text-sm font-semibold mt-0.5">Mix salle / métiers / locations</p>
+              <p className="text-sm font-semibold mt-0.5">Vos sélections</p>
             </Link>
           </div>
         </Card>
@@ -5311,7 +5311,7 @@ function DashboardPageContent() {
               <span className="text-2xl font-semibold text-foreground tracking-tight">
                 {usage ? formatQuota(usage.events, limits?.maxEvents) : events.length}
               </span>
-              <p className="text-[11px] text-muted mt-1">Créés dans votre organisation</p>
+              <p className="text-[11px] text-muted mt-1">Vos événements créés</p>
             </div>
           </div>
           <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
@@ -5325,7 +5325,7 @@ function DashboardPageContent() {
               <span className="text-2xl font-semibold text-foreground tracking-tight">
                 {usage ? formatQuota(usage.guests, limits?.maxGuests) : '—'}
               </span>
-              <p className="text-[11px] text-muted mt-1">Quota du forfait actuel</p>
+              <p className="text-[11px] text-muted mt-1">Invités sur votre forfait</p>
             </div>
           </div>
           <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
@@ -5339,7 +5339,7 @@ function DashboardPageContent() {
               <span className="text-2xl font-semibold text-foreground tracking-tight">
                 {usage ? formatQuota(usage.templates, limits?.maxTemplates) : '—'}
               </span>
-              <p className="text-[11px] text-muted mt-1">Bibliothèque d&apos;invitations</p>
+              <p className="text-[11px] text-muted mt-1">Modèles d&apos;invitations</p>
             </div>
           </div>
           <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
@@ -5354,7 +5354,7 @@ function DashboardPageContent() {
                 {tenant?.plan || billing?.plan || '—'}
               </span>
               <p className="text-[11px] text-muted mt-1">
-                {usage ? `${formatQuota(usage.rooms, limits?.maxRooms)} salles` : 'Abonnement organisation'}
+                {usage ? `${formatQuota(usage.rooms, limits?.maxRooms)} salles` : 'Formule active'}
               </p>
             </div>
           </div>
@@ -5364,7 +5364,7 @@ function DashboardPageContent() {
       {showQuota && orgQuota && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-muted uppercase tracking-wider">
-            Quotas restants — forfait {tenant?.plan || billing?.plan}
+            Vos quotas disponibles ({tenant?.plan || billing?.plan})
           </h2>
           <QuotaUsagePanel quota={orgQuota} />
         </div>
@@ -5398,8 +5398,8 @@ function DashboardPageContent() {
               {events.length === 0 ? (
                 <div className="text-center py-12 bg-surface-muted border border-dashed border-border rounded-[var(--radius-card)]">
                   <Calendar className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
-                  <h3 className="font-semibold text-foreground">Aucun événement</h3>
-                  <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Vous n&apos;avez pas encore d&apos;événement. Créez-en un pour commencer à inviter des personnes.</p>
+                  <h3 className="font-semibold text-foreground">Aucun événement pour le moment</h3>
+                  <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Créez votre premier événement pour envoyer vos faire-part et suivre les confirmations de vos invités.</p>
                   <Link
                     href="/dashboard/events"
                     className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg text-sm transition"
@@ -5483,10 +5483,10 @@ function DashboardPageContent() {
             <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_55%,#0f172a)] via-[color-mix(in_srgb,var(--primary)_25%,#020617)] to-background text-white rounded-2xl p-6 shadow-md border border-border flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
               <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[80px] pointer-events-none" />
               <div className="space-y-2 relative z-10">
-                <span className="text-[10px] bg-primary/20 border border-primary/30 text-primary/80 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Nouveau</span>
-                <h3 className="text-lg font-bold">Analyses & Statistiques Avancées</h3>
+                <span className="text-[10px] bg-primary/20 border border-primary/30 text-primary/80 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Astuce</span>
+                <h3 className="text-lg font-bold">Suivez vos invités en temps réel</h3>
                 <p className="text-xs text-muted max-w-md leading-relaxed">
-                  Visualisez les régimes alimentaires de vos invités, les réponses aux questions personnalisées et exportez vos données en un clic pour une organisation parfaite.
+                  Consultez les réponses RSVP, les régimes alimentaires et téléchargez la liste d&apos;émargement prête pour le jour J.
                 </p>
               </div>
               <Link
@@ -5494,7 +5494,7 @@ function DashboardPageContent() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition shadow-lg shadow-primary/20 whitespace-nowrap relative z-10"
               >
                 <BarChart3 className="w-4 h-4" />
-                Consulter les statistiques
+                Voir les statistiques
               </Link>
             </div>
           )}
@@ -5504,7 +5504,7 @@ function DashboardPageContent() {
         {showBillingCard && (
           <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 flex flex-col justify-between">
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-foreground">Statut d&apos;abonnement</h2>
+              <h2 className="text-lg font-semibold text-foreground">Votre formule</h2>
 
               {billing && (
                 <div className="space-y-4">
@@ -5513,7 +5513,7 @@ function DashboardPageContent() {
                       <Award className="w-6 h-6" />
                     </div>
                     <div>
-                      <div className="text-xs text-muted font-semibold uppercase tracking-wider">Forfait Actuel</div>
+                      <div className="text-xs text-muted font-semibold uppercase tracking-wider">Formule active</div>
                       <div className="text-xl font-black text-foreground mt-0.5">{billing.plan}</div>
                     </div>
                   </div>
@@ -5521,18 +5521,18 @@ function DashboardPageContent() {
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 text-sm text-muted">
                       <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <span>Isolation Stricte des Données</span>
+                      <span>Données privées et protégées</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted">
                       <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <span>RSVP Web Dynamique</span>
+                      <span>Confirmations RSVP en ligne</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted">
                       <CheckCircle className="w-4 h-4 text-emerald-500" />
                       {billing.limits.customTemplates ? (
-                        <span>Modèles d&apos;Invitation Customisés</span>
+                        <span>Modèles d&apos;invitation personnalisables</span>
                       ) : (
-                        <span className="line-through text-muted">Modèles d&apos;Invitation Customisés</span>
+                        <span className="line-through text-muted">Modèles d&apos;invitation personnalisables</span>
                       )}
                     </div>
                   </div>
@@ -5546,7 +5546,7 @@ function DashboardPageContent() {
                 className="w-full flex items-center justify-center gap-2 py-3 bg-foreground hover:opacity-90 text-background font-semibold rounded-xl text-sm transition"
               >
                 <CreditCard className="w-4.5 h-4.5" />
-                Gérer la facturation
+                Gérer mon abonnement
               </Link>
             </div>
           </div>
@@ -5562,7 +5562,7 @@ export default function DashboardPage() {
       <div className="min-h-screen flex items-center justify-center bg-surface-muted dark:bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <p className="text-sm font-medium text-muted dark:text-muted">Chargement de votre espace sécurisé...</p>
+          <p className="text-sm font-medium text-muted dark:text-muted">Préparation de votre tableau de bord...</p>
         </div>
       </div>
     }>

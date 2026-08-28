@@ -136,10 +136,10 @@ function OrganizerDemandesPage() {
   const showEventFilter = (tab === 'quotes' || tab === 'bookings') && eventOptions.length > 0;
 
   const pageTitle =
-    tab === 'bookings' ? 'Réservations'
-      : tab === 'quotes' ? 'Demandes de devis'
-        : tab === 'packs' ? 'Packs enregistrés'
-          : tab === 'favorites' ? 'Favoris'
+    tab === 'bookings' ? 'Vos réservations de dates'
+      : tab === 'quotes' ? 'Vos demandes de devis'
+        : tab === 'packs' ? 'Vos packs enregistrés'
+          : tab === 'favorites' ? 'Vos favoris'
             : 'Devis & réservations';
 
   const pageDescription = isProtocol
@@ -147,14 +147,14 @@ function OrganizerDemandesPage() {
       ? 'Suivez les réservations liées aux événements que vous accompagnez.'
       : 'Suivez les devis envoyés aux salles et prestataires pour le protocole.'
     : tab === 'bookings'
-      ? `Suivez les réservations de dates. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`
+      ? `Suivez vos réservations confirmées. L’acompte (${depositPercent(site)} %) se règle directement auprès du prestataire.`
       : tab === 'quotes'
         ? 'Suivez vos demandes de devis envoyées aux salles et prestataires.'
         : tab === 'packs'
-          ? 'Retrouvez les compositions catalogue enregistrées pour votre projet.'
+          ? 'Retrouvez vos sélections de packs créées pour votre projet.'
           : tab === 'favorites'
-            ? 'Salles, métiers et locations que vous avez mises de côté.'
-            : `Suivez devis, réservations, packs et favoris. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`;
+            ? 'Les lieux, prestataires et équipements que vous avez gardés de côté.'
+            : `Suivez vos devis, réservations, packs et favoris en toute simplicité.`;
 
   return (
     <div className="space-y-5 w-full">

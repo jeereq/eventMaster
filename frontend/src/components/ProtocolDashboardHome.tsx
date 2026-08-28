@@ -61,15 +61,15 @@ export default function ProtocolDashboardHome() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Tableau de bord protocole"
-        description="Vue du jour : accueils à venir, check-in et tâches assignées."
+        title="Accueil & Protocole"
+        description="Votre journée en un coup d’œil : événements du jour, émargement et accueil des invités."
         breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil' }]} />}
         action={
           <div className="flex flex-wrap gap-2">
             {todayEvent ? (
               <Link href={eventDashboardHref(todayEvent.id, { tab: 'protocol', protocol: true })}>
                 <Button size="sm" leftIcon={<ScanLine className="w-4 h-4" />}>
-                  Accueillir
+                  Accueillir les invités
                 </Button>
               </Link>
             ) : (
@@ -81,7 +81,7 @@ export default function ProtocolDashboardHome() {
             )}
             <Link href="/dashboard/protocol?view=tasks">
               <Button size="sm" variant="secondary" leftIcon={<ClipboardList className="w-4 h-4" />}>
-                Mes tâches
+                Mes tâches du jour
               </Button>
             </Link>
           </div>

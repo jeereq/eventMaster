@@ -73,9 +73,9 @@ export default function QuotaUsagePanel({ quota, className = '' }: QuotaUsagePan
  <p className="text-lg font-semibold text-foreground">
  {formatQuotaRemaining(used, max, guests)}
  </p>
- <p className="text-xs text-muted mt-1">
- {used.toLocaleString('fr-FR')} utilisé{used !== 1 ? 's' : ''} · max {formatQuotaMax(max, guests)}
- </p>
+              <p className="text-xs text-muted mt-1">
+                {used.toLocaleString('fr-FR')} utilisé{used > 1 ? 's' : ''} sur {formatQuotaMax(max, guests)}
+              </p>
  {!guests && max < 9999 ? (
  <div className="w-full bg-surface-muted rounded-full h-1.5 mt-2 overflow-hidden">
  <div className={`h-full rounded-full transition-all duration-500 ${style.bar}`} style={{ width: `${pct}%` }} />
