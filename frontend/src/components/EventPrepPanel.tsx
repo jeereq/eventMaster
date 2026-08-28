@@ -805,7 +805,11 @@ export default function EventPrepPanel({
               ...eventPrepBasket(prep, 'manual').vendors,
             ].map((item) => item.slug),
           }}
-          onApply={(result) => void persist(eventPrepFromAiRecommendation(result, prep))}
+          onApply={(pack) => void persist(eventPrepFromAiRecommendation({
+            summary: pack.summary || pack.label,
+            venue: pack.venue,
+            services: pack.services,
+          }, prep))}
         />
       ) : null}
 

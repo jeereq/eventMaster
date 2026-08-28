@@ -773,9 +773,17 @@ function ClientMarketplaceInner() {
                     ...(manualPackages[0]?.services || []),
                   ].map((item) => item.slug),
                 }}
-                applyLabel="Retenir dans la simulation IA"
-                onApply={(result) => {
-                  setAiPackages([eventPlanAiToPackage(result, brief.budgetMaxFc)]);
+                applyLabel="Retenir cette proposition"
+                onApply={(pack) => {
+                  setAiPackages((current) => {
+                    const next = eventPlanAiToPackage(pack, brief.budgetMaxFc);
+                    const without = current.filter((item) => item.id !== next.id);
+                    return [...without, next];
+                  });
+                  setPlanError('');
+                }}
+                onApplyAll={(packages) => {
+                  setAiPackages(packages.map((pack) => eventPlanAiToPackage(pack, brief.budgetMaxFc)));
                   setPlanError('');
                 }}
               />

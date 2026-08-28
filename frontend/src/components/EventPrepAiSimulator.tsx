@@ -10,7 +10,7 @@ import { formatFc } from '@/config/landingPricing';
 import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
 import { isServiceRentalCategory } from '@/lib/marketplace';
 import { communesForCity } from '@/lib/rdcCities';
-import type { EventPlanAiResult } from '@/lib/eventPlan';
+import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 
 export type EventPrepAiDefaults = {
   eventType?: ListingEventTypeId;
@@ -28,11 +28,13 @@ export default function EventPrepAiSimulator({
   defaults,
   applyLabel = 'Appliquer à la préparation',
   onApply,
+  onApplyAll,
   defaultOpen = false,
 }: {
   defaults?: EventPrepAiDefaults;
   applyLabel?: string;
-  onApply: (result: EventPlanAiResult) => void;
+  onApply: (pack: EventPlanAiPackage) => void;
+  onApplyAll?: (packages: EventPlanAiPackage[]) => void;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -52,7 +54,9 @@ export default function EventPrepAiSimulator({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<EventPlanAiResult | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const communes = useMemo(() => communesForCity(city), [city]);
+  const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
   const run = async () => {
     setLoading(true);
@@ -72,9 +76,13 @@ export default function EventPrepAiSimulator({
         keepVenueSlug: keepVenue ? defaults?.keepVenueSlug : undefined,
         keepServiceSlugs: defaults?.keepServiceSlugs || [],
       })) as EventPlanAiResult;
-      setResult(data);
+      const packages = Array.isArray(data.packages) ? data.packages : [];
+      setResult({ ...data, packages });
+      setSelectedId(packages[1]?.id || packages[0]?.id || null);
+      if (packages.length && onApplyAll) onApplyAll(packages);
     } catch (err: unknown) {
       setResult(null);
+      setSelectedId(null);
       setError(err instanceof Error ? err.message : 'Simulation impossible.');
     } finally {
       setLoading(false);
@@ -90,7 +98,7 @@ export default function EventPrepAiSimulator({
             Simulation IA
           </h3>
           <p className="text-xs text-muted leading-relaxed">
-            L’IA cherche dans le catalogue EventMaster (salles, métiers, locations) et propose un mix adapté à votre brief.
+            L’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort — comme la simulation par critères.
           </p>
         </div>
         <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)}>
@@ -203,75 +211,116 @@ export default function EventPrepAiSimulator({
             ) : null}
           </div>
 
-          {error ? <Alert variant="error">{error}</Alert> : null}
-
           <Button onClick={() => void run()} loading={loading} leftIcon={<Sparkles className="w-4 h-4" />}>
             Lancer la simulation
           </Button>
+        </div>
+      ) : null}
 
-          {result ? (
-            <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">{result.summary}</p>
-                  {result.rationale ? <p className="text-xs text-muted mt-1 leading-relaxed">{result.rationale}</p> : null}
-                </div>
-                <p className="text-sm font-bold shrink-0">{formatFc(result.estimatedTotalFc)}</p>
-              </div>
-              {result.warnings.length > 0 ? (
-                <ul className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-0.5">
-                  {result.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              ) : null}
-              <ul className="space-y-1.5">
-                {result.venue ? (
-                  <li>
-                    <AiPickRow
-                      href={result.venue.href}
-                      cover={result.venue.coverUrl}
-                      icon={<Building2 className="w-4 h-4" />}
-                      kind="Salle"
-                      title={result.venue.title}
-                      meta={[result.venue.orgName, result.venue.location, result.venue.capacity ? `${result.venue.capacity} places` : null]}
-                      price={result.venue.estimatedFc}
-                    />
-                  </li>
-                ) : null}
-                {result.services.map((item) => {
-                  const rental = isServiceRentalCategory(item.category);
-                  return (
-                    <li key={item.slug}>
-                      <AiPickRow
-                        href={item.href}
-                        cover={item.coverUrl}
-                        icon={rental ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                        kind={rental ? 'Location' : 'Métier'}
-                        title={item.title}
-                        meta={[item.categoryLabel, item.orgName, item.location]}
-                        price={item.estimatedFc}
-                      />
-                    </li>
+      {error ? <Alert variant="error">{error}</Alert> : null}
+
+      {loading && !result?.packages.length ? (
+        <p className="text-xs text-muted inline-flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Recherche dans le catalogue, puis recommandation…
+        </p>
+      ) : null}
+
+      {result?.packages.length ? (
+        <div className="space-y-3">
+          <p className="text-xs text-muted">
+            {result.packages.length} proposition{result.packages.length > 1 ? 's' : ''} · catalogue : {result.catalog.venues} salles · {result.catalog.trades} métiers · {result.catalog.rentals} locations.
+          </p>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3" role="radiogroup" aria-label="Propositions IA">
+            {result.packages.map((pack) => {
+              const active = selected?.id === pack.id;
+              return (
+                <article
+                  key={pack.id}
+                  role="radio"
+                  aria-checked={active}
+                  tabIndex={0}
+                  onClick={() => setSelectedId(pack.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedId(pack.id);
+                    }
+                  }}
+                  className={cn(
+                    'text-left rounded-2xl border p-3.5 space-y-2.5 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    active
+                      ? 'border-primary bg-primary/8 ring-1 ring-primary/25'
+                      : 'border-border bg-surface hover:border-primary/40',
+                  )}
+                >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground">{pack.label}</p>
+                          {pack.blurb ? <p className="text-[11px] text-muted mt-0.5 leading-relaxed">{pack.blurb}</p> : null}
+                        </div>
+                        <p className="text-sm font-bold shrink-0 tabular-nums">{formatFc(pack.estimatedTotalFc)}</p>
+                      </div>
+                      {pack.summary ? (
+                        <p className="text-xs text-foreground leading-relaxed line-clamp-3">{pack.summary}</p>
+                      ) : null}
+                      <ul className="space-y-1">
+                        {pack.venue ? (
+                          <li>
+                            <AiPickRow
+                              href={pack.venue.href}
+                              cover={pack.venue.coverUrl}
+                              icon={<Building2 className="w-4 h-4" />}
+                              kind="Salle"
+                              title={pack.venue.title}
+                              meta={[pack.venue.orgName, pack.venue.location]}
+                              price={pack.venue.estimatedFc}
+                            />
+                          </li>
+                        ) : null}
+                        {pack.services.slice(0, 4).map((item) => {
+                          const rental = isServiceRentalCategory(item.category);
+                          return (
+                            <li key={item.slug}>
+                              <AiPickRow
+                                href={item.href}
+                                cover={item.coverUrl}
+                                icon={rental ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                                kind={rental ? 'Location' : 'Métier'}
+                                title={item.title}
+                                meta={[item.categoryLabel, item.orgName]}
+                                price={item.estimatedFc}
+                              />
+                            </li>
+                          );
+                        })}
+                        {pack.services.length > 4 ? (
+                          <li className="text-[11px] text-muted px-1">+{pack.services.length - 4} autre{pack.services.length - 4 > 1 ? 's' : ''}</li>
+                        ) : null}
+                      </ul>
+                      {pack.warnings.length > 0 ? (
+                        <p className="text-[11px] text-amber-800 dark:text-amber-200 line-clamp-2">{pack.warnings[0]}</p>
+                      ) : null}
+                    </article>
                   );
                 })}
-              </ul>
-              <p className="text-[11px] text-muted">
-                Catalogue lu : {result.catalog.venues} salles · {result.catalog.trades} métiers · {result.catalog.rentals} locations.
-              </p>
-              <Button
-                onClick={() => onApply(result)}
-                disabled={!result.venue && result.services.length === 0}
-              >
-                {applyLabel}
-              </Button>
-            </div>
-          ) : loading ? (
-            <p className="text-xs text-muted inline-flex items-center gap-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Recherche dans le catalogue, puis recommandation…
-            </p>
+              </div>
+          {selected?.rationale ? (
+            <p className="text-xs text-muted leading-relaxed">{selected.rationale}</p>
           ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => selected && onApply(selected)}
+              disabled={!selected || (!selected.venue && selected.services.length === 0)}
+            >
+              {applyLabel}
+            </Button>
+            {onApplyAll && result.packages.length > 1 ? (
+              <Button variant="secondary" onClick={() => onApplyAll(result.packages)}>
+                Retenir les {result.packages.length} propositions
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </section>

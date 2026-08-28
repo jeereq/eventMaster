@@ -372,33 +372,42 @@ export type EventPlanResult = {
 
 export type EventPlanAiItem = PlanItem;
 
-export type EventPlanAiResult = {
+export type EventPlanAiStyleId = 'eco' | 'balanced' | 'comfort';
+
+export type EventPlanAiPackage = {
+  id: EventPlanAiStyleId | string;
+  label: string;
+  blurb?: string;
   summary: string;
   rationale: string;
   warnings: string[];
   estimatedTotalFc: number;
-  catalog: { venues: number; trades: number; rentals: number };
   venue: PlanItem | null;
   services: PlanItem[];
 };
 
-export function eventPlanAiToPackage(result: EventPlanAiResult, budgetMaxFc = 0): PlanPackage {
+export type EventPlanAiResult = {
+  catalog: { venues: number; trades: number; rentals: number };
+  packages: EventPlanAiPackage[];
+};
+
+export function eventPlanAiToPackage(pack: EventPlanAiPackage, budgetMaxFc = 0): PlanPackage {
   const items = [
-    ...(result.venue ? [result.venue] : []),
-    ...result.services,
+    ...(pack.venue ? [pack.venue] : []),
+    ...pack.services,
   ];
   return {
-    id: 'ai',
-    label: 'Proposition IA',
-    blurb: result.summary,
-    totalFc: result.estimatedTotalFc,
-    leftoverFc: Math.max(0, budgetMaxFc - result.estimatedTotalFc),
-    overBudget: budgetMaxFc > 0 && result.estimatedTotalFc > budgetMaxFc,
+    id: `ai-${pack.id}`,
+    label: pack.label || 'Proposition IA',
+    blurb: pack.blurb || pack.summary,
+    totalFc: pack.estimatedTotalFc,
+    leftoverFc: Math.max(0, budgetMaxFc - pack.estimatedTotalFc),
+    overBudget: budgetMaxFc > 0 && pack.estimatedTotalFc > budgetMaxFc,
     complete: items.length > 0,
-    venue: result.venue,
-    services: result.services,
+    venue: pack.venue,
+    services: pack.services,
     items,
-    notes: [result.rationale, ...result.warnings].filter(Boolean),
+    notes: [pack.rationale, ...pack.warnings].filter(Boolean),
     filledCount: items.length,
     requiredCount: items.length,
   };

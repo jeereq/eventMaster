@@ -76,15 +76,30 @@ export type EventPlanAiItem = {
   capacity?: number | null;
 };
 
-export type EventPlanAiResult = {
+export type EventPlanAiStyleId = 'eco' | 'balanced' | 'comfort';
+
+export type EventPlanAiPackage = {
+  id: EventPlanAiStyleId;
+  label: string;
+  blurb: string;
   summary: string;
   rationale: string;
   warnings: string[];
   estimatedTotalFc: number;
-  catalog: { venues: number; trades: number; rentals: number };
   venue: EventPlanAiItem | null;
   services: EventPlanAiItem[];
 };
+
+export type EventPlanAiResult = {
+  catalog: { venues: number; trades: number; rentals: number };
+  packages: EventPlanAiPackage[];
+};
+
+const AI_STYLES: Array<{ id: EventPlanAiStyleId; label: string; blurb: string; maxTrades: number; maxRentals: number }> = [
+  { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe, sans options.', maxTrades: 2, maxRentals: 1 },
+  { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre brief, options si le budget le permet.', maxTrades: 3, maxRentals: 1 },
+  { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 2 },
+];
 
 function parseEventType(value: unknown): EventPlanType {
   return typeof value === 'string' && EVENT_PLAN_TYPES.includes(value as EventPlanType)
@@ -238,7 +253,7 @@ async function askOpenAi(system: string, user: string): Promise<Record<string, u
       },
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        temperature: 0.35,
+        temperature: 0.55,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },
@@ -310,13 +325,24 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   }));
 
   const allowed = new Set(compact.map((row) => row.slug));
+  const venueBySlug = new Map(catalog.venues.map((row) => [row.slug, row.item]));
+  const serviceBySlug = new Map(catalog.services.map((row) => [row.slug, row.item]));
+  const venuesPool = includeVenue ? catalog.venues.map((row) => row.item) : [];
+  const tradesPool = includeTrades
+    ? catalog.services.filter((row) => row.kind === 'trade').map((row) => row.item)
+    : [];
+  const rentalsPool = includeRentals
+    ? catalog.services.filter((row) => row.kind === 'rental').map((row) => row.item)
+    : [];
+
   const system = [
     'Tu es l’assistant EventMaster (Kinshasa et Lubumbashi).',
     'Tu ne proposes QUE des fiches dont le slug est dans le catalogue JSON fourni. N’invente jamais de slug, de prix ou de prestataire.',
-    'Réponds uniquement en JSON : { "summary": string, "rationale": string, "venueSlug": string|null, "serviceSlugs": string[], "warnings": string[] }.',
-    'Choisis au plus 1 salle, 4 métiers et 3 locations, cohérents avec le type d’événement, la ville, la date et le budget.',
-    'Si un budget est donné, vise un total estimé inférieur ou égal. Si c’est impossible, explique-le dans warnings.',
-    'Préfère des fiches du même quartier / commune quand c’est possible.',
+    'Réponds uniquement en JSON : { "packages": [ { "id": "eco"|"balanced"|"comfort", "summary": string, "rationale": string, "venueSlug": string|null, "serviceSlugs": string[], "warnings": string[] } ] }.',
+    'Propose EXACTEMENT 3 packs distincts : eco (sobre, moins cher), balanced (compromis), comfort (plus complet).',
+    'Chaque pack : au plus 1 salle, métiers et locations cohérents. Varie les slugs entre packs quand le catalogue le permet.',
+    'Si un budget est donné, chaque pack vise un total estimé inférieur ou égal. Sinon, explique-le dans warnings.',
+    'Préfère le même quartier / commune. Si keepVenueSlug est fourni, utilise-le pour les 3 packs.',
   ].join(' ');
 
   const user = JSON.stringify({
@@ -338,54 +364,153 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   });
 
   const ai = await askOpenAi(system, user);
-  const venueBySlug = new Map(catalog.venues.map((row) => [row.slug, row.item]));
-  const serviceBySlug = new Map(catalog.services.map((row) => [row.slug, row.item]));
+  const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
-  const venueSlug = typeof ai.venueSlug === 'string' && allowed.has(ai.venueSlug) ? ai.venueSlug : null;
-  const serviceSlugs = Array.isArray(ai.serviceSlugs)
-    ? ai.serviceSlugs.filter((value): value is string => typeof value === 'string' && allowed.has(value) && serviceBySlug.has(value))
-    : [];
+  const hydrate = (
+    style: typeof AI_STYLES[number],
+    venueSlug: string | null,
+    serviceSlugs: string[],
+    summary: string,
+    rationale: string,
+    extraWarnings: string[],
+  ): EventPlanAiPackage => {
+    const venue = includeVenue
+      ? (keepVenueSlug && venueBySlug.has(keepVenueSlug)
+        ? venueBySlug.get(keepVenueSlug) || null
+        : venueSlug && allowed.has(venueSlug) ? venueBySlug.get(venueSlug) || null : null)
+      : null;
 
-  const venue = includeVenue
-    ? (keepVenueSlug && venueBySlug.has(keepVenueSlug)
-      ? venueBySlug.get(keepVenueSlug) || null
-      : venueSlug ? venueBySlug.get(venueSlug) || null : null)
-    : null;
-  const uniqueServices: EventPlanAiItem[] = [];
-  const seen = new Set<string>();
-  for (const slug of [...keepServiceSlugs, ...serviceSlugs]) {
-    if (seen.has(slug)) continue;
-    const item = serviceBySlug.get(slug);
-    if (!item) continue;
-    if (item.category && isServiceRentalCategory(item.category) && !includeRentals) continue;
-    if (item.category && !isServiceRentalCategory(item.category) && !includeTrades) continue;
-    seen.add(slug);
-    uniqueServices.push(item);
-    if (uniqueServices.length >= 8) break;
-  }
+    const uniqueServices: EventPlanAiItem[] = [];
+    const seen = new Set<string>();
+    for (const slug of [...keepServiceSlugs, ...serviceSlugs]) {
+      if (seen.has(slug) || !allowed.has(slug)) continue;
+      const item = serviceBySlug.get(slug);
+      if (!item) continue;
+      if (item.category && isServiceRentalCategory(item.category) && !includeRentals) continue;
+      if (item.category && !isServiceRentalCategory(item.category) && !includeTrades) continue;
+      seen.add(slug);
+      uniqueServices.push(item);
+      if (uniqueServices.length >= 8) break;
+    }
 
-  const warnings = Array.isArray(ai.warnings)
-    ? ai.warnings.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 6)
-    : [];
-  if (includeVenue && !venue) warnings.unshift('Aucune salle retenue dans le catalogue disponible.');
-  if (!uniqueServices.length) warnings.push('Aucun métier ni location retenu dans le catalogue disponible.');
+    const warnings = extraWarnings.slice(0, 6);
+    if (includeVenue && !venue) warnings.unshift('Aucune salle retenue dans le catalogue disponible.');
+    if (!uniqueServices.length && (includeTrades || includeRentals)) {
+      warnings.push('Aucun métier ni location retenu dans le catalogue disponible.');
+    }
+    const estimatedTotalFc = [venue, ...uniqueServices].reduce((sum, item) => sum + (item?.estimatedFc || 0), 0);
+    if (budget && estimatedTotalFc > budget) {
+      warnings.push(`Estimation ${estimatedTotalFc.toLocaleString('fr-FR')} FC au-dessus du budget ${budget.toLocaleString('fr-FR')} FC.`);
+    }
 
-  const estimatedTotalFc = [venue, ...uniqueServices].reduce((sum, item) => sum + (item?.estimatedFc || 0), 0);
-  if (budget && estimatedTotalFc > budget) {
-    warnings.push(`Estimation ${estimatedTotalFc.toLocaleString('fr-FR')} FC au-dessus du budget ${budget.toLocaleString('fr-FR')} FC.`);
+    return {
+      id: style.id,
+      label: style.label,
+      blurb: style.blurb,
+      summary: summary.trim().slice(0, 400) || `Proposition ${style.label.toLowerCase()} basée sur le catalogue EventMaster.`,
+      rationale: rationale.trim().slice(0, 1200),
+      warnings,
+      estimatedTotalFc,
+      venue,
+      services: uniqueServices,
+    };
+  };
+
+  const pickByStyle = <T extends { slug: string; estimatedFc: number }>(
+    items: T[],
+    style: EventPlanAiStyleId,
+    used: Set<string>,
+  ): T | null => {
+    const available = items.filter((item) => !used.has(item.slug));
+    const pool = available.length ? available : items;
+    if (!pool.length) return null;
+    const sorted = [...pool].sort((a, b) => a.estimatedFc - b.estimatedFc);
+    if (style === 'eco') return sorted[0];
+    if (style === 'comfort') return sorted[sorted.length - 1];
+    return sorted[Math.floor((sorted.length - 1) / 2)];
+  };
+
+  const heuristicPackage = (style: typeof AI_STYLES[number], usedVenues: Set<string>, usedServices: Set<string>): EventPlanAiPackage => {
+    const venue = includeVenue
+      ? (keepVenueSlug && venueBySlug.has(keepVenueSlug)
+        ? venueBySlug.get(keepVenueSlug) || null
+        : pickByStyle(venuesPool, style.id, usedVenues))
+      : null;
+    if (venue) usedVenues.add(venue.slug);
+
+    const services: EventPlanAiItem[] = [];
+    let remaining = budget > 0 ? Math.max(0, budget - (venue?.estimatedFc || 0)) : Number.POSITIVE_INFINITY;
+    const byCategory = new Map<string, EventPlanAiItem[]>();
+    for (const item of [...tradesPool, ...rentalsPool]) {
+      const key = item.category || item.slug;
+      const list = byCategory.get(key) || [];
+      list.push(item);
+      byCategory.set(key, list);
+    }
+
+    let trades = 0;
+    let rentals = 0;
+    for (const group of byCategory.values()) {
+      const rental = Boolean(group[0]?.category && isServiceRentalCategory(group[0].category));
+      if (rental && rentals >= style.maxRentals) continue;
+      if (!rental && trades >= style.maxTrades) continue;
+      const pick = pickByStyle(group, style.id, usedServices);
+      if (!pick) continue;
+      const cost = pick.estimatedFc || 0;
+      if (budget > 0 && cost > remaining && services.length > 0) continue;
+      usedServices.add(pick.slug);
+      services.push(pick);
+      remaining -= cost;
+      if (rental) rentals += 1;
+      else trades += 1;
+    }
+
+    for (const slug of keepServiceSlugs) {
+      if (services.some((item) => item.slug === slug)) continue;
+      const item = serviceBySlug.get(slug);
+      if (item) services.unshift(item);
+    }
+
+    return hydrate(style, venue?.slug || null, services.map((item) => item.slug), '', '', []);
+  };
+
+  const usedVenues = new Set<string>();
+  const usedServices = new Set<string>();
+  const packages = AI_STYLES.map((style, index) => {
+    const raw = rawPackages.find((row) => row && typeof row === 'object' && (row as { id?: string }).id === style.id)
+      || (rawPackages[index] && typeof rawPackages[index] === 'object' ? rawPackages[index] : null);
+    const row = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+    const venueSlug = typeof row.venueSlug === 'string' ? row.venueSlug : null;
+    const serviceSlugs = Array.isArray(row.serviceSlugs)
+      ? row.serviceSlugs.filter((value): value is string => typeof value === 'string')
+      : [];
+    const summary = typeof row.summary === 'string' ? row.summary : '';
+    const rationale = typeof row.rationale === 'string' ? row.rationale : '';
+    const warnings = Array.isArray(row.warnings)
+      ? row.warnings.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : [];
+
+    let pack = hydrate(style, venueSlug, serviceSlugs, summary, rationale, warnings);
+    const empty = !pack.venue && pack.services.length === 0;
+    if (empty) {
+      pack = heuristicPackage(style, usedVenues, usedServices);
+    } else {
+      if (pack.venue) usedVenues.add(pack.venue.slug);
+      pack.services.forEach((item) => usedServices.add(item.slug));
+    }
+    return pack;
+  });
+
+  if (!packages.some((pack) => pack.venue || pack.services.length > 0)) {
+    fail(404, 'Impossible de composer 3 propositions avec le catalogue actuel.');
   }
 
   return {
-    summary: typeof ai.summary === 'string' && ai.summary.trim() ? ai.summary.trim().slice(0, 400) : 'Proposition basée sur le catalogue EventMaster.',
-    rationale: typeof ai.rationale === 'string' ? ai.rationale.trim().slice(0, 1200) : '',
-    warnings,
-    estimatedTotalFc,
     catalog: {
       venues: catalog.venues.length,
       trades: catalog.services.filter((row) => row.kind === 'trade').length,
       rentals: catalog.services.filter((row) => row.kind === 'rental').length,
     },
-    venue,
-    services: uniqueServices,
+    packages,
   };
 }
