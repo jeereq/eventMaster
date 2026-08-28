@@ -963,6 +963,7 @@ function ClientMarketplaceInner() {
           budgetFc={brief.budgetMaxFc}
           city={brief.city}
           guestCount={brief.guestCount}
+          onOpenListing={(item) => setListingPreview({ kind: item.kind, slug: item.slug })}
           onCreate={async (payload) => {
             await persistPack(payload);
           }}

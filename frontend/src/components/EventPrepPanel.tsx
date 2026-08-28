@@ -1040,19 +1040,33 @@ export default function EventPrepPanel({
             <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, métiers et locations se remplissent ici, sans réserver.</p>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {savedPacks.slice(0, 6).map((pack) => (
-                <li key={pack.id}>
-                  <button
-                    type="button"
-                    onClick={() => persistBasket('manual', applyPackToEventPrepBasket(pack, eventPrepBasket(prep, 'manual')))}
-                    className="w-full text-left rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition"
-                  >
+                <li key={pack.id} className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 space-y-2">
+                  <div>
                     <p className="text-sm font-semibold truncate">{pack.name}</p>
-                    <p className="text-[11px] text-muted truncate">
-                      {formatFc(pack.totalFc)}
-                      {pack.venue ? ` · ${pack.venue.title}` : ''}
-                      {pack.services.length ? ` · ${pack.services.length} fiche${pack.services.length > 1 ? 's' : ''}` : ''}
-                    </p>
-                  </button>
+                    <p className="text-[11px] text-muted truncate">{formatFc(pack.totalFc)}</p>
+                  </div>
+                  {pack.items.length > 0 ? (
+                    <ul className="space-y-1">
+                      {pack.items.slice(0, 6).map((item) => (
+                        <li key={`${pack.id}:${item.kind}:${item.slug}`}>
+                          <button
+                            type="button"
+                            onClick={() => openPreview({ kind: item.kind, slug: item.slug })}
+                            className="w-full text-left text-xs font-medium truncate hover:text-primary"
+                          >
+                            {item.title}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => persistBasket('manual', applyPackToEventPrepBasket(pack, eventPrepBasket(prep, 'manual')))}
+                  >
+                    Appliquer ce pack
+                  </Button>
                 </li>
               ))}
             </ul>

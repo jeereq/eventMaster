@@ -35,6 +35,7 @@ export default function EventSavedPacks({
   guestCount,
   onCreate,
   onDelete,
+  onOpenListing,
 }: {
   packs: SavedEventPack[];
   favorites: FavoriteListing[];
@@ -53,6 +54,7 @@ export default function EventSavedPacks({
     items: SavedPackItem[];
   }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onOpenListing?: (item: { kind: 'venue' | 'service'; slug: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -160,30 +162,64 @@ export default function EventSavedPacks({
                 {pack.city ? ` · ${pack.city}` : ''}
               </p>
               <ul className="space-y-1.5">
-                {pack.items.map((item) => (
+                {pack.items.map((item) => {
+                  const open = () => onOpenListing?.({ kind: item.kind, slug: item.slug });
+                  const titleClass = 'min-w-0 flex-1 truncate font-medium text-left hover:text-primary';
+                  return (
                   <li key={`${item.kind}:${item.slug}`} className="flex items-center gap-2 text-xs">
-                    <div className="w-8 h-8 rounded-md overflow-hidden bg-surface-muted shrink-0">
-                      {item.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.coverUrl}
-                          alt={item.title || 'Visuel du pack'}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted">
-                          <Store className="w-3.5 h-3.5" />
-                        </div>
-                      )}
-                    </div>
-                    <Link href={item.href} className="min-w-0 flex-1 truncate font-medium hover:text-primary">
-                      {item.title}
-                    </Link>
+                    {onOpenListing ? (
+                      <button
+                        type="button"
+                        onClick={open}
+                        className="w-8 h-8 rounded-md overflow-hidden bg-surface-muted shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        aria-label={`Voir la fiche ${item.title}`}
+                      >
+                        {item.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.coverUrl}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted">
+                            <Store className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="w-8 h-8 rounded-md overflow-hidden bg-surface-muted shrink-0">
+                        {item.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.coverUrl}
+                            alt={item.title || 'Visuel du pack'}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted">
+                            <Store className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {onOpenListing ? (
+                      <button type="button" onClick={open} className={titleClass}>
+                        {item.title}
+                      </button>
+                    ) : (
+                      <Link href={item.href} className={`${titleClass} block`}>
+                        {item.title}
+                      </Link>
+                    )}
                     <span className="text-muted shrink-0">{formatFc(item.estimatedFc)}</span>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </article>
           ))}
