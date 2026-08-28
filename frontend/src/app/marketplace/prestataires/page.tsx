@@ -159,7 +159,7 @@ function MarketplaceServicesPageInner() {
       renderFilters={(variant) => (
         <CatalogueFilterBar
           variant={variant}
-          hideViewToggle={variant === 'float' && mode !== 'focus'}
+          hideViewToggle={variant === 'float'}
           compactToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}

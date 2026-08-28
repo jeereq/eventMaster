@@ -488,7 +488,7 @@ function ClientMarketplaceInner() {
     <CatalogueFilterBar
       variant={variant}
       topSlot={kindPills}
-      hideViewToggle={false}
+      hideViewToggle={variant === 'float'}
       compactToggle={variant === 'float'}
       hideShare={variant === 'float'}
       search={query}
@@ -642,7 +642,9 @@ function ClientMarketplaceInner() {
 
       {tab === 'explore' && !immersiveExplore ? (
           <>
-            {exploreFilterBar('card')}
+            <div className="sticky top-0 md:top-14 z-10 -mx-1 px-1 py-1 bg-background/90 backdrop-blur-md">
+              {exploreFilterBar('card')}
+            </div>
 
             {loading ? (
               <CatalogueResultsSkeleton mode={mapMode ? 'map' : mode === 'list' ? 'list' : 'grid'} count={pageSize} gridCols={gridCols} />

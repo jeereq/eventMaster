@@ -142,18 +142,11 @@ export default function CatalogueViewToggle({
   compact?: boolean;
   hideMap?: boolean;
 }) {
-  const compactOptions: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = hideMap
+  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = hideMap
     ? [
         { id: 'grid', label: 'Grille', icon: LayoutGrid },
         { id: 'list', label: 'Liste', icon: List },
       ]
-    : [
-        { id: 'grid', label: 'Grille', icon: LayoutGrid },
-        { id: 'list', label: 'Liste', icon: List },
-        { id: 'map', label: 'Carte', icon: Map },
-      ];
-  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = hideMap || (compact && value !== 'focus')
-    ? compactOptions
     : [
         { id: 'grid', label: 'Grille', icon: LayoutGrid },
         { id: 'list', label: 'Liste', icon: List },
@@ -178,8 +171,8 @@ export default function CatalogueViewToggle({
           aria-pressed={value === id}
           title={`Vue ${label.toLowerCase()}`}
           className={cn(
-            'inline-flex flex-1 sm:flex-none items-center justify-center rounded-[var(--radius-button)] px-2.5 py-1.5 transition-colors',
-            id === 'focus' && 'hidden lg:inline-flex',
+            'inline-flex flex-1 sm:flex-none min-h-11 items-center justify-center rounded-[var(--radius-button)] px-2.5 py-1.5 transition-colors',
+            id === 'focus' && 'hidden md:inline-flex',
             value === id
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',

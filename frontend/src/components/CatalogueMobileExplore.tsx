@@ -15,17 +15,21 @@ import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, form
 type SheetSnap = 'peek' | 'mid' | 'full';
 
 const PEEK = 228;
+const HEADER_GAP = 8;
+const HEADER_FALLBACK = 132;
 
-function snapHeights(vh: number) {
+function snapHeights(vh: number, headerPx: number) {
+  const reserved = Math.max(HEADER_FALLBACK, headerPx) + HEADER_GAP;
+  const maxFull = Math.max(PEEK, vh - reserved);
   return {
-    peek: PEEK,
-    mid: Math.round(vh * 0.38),
-    full: Math.round(vh * 0.9),
+    peek: Math.min(PEEK, maxFull),
+    mid: Math.min(Math.round(vh * 0.38), maxFull),
+    full: maxFull,
   };
 }
 
-function nearestSnap(height: number, vh: number): SheetSnap {
-  const snaps = snapHeights(vh);
+function nearestSnap(height: number, vh: number, headerPx: number): SheetSnap {
+  const snaps = snapHeights(vh, headerPx);
   const entries = Object.entries(snaps) as Array<[SheetSnap, number]>;
   return entries.reduce((best, [name, value]) =>
     Math.abs(value - height) < Math.abs(snaps[best] - height) ? name : best, 'peek' as SheetSnap);
@@ -210,6 +214,7 @@ export default function CatalogueMobileExplore({
   const mapApi = useRef<MarketplaceMapHandle>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const chromeRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startY: number; startH: number; lastY: number; lastT: number } | null>(null);
   const skipRailRef = useRef(false);
 
@@ -218,6 +223,7 @@ export default function CatalogueMobileExplore({
   const [sheetH, setSheetH] = useState(PEEK);
   const [dragging, setDragging] = useState(false);
   const [vh, setVh] = useState(800);
+  const [headerH, setHeaderH] = useState(HEADER_FALLBACK);
 
   useEffect(() => {
     const sync = () => setVh(window.innerHeight);
@@ -227,8 +233,23 @@ export default function CatalogueMobileExplore({
   }, []);
 
   useEffect(() => {
-    if (!dragging) setSheetH(snapHeights(vh)[snap]);
-  }, [snap, vh, dragging]);
+    const node = chromeRef.current;
+    if (!node || typeof ResizeObserver === 'undefined') {
+      setHeaderH(node?.getBoundingClientRect().height || HEADER_FALLBACK);
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const height = entries[0]?.contentRect.height || node.getBoundingClientRect().height;
+      if (height > 0) setHeaderH(height);
+    });
+    observer.observe(node);
+    setHeaderH(node.getBoundingClientRect().height || HEADER_FALLBACK);
+    return () => observer.disconnect();
+  }, [nav, filters]);
+
+  useEffect(() => {
+    if (!dragging) setSheetH(snapHeights(vh, headerH)[snap]);
+  }, [snap, vh, headerH, dragging]);
 
   useEffect(() => {
     const first = items.find((item) => item.latitude != null && item.longitude != null) || items[0];
@@ -282,12 +303,12 @@ export default function CatalogueMobileExplore({
     if (!drag) return;
     const dt = Math.max(16, Date.now() - drag.lastT);
     const velocity = (drag.lastY - clientY) / dt;
-    const nextH = Math.min(snapHeights(vh).full, Math.max(PEEK, drag.startH + (drag.startY - clientY)));
-    let next = nearestSnap(nextH, vh);
+    const nextH = Math.min(snapHeights(vh, headerH).full, Math.max(PEEK, drag.startH + (drag.startY - clientY)));
+    let next = nearestSnap(nextH, vh, headerH);
     if (velocity > 0.35) next = next === 'peek' ? 'mid' : 'full';
     if (velocity < -0.35) next = next === 'full' ? 'mid' : 'peek';
     setSnap(next);
-    setSheetH(snapHeights(vh)[next]);
+    setSheetH(snapHeights(vh, headerH)[next]);
   };
 
   const onPointerDown = (event: React.PointerEvent) => {
@@ -301,7 +322,7 @@ export default function CatalogueMobileExplore({
     if (!drag) return;
     drag.lastY = event.clientY;
     drag.lastT = Date.now();
-    const next = Math.min(snapHeights(vh).full, Math.max(PEEK, drag.startH + (drag.startY - event.clientY)));
+    const next = Math.min(snapHeights(vh, headerH).full, Math.max(PEEK, drag.startH + (drag.startY - event.clientY)));
     setSheetH(next);
   };
 
@@ -323,7 +344,8 @@ export default function CatalogueMobileExplore({
         />
       </div>
 
-      <div className="absolute z-10 top-0 left-0 right-0 px-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] pb-10 space-y-1.5 bg-gradient-to-b from-background/75 via-background/25 to-transparent pointer-events-none">
+      <div className="absolute z-30 top-0 left-0 right-0 px-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-background/85 via-background/40 to-transparent pointer-events-none">
+        <div ref={chromeRef} className="space-y-1.5">
         <div className="pointer-events-auto flex items-center gap-1.5">
           {onExit ? (
             <button
@@ -338,6 +360,7 @@ export default function CatalogueMobileExplore({
           {nav ? <div className="min-w-0 flex-1">{nav}</div> : null}
         </div>
         {filters ? <div className="pointer-events-auto">{filters}</div> : null}
+        </div>
       </div>
 
       {snap !== 'full' ? (
