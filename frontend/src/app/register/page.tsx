@@ -545,7 +545,9 @@ function RegisterPageContent() {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showMobileSteps, setShowMobileSteps] = useState(false);
+  const [showAllAccountKinds, setShowAllAccountKinds] = useState(false);
 
+  const hasExplicitAction = Boolean(actionParam || intentParam || planParam || searchParams.get('kind'));
   const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
 
   // Détection et pré-sélection intelligente des paramètres URL
@@ -822,55 +824,96 @@ function RegisterPageContent() {
             )}
 
             <form className="space-y-4" onSubmit={handleSubmit}>
-              {/* ─── SÉLECTION DU TYPE DE COMPTE AVEC SUGGESTION VISUELLE ─── */}
-              <fieldset className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <legend className="text-xs font-semibold text-foreground">
-                    Type de compte souhaité
-                  </legend>
-                  <span className="text-[11px] text-muted">Modifiable ultérieurement</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {(['ORGANIZER', 'CLIENT', 'VENDOR', 'BOTH'] as TenantAccountKind[]).map((kind) => {
-                    const isSelected = accountKind === kind;
-                    const isRecommended = config.defaultAccountKind === kind;
-
-                    return (
-                      <label
-                        key={kind}
-                        className={cn(
-                          'flex flex-col justify-center gap-1 p-3 rounded-[var(--radius-card)] border text-xs font-medium cursor-pointer transition-all touch-manipulation active:scale-[0.99] min-h-[52px]',
-                          isSelected
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary/40 text-foreground shadow-xs'
-                            : 'border-border text-muted hover:border-primary/40 hover:bg-surface-muted/50',
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-foreground flex items-center gap-1.5">
-                            <input
-                              type="radio"
-                              name="accountKind"
-                              className="accent-primary"
-                              checked={isSelected}
-                              onChange={() => setAccountKind(kind)}
-                            />
-                            {ACCOUNT_KIND_LABELS[kind]}
-                          </span>
-                          {isRecommended && (
-                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                              Recommandé
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-normal text-muted opacity-90 leading-snug pl-5">
-                          {ACCOUNT_KIND_DESCRIPTIONS[kind]}
+              {/* ─── SÉLECTION DU TYPE DE COMPTE AVEC SUGGESTION VISUELLE OU FOCUS SUR L'ACTION ─── */}
+              {hasExplicitAction && !showAllAccountKinds ? (
+                <div className="p-3 rounded-[var(--radius-card)] bg-surface-muted/70 border border-border flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <GoalIcon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground truncate">
+                          {ACCOUNT_KIND_LABELS[accountKind]}
                         </span>
-                      </label>
-                    );
-                  })}
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
+                          Sélectionné
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted truncate">
+                        {ACCOUNT_KIND_DESCRIPTIONS[accountKind]}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAllAccountKinds(true)}
+                    className="text-[11px] font-semibold text-primary hover:underline touch-manipulation shrink-0 px-2 py-1 rounded hover:bg-primary/5 cursor-pointer"
+                  >
+                    Changer
+                  </button>
                 </div>
-              </fieldset>
+              ) : (
+                <fieldset className="space-y-2 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <legend className="text-xs font-semibold text-foreground">
+                      Type de compte souhaité
+                    </legend>
+                    {hasExplicitAction ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllAccountKinds(false)}
+                        className="text-[11px] font-semibold text-primary hover:underline touch-manipulation cursor-pointer"
+                      >
+                        Garder le focus
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-muted">Modifiable ultérieurement</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(['ORGANIZER', 'CLIENT', 'VENDOR', 'BOTH'] as TenantAccountKind[]).map((kind) => {
+                      const isSelected = accountKind === kind;
+                      const isRecommended = config.defaultAccountKind === kind;
+
+                      return (
+                        <label
+                          key={kind}
+                          className={cn(
+                            'flex flex-col justify-center gap-1 p-3 rounded-[var(--radius-card)] border text-xs font-medium cursor-pointer transition-all touch-manipulation active:scale-[0.99] min-h-[52px]',
+                            isSelected
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary/40 text-foreground shadow-xs'
+                              : 'border-border text-muted hover:border-primary/40 hover:bg-surface-muted/50',
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-foreground flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name="accountKind"
+                                className="accent-primary"
+                                checked={isSelected}
+                                onChange={() => setAccountKind(kind)}
+                              />
+                              {ACCOUNT_KIND_LABELS[kind]}
+                            </span>
+                            {isRecommended && (
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                Recommandé
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-normal text-muted opacity-90 leading-snug pl-5">
+                            {ACCOUNT_KIND_DESCRIPTIONS[kind]}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              )}
 
               {/* ─── IDENTITÉ ET ORGANISATION ─── */}
               <div className={cn('grid gap-4', accountKind === 'CLIENT' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
