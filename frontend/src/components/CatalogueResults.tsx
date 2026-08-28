@@ -246,6 +246,7 @@ export default function CatalogueResults({
   emptyTitle,
   emptyDescription,
   gridCols = 4,
+  groupByKind = false,
   isFavorite,
   onToggleFavorite,
 }: {
@@ -254,6 +255,7 @@ export default function CatalogueResults({
   emptyTitle: string;
   emptyDescription: string;
   gridCols?: CatalogueGridCols;
+  groupByKind?: boolean;
   isFavorite?: (item: CatalogueItem) => boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
 }) {
@@ -272,21 +274,46 @@ export default function CatalogueResults({
     );
   }
 
-  const groups = groupCatalogueItemsByDisplayKind(items);
-  const showHeadings = groups.length > 1;
   const cols = CATALOGUE_GRID_COLS.includes(gridCols as CatalogueGridCols) ? gridCols : 4;
 
-  if (mode === 'list') {
+  if (groupByKind) {
+    const groups = groupCatalogueItemsByDisplayKind(items);
+    const showHeadings = groups.length > 1;
+
+    if (mode === 'list') {
+      return (
+        <div className="space-y-6">
+          {groups.map((group) => (
+            <section key={group.kind} className="space-y-2">
+              {showHeadings ? <GroupHeading kind={group.kind} count={group.items.length} /> : null}
+              <div className={listStackClass}>
+                {group.items.map((item) => (
+                  <ListRow
+                    key={item.id}
+                    item={item}
+                    favorited={isFavorite?.(item)}
+                    onToggleFavorite={onToggleFavorite}
+                    onNavigate={rememberListOnNavigate}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         {groups.map((group) => (
-          <section key={group.kind} className="space-y-2">
+          <section key={group.kind} className="space-y-3">
             {showHeadings ? <GroupHeading kind={group.kind} count={group.items.length} /> : null}
-            <div className={listStackClass}>
+            <div className={GRID_CLASS[cols]}>
               {group.items.map((item) => (
-                <ListRow
+                <GridCard
                   key={item.id}
                   item={item}
+                  compact={cols >= 5}
                   favorited={isFavorite?.(item)}
                   onToggleFavorite={onToggleFavorite}
                   onNavigate={rememberListOnNavigate}
@@ -299,24 +326,34 @@ export default function CatalogueResults({
     );
   }
 
+  // Vue directe / tous mélangés
+  if (mode === 'list') {
+    return (
+      <div className={listStackClass}>
+        {items.map((item) => (
+          <ListRow
+            key={item.id}
+            item={item}
+            favorited={isFavorite?.(item)}
+            onToggleFavorite={onToggleFavorite}
+            onNavigate={rememberListOnNavigate}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {groups.map((group) => (
-        <section key={group.kind} className="space-y-3">
-          {showHeadings ? <GroupHeading kind={group.kind} count={group.items.length} /> : null}
-          <div className={GRID_CLASS[cols]}>
-            {group.items.map((item) => (
-              <GridCard
-                key={item.id}
-                item={item}
-                compact={cols >= 5}
-                favorited={isFavorite?.(item)}
-                onToggleFavorite={onToggleFavorite}
-                onNavigate={rememberListOnNavigate}
-              />
-            ))}
-          </div>
-        </section>
+    <div className={GRID_CLASS[cols]}>
+      {items.map((item) => (
+        <GridCard
+          key={item.id}
+          item={item}
+          compact={cols >= 5}
+          favorited={isFavorite?.(item)}
+          onToggleFavorite={onToggleFavorite}
+          onNavigate={rememberListOnNavigate}
+        />
       ))}
     </div>
   );
