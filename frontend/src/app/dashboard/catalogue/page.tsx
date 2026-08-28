@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, ListChecks, Minimize2, MousePointerClick, Store, Wallet, Bookmark, Wand2 } from 'lucide-react';
+import { Heart, Minimize2, Store, Wallet, Bookmark } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -76,6 +76,7 @@ import {
   type SavedEventPack,
 } from '@/lib/eventPlan';
 import EventPlanBriefForm from '@/components/EventPlanBriefForm';
+import EventPlanMethodPicker from '@/components/EventPlanMethodPicker';
 import EventPlanPacks from '@/components/EventPlanPacks';
 import EventSavedPacks from '@/components/EventSavedPacks';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
@@ -382,11 +383,6 @@ function ClientMarketplaceInner() {
   };
 
   const workingPackages = planView === 'ai' ? aiPackages : planView === 'final' ? (finalPackage ? [finalPackage] : []) : manualPackages;
-  const planNav: Array<{ id: PlanPrepView; label: string; hint: string; count: number; icon: typeof MousePointerClick }> = [
-    { id: 'manual', label: 'Sans IA', hint: 'Budget et packs calculés', count: manualPackages.length, icon: MousePointerClick },
-    { id: 'ai', label: 'Avec IA', hint: 'Simulation et retenus IA', count: aiPackages.length, icon: Wand2 },
-    { id: 'final', label: 'Solution finale', hint: 'Pack retenu pour réserver', count: finalPackage ? 1 : 0, icon: ListChecks },
-  ];
 
   const persistPack = async (payload: {
     name: string;
@@ -591,11 +587,7 @@ function ClientMarketplaceInner() {
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Agenda' : 'Marketplace'}
         description={
           tab === 'plan'
-            ? planView === 'ai'
-              ? 'Simulez un mix salle / métiers / locations, puis retenez-le dans cette vue.'
-              : planView === 'final'
-                ? 'Choisissez le pack retenu — c’est celui que vous enregistrerez pour les devis.'
-                : 'Décrivez l’enveloppe : EventMaster propose des packs dans votre budget, sans IA.'
+            ? 'Choisissez comment simuler (par critères ou avec l’IA), puis retenez le pack utilisé pour les devis.'
             : tab === 'favorites'
               ? 'Salles, prestataires et locations enregistrés. Filtrez et changez la vue grille ou liste.'
               : tab === 'packs'
@@ -752,40 +744,22 @@ function ClientMarketplaceInner() {
       ) : null}
 
       {tab === 'plan' ? (
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
-          <nav className="w-full lg:w-56 shrink-0 lg:sticky lg:top-4 rounded-[var(--radius-card)] border border-border bg-surface p-1.5 flex lg:flex-col gap-1 overflow-x-auto">
-            {planNav.map((item) => {
-              const Icon = item.icon;
-              const active = planView === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setPlanView(item.id)}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-[var(--radius-button)] px-3 py-2.5 text-left transition min-w-[10.5rem] lg:min-w-0',
-                    active ? 'bg-primary/10 text-foreground border border-primary/25' : 'text-muted hover:text-foreground hover:bg-surface-muted/70',
-                  )}
-                >
-                  <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary' : '')} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold truncate">{item.label}</span>
-                    <span className="block text-[10px] text-muted truncate">{item.hint}</span>
-                  </span>
-                  <span className={cn(
-                    'min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold inline-flex items-center justify-center',
-                    item.count > 0 ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
-                  )}>
-                    {item.count}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
+        <div className="space-y-5">
+          <EventPlanMethodPicker
+            value={planView}
+            onChange={setPlanView}
+            counts={{
+              manual: manualPackages.length,
+              ai: aiPackages.length,
+              final: finalPackage ? 1 : 0,
+            }}
+            finalLocked
+          />
 
-          <div className="flex-1 min-w-0 space-y-5">
+          <div className="space-y-5">
             {planView === 'ai' ? (
               <EventPrepAiSimulator
+                defaultOpen
                 defaults={{
                   eventType: brief.eventType,
                   city: brief.city,
@@ -842,34 +816,59 @@ function ClientMarketplaceInner() {
 
             {planView === 'final' ? (
               <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
-                <p className="text-sm font-semibold">Composer la solution finale</p>
-                <p className="text-xs text-muted">Reprenez un pack d’une simulation — c’est celui que vous enregistrerez dans Mes packs.</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-foreground">Quel pack retenir ?</p>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Reprenez un pack d’une simulation — c’est celui que vous enregistrerez dans Mes packs et utiliserez pour les devis.
+                  </p>
+                </div>
                 {manualPackages.length === 0 && aiPackages.length === 0 ? (
-                  <p className="text-sm text-muted">Générez d’abord un pack sans IA ou avec IA.</p>
-                ) : (
                   <div className="flex flex-wrap gap-2">
-                    {manualPackages.map((pack) => (
-                      <Button
-                        key={`manual-${pack.id}`}
-                        type="button"
-                        size="sm"
-                        variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
-                        onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Pack sans IA' })}
-                      >
-                        Sans IA · {pack.label}
-                      </Button>
-                    ))}
-                    {aiPackages.map((pack) => (
-                      <Button
-                        key={`ai-${pack.id}`}
-                        type="button"
-                        size="sm"
-                        variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
-                        onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Proposition IA' })}
-                      >
-                        IA · {pack.label}
-                      </Button>
-                    ))}
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setPlanView('manual')}>
+                      Simuler par critères
+                    </Button>
+                    <Button type="button" size="sm" onClick={() => setPlanView('ai')}>
+                      Simuler avec l’IA
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {manualPackages.length > 0 ? (
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Issus des critères (sans IA)</p>
+                        <div className="flex flex-wrap gap-2">
+                          {manualPackages.map((pack) => (
+                            <Button
+                              key={`manual-${pack.id}`}
+                              type="button"
+                              size="sm"
+                              variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
+                              onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Pack sans IA' })}
+                            >
+                              {pack.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {aiPackages.length > 0 ? (
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Issus de l’IA</p>
+                        <div className="flex flex-wrap gap-2">
+                          {aiPackages.map((pack) => (
+                            <Button
+                              key={`ai-${pack.id}`}
+                              type="button"
+                              size="sm"
+                              variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
+                              onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Proposition IA' })}
+                            >
+                              {pack.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -883,8 +882,15 @@ function ClientMarketplaceInner() {
                 isFavorite={isFavorite}
                 onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
                 onReplace={replacePackItem}
+                onChooseFinal={planView !== 'final' ? (pack) => {
+                  setFinalPackage({
+                    ...pack,
+                    id: `final-${pack.id}`,
+                    label: pack.label,
+                  });
+                  setPlanView('final');
+                } : undefined}
                 onSave={(pack) => {
-                  if (planView !== 'final') setFinalPackage(pack);
                   setSaveName(`${eventTypeLabel(brief.eventType)} · ${pack.label}`);
                   setSaveError('');
                   setSaveTarget(pack);
@@ -926,9 +932,9 @@ function ClientMarketplaceInner() {
                 }
                 description={
                   planView === 'ai'
-                    ? 'Lancez une simulation, puis retenez le mix proposé dans cette vue.'
+                    ? 'Décrivez l’événement ci-dessus, lancez la simulation, puis retenez le mix proposé.'
                     : planView === 'final'
-                      ? 'Choisissez un pack dans la simulation sans IA ou avec IA.'
+                      ? 'Choisissez un pack issu de la simulation par critères ou de l’IA.'
                       : 'Indiquez le budget, la date et les métiers, puis lancez la recherche.'
                 }
               />

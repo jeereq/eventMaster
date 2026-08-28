@@ -28,12 +28,14 @@ export default function EventPrepAiSimulator({
   defaults,
   applyLabel = 'Appliquer à la préparation',
   onApply,
+  defaultOpen = false,
 }: {
   defaults?: EventPrepAiDefaults;
   applyLabel?: string;
   onApply: (result: EventPlanAiResult) => void;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
   const [city, setCity] = useState(defaults?.city || '');
   const [commune, setCommune] = useState(defaults?.commune || '');
@@ -92,7 +94,7 @@ export default function EventPrepAiSimulator({
           </p>
         </div>
         <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)}>
-          {open ? 'Fermer' : 'Simuler'}
+          {open ? 'Masquer le brief' : 'Ouvrir le brief'}
         </Button>
       </div>
 

@@ -12,14 +12,11 @@ import {
   Eye,
   Filter,
   KeyRound,
-  ListChecks,
   Loader2,
   MapPin,
-  MousePointerClick,
   Search,
   Sparkles,
   Inbox,
-  Wand2,
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -69,6 +66,7 @@ import EventPrepListingModal, {
 } from '@/components/EventPrepListingModal';
 import EventPrepVendorSheet from '@/components/EventPrepVendorSheet';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
+import EventPlanMethodPicker from '@/components/EventPlanMethodPicker';
 
 type OrgRoomOption = {
   id: string;
@@ -737,17 +735,6 @@ export default function EventPrepPanel({
     { id: 'rental', label: 'Locations', count: rentals.length, icon: KeyRound, hint: 'Le bien loué' },
   ];
   const estimate = eventPrepEstimateFc(working);
-  const viewNav: Array<{
-    id: EventPrepViewId;
-    label: string;
-    hint: string;
-    count: number;
-    icon: typeof MousePointerClick;
-  }> = [
-    { id: 'manual', label: 'Sans IA', hint: 'Catalogue et retenus manuels', count: manualCount, icon: MousePointerClick },
-    { id: 'ai', label: 'Avec IA', hint: 'Simulation et retenus IA', count: aiCount, icon: Wand2 },
-    { id: 'final', label: 'Solution finale', hint: 'Composer à partir des deux vues', count: finalCount, icon: ListChecks },
-  ];
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -755,7 +742,7 @@ export default function EventPrepPanel({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
           <p className="text-sm text-muted">
-            Simulez sans IA ou avec l’IA, puis composez la solution finale utilisée pour les devis et les réservations.
+            Choisissez comment simuler (par critères ou avec l’IA), puis composez la solution finale pour les devis.
             {dateKey ? ` Date : ${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}.` : ''}
           </p>
         </div>
@@ -796,40 +783,16 @@ export default function EventPrepPanel({
         <p className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-[var(--radius-card)] px-4 py-3">{error}</p>
       ) : null}
 
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        <nav className="w-full lg:w-56 shrink-0 lg:sticky lg:top-4 rounded-[var(--radius-card)] border border-border bg-surface p-1.5 flex lg:flex-col gap-1 overflow-x-auto">
-          {viewNav.map((item) => {
-            const Icon = item.icon;
-            const active = view === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => void persist({ ...prep, activeView: item.id })}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-[var(--radius-button)] px-3 py-2.5 text-left transition min-w-[10.5rem] lg:min-w-0',
-                  active ? 'bg-primary/10 text-foreground border border-primary/25' : 'text-muted hover:text-foreground hover:bg-surface-muted/70',
-                )}
-              >
-                <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary' : '')} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold truncate">{item.label}</span>
-                  <span className="block text-[10px] text-muted truncate">{item.hint}</span>
-                </span>
-                <span className={cn(
-                  'min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold inline-flex items-center justify-center',
-                  item.count > 0 ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
-                )}>
-                  {item.count}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
+      <EventPlanMethodPicker
+        value={view}
+        onChange={(next) => void persist({ ...prep, activeView: next })}
+        counts={{ manual: manualCount, ai: aiCount, final: finalCount }}
+      />
 
-        <div className="flex-1 min-w-0 space-y-5">
+      <div className="space-y-5">
       {view === 'ai' ? (
         <EventPrepAiSimulator
+          defaultOpen
           applyLabel="Retenir dans la simulation IA"
           defaults={{
             city: defaultCity,
@@ -1203,7 +1166,6 @@ export default function EventPrepPanel({
           className="mt-2 w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
         />
       </Card>
-        </div>
       </div>
 
       <EventPrepListingModal

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Check, Pin, RefreshCw, Store, Bookmark } from 'lucide-react';
+import { Check, ListChecks, Pin, RefreshCw, Store, Bookmark } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import FavoriteHeart from '@/components/FavoriteHeart';
@@ -129,6 +129,7 @@ export default function EventPlanPacks({
   onToggleFavorite,
   onReplace,
   onSave,
+  onChooseFinal,
   onKeep,
   onWidenSlot,
 }: {
@@ -139,6 +140,7 @@ export default function EventPlanPacks({
   onToggleFavorite: (kind: 'venue' | 'service', slug: string) => void;
   onReplace: (packId: string, currentSlug: string, next: PlanItem) => void;
   onSave?: (pack: PlanPackage) => void;
+  onChooseFinal?: (pack: PlanPackage) => void;
   onKeep?: (item: PlanItem) => void;
   onWidenSlot?: (slot: PlanMissingSlot) => void;
 }) {
@@ -251,10 +253,19 @@ export default function EventPlanPacks({
                 />
               ))}
             </ul>
-            {onSave ? (
-              <Button size="sm" variant="secondary" onClick={() => onSave(pack)} leftIcon={<Bookmark className="w-3.5 h-3.5" />}>
-                Sauvegarder ce pack
-              </Button>
+            {onSave || onChooseFinal ? (
+              <div className="flex flex-wrap gap-2">
+                {onChooseFinal ? (
+                  <Button size="sm" onClick={() => onChooseFinal(pack)} leftIcon={<ListChecks className="w-3.5 h-3.5" />}>
+                    Retenir comme solution finale
+                  </Button>
+                ) : null}
+                {onSave ? (
+                  <Button size="sm" variant="secondary" onClick={() => onSave(pack)} leftIcon={<Bookmark className="w-3.5 h-3.5" />}>
+                    Sauvegarder ce pack
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
           </article>
         );
