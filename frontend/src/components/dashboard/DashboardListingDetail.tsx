@@ -30,7 +30,7 @@ import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { listingPublicUrl } from '@/lib/share';
 import { useListingFavorites } from '@/lib/listingFavorites';
-import { Building2, MapPin, Navigation, Sparkles, Users } from 'lucide-react';
+import { Building2, Navigation, Sparkles } from 'lucide-react';
 
 export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'service' }) {
   const params = useParams();
@@ -152,57 +152,35 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         />
       ) : undefined}
       details={item ? (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {!isPublic && (
             <Badge variant="default">Brouillon — non visible sur le marketplace public</Badge>
           )}
-          <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {venue && formatLocationLine(venue) && (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                <MapPin className="w-3.5 h-3.5" /> {formatLocationLine(venue)}
-                {venue.address ? ` · ${venue.address}` : ''}
-              </span>
-            )}
-            {service && formatLocationLine(service) && (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                <MapPin className="w-3.5 h-3.5" />
-                {formatLocationLine(service)}
-                {` · ${serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)}`}
-              </span>
-            )}
-            {venue?.capacity ? (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                <Users className="w-3.5 h-3.5" /> {venue.capacity} places
-              </span>
+          <p className="text-sm text-muted leading-relaxed">
+            {[
+              venue ? [formatLocationLine(venue), venue.address].filter(Boolean).join(' · ') : null,
+              service ? [formatLocationLine(service), serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)].filter(Boolean).join(' · ') : null,
+              venue?.capacity ? `${venue.capacity} places` : null,
+              quotaLabel,
+            ].filter(Boolean).join(' · ')}
+            {lat != null && lng != null ? (
+              <>
+                {' · '}
+                <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline">
+                  Itinéraire
+                </button>
+              </>
             ) : null}
-            {quotaLabel && (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                {quotaLabel}
-              </span>
-            )}
-            {lat != null && lng != null && (
-              <button
-                type="button"
-                onClick={() => startRoute(item.id)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 min-h-9 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:opacity-95"
-              >
-                <Navigation className="w-3.5 h-3.5" />
-                Itinéraire
-              </button>
-            )}
-          </div>
-
-          {(venue?.description || service?.description) && (
-            <p className="text-sm text-muted leading-relaxed whitespace-pre-line">
+          </p>
+          {(venue?.description || service?.description) ? (
+            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
               {venue?.description || service?.description}
             </p>
-          )}
-
+          ) : null}
           <ListingPublicDetails details={venue?.details || service?.details} kind={kind === 'venue' ? 'venue' : 'service'} />
-
           {venue?.layoutPreview ? (
-            <div className="border border-border rounded-[var(--radius-card)] p-3 sm:p-4 bg-surface -mx-0.5 sm:mx-0">
-              <h2 className="text-sm font-semibold mb-2 sm:mb-3">Rendu de la salle</h2>
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold">Plan de la salle</h2>
               <RoomLayoutPreview
                 blueprint={venue.layoutPreview as RoomLayoutBlueprint}
                 quality="showcase"

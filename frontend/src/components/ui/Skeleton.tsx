@@ -304,69 +304,38 @@ export function SkeletonProfileView() {
 
 export function SkeletonListingDetail() {
   return (
-    <div
-      className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-8 items-start animate-fade-in"
-      role="status"
-      aria-live="polite"
-      aria-label="Chargement de la fiche"
-    >
-      <div className="lg:col-span-3 space-y-3 sm:space-y-5">
-        <Skeleton className="em-listing-hero w-full rounded-[var(--radius-card)]" />
-        <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
-          <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
-          <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
-          <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
-        </div>
-        <div className="flex gap-2 overflow-hidden">
-          <Skeleton className="h-8 w-36 rounded-[var(--radius-button)] shrink-0" />
-          <Skeleton className="h-8 w-24 rounded-[var(--radius-button)] shrink-0" />
-          <Skeleton className="h-8 w-28 rounded-[var(--radius-button)] shrink-0" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-3.5 w-full" />
-          <Skeleton className="h-3.5 w-[92%]" />
-          <Skeleton className="h-3.5 w-4/5" />
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-[var(--radius-card)] border border-border bg-surface p-3 space-y-2">
-              <Skeleton className="h-2.5 w-14" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-          ))}
-        </div>
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-8 w-32 rounded-md" />
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: 35 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-square rounded-md" />
-            ))}
-          </div>
-        </div>
+    <div className="space-y-6 animate-fade-in" role="status" aria-live="polite" aria-label="Chargement de la fiche">
+      <Skeleton className="em-listing-hero w-full rounded-[var(--radius-card)]" />
+      <div className="flex gap-2">
+        <Skeleton className="h-16 w-24 rounded-[var(--radius-button)]" />
+        <Skeleton className="h-16 w-24 rounded-[var(--radius-button)]" />
+        <Skeleton className="h-16 w-24 rounded-[var(--radius-button)]" />
       </div>
-      <aside className="hidden lg:block lg:col-span-2 space-y-4">
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-2">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-7 w-36" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-3">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-10 w-full rounded-[var(--radius-button)]" />
-          <Skeleton className="h-10 w-full rounded-[var(--radius-button)]" />
-          <Skeleton className="h-10 w-full rounded-[var(--radius-button)]" />
-          <div className="grid grid-cols-2 gap-3">
-            <Skeleton className="h-10 w-full rounded-[var(--radius-button)]" />
-            <Skeleton className="h-10 w-full rounded-[var(--radius-button)]" />
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+        <div className="lg:col-span-3 space-y-5">
+          <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
+            <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
+            <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
+            <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
           </div>
-          <Skeleton className="h-24 w-full rounded-[var(--radius-button)]" />
-          <Skeleton className="h-11 w-full rounded-[var(--radius-button)]" />
+          <div className="space-y-2">
+            <Skeleton className="h-3.5 w-2/3" />
+            <Skeleton className="h-3.5 w-full" />
+            <Skeleton className="h-3.5 w-[88%]" />
+          </div>
         </div>
-      </aside>
+        <aside className="hidden lg:block lg:col-span-2 space-y-4">
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-2">
+            <Skeleton className="h-7 w-36" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-3">
+            <Skeleton className="h-10 w-full rounded-[var(--radius-button)]" />
+            <Skeleton className="h-10 w-full rounded-[var(--radius-button)]" />
+            <Skeleton className="h-24 w-full rounded-[var(--radius-button)]" />
+          </div>
+        </aside>
+      </div>
       <span className="sr-only">Chargement de la fiche…</span>
     </div>
   );

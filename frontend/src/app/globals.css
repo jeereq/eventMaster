@@ -1090,14 +1090,18 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-listing-hero {
-  aspect-ratio: 16 / 10;
-  max-height: min(42vh, 280px);
+  height: min(58vh, 22rem);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .em-listing-hero {
-    aspect-ratio: 16 / 9;
-    max-height: none;
+    height: min(74vh, 40rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .em-listing-hero {
+    height: min(82vh, 48rem);
   }
 }
 

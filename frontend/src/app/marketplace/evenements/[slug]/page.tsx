@@ -21,7 +21,7 @@ import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQue
 import { CLIENT_AGENDA_HREF } from '@/lib/marketplace';
 import { useAuth } from '@/context/AuthContext';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Calendar, MapPin, Navigation, Rss, Ticket } from 'lucide-react';
+import { Navigation, Ticket } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 function eventDateKey(iso: string) {
@@ -133,35 +133,26 @@ function MarketplaceEventDetailInner() {
         hideBooking
         inquireLabel={event?.paid ? 'Billet' : 'S’inscrire'}
         details={event ? (
-          <div className="space-y-5">
-            <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                <Calendar className="w-3.5 h-3.5" />
-                {new Date(event.date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}
-              </span>
-              {event.location ? (
-                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                  <MapPin className="w-3.5 h-3.5" /> {event.location}
-                </span>
+          <div className="space-y-6">
+            <p className="text-sm text-muted leading-relaxed">
+              {[
+                new Date(event.date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }),
+                event.location,
+                event.ticketsRemaining != null
+                  ? (event.soldOut ? 'Complet' : `${event.ticketsRemaining} place${event.ticketsRemaining > 1 ? 's' : ''}`)
+                  : null,
+              ].filter(Boolean).join(' · ')}
+              {item && event.latitude != null && event.longitude != null ? (
+                <>
+                  {' · '}
+                  <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline">
+                    Itinéraire
+                  </button>
+                </>
               ) : null}
-              {event.ticketsRemaining != null ? (
-                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                  {event.soldOut ? 'Complet' : `${event.ticketsRemaining} place${event.ticketsRemaining > 1 ? 's' : ''}`}
-                </span>
-              ) : null}
-              {item && event.latitude != null && event.longitude != null && (
-                <button
-                  type="button"
-                  onClick={() => startRoute(item.id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 min-h-9 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:opacity-95"
-                >
-                  <Navigation className="w-3.5 h-3.5" />
-                  Itinéraire
-                </button>
-              )}
-            </div>
+            </p>
             {event.description ? (
-              <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{event.description}</p>
+              <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{event.description}</p>
             ) : (
               <p className="text-sm text-muted">Inscription ouverte au public.</p>
             )}
@@ -173,11 +164,8 @@ function MarketplaceEventDetailInner() {
                 : 'Entrée libre : inscrivez-vous pour recevoir votre badge QR.'}
             </p>
             {posts.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="font-semibold text-foreground inline-flex items-center gap-2 text-sm">
-                  <Rss className="w-4 h-4" />
-                  Actualités
-                </h2>
+              <div className="space-y-4">
+                <h2 className="font-semibold text-foreground text-sm">Actualités</h2>
                 {posts.map((post) => (
                   <PublicFeedPost key={post.id} post={post} />
                 ))}

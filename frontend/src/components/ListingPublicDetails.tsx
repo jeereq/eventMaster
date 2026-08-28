@@ -1,28 +1,30 @@
 'use client';
 
 import React from 'react';
-import { FileText, Info, Phone, Shield, Sparkles, Wallet } from 'lucide-react';
 import {
   amenityLabel,
   eventTypeLabel,
   type ListingDetails,
 } from '@/lib/listingDetails';
 
-function Section({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function Facts({ items }: { items: Array<{ label: string; value: string }> }) {
+  if (!items.length) return null;
   return (
-    <section className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 space-y-2.5">
-      <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
-        <span className="text-primary">{icon}</span>
-        {title}
-      </h2>
+    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5">
+      {items.map((fact) => (
+        <div key={fact.label} className="flex items-baseline justify-between gap-4 sm:block">
+          <dt className="text-xs text-muted">{fact.label}</dt>
+          <dd className="text-sm font-medium text-foreground sm:mt-0.5">{fact.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Block({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       {children}
     </section>
   );
@@ -66,92 +68,50 @@ export default function ListingPublicDetails({
     details.colors ? { label: 'Couleurs', value: details.colors } : null,
     details.dimensions ? { label: 'Dimensions', value: details.dimensions } : null,
     details.capacity ? { label: 'Capacité', value: details.capacity } : null,
-  ].filter(Boolean) as Array<{ label: string; value: string }>;
-
-  const rentalLogistics = [
-    details.securityDepositFc ? { label: 'Caution (FC)', value: Number(details.securityDepositFc).toLocaleString('fr-FR') } : null,
+    details.securityDepositFc ? { label: 'Caution', value: `${Number(details.securityDepositFc).toLocaleString('fr-FR')} FC` } : null,
     details.deliveryMode === 'pickup' ? { label: 'Livraison', value: 'Retrait sur place' } :
     details.deliveryMode === 'included' ? { label: 'Livraison', value: 'Livraison incluse' } :
     details.deliveryMode === 'extra_fee' ? { label: 'Livraison', value: 'En supplément' } : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
+  const allFacts = [...facts, ...rentalFacts];
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
+      {allFacts.length > 0 ? <Facts items={allFacts} /> : null}
+
       {amenities.length > 0 && (
-        <Section title={kind === 'venue' ? 'Équipements' : 'Atouts'} icon={<Sparkles className="w-4 h-4" />}>
-          <div className="flex flex-wrap gap-1.5">
-            {amenities.map((id) => (
-              <span key={id} className="px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-medium bg-surface-muted border border-border">
-                {amenityLabel(id)}
-              </span>
-            ))}
-          </div>
-        </Section>
+        <Block title={kind === 'venue' ? 'Équipements' : 'Atouts'}>
+          <p className="text-sm text-foreground/90 leading-relaxed">
+            {amenities.map((id) => amenityLabel(id)).join(' · ')}
+          </p>
+        </Block>
       )}
       {eventTypes.length > 0 && (
-        <Section title="Types d’événements" icon={<Sparkles className="w-4 h-4" />}>
-          <div className="flex flex-wrap gap-1.5">
-            {eventTypes.map((id) => (
-              <span key={id} className="px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-medium bg-primary/10 text-primary border border-primary/15">
-                {eventTypeLabel(id)}
-              </span>
-            ))}
-          </div>
-        </Section>
+        <Block title="Types d’événements">
+          <p className="text-sm text-foreground/90 leading-relaxed">
+            {eventTypes.map((id) => eventTypeLabel(id)).join(' · ')}
+          </p>
+        </Block>
       )}
-      {facts.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {facts.map((fact) => (
-            <div key={fact.label} className="rounded-[var(--radius-card)] border border-border bg-surface-muted/60 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">{fact.label}</p>
-              <p className="text-sm font-medium text-foreground mt-0.5">{fact.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-      
-      {rentalFacts.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {rentalFacts.map((fact) => (
-            <div key={fact.label} className="rounded-[var(--radius-card)] border border-border bg-primary/5 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wider text-primary/70 font-semibold">{fact.label}</p>
-              <p className="text-sm font-medium text-foreground mt-0.5">{fact.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {rentalLogistics.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {rentalLogistics.map((fact) => (
-            <div key={fact.label} className="rounded-[var(--radius-card)] border border-border bg-amber-50 dark:bg-amber-950/20 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wider text-amber-700/70 dark:text-amber-500/70 font-semibold">{fact.label}</p>
-              <p className="text-sm font-medium text-foreground mt-0.5">{fact.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
       {details.accessories ? (
-        <Section title="Accessoires fournis" icon={<Sparkles className="w-4 h-4" />}>
+        <Block title="Accessoires fournis">
           <p className="text-sm text-muted whitespace-pre-line leading-relaxed">{details.accessories}</p>
-        </Section>
+        </Block>
       ) : null}
-
       {details.returnRules ? (
-        <Section title="Règles de restitution" icon={<Shield className="w-4 h-4" />}>
+        <Block title="Restitution">
           <p className="text-sm text-muted whitespace-pre-line leading-relaxed">{details.returnRules}</p>
-        </Section>
+        </Block>
       ) : null}
-
       {details.included ? (
-        <Section title="Inclus dans le tarif" icon={<Wallet className="w-4 h-4" />}>
+        <Block title="Inclus dans le tarif">
           <p className="text-sm text-muted whitespace-pre-line leading-relaxed">{details.included}</p>
-        </Section>
+        </Block>
       ) : null}
       {hasContact ? (
-        <Section title="Contact" icon={<Phone className="w-4 h-4" />}>
-          <div className="flex flex-col gap-1.5 text-sm">
+        <Block title="Contact">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             {details.contactPhone ? (
               <a href={`tel:${details.contactPhone}`} className="text-primary font-medium hover:underline">
                 {details.contactPhone}
@@ -164,7 +124,7 @@ export default function ListingPublicDetails({
                 rel="noreferrer"
                 className="text-primary font-medium hover:underline"
               >
-                WhatsApp {details.contactWhatsapp}
+                WhatsApp
               </a>
             ) : null}
             {details.instagram ? (
@@ -172,33 +132,33 @@ export default function ListingPublicDetails({
                 href={`https://instagram.com/${details.instagram.replace(/^@/, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-primary font-medium hover:underline"
+                className="text-primary font-medium hover:underline"
               >
                 {details.instagram.startsWith('@') ? details.instagram : `@${details.instagram}`}
               </a>
             ) : null}
           </div>
-        </Section>
+        </Block>
       ) : null}
       {details.accessNotes ? (
-        <Section title="Accès" icon={<Info className="w-4 h-4" />}>
+        <Block title="Accès">
           <p className="text-sm text-muted whitespace-pre-line leading-relaxed">{details.accessNotes}</p>
-        </Section>
+        </Block>
       ) : null}
       {details.extraFees ? (
-        <Section title="Suppléments" icon={<Wallet className="w-4 h-4" />}>
+        <Block title="Suppléments">
           <p className="text-sm text-muted whitespace-pre-line leading-relaxed">{details.extraFees}</p>
-        </Section>
+        </Block>
       ) : null}
       {details.houseRules ? (
-        <Section title="Règles" icon={<FileText className="w-4 h-4" />}>
+        <Block title="Règles">
           <p className="text-sm text-muted whitespace-pre-line leading-relaxed">{details.houseRules}</p>
-        </Section>
+        </Block>
       ) : null}
       {details.cancellation ? (
-        <Section title="Annulation" icon={<Shield className="w-4 h-4" />}>
+        <Block title="Annulation">
           <p className="text-sm text-muted whitespace-pre-line leading-relaxed">{details.cancellation}</p>
-        </Section>
+        </Block>
       ) : null}
     </div>
   );

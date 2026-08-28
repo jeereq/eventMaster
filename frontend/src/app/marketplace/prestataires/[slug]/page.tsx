@@ -21,7 +21,7 @@ import {
   type PublicService,
 } from '@/lib/marketplace';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { MapPin, Navigation, Sparkles, KeyRound } from 'lucide-react';
+import { Navigation, Sparkles, KeyRound } from 'lucide-react';
 
 export default function MarketplaceServiceDetailPage() {
   const params = useParams();
@@ -87,34 +87,25 @@ export default function MarketplaceServiceDetailPage() {
         priceUnitLabel={service?.priceUnitLabel}
         quotaLabel={quotaLabel}
         details={service && item ? (
-          <div className="space-y-5">
-            <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              {formatLocationLine(service) && (
-                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {formatLocationLine(service)}
-                  {` · ${serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)}`}
-                </span>
-              )}
-              {quotaLabel && (
-                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
-                  {quotaLabel}
-                </span>
-              )}
-              {service.latitude != null && service.longitude != null && (
-                <button
-                  type="button"
-                  onClick={() => startRoute(item.id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 min-h-9 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:opacity-95"
-                >
-                  <Navigation className="w-3.5 h-3.5" />
-                  Itinéraire
-                </button>
-              )}
-            </div>
-            {service.description && (
-              <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{service.description}</p>
-            )}
+          <div className="space-y-6">
+            <p className="text-sm text-muted leading-relaxed">
+              {[
+                formatLocationLine(service),
+                serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm),
+                quotaLabel,
+              ].filter(Boolean).join(' · ')}
+              {service.latitude != null && service.longitude != null ? (
+                <>
+                  {' · '}
+                  <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline">
+                    Itinéraire
+                  </button>
+                </>
+              ) : null}
+            </p>
+            {service.description ? (
+              <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{service.description}</p>
+            ) : null}
             <ListingPublicDetails details={service.details} kind="service" />
           </div>
         ) : null}

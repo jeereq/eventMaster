@@ -12,7 +12,48 @@ import { ArrowLeft, Play } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 
-function ListingMediaGallery({
+function ListingPhotoThumbs({
+  photos,
+  photoIndex,
+  onPhotoIndex,
+}: {
+  photos: string[];
+  photoIndex: number;
+  onPhotoIndex: (index: number) => void;
+}) {
+  if (photos.length < 2) return null;
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+      {photos.map((url, i) => (
+        <button
+          key={url}
+          type="button"
+          onClick={() => onPhotoIndex(i)}
+          className={cn(
+            'relative snap-start shrink-0 w-20 sm:w-28 aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+            i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+          )}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={mediaPosterUrl(url)}
+            alt={`Miniature ${i + 1}`}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+          />
+          {isVideoUrl(url) && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+              <Play className="w-3.5 h-3.5 text-white fill-white" />
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ListingMediaGrid({
   photos,
   photoIndex,
   onPhotoIndex,
@@ -23,65 +64,38 @@ function ListingMediaGallery({
   onPhotoIndex: (index: number) => void;
   fallback: React.ReactNode;
 }) {
-  const current = photos[photoIndex];
+  if (!photos.length) {
+    return (
+      <div className="rounded-[var(--radius-card)] bg-surface-muted border border-border h-48 flex items-center justify-center text-muted">
+        {fallback}
+      </div>
+    );
+  }
   return (
-    <div className="space-y-2">
-      <div className="em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
-        {current ? (
-          isVideoUrl(current) ? (
-            <video
-              key={current}
-              src={current}
-              poster={mediaPosterUrl(current)}
-              controls
-              playsInline
-              className="w-full h-full object-contain"
-            />
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {photos.map((url, i) => (
+        <button
+          key={url}
+          type="button"
+          onClick={() => onPhotoIndex(i)}
+          className={cn(
+            'relative aspect-[4/3] rounded-[var(--radius-card)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+            i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+          )}
+        >
+          {isVideoUrl(url) ? (
+            <video src={url} poster={mediaPosterUrl(url)} muted playsInline className="w-full h-full object-cover" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={current}
-              alt="Photo de l’établissement"
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover"
-            />
-          )
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
-            {fallback}
-          </div>
-        )}
-      </div>
-      {photos.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
-          {photos.map((url, i) => (
-            <button
-              key={url}
-              type="button"
-              onClick={() => onPhotoIndex(i)}
-              className={cn(
-                'relative snap-start shrink-0 w-[3.75rem] sm:w-[5.5rem] aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted',
-                i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
-              )}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={mediaPosterUrl(url)}
-                alt={`Miniature ${i + 1}`}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-              {isVideoUrl(url) && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/35">
-                  <Play className="w-3.5 h-3.5 text-white fill-white" />
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+            <img src={url} alt={`Média ${i + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+          )}
+          {isVideoUrl(url) && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <Play className="w-6 h-6 text-white fill-white" />
+            </span>
+          )}
+        </button>
+      ))}
     </div>
   );
 }
@@ -205,20 +219,25 @@ export default function ListingDetailLayout({
   };
 
   const priceBlock = (
-    <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-1">
-      <p className="text-xs text-muted">À partir de</p>
-      <p className="text-2xl font-semibold text-foreground">{priceLabel}</p>
+    <div className="space-y-1">
+      <p className="text-2xl font-semibold text-foreground tracking-tight">{priceLabel}</p>
       {priceUnitLabel ? <p className="text-xs text-muted">{priceUnitLabel}</p> : null}
       {quotaLabel ? <p className="text-xs text-muted">{quotaLabel}</p> : null}
     </div>
   );
 
+  const heroSrc = (photoIndex > 0 && photos[photoIndex]) || heroUrl || photos[0] || null;
+  const cycleHero = () => {
+    if (photos.length < 2) return;
+    onPhotoIndex((photoIndex + 1) % photos.length);
+  };
+
   return (
-    <main className={embedded ? 'pb-8 sm:pb-10 flex-1' : 'page-container pt-3 pb-20 sm:pt-6 lg:py-10 lg:pb-10 flex-1'}>
+    <main className={embedded ? 'pb-8 sm:pb-10 flex-1' : 'page-container pt-3 pb-20 sm:pt-5 lg:py-8 lg:pb-10 flex-1'}>
       <button
         type="button"
         onClick={goBack}
-        className="inline-flex items-center gap-1.5 min-h-9 -ml-1 px-1 text-xs font-semibold text-muted hover:text-foreground mb-2 sm:mb-5"
+        className="inline-flex items-center gap-1.5 min-h-9 -ml-1 px-1 text-xs font-semibold text-muted hover:text-foreground mb-3"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         {backLabel}
@@ -233,75 +252,91 @@ export default function ListingDetailLayout({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 lg:gap-8 items-start">
-            <div className="lg:col-span-3 space-y-3 sm:space-y-5 min-w-0">
-              <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border shadow-[var(--shadow-soft)]">
-                {heroUrl ? (
-                  isVideoUrl(heroUrl) ? (
-                    <video src={heroUrl} poster={mediaPosterUrl(heroUrl)} className="w-full h-full object-cover" muted playsInline />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={heroUrl}
-                      alt={title || "Visuel principal de l'établissement"}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                    />
-                  )
+          <div className="space-y-3 mb-6 lg:mb-8">
+            <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-black/80 shadow-[var(--shadow-soft)]">
+              {heroSrc ? (
+                isVideoUrl(heroSrc) ? (
+                  <video
+                    src={heroSrc}
+                    poster={mediaPosterUrl(heroSrc)}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    controls
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
-                    {fallbackIcon}
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                {heroAction || title ? (
-                  <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-                    {heroAction}
-                    {title ? (
-                      <ShareButton
-                        title={listingShareTitle(shareKind, title)}
-                        text={subtitle ? `${chip ? `${chip} · ` : ''}${subtitle}` : chip}
-                        url={shareHref}
-                        variant="icon"
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-                <div className="absolute inset-x-0 bottom-0 p-3 sm:p-6 text-white space-y-0.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">{chip}</p>
-                  <h1 className="text-lg sm:text-3xl font-semibold tracking-tight drop-shadow leading-tight">
-                    {title}
-                  </h1>
-                  <p className="text-xs sm:text-sm text-white/85 truncate">{subtitle}</p>
-                  <p className="lg:hidden text-sm font-semibold pt-1">
-                    {priceLabel}
-                    {priceUnitLabel ? <span className="text-[11px] font-normal text-white/75"> · {priceUnitLabel}</span> : null}
-                  </p>
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={heroSrc}
+                    alt={title || "Visuel principal de l'établissement"}
+                    onClick={photos.length > 1 ? cycleHero : undefined}
+                    className={cn('w-full h-full object-cover', photos.length > 1 && 'cursor-pointer')}
+                  />
+                )
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
+                  {fallbackIcon}
                 </div>
+              )}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+              {heroAction || title ? (
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                  {heroAction}
+                  {title ? (
+                    <ShareButton
+                      title={listingShareTitle(shareKind, title)}
+                      text={subtitle ? `${chip ? `${chip} · ` : ''}${subtitle}` : chip}
+                      url={shareHref}
+                      variant="icon"
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7 text-white">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight drop-shadow leading-[1.1]">
+                  {title}
+                </h1>
+                {(chip || subtitle) ? (
+                  <p className="mt-1.5 text-sm sm:text-base text-white/85 truncate">
+                    {[chip, subtitle].filter(Boolean).join(' · ')}
+                  </p>
+                ) : null}
               </div>
+            </div>
+            {photos.length > 1 ? (
+              <ListingPhotoThumbs
+                photos={photos}
+                photoIndex={photoIndex}
+                onPhotoIndex={onPhotoIndex}
+              />
+            ) : null}
+          </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10 items-start">
+            <div className="lg:col-span-3 space-y-5 min-w-0">
               <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
                 <MarketplaceFormTabs value={tab} onChange={onTab} />
               </div>
 
-              {tab === 'medias' && (
-                <ListingMediaGallery
+              {tab === 'medias' ? (
+                <ListingMediaGrid
                   photos={photos}
                   photoIndex={photoIndex}
                   onPhotoIndex={onPhotoIndex}
                   fallback={fallbackIcon}
                 />
-              )}
+              ) : null}
               {tab === 'details' && details}
               {tab === 'map' && map}
             </div>
 
             <aside
               id="listing-contact"
-              className="lg:col-span-2 space-y-3 sm:space-y-4 lg:sticky lg:top-24 scroll-mt-24"
+              className="lg:col-span-2 space-y-5 lg:sticky lg:top-24 scroll-mt-24"
             >
-              <div className="hidden lg:block">{priceBlock}</div>
+              <div className="hidden lg:block border border-border rounded-[var(--radius-card)] p-5 bg-surface">
+                {priceBlock}
+              </div>
 
               {availability ? (
                 <div id="listing-availability" className="scroll-mt-24">
@@ -312,7 +347,7 @@ export default function ListingDetailLayout({
               {showCommerce ? (
                 <>
               {showBooking ? (
-              <div className="lg:hidden flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
+              <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
                 <button
                   type="button"
                   onClick={() => setMobileAction('inquire')}
@@ -340,11 +375,11 @@ export default function ListingDetailLayout({
               </div>
               ) : null}
 
-              <div className={cn(!showBooking || mobileAction === 'inquire' ? 'block' : 'hidden', 'lg:block')}>
+              <div className={cn(!showBooking || mobileAction === 'inquire' ? 'block' : 'hidden')}>
                 {inquiry}
               </div>
               {showBooking ? (
-              <div className={cn(mobileAction === 'book' ? 'block' : 'hidden', 'lg:block')}>
+              <div className={cn(mobileAction === 'book' ? 'block' : 'hidden')}>
                 {booking}
               </div>
               ) : null}
@@ -356,7 +391,6 @@ export default function ListingDetailLayout({
               ) : null}
             </aside>
           </div>
-
         </>
       )}
 
