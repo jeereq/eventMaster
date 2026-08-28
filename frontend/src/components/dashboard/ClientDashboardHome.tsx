@@ -344,8 +344,8 @@ export default function ClientDashboardHome() {
               <span className="text-xs text-muted">· Événements &amp; Marketplace</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              Bonjour, {user?.name || 'Cher invité'} 👋
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate max-w-xl">
+              Bonjour, {(user?.name || 'Cher invité').split(' ')[0]} 👋
             </h1>
             <p className="text-sm text-muted leading-relaxed">
               Définissez votre priorité du moment pour explorer nos meilleures salles, prestataires,
@@ -369,7 +369,7 @@ export default function ClientDashboardHome() {
               onClick={() => router.push('/dashboard/catalogue?tab=packs')}
               leftIcon={<Bookmark className="w-4 h-4 text-primary" />}
             >
-              Mes Packs ({stats.packsCount})
+              Mes Packs {stats.loading ? '' : `(${stats.packsCount})`}
             </Button>
             <Button
               variant="secondary"
@@ -385,7 +385,7 @@ export default function ClientDashboardHome() {
               onClick={() => router.push('/dashboard/tickets')}
               leftIcon={<Ticket className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
             >
-              Mes Billets ({stats.ticketsCount})
+              Mes Billets {stats.loading ? '' : `(${stats.ticketsCount})`}
             </Button>
           </div>
         </div>
@@ -426,7 +426,13 @@ export default function ClientDashboardHome() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl font-black text-foreground">{stats.packsCount}</p>
+            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
+              {stats.loading ? (
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+              ) : (
+                stats.packsCount.toLocaleString('fr-FR')
+              )}
+            </p>
             <p className="text-xs text-muted mt-0.5">Packs créés &amp; simulateur IA</p>
           </div>
         </Link>
@@ -443,7 +449,13 @@ export default function ClientDashboardHome() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl font-black text-foreground">{stats.ticketsCount}</p>
+            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
+              {stats.loading ? (
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+              ) : (
+                stats.ticketsCount.toLocaleString('fr-FR')
+              )}
+            </p>
             <p className="text-xs text-muted mt-0.5">Accès QR &amp; e-billets payés</p>
           </div>
         </Link>
@@ -460,7 +472,13 @@ export default function ClientDashboardHome() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl font-black text-foreground">{stats.quotesCount}</p>
+            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
+              {stats.loading ? (
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+              ) : (
+                stats.quotesCount.toLocaleString('fr-FR')
+              )}
+            </p>
             <p className="text-xs text-muted mt-0.5">Demandes aux prestataires</p>
           </div>
         </Link>
@@ -477,7 +495,13 @@ export default function ClientDashboardHome() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl font-black text-foreground">{stats.bookingsCount}</p>
+            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
+              {stats.loading ? (
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+              ) : (
+                stats.bookingsCount.toLocaleString('fr-FR')
+              )}
+            </p>
             <p className="text-xs text-muted mt-0.5">Dates confirmées &amp; acomptes</p>
           </div>
         </Link>
@@ -494,7 +518,13 @@ export default function ClientDashboardHome() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl font-black text-foreground">{favoriteItems.length}</p>
+            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
+              {stats.loading ? (
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+              ) : (
+                favoriteItems.length.toLocaleString('fr-FR')
+              )}
+            </p>
             <p className="text-xs text-muted mt-0.5">Salles &amp; pros mis de côté</p>
           </div>
         </Link>

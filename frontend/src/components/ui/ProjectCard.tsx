@@ -202,7 +202,9 @@ export function ProjectCard({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={coverUrl}
-      alt=""
+      alt={title ? `Visuel de ${title}` : 'Visuel de l’élément'}
+      loading="lazy"
+      decoding="async"
       className="w-full h-full object-cover transition duration-500 group-hover:scale-110"
     />
   ) : cover ? (
@@ -239,7 +241,13 @@ export function ProjectCard({
           <div className="w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
             {coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+              <img
+                src={coverUrl}
+                alt={title ? `Visuel de ${title}` : 'Visuel de l’élément'}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
             ) : cover ? (
               <div className="w-full h-full">{cover}</div>
             ) : (
