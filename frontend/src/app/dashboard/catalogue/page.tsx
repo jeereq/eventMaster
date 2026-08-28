@@ -23,6 +23,8 @@ import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/Catalog
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { CatalogueFocusStage } from '@/components/CatalogueSearchLayout';
+import CatalogueMobileExplore from '@/components/CatalogueMobileExplore';
+import useIsMobile from '@/hooks/useIsMobile';
 import {
   EMPTY_CATALOGUE_GEO,
   appendCatalogueGeoParams,
@@ -115,6 +117,7 @@ function ClientMarketplaceInner() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
   const lastBrowseRef = useRef<Exclude<import('@/lib/marketplace').CatalogueViewMode, 'map' | 'focus'>>('grid');
   const { q: query, setQ: setQuery, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
@@ -433,15 +436,6 @@ function ClientMarketplaceInner() {
     if (mode === 'grid' || mode === 'list') lastBrowseRef.current = mode;
   }, [mode]);
 
-  useEffect(() => {
-    if (!focusMode) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [focusMode]);
-
   const kindPills = (
     <div className="flex flex-wrap items-center gap-1.5">
       {KIND_FILTER_OPTIONS.map((item) => {
@@ -529,34 +523,6 @@ function ClientMarketplaceInner() {
 
   return (
     <div className="space-y-6 w-full">
-      {focusMode ? (
-        <CatalogueFocusStage
-          className="fixed inset-0 z-50 min-h-dvh bg-background"
-          markers={markers}
-          loading={loading}
-          error={filterError}
-          searchCenter={searchCenter}
-          radiusKm={applied.radiusKm}
-          city={applied.city}
-          searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
-          header={
-            <div className="flex items-start gap-2">
-              <p className="flex-1 min-w-0 h-9 inline-flex items-center px-3 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground">
-                Vue focus — salles, prestataires, locations et événements
-              </p>
-              <button
-                type="button"
-                onClick={() => setView(lastBrowseRef.current)}
-                className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Minimize2 className="w-3.5 h-3.5" />
-                Quitter
-              </button>
-            </div>
-          }
-          filters={exploreFilterBar('float')}
-        />
-      ) : null}
       <PageHeader
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Agenda' : 'Marketplace'}
         description={
@@ -616,49 +582,118 @@ function ClientMarketplaceInner() {
         ))}
       </div>
 
-      {tab === 'explore' && !focusMode ? (
-        <>
-          {exploreFilterBar('card')}
-
-          {loading ? (
-            <CatalogueResultsSkeleton mode={mapMode ? 'map' : mode === 'list' ? 'list' : 'grid'} count={pageSize} gridCols={gridCols} />
-          ) : mapMode ? (
-            markers.length === 0 ? (
-              <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond à cette recherche." />
-            ) : (
-              <MarketplaceLocationsMap
+      {tab === 'explore' ? (
+        isMobile && (mapMode || focusMode) ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-border text-xs font-bold text-foreground shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Mode Carte &amp; Explorer</span>
+                <span className="text-muted font-normal">· {visible.length} fiches</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setView(lastBrowseRef.current)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted transition touch-manipulation cursor-pointer"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                Quitter
+              </button>
+            </div>
+            <div className="relative w-full h-[calc(100dvh-14rem)] min-h-[460px] rounded-2xl overflow-hidden border border-border shadow-md">
+              <CatalogueMobileExplore
+                items={visible}
                 markers={markers}
-                listingSearch
-                navigateOnClick
-                height={480}
+                loading={loading}
+                error={filterError}
                 searchCenter={searchCenter}
-                radiusKm={searchCenter ? applied.radiusKm : 0}
+                radiusKm={applied.radiusKm}
                 city={applied.city}
                 searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
-              />
-            )
-          ) : (
-            <div className="space-y-3">
-              <CatalogueResults
-                items={paginateItems(visible, page, pageSize)}
-                mode={mode === 'list' ? 'list' : 'grid'}
-                gridCols={gridCols}
-                emptyTitle="Aucune fiche pour cette recherche"
-                emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles, prestataires, locations et événements."
-                isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
-                onToggleFavorite={onToggleFavorite}
-              />
-              <Pagination
-                page={page}
-                pageSize={pageSize}
-                total={visible.length}
-                onPageChange={setPage}
-                onPageSizeChange={setPageSize}
-                itemLabel="fiches"
+                onExit={() => setView(lastBrowseRef.current)}
+                filters={exploreFilterBar('float')}
+                emptyTitle="Aucune fiche géolocalisée"
+                emptyDescription="Élargissez les filtres ou changez de ville pour trouver des établissements."
               />
             </div>
-          )}
-        </>
+          </div>
+        ) : focusMode ? (
+          <div className="space-y-3">
+            <CatalogueFocusStage
+              className="h-[calc(100dvh-14rem)] min-h-[580px] w-full rounded-2xl overflow-hidden border border-border relative isolate shadow-lg"
+              markers={markers}
+              loading={loading}
+              error={filterError}
+              listingSearch={false}
+              navigateOnClick={false}
+              searchCenter={searchCenter}
+              radiusKm={applied.radiusKm}
+              city={applied.city}
+              searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+              header={
+                <div className="flex items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Mode Focus · Carte interactive</span>
+                    <span className="text-muted font-normal">({visible.length} fiches)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setView(lastBrowseRef.current)}
+                    className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground hover:bg-surface hover:text-primary transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    <Minimize2 className="w-3.5 h-3.5" />
+                    Quitter le focus
+                  </button>
+                </div>
+              }
+              filters={exploreFilterBar('float')}
+            />
+          </div>
+        ) : (
+          <>
+            {exploreFilterBar('card')}
+
+            {loading ? (
+              <CatalogueResultsSkeleton mode={mapMode ? 'map' : mode === 'list' ? 'list' : 'grid'} count={pageSize} gridCols={gridCols} />
+            ) : mapMode ? (
+              markers.length === 0 ? (
+                <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond à cette recherche." />
+              ) : (
+                <MarketplaceLocationsMap
+                  markers={markers}
+                  listingSearch
+                  navigateOnClick={false}
+                  height={500}
+                  searchCenter={searchCenter}
+                  radiusKm={searchCenter ? applied.radiusKm : 0}
+                  city={applied.city}
+                  searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+                />
+              )
+            ) : (
+              <div className="space-y-3">
+                <CatalogueResults
+                  items={paginateItems(visible, page, pageSize)}
+                  mode={mode === 'list' ? 'list' : 'grid'}
+                  gridCols={gridCols}
+                  emptyTitle="Aucune fiche pour cette recherche"
+                  emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles, prestataires, locations et événements."
+                  isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
+                  onToggleFavorite={onToggleFavorite}
+                />
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={visible.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="fiches"
+                />
+              </div>
+            )}
+          </>
+        )
       ) : null}
 
       {tab === 'favorites' ? (

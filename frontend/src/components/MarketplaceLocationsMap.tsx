@@ -240,24 +240,25 @@ function MarkerPreviewCard({
 
   return (
     <div
-      className="absolute z-[500] left-3 right-3 bottom-3 sm:left-auto sm:right-3 sm:w-[22rem] rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden max-h-[46%] overflow-y-auto pointer-events-auto"
+      className="absolute z-[1200] left-3 right-3 bottom-3 sm:left-auto sm:right-4 sm:w-[23rem] rounded-2xl border border-border bg-surface/98 backdrop-blur-xl shadow-2xl overflow-hidden max-h-[calc(100%-5rem)] sm:max-h-[500px] flex flex-col pointer-events-auto transition-all animate-fade-in"
       onMouseEnter={onKeep}
       onMouseLeave={onHide}
     >
       <button
         type="button"
         onClick={onClose}
-        className="absolute z-10 top-2 right-2 p-1.5 rounded-lg bg-surface/95 text-muted hover:text-foreground border border-border shadow-sm"
+        className="absolute z-10 top-2.5 right-2.5 p-1.5 rounded-full bg-surface/90 backdrop-blur-md text-muted hover:text-foreground border border-border shadow-md transition"
         aria-label="Fermer les détails"
       >
         <X className="w-4 h-4" />
       </button>
+
       <MarkerPhotoGallery
         key={marker.id}
         urls={markerImageUrls(marker)}
         fallbackIcon={
           <div className={cn(
-            'h-16 w-full flex items-center justify-center',
+            'h-24 w-full flex items-center justify-center',
             isEvent
               ? 'bg-emerald-50 text-emerald-700'
               : isRental
@@ -266,14 +267,15 @@ function MarkerPreviewCard({
                 ? 'bg-[color:var(--festive-accent)]/12 text-[color:var(--festive-accent)]'
                 : 'bg-primary/10 text-primary',
           )}>
-            <KindIcon className="w-7 h-7" />
+            <KindIcon className="w-8 h-8" />
           </div>
         }
       />
-      <div className="p-3 space-y-2">
+
+      <div className="p-3.5 space-y-2.5 overflow-y-auto flex-1 min-h-0">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className={cn(
-            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border',
+            'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
             isEvent
               ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
               : isRental
@@ -295,17 +297,22 @@ function MarkerPreviewCard({
             <span className="text-[10px] font-semibold text-primary">{distance}</span>
           ) : null}
           {pinned ? (
-            <span className="text-[10px] text-muted">Reste affichée</span>
+            <span className="text-[10px] text-muted">Épinglé</span>
           ) : null}
         </div>
-        <h3 className="font-semibold text-sm text-foreground leading-snug">{marker.title}</h3>
-        {marker.orgName ? <p className="text-xs text-muted truncate">{marker.orgName}</p> : null}
+
+        <div>
+          <h3 className="font-bold text-sm text-foreground leading-snug">{marker.title}</h3>
+          {marker.orgName ? <p className="text-xs text-muted truncate mt-0.5">{marker.orgName}</p> : null}
+        </div>
+
         {(marker.location || marker.address) ? (
-          <p className="text-xs text-muted inline-flex items-start gap-1">
-            <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
-            <span>{[marker.address, marker.location].filter(Boolean).join(' · ')}</span>
+          <p className="text-xs text-muted inline-flex items-start gap-1.5">
+            <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary" />
+            <span className="line-clamp-2">{[marker.address, marker.location].filter(Boolean).join(' · ')}</span>
           </p>
         ) : null}
+
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
           {marker.capacity ? (
             <span className="inline-flex items-center gap-1">
@@ -323,24 +330,30 @@ function MarkerPreviewCard({
             <span>{marker.travels ? 'Livraison possible' : 'Bien à récupérer'}</span>
           ) : null}
         </div>
+
         {marker.priceLabel ? (
-          <p className="text-sm font-semibold text-foreground">
-            {marker.priceLabel}
-            {marker.priceUnitLabel ? <span className="block text-[11px] font-normal text-muted">{marker.priceUnitLabel}</span> : null}
-          </p>
+          <div className="pt-0.5">
+            <p className="text-sm font-bold text-foreground">
+              {marker.priceLabel}
+              {marker.priceUnitLabel ? <span className="ml-1 text-[11px] font-normal text-muted">({marker.priceUnitLabel})</span> : null}
+            </p>
+          </div>
         ) : null}
-        <div className="flex flex-wrap gap-2 pt-1">
+
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/70">
           {navigatingHere ? (
-            <Button size="sm" variant="secondary" onClick={onCancelNavigation}>
-              Annuler la navigation
+            <Button size="sm" variant="secondary" onClick={onCancelNavigation} className="flex-1 text-xs">
+              Annuler
             </Button>
           ) : (
-            <Button size="sm" onClick={() => onDirections(marker)} leftIcon={<Navigation className="w-3.5 h-3.5" />}>
-              {navigationActive ? 'Itinéraire vers ici' : 'Lancer la navigation'}
+            <Button size="sm" onClick={() => onDirections(marker)} leftIcon={<Navigation className="w-3.5 h-3.5" />} className="flex-1 text-xs font-bold">
+              {navigationActive ? 'Itinéraire' : 'Navigation'}
             </Button>
           )}
-          <Link href={marker.href} className="inline-flex">
-            <Button size="sm" variant="secondary">Voir la fiche</Button>
+          <Link href={marker.href} className="inline-flex flex-1">
+            <Button size="sm" variant="secondary" fullWidth className="text-xs font-bold">
+              Voir la fiche
+            </Button>
           </Link>
         </div>
       </div>
