@@ -241,7 +241,13 @@ export default function ListingDetailLayout({
                     <video src={heroUrl} poster={mediaPosterUrl(heroUrl)} className="w-full h-full object-cover" muted playsInline />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={heroUrl} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={heroUrl}
+                      alt={title || "Visuel principal de l'établissement"}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
                   )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">

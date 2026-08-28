@@ -500,90 +500,6 @@ export default function ClientDashboardHome() {
         </Link>
       </div>
 
-      {/* ─── BANNIÈRE DÉDIÉE : SIMULATEUR DE PACKS & ACCÈS DIRECT ─── */}
-      <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-primary/25 bg-linear-to-r from-primary/10 via-surface to-emerald-500/10 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-primary text-white shadow-xs">
-                <Sparkles className="w-3.5 h-3.5" />
-                Simulateur Intelligent
-              </span>
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                Budget en Francs Congolais (CDF)
-              </span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-bold text-foreground">
-              Créez votre Pack Événement ou retrouvez vos packs enregistrés
-            </h2>
-            <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Assemblez automatiquement une salle, un traiteur, un décorateur et une sonorisation selon votre enveloppe budgétaire. Comparez les totaux et lancez vos devis en 1 clic.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
-              leftIcon={<Wand2 className="w-4 h-4" />}
-              className="font-bold shadow-md shadow-primary/20"
-            >
-              Lancer la simulation IA
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => router.push('/dashboard/catalogue?tab=packs')}
-              leftIcon={<Bookmark className="w-4 h-4" />}
-            >
-              Voir mes packs ({stats.packsCount})
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-border/80">
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai"
-            className="p-3.5 rounded-xl bg-surface border border-border hover:border-primary hover:bg-primary/5 transition flex items-center gap-3 group touch-manipulation"
-          >
-            <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-foreground truncate">1. Simulation IA Express</p>
-              <p className="text-[11px] text-muted truncate">Composé selon votre budget max</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=manual"
-            className="p-3.5 rounded-xl bg-surface border border-border hover:border-primary hover:bg-primary/5 transition flex items-center gap-3 group touch-manipulation"
-          >
-            <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-              <SlidersHorizontal className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-foreground truncate">2. Simulation par filtres</p>
-              <p className="text-[11px] text-muted truncate">Sélection personnalisée des métiers</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/catalogue?tab=packs"
-            className="p-3.5 rounded-xl bg-surface border border-border hover:border-primary hover:bg-primary/5 transition flex items-center gap-3 group touch-manipulation"
-          >
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-              <Bookmark className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-foreground truncate">3. Mes Packs sauvegardés</p>
-              <p className="text-[11px] text-muted truncate">{stats.packsCount} pack{stats.packsCount > 1 ? 's' : ''} disponible{stats.packsCount > 1 ? 's' : ''}</p>
-            </div>
-          </Link>
-        </div>
-      </div>
-
       {/* ─── SÉLECTEUR D'OBJECTIFS / RAISON D'ÊTRE CLIENT ─── */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -593,7 +509,7 @@ export default function ClientDashboardHome() {
               Que cherchez-vous en premier ?
             </h2>
             <p className="text-xs text-muted">
-              Sélectionnez votre besoin principal pour afficher les raccourcis et filtres optimisés.
+              Sélectionnez votre priorité du moment pour afficher les raccourcis et actions dédiées.
             </p>
           </div>
           <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full self-start sm:self-auto">
@@ -777,43 +693,30 @@ export default function ClientDashboardHome() {
         </div>
       </div>
 
-      {/* ─── DÉCOUVRIR LE MARKETPLACE EN 3 ÉTAPES CLÉS ─── */}
-      <div className="p-5 sm:p-6 rounded-2xl border border-border bg-surface space-y-4">
-        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-          <Zap className="w-4 h-4 text-amber-500" />
-          Comment profiter au maximum d’EventMaster ?
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border space-y-2">
-            <div className="w-6 h-6 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs">
-              1
-            </div>
-            <h4 className="font-bold text-foreground">Explorez ou Simulez un Pack</h4>
-            <p className="text-muted leading-relaxed">
-              Consultez les fiches de salles et traiteurs ou lancez notre simulateur IA pour concevoir un pack complet selon votre budget.
-            </p>
+      {/* ─── GUIDE RAPIDE & ASSISTANCE ─── */}
+      <div className="p-4 sm:p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <Zap className="w-4 h-4" />
           </div>
-
-          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border space-y-2">
-            <div className="w-6 h-6 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs">
-              2
-            </div>
-            <h4 className="font-bold text-foreground">Demandez des Devis gratuits</h4>
-            <p className="text-muted leading-relaxed">
-              Envoyez vos demandes de dates directement aux prestataires ou validez vos packs créés et suivez leurs réponses en direct.
-            </p>
+          <div>
+            <p className="text-xs font-bold text-foreground">Besoin d’aide pour organiser votre événement ?</p>
+            <p className="text-[11px] text-muted">Consultez notre guide ou contactez le support pour vous accompagner dans le choix de vos prestataires.</p>
           </div>
-
-          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border space-y-2">
-            <div className="w-6 h-6 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs">
-              3
-            </div>
-            <h4 className="font-bold text-foreground">Passez à l’Abonnement si besoin</h4>
-            <p className="text-muted leading-relaxed">
-              Pour envoyer des faire-part WhatsApp, gérer vos invités RSVP et scanner les badges QR à l’entrée, activez un forfait Organisateur.
-            </p>
-          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+          <Link
+            href="/dashboard/guide"
+            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl border border-border hover:bg-surface-muted text-xs font-semibold text-foreground transition"
+          >
+            Guide utilisateur
+          </Link>
+          <Link
+            href="/dashboard/catalogue"
+            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs"
+          >
+            Explorer le catalogue
+          </Link>
         </div>
       </div>
     </div>
