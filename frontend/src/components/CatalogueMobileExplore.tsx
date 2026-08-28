@@ -61,7 +61,13 @@ function StoryCard({
         <div className="relative h-16 bg-surface-muted">
           {item.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
+            <img
+              src={item.coverUrl}
+              alt={item.title || "Visuel de l'établissement"}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className={cn('w-full h-full flex items-center justify-center', accent.cover)}>
               <Icon className="w-7 h-7" strokeWidth={2.2} />
@@ -135,7 +141,13 @@ function SheetRow({
       <div className="relative w-[4.5rem] h-14 rounded-md overflow-hidden bg-surface-muted shrink-0">
         {item.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
+          <img
+            src={item.coverUrl}
+            alt={item.title || "Visuel de l'établissement"}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className={cn('w-full h-full flex items-center justify-center', accent.cover)}>
             <Icon className="w-5 h-5" strokeWidth={2.2} />
@@ -332,8 +344,12 @@ export default function CatalogueMobileExplore({
         <button
           type="button"
           onClick={() => mapApi.current?.recenter()}
-          className="absolute z-10 right-3 h-10 w-10 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground"
-          style={{ bottom: sheetH + 12, transition: dragging ? 'none' : 'bottom 0.32s cubic-bezier(0.22, 1, 0.36, 1)' }}
+          className="absolute z-10 right-3 bottom-3 h-10 w-10 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground touch-manipulation active:scale-95"
+          style={{
+            transform: `translateY(-${sheetH}px)`,
+            transition: dragging ? 'none' : 'transform 0.32s cubic-bezier(0.22, 1, 0.36, 1)',
+            willChange: dragging ? 'transform' : 'auto',
+          }}
           aria-label="Recentrer la carte"
         >
           <Locate className="w-4 h-4" />
@@ -346,7 +362,10 @@ export default function CatalogueMobileExplore({
         style={{
           height: sheetH,
           paddingBottom: 'env(safe-area-inset-bottom)',
+          /* impeccable-disable-next-line layout-transition */
           transition: dragging ? 'none' : 'height 0.32s cubic-bezier(0.22, 1, 0.36, 1)',
+          contain: 'layout style',
+          willChange: dragging ? 'height' : 'auto',
         }}
       >
         <div

@@ -135,12 +135,18 @@ function vendorFromPublic(service: PublicService): EventPrepVendor {
   };
 }
 
-function Cover({ src, fallback }: { src?: string | null; fallback: React.ReactNode }) {
+function Cover({ src, fallback, alt = 'Visuel' }: { src?: string | null; fallback: React.ReactNode; alt?: string }) {
   return (
     <div className="w-12 h-12 rounded-[var(--radius-card)] overflow-hidden bg-surface-muted shrink-0">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="w-full h-full object-cover" />
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover"
+        />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-muted">{fallback}</div>
       )}

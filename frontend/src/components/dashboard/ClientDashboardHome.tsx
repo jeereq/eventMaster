@@ -206,7 +206,7 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
     description:
       'Trouvez tout le matériel nécessaire pour équiper votre lieu : tentes, groupes électrogènes, éclairage et véhicules de prestige.',
     icon: Truck,
-    accentColor: 'from-purple-500/10 to-violet-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400',
+    accentColor: 'from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300',
     ctaLabel: 'Explorer les offres de location',
     ctaHref: '/dashboard/catalogue?kind=rental',
     quickFilters: [
@@ -612,7 +612,7 @@ export default function ClientDashboardHome() {
                 type="button"
                 onClick={() => handleSelectIntent(intent.id)}
                 className={cn(
-                  'p-3 sm:p-3.5 rounded-xl border text-left transition flex flex-col justify-between gap-2 touch-manipulation cursor-pointer relative',
+                  'p-3 sm:p-3.5 rounded-xl border text-left transition flex flex-col justify-between gap-2 touch-manipulation cursor-pointer relative focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                   isSelected
                     ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary'
                     : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40',

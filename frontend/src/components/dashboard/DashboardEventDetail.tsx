@@ -34,12 +34,19 @@ function PublicFeedPost({ post }: { post: PublicEventPost }) {
       {post.content && <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{post.content}</p>}
       {post.media.length > 0 && (
         <div className={cn('grid gap-1 rounded-[var(--radius-button)] overflow-hidden', post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
-          {post.media.map((media) =>
+          {post.media.map((media, mIdx) =>
             media.type === 'VIDEO' ? (
               <video key={media.url} src={media.url} controls className="w-full max-h-72 object-contain bg-black" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={media.url} src={media.url} alt="" className="w-full max-h-72 object-cover" />
+              <img
+                key={media.url}
+                src={media.url}
+                alt={`Média publication ${mIdx + 1}`}
+                loading="lazy"
+                decoding="async"
+                className="w-full max-h-72 object-cover"
+              />
             ),
           )}
         </div>

@@ -34,7 +34,13 @@ function Cover({ item, className }: { item: CatalogueItem; className?: string })
   if (item.coverUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={item.coverUrl} alt="" className={cn('object-cover transition duration-500 group-hover:scale-110', className)} />
+      <img
+        src={item.coverUrl}
+        alt={item.title || "Visuel de l'établissement"}
+        loading="lazy"
+        decoding="async"
+        className={cn('object-cover transition duration-500 group-hover:scale-110', className)}
+      />
     );
   }
   return (

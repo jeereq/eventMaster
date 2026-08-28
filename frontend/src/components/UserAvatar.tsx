@@ -41,7 +41,13 @@ export default function UserAvatar({
     >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="w-full h-full object-cover" />
+        <img
+          src={src}
+          alt={name ? `Avatar de ${name}` : 'Avatar utilisateur'}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover"
+        />
       ) : (
         initialsFrom(name)
       )}

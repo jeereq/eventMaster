@@ -39,7 +39,13 @@ function ListingMediaGallery({
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={current} alt="" className="w-full h-full object-cover" />
+            <img
+              src={current}
+              alt="Photo de l’établissement"
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           )
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
@@ -60,7 +66,13 @@ function ListingMediaGallery({
               )}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={mediaPosterUrl(url)} alt="" className="w-full h-full object-cover" />
+              <img
+                src={mediaPosterUrl(url)}
+                alt={`Miniature ${i + 1}`}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
               {isVideoUrl(url) && (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/35">
                   <Play className="w-3.5 h-3.5 text-white fill-white" />

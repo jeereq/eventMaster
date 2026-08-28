@@ -298,7 +298,13 @@ function AiPickRow({
       <div className="w-11 h-11 rounded-lg overflow-hidden bg-surface-muted shrink-0">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={cover} alt="" className="w-full h-full object-cover" />
+          <img
+            src={cover}
+            alt={title ? `Visuel de ${title}` : 'Visuel du service'}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted">{icon}</div>
         )}

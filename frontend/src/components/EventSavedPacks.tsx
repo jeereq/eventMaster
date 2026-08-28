@@ -165,7 +165,13 @@ export default function EventSavedPacks({
                     <div className="w-8 h-8 rounded-md overflow-hidden bg-surface-muted shrink-0">
                       {item.coverUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={item.coverUrl}
+                          alt={item.title || 'Visuel du pack'}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted">
                           <Store className="w-3.5 h-3.5" />
