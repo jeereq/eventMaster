@@ -7,7 +7,6 @@ import { api } from '@/lib/api';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
-import LandingWorkflowSection from '@/components/landing/LandingWorkflowSection';
 import LandingProfileGate from '@/components/landing/LandingProfileGate';
 import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
 import LandingRoomEditorShowcase from '@/components/landing/LandingRoomEditorShowcase';
@@ -50,7 +49,7 @@ export default function Home() {
     const next = getLandingProfile(id);
     setProfileId(id);
     if (typeof window !== 'undefined') {
-      const hash = scrollToSection && next.sectionId !== 'parcours' ? next.sectionId : id;
+      const hash = scrollToSection && next.sectionId ? next.sectionId : id;
       window.history.replaceState(null, '', `#${hash}`);
       if (scrollToSection) {
         window.dispatchEvent(new Event('hashchange'));
@@ -155,10 +154,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── PARCOURS ÉTAPE PAR ÉTAPE (Fonctionnement pratique) ─── */}
-      <LandingWorkflowSection profileId={profileId} onProfileChange={(id) => selectProfile(id, false)} />
-
-      {/* ─── ÉDITEUR DE SALLE 2D / 3D (Showcase interactif) ─── */}
+      {/* ─── ÉDITEUR DE SALLE 2D / 3D (CAO, 3D WebGL, Placement, Scan QR) ─── */}
       <LandingRoomEditorShowcase />
 
       {/* ─── MODÈLES D'INVITATION (Papeterie digitale) ─── */}

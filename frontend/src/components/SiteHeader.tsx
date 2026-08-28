@@ -23,7 +23,7 @@ interface SiteHeaderProps {
 
 const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/marketplace', label: 'Marketplace' },
-  { href: '/#parcours', label: 'Parcours' },
+  { href: '/#editeur', label: 'Éditeur 2D/3D' },
   { href: '/#tarifs', label: 'Tarifs' },
   { href: '/contact', label: 'Contact' },
 ];

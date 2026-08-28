@@ -27,7 +27,7 @@ export type LandingJourneyStep = {
 };
 
 /** Ancres de la landing — le hero y envoie selon le profil. */
-export type LandingSectionId = 'parcours' | 'produit' | 'modeles' | 'salles' | 'catalogue' | 'prestataires' | 'tarifs';
+export type LandingSectionId = 'profils' | 'editeur' | 'modeles' | 'salles' | 'catalogue' | 'prestataires' | 'tarifs';
 
 export type LandingProfile = {
   id: LandingProfileId;
@@ -69,9 +69,9 @@ export const LANDING_PROFILES: LandingProfile[] = [
     intro: 'Créez l’événement, invitez sur WhatsApp et placez vos invités sur plan 2D/3D.',
     examples: 'Mariage, anniversaire, baptême, fête privée.',
     clicks: ['1. Créer la fête', '2. Inviter WhatsApp', '3. Plan & Scan QR'],
-    clickHrefs: ['#parcours', '#modeles', '#produit'],
-    sectionId: 'parcours',
-    exploreCta: { href: '#parcours', label: 'Découvrir les étapes' },
+    clickHrefs: ['#profils', '#modeles', '#editeur'],
+    sectionId: 'editeur',
+    exploreCta: { href: '#editeur', label: 'Découvrir l’éditeur' },
     cta: { href: '/register?kind=ORGANIZER&intent=personal', label: 'Créer mon événement (Gratuit)' },
     registerHint: 'Éditeur de salle complet inclus. Sans carte bancaire.',
     results: [
@@ -122,9 +122,9 @@ export const LANDING_PROFILES: LandingProfile[] = [
     intro: 'Vendez vos billets par zone, encaissez en Mobile Money et contrôlez les entrées.',
     examples: 'Concerts, conférences, galas, agences événementielles.',
     clicks: ['1. Billetterie & Prix', '2. Ventes Mobile Money', '3. Desk Protocole'],
-    clickHrefs: ['#parcours', '#catalogue', '#produit'],
-    sectionId: 'parcours',
-    exploreCta: { href: '#parcours', label: 'Découvrir le workflow pro' },
+    clickHrefs: ['#tarifs', '#catalogue', '#editeur'],
+    sectionId: 'editeur',
+    exploreCta: { href: '#tarifs', label: 'Découvrir les forfaits pro' },
     cta: { href: '/register?kind=ORGANIZER&intent=pro', label: 'Lancer mon espace Pro' },
     registerHint: 'Gestion d’équipe, billetterie multi-zones et scan jour J.',
     results: [
@@ -228,7 +228,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     intro: 'Vitrine avec plan 3D, demandes de devis directes et gestion de planning.',
     examples: 'Propriétaires de salle, traiteurs, décorateurs, photographes.',
     clicks: ['1. Publier ma fiche', '2. Recevoir des devis', '3. Bloquer les dates'],
-    clickHrefs: ['#tarifs', '#parcours', '#salles'],
+    clickHrefs: ['#tarifs', '#editeur', '#salles'],
     sectionId: 'tarifs',
     exploreCta: { href: '#tarifs', label: 'Voir les forfaits' },
     cta: { href: '/register?kind=VENDOR&intent=vendor', label: 'Référencer mon activité' },
