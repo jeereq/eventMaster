@@ -344,18 +344,24 @@ export default function LandingPricingSection({
  .map((plan) => (
  <article
  key={plan.id}
- className={`relative flex flex-col rounded-[var(--radius-card)] border bg-surface overflow-hidden em-soft-hover ${
+ className={`relative flex flex-col rounded-[var(--radius-card)] overflow-hidden transition-all duration-300 ${
  plan.highlighted
- ? 'border-foreground/30'
+ ? 'border-2 border-primary bg-surface dark:bg-slate-900 shadow-xl shadow-primary/25 ring-2 ring-primary/30 scale-[1.02] z-10'
  : plan.promoActive
- ? 'border-border'
- : 'border-border'
+ ? 'border border-rose-500/40 bg-surface dark:bg-slate-900 shadow-md'
+ : 'em-hud-card border-border'
  }`}
  >
- <div className={`h-1 w-full ${TIER_ACCENT[plan.tier]}`} />
+ <div className={`h-1.5 w-full ${plan.highlighted ? 'bg-gradient-to-r from-primary via-brand-accent to-festive-accent' : TIER_ACCENT[plan.tier]}`} />
 
- {plan.badge && (
- <div className="absolute top-4 right-4 bg-primary text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+ {plan.highlighted && (
+ <div className="em-ribbon-badge">
+ Recommandé
+ </div>
+ )}
+
+ {plan.badge && !plan.highlighted && (
+ <div className="absolute top-4 right-4 bg-primary text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
  <Sparkles className="w-3 h-3" />
  {plan.badge}
  </div>

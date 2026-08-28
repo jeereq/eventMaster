@@ -129,8 +129,9 @@ export default function Home() {
                 </span>
               </div>
 
-              <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.2rem] font-semibold tracking-tight text-foreground leading-[1.12]">
-                {LANDING_SLOGAN.full}
+              <h1 className="font-display text-[2.25rem] sm:text-5xl lg:text-[3.25rem] font-semibold tracking-tight text-foreground leading-[1.12]">
+                Votre événement,{' '}
+                <span className="em-glow-text">maîtrisé de A à Z</span>
               </h1>
 
               <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-xl">
@@ -141,14 +142,14 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
                 {user ? (
                   <Link href="/dashboard" className="w-full sm:w-auto">
-                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto">
+                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto shadow-md shadow-primary/20">
                       Ouvrir mon tableau de bord
                     </Button>
                   </Link>
                 ) : site.allowRegistration ? (
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
                     <Link href={profile.cta.href} className="w-full sm:w-auto">
-                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto">
+                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto shadow-md shadow-primary/20">
                         {profile.cta.label}
                       </Button>
                     </Link>
@@ -162,7 +163,7 @@ export default function Home() {
                 ) : (
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
                     <Link href="/login" className="w-full sm:w-auto">
-                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto">
+                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto shadow-md shadow-primary/20">
                         Accéder à mon espace
                       </Button>
                     </Link>
@@ -183,9 +184,9 @@ export default function Home() {
                 </a>
               </div>
 
-              {/* Badge d'aide et réassurance */}
-              <div className="inline-flex items-center gap-2 rounded-[var(--radius-card)] border border-border bg-surface/90 px-3 py-2 text-xs text-muted shadow-xs">
-                <Smartphone className="w-4 h-4 shrink-0 text-foreground" />
+              {/* Badge d'aide et réassurance HUD */}
+              <div className="inline-flex items-center gap-2 em-hud-pill px-3.5 py-2 text-xs text-muted">
+                <Smartphone className="w-4 h-4 shrink-0 text-primary" />
                 <p>
                   <span className="font-semibold text-foreground">100% dans le navigateur.</span>
                   {' '}Zéro application à installer pour vous ou vos invités.

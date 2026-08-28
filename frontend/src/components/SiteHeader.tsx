@@ -40,24 +40,24 @@ export default function SiteHeader({
 
   const links = variant === 'minimal' ? [] : PUBLIC_LINKS;
   const iconBtn =
-    'p-2.5 sm:p-2 min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation';
+    'p-2.5 sm:p-2 min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary';
 
   return (
     <header
       className={cn(
-        'border-b border-border bg-background sticky top-0 z-50',
+        'sticky top-0 z-50 backdrop-blur-md bg-background/85 dark:bg-slate-950/80 border-b border-border/80 dark:border-white/10 transition-colors duration-200',
         className,
       )}
     >
       <div className="page-container h-14 flex items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition shrink-0">
-          <div className="bg-foreground p-1.5 rounded-md text-background">
-            <PartyPopper className="w-3.5 h-3.5" />
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition shrink-0 group">
+          <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm shadow-primary/30 group-hover:scale-105 transition-transform">
+            <PartyPopper className="w-4 h-4" />
           </div>
-          <span className="text-[15px] font-semibold tracking-tight">{site.platformName}</span>
+          <span className="text-[15px] font-bold tracking-tight text-foreground">{site.platformName}</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 min-w-0">
+        <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-surface-muted/60 dark:bg-white/5 border border-border/60 dark:border-white/10 backdrop-blur-xs min-w-0">
           {links.map((item) => {
             const active =
               item.href === '/marketplace'
@@ -66,10 +66,10 @@ export default function SiteHeader({
                   ? pathname === '/contact' || pathname === '/faq'
                   : item.href !== '/' && pathname === item.href;
             const className = cn(
-              'px-3 py-1.5 text-sm transition rounded-full',
+              'px-3.5 py-1 text-xs font-semibold transition rounded-full',
               active
-                ? 'font-semibold text-foreground bg-surface-muted'
-                : 'text-muted hover:text-foreground hover:bg-surface-muted/60',
+                ? 'text-primary bg-surface dark:bg-white/10 shadow-xs border border-primary/20'
+                : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-white/5',
             );
             return item.href.startsWith('/#') ? (
               <a key={item.href} href={item.href} className={className}>
@@ -83,7 +83,7 @@ export default function SiteHeader({
           })}
         </nav>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <div className="hidden sm:flex items-center">
             <PublicAccentPicker />
           </div>
@@ -95,19 +95,19 @@ export default function SiteHeader({
           >
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
-          <div className="hidden md:flex items-center gap-2 ml-2">
+          <div className="hidden md:flex items-center gap-2 ml-1">
             {user ? (
               <Link href="/dashboard">
                 <Button size="sm">Tableau de bord</Button>
               </Link>
             ) : (
               <>
-                <Link href="/login" className="text-sm text-muted hover:text-foreground px-2">
+                <Link href="/login" className="text-xs font-semibold text-muted hover:text-foreground px-2">
                   Connexion
                 </Link>
                 {site.allowRegistration ? (
                   <Link href="/register">
-                    <Button size="sm">Démarrer maintenant</Button>
+                    <Button size="sm">Démarrer</Button>
                   </Link>
                 ) : null}
               </>

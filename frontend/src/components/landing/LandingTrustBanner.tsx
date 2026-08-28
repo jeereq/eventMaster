@@ -32,24 +32,24 @@ const TRUST_POINTS = [
 
 export default function LandingTrustBanner() {
   return (
-    <section className="border-y border-border bg-surface-muted/30 py-8 relative">
+    <section className="border-y border-border/80 bg-surface/50 dark:bg-slate-950/40 backdrop-blur-xs py-7 relative">
       <div className="page-container">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {TRUST_POINTS.map((point) => {
             const Icon = point.icon;
             return (
               <div
                 key={point.title}
-                className="flex items-start gap-3.5 p-2 rounded-[var(--radius-card)] transition-colors hover:bg-surface/60"
+                className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] em-hud-card transition-all"
               >
-                <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5 shadow-xs border border-primary/15">
+                <div className="w-9 h-9 rounded-lg em-glow-icon-box shrink-0 mt-0.5">
                   <Icon className="w-4 h-4" />
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-foreground">{point.title}</h4>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold text-foreground truncate">{point.title}</h4>
                   </div>
-                  <p className="text-[11px] text-muted leading-relaxed">{point.description}</p>
+                  <p className="text-[11px] text-muted leading-relaxed line-clamp-2">{point.description}</p>
                 </div>
               </div>
             );

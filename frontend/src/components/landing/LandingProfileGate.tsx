@@ -33,7 +33,7 @@ export default function LandingProfileGate({
 
       <ul
         id="profils"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4"
         role="list"
       >
         {LANDING_PROFILES.map((profile) => {
@@ -46,62 +46,71 @@ export default function LandingProfileGate({
                 onClick={() => onSelect(profile.id)}
                 aria-pressed={selected}
                 className={cn(
-                  'w-full h-full text-left rounded-[var(--radius-card)] border p-4 sm:p-4.5 transition-all duration-200 flex flex-col justify-between relative overflow-hidden',
+                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group',
                   selected
-                    ? 'border-primary bg-primary/[0.04] shadow-md ring-2 ring-primary/30'
-                    : 'border-border bg-surface hover:border-foreground/20 hover:bg-surface/80 shadow-xs',
+                    ? 'border-2 border-primary bg-primary/[0.06] dark:bg-primary/[0.12] shadow-lg shadow-primary/20 ring-1 ring-primary/40'
+                    : 'em-hud-card border-border hover:border-primary/40',
                 )}
               >
+                {/* Lueur d'accentuation en arrière plan au survol */}
+                <div
+                  className={cn(
+                    'absolute -inset-10 bg-radial from-primary/15 to-transparent blur-xl pointer-events-none transition-opacity duration-300 -z-10',
+                    selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-60',
+                  )}
+                  aria-hidden
+                />
+
                 {/* Indicateur de sélection */}
                 {selected && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] shadow-xs">
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] shadow-sm shadow-primary/40">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
 
                 <div>
-                  <div className="flex items-center gap-2.5 mb-3">
+                  <div className="flex items-center gap-2.5 mb-3.5">
                     <div
                       className={cn(
-                        'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+                        'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0',
                         selected
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted/30 text-foreground/80',
+                          ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30 scale-105'
+                          : 'em-glow-icon-box',
                       )}
                     >
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded bg-muted/20">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border/80">
                       {profile.eyebrow}
                     </span>
                   </div>
 
                   <h3
                     className={cn(
-                      'text-sm font-bold mb-1 leading-snug',
-                      selected ? 'text-primary' : 'text-foreground',
+                      'text-sm font-bold mb-1.5 leading-snug transition-colors',
+                      selected ? 'text-primary' : 'text-foreground group-hover:text-primary',
                     )}
                   >
                     {profile.label}
                   </h3>
 
-                  <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-3">
+                  <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-3.5">
                     {profile.intro}
                   </p>
                 </div>
 
                 {/* 3 micro-pills visuels */}
-                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/60">
+                <div className="flex flex-wrap gap-1.5 pt-2.5 border-t border-border/60">
                   {profile.results.map((res) => {
                     const ResIcon = res.icon;
                     return (
                       <span
                         key={res.label}
                         className={cn(
-                          'inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full',
+                          'inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors',
                           selected
-                            ? 'bg-primary/10 text-primary border border-primary/20'
-                            : 'bg-muted/30 text-muted-foreground',
+                            ? 'bg-primary/12 text-primary border border-primary/25'
+                            : 'bg-surface-muted text-muted border border-border/60 group-hover:border-primary/20',
                         )}
                       >
                         <ResIcon className="w-2.5 h-2.5" />

@@ -33,62 +33,62 @@ export default function LandingHeroPreview() {
 
   return (
     <div className="relative w-full max-w-lg mx-auto lg:max-w-none">
-      {/* Halo festif d'arrière plan */}
+      {/* Halo festif & néon d'arrière plan (JumpBot & Cinematic Glow) */}
       <div
-        className="absolute -inset-3 rounded-3xl bg-gradient-to-tr from-primary/20 via-[color:var(--festive-accent-soft)] to-amber-500/10 blur-2xl -z-10 opacity-80 pointer-events-none"
+        className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-primary/25 via-[color:var(--festive-accent-soft)] to-primary/10 blur-2xl -z-10 opacity-75 pointer-events-none animate-pulse duration-1000"
         aria-hidden
       />
 
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-[0_12px_36px_-10px_rgba(0,0,0,0.12)] overflow-hidden transition-all duration-300">
-        {/* En-tête des onglets d'aperçu */}
-        <div className="flex items-center justify-between border-b border-border bg-surface-muted/70 px-3 py-2 gap-1 overflow-x-auto [scrollbar-width:none]">
+      <div className="em-hud-card overflow-hidden transition-all duration-300">
+        {/* En-tête des onglets d'aperçu HUD */}
+        <div className="flex items-center justify-between border-b border-border/80 bg-surface-muted/60 dark:bg-slate-900/80 px-3 py-2 gap-1 overflow-x-auto [scrollbar-width:none]">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setActiveTab('room')}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                 activeTab === 'room'
-                  ? 'bg-surface text-foreground shadow-xs border border-border'
-                  : 'text-muted hover:text-foreground hover:bg-surface/50',
+                  ? 'bg-primary text-primary-foreground shadow-xs shadow-primary/30 border border-primary/20'
+                  : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-white/5',
               )}
             >
-              <LayoutGrid className="w-3.5 h-3.5 text-primary" />
-              <span>Plan de salle 2D / 3D</span>
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Plan 2D / 3D</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('rsvp')}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                 activeTab === 'rsvp'
-                  ? 'bg-surface text-foreground shadow-xs border border-border'
-                  : 'text-muted hover:text-foreground hover:bg-surface/50',
+                  ? 'bg-primary text-primary-foreground shadow-xs shadow-primary/30 border border-primary/20'
+                  : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-white/5',
               )}
             >
-              <Mail className="w-3.5 h-3.5 text-[color:var(--festive-accent)]" />
-              <span>Invitation & RSVP</span>
+              <Mail className="w-3.5 h-3.5" />
+              <span>RSVP WhatsApp</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('qr')}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                 activeTab === 'qr'
-                  ? 'bg-surface text-foreground shadow-xs border border-border'
-                  : 'text-muted hover:text-foreground hover:bg-surface/50',
+                  ? 'bg-primary text-primary-foreground shadow-xs shadow-primary/30 border border-primary/20'
+                  : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-white/5',
               )}
             >
-              <ScanLine className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Scan QR Jour J</span>
+              <ScanLine className="w-3.5 h-3.5" />
+              <span>Pass QR</span>
             </button>
           </div>
 
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-medium text-muted px-2 py-0.5 rounded-full bg-background border border-border">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Temps réel
+            Live
           </span>
         </div>
 
@@ -118,7 +118,7 @@ export default function LandingHeroPreview() {
                         onClick={() => setLightingTheme('gala')}
                         title="Ambiance Gala Or"
                         className={cn(
-                          'p-1 rounded transition',
+                          'p-1 rounded transition focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary',
                           lightingTheme === 'gala' ? 'bg-surface text-amber-500 shadow-xs' : 'text-muted hover:text-foreground',
                         )}
                       >
@@ -129,7 +129,7 @@ export default function LandingHeroPreview() {
                         onClick={() => setLightingTheme('romantic')}
                         title="Ambiance Romantique"
                         className={cn(
-                          'p-1 rounded transition',
+                          'p-1 rounded transition focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary',
                           lightingTheme === 'romantic' ? 'bg-surface text-rose-500 shadow-xs' : 'text-muted hover:text-foreground',
                         )}
                       >
@@ -140,7 +140,7 @@ export default function LandingHeroPreview() {
                         onClick={() => setLightingTheme('night')}
                         title="Ambiance Nocturne & Spotlights"
                         className={cn(
-                          'p-1 rounded transition',
+                          'p-1 rounded transition focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary',
                           lightingTheme === 'night' ? 'bg-surface text-indigo-400 shadow-xs' : 'text-muted hover:text-foreground',
                         )}
                       >
@@ -153,7 +153,7 @@ export default function LandingHeroPreview() {
                     type="button"
                     onClick={() => setViewMode3D(!viewMode3D)}
                     className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition shadow-xs',
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                       viewMode3D
                         ? 'bg-primary text-white border-primary hover:bg-primary-hover'
                         : 'bg-surface hover:bg-surface-muted text-foreground border-border',

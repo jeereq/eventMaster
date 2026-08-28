@@ -131,7 +131,7 @@ export default function LandingRoomEditorShowcase() {
                       type="button"
                       onClick={() => setSelectedTierIndex(index as ShowcaseLevel)}
                       className={cn(
-                        'w-full text-left p-3.5 sm:p-4 rounded-[var(--radius-card)] border transition-all duration-200',
+                        'w-full text-left p-3.5 sm:p-4 rounded-[var(--radius-card)] border transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                         isSelected
                           ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/40 shadow-sm'
                           : 'border-border bg-background hover:border-foreground/20 hover:bg-surface-muted/50',
@@ -169,10 +169,10 @@ export default function LandingRoomEditorShowcase() {
           </div>
 
           {/* Colonne droite : Canevas Visuel Dynamique (7 colonnes) */}
-          <div className="lg:col-span-7 rounded-[var(--radius-card)] border border-border bg-background p-5 sm:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.06)] flex flex-col justify-between space-y-6">
+          <div className="lg:col-span-7 em-hud-card p-5 sm:p-6 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
-              {/* En-tête du canevas avec commandes de vue */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+              {/* En-tête du canevas avec commandes de vue HUD */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-primary">
@@ -190,13 +190,13 @@ export default function LandingRoomEditorShowcase() {
                 <div className="flex items-center gap-2">
                   {/* Sélecteur d'étage (si niveau complet) */}
                   {selectedTierIndex === 3 && (
-                    <div className="flex items-center bg-surface-muted rounded-[var(--radius-button)] p-0.5 border border-border text-[10px]">
+                    <div className="flex items-center bg-surface-muted/80 rounded-full p-0.5 border border-border text-[10px]">
                       <button
                         type="button"
                         onClick={() => setActiveFloor('rdc')}
                         className={cn(
-                          'px-2 py-1 rounded font-semibold transition',
-                          activeFloor === 'rdc' ? 'bg-surface text-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                          'px-2.5 py-1 rounded-full font-semibold transition focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary',
+                          activeFloor === 'rdc' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                         )}
                       >
                         RDC
@@ -205,8 +205,8 @@ export default function LandingRoomEditorShowcase() {
                         type="button"
                         onClick={() => setActiveFloor('mezzanine')}
                         className={cn(
-                          'px-2 py-1 rounded font-semibold transition',
-                          activeFloor === 'mezzanine' ? 'bg-surface text-primary shadow-xs' : 'text-muted hover:text-foreground',
+                          'px-2.5 py-1 rounded-full font-semibold transition focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary',
+                          activeFloor === 'mezzanine' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                         )}
                       >
                         Balcon VIP
@@ -215,13 +215,13 @@ export default function LandingRoomEditorShowcase() {
                   )}
 
                   {/* Bouton de bascule 2D / 3D */}
-                  <div className="flex items-center bg-surface-muted rounded-[var(--radius-button)] p-0.5 border border-border text-xs">
+                  <div className="flex items-center bg-surface-muted/80 rounded-full p-0.5 border border-border text-xs">
                     <button
                       type="button"
                       onClick={() => setViewMode3D(false)}
                       className={cn(
-                        'inline-flex items-center gap-1 px-2.5 py-1 rounded font-semibold transition',
-                        !viewMode3D ? 'bg-surface text-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                        'inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold transition focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary',
+                        !viewMode3D ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
                     >
                       <LayoutGrid className="w-3.5 h-3.5" />
@@ -231,8 +231,8 @@ export default function LandingRoomEditorShowcase() {
                       type="button"
                       onClick={() => setViewMode3D(true)}
                       className={cn(
-                        'inline-flex items-center gap-1 px-2.5 py-1 rounded font-semibold transition',
-                        viewMode3D ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                        'inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold transition focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary',
+                        viewMode3D ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
                     >
                       <Eye className="w-3.5 h-3.5" />
