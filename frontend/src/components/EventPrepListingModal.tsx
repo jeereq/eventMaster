@@ -16,7 +16,6 @@ import {
   formatLocationLine,
   formatQuotaLabel,
   isServiceRentalCategory,
-  prepListingCanBook,
   serviceMobilityLabel,
   type PrepListingPipeline,
   type PublicService,
@@ -138,16 +137,9 @@ export default function EventPrepListingModal({
     : service
       ? dashboardServiceHref(service.slug, service.category)
       : '#';
-  const canBook = prepListingCanBook(listing?.priceFromFc, pipeline);
   const followHref = eventId
     ? `/dashboard/bookings?tab=bookings&event=${encodeURIComponent(eventId)}`
     : '/dashboard/bookings?tab=bookings';
-
-  useEffect(() => {
-    if (view === 'book' && listing && listing.priceFromFc == null) {
-      setView('inquire');
-    }
-  }, [view, listing]);
 
   const facts = [
     venue?.capacity ? `${venue.capacity} places` : null,
@@ -187,36 +179,46 @@ export default function EventPrepListingModal({
       title={modalTitle}
       description={modalDescription}
       footer={
-        listing && view === 'details' ? (
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 w-full">
-            {selected && onRemove ? (
-              <Button variant="secondary" onClick={onRemove}>
-                Retirer de la préparation
-              </Button>
-            ) : canRetain ? (
-              <Button onClick={retainListing}>Retenir pour l’événement</Button>
-            ) : null}
-            {pipeline?.stage === 'booking' ? (
-              <Link href={followHref} className="inline-flex">
-                <Button variant="secondary">Suivre la réservation</Button>
-              </Link>
-            ) : (
-              <>
-                <Button variant="secondary" onClick={() => setView('inquire')}>
-                  {pipeline?.stage === 'inquiry' ? 'Nouveau devis' : 'Demander un devis'}
+        target ? (
+          <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-2 order-2 sm:order-1">
+              {view !== 'details' ? (
+                <Button variant="ghost" onClick={() => setView('details')}>
+                  Fiche
                 </Button>
-                {canBook ? (
-                  <Button leftIcon={<CalendarCheck className="w-3.5 h-3.5" />} onClick={() => setView('book')}>
-                    Réserver
-                  </Button>
-                ) : null}
-              </>
-            )}
+              ) : selected && onRemove ? (
+                <Button variant="secondary" onClick={onRemove} disabled={loading || !listing}>
+                  Retirer de la préparation
+                </Button>
+              ) : canRetain ? (
+                <Button variant="secondary" onClick={retainListing} disabled={loading || !listing}>
+                  Retenir pour l’événement
+                </Button>
+              ) : null}
+              {pipeline?.stage === 'booking' ? (
+                <Link href={followHref} className="inline-flex">
+                  <Button variant="ghost">Suivre la réservation</Button>
+                </Link>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex order-1 sm:order-2">
+              <Button
+                variant={view === 'inquire' ? 'primary' : 'secondary'}
+                onClick={() => setView('inquire')}
+                disabled={loading}
+              >
+                {pipeline?.stage === 'inquiry' ? 'Nouveau devis' : 'Devis'}
+              </Button>
+              <Button
+                variant={view === 'book' ? 'primary' : 'secondary'}
+                leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
+                onClick={() => setView('book')}
+                disabled={loading}
+              >
+                Réserver
+              </Button>
+            </div>
           </div>
-        ) : view === 'inquire' || view === 'book' ? (
-          <Button variant="ghost" onClick={() => setView('details')}>
-            Retour à la fiche
-          </Button>
         ) : null
       }
     >

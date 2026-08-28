@@ -142,8 +142,8 @@ export default function MarketplaceBookingForm({
         {calendar}
         <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface">
           <p className="text-xs text-muted leading-relaxed">
-            Cette offre est sur devis. Envoyez une demande ci-dessus : la réservation avec acompte n’est disponible
-            que lorsqu’un tarif de départ est publié.
+            Cette offre est sur devis. Utilisez Devis pour envoyer une demande : la réservation avec acompte n’est
+            disponible que lorsqu’un tarif de départ est publié.
           </p>
         </div>
       </div>
