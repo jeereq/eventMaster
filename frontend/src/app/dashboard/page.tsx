@@ -5221,27 +5221,17 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-6 em-dashboard-home">
-      {showGreeting ? (
-        <div className="space-y-1">
-          <p className="text-[11px] font-medium text-muted capitalize">{dateLabelLong}</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
-            {greetingLabel}, {(user?.name || 'là').split(' ')[0]}
-          </h2>
-          <p className="text-sm text-muted">
-            {tenant?.accountKind === 'VENDOR'
-              ? 'Voici l’état de vos offres marketplace et de votre forfait.'
-              : 'Voici l&apos;état de vos événements et quotas aujourd&apos;hui.'}
-          </p>
-        </div>
-      ) : null}
-
       <PageHeader
-        title="Tableau de bord"
+        title={
+          showGreeting
+            ? `${greetingLabel}, ${(user?.name || 'là').split(' ')[0]}`
+            : 'Tableau de bord'
+        }
         description={
           tenant?.name
             ? tenant.accountKind === 'VENDOR'
-              ? `Bienvenue — ${tenant.name}. Suivez vos fiches marketplace, quotas et abonnement.`
-              : `Bienvenue — ${tenant.name}. Suivez vos événements, quotas et abonnement.`
+              ? `Organisation ${tenant.name} · Suivez vos offres marketplace, réservations et forfaits.`
+              : `Organisation ${tenant.name} · Suivez vos événements, quotas et abonnement.`
             : "Bienvenue dans votre espace de gestion d'événements."
         }
         breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Tableau de bord' }]} />}
