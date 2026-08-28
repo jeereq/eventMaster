@@ -35,7 +35,7 @@ function ListingPhotoThumbs({
           aria-pressed={i === photoIndex}
           className={cn(
             'relative snap-start shrink-0 w-20 min-h-11 sm:w-28 aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-            i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+            i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/40',
           )}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -186,7 +186,7 @@ export default function ListingDetailLayout({
 
   const priceBlock = (
     <div className="space-y-1">
-      <p className="text-2xl font-semibold text-foreground tracking-tight">{priceLabel}</p>
+      <p className="text-2xl font-semibold text-foreground tracking-tight tabular-nums">{priceLabel}</p>
       {priceUnitLabel ? <p className="text-xs text-muted">{priceUnitLabel}</p> : null}
       {quotaLabel ? <p className="text-xs text-muted">{quotaLabel}</p> : null}
     </div>
@@ -209,7 +209,7 @@ export default function ListingDetailLayout({
       <button
         type="button"
         onClick={goBack}
-        className="inline-flex items-center gap-1.5 min-h-11 -ml-1 px-1.5 text-xs font-semibold text-muted hover:text-foreground mb-3"
+        className="inline-flex items-center gap-1.5 min-h-11 -ml-1 px-1.5 text-xs font-semibold text-muted hover:text-foreground mb-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         {backLabel}
@@ -281,7 +281,7 @@ export default function ListingDetailLayout({
                 </div>
               ) : null}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5 pt-16 sm:px-7 sm:pb-8 sm:pt-24 text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words">
+                <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words line-clamp-3">
                   {title}
                 </h1>
                 {(chip || subtitle) ? (
@@ -340,27 +340,33 @@ export default function ListingDetailLayout({
               {showCommerce ? (
                 <>
               {showBooking ? (
-              <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
+              <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Devis ou réservation">
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={mobileAction === 'inquire'}
                   onClick={() => setMobileAction('inquire')}
                   className={cn(
                     'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     mobileAction === 'inquire'
                       ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                      : 'text-muted',
+                      : 'text-muted hover:text-foreground',
                   )}
                 >
                   {inquireLabel}
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={mobileAction === 'book'}
                   onClick={() => setMobileAction('book')}
                   className={cn(
                     'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     mobileAction === 'book'
                       ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                      : 'text-muted',
+                      : 'text-muted hover:text-foreground',
                   )}
                 >
                   {bookLabel}
@@ -410,10 +416,10 @@ export default function ListingDetailLayout({
             ) : (
               <>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">{priceLabel}</p>
+                  <p className="text-sm font-semibold truncate tabular-nums">{priceLabel}</p>
                 </div>
                 <Button size="md" className="shrink-0 min-h-11" onClick={() => scrollToContact('inquire')}>
-                  {hideBooking ? inquireLabel : 'Devis'}
+                  {inquireLabel}
                 </Button>
                 {showBooking ? (
                 <Button size="md" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>

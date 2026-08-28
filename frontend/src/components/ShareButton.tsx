@@ -83,7 +83,8 @@ export default function ShareButton({
       type="button"
       onClick={() => void onShare()}
       className={cn(
-        'inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-button)] border shadow-sm transition',
+        'inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-button)] border shadow-sm transition',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         copied
           ? 'bg-emerald-600 border-emerald-600 text-white'
           : 'bg-white/95 border-border text-muted hover:text-foreground',

@@ -172,7 +172,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         <FavoriteHeart
           active={isFavorite(kind, slug)}
           onToggle={() => void toggleFavorite(kind, slug)}
-          className="h-10 w-10 bg-white/95"
+          className="bg-white/95"
         />
       ) : undefined}
       details={item ? (
@@ -189,7 +189,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
             {lat != null && lng != null ? (
               <>
                 {' · '}
-                <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline">
+                <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
                   Itinéraire
                 </button>
               </>

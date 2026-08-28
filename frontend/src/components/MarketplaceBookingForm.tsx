@@ -18,6 +18,10 @@ import { Lock } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
+import { cn } from '@/lib/cn';
+
+const fieldClass =
+  'w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
 
 export default function MarketplaceBookingForm({
   listingSlug,
@@ -34,6 +38,7 @@ export default function MarketplaceBookingForm({
   showCalendar = true,
   eventId,
   onSent,
+  flush = false,
 }: {
   listingSlug?: string;
   offeringSlug?: string;
@@ -49,6 +54,7 @@ export default function MarketplaceBookingForm({
   showCalendar?: boolean;
   eventId?: string;
   onSent?: () => void;
+  flush?: boolean;
 }) {
   const { token, loading } = useAuth();
   const { site } = usePlatformSite();
@@ -142,7 +148,7 @@ export default function MarketplaceBookingForm({
     return (
       <div className="space-y-3">
         {calendar}
-        <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface">
+        <div className={cn(!flush && 'border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface')}>
           <p className="text-xs text-muted leading-relaxed">
             Cette offre est sur devis. Utilisez Devis pour envoyer une demande : la réservation avec acompte n’est
             disponible que lorsqu’un tarif de départ est publié.
@@ -156,8 +162,7 @@ export default function MarketplaceBookingForm({
     return (
       <div className="space-y-3">
         {calendar}
-        <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
+        <div className={cn('space-y-3', !flush && 'border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface')}>
           <ClientAuthChoice
             nextPath={nextPath}
             description={`Un compte est requis pour demander une date. L’acompte (${depositPct} %) se verse hors plateforme au professionnel ; EventMaster n’encaisse pas ce paiement.`}
@@ -170,7 +175,7 @@ export default function MarketplaceBookingForm({
   return (
     <form onSubmit={handleBook} className="space-y-3">
       {calendar}
-      <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
+      <div className={cn('space-y-3', !flush && 'border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface')}>
         <p className="text-xs text-muted leading-relaxed">
           Un jour libre, puis éventuellement le dernier. Acompte {depositPct} % hors plateforme, après acceptation.
         </p>
@@ -185,7 +190,7 @@ export default function MarketplaceBookingForm({
           <p className="text-xs text-muted">Aucune date sélectionnée.</p>
         )}
         {dateTaken && (
-          <p className="text-[11px] text-red-600">Cette période chevauche une date déjà bloquée ou réservée.</p>
+          <Alert variant="error">Cette période chevauche une date déjà bloquée ou réservée.</Alert>
         )}
         <Input
           label="Nombre d’invités (estimé)"
@@ -200,12 +205,12 @@ export default function MarketplaceBookingForm({
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+            className={cn(fieldClass, 'min-h-[5.5rem] py-2.5')}
             placeholder="Horaires, type d’événement…"
           />
         </label>
         {amounts && (
-          <div className="rounded-md border border-border bg-surface-muted px-3 py-2 text-xs space-y-1">
+          <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2 text-xs space-y-1 tabular-nums">
             <p>Montant indicatif : <strong>{formatFc(amounts.amountFc)}</strong></p>
             {priceUnit === 'DAY' && rangeKeys.length > 1 ? (
               <p className="text-muted">{formatFc(priceFromFc || 0)} / jour × {rangeKeys.length} jours</p>
@@ -221,7 +226,7 @@ export default function MarketplaceBookingForm({
         </Button>
         <p className="text-[11px] text-muted">
           Suivi dans{' '}
-          <Link href={bookingsHref} className="font-semibold text-primary hover:underline">
+          <Link href={bookingsHref} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
             Devis & réservations
           </Link>
           .

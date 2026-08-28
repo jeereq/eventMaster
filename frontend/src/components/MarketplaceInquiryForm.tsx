@@ -8,6 +8,10 @@ import { Alert, Button, Input } from '@/components/ui';
 import { LISTING_EVENT_TYPES } from '@/lib/listingDetails';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { Calendar, Send } from 'lucide-react';
+import { cn } from '@/lib/cn';
+
+const fieldClass =
+  'w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
 
 export default function MarketplaceInquiryForm({
   endpoint,
@@ -20,6 +24,7 @@ export default function MarketplaceInquiryForm({
   defaultMessage,
   eventId,
   onSent,
+  flush = false,
 }: {
   endpoint: string;
   successCopy?: string;
@@ -31,6 +36,7 @@ export default function MarketplaceInquiryForm({
   defaultMessage?: string;
   eventId?: string;
   onSent?: () => void;
+  flush?: boolean;
 }) {
   const pathname = usePathname();
   const { user, token, loading: authLoading } = useAuth();
@@ -111,7 +117,7 @@ export default function MarketplaceInquiryForm({
   };
 
   return (
-    <form onSubmit={handleInquire} className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
+    <form onSubmit={handleInquire} className={cn('space-y-3', !flush && 'border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface')}>
       {showAuthChoice ? (
         <ClientAuthChoice
           nextPath={nextPath}
@@ -130,7 +136,7 @@ export default function MarketplaceInquiryForm({
             <select
               value={eventType}
               onChange={(e) => setEventType(e.target.value)}
-              className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              className={fieldClass}
             >
               <option value="">À préciser</option>
               {LISTING_EVENT_TYPES.map((item) => (
@@ -191,7 +197,7 @@ export default function MarketplaceInquiryForm({
               rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              className={cn(fieldClass, 'min-h-[6.5rem] py-2.5')}
               placeholder="Besoins, style, contraintes, questions…"
             />
           </label>

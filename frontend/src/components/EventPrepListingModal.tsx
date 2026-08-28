@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ExternalLink, KeyRound, Loader2, Sparkles } from 'lucide-react';
+import { Building2, ExternalLink, KeyRound, Loader2, Play, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Modal, StatusPill, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
@@ -15,6 +15,7 @@ import {
   formatLocationLine,
   formatQuotaLabel,
   isServiceRentalCategory,
+  isVideoUrl,
   listingSrcSet,
   serviceMobilityLabel,
   sizedMediaUrl,
@@ -185,21 +186,21 @@ export default function EventPrepListingModal({
           <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap gap-2 order-2 sm:order-1">
               {view !== 'details' ? (
-                <Button variant="ghost" onClick={() => setView('details')}>
+                <Button variant="ghost" className="min-h-11" onClick={() => setView('details')}>
                   Fiche
                 </Button>
               ) : selected && onRemove ? (
-                <Button variant="secondary" onClick={onRemove} disabled={loading || !listing}>
+                <Button variant="secondary" className="min-h-11" onClick={onRemove} disabled={loading || !listing}>
                   Retirer
                 </Button>
               ) : canRetain ? (
-                <Button variant="secondary" onClick={retainListing} disabled={loading || !listing}>
+                <Button variant="secondary" className="min-h-11" onClick={retainListing} disabled={loading || !listing}>
                   Retenir
                 </Button>
               ) : null}
               {pipeline?.stage === 'booking' ? (
                 <Link href={followHref} className="inline-flex">
-                  <Button variant="ghost">Suivre la réservation</Button>
+                  <Button variant="ghost" className="min-h-11">Suivre la réservation</Button>
                 </Link>
               ) : null}
             </div>
@@ -226,10 +227,13 @@ export default function EventPrepListingModal({
       }
     >
       {loading ? (
-        <p className="text-sm text-muted inline-flex items-center gap-2 py-8 justify-center w-full" aria-live="polite">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Chargement de la fiche…
-        </p>
+        <div className="flex flex-col gap-3 py-2" aria-busy="true" aria-live="polite">
+          <div className="aspect-[16/9] rounded-[var(--radius-card)] bg-surface-muted animate-pulse" />
+          <p className="text-sm text-muted inline-flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Chargement de la fiche…
+          </p>
+        </div>
       ) : error ? (
         <Alert variant="error" title="Fiche indisponible">
           <div className="space-y-3">
@@ -251,6 +255,7 @@ export default function EventPrepListingModal({
           defaultGuestCount={guestCount && guestCount > 0 ? guestCount : undefined}
           defaultMessage={eventTitle ? `Demande pour l’événement « ${eventTitle} ».` : undefined}
           eventId={eventId}
+          flush
           onSent={() => {
             if (!selected && canRetain) retainListing();
             onPipelineChange?.();
@@ -268,6 +273,7 @@ export default function EventPrepListingModal({
           priceUnit={listing.priceUnit}
           eventDate={dateKey || undefined}
           eventId={eventId}
+          flush
           onSent={() => {
             if (!selected && canRetain) retainListing();
             onPipelineChange?.();
@@ -280,17 +286,29 @@ export default function EventPrepListingModal({
           ) : null}
 
           <div className="flex flex-col gap-2">
-          <div className="relative overflow-hidden rounded-2xl bg-surface-muted aspect-[16/9]">
+          <div className="relative overflow-hidden rounded-[var(--radius-card)] bg-surface-muted aspect-[16/9]">
             {photos[photoIndex] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={sizedMediaUrl(photos[photoIndex], 960)}
-                srcSet={listingSrcSet(photos[photoIndex], [480, 720, 960])}
-                sizes="(min-width: 640px) 42rem, 100vw"
-                alt={`Visuel de ${title}`}
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
+              isVideoUrl(photos[photoIndex]) ? (
+                <video
+                  src={photos[photoIndex]}
+                  poster={sizedMediaUrl(photos[photoIndex], 960)}
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  controls
+                  preload="metadata"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={sizedMediaUrl(photos[photoIndex], 960)}
+                  srcSet={listingSrcSet(photos[photoIndex], [480, 720, 960])}
+                  sizes="(min-width: 640px) 42rem, 100vw"
+                  alt={`Visuel de ${title}`}
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
+              )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted">
                 <CoverFallback kind={target?.kind === 'venue' ? 'venue' : 'service'} rental={rental} />
@@ -298,27 +316,32 @@ export default function EventPrepListingModal({
             )}
           </div>
           {photos.length > 1 ? (
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-              {photos.slice(0, 8).map((url, index) => (
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {photos.map((url, index) => (
                 <button
                   key={url}
                   type="button"
                   onClick={() => setPhotoIndex(index)}
-                  aria-label={`Photo ${index + 1} sur ${Math.min(photos.length, 8)} — ${title}`}
+                  aria-label={`Photo ${index + 1} sur ${photos.length} — ${title}`}
                   aria-pressed={index === photoIndex}
                   className={cn(
-                    'min-w-11 min-h-11 w-16 h-11 rounded-lg overflow-hidden border shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    index === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+                    'relative snap-start shrink-0 w-20 min-h-11 aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    index === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/40',
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={sizedMediaUrl(url, 128)}
+                    src={sizedMediaUrl(url, 160)}
                     alt=""
                     loading="lazy"
                     decoding="async"
                     className="w-full h-full object-cover"
                   />
+                  {isVideoUrl(url) ? (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                      <Play className="w-3.5 h-3.5 text-white fill-white" />
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -345,7 +368,7 @@ export default function EventPrepListingModal({
 
           <Link
             href={href}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+            className="inline-flex items-center gap-1.5 min-h-11 text-xs font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
           >
             Ouvrir la fiche complète
             <ExternalLink className="w-3.5 h-3.5" />

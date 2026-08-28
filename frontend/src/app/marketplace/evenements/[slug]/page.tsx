@@ -157,7 +157,7 @@ function MarketplaceEventDetailInner() {
               {item && event.latitude != null && event.longitude != null ? (
                 <>
                   {' · '}
-                  <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline">
+                  <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
                     Itinéraire
                   </button>
                 </>
