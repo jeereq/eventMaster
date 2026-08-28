@@ -99,7 +99,7 @@ export function applyPaletteToElements<T extends ColorableElement>(
 
 /** Palette d’invitation dérivée des couleurs de l’organisation. */
 export function buildOrgBrandInvitationTheme(branding?: TenantBranding | null): InvitationColorTheme {
-  const primary = branding?.primary || '#4f46e5';
+  const primary = branding?.primary || '#059669';
   const accent = branding?.accent || primary;
   return {
     id: ORG_BRAND_THEME_ID,

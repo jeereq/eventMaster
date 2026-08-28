@@ -2923,7 +2923,7 @@ function DashboardPageContent() {
                                   value={adminSettings.brandPrimary || ''}
                                   onChange={(e) => setAdminSettings({ ...adminSettings, brandPrimary: e.target.value })}
                                   className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm font-mono"
-                                  placeholder="#4f46e5"
+                                  placeholder="#059669"
                                 />
                               </div>
                               <div className="space-y-1.5">
@@ -2933,7 +2933,7 @@ function DashboardPageContent() {
                                   value={adminSettings.brandAccent || ''}
                                   onChange={(e) => setAdminSettings({ ...adminSettings, brandAccent: e.target.value })}
                                   className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm font-mono"
-                                  placeholder="#6366f1"
+                                  placeholder="#10b981"
                                 />
                               </div>
                             </div>

@@ -22,16 +22,16 @@ export type TenantBranding = {
   authTo?: string;
 };
 
-/** Palette par défaut — indigo EventMaster (Asana-adjacent). */
+/** Palette par défaut — vert émeraude EventMaster. */
 export const DEFAULT_BRAND_PALETTE = {
-  primary: '#4f46e5',
-  primaryHover: '#4338ca',
-  accent: '#6366f1',
+  primary: '#059669',
+  primaryHover: '#047857',
+  accent: '#10b981',
   /** Panneau marketing auth (clair → sombre) */
-  authFrom: '#312e81',
-  authVia: '#1e1b4b',
+  authFrom: '#064e3b',
+  authVia: '#022c22',
   authTo: '#0f172a',
-  authGlow: '79, 70, 229', // RGB du primary pour blur/glow
+  authGlow: '5, 150, 105', // RGB du primary pour blur/glow
 };
 
 export type BrandPalette = {

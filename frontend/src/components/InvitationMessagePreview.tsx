@@ -84,8 +84,8 @@ export default function InvitationMessagePreview({
   whatsappBody,
   channel,
   orgName,
-  primary = '#4f46e5',
-  accent = '#6366f1',
+  primary = '#059669',
+  accent = '#10b981',
   guidelinesBlock,
 }: {
   subject: string;

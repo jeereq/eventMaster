@@ -195,9 +195,9 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
           <span
             style={{
               ...textStyle,
-              backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5',
-              color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff',
-              borderColor: el.color || '#4f46e5',
+              backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#059669',
+              color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : '#ffffff',
+              borderColor: el.color || '#059669',
               display: 'inline-block',
               padding: '10px 24px',
               borderRadius: '12px',
@@ -281,7 +281,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   const neighborNames =
     data.tableDetails?.neighbors?.map((n) => `${n.firstName} ${n.lastName}`.trim()) ?? [];
 
-  const primary = data.branding?.primary || '#4f46e5';
+  const primary = data.branding?.primary || '#059669';
   const accent = data.branding?.accent || primary;
   const orgName = data.organizationName?.trim() || 'Organisation';
   const cardMax = Number.parseInt(String(canvasStyle.maxWidth), 10) || 520;

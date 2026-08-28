@@ -10,9 +10,9 @@
   --surface-muted: #ededee;
   --border: #e8e8e9;
   --border-subtle: #f0f0f1;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --brand-accent: #6366f1;
+  --primary: #059669;
+  --primary-hover: #047857;
+  --brand-accent: #10b981;
   --muted: #6d6e6f;
   --sidebar: #f0f1f3;
   --card-hover: #fafafa;
@@ -24,10 +24,10 @@
   /* Barre Devis / Réserver des fiches (pt-3 + 44px + pb-3) */
   --em-listing-dock: 4.5rem;
   /* Panneau auth — surchargés par brandTheme / env */
-  --auth-from: #312e81;
-  --auth-via: #1e1b4b;
+  --auth-from: #064e3b;
+  --auth-via: #022c22;
   --auth-to: #0f172a;
-  --auth-glow: 79, 70, 229;
+  --auth-glow: 5, 150, 105;
   /* Celebrate (landing / RSVP / auth) — touche Kinshasa + confetti minimal */
   --festive-accent: #d97706;
   --festive-accent-soft: color-mix(in srgb, #d97706 14%, transparent);
@@ -54,7 +54,7 @@ html[data-mood="celebrate"].dark,
   --border-subtle: #48494b;
   --sidebar: #191a1c;
   --card-hover: #303133;
-  --brand-accent: #a5b4fc;
+  --brand-accent: #6ee7b7;
   --festive-accent: #fbbf24;
 }
 
@@ -65,9 +65,9 @@ html[data-mood="celebrate"].dark,
   --surface-muted: #323437;
   --border: #3e3f42;
   --border-subtle: #48494b;
-  --primary: #6366f1;
-  --primary-hover: #818cf8;
-  --brand-accent: #a5b4fc;
+  --primary: #10b981;
+  --primary-hover: #34d399;
+  --brand-accent: #6ee7b7;
   --muted: #a2a0a2;
   --sidebar: #191a1c;
   --card-hover: #303133;
@@ -83,7 +83,7 @@ html[data-mood="celebrate"].dark,
   --color-border-subtle: var(--border-subtle);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
-  --color-brand-accent: var(--brand-accent, #6366f1);
+  --color-brand-accent: var(--brand-accent, #10b981);
   --color-muted: var(--muted);
   --color-sidebar: var(--sidebar);
   --color-card-hover: var(--card-hover);
@@ -542,9 +542,9 @@ html[data-mood="celebrate"] .font-display {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: #059669;
   border: 2px solid #fff;
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.22);
+  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.22);
   animation: em-guide-user-pulse 1.8s ease-out infinite;
 }
 
@@ -682,7 +682,7 @@ html[data-mood="celebrate"] .font-display {
   animation-delay: calc(var(--pin-delay, 0ms) + 520ms);
 }
 
-.em-map-marker-venue .em-map-marker-pulse { background: var(--primary, #4f46e5); }
+.em-map-marker-venue .em-map-marker-pulse { background: var(--primary, #059669); }
 .em-map-marker-service .em-map-marker-pulse { background: var(--festive-accent, #b45309); }
 .em-map-marker-rental .em-map-marker-pulse { background: #0e7490; }
 .em-map-marker-event .em-map-marker-pulse { background: #059669; }
@@ -724,7 +724,7 @@ html[data-mood="celebrate"] .font-display {
 
 .em-map-marker-card.is-venue .em-map-marker-card-face,
 .em-map-marker-venue .em-map-marker-card-face {
-  background: var(--primary, #4f46e5);
+  background: var(--primary, #059669);
 }
 .em-map-marker-card.is-service .em-map-marker-card-face,
 .em-map-marker-service .em-map-marker-card-face {
@@ -789,7 +789,7 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-map-marker-card.is-venue .em-map-marker-card-arrow,
-.em-map-marker-venue .em-map-marker-card-arrow { color: var(--primary, #4f46e5); }
+.em-map-marker-venue .em-map-marker-card-arrow { color: var(--primary, #059669); }
 .em-map-marker-card.is-service .em-map-marker-card-arrow,
 .em-map-marker-service .em-map-marker-card-arrow { color: var(--festive-accent, #b45309); }
 .em-map-marker-card.is-rental .em-map-marker-card-arrow,
@@ -1017,7 +1017,7 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-map-legend-venue {
-  background: var(--primary, #4f46e5);
+  background: var(--primary, #059669);
   border-radius: 3px;
 }
 

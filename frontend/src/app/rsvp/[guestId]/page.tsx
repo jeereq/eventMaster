@@ -2080,9 +2080,9 @@ export default function RsvpPage() {
                                 document.getElementById('rsvp-section')?.scrollIntoView({ behavior: 'smooth' });
                               }}
                               style={{ 
-                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5', 
-                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff', 
-                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : 'transparent',
+                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#059669', 
+                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : '#ffffff', 
+                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : 'transparent',
                                 fontSize: el.fontSize,
                                 fontFamily: el.fontFamily || 'Cormorant Garamond',
                                 letterSpacing: el.letterSpacing || 'normal',
@@ -2106,9 +2106,9 @@ export default function RsvpPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ 
-                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5', 
-                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff', 
-                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : 'transparent',
+                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#059669', 
+                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : '#ffffff', 
+                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : 'transparent',
                                 fontSize: el.fontSize,
                                 fontFamily: el.fontFamily || 'Cormorant Garamond',
                                 letterSpacing: el.letterSpacing || 'normal',
@@ -2131,9 +2131,9 @@ export default function RsvpPage() {
                         ) : (
                           <div 
                             style={{ 
-                              backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5', 
-                              color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff', 
-                              borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : 'transparent',
+                              backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#059669', 
+                              color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : '#ffffff', 
+                              borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : 'transparent',
                               fontSize: el.fontSize,
                               fontFamily: el.fontFamily || 'Cormorant Garamond',
                               letterSpacing: el.letterSpacing || 'normal',

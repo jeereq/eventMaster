@@ -274,7 +274,7 @@ export default function GuestVenueGuide({
             mapRef.current.removeLayer(routeLineRef.current);
           }
           routeLineRef.current = L.polyline(coords, {
-            color: '#4f46e5',
+            color: '#059669',
             weight: 5,
             opacity: 0.9,
           }).addTo(mapRef.current);

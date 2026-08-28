@@ -137,9 +137,9 @@ function renderElement(el: PreviewElement, compact?: boolean) {
  <div className={`flex ${alignClass(el.align)}`}>
  <span
  style={{
- backgroundColor: isOutline ? 'transparent' : el.color || '#4f46e5',
- color: isOutline ? el.color || '#4f46e5' : '#ffffff',
- borderColor: isOutline || el.buttonStyle === 'double-border' ? el.color || '#4f46e5' : 'transparent',
+                                backgroundColor: isOutline ? 'transparent' : el.color || '#059669',
+                                color: isOutline ? el.color || '#059669' : '#ffffff',
+                                borderColor: isOutline || el.buttonStyle === 'double-border' ? el.color || '#059669' : 'transparent',
  fontFamily: el.fontFamily ? `"${el.fontFamily}", serif` : undefined,
  letterSpacing: el.letterSpacing && el.letterSpacing !== 'normal' ? el.letterSpacing : undefined,
  fontWeight: el.bold ? 'bold' : 600,

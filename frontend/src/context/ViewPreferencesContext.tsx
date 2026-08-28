@@ -20,18 +20,18 @@ export interface AccentPreset {
 
 export const ACCENT_PRESETS: AccentPreset[] = [
   {
+    id: 'emerald',
+    label: 'Émeraude',
+    primary: '#059669',
+    accent: '#10b981',
+    swatches: ['#059669', '#10b981', '#34d399', '#6ee7b7'],
+  },
+  {
     id: 'indigo',
     label: 'Indigo',
     primary: '#4f46e5',
     accent: '#6366f1',
     swatches: ['#4f46e5', '#22c55e', '#eab308', '#ef4444'],
-  },
-  {
-    id: 'emerald',
-    label: 'Émeraude',
-    primary: '#059669',
-    accent: '#34d399',
-    swatches: ['#059669', '#0ea5e9', '#eab308', '#f43f5e'],
   },
   {
     id: 'sky',
@@ -45,14 +45,14 @@ export const ACCENT_PRESETS: AccentPreset[] = [
     label: 'Ambre',
     primary: '#d97706',
     accent: '#fbbf24',
-    swatches: ['#d97706', '#4f46e5', '#10b981', '#ef4444'],
+    swatches: ['#d97706', '#059669', '#10b981', '#ef4444'],
   },
   {
     id: 'rose',
     label: 'Rose',
     primary: '#e11d48',
     accent: '#fb7185',
-    swatches: ['#e11d48', '#6366f1', '#14b8a6', '#f59e0b'],
+    swatches: ['#e11d48', '#059669', '#14b8a6', '#f59e0b'],
   },
   {
     id: 'violet',
@@ -83,7 +83,7 @@ export interface ViewPreferences {
 const STORAGE_KEY = 'em-view-prefs-v1';
 
 export const DEFAULT_VIEW_PREFERENCES: ViewPreferences = {
-  accent: 'indigo',
+  accent: 'emerald',
   density: 'comfortable',
   fontScale: 'md',
   mood: 'work',
