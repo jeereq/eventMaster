@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Minimize2 } from 'lucide-react';
+import { Minimize2, SlidersHorizontal } from 'lucide-react';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
@@ -46,6 +46,8 @@ export function CatalogueFocusStage({
   navigateOnClick?: boolean;
   className?: string;
 }) {
+  const [filtersVisible, setFiltersVisible] = useState(true);
+
   return (
     <div className={cn('relative isolate flex-1 min-h-0', className)}>
       <div className="absolute inset-0 z-0">
@@ -62,9 +64,27 @@ export function CatalogueFocusStage({
           searchOriginLabel={searchOriginLabel}
         />
       </div>
-      <div className="absolute inset-x-0 top-0 z-20 p-2 sm:p-4 space-y-2 bg-gradient-to-b from-background/85 via-background/40 to-transparent pointer-events-none">
-        {header ? <div className="pointer-events-auto">{header}</div> : null}
-        {filters ? <div className="pointer-events-auto w-full max-w-3xl em-focus-filters">{filters}</div> : null}
+      <div className="absolute inset-x-0 top-0 z-30 p-2 sm:p-4 space-y-2 bg-gradient-to-b from-background/85 via-background/40 to-transparent pointer-events-none">
+        <div className="pointer-events-auto flex items-start gap-2">
+          {header ? <div className="min-w-0 flex-1">{header}</div> : null}
+          {filters ? (
+            <button
+              type="button"
+              onClick={() => setFiltersVisible((open) => !open)}
+              aria-pressed={filtersVisible}
+              aria-controls="catalogue-focus-filters"
+              className="h-9 sm:h-10 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              {filtersVisible ? 'Masquer' : 'Filtres'}
+            </button>
+          ) : null}
+        </div>
+        {filters && filtersVisible ? (
+          <div id="catalogue-focus-filters" className="pointer-events-auto w-full max-w-3xl em-focus-filters">
+            {filters}
+          </div>
+        ) : null}
         {error ? (
           <p className="pointer-events-auto text-sm text-rose-600 bg-surface/95 rounded-lg px-3 py-2 shadow-lg">
             {error}

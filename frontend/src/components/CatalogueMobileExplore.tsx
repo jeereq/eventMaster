@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Building2, Calendar, KeyRound, ChevronUp, LayoutGrid, Locate, Navigation, Sparkles, X } from 'lucide-react';
+import { Building2, Calendar, KeyRound, ChevronUp, LayoutGrid, Locate, Navigation, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import MarketplaceLocationsMap, {
   type MarketplaceMapHandle,
   type MarketplaceMapMarker,
@@ -224,6 +224,7 @@ export default function CatalogueMobileExplore({
   const [dragging, setDragging] = useState(false);
   const [vh, setVh] = useState(800);
   const [headerH, setHeaderH] = useState(HEADER_FALLBACK);
+  const [filtersVisible, setFiltersVisible] = useState(true);
 
   useEffect(() => {
     const sync = () => setVh(window.innerHeight);
@@ -245,7 +246,11 @@ export default function CatalogueMobileExplore({
     observer.observe(node);
     setHeaderH(node.getBoundingClientRect().height || HEADER_FALLBACK);
     return () => observer.disconnect();
-  }, [nav, filters]);
+  }, [nav, filters, filtersVisible]);
+
+  useEffect(() => {
+    if (snap === 'full') setFiltersVisible(false);
+  }, [snap]);
 
   useEffect(() => {
     if (!dragging) setSheetH(snapHeights(vh, headerH)[snap]);
@@ -358,8 +363,24 @@ export default function CatalogueMobileExplore({
             </button>
           ) : null}
           {nav ? <div className="min-w-0 flex-1">{nav}</div> : null}
+          {filters ? (
+            <button
+              type="button"
+              onClick={() => setFiltersVisible((open) => !open)}
+              aria-pressed={filtersVisible}
+              aria-controls="catalogue-explore-filters"
+              className="h-9 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              {filtersVisible ? 'Masquer' : 'Filtres'}
+            </button>
+          ) : null}
         </div>
-        {filters ? <div className="pointer-events-auto">{filters}</div> : null}
+        {filters && filtersVisible ? (
+          <div id="catalogue-explore-filters" className="pointer-events-auto">
+            {filters}
+          </div>
+        ) : null}
         </div>
       </div>
 
@@ -409,6 +430,16 @@ export default function CatalogueMobileExplore({
               ) : null}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              {filters && !filtersVisible ? (
+                <button
+                  type="button"
+                  onClick={() => setFiltersVisible(true)}
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Filtres
+                </button>
+              ) : null}
               {onExit ? (
                 <button
                   type="button"
