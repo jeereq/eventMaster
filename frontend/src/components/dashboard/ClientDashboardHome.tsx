@@ -202,7 +202,7 @@ const INTENT_STORAGE_KEY = 'em_client_primary_intent';
 export default function ClientDashboardHome() {
   const { user } = useAuth();
   const router = useRouter();
-  const { favorites } = useListingFavorites();
+  const { items: favoriteItems } = useListingFavorites();
 
   const [selectedIntent, setSelectedIntent] = useState<ClientIntent>('venue');
   const [searchQuery, setSearchQuery] = useState('');
@@ -426,7 +426,7 @@ export default function ClientDashboardHome() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl font-black text-foreground">{favorites.length}</p>
+            <p className="text-2xl font-black text-foreground">{favoriteItems.length}</p>
             <p className="text-xs text-muted mt-0.5">Salles &amp; prestataires mis de côté</p>
           </div>
         </Link>
