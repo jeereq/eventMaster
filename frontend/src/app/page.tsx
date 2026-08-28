@@ -14,7 +14,6 @@ import LandingTrustBanner from '@/components/landing/LandingTrustBanner';
 import LandingRoomEditorShowcase from '@/components/landing/LandingRoomEditorShowcase';
 import LandingMobileStickyBar from '@/components/landing/LandingMobileStickyBar';
 import FaqSection from '@/components/landing/FaqSection';
-import LandingProductOverview from '@/components/landing/LandingProductOverview';
 import LandingModelsSection from '@/components/landing/LandingModelsSection';
 import LandingVitrineSection from '@/components/landing/LandingVitrineSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
@@ -175,13 +174,6 @@ export default function Home() {
                     </Link>
                   </div>
                 )}
-                <a
-                  href={profile.exploreCta.href}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-primary hover:text-primary-hover transition"
-                >
-                  {profile.exploreCta.label}
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </a>
               </div>
 
               {/* Badge d'aide et réassurance HUD */}
@@ -229,8 +221,6 @@ export default function Home() {
       <LandingWorkflowSection profileId={profileId} onProfileChange={(id) => selectProfile(id, false)} />
 
       <LandingRoomEditorShowcase />
-
-      <LandingProductOverview />
 
       <LandingModelsSection
         templates={publicTemplates}

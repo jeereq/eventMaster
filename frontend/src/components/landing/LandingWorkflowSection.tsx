@@ -83,7 +83,7 @@ export default function LandingWorkflowSection({
       <div className="page-container space-y-8">
         <div className="max-w-2xl space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted">
-            Un chemin tout tracé
+            Parcours guidé
           </p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
             Votre parcours, étape par étape
@@ -94,7 +94,7 @@ export default function LandingWorkflowSection({
         <div
           role="tablist"
           aria-label="Changer de profil"
-          className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {LANDING_PROFILES.map((item) => (
             <button
@@ -106,9 +106,9 @@ export default function LandingWorkflowSection({
               aria-controls={`${tabsId}-panel`}
               onClick={() => onProfileChange(item.id)}
               className={cn(
-                'shrink-0 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition border',
+                'shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                 profileId === item.id
-                  ? 'bg-primary text-white border-primary'
+                  ? 'bg-primary text-primary-foreground border-primary/30 shadow-xs'
                   : 'bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted',
               )}
             >

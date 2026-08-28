@@ -16,19 +16,13 @@ export default function LandingProfileGate({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            Choisissez votre objectif
-          </p>
-          <p className="text-xs sm:text-sm text-muted">
-            Sélectionnez votre profil pour adapter instantanément les outils et le parcours.
-          </p>
-        </div>
-        <span className="hidden sm:inline-block text-[11px] font-medium text-muted bg-surface px-2.5 py-1 rounded-full border border-border">
-          4 profils adaptés
-        </span>
+      <div className="px-1">
+        <h2 className="text-base sm:text-lg font-bold text-foreground">
+          Choisissez votre profil
+        </h2>
+        <p className="text-xs sm:text-sm text-muted">
+          Adaptez instantanément les outils et le parcours à votre événement.
+        </p>
       </div>
 
       <ul
@@ -46,7 +40,7 @@ export default function LandingProfileGate({
                 onClick={() => onSelect(profile.id)}
                 aria-pressed={selected}
                 className={cn(
-                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group',
+                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                   selected
                     ? 'border-2 border-primary bg-primary/[0.06] dark:bg-primary/[0.12] shadow-lg shadow-primary/20 ring-1 ring-primary/40'
                     : 'em-hud-card border-border hover:border-primary/40',
