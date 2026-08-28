@@ -213,22 +213,22 @@ export default function LandingPricingSection({
  <div className="page-container">
         <div className="max-w-2xl mb-10 space-y-2">
           <p className="text-xs font-medium text-muted uppercase tracking-wider">
-            Un investissement pour votre sérénité
+            Tarification
           </p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
             {audience === 'B2C'
-              ? 'Choisissez la tranquillité'
+              ? 'Forfaits Particuliers'
               : audience === 'VENDOR'
-                ? 'Donnez de la visibilité à votre activité'
-                : 'Passez à la vitesse supérieure'}
+                ? 'Forfaits Salles & Prestataires'
+                : 'Forfaits Organisations'}
           </h2>
           <p className="text-sm text-muted leading-relaxed">
             {lead ||
               (audience === 'B2C'
-                ? `Des forfaits simples basés sur le nombre d'invités (50, 100, 200 ou +200) pour tout gérer sans stress. Le paiement annuel offre −${ANNUAL_DISCOUNT_PERCENT} %.`
+                ? `Forfaits clairs selon votre nombre d'invités. Éditeur de salle complet inclus. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
                 : audience === 'VENDOR'
-                  ? `Publiez vos fiches (salle, métier, location) et recevez des demandes. Sur les forfaits payants, le paiement annuel offre −${ANNUAL_DISCOUNT_PERCENT} %.`
-                  : `La solution clé en main pour les professionnels de l'événementiel (Business, Premium, Enterprise). Paiement annuel : −${ANNUAL_DISCOUNT_PERCENT} %.`)}
+                  ? `Publiez votre vitrine avec plan 3D et recevez des demandes directes sans commission. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
+                  : `Billetterie par zone, gestion d’équipe, scan jour J et multi-événements. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`)}
           </p>
         </div>
 

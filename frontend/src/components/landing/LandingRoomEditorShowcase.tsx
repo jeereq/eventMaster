@@ -40,8 +40,8 @@ const EDITOR_TIERS: EditorTierConfig[] = [
     badge: 'Découverte',
     plans: 'Forfait Gratuit',
     tagline: 'L’essentiel pour démarrer rapidement sans contrainte',
-    description: 'Tables simples rondes et rectangulaires, déplacement fluide et positionnement basique.',
-    features: ['2 formes de tables', 'Déplacement & suppression', '1 salle de réception simple', 'Vue plan 2D claire'],
+    description: 'Tables simples rondes et rectangulaires, positionnement basique.',
+    features: ['2 formes de tables', 'Déplacement fluide', '1 salle simple', 'Vue plan 2D claire'],
     dimensions: '14m × 10m',
     capacity: '24 invités',
   },
@@ -50,8 +50,8 @@ const EDITOR_TIERS: EditorTierConfig[] = [
     badge: 'Standard',
     plans: 'Business B2B',
     tagline: 'Organisation méthodique avec grille magnétique et rangées',
-    description: 'Création en rangées, duplication rapide, verrouillage d’objets, 4 formes de tables et allées de passage.',
-    features: ['4 formes de tables (ronde, banquet, carrée, ovale)', 'Grille magnétique & alignement', 'Gestion des entrées et couloirs', 'Rendu standard'],
+    description: '4 formes de tables, rangées, duplication rapide et allées.',
+    features: ['4 formes de tables', 'Grille magnétique', 'Allées de passage', 'Rendu standard'],
     dimensions: '18m × 12m',
     capacity: '80 invités',
   },
@@ -60,8 +60,8 @@ const EDITOR_TIERS: EditorTierConfig[] = [
     badge: 'Avancé',
     plans: 'Premium & Premium Plus',
     tagline: 'Scénographie événementielle et rendu 3D d’ambiance',
-    description: 'Scène d’honneur surélevée, buffets traiteur, zone VIP, piste de danse centrale et rendu 3D showcase.',
-    features: ['12 thèmes d’ambiance & éclairage', 'Scènes, podiums & décors floraux', 'Rendu 3D showcase immersif', 'Rotations libres & zones VIP'],
+    description: 'Scène surélevée, buffets, zone VIP et rendu 3D d’ambiance.',
+    features: ['12 thèmes d’éclairage', 'Scènes & podiums', 'Rendu 3D immersif', 'Rotations libres'],
     dimensions: '24m × 16m',
     capacity: '160 invités',
   },
@@ -70,8 +70,8 @@ const EDITOR_TIERS: EditorTierConfig[] = [
     badge: 'Excellence',
     plans: 'Particuliers, Enterprise, Salles',
     tagline: 'L’expérience totale sans aucune restriction créative',
-    description: 'Bâtiments multi-étages (Duplex, Mezzanine, Balcon), tapis d’honneur, chaises dorées Chiavari et textures de sol sur-mesure.',
-    features: ['Multi-étages (Duplex, Villa, Balcon)', 'Tapis & périmètres sur-mesure', 'Thèmes & visuels personnalisés', 'Rendu 3D complet avec lustres'],
+    description: 'Multi-étages (Duplex, Balcon), lustres et textures sur-mesure.',
+    features: ['Multi-étages (Duplex, Balcon)', 'Tapis & allées sur-mesure', 'Thèmes personnalisés', 'Rendu 3D avec lustres'],
     dimensions: '30m × 20m (Duplex)',
     capacity: '250+ invités',
     highlighted: true,
@@ -102,12 +102,11 @@ export default function LandingRoomEditorShowcase() {
           </div>
 
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight leading-tight">
-            Visualisez chaque place, du plan de masse à la vue d’ambiance 3D
+            Modélisez votre salle en 2D et 3D
           </h2>
 
           <p className="text-sm sm:text-base text-muted leading-relaxed">
-            Finis les plans sur papier ou les tableurs encombrants. Dessinez la salle, agencez les tables avec leurs chaises,
-            ajoutez l’estrade et les buffets, puis basculez en vue 3D d’ambiance pour immerger vos clients ou invités.
+            Placez tables, allées, buffets et lustres, puis visualisez l’ambiance en direct.
           </p>
         </div>
 

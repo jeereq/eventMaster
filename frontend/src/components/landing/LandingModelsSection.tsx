@@ -43,11 +43,10 @@ export default function LandingModelsSection({
           <div className="max-w-xl space-y-2">
             <p className="text-xs font-medium uppercase tracking-wider text-muted">Modèles d’invitation</p>
             <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-              Choisissez un modèle, envoyez le lien
+              Modèles d’invitation prêts à l’emploi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Un visuel pour le premier message. Vos invités répondent. Le plan de table et le PDF partent ensuite,
-              une fois la place attribuée.
+              Choisissez un design élégant, personnalisez les détails et partagez le lien d’invitation en 1 clic.
             </p>
           </div>
           <Link href="/register">

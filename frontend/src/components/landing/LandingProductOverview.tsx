@@ -6,23 +6,23 @@ import { useLandingReveal } from '@/components/landing/useLandingReveal';
 const PILLARS = [
   {
     icon: Mail,
-    title: 'Des invitations qui font de l\'effet',
-    text: 'Fini le PDF perdu. Envoyez un lien unique, suivez les confirmations en temps réel et partagez le plan au bon moment.',
+    title: 'Invitations WhatsApp & RSVP',
+    text: 'Lien unique par invité, suivi des réponses et choix de repas en temps réel.',
   },
   {
     icon: LayoutGrid,
-    title: 'Le placement, sans le casse-tête',
-    text: 'Un plan interactif et visuel. Placez chaque invité facilement pour que tout le monde sache où s’asseoir avant même d\'arriver.',
+    title: 'Plan de table 2D & 3D',
+    text: 'Placement visuel par glisser-déposer. Vue d’ambiance immersive pour vos invités.',
   },
   {
     icon: ScanLine,
-    title: 'Un accueil fluide et moderne',
-    text: 'Scannez le QR Code de vos invités depuis votre smartphone à l\'entrée. Fini la file d\'attente et les listes papier barrées.',
+    title: 'Scan QR & Accueil Jour J',
+    text: 'Validation des entrées en 2 secondes au smartphone. Zéro file d’attente.',
   },
   {
     icon: Store,
-    title: 'L\'excellence à portée de clic',
-    text: 'Salles, prestataires, locations de matériel. Découvrez et réservez la crème de l\'événementiel sans intermédiaire financier.',
+    title: 'Lieux & Prestataires',
+    text: 'Explorez et contactez les meilleures salles et prestataires vérifiés en direct.',
   },
 ];
 
@@ -37,13 +37,12 @@ export default function LandingProductOverview() {
     >
       <div className="page-container space-y-8">
         <div className="max-w-2xl space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">La promesse EventMaster</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">Tout-en-un</p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-            Votre centre de commande centralisé
+            Tout votre événement sur un seul écran
           </h2>
           <p className="text-sm text-muted leading-relaxed">
-            Dites adieu aux tableurs et aux dizaines d'échanges. EventMaster unifie tout ce qui crée l'angoisse d'un organisateur : 
-            les invitations, les réponses, le placement et l'accueil le jour J.
+            Invitations, plan de salle, billetterie et scan jour J réunis dans votre navigateur.
           </p>
         </div>
 

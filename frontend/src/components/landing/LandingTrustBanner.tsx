@@ -6,27 +6,27 @@ import { Smartphone, LayoutGrid, ScanLine, CreditCard } from 'lucide-react';
 const TRUST_POINTS = [
   {
     icon: Smartphone,
-    title: '100% dans le navigateur',
-    description: 'Aucune app à installer pour vous ou vos invités. Rapide sur mobile et desktop.',
+    title: '100% Navigateur',
+    description: 'Zéro application à installer. Fluide sur mobile et ordinateur.',
     highlight: 'Zéro friction',
   },
   {
     icon: LayoutGrid,
-    title: 'Éditeur de Salle 2D / 3D',
-    description: 'Scénographie, tables, buffets, étages et vue d’ambiance immersive.',
-    highlight: 'Niveaux flexibles',
+    title: 'Plan de Salle 2D / 3D',
+    description: 'Placement de tables, allées, lustres et vue immersive.',
+    highlight: 'Visuel direct',
   },
   {
     icon: ScanLine,
-    title: 'Scan QR & Protocole Jour J',
-    description: 'Validation de présence et attribution de place en moins de 2 secondes à l’entrée.',
-    highlight: 'Fluidité totale',
+    title: 'Scan QR Jour J',
+    description: 'Validation d’entrée en 2 secondes au smartphone.',
+    highlight: 'Zéro attente',
   },
   {
     icon: CreditCard,
-    title: 'Tarifs transparents en FC',
-    description: 'Forfaits clairs au trimestre (B2C) ou au mois (Pro). Remise annuelle de 10 %.',
-    highlight: 'Paiements locaux',
+    title: 'Paiements Locaux CDF',
+    description: 'Mobile Money (M-Pesa, Orange, Airtel) et cartes bancaires.',
+    highlight: '100% sécurisé',
   },
 ];
 

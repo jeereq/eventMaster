@@ -305,12 +305,12 @@ export default function LandingVitrineSection({
       <div className="page-container space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted">Le catalogue EventMaster</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">Catalogue & Marketplace</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Trouvez la perle rare parmi nos partenaires
+              Lieux, prestataires et billetteries
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Ne perdez plus des heures à chercher. Parcourez notre sélection et découvrez leurs offres.
+              Explorez les espaces vérifiés avec visite 3D et contactez les professionnels en direct.
             </p>
           </div>
           <Link href="/marketplace">

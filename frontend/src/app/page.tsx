@@ -133,8 +133,8 @@ export default function Home() {
                 {LANDING_SLOGAN.full}
               </h1>
 
-              <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
-                Rassemblez le lieu idéal, les meilleurs prestataires et tous vos invités sur une seule plateforme intuitive. Tout se fait dans le navigateur, y compris au téléphone.
+              <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-xl">
+                Plan de salle 2D/3D, invitations WhatsApp, billetterie et scan QR réunis dans votre navigateur.
               </p>
 
               {/* Actions directes */}
@@ -156,7 +156,7 @@ export default function Home() {
                       href="/login"
                       className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-foreground/80 hover:text-foreground hover:underline transition"
                     >
-                      J’ai déjà un compte
+                      Connexion
                     </Link>
                   </div>
                 ) : (
@@ -170,7 +170,7 @@ export default function Home() {
                       href="/contact"
                       className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-foreground/80 hover:text-foreground hover:underline transition"
                     >
-                      Parler à l’équipe
+                      Contact
                     </Link>
                   </div>
                 )}
@@ -184,11 +184,11 @@ export default function Home() {
               </div>
 
               {/* Badge d'aide et réassurance */}
-              <div className="inline-flex items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface/90 px-3.5 py-2.5 text-xs text-muted max-w-xl shadow-xs">
-                <Smartphone className="w-4 h-4 shrink-0 mt-0.5 text-foreground" />
+              <div className="inline-flex items-center gap-2 rounded-[var(--radius-card)] border border-border bg-surface/90 px-3 py-2 text-xs text-muted shadow-xs">
+                <Smartphone className="w-4 h-4 shrink-0 text-foreground" />
                 <p>
-                  <span className="font-semibold text-foreground">Pas d’app à installer.</span>
-                  {' '}RSVP WhatsApp, scan QR et tableau de bord fonctionnent déjà dans votre navigateur.
+                  <span className="font-semibold text-foreground">100% dans le navigateur.</span>
+                  {' '}Zéro application à installer pour vous ou vos invités.
                 </p>
               </div>
             </div>
@@ -206,43 +206,18 @@ export default function Home() {
               onSelect={(id) => selectProfile(id, true)}
             />
 
-            <div className="mt-6 max-w-2xl space-y-3">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted bg-surface px-2 py-0.5 rounded border border-border">
-                  {profile.eyebrow}
-                </span>
-                <span className="text-xs text-muted">Parcours personnalisé</span>
+                <span className="font-semibold text-foreground">{profile.title} :</span>
+                <span>{profile.intro}</span>
               </div>
-
-              <h3 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
-                {profile.title}
-              </h3>
-              <p className="text-sm text-muted leading-relaxed">{profile.intro}</p>
-
-              <ol
-                key={profileId}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted animate-fade-in pt-1"
-                aria-label="Les étapes"
+              <a
+                href={profile.exploreCta.href}
+                className="inline-flex items-center gap-1 font-semibold text-primary hover:text-primary-hover transition"
               >
-                {profile.clicks.map((label, index) => {
-                  const href = profile.clickHrefs[index];
-                  const clickClass =
-                    'font-medium text-foreground hover:text-primary underline-offset-2 hover:underline transition';
-                  return (
-                    <li key={`${profile.id}-${label}`} className="inline-flex items-center gap-2">
-                      <span className="text-[11px] font-semibold tabular-nums text-foreground/70">{index + 1}.</span>
-                      {href.startsWith('#') ? (
-                        <a href={href} className={clickClass}>{label}</a>
-                      ) : (
-                        <Link href={href} className={clickClass}>{label}</Link>
-                      )}
-                      {index < profile.clicks.length - 1 ? (
-                        <ArrowRight className="w-3.5 h-3.5 text-border" aria-hidden />
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ol>
+                {profile.exploreCta.label}
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         </div>
@@ -281,8 +256,8 @@ export default function Home() {
       <FaqSection itemIds={profile.faqIds} subtitle={faqSubtitle} />
 
       <PublicCtaBand
-        title={LANDING_SLOGAN.full}
-        description={profile.intro}
+        title="Prêt à lancer votre événement ?"
+        description="Créez votre compte gratuit en 1 minute. Sans carte bancaire."
         actions={
           user ? (
             <Link href="/dashboard">
