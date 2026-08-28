@@ -33,7 +33,7 @@ import {
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
-import { ArrowRight, Building2, Calendar, KeyRound, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, Sparkles, Store } from 'lucide-react';
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -273,9 +273,17 @@ export default function LandingVitrineSection() {
       <div id="evenements" className="scroll-mt-16" />
       <div className="page-container space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-          <div className="max-w-xl space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted">Catalogue & Marketplace</p>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          <div className="max-w-xl space-y-2.5">
+            <div className="flex items-center gap-2">
+              <span className="em-festive-chip">
+                <Store className="w-3 h-3" />
+                Catalogue & Marketplace
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Espaces & Talents
+              </span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
               Lieux, prestataires et billetteries
             </h2>
             <p className="text-sm text-muted leading-relaxed">
@@ -289,17 +297,17 @@ export default function LandingVitrineSection() {
           </Link>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {tabs.map(({ id, label, icon: Icon, hash }) => (
             <button
               key={id}
               type="button"
               onClick={() => selectTab(id, hash)}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
+                'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                 tab === id
-                  ? 'bg-foreground text-background'
-                  : 'bg-background text-muted hover:text-foreground border border-border',
+                  ? 'bg-primary text-primary-foreground border border-primary/30 shadow-xs'
+                  : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60',
               )}
             >
               <Icon className="w-3.5 h-3.5" />

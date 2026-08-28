@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles, Eye } from 'lucide-react';
 import { Button, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import type { LandingTemplate } from '@/config/landingTemplates';
@@ -40,61 +40,91 @@ export default function LandingModelsSection({
     >
       <div className="page-container space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-          <div className="max-w-xl space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted">Modèles d’invitation</p>
-            <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+          <div className="max-w-xl space-y-2.5">
+            <div className="flex items-center gap-2">
+              <span className="em-festive-chip">
+                <Sparkles className="w-3 h-3" />
+                Papeterie Digitale
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Faire-part & RSVP
+              </span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
               Modèles d’invitation prêts à l’emploi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Choisissez un design élégant, personnalisez les détails et partagez le lien d’invitation en 1 clic.
+              Choisissez un design élégant, personnalisez les détails et partagez le lien d’invitation WhatsApp en 1 clic.
             </p>
           </div>
+
           <Link href="/register">
-            <Button rightIcon={<ArrowRight className="w-4 h-4" />}>Utiliser un modèle</Button>
+            <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Créer mon invitation
+            </Button>
           </Link>
         </div>
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-56 rounded-[var(--radius-card)]" />
+              <Skeleton key={i} className="h-64 rounded-[var(--radius-card)]" />
             ))}
           </div>
         ) : templates.length === 0 ? (
-          <p className="text-sm text-muted">
-            Les modèles publiés apparaîtront ici. Vous pourrez aussi en créer après inscription.
-          </p>
+          <div className="p-8 text-center em-hud-card rounded-[var(--radius-card)]">
+            <p className="text-sm text-muted">
+              Les modèles publiés apparaîtront ici. Vous pourrez aussi créer votre propre modèle sur-mesure.
+            </p>
+          </div>
         ) : (
           <>
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 em-stagger">
               {shown.map((template) => (
                 <li key={template.id}>
-                  <article className="h-full rounded-[var(--radius-card)] border border-border bg-surface p-3.5 flex flex-col shadow-[var(--shadow-soft)] em-soft-hover">
-                    <button
-                      type="button"
-                      onClick={() => onPreview(template)}
-                      className="w-full text-left rounded-[var(--radius-button)] overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
-                    >
-                      <LandingInvitationPreview template={template} compact className="!max-h-[200px]" />
-                    </button>
-                    <div className="mt-3 space-y-1.5 flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                        {categoryLabel(template.category)}
-                      </p>
-                      <h3 className="text-sm font-semibold text-foreground leading-snug line-clamp-1">{template.name}</h3>
-                      {template.description ? (
-                        <p className="text-xs text-muted leading-relaxed line-clamp-2">{template.description}</p>
-                      ) : null}
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
+                  <article className="h-full rounded-[var(--radius-card)] em-hud-card p-3.5 flex flex-col justify-between transition-all group">
+                    <div>
                       <button
                         type="button"
                         onClick={() => onPreview(template)}
-                        className="text-xs font-medium text-foreground hover:underline"
+                        className="w-full text-left rounded-[var(--radius-button)] overflow-hidden focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary relative group/preview cursor-pointer"
                       >
-                        Aperçu
+                        <LandingInvitationPreview template={template} compact className="!max-h-[200px]" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 backdrop-blur-[2px]">
+                          <Eye className="w-4 h-4" />
+                          <span>Aperçu interactif</span>
+                        </div>
                       </button>
-                      <Link href="/register" className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1">
+
+                      <div className="mt-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
+                            {categoryLabel(template.category)}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+                          {template.name}
+                        </h3>
+                        {template.description ? (
+                          <p className="text-xs text-muted leading-relaxed line-clamp-2">
+                            {template.description}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-border/80 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onPreview(template)}
+                        className="text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Aperçu
+                      </button>
+                      <Link
+                        href="/register"
+                        className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                      >
                         Utiliser <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>

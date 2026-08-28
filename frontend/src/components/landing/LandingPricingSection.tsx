@@ -25,6 +25,7 @@ import {
  type PlanCapabilityBadge,
 } from '@/config/landingPricing';
 import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
+import { cn } from '@/lib/cn';
 
 interface DbPlan {
  name?: string;
@@ -208,14 +209,20 @@ export default function LandingPricingSection({
  return (
  <section
  id="tarifs"
- className="py-16 sm:py-20 bg-background border-t border-border"
+ className="py-16 sm:py-20 bg-background border-t border-border scroll-mt-16"
  >
  <div className="page-container">
-        <div className="max-w-2xl mb-10 space-y-2">
-          <p className="text-xs font-medium text-muted uppercase tracking-wider">
-            Tarification
-          </p>
-          <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+        <div className="max-w-2xl mb-10 space-y-2.5">
+          <div className="flex items-center gap-2">
+            <span className="em-festive-chip">
+              <Sparkles className="w-3 h-3" />
+              Tarification Transparente
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Sans frais cachés
+            </span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
             {audience === 'B2C'
               ? 'Forfaits Particuliers'
               : audience === 'VENDOR'
@@ -233,10 +240,10 @@ export default function LandingPricingSection({
         </div>
 
  {activePromos.length > 0 && (
- <div className="mb-8 max-w-2xl rounded-[var(--radius-card)] border border-border bg-surface-muted p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
- <Tag className="w-5 h-5 text-muted shrink-0" />
+ <div className="mb-8 max-w-2xl rounded-[var(--radius-card)] em-hud-card p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+ <Tag className="w-5 h-5 text-primary shrink-0" />
  <div className="min-w-0">
- <p className="text-sm font-semibold text-foreground">
+ <p className="text-sm font-bold text-foreground">
  Promotions sur {activePromos.length} forfait{activePromos.length > 1 ? 's' : ''}
  </p>
  <p className="text-xs text-muted mt-0.5">
@@ -247,68 +254,77 @@ export default function LandingPricingSection({
  )}
 
  <div className="flex flex-col items-start gap-3 mb-10">
- <div className="inline-flex items-center p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
+ <div className="flex flex-wrap items-center gap-3">
+ <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-slate-900 border border-border">
  <button
  type="button"
  onClick={() => setAudience('B2B')}
- className={`px-4 py-2 rounded-md text-xs font-medium transition ${
- audience === 'B2B'
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
- : 'text-muted hover:text-foreground'
- }`}
+ className={cn(
+   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   audience === 'B2B'
+     ? 'bg-primary text-primary-foreground shadow-xs'
+     : 'text-muted hover:text-foreground',
+ )}
  >
  Organisations (B2B)
  </button>
  <button
  type="button"
  onClick={() => setAudience('B2C')}
- className={`px-4 py-2 rounded-md text-xs font-medium transition ${
- audience === 'B2C'
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
- : 'text-muted hover:text-foreground'
- }`}
+ className={cn(
+   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   audience === 'B2C'
+     ? 'bg-primary text-primary-foreground shadow-xs'
+     : 'text-muted hover:text-foreground',
+ )}
  >
  Particuliers (B2C)
  </button>
  <button
  type="button"
  onClick={() => setAudience('VENDOR')}
- className={`px-4 py-2 rounded-md text-xs font-medium transition ${
- audience === 'VENDOR'
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
- : 'text-muted hover:text-foreground'
- }`}
+ className={cn(
+   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   audience === 'VENDOR'
+     ? 'bg-primary text-primary-foreground shadow-xs'
+     : 'text-muted hover:text-foreground',
+ )}
  >
  Salles & prestataires
  </button>
  </div>
- <div className="inline-flex items-center p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
+
+ <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-slate-900 border border-border">
  <button
  type="button"
  onClick={() => setBilling('monthly')}
- className={`px-4 py-2 rounded-md text-xs font-medium transition ${
- billing === 'monthly'
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
- : 'text-muted hover:text-foreground'
- }`}
+ className={cn(
+   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   billing === 'monthly'
+     ? 'bg-surface text-foreground shadow-xs border border-border/80'
+     : 'text-muted hover:text-foreground',
+ )}
  >
  {audience === 'B2C' ? 'Trimestriel' : 'Mensuel'}
  </button>
  <button
  type="button"
  onClick={() => setBilling('annual')}
- className={`px-4 py-2 rounded-md text-xs font-medium transition flex items-center gap-2 ${
- billing === 'annual'
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
- : 'text-muted hover:text-foreground'
- }`}
+ className={cn(
+   'px-4 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   billing === 'annual'
+     ? 'bg-surface text-foreground shadow-xs border border-border/80'
+     : 'text-muted hover:text-foreground',
+ )}
  >
- Annuel
- <span className="text-[10px] font-semibold text-muted">
+ <span>Annuel</span>
+ <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full">
  −{ANNUAL_DISCOUNT_PERCENT} %
  </span>
  </button>
  </div>
+ </div>
+
  <p className="text-xs text-muted">
  {billing === 'annual'
  ? audience === 'B2C'

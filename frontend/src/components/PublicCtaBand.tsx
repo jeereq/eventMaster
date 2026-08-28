@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 export default function PublicCtaBand({
   title,
@@ -23,20 +23,38 @@ export default function PublicCtaBand({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="py-16 sm:py-20 bg-foreground text-background">
-      <div className="page-container text-center space-y-5">
-        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-xl mx-auto">
+    <section className="relative overflow-hidden py-16 sm:py-20 bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white border-t border-primary/20">
+      {/* Spotlight et néon d'arrière plan */}
+      <div
+        className="absolute inset-0 bg-radial-[at_50%_20%] from-primary/30 via-transparent to-transparent pointer-events-none"
+        aria-hidden
+      />
+
+      <div className="page-container relative z-10 text-center space-y-5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[11px] font-bold text-amber-300 uppercase tracking-wider mx-auto">
+          <Sparkles className="w-3.5 h-3.5" />
+          Rejoignez EventMaster
+        </div>
+
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white max-w-xl mx-auto leading-tight">
           {title}
         </h2>
-        <p className="text-sm text-background/70 max-w-md mx-auto leading-relaxed">
+
+        <p className="text-sm sm:text-base text-white/70 max-w-md mx-auto leading-relaxed">
           {description}
         </p>
-        <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3">
           {actions || (
             <>
               {primaryHref && primaryLabel ? (
                 <Link href={primaryHref}>
-                  <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  <Button
+                    size="lg"
+                    variant="primary"
+                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                    className="shadow-lg shadow-primary/40 text-sm font-bold"
+                  >
                     {primaryLabel}
                   </Button>
                 </Link>
@@ -45,8 +63,8 @@ export default function PublicCtaBand({
                 <Link href={secondaryHref}>
                   <Button
                     size="lg"
-                    variant="ghost"
-                    className="text-background/80 hover:text-background hover:bg-background/10 border border-background/20"
+                    variant="secondary"
+                    className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
                   >
                     {secondaryLabel}
                   </Button>

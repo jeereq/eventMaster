@@ -33,10 +33,10 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           <div className="sm:col-span-2 lg:col-span-4 space-y-4">
             <Link href="/" className="inline-flex items-center gap-2.5 group">
-              <div className="bg-foreground p-2 rounded-[var(--radius-button)] text-background transition group-hover:opacity-90">
+              <div className="bg-primary text-primary-foreground p-2 rounded-[var(--radius-button)] shadow-xs shadow-primary/30 transition group-hover:scale-105">
                 <Building2 className="w-4 h-4" />
               </div>
-              <span className="text-base font-semibold tracking-tight">{site.platformName}</span>
+              <span className="text-base font-bold tracking-tight text-foreground">{site.platformName}</span>
             </Link>
             <p className="text-sm text-muted leading-relaxed max-w-sm">
               {FOOTER_BRAND_DESCRIPTION}

@@ -238,7 +238,7 @@ export default function LandingHeroPreview({
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg em-glow-icon-box shrink-0">
                         <Icon className="w-4 h-4" />
                       </div>
                       <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">

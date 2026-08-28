@@ -188,7 +188,7 @@ export default function Home() {
         actions={
           user ? (
             <Link href="/dashboard">
-              <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
                 Ouvrir mon espace
               </Button>
             </Link>
@@ -196,7 +196,7 @@ export default function Home() {
             <>
               {site.allowRegistration && (
                 <Link href={profile.cta.href}>
-                  <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
                     {profile.cta.label}
                   </Button>
                 </Link>
@@ -204,8 +204,8 @@ export default function Home() {
               <Link href="/marketplace">
                 <Button
                   size="lg"
-                  variant="ghost"
-                  className="text-background/80 hover:text-background hover:bg-background/10 border border-background/20"
+                  variant="secondary"
+                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
                 >
                   Explorer le marketplace
                 </Button>

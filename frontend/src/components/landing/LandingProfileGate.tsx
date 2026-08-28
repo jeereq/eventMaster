@@ -57,9 +57,14 @@ export default function LandingProfileGate({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 px-1">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider mb-1.5">
-            <Sparkles className="w-3 h-3" />
-            Solutions & Produits
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="em-festive-chip">
+              <Sparkles className="w-3 h-3" />
+              Solutions & Produits
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Orientation Immédiate
+            </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
             Quel est votre projet ?
@@ -84,9 +89,19 @@ export default function LandingProfileGate({
           return (
             <li key={profile.id} className="w-full">
               <div
+                role="button"
+                tabIndex={0}
+                aria-pressed={selected}
+                aria-label={`Sélectionner la solution ${profile.label}`}
                 onClick={() => onSelect(profile.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect(profile.id);
+                  }
+                }}
                 className={cn(
-                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group cursor-pointer select-none',
+                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group cursor-pointer select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                   selected
                     ? 'border-2 border-primary bg-surface dark:bg-slate-900/90 shadow-xl shadow-primary/25 ring-2 ring-primary/30 scale-[1.01] z-10'
                     : 'em-hud-card border-border hover:border-primary/50 hover:bg-surface/90',

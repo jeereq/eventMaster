@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, HelpCircle, Sparkles } from 'lucide-react';
 import { FAQ_ITEMS } from '@/config/siteContent';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -51,32 +51,51 @@ export default function FaqSection({
   return (
     <section id={id} className={cn('py-16 sm:py-20 bg-surface border-t border-border scroll-mt-16', className)}>
       <div className="page-container">
-        <div className="max-w-2xl mb-8 space-y-2">
-          <h2 className="text-2xl font-semibold text-foreground tracking-tight">{title}</h2>
+        <div className="max-w-2xl mb-8 space-y-2.5">
+          <div className="flex items-center gap-2">
+            <span className="em-festive-chip">
+              <Sparkles className="w-3 h-3" />
+              FAQ & Aide
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Réponses Claires
+            </span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">{title}</h2>
           <p className="text-sm text-muted leading-relaxed">{subtitle}</p>
         </div>
 
-        <div className="space-y-2 max-w-3xl">
+        <div className="space-y-2.5 max-w-3xl">
           {items.map((item) => {
             const isOpen = openId === item.id;
             return (
               <div
                 key={item.id}
-                className="bg-background border border-border rounded-[var(--radius-card)] overflow-hidden"
+                className={cn(
+                  'rounded-[var(--radius-card)] transition-all overflow-hidden border',
+                  isOpen
+                    ? 'border-primary/50 bg-background shadow-md shadow-primary/5'
+                    : 'border-border bg-background hover:border-primary/30',
+                )}
               >
                 <button
                   type="button"
                   onClick={() => setOpenId(isOpen ? null : item.id)}
-                  className="w-full flex items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-surface-muted/50 transition"
+                  className="w-full flex items-center justify-between gap-4 px-4 sm:px-5 py-4 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
                   aria-expanded={isOpen}
                 >
-                  <span className="text-sm font-medium text-foreground">{item.question}</span>
+                  <span className={cn('text-sm font-semibold transition-colors', isOpen ? 'text-primary' : 'text-foreground')}>
+                    {item.question}
+                  </span>
                   <ChevronDown
-                    className={cn('w-4 h-4 text-muted shrink-0 transition-transform', isOpen && 'rotate-180')}
+                    className={cn(
+                      'w-4 h-4 shrink-0 transition-transform duration-200',
+                      isOpen ? 'rotate-180 text-primary' : 'text-muted',
+                    )}
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4 pb-4 text-sm text-muted leading-relaxed border-t border-border pt-3 whitespace-pre-line">
+                  <div className="px-4 sm:px-5 pb-4 text-xs sm:text-sm text-muted leading-relaxed border-t border-border/80 pt-3.5 whitespace-pre-line animate-fade-in">
                     {item.answer}
                   </div>
                 )}
@@ -86,12 +105,15 @@ export default function FaqSection({
         </div>
 
         {showContactLink && (
-          <p className="text-xs text-muted mt-8">
-            Pas de réponse ?{' '}
-            <Link href="/contact" className="font-medium text-foreground underline underline-offset-2 hover:no-underline">
-              Contactez-nous
-            </Link>
-          </p>
+          <div className="mt-8 flex items-center gap-2 text-xs text-muted">
+            <HelpCircle className="w-4 h-4 text-primary shrink-0" />
+            <span>
+              Une question spécifique ?{' '}
+              <Link href="/contact" className="font-bold text-primary hover:underline">
+                Contactez notre équipe de support →
+              </Link>
+            </span>
+          </div>
         )}
       </div>
     </section>
