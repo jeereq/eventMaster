@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutGrid,
   Mail,
@@ -21,15 +21,31 @@ import {
   Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import type { LandingProfileId } from '@/lib/landingProfiles';
 
 export type PreviewTab = 'room' | 'rsvp' | 'qr';
 export type LightingTheme = 'gala' | 'romantic' | 'night';
 
-export default function LandingHeroPreview() {
+export default function LandingHeroPreview({
+  profileId,
+}: {
+  profileId?: LandingProfileId;
+} = {}) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('room');
   const [viewMode3D, setViewMode3D] = useState(false);
   const [lightingTheme, setLightingTheme] = useState<LightingTheme>('gala');
   const [showGuestNames, setShowGuestNames] = useState(true);
+
+  useEffect(() => {
+    if (!profileId) return;
+    if (profileId === 'personal') {
+      setActiveTab('room');
+    } else if (profileId === 'pro') {
+      setActiveTab('qr');
+    } else if (profileId === 'seeker' || profileId === 'vendor') {
+      setActiveTab('room');
+    }
+  }, [profileId]);
 
   return (
     <div className="relative w-full max-w-lg mx-auto lg:max-w-none">

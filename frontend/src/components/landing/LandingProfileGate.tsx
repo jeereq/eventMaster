@@ -1,11 +1,14 @@
 'use client';
 
+import React from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import {
   LANDING_PROFILES,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
-import { Check, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { ArrowRight, Check, Sparkles } from 'lucide-react';
 
 export default function LandingProfileGate({
   selectedId,
@@ -16,18 +19,24 @@ export default function LandingProfileGate({
 }) {
   return (
     <div className="space-y-4">
-      <div className="px-1">
-        <h2 className="text-base sm:text-lg font-bold text-foreground">
-          Choisissez votre profil
-        </h2>
-        <p className="text-xs sm:text-sm text-muted">
-          Adaptez instantanément les outils et le parcours à votre événement.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 px-1">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider mb-1.5">
+            <Sparkles className="w-3 h-3" />
+            Solutions & Produits
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+            Quel est votre projet ?
+          </h2>
+          <p className="text-xs sm:text-sm text-muted">
+            Choisissez votre solution pour accéder immédiatement aux outils adaptés.
+          </p>
+        </div>
       </div>
 
       <ul
         id="profils"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         role="list"
       >
         {LANDING_PROFILES.map((profile) => {
@@ -35,35 +44,42 @@ export default function LandingProfileGate({
           const selected = selectedId === profile.id;
           return (
             <li key={profile.id} className="w-full">
-              <button
-                type="button"
+              <div
                 onClick={() => onSelect(profile.id)}
-                aria-pressed={selected}
                 className={cn(
-                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group cursor-pointer select-none',
                   selected
-                    ? 'border-2 border-primary bg-primary/[0.06] dark:bg-primary/[0.12] shadow-lg shadow-primary/20 ring-1 ring-primary/40'
-                    : 'em-hud-card border-border hover:border-primary/40',
+                    ? 'border-2 border-primary bg-surface dark:bg-slate-900/90 shadow-xl shadow-primary/25 ring-2 ring-primary/30 scale-[1.01] z-10'
+                    : 'em-hud-card border-border hover:border-primary/50 hover:bg-surface/90',
                 )}
               >
-                {/* Lueur d'accentuation en arrière plan au survol */}
+                {/* Spotlight lumineux d'arrière-plan */}
                 <div
                   className={cn(
-                    'absolute -inset-10 bg-radial from-primary/15 to-transparent blur-xl pointer-events-none transition-opacity duration-300 -z-10',
+                    'absolute -inset-10 bg-radial from-primary/20 to-transparent blur-2xl pointer-events-none transition-opacity duration-300 -z-10',
                     selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-60',
                   )}
                   aria-hidden
                 />
 
-                {/* Indicateur de sélection */}
+                {/* Barre accentuée supérieure */}
+                <div
+                  className={cn(
+                    'absolute top-0 left-0 right-0 h-1 transition-all',
+                    selected ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/40',
+                  )}
+                />
+
+                {/* Indicateur de sélection actif */}
                 {selected && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] shadow-sm shadow-primary/40">
+                  <span className="absolute top-3.5 right-3.5 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] shadow-sm shadow-primary/40">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
 
                 <div>
-                  <div className="flex items-center gap-2.5 mb-3.5">
+                  {/* Badge & Icône */}
+                  <div className="flex items-center gap-2.5 mb-3">
                     <div
                       className={cn(
                         'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0',
@@ -79,41 +95,64 @@ export default function LandingProfileGate({
                     </span>
                   </div>
 
+                  {/* Titre Produit */}
                   <h3
                     className={cn(
-                      'text-sm font-bold mb-1.5 leading-snug transition-colors',
+                      'text-base font-bold mb-1.5 leading-snug transition-colors',
                       selected ? 'text-primary' : 'text-foreground group-hover:text-primary',
                     )}
                   >
                     {profile.label}
                   </h3>
 
+                  {/* Description courte */}
                   <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-3.5">
                     {profile.intro}
                   </p>
+
+                  {/* 3 micro-puces de fonctionnalités */}
+                  <div className="space-y-1.5 py-3 border-y border-border/60">
+                    {profile.results.map((res) => {
+                      const ResIcon = res.icon;
+                      return (
+                        <div
+                          key={res.label}
+                          className="flex items-center gap-2 text-[11px] font-medium text-foreground/90"
+                        >
+                          <span className={cn(
+                            'w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[9px]',
+                            selected ? 'bg-primary/15 text-primary' : 'bg-surface-muted text-muted group-hover:text-primary',
+                          )}>
+                            <ResIcon className="w-2.5 h-2.5" />
+                          </span>
+                          <span className="truncate">{res.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* 3 micro-pills visuels */}
-                <div className="flex flex-wrap gap-1.5 pt-2.5 border-t border-border/60">
-                  {profile.results.map((res) => {
-                    const ResIcon = res.icon;
-                    return (
-                      <span
-                        key={res.label}
-                        className={cn(
-                          'inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors',
-                          selected
-                            ? 'bg-primary/12 text-primary border border-primary/25'
-                            : 'bg-surface-muted text-muted border border-border/60 group-hover:border-primary/20',
-                        )}
-                      >
-                        <ResIcon className="w-2.5 h-2.5" />
-                        {res.label}
-                      </span>
-                    );
-                  })}
+                {/* Bouton d'action direct */}
+                <div className="pt-4 mt-auto">
+                  <Link
+                    href={profile.cta.href}
+                    onClick={(e) => e.stopPropagation()}
+                    className="block w-full"
+                  >
+                    <Button
+                      size="sm"
+                      variant={selected ? 'primary' : 'secondary'}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                      className={cn(
+                        'w-full text-xs font-semibold justify-between transition-all duration-200',
+                        selected ? 'shadow-md shadow-primary/30' : 'hover:border-primary/40',
+                      )}
+                    >
+                      {profile.cta.label}
+                    </Button>
+                  </Link>
                 </div>
-              </button>
+              </div>
             </li>
           );
         })}

@@ -3,10 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Button, Pagination, paginateItems, Skeleton, SkeletonLandingTemplateGrid, usePageSize } from '@/components/ui';
+import { Button, Pagination, paginateItems, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
-import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import CatalogueFilterBar, { CatalogueEntityFilterFields } from '@/components/CatalogueFilterBar';
 import {
   EMPTY_CATALOGUE_GEO,
@@ -34,37 +33,17 @@ import {
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
-import {
-  buildLandingTemplateGroups,
-  type LandingTemplate,
-} from '@/config/landingTemplates';
-import { ArrowRight, Building2, Calendar, FileText, KeyRound, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, Sparkles } from 'lucide-react';
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 
-type VitrineTab = 'venues' | 'services' | 'rentals' | 'events' | 'templates';
+type VitrineTab = 'venues' | 'services' | 'rentals' | 'events';
 type EntityFilters = CatalogueGeoState & CatalogueEntityExtras;
 
 const emptyFilters: EntityFilters = { ...EMPTY_CATALOGUE_GEO, ...EMPTY_CATALOGUE_EXTRAS };
 
-function getCategoryLabel(category: string) {
-  if (category === 'private') return 'Célébrations';
-  if (category === 'corporate') return 'Professionnel';
-  return 'Soirées';
-}
-
-export default function LandingVitrineSection({
-  publicTemplates,
-  loadingTemplates,
-  isSuperAdmin,
-  onPreviewTemplate,
-}: {
-  publicTemplates: LandingTemplate[];
-  loadingTemplates: boolean;
-  isSuperAdmin: boolean;
-  onPreviewTemplate: (template: LandingTemplate) => void;
-}) {
+export default function LandingVitrineSection() {
   const revealRef = useLandingReveal<HTMLElement>();
   const [tab, setTab] = useState<VitrineTab>('venues');
   const [venues, setVenues] = useState<PublicVenue[]>([]);
@@ -75,13 +54,12 @@ export default function LandingVitrineSection({
   const [applied, setApplied] = useState<EntityFilters>(emptyFilters);
   const [draft, setDraft] = useState<EntityFilters>(emptyFilters);
   const [filterError, setFilterError] = useState('');
-  const [templateCategory, setTemplateCategory] = useState('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-vitrine', 8);
   const { gridCols, setGridCols } = useCatalogueGridCols();
   const vitrineCols: CatalogueGridCols = gridCols === 5 ? 4 : gridCols === 2 || gridCols === 3 || gridCols === 4 ? gridCols : 3;
 
-  const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : tab === 'events' ? 'event' : 'all';
+  const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : 'event';
 
   const load = useCallback(async (filters: EntityFilters, search: string) => {
     setLoadingCatalog(true);
@@ -100,13 +78,13 @@ export default function LandingVitrineSection({
       appendCatalogueEntityParams(venueParams, { ...filters, kind: 'venue' }, 'venue');
       appendCatalogueEntityParams(serviceParams, filters, 'service');
       appendCatalogueEntityParams(eventParams, { ...filters, kind: 'event' }, 'event');
-      const [venuesData, services, eventsData] = await Promise.all([
+      const [venuesData, servicesData, eventsData] = await Promise.all([
         api.get(`/public/venues?${venueParams.toString()}`).catch(() => ({ venues: [] })),
         fetchPublicServicesForCatalogue(serviceParams, 'all'),
         api.get(`/public/events?${eventParams.toString()}`).catch(() => ({ events: [] })),
       ]);
       setVenues(venuesData.venues || []);
-      setServices(services);
+      setServices(servicesData);
       setEvents(eventsData.events || []);
     } finally {
       setLoadingCatalog(false);
@@ -121,7 +99,6 @@ export default function LandingVitrineSection({
   useEffect(() => {
     const applyHash = () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash === 'modeles') setTab('templates');
       if (hash === 'salles' || hash === 'catalogue' || hash === 'marketplace') setTab('venues');
       if (hash === 'prestataires') setTab('services');
       if (hash === 'locations') setTab('rentals');
@@ -134,10 +111,9 @@ export default function LandingVitrineSection({
 
   useEffect(() => {
     setPage(1);
-  }, [tab, query, applied, templateCategory]);
+  }, [tab, query, applied]);
 
   useEffect(() => {
-    if (entity === 'all') return;
     const prune = (filters: EntityFilters): EntityFilters => ({
       ...filters,
       kind: entity,
@@ -185,17 +161,11 @@ export default function LandingVitrineSection({
     [events, query, applied],
   );
 
-  const templateList = useMemo(
-    () => buildLandingTemplateGroups(publicTemplates, templateCategory)[0]?.templates || [],
-    [publicTemplates, templateCategory],
-  );
-
   const tabs: Array<{ id: VitrineTab; label: string; icon: typeof Building2; hash: string }> = [
     { id: 'venues', label: 'Salles', icon: Building2, hash: 'salles' },
     { id: 'services', label: 'Prestataires', icon: Sparkles, hash: 'prestataires' },
     { id: 'rentals', label: 'Locations', icon: KeyRound, hash: 'locations' },
     { id: 'events', label: 'Événements', icon: Calendar, hash: 'evenements' },
-    { id: 'templates', label: 'Modèles', icon: FileText, hash: 'modeles' },
   ];
 
   const selectTab = (next: VitrineTab, hash: string) => {
@@ -209,10 +179,9 @@ export default function LandingVitrineSection({
   const pagedServices = paginateItems(serviceItems, page, pageSize);
   const pagedRentals = paginateItems(rentalItems, page, pageSize);
   const pagedEvents = paginateItems(eventItems, page, pageSize);
-  const pagedTemplates = paginateItems(templateList, page, pageSize);
-  const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity === 'all' ? 'all' : entity }));
+  const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity }));
 
-  const catalogFilters = tab !== 'templates' && (
+  const catalogFilters = (
     <CatalogueFilterBar
       search={query}
       onSearchChange={setQuery}
@@ -285,11 +254,11 @@ export default function LandingVitrineSection({
       }
       filters={
         <CatalogueEntityFilterFields
-          entity={entity === 'all' ? 'all' : entity}
+          entity={entity}
           value={draft}
-          extras={{ ...draft, kind: entity === 'all' ? 'all' : entity }}
+          extras={{ ...draft, kind: entity }}
           error={filterError}
-          onChange={(geo, extras) => setDraft({ ...mergeGeoAndExtras(geo, extras), kind: entity === 'all' ? extras.kind : entity })}
+          onChange={(geo, extras) => setDraft({ ...mergeGeoAndExtras(geo, extras), kind: entity })}
         />
       }
     />
@@ -378,7 +347,7 @@ export default function LandingVitrineSection({
                   mode="grid"
                   gridCols={vitrineCols}
                   emptyTitle="Aucun prestataire publié"
-                  emptyDescription="Les prestataires enregistrés sur EventMaster apparaîtront ici."
+                  emptyDescription="Les prestataires enregistrés apparaîtront ici."
                 />
                 <Pagination
                   page={page}
@@ -404,8 +373,8 @@ export default function LandingVitrineSection({
                   items={pagedRentals}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle="Aucune location publiée"
-                  emptyDescription="Les locations d’habits, véhicules et matériel apparaîtront ici."
+                  emptyTitle="Aucune offre de location"
+                  emptyDescription="Les matériels et équipements en location apparaîtront ici."
                 />
                 <Pagination
                   page={page}
@@ -441,105 +410,6 @@ export default function LandingVitrineSection({
                   onPageChange={setPage}
                   onPageSizeChange={setPageSize}
                   itemLabel="événements"
-                />
-              </>
-            )}
-          </div>
-        )}
-
-        {tab === 'templates' && (
-          <div className="space-y-4">
-            <div className="text-sm text-muted leading-relaxed">
-              {loadingTemplates ? (
-                <Skeleton className="h-4 w-72 max-w-full" />
-              ) : publicTemplates.length === 0
-                ? 'Aucun modèle publié. Le Super Admin crée un modèle global et active « Afficher sur la landing ».'
-                : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} publié${publicTemplates.length > 1 ? 's' : ''} — personnalisables après inscription.`}
-            </div>
-            {isSuperAdmin && (
-              <Link href="/dashboard?tab=templates" className="inline-flex text-xs font-medium text-foreground underline underline-offset-2 hover:no-underline">
-                Gérer la vitrine (Super Admin)
-              </Link>
-            )}
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { id: 'all', name: 'Tous' },
-                { id: 'private', name: 'Célébrations' },
-                { id: 'corporate', name: 'Professionnel' },
-                { id: 'casual', name: 'Soirées' },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setTemplateCategory(c.id)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
-                    templateCategory === c.id
-                      ? 'bg-foreground text-background'
-                      : 'bg-background text-muted hover:text-foreground border border-border',
-                  )}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-
-            {loadingTemplates ? (
-              <SkeletonLandingTemplateGrid count={pageSize} />
-            ) : publicTemplates.length === 0 ? (
-              <div className="py-12 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-background text-center max-w-lg">
-                <p className="text-sm text-muted leading-relaxed">
-                  Créez un modèle global dans le concepteur, puis activez « Afficher sur la landing page ».
-                </p>
-              </div>
-            ) : templateList.length === 0 ? (
-              <p className="text-sm text-muted py-8">Aucun modèle dans cette catégorie.</p>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {pagedTemplates.map((t) => (
-                    <article
-                      key={t.id}
-                      className="bg-background border border-border rounded-[var(--radius-card)] p-3.5 flex flex-col em-soft-hover"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => onPreviewTemplate(t)}
-                        className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 overflow-hidden"
-                      >
-                        <LandingInvitationPreview template={t} compact className="!max-h-[200px]" />
-                      </button>
-                      <div className="mt-3 space-y-2 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                            {getCategoryLabel(t.category)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onPreviewTemplate(t)}
-                            className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1"
-                          >
-                            Aperçu <ArrowRight className="w-3 h-3" />
-                          </button>
-                        </div>
-                        <h3 className="font-semibold text-sm text-foreground leading-snug line-clamp-1">{t.name}</h3>
-                        <p className="text-xs text-muted leading-relaxed line-clamp-2">{t.description}</p>
-                      </div>
-                      <div className="border-t border-border pt-3 mt-4">
-                        <Link href="/register" className="text-xs font-medium text-foreground hover:underline">
-                          Utiliser ce modèle →
-                        </Link>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-                <Pagination
-                  page={page}
-                  pageSize={pageSize}
-                  total={templateList.length}
-                  onPageChange={setPage}
-                  onPageSizeChange={setPageSize}
-                  itemLabel="modèles"
                 />
               </>
             )}

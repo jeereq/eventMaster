@@ -81,40 +81,45 @@ export default function LandingWorkflowSection({
       className="em-reveal py-16 sm:py-20 bg-background border-t border-border scroll-mt-16"
     >
       <div className="page-container space-y-8">
-        <div className="max-w-2xl space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">
-            Parcours guidé
-          </p>
-          <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-            Votre parcours, étape par étape
-          </h2>
-          <p className="text-sm text-muted leading-relaxed">{journey.intro}</p>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div className="max-w-xl space-y-1.5">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
+              Déroulement pratique
+            </p>
+            <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+              Comment ça marche ?
+            </h2>
+            <p className="text-sm text-muted leading-relaxed">
+              Suivez les 4 étapes clés de votre organisation, de la configuration au jour J.
+            </p>
+          </div>
 
-        <div
-          role="tablist"
-          aria-label="Changer de profil"
-          className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {LANDING_PROFILES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              id={`${tabsId}-${item.id}`}
-              aria-selected={profileId === item.id}
-              aria-controls={`${tabsId}-panel`}
-              onClick={() => onProfileChange(item.id)}
-              className={cn(
-                'shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
-                profileId === item.id
-                  ? 'bg-primary text-primary-foreground border-primary/30 shadow-xs'
-                  : 'bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted',
-              )}
-            >
-              {item.shortLabel}
-            </button>
-          ))}
+          {/* Onglets de profil */}
+          <div
+            role="tablist"
+            aria-label="Changer de profil"
+            className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {LANDING_PROFILES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`${tabsId}-${item.id}`}
+                aria-selected={profileId === item.id}
+                aria-controls={`${tabsId}-panel`}
+                onClick={() => onProfileChange(item.id)}
+                className={cn(
+                  'shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                  profileId === item.id
+                    ? 'bg-primary text-primary-foreground border-primary/30 shadow-xs'
+                    : 'bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted',
+                )}
+              >
+                {item.shortLabel}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div
@@ -125,13 +130,8 @@ export default function LandingWorkflowSection({
           onKeyDown={onKeyDown}
         >
           <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)]">
-            <div className="p-5 sm:p-6 border-b lg:border-b-0 lg:border-r border-border space-y-4">
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{journey.eyebrow}</p>
-                <h3 className="text-lg font-semibold text-foreground tracking-tight">{journey.title}</h3>
-                <p className="text-sm text-muted leading-relaxed">{journey.registerHint}</p>
-              </div>
-
+            {/* Liste des étapes à gauche */}
+            <div className="p-5 sm:p-6 border-b lg:border-b-0 lg:border-r border-border space-y-3">
               <div className="space-y-1" role="list" aria-label="Étapes du parcours">
                 {journey.steps.map((item, index) => {
                   const Icon = item.icon;
@@ -145,7 +145,7 @@ export default function LandingWorkflowSection({
                       aria-current={selected ? 'step' : undefined}
                       onClick={() => setStepIndex(index)}
                       className={cn(
-                        'w-full flex items-start gap-3 text-left px-3 py-2.5 rounded-[var(--radius-button)] border transition',
+                        'w-full flex items-start gap-3 text-left px-3.5 py-3 rounded-[var(--radius-button)] border transition',
                         selected
                           ? 'bg-primary/5 border-primary/25'
                           : 'bg-transparent border-transparent hover:bg-surface-muted',
@@ -181,10 +181,11 @@ export default function LandingWorkflowSection({
               </div>
             </div>
 
+            {/* Détail de l'étape sélectionnée à droite */}
             <div className="p-5 sm:p-7 flex flex-col bg-background/40">
               <div className="flex items-center justify-between gap-3 mb-4">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-                  Étape {stepIndex + 1} / {journey.steps.length}
+                  Étape {stepIndex + 1} sur {journey.steps.length}
                 </p>
                 <div className="flex-1 max-w-[140px] h-1 rounded-full bg-surface-muted overflow-hidden" aria-hidden>
                   <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
@@ -194,15 +195,15 @@ export default function LandingWorkflowSection({
               <div className="inline-flex items-center justify-center w-11 h-11 rounded-[var(--radius-button)] border border-border bg-surface text-foreground mb-4">
                 <StepIcon className="w-5 h-5" />
               </div>
-              <h4 className="text-xl font-semibold text-foreground tracking-tight">{step.title}</h4>
+              <h3 className="text-xl font-semibold text-foreground tracking-tight">{step.title}</h3>
               <p className="text-sm text-muted leading-relaxed mt-2">{step.detail}</p>
 
               <div className="mt-5 rounded-[var(--radius-card)] border border-border bg-surface p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">À cette étape</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">Résultat obtenu</p>
                 <p className="text-sm font-medium text-foreground leading-relaxed">{step.outcome}</p>
               </div>
 
-              <div className="mt-auto pt-6 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="mt-auto pt-6 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -223,27 +224,12 @@ export default function LandingWorkflowSection({
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-[11px] text-muted hidden sm:block">Flèches du clavier pour parcourir</p>
+                <Link href={journey.cta.href}>
+                  <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                    {journey.cta.label}
+                  </Button>
+                </Link>
               </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 sm:px-6 py-4 border-t border-border bg-surface">
-            <Link href={journey.cta.href}>
-              <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                {journey.cta.label}
-              </Button>
-            </Link>
-            <div className="flex flex-wrap gap-2">
-              {journey.results.map(({ icon: Icon, label }) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-button)] bg-background border border-border text-xs font-medium text-foreground"
-                >
-                  <Icon className="w-3.5 h-3.5 text-muted" />
-                  {label}
-                </span>
-              ))}
             </div>
           </div>
         </div>
