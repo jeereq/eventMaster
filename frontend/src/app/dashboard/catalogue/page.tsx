@@ -442,9 +442,50 @@ function ClientMarketplaceInner() {
     };
   }, [focusMode]);
 
+  const kindPills = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {KIND_FILTER_OPTIONS.map((item) => {
+        const isSelected = applied.kind === item.id;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              const kind = item.id as CatalogueKind;
+              applyFilters({
+                ...applied,
+                kind,
+                roomType: kind === 'service' || kind === 'rental' || kind === 'event' ? '' : applied.roomType,
+                category: kind === 'venue' || kind === 'event'
+                  ? ''
+                  : kind === 'service' && isServiceRentalCategory(applied.category)
+                    ? ''
+                    : kind === 'rental' && applied.category && !isServiceRentalCategory(applied.category)
+                      ? ''
+                      : applied.category,
+                mobility: kind === 'venue' || kind === 'event' ? '' : applied.mobility,
+                priceUnit: kind === 'venue' || kind === 'event' ? '' : applied.priceUnit,
+                entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : applied.entry,
+              });
+            }}
+            className={cn(
+              'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
+              isSelected
+                ? 'bg-primary text-white border-primary shadow-xs'
+                : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
+            )}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   const exploreFilterBar = (variant: 'card' | 'float') => (
     <CatalogueFilterBar
       variant={variant}
+      topSlot={variant === 'card' ? kindPills : undefined}
       hideViewToggle={false}
       compactToggle={variant === 'float'}
       search={query}
@@ -476,7 +517,7 @@ function ClientMarketplaceInner() {
       modalTitle={catalogueKindFilterTitle(draft.kind, 'Filtrer le marketplace')}
       filters={
         <CatalogueEntityFilterFields
-          showKind
+          showKind={false}
           value={draft}
           extras={draft}
           error={filterError}
@@ -577,38 +618,6 @@ function ClientMarketplaceInner() {
 
       {tab === 'explore' && !focusMode ? (
         <>
-          <div className="flex flex-wrap gap-1.5">
-            {KIND_FILTER_OPTIONS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  const kind = item.id as CatalogueKind;
-                  applyFilters({
-                    ...applied,
-                    kind,
-                    roomType: kind === 'service' || kind === 'rental' || kind === 'event' ? '' : applied.roomType,
-                    category: kind === 'venue' || kind === 'event'
-                      ? ''
-                      : kind === 'service' && isServiceRentalCategory(applied.category)
-                        ? ''
-                        : kind === 'rental' && applied.category && !isServiceRentalCategory(applied.category)
-                          ? ''
-                          : applied.category,
-                    mobility: kind === 'venue' || kind === 'event' ? '' : applied.mobility,
-                    priceUnit: kind === 'venue' || kind === 'event' ? '' : applied.priceUnit,
-                    entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : applied.entry,
-                  });
-                }}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-semibold border',
-                  applied.kind === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
           {exploreFilterBar('card')}
 
           {loading ? (
@@ -657,12 +666,12 @@ function ClientMarketplaceInner() {
           <CatalogueResultsSkeleton mode={favMode} count={8} gridCols={gridCols} />
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex flex-wrap gap-1.5">
+            <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)]">
+              <div className="pb-2 border-b border-border/70 flex flex-wrap items-center gap-1.5">
                 {([
                   ['all', 'Tous'],
                   ['venue', 'Salles'],
-                  ['service', 'Métiers'],
+                  ['service', 'Prestataires'],
                   ['rental', 'Locations'],
                 ] as const).map(([id, label]) => (
                   <button
@@ -670,27 +679,32 @@ function ClientMarketplaceInner() {
                     type="button"
                     onClick={() => setFavKind(id)}
                     className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-semibold border',
-                      favKind === id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                      'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
+                      favKind === id
+                        ? 'bg-primary text-white border-primary shadow-xs'
+                        : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
                     )}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <div className="flex-1 min-w-[12rem]">
-                <Input
-                  value={favQ}
-                  onChange={(e) => setFavQ(e.target.value)}
-                  placeholder="Filtrer par nom, ville, métier…"
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <Input
+                    value={favQ}
+                    onChange={(e) => setFavQ(e.target.value)}
+                    placeholder="Filtrer par nom, ville, métier…"
+                    leftIcon={<Store className="w-4 h-4" />}
+                  />
+                </div>
+                <CatalogueViewToggle
+                  compact
+                  hideMap
+                  value={favMode}
+                  onChange={(next) => setFavMode(next === 'list' ? 'list' : 'grid')}
                 />
               </div>
-              <CatalogueViewToggle
-                compact
-                hideMap
-                value={favMode}
-                onChange={(next) => setFavMode(next === 'list' ? 'list' : 'grid')}
-              />
             </div>
             <CatalogueResults
               items={visibleFavorites}

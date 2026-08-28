@@ -18,47 +18,14 @@ import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { rememberCurrentCatalogueList, useRememberListReturn } from '@/lib/catalogueQuery';
 import { Bookmark, CalendarCheck, FileText, Heart, Inbox, Loader2, Store, Trash2 } from 'lucide-react';
-import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
-import { CatalogueChoicePills } from '@/components/CatalogueFilterBar';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import type { SavedEventPack } from '@/lib/eventPlan';
 import { eventTypeLabel } from '@/lib/listingDetails';
 import { cn } from '@/lib/cn';
 
 type HubTab = 'quotes' | 'bookings' | 'packs' | 'favorites';
-
-function HubStat({
-  label,
-  value,
-  hint,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-  active?: boolean;
-  onClick?: () => void;
-}) {
-  const Comp = onClick ? 'button' : 'div';
-  return (
-    <Comp
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      className={cn(
-        'text-left rounded-2xl border px-3.5 py-3 bg-surface transition',
-        active ? 'border-primary/40 ring-1 ring-primary/25' : 'border-border',
-        onClick && 'hover:border-primary/30 cursor-pointer',
-      )}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</p>
-      <p className="text-xl font-semibold tracking-tight mt-0.5">{value}</p>
-      {hint ? <p className="text-[11px] text-muted mt-0.5 leading-snug">{hint}</p> : null}
-    </Comp>
-  );
-}
 
 function OrganizerDemandesPage() {
   useRememberListReturn();
@@ -156,36 +123,6 @@ function OrganizerDemandesPage() {
   const openBookings = visibleBookings.filter((item) => item.status === 'REQUESTED' || item.status === 'ACCEPTED').length;
   const confirmedBookings = visibleBookings.filter((item) => item.status === 'CONFIRMED' || item.status === 'COMPLETED').length;
 
-  const tabs = useMemo(
-    () => [
-      {
-        id: 'quotes',
-        label: pendingQuotes > 0
-          ? `Devis · ${pendingQuotes} en attente`
-          : `Devis · ${visibleInquiries.length}`,
-      },
-      {
-        id: 'bookings',
-        label: openBookings > 0
-          ? `Réservations · ${openBookings} ouvertes`
-          : `Réservations · ${visibleBookings.length}`,
-      },
-      ...(isProtocol ? [] : [
-        { id: 'packs', label: `Packs · ${packs.length}` },
-        { id: 'favorites', label: `Favoris · ${favorites.items.length}` },
-      ]),
-    ],
-    [
-      pendingQuotes,
-      visibleInquiries.length,
-      openBookings,
-      visibleBookings.length,
-      packs.length,
-      favorites.items.length,
-      isProtocol,
-    ],
-  );
-
   useEffect(() => {
     if (!isProtocol) return;
     if (tab !== 'packs' && tab !== 'favorites') return;
@@ -246,65 +183,72 @@ function OrganizerDemandesPage() {
         }
       />
 
-      {isClient && !isProtocol ? <GettingStartedChecklist variant="client" hasEvents={false} /> : null}
-
       {error && <Alert variant="error">{error}</Alert>}
 
-      {!loading ? (
-        <div className={cn('grid gap-2', isProtocol ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4')}>
-          <HubStat
-            label="Devis en attente"
-            value={pendingQuotes}
-            hint={`${visibleInquiries.length} au total`}
-            active={tab === 'quotes'}
-            onClick={() => setHubTab('quotes')}
-          />
-          <HubStat
-            label="Résas ouvertes"
-            value={openBookings}
-            hint={`${confirmedBookings} confirmée${confirmedBookings > 1 ? 's' : ''}`}
-            active={tab === 'bookings'}
-            onClick={() => setHubTab('bookings')}
-          />
-          {!isProtocol ? (
-            <>
-              <HubStat
-                label="Packs"
-                value={packs.length}
-                active={tab === 'packs'}
-                onClick={() => setHubTab('packs')}
-              />
-              <HubStat
-                label="Favoris"
-                value={favorites.items.length}
-                active={tab === 'favorites'}
-                onClick={() => setHubTab('favorites')}
-              />
-            </>
-          ) : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          role="tablist"
+          aria-label="Sections devis et réservations"
+          className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
+        >
+          {[
+            {
+              id: 'quotes' as const,
+              label: 'Devis',
+              count: pendingQuotes > 0 ? `${pendingQuotes} en attente` : visibleInquiries.length,
+              icon: Inbox,
+            },
+            {
+              id: 'bookings' as const,
+              label: 'Réservations',
+              count: openBookings > 0 ? `${openBookings} ouvertes` : visibleBookings.length,
+              icon: CalendarCheck,
+            },
+            ...(!isProtocol
+              ? [
+                  { id: 'packs' as const, label: 'Packs', count: packs.length, icon: Bookmark },
+                  { id: 'favorites' as const, label: 'Favoris', count: favorites.items.length, icon: Heart },
+                ]
+              : []),
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              onClick={() => setHubTab(item.id)}
+              className={cn(
+                'inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition',
+                tab === item.id
+                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                  : 'text-muted hover:bg-surface/70 hover:text-foreground',
+              )}
+            >
+              <item.icon className="w-4 h-4 shrink-0" />
+              <span>{item.label}</span>
+              <span className={cn(
+                'ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold',
+                tab === item.id ? 'bg-primary/10 text-primary' : 'bg-surface text-muted'
+              )}>
+                {item.count}
+              </span>
+            </button>
+          ))}
         </div>
-      ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <CatalogueChoicePills
-          options={tabs}
-          value={tab}
-          onChange={(id) => setHubTab((id as HubTab) || 'quotes')}
-        />
         {showEventFilter ? (
-          <label className="flex flex-col gap-1.5 text-sm sm:min-w-[14rem]">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Filtrer par événement</span>
+          <div className="sm:w-64 shrink-0">
             <select
               value={eventFilter}
               onChange={(e) => setEventFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface text-sm"
+              className="w-full h-10 px-3 rounded-xl border border-border bg-surface text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent transition"
             >
               <option value="all">Tous les événements</option>
               {eventOptions.map((event) => (
                 <option key={event.id} value={event.id}>{event.title}</option>
               ))}
             </select>
-          </label>
+          </div>
         ) : null}
       </div>
 

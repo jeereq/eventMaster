@@ -190,85 +190,97 @@ export default function ClientTicketsPage() {
         />
       ) : (
         <div className="space-y-4">
-          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-              <div className="flex-1 min-w-[12rem]">
+          <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)]">
+            {/* Filtres d'état rapides (Date & Entrée) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/70">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap gap-1" role="group" aria-label="Date">
+                  {([
+                    ['all', 'Toutes dates'],
+                    ['upcoming', 'À venir'],
+                    ['past', 'Passés'],
+                  ] as Array<[WhenFilter, string]>).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setWhen(id)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation',
+                        when === id
+                          ? 'bg-primary text-white border-primary shadow-xs'
+                          : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <span className="text-muted/40 hidden sm:inline">|</span>
+
+                <div className="flex flex-wrap gap-1" role="group" aria-label="Entrée">
+                  {([
+                    ['all', 'Tous tarifs'],
+                    ['paid', 'Payants'],
+                    ['free', 'Entrée libre'],
+                  ] as Array<[EntryFilter, string]>).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setEntry(id)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation',
+                        entry === id
+                          ? 'bg-primary text-white border-primary shadow-xs'
+                          : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <span className="text-[11px] font-medium text-muted">
+                {filtered.length} billet{filtered.length > 1 ? 's' : ''}
+                {filtered.length !== tickets.length ? ` / ${tickets.length}` : ''}
+              </span>
+            </div>
+
+            {/* Barre de recherche + Sélecteur de lieu + Vue */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+              <div className="flex-1 min-w-0">
                 <Input
-                  label="Recherche"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Titre, lieu, nom…"
-                  hint="Filtre le titre de l’événement, le lieu ou le nom sur le billet."
+                  placeholder="Rechercher par titre, lieu, nom de l’acheteur…"
+                  leftIcon={<Ticket className="w-4 h-4" />}
                 />
               </div>
+
               {locations.length > 1 ? (
-                <label className="space-y-1.5 min-w-[10rem]">
-                  <span className="block text-xs font-semibold text-muted">Lieu</span>
+                <div className="sm:w-48 shrink-0">
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                    className="w-full h-10 px-3 rounded-xl border border-border bg-surface text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent transition"
                   >
                     <option value="">Tous les lieux</option>
                     {locations.map((item) => (
                       <option key={item} value={item}>{item}</option>
                     ))}
                   </select>
-                </label>
+                </div>
               ) : null}
+
               <ViewModeToggle
                 storageKey="em-view-tickets"
                 value={viewMode}
                 onChange={setViewMode}
                 columns={columns}
                 onColumnsChange={setGridColumns}
-                className="lg:mb-0.5"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Date">
-                {([
-                  ['all', 'Toutes les dates'],
-                  ['upcoming', 'À venir'],
-                  ['past', 'Passés'],
-                ] as Array<[WhenFilter, string]>).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setWhen(id)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-semibold border',
-                      when === id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Entrée">
-                {([
-                  ['all', 'Payant et libre'],
-                  ['paid', 'Payant'],
-                  ['free', 'Entrée libre'],
-                ] as Array<[EntryFilter, string]>).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setEntry(id)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-semibold border',
-                      entry === id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="text-[11px] text-muted">
-              {filtered.length} billet{filtered.length > 1 ? 's' : ''}
-              {filtered.length !== tickets.length ? ` sur ${tickets.length}` : ''}
-            </p>
           </div>
 
           {filtered.length === 0 ? (

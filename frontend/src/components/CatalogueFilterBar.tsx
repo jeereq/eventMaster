@@ -128,6 +128,7 @@ export default function CatalogueFilterBar({
   gridColOptions,
   shareUrl,
   shareTitle,
+  topSlot,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -156,6 +157,7 @@ export default function CatalogueFilterBar({
   gridColOptions?: CatalogueGridCols[];
   shareUrl?: string;
   shareTitle?: string;
+  topSlot?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -372,6 +374,11 @@ export default function CatalogueFilterBar({
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)] overflow-hidden">
+      {topSlot ? (
+        <div className="pb-2 border-b border-border/70">
+          {topSlot}
+        </div>
+      ) : null}
       <div className="flex flex-col gap-2 min-w-0 sm:flex-row sm:items-center">
         <div className="flex-1 min-w-0">
           <Input

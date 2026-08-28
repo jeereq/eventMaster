@@ -1,44 +1,28 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Building2,
   Sparkles,
   Ticket,
-  Calendar,
-  Store,
   Search,
   ArrowRight,
   Heart,
   Inbox,
   CalendarCheck,
-  MapPin,
-  Camera,
   Utensils,
-  Music,
   Truck,
   Mail,
-  Layers,
-  CheckCircle2,
-  SlidersHorizontal,
   Compass,
-  Zap,
-  Info,
-  Clock,
-  ShieldCheck,
-  Bookmark,
   Crown,
-  Gem,
-  Lock,
-  Wand2,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { Button, Card, EmptyState, StatusPill } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useListingFavorites } from '@/lib/listingFavorites';
-import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 
 export type ClientIntent =
@@ -223,14 +207,11 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
   },
 ];
 
-const INTENT_STORAGE_KEY = 'em_client_primary_intent';
-
 export default function ClientDashboardHome() {
   const { user } = useAuth();
   const router = useRouter();
   const { items: favoriteItems } = useListingFavorites();
 
-  const [selectedIntent, setSelectedIntent] = useState<ClientIntent>('ai-plan');
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     ticketsCount: 0,
@@ -239,27 +220,6 @@ export default function ClientDashboardHome() {
     packsCount: 0,
     loading: true,
   });
-
-  // Charger la préférence mémorisée
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(INTENT_STORAGE_KEY) as ClientIntent | null;
-      if (saved && CLIENT_INTENTS.some((i) => i.id === saved)) {
-        setSelectedIntent(saved);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const handleSelectIntent = (intentId: ClientIntent) => {
-    setSelectedIntent(intentId);
-    try {
-      localStorage.setItem(INTENT_STORAGE_KEY, intentId);
-    } catch {
-      /* ignore */
-    }
-  };
 
   // Charger les statistiques d'activité client
   useEffect(() => {
@@ -311,12 +271,6 @@ export default function ClientDashboardHome() {
     };
   }, []);
 
-  const currentConfig = useMemo(() => {
-    return (
-      CLIENT_INTENTS.find((i) => i.id === selectedIntent) || CLIENT_INTENTS[0]
-    );
-  }, [selectedIntent]);
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
@@ -326,90 +280,81 @@ export default function ClientDashboardHome() {
     router.push(`/dashboard/catalogue?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
-  const IntentIcon = currentConfig.icon;
-
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
-      {/* ─── BANNIÈRE BIENVENUE & ACCROCHE CLIENT ─── */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border bg-linear-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-8 shadow-xs">
+      {/* ─── BANNIÈRE BIENVENUE & RECHERCHE INTÉGRÉE ─── */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border bg-linear-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-7 shadow-xs">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-primary/15 text-primary border border-primary/25">
+        <div className="relative space-y-4 max-w-3xl">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
                 <Sparkles className="w-3.5 h-3.5" />
-                Espace Client &amp; Découverte
+                Espace Client
               </span>
-              <span className="text-xs text-muted">· Événements &amp; Marketplace</span>
+              <span className="text-xs text-muted">· Marketplace &amp; Événements</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate max-w-xl">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">
               Bonjour, {(user?.name || 'Cher invité').split(' ')[0]} 👋
             </h1>
-            <p className="text-sm text-muted leading-relaxed">
-              Définissez votre priorité du moment pour explorer nos meilleures salles, prestataires,
-              billets de spectacles ou lancer une <strong>simulation de pack événement</strong> en République Démocratique du Congo.
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              Explorez nos salles d’exception, prestataires qualifiés, billets de spectacles ou composez votre <strong>pack événementiel</strong> optimisé selon votre budget.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
-              leftIcon={<Sparkles className="w-4 h-4" />}
-              className="font-bold shadow-md shadow-primary/20 bg-linear-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 text-white border-0"
+          {/* Barre de recherche principale avec raccourcis */}
+          <form onSubmit={handleSearchSubmit} className="relative">
+            <div className="relative flex items-center">
+              <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher une salle, un traiteur, un DJ, un lieu à Gombe, Limete, Ngaliema…"
+                className="w-full pl-11 pr-28 py-3.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition flex items-center gap-1.5 touch-manipulation cursor-pointer"
+              >
+                <span>Chercher</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </form>
+
+          {/* Suggestions de recherche en 1 clic */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
+            <span className="text-[11px] font-medium text-muted mr-1">Populaire :</span>
+            <Link
+              href="/dashboard/catalogue?kind=venue&q=Gombe"
+              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
             >
-              Simulateur de Pack IA
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => router.push('/dashboard/catalogue?tab=packs')}
-              leftIcon={<Bookmark className="w-4 h-4 text-primary" />}
+              Salles Gombe
+            </Link>
+            <Link
+              href="/dashboard/catalogue?kind=service&cat=caterer"
+              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
             >
-              Mes Packs {stats.loading ? '' : `(${stats.packsCount})`}
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => router.push('/dashboard/catalogue')}
-              leftIcon={<Store className="w-4 h-4" />}
+              Traiteurs &amp; Buffets
+            </Link>
+            <Link
+              href="/dashboard/catalogue?kind=service&cat=dj"
+              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
             >
-              Marketplace
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => router.push('/dashboard/tickets')}
-              leftIcon={<Ticket className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+              DJ &amp; Sonorisation
+            </Link>
+            <Link
+              href="/dashboard/catalogue?tab=plan&planView=ai"
+              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-[11px] font-bold text-primary transition inline-flex items-center gap-1"
             >
-              Mes Billets {stats.loading ? '' : `(${stats.ticketsCount})`}
-            </Button>
+              <Sparkles className="w-3 h-3" />
+              Simulateur IA
+            </Link>
           </div>
         </div>
-
-        {/* ─── BARRE DE RECHERCHE RAPIDE INTÉGRÉE ─── */}
-        <form onSubmit={handleSearchSubmit} className="mt-6 relative max-w-3xl">
-          <div className="relative flex items-center">
-            <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher une salle, un traiteur, un DJ, un lieu à Gombe, Limete, Ngaliema…"
-              className="w-full pl-11 pr-28 py-3.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition flex items-center gap-1.5 touch-manipulation cursor-pointer"
-            >
-              <span>Chercher</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </form>
       </div>
 
       {/* ─── WIDGETS D'ACTIVITÉS EN TEMPS RÉEL (5 CARTES) ─── */}
@@ -530,196 +475,90 @@ export default function ClientDashboardHome() {
         </Link>
       </div>
 
-      {/* ─── SÉLECTEUR D'OBJECTIFS / RAISON D'ÊTRE CLIENT ─── */}
+      {/* ─── DÉCOUVERTE PAR CATÉGORIES & OBJECTIFS (CARTES DIRECTES SANS SURCHARGE) ─── */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Compass className="w-5 h-5 text-primary" />
-              Que cherchez-vous en premier ?
-            </h2>
-            <p className="text-xs text-muted">
-              Sélectionnez votre priorité du moment pour afficher les raccourcis et actions dédiées.
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full self-start sm:self-auto">
-            {CLIENT_INTENTS.findIndex((i) => i.id === selectedIntent) + 1} / {CLIENT_INTENTS.length} objectifs
-          </span>
+        <div>
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+            <Compass className="w-5 h-5 text-primary" />
+            Explorer le marketplace selon vos besoins
+          </h2>
+          <p className="text-xs text-muted">
+            Accédez directement aux catégories, simulateurs ou services qui correspondent à votre événement.
+          </p>
         </div>
 
-        {/* Grille des 6 choix d'objectifs */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {CLIENT_INTENTS.map((intent) => {
             const Icon = intent.icon;
-            const isSelected = selectedIntent === intent.id;
             return (
-              <button
+              <div
                 key={intent.id}
-                type="button"
-                onClick={() => handleSelectIntent(intent.id)}
                 className={cn(
-                  'p-3 sm:p-3.5 rounded-xl border text-left transition flex flex-col justify-between gap-2 touch-manipulation cursor-pointer relative focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
-                  isSelected
-                    ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary'
-                    : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40',
+                  'p-4 sm:p-5 rounded-2xl border bg-surface transition-all flex flex-col justify-between gap-3 relative hover:border-primary/50 hover:shadow-xs group',
+                  intent.id === 'ai-plan' ? 'border-primary/40 bg-linear-to-br from-primary/5 via-surface to-emerald-500/5' : 'border-border',
+                  intent.isPaidPlanRequired ? 'border-amber-500/30' : '',
                 )}
               >
-                {isSelected && (
-                  <div className="absolute top-2 right-2">
-                    <CheckCircle2 className="w-4 h-4 text-primary" />
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', intent.accentColor)}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {intent.isPaidPlanRequired ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          <Crown className="w-3 h-3" />
+                          Abonnement requis
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted text-muted border border-border">
+                          {intent.badge}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center justify-between gap-1 w-full">
-                  <div
+
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition">
+                      {intent.title}
+                    </h3>
+                    <p className="text-xs text-muted leading-relaxed mt-1 line-clamp-2">
+                      {intent.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 pt-2 border-t border-border/70">
+                  {/* Raccourcis rapides */}
+                  <div className="flex flex-wrap gap-1">
+                    {intent.quickFilters.slice(0, 3).map((qf, idx) => (
+                      <Link
+                        key={idx}
+                        href={qf.href}
+                        className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted truncate max-w-full"
+                      >
+                        {qf.label}
+                      </Link>
+                    ))}
+                  </div>
+
+                  <Button
+                    variant={intent.id === 'ai-plan' ? 'primary' : 'secondary'}
+                    size="sm"
+                    fullWidth
+                    onClick={() => router.push(intent.ctaHref)}
+                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                     className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                      isSelected ? 'bg-primary text-white' : 'bg-surface-muted text-foreground',
+                      'font-bold text-xs',
+                      intent.id === 'ai-plan' ? 'shadow-xs shadow-primary/20' : '',
                     )}
                   >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  {intent.isPaidPlanRequired && (
-                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
-                      <Crown className="w-2.5 h-2.5" />
-                      Payant
-                    </span>
-                  )}
+                    {intent.ctaLabel}
+                  </Button>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground leading-tight flex items-center gap-1">
-                    {intent.badge}
-                  </p>
-                  <p className="text-[10px] text-muted truncate mt-0.5">{intent.title}</p>
-                </div>
-              </button>
+              </div>
             );
           })}
-        </div>
-
-        {/* ─── FICHE FOCUS DÉTAILLÉE SUR L'OBJECTIF SÉLECTIONNÉ ─── */}
-        <div className="p-5 sm:p-7 rounded-2xl border border-border bg-surface shadow-xs space-y-5">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-5 border-b border-border pb-5">
-            <div className="flex items-start gap-4">
-              <div
-                className={cn(
-                  'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-primary/10 text-primary',
-                )}
-              >
-                <IntentIcon className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/15 text-primary">
-                    {currentConfig.badge}
-                  </span>
-                  {currentConfig.isPaidPlanRequired && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                      <Crown className="w-3 h-3" />
-                      Formule Payante Organisateur
-                    </span>
-                  )}
-                  <span className="text-xs text-muted">Objectif sélectionné</span>
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold text-foreground">
-                  {currentConfig.title}
-                </h3>
-                <p className="text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-                  {currentConfig.description}
-                </p>
-              </div>
-            </div>
-
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => router.push(currentConfig.ctaHref)}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-              className="font-bold shrink-0 shadow-md shadow-primary/20 w-full md:w-auto"
-            >
-              {currentConfig.ctaLabel}
-            </Button>
-          </div>
-
-          {/* ─── BANDEAU D'AVERTISSEMENT ABONNEMENT PAYANT (POUR LES FAIRE-PART) ─── */}
-          {currentConfig.pricingNotice && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-linear-to-r from-amber-500/15 via-surface to-amber-500/5 border-2 border-amber-500/40 text-foreground space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-amber-500 text-white shrink-0 shadow-xs">
-                    <Crown className="w-4 h-4" />
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/30">
-                    {currentConfig.pricingNotice.badge}
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                  Abonnement Organisateur requis
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <h4 className="text-sm sm:text-base font-extrabold text-foreground">
-                  {currentConfig.pricingNotice.title}
-                </h4>
-                <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                  {currentConfig.pricingNotice.description}
-                </p>
-              </div>
-
-              {currentConfig.pricingNotice.pricingHighlight && (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs font-semibold text-amber-900 dark:text-amber-200">
-                  <Gem className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  <span>{currentConfig.pricingNotice.pricingHighlight}</span>
-                </div>
-              )}
-
-              <div className="pt-1 flex flex-wrap items-center gap-3">
-                <Link
-                  href={currentConfig.pricingNotice.ctaHref}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-500/20 transition touch-manipulation cursor-pointer"
-                >
-                  <span>{currentConfig.pricingNotice.ctaLabel}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-                <span className="text-xs text-muted">
-                  Activation instantanée · Forfaits Particulier &amp; Professionnel
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Points forts & Avantages */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {currentConfig.features.map((feat, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-2 p-3 rounded-xl bg-surface-muted/60 border border-border text-xs text-foreground/90 font-medium"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{feat}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Raccourcis de recherche suggérés pour cet objectif */}
-          <div className="space-y-2 pt-2 border-t border-border">
-            <p className="text-xs font-semibold text-muted flex items-center gap-1.5">
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Accès directs &amp; Filtres populaires pour cet objectif :
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {currentConfig.quickFilters.map((qf, idx) => (
-                <Link
-                  key={idx}
-                  href={qf.href}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-xs font-semibold text-foreground transition flex items-center gap-1.5 touch-manipulation"
-                >
-                  <span>{qf.label}</span>
-                  <ArrowRight className="w-3 h-3 text-muted" />
-                </Link>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
