@@ -379,10 +379,10 @@ function SidebarNav({
  aria-current={isActive ? 'page' : undefined}
  title={collapsed ? item.name : undefined}
  className={cn(
- 'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150',
- collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
+ 'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150 touch-manipulation select-none active:scale-[0.99]',
+ collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5 min-h-[40px]',
  isActive
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+ ? 'bg-surface text-foreground shadow-[var(--shadow-soft)] font-semibold'
  : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
  )}
  >
@@ -404,7 +404,7 @@ function SidebarNav({
  )}
  />
  {!collapsed && (
- <span className="truncate text-[13px] font-medium leading-snug">{item.name}</span>
+ <span className="truncate text-[13px] leading-snug">{item.name}</span>
  )}
  </Link>
  </Tooltip>
@@ -595,229 +595,258 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  >
  <TourProvider>
  <SupportSessionBanner />
- <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
- {/* Overlay mobile */}
- {mobileMenuOpen && (
- <button
- type="button"
- aria-label="Fermer le menu"
- className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden animate-fade-in"
- onClick={() => {
-  if (document.body.dataset.emTour === '1') return;
-  setMobileMenuOpen(false);
- }}
- />
- )}
+      <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
+        {/* Overlay mobile */}
+        {mobileMenuOpen && (
+          <button
+            type="button"
+            aria-label="Fermer le menu"
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm md:hidden animate-fade-in"
+            onClick={() => {
+              if (document.body.dataset.emTour === '1') return;
+              setMobileMenuOpen(false);
+            }}
+          />
+        )}
 
- {/* Header mobile */}
- <header className="md:hidden bg-sidebar border-b border-border h-12 px-3 flex items-center justify-between sticky top-0 z-50">
- <div className="flex items-center gap-2 min-w-0">
- <div className="bg-primary p-1.5 rounded-lg text-white shrink-0">
- <PartyPopper className="w-4 h-4" />
- </div>
- <DashboardMobileTitle />
- </div>
- <div className="flex items-center gap-0.5 shrink-0">
- {showNotifications && <NotificationBell />}
- <ViewCustomizerTrigger />
- <button
- onClick={toggleTheme}
- className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
- aria-label="Changer de thème"
- >
- {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
- </button>
- <button
- onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
- className="p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition"
- aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
- aria-expanded={mobileMenuOpen}
- >
- {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
- </button>
- </div>
- </header>
+        {/* Header mobile */}
+        <header className="md:hidden bg-sidebar border-b border-border h-12 px-3 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="bg-primary p-1.5 rounded-lg text-white shrink-0">
+              <PartyPopper className="w-4 h-4" />
+            </div>
+            <DashboardMobileTitle />
+          </div>
+          <div className="flex items-center gap-0.5 shrink-0">
+            {showNotifications && <NotificationBell />}
+            <ViewCustomizerTrigger />
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+              aria-label="Changer de thème"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+              aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </header>
 
- {/* Sidebar */}
- <aside
- className={cn(
- 'fixed top-12 bottom-0 left-0 z-40 max-w-[85vw] bg-sidebar border-r border-border',
- 'flex flex-col transform transition-[transform,width] duration-300 ease-out',
- 'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:max-w-none md:z-30',
- mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
- /* Mobile always full width drawer; desktop follows collapse */
- 'w-72',
- sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
- )}
- >
- <div className={cn('flex-1 overflow-y-auto space-y-5', sidebarCollapsed ? 'p-2 md:p-2' : 'p-4')}>
- {/* Logo desktop */}
- <div className={cn('hidden md:flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
- <div className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : 'gap-2.5')}>
- <div className="bg-primary p-1.5 rounded-[var(--radius-button)] text-white shrink-0">
- <PartyPopper className="w-4 h-4" />
- </div>
- {!sidebarCollapsed && (
- <div>
- <span className="font-semibold text-[15px] text-foreground block leading-none tracking-tight">EventMaster</span>
- <span className="text-[10px] font-medium text-muted mt-1 block">
- {user?.role === 'SUPER_ADMIN'
- ? 'Console plateforme'
- : user?.role === 'COMMERCIAL'
- ? 'Espace commercial'
- : isClientAccount
- ? 'Espace client'
- : tenant?.accountKind === 'VENDOR'
- ? 'Espace marketplace'
- : 'Workspace'}
- </span>
- </div>
- )}
- </div>
- <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
- <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
- <button
- type="button"
- onClick={toggleSidebarCollapsed}
- className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
- aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
- >
- {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
- </button>
- </Tooltip>
- {!sidebarCollapsed && (
- <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="bottom">
- <button
- type="button"
- onClick={toggleTheme}
- className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
- aria-label="Changer de thème"
- >
- {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
- </button>
- </Tooltip>
- )}
- </div>
- </div>
+        {/* Sidebar */}
+        <aside
+          className={cn(
+            'fixed inset-y-0 left-0 z-[70] w-[min(86vw,20rem)] bg-sidebar border-r border-border shadow-2xl',
+            'flex flex-col transform transition-transform duration-300 ease-out',
+            'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:max-w-none md:z-30 md:shadow-none',
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+            sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
+          )}
+        >
+          {/* Header spécifique du drawer mobile */}
+          <div className="flex md:hidden items-center justify-between p-3.5 border-b border-border bg-surface shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="bg-primary p-1.5 rounded-lg text-white shrink-0">
+                <PartyPopper className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold text-sm text-foreground block leading-none tracking-tight">EventMaster</span>
+                <span className="text-[10px] font-medium text-muted mt-0.5 block">
+                  {user?.role === 'SUPER_ADMIN'
+                    ? 'Console plateforme'
+                    : user?.role === 'COMMERCIAL'
+                    ? 'Espace commercial'
+                    : isClientAccount
+                    ? 'Espace client'
+                    : tenant?.accountKind === 'VENDOR'
+                    ? 'Espace marketplace'
+                    : 'Workspace'}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-1.5 rounded-lg bg-surface-muted hover:bg-border text-foreground transition touch-manipulation cursor-pointer"
+              aria-label="Fermer le menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
- {/* Contexte tenant / admin */}
- {!sidebarCollapsed && (
- <>
- {user?.role === 'SUPER_ADMIN' ? (
- <div className="p-3 bg-surface border border-border rounded-lg">
- <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
- <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
- <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
- <ShieldCheck className="w-3 h-3" />
- Plateforme SaaS
- </div>
- </div>
- ) : user?.role === 'COMMERCIAL' ? (
- <div className="p-3 bg-surface border border-border rounded-lg">
- <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
- <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
- <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-700 dark:text-amber-300">
- <Briefcase className="w-3 h-3" />
- Parrainage
- </div>
- </div>
- ) : tenant ? (
- <div className="p-3 bg-surface border border-border rounded-lg">
- <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
- {isClientAccount ? 'Compte' : 'Organisation'}
- </div>
- <div className="font-semibold text-foreground text-sm truncate mt-0.5">
- {tenant.name}
- </div>
- <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
- <ShieldCheck className="w-3 h-3" />
- {isClientAccount ? 'Client' : `Plan ${tenant.plan}`}
- </div>
- </div>
- ) : null}
- </>
- )}
+          <div className={cn('flex-1 overflow-y-auto overscroll-contain space-y-4', sidebarCollapsed ? 'p-2 md:p-2' : 'p-3.5 sm:p-4')}>
+            {/* Logo desktop */}
+            <div className={cn('hidden md:flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
+              <div className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : 'gap-2.5')}>
+                <div className="bg-primary p-1.5 rounded-[var(--radius-button)] text-white shrink-0">
+                  <PartyPopper className="w-4 h-4" />
+                </div>
+                {!sidebarCollapsed && (
+                  <div>
+                    <span className="font-semibold text-[15px] text-foreground block leading-none tracking-tight">EventMaster</span>
+                    <span className="text-[10px] font-medium text-muted mt-1 block">
+                      {user?.role === 'SUPER_ADMIN'
+                        ? 'Console plateforme'
+                        : user?.role === 'COMMERCIAL'
+                        ? 'Espace commercial'
+                        : isClientAccount
+                        ? 'Espace client'
+                        : tenant?.accountKind === 'VENDOR'
+                        ? 'Espace marketplace'
+                        : 'Workspace'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
+                <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
+                  <button
+                    type="button"
+                    onClick={toggleSidebarCollapsed}
+                    className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                    aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+                  >
+                    {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                  </button>
+                </Tooltip>
+                {!sidebarCollapsed && (
+                  <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="bottom">
+                    <button
+                      type="button"
+                      onClick={toggleTheme}
+                      className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                      aria-label="Changer de thème"
+                    >
+                      {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                    </button>
+                  </Tooltip>
+                )}
+              </div>
+            </div>
 
- <Suspense
- fallback={
- <div className="h-20 flex items-center justify-center">
- <Loader2 className="w-5 h-5 text-primary animate-spin" />
- </div>
- }
- >
- <SidebarNav
- sections={withNavTips(navSections)}
- pathname={pathname}
- setMobileMenuOpen={setMobileMenuOpen}
- collapsed={sidebarCollapsed}
- fallbackTab={user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants'}
- />
- </Suspense>
- </div>
+            {/* Contexte tenant / admin */}
+            {(!sidebarCollapsed || mobileMenuOpen) && (
+              <>
+                {user?.role === 'SUPER_ADMIN' ? (
+                  <div className="p-3 bg-surface border border-border rounded-lg">
+                    <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
+                    <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
+                      <ShieldCheck className="w-3 h-3" />
+                      Plateforme SaaS
+                    </div>
+                  </div>
+                ) : user?.role === 'COMMERCIAL' ? (
+                  <div className="p-3 bg-surface border border-border rounded-lg">
+                    <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
+                    <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                      <Briefcase className="w-3 h-3" />
+                      Parrainage
+                    </div>
+                  </div>
+                ) : tenant ? (
+                  <div className="p-3 bg-surface border border-border rounded-lg">
+                    <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
+                      {isClientAccount ? 'Compte' : 'Organisation'}
+                    </div>
+                    <div className="font-semibold text-foreground text-sm truncate mt-0.5">
+                      {tenant.name}
+                    </div>
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
+                      <ShieldCheck className="w-3 h-3" />
+                      {isClientAccount ? 'Client' : `Plan ${tenant.plan}`}
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
 
- {/* Profil & déconnexion */}
- <div className={cn('border-t border-border shrink-0', sidebarCollapsed ? 'p-2 space-y-1' : 'p-4 space-y-2')}>
- <Tooltip
- content={
- <span className="flex flex-col gap-0.5 text-left">
- <span className="font-semibold">{user.name}</span>
- <span className="opacity-80 font-normal">Mon compte</span>
- </span>
- }
- side="right"
- disabled={!sidebarCollapsed}
- className="flex w-full"
- >
- <Link
- href="/dashboard/profile"
- data-tour="nav-profile"
- onClick={() => {
-  if (document.body.dataset.emTour === '1') return;
-  setMobileMenuOpen(false);
- }}
- className={cn(
- 'flex w-full items-center rounded-[var(--radius-button)] hover:bg-surface-muted transition group',
- sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
- )}
- >
- <UserAvatar name={user.name} src={user.avatarUrl} size="md" />
- {!sidebarCollapsed && (
- <div className="min-w-0 flex-1">
- <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
- {user.name}
- </span>
- <span className="text-xs text-muted truncate block">{user.email}</span>
- </div>
- )}
- </Link>
- </Tooltip>
- <Tooltip content="Se déconnecter" side="right" disabled={!sidebarCollapsed} className="flex w-full">
- <button
- type="button"
- onClick={logout}
- className={cn(
- 'flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition',
- sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
- )}
- >
- <LogOut className="w-4 h-4" />
- {!sidebarCollapsed && 'Déconnexion'}
- </button>
- </Tooltip>
- {sidebarCollapsed && (
- <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="right" className="flex w-full">
- <button
- type="button"
- onClick={toggleTheme}
- className="flex w-full items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
- aria-label="Changer de thème"
- >
- {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
- </button>
- </Tooltip>
- )}
- </div>
- </aside>
+            <Suspense
+              fallback={
+                <div className="h-20 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                </div>
+              }
+            >
+              <SidebarNav
+                sections={withNavTips(navSections)}
+                pathname={pathname}
+                setMobileMenuOpen={setMobileMenuOpen}
+                collapsed={sidebarCollapsed}
+                fallbackTab={user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants'}
+              />
+            </Suspense>
+          </div>
+
+          {/* Profil & déconnexion */}
+          <div className={cn('border-t border-border bg-surface shrink-0', sidebarCollapsed ? 'p-2 space-y-1' : 'p-3.5 sm:p-4 space-y-2 pb-[max(1rem,env(safe-area-inset-bottom))]')}>
+            <Tooltip
+              content={
+                <span className="flex flex-col gap-0.5 text-left">
+                  <span className="font-semibold">{user.name}</span>
+                  <span className="opacity-80 font-normal">Mon compte</span>
+                </span>
+              }
+              side="right"
+              disabled={!sidebarCollapsed}
+              className="flex w-full"
+            >
+              <Link
+                href="/dashboard/profile"
+                data-tour="nav-profile"
+                onClick={() => {
+                  if (document.body.dataset.emTour === '1') return;
+                  setMobileMenuOpen(false);
+                }}
+                className={cn(
+                  'flex w-full items-center rounded-[var(--radius-button)] hover:bg-surface-muted transition group',
+                  sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
+                )}
+              >
+                <UserAvatar name={user.name} src={user.avatarUrl} size="md" />
+                {!sidebarCollapsed && (
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
+                      {user.name}
+                    </span>
+                    <span className="text-xs text-muted truncate block">{user.email}</span>
+                  </div>
+                )}
+              </Link>
+            </Tooltip>
+            <Tooltip content="Se déconnecter" side="right" disabled={!sidebarCollapsed} className="flex w-full">
+              <button
+                type="button"
+                onClick={logout}
+                className={cn(
+                  'flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition touch-manipulation',
+                  sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+                )}
+              >
+                <LogOut className="w-4 h-4" />
+                {!sidebarCollapsed && 'Déconnexion'}
+              </button>
+            </Tooltip>
+            {sidebarCollapsed && (
+              <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="right" className="flex w-full">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="flex w-full items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                  aria-label="Changer de thème"
+                >
+                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        </aside>
 
       {/* Contenu principal */}
       <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
