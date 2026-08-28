@@ -589,6 +589,5 @@ export default function ClientDashboardHome() {
         </div>
       </div>
     </div>
-    </div>
   );
 }

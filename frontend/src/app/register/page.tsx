@@ -507,8 +507,9 @@ export default function RegisterPage() {
           features={REGISTRATION_ACTION_CONFIGS.ORGANIZER.features}
           backHref="/"
           backLabel="Retour au site"
+          maxWidthClassName="max-w-xl"
         >
-          <Card padding="lg" className="shadow-xl animate-pulse h-96">
+          <Card padding="md" className="shadow-xl animate-pulse h-96">
             <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
           </Card>
         </AuthSplitLayout>
@@ -671,8 +672,9 @@ function RegisterPageContent() {
       features={layoutFeatures}
       backHref="/"
       backLabel="Retour au site"
+      maxWidthClassName="max-w-xl"
     >
-      <Card padding="lg" className="border-border shadow-sm">
+      <Card padding="md" className="border-border shadow-sm p-4 sm:p-5">
         {ready && !site.allowRegistration ? (
           <div className="text-center space-y-4 py-6">
             <h2 className="text-xl font-semibold text-foreground">Inscriptions temporairement fermées</h2>
@@ -693,119 +695,73 @@ function RegisterPageContent() {
             </div>
           </div>
         ) : successMessage ? (
-          <div className="text-center space-y-5 py-2">
-            <div className="inline-flex items-center justify-center bg-emerald-100 dark:bg-emerald-950/30 p-4 rounded-full text-emerald-600 dark:text-emerald-400">
+          <div className="text-center space-y-4 py-2">
+            <div className="inline-flex items-center justify-center bg-emerald-100 dark:bg-emerald-950/30 p-3.5 rounded-full text-emerald-600 dark:text-emerald-400">
               {verificationMethod === 'WHATSAPP' ? (
-                <MessageSquare className="w-10 h-10" />
+                <MessageSquare className="w-8 h-8" />
               ) : (
-                <Mail className="w-10 h-10" />
+                <Mail className="w-8 h-8" />
               )}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">
                 {verificationMethod === 'WHATSAPP' ? 'Vérifiez votre WhatsApp' : 'Vérifiez votre boîte mail'}
               </h2>
-              <p className="text-sm text-muted mt-2 leading-relaxed">{successMessage}</p>
+              <p className="text-xs sm:text-sm text-muted mt-1.5 leading-relaxed">{successMessage}</p>
             </div>
             <Link href={targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login'}>
-              <Button fullWidth size="lg">
+              <Button fullWidth>
                 Aller à la connexion
               </Button>
             </Link>
           </div>
         ) : (
           <>
-            {/* ─── BANDEAU CONTEXTUEL D'INTENTION D'ACTION (Desktop & Mobile) ─── */}
-            <div className="mb-6 p-4 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-[color:var(--festive-accent-soft)]/20 to-primary/5 border border-primary/20 space-y-2.5 relative overflow-hidden">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                    <GoalIcon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/15 px-2 py-0.5 rounded-md">
-                        {config.goalTag}
+            {/* ─── BANDEAU CONTEXTUEL D'INTENTION D'ACTION COMPACT ─── */}
+            <div className="mb-3.5 p-2.5 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-[color:var(--festive-accent-soft)]/20 to-primary/5 border border-primary/20 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-md bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                  <GoalIcon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
+                      {config.goalTag}
+                    </span>
+                    {matchedPlan && (
+                      <span className="text-[9px] font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded">
+                        Forfait : {matchedPlan.ms365Name}
                       </span>
-                      {matchedPlan && (
-                        <span className="text-[10px] font-bold text-foreground bg-surface border border-border px-2 py-0.5 rounded-md">
-                          Forfait : {matchedPlan.ms365Name}
-                        </span>
-                      )}
-                      {templateIdParam && (
-                        <span className="text-[10px] font-bold text-foreground bg-surface border border-border px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-primary" /> Modèle prêt
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-bold text-foreground mt-0.5">
-                      {config.goalTitle}
-                    </h3>
+                    )}
+                    {templateIdParam && (
+                      <span className="text-[9px] font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 text-primary" /> Modèle prêt
+                      </span>
+                    )}
                   </div>
+                  <h3 className="text-xs font-bold text-foreground truncate mt-0.5">
+                    {config.goalTitle}
+                  </h3>
                 </div>
               </div>
 
-              <p className="text-xs text-muted leading-relaxed pl-11">
-                {config.goalSubtitle}
-              </p>
-
-              <div className="pl-11 pt-0.5 flex flex-wrap items-center gap-3 text-[11px] text-muted">
+              <div className="hidden sm:flex items-center gap-2 text-[10px] text-muted shrink-0">
                 <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 100% dans le navigateur
+                  <CheckCircle2 className="w-3 h-3" /> Sans carte
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Sans carte bancaire
-                </span>
-              </div>
-
-              {/* Accordéon mobile pour découvrir les 3 étapes sans encombrer l'écran */}
-              <div className="lg:hidden pl-11 pt-1.5 border-t border-primary/15 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowMobileSteps((v) => !v)}
-                  className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 touch-manipulation cursor-pointer"
-                >
-                  <span>{showMobileSteps ? 'Masquer les 3 étapes' : 'Voir les 3 étapes clés'}</span>
-                  <ChevronDown
-                    className={cn('w-3.5 h-3.5 transition-transform duration-200', showMobileSteps && 'rotate-180')}
-                  />
-                </button>
-                {showMobileSteps && (
-                  <ol className="mt-2.5 space-y-2 animate-fade-in">
-                    {layoutFeatures.map((feat) => {
-                      const FeatIcon = feat.icon;
-                      return (
-                        <li
-                          key={feat.title}
-                          className="flex items-start gap-2 text-xs bg-surface/80 border border-border/80 p-2.5 rounded-lg"
-                        >
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">
-                            {feat.step}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-bold text-foreground text-[11px] flex items-center gap-1">
-                              <FeatIcon className="w-3 h-3 text-primary" /> {feat.title}
-                            </p>
-                            <p className="text-[10px] text-muted leading-relaxed mt-0.5">{feat.desc}</p>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
               </div>
             </div>
 
-            {/* En-tête formulaire */}
-            <div className="text-left mb-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+            {/* En-tête formulaire compact */}
+            <div className="text-left mb-3">
+              <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
                 {accountKind === 'CLIENT'
                   ? 'Créer mon compte client'
                   : accountKind === 'VENDOR'
                     ? 'Créer mon compte professionnel'
                     : 'Créer mon espace organisateur'}
               </h2>
-              <p className="mt-1 text-xs sm:text-sm text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 Déjà inscrit ?{' '}
                 <Link
                   href={targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login'}
@@ -816,53 +772,46 @@ function RegisterPageContent() {
               </p>
             </div>
 
-            {error && <Alert variant="error" className="mb-5">{error}</Alert>}
+            {error && <Alert variant="error" className="mb-3 py-2 text-xs">{error}</Alert>}
 
             {referralFromLink && referralCode && (
-              <div className="mb-5 flex items-start gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-sm">
-                <UserCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="mb-3 flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-xs">
+                <UserCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-bold text-emerald-800 dark:text-emerald-300">Parrainage actif</p>
-                  <p className="text-emerald-700 dark:text-emerald-400 text-xs mt-0.5">
+                  <p className="text-emerald-700 dark:text-emerald-400 text-[11px] mt-0.5">
                     Code commercial appliqué : <span className="font-mono font-bold">{referralCode}</span>
                   </p>
                 </div>
               </div>
             )}
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              {/* ─── SÉLECTION DU TYPE DE COMPTE AVEC SUGGESTION VISUELLE OU FOCUS SUR L'ACTION ─── */}
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              {/* ─── SÉLECTION DU TYPE DE COMPTE COMPACTE ─── */}
               {hasExplicitAction && !showAllAccountKinds ? (
-                <div className="p-3 rounded-[var(--radius-card)] bg-surface-muted/70 border border-border flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <GoalIcon className="w-4 h-4" />
+                <div className="p-2 rounded-[var(--radius-card)] bg-surface-muted/70 border border-border flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <GoalIcon className="w-3.5 h-3.5" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-foreground truncate">
-                          {ACCOUNT_KIND_LABELS[accountKind]}
-                        </span>
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                          Sélectionné
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-muted truncate">
-                        {ACCOUNT_KIND_DESCRIPTIONS[accountKind]}
-                      </p>
-                    </div>
+                    <span className="font-semibold text-foreground truncate text-xs">
+                      {ACCOUNT_KIND_LABELS[accountKind]}
+                    </span>
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1 py-0.2 rounded shrink-0">
+                      Actif
+                    </span>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setShowAllAccountKinds(true)}
-                    className="text-[11px] font-semibold text-primary hover:underline touch-manipulation shrink-0 px-2 py-1 rounded hover:bg-primary/5 cursor-pointer"
+                    className="text-[11px] font-semibold text-primary hover:underline touch-manipulation shrink-0 px-1.5 py-0.5 rounded hover:bg-primary/5 cursor-pointer"
                   >
                     Changer
                   </button>
                 </div>
               ) : (
-                <fieldset className="space-y-2 animate-fade-in">
+                <fieldset className="space-y-1 animate-fade-in">
                   <div className="flex items-center justify-between">
                     <legend className="text-xs font-semibold text-foreground">
                       Type de compte souhaité
@@ -871,16 +820,16 @@ function RegisterPageContent() {
                       <button
                         type="button"
                         onClick={() => setShowAllAccountKinds(false)}
-                        className="text-[11px] font-semibold text-primary hover:underline touch-manipulation cursor-pointer"
+                        className="text-[10px] font-semibold text-primary hover:underline touch-manipulation cursor-pointer"
                       >
                         Garder le focus
                       </button>
                     ) : (
-                      <span className="text-[11px] text-muted">Modifiable ultérieurement</span>
+                      <span className="text-[10px] text-muted">Modifiable plus tard</span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {(['ORGANIZER', 'CLIENT', 'VENDOR', 'BOTH'] as TenantAccountKind[]).map((kind) => {
                       const isSelected = accountKind === kind;
                       const isRecommended = config.defaultAccountKind === kind;
@@ -889,14 +838,14 @@ function RegisterPageContent() {
                         <label
                           key={kind}
                           className={cn(
-                            'flex flex-col justify-center gap-1 p-3 rounded-[var(--radius-card)] border text-xs font-medium cursor-pointer transition-all touch-manipulation active:scale-[0.99] min-h-[52px]',
+                            'flex flex-col justify-center gap-0.5 p-2 rounded-[var(--radius-card)] border text-xs cursor-pointer transition-all touch-manipulation',
                             isSelected
                               ? 'border-primary bg-primary/5 ring-1 ring-primary/40 text-foreground shadow-xs'
                               : 'border-border text-muted hover:border-primary/40 hover:bg-surface-muted/50',
                           )}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-foreground flex items-center gap-1.5">
+                            <span className="font-bold text-foreground flex items-center gap-1.5 text-xs">
                               <input
                                 type="radio"
                                 name="accountKind"
@@ -907,12 +856,12 @@ function RegisterPageContent() {
                               {ACCOUNT_KIND_LABELS[kind]}
                             </span>
                             {isRecommended && (
-                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1 py-0.2 rounded">
                                 Recommandé
                               </span>
                             )}
                           </div>
-                          <span className="font-normal text-muted opacity-90 leading-snug pl-5">
+                          <span className="font-normal text-[10px] text-muted opacity-90 leading-tight pl-5 truncate">
                             {ACCOUNT_KIND_DESCRIPTIONS[kind]}
                           </span>
                         </label>
@@ -922,8 +871,8 @@ function RegisterPageContent() {
                 </fieldset>
               )}
 
-              {/* ─── IDENTITÉ ET ORGANISATION ─── */}
-              <div className={cn('grid gap-4', accountKind === 'CLIENT' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
+              {/* ─── IDENTITÉ ET ORGANISATION (2 COLONNES) ─── */}
+              <div className={cn('grid gap-2.5', accountKind === 'CLIENT' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
                 <Input
                   label={accountKind === 'CLIENT' ? 'Votre nom complet' : 'Votre nom & prénom'}
                   id="name"
@@ -935,7 +884,7 @@ function RegisterPageContent() {
                 />
                 {accountKind !== 'CLIENT' && (
                   <Input
-                    label={config.orgLabel || 'Nom de l’organisation / Événement'}
+                    label={config.orgLabel || 'Nom organisation / Événement'}
                     id="tenantName"
                     required
                     value={tenantName}
@@ -946,56 +895,52 @@ function RegisterPageContent() {
                 )}
               </div>
 
-              {/* ─── CONTACT : E-MAIL & WHATSAPP ─── */}
-              <Input
-                label="Adresse email"
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="jean@exemple.com"
-                leftIcon={<Mail className="w-4 h-4" />}
-              />
+              {/* ─── CONTACT : E-MAIL & WHATSAPP (2 COLONNES) ─── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Input
+                  label="Adresse email"
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jean@exemple.com"
+                  leftIcon={<Mail className="w-4 h-4" />}
+                />
 
-              <PhoneInput
-                id="phone"
-                label="Téléphone WhatsApp"
-                countryCode={phoneCountryCode}
-                national={phoneNational}
-                onCountryCodeChange={setPhoneCountryCode}
-                onNationalChange={setPhoneNational}
-                required={verificationMethod === 'WHATSAPP'}
-                hint={
-                  verificationMethod === 'WHATSAPP'
-                    ? 'Indicatif pays + numéro national (sans le premier 0).'
-                    : 'Optionnel si validation par e-mail.'
-                }
-              />
+                <PhoneInput
+                  id="phone"
+                  label="Téléphone WhatsApp"
+                  countryCode={phoneCountryCode}
+                  national={phoneNational}
+                  onCountryCodeChange={setPhoneCountryCode}
+                  onNationalChange={setPhoneNational}
+                  required={verificationMethod === 'WHATSAPP'}
+                  placeholder="812345678"
+                />
+              </div>
 
-              <Input
-                label="Mot de passe"
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
-              />
+              {/* ─── MOT DE PASSE & CODE PARRAINAGE (2 COLONNES) ─── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Input
+                  label="Mot de passe"
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  leftIcon={<Lock className="w-4 h-4" />}
+                />
 
-              <Input
-                label="Code parrainage commercial (optionnel)"
-                id="referralCode"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                placeholder="EM-XXXX-XXXX"
-                hint={
-                  referralFromLink
-                    ? 'Code transmis par votre commercial — modifiable si besoin.'
-                    : 'Si un commercial ou partenaire vous a parrainé, renseignez son code.'
-                }
-              />
+                <Input
+                  label="Code parrainage (optionnel)"
+                  id="referralCode"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="EM-XXXX-XXXX"
+                />
+              </div>
 
               {/* ─── CHOIX DE MÉTHODE DE VALIDATION OTP ─── */}
               <MethodToggle
@@ -1003,17 +948,17 @@ function RegisterPageContent() {
                 value={verificationMethod}
                 onChange={setVerificationMethod}
                 options={[
-                  { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-4 h-4" /> },
-                  { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-4 h-4" /> },
+                  { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" /> },
+                  { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
                 ]}
               />
 
-              {/* ─── CONDITIONS LÉGALES & PRÉVISUALISATION OBLIGATOIRE ─── */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              {/* ─── CONDITIONS LÉGALES & PRÉVISUALISATION COMPACTES ─── */}
+              <div className="space-y-1.5 pt-0.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground flex items-center gap-1 text-xs">
                     <Scale className="w-3.5 h-3.5 text-primary" />
-                    Engagements & Conditions légales
+                    Engagements légaux
                   </span>
                   {(!acceptTerms || !acceptPrivacy) && (
                     <button
@@ -1022,7 +967,7 @@ function RegisterPageContent() {
                         setLegalModalTab('summary');
                         setLegalModalOpen(true);
                       }}
-                      className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 touch-manipulation cursor-pointer"
+                      className="text-[10px] font-bold text-primary hover:underline inline-flex items-center gap-1 touch-manipulation cursor-pointer"
                     >
                       <Eye className="w-3 h-3" />
                       Tout lire & approuver
@@ -1030,140 +975,113 @@ function RegisterPageContent() {
                   )}
                 </div>
 
-                {/* 1. Carte Conditions d'utilisation */}
-                <div
-                  className={cn(
-                    'p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-xs',
-                    acceptTerms
-                      ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
-                      : 'border-border bg-surface hover:border-primary/40',
-                  )}
-                >
-                  <label className="flex items-start gap-2.5 min-w-0 cursor-pointer flex-1">
-                    <input
-                      type="checkbox"
-                      checked={acceptTerms}
-                      onChange={() => {
-                        if (!acceptTerms) {
-                          setLegalModalTab('terms');
-                          setLegalModalOpen(true);
-                        } else {
-                          setAcceptTerms(false);
-                        }
-                      }}
-                      className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-semibold text-foreground flex items-center gap-1.5 truncate">
-                        Conditions d’utilisation
-                        <span className="text-[10px] font-normal text-muted">v{TERMS_VERSION}</span>
-                      </p>
-                      <p className="text-[11px] text-muted truncate">
-                        {acceptTerms ? 'Document examiné et approuvé' : 'Cliquez pour lire et valider'}
-                      </p>
-                    </div>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLegalModalTab('terms');
-                      setLegalModalOpen(true);
-                    }}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                  {/* 1. Carte Conditions d'utilisation */}
+                  <div
                     className={cn(
-                      'px-2 py-1 rounded-md text-[11px] font-bold shrink-0 transition flex items-center gap-1 touch-manipulation cursor-pointer',
+                      'px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
                       acceptTerms
-                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
-                        : 'text-primary bg-primary/10 hover:bg-primary/20',
+                        ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
+                        : 'border-border bg-surface hover:border-primary/40',
                     )}
                   >
-                    {acceptTerms ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3" /> Approuvé
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-3 h-3" /> Consulter
-                      </>
-                    )}
-                  </button>
-                </div>
+                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1">
+                      <input
+                        type="checkbox"
+                        checked={acceptTerms}
+                        onChange={() => {
+                          if (!acceptTerms) {
+                            setLegalModalTab('terms');
+                            setLegalModalOpen(true);
+                          } else {
+                            setAcceptTerms(false);
+                          }
+                        }}
+                        className="rounded text-primary focus:ring-primary accent-primary shrink-0"
+                      />
+                      <span className="font-medium text-foreground truncate text-[11px]">
+                        Conditions d’utilisation <span className="text-[10px] text-muted">v{TERMS_VERSION}</span>
+                      </span>
+                    </label>
 
-                {/* 2. Carte Politique de confidentialité */}
-                <div
-                  className={cn(
-                    'p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-xs',
-                    acceptPrivacy
-                      ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
-                      : 'border-border bg-surface hover:border-primary/40',
-                  )}
-                >
-                  <label className="flex items-start gap-2.5 min-w-0 cursor-pointer flex-1">
-                    <input
-                      type="checkbox"
-                      checked={acceptPrivacy}
-                      onChange={() => {
-                        if (!acceptPrivacy) {
-                          setLegalModalTab('privacy');
-                          setLegalModalOpen(true);
-                        } else {
-                          setAcceptPrivacy(false);
-                        }
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLegalModalTab('terms');
+                        setLegalModalOpen(true);
                       }}
-                      className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-semibold text-foreground flex items-center gap-1.5 truncate">
-                        Politique de confidentialité
-                        <span className="text-[10px] font-normal text-muted">v{PRIVACY_VERSION}</span>
-                      </p>
-                      <p className="text-[11px] text-muted truncate">
-                        {acceptPrivacy ? 'Document examiné et approuvé' : 'Cliquez pour lire et valider'}
-                      </p>
-                    </div>
-                  </label>
+                      className={cn(
+                        'px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 transition flex items-center gap-0.5 touch-manipulation cursor-pointer',
+                        acceptTerms
+                          ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
+                          : 'text-primary bg-primary/10 hover:bg-primary/20',
+                      )}
+                    >
+                      {acceptTerms ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : 'Lire'}
+                    </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLegalModalTab('privacy');
-                      setLegalModalOpen(true);
-                    }}
+                  {/* 2. Carte Politique de confidentialité */}
+                  <div
                     className={cn(
-                      'px-2 py-1 rounded-md text-[11px] font-bold shrink-0 transition flex items-center gap-1 touch-manipulation cursor-pointer',
+                      'px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
                       acceptPrivacy
-                        ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
-                        : 'text-primary bg-primary/10 hover:bg-primary/20',
+                        ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
+                        : 'border-border bg-surface hover:border-primary/40',
                     )}
                   >
-                    {acceptPrivacy ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3" /> Approuvé
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-3 h-3" /> Consulter
-                      </>
-                    )}
-                  </button>
+                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1">
+                      <input
+                        type="checkbox"
+                        checked={acceptPrivacy}
+                        onChange={() => {
+                          if (!acceptPrivacy) {
+                            setLegalModalTab('privacy');
+                            setLegalModalOpen(true);
+                          } else {
+                            setAcceptPrivacy(false);
+                          }
+                        }}
+                        className="rounded text-primary focus:ring-primary accent-primary shrink-0"
+                      />
+                      <span className="font-medium text-foreground truncate text-[11px]">
+                        Confidentialité <span className="text-[10px] text-muted">v{PRIVACY_VERSION}</span>
+                      </span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLegalModalTab('privacy');
+                        setLegalModalOpen(true);
+                      }}
+                      className={cn(
+                        'px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 transition flex items-center gap-0.5 touch-manipulation cursor-pointer',
+                        acceptPrivacy
+                          ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
+                          : 'text-primary bg-primary/10 hover:bg-primary/20',
+                      )}
+                    >
+                      {acceptPrivacy ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : 'Lire'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* ─── BOUTON D'ACTION PRINCIPAL DYNAMIQUE ─── */}
-              <div className="pt-2 space-y-2">
+              <div className="pt-1.5 space-y-1.5">
                 <Button
                   type="submit"
                   fullWidth
-                  size="lg"
                   loading={loading}
                   rightIcon={<ArrowRight className="w-4 h-4" />}
-                  className="shadow-md shadow-primary/20 font-bold"
+                  className="shadow-md shadow-primary/20 font-bold py-2.5"
                 >
                   {config.submitButtonLabel}
                 </Button>
 
-                <p className="text-center text-[11px] text-muted flex items-center justify-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
+                <p className="text-center text-[10px] text-muted flex items-center justify-center gap-1">
+                  <Zap className="w-3 h-3 text-primary shrink-0" />
                   Accès débloqué immédiatement après validation du code
                 </p>
               </div>

@@ -22,6 +22,7 @@ interface AuthSplitLayoutProps {
   features?: AuthFeature[];
   backHref?: string;
   backLabel?: string;
+  maxWidthClassName?: string;
   children: React.ReactNode;
 }
 
@@ -32,6 +33,7 @@ export function AuthSplitLayout({
   features = [],
   backHref = '/',
   backLabel = 'Retour au site',
+  maxWidthClassName,
   children,
 }: AuthSplitLayoutProps) {
   const { theme, toggleTheme } = useTheme();
@@ -134,7 +136,7 @@ export function AuthSplitLayout({
           </button>
         </div>
 
-        <div className="max-w-md w-full mx-auto space-y-5 pt-10 lg:pt-0">
+        <div className={cn(maxWidthClassName || 'max-w-md', 'w-full mx-auto space-y-4 pt-8 lg:pt-0')}>
           {backHref && (
             <Link
               href={backHref}
