@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/cn';
 import {
   LANDING_PROFILES,
@@ -17,6 +18,41 @@ export default function LandingProfileGate({
   selectedId: LandingProfileId;
   onSelect: (id: LandingProfileId) => void;
 }) {
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user);
+
+  const getProfileHref = (profileId: LandingProfileId, defaultHref: string) => {
+    if (!isLoggedIn) return defaultHref;
+    switch (profileId) {
+      case 'personal':
+        return '/dashboard/events';
+      case 'pro':
+        return '/dashboard/events';
+      case 'seeker':
+        return '/marketplace';
+      case 'vendor':
+        return '/dashboard/catalogue';
+      default:
+        return '/dashboard';
+    }
+  };
+
+  const getProfileCtaLabel = (profileId: LandingProfileId, defaultLabel: string) => {
+    if (!isLoggedIn) return defaultLabel;
+    switch (profileId) {
+      case 'personal':
+        return 'Accéder à mes événements';
+      case 'pro':
+        return 'Gérer ma billetterie';
+      case 'seeker':
+        return 'Explorer le catalogue';
+      case 'vendor':
+        return 'Ouvrir mon catalogue';
+      default:
+        return 'Ouvrir mon espace';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 px-1">
@@ -29,7 +65,7 @@ export default function LandingProfileGate({
             Quel est votre projet ?
           </h2>
           <p className="text-xs sm:text-sm text-muted">
-            Choisissez votre solution pour accéder immédiatement aux outils adaptés.
+            Choisissez votre solution pour accéder immédiatement aux actions et outils dédiés.
           </p>
         </div>
       </div>
@@ -42,6 +78,9 @@ export default function LandingProfileGate({
         {LANDING_PROFILES.map((profile) => {
           const Icon = profile.icon;
           const selected = selectedId === profile.id;
+          const ctaHref = getProfileHref(profile.id, profile.cta.href);
+          const ctaLabel = getProfileCtaLabel(profile.id, profile.cta.label);
+
           return (
             <li key={profile.id} className="w-full">
               <div
@@ -119,10 +158,14 @@ export default function LandingProfileGate({
                           key={res.label}
                           className="flex items-center gap-2 text-[11px] font-medium text-foreground/90"
                         >
-                          <span className={cn(
-                            'w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[9px]',
-                            selected ? 'bg-primary/15 text-primary' : 'bg-surface-muted text-muted group-hover:text-primary',
-                          )}>
+                          <span
+                            className={cn(
+                              'w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[9px]',
+                              selected
+                                ? 'bg-primary/15 text-primary'
+                                : 'bg-surface-muted text-muted group-hover:text-primary',
+                            )}
+                          >
                             <ResIcon className="w-2.5 h-2.5" />
                           </span>
                           <span className="truncate">{res.label}</span>
@@ -135,7 +178,7 @@ export default function LandingProfileGate({
                 {/* Bouton d'action direct */}
                 <div className="pt-4 mt-auto">
                   <Link
-                    href={profile.cta.href}
+                    href={ctaHref}
                     onClick={(e) => e.stopPropagation()}
                     className="block w-full"
                   >
@@ -148,7 +191,7 @@ export default function LandingProfileGate({
                         selected ? 'shadow-md shadow-primary/30' : 'hover:border-primary/40',
                       )}
                     >
-                      {profile.cta.label}
+                      {ctaLabel}
                     </Button>
                   </Link>
                 </div>

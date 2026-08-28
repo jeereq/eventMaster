@@ -143,11 +143,11 @@ export default function Home() {
             />
           </div>
 
-          {/* Démonstration Live interactive synchronisée */}
-          <div className="pt-2 max-w-4xl mx-auto">
+          {/* Console d'Actions Directes & Lancement Rapide */}
+          <div className="pt-2 max-w-4xl mx-auto animate-fade-in">
             <div className="text-center mb-3">
               <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-                Aperçu en direct · {profile.label}
+                Actions directes · {profile.label}
               </span>
             </div>
             <LandingHeroPreview profileId={profileId} />

@@ -2,28 +2,22 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import {
   Sparkles,
   LayoutGrid,
   CheckCircle2,
   ArrowRight,
-  Layers,
-  Palette,
   Maximize2,
   Eye,
   Flame,
   Sun,
   Moon,
-  Building,
-  RotateCw,
-  Compass,
   Crown,
-  Plus,
-  Move,
   Grid,
-  DoorOpen,
-  Wine,
-  UtensilsCrossed,
+  Building2,
+  ExternalLink,
+  PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -93,48 +87,67 @@ const EDITOR_TIERS: EditorTierConfig[] = [
 ];
 
 export default function LandingRoomEditorShowcase() {
-  const [selectedTierIndex, setSelectedTierIndex] = useState<ShowcaseLevel>(3); // Complet par défaut
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user);
+  const [selectedTierIndex, setSelectedTierIndex] = useState<ShowcaseLevel>(3);
   const [viewMode3D, setViewMode3D] = useState<boolean>(true);
   const [lightingTheme, setLightingTheme] = useState<LightingTheme>('gala');
   const [activeFloor, setActiveFloor] = useState<'rdc' | 'mezzanine'>('rdc');
   const [hoveredTable, setHoveredTable] = useState<string | null>(null);
 
   const currentTier = EDITOR_TIERS[selectedTierIndex];
+  const roomEditorUrl = isLoggedIn ? '/dashboard/rooms' : '/register?kind=ORGANIZER&intent=personal';
 
   return (
     <section className="py-16 sm:py-24 bg-surface border-t border-border">
-      <div className="page-container space-y-12">
-        {/* En-tête de section */}
-        <div className="max-w-3xl space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="em-festive-chip">
-              <Sparkles className="w-3 h-3" />
-              Éditeur Visuel 2D / 3D
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Le cœur du placement
-            </span>
+      <div className="page-container space-y-10">
+        {/* En-tête de section avec CTAs directs */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div className="max-w-2xl space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="em-festive-chip">
+                <Sparkles className="w-3 h-3" />
+                Éditeur Visuel 2D / 3D
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Le cœur du placement
+              </span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight leading-tight">
+              Modélisez votre salle en 2D et 3D
+            </h2>
+
+            <p className="text-sm sm:text-base text-muted leading-relaxed">
+              Placez tables, allées, buffets et lustres, puis visualisez l’ambiance en direct avec cotations réalistes.
+            </p>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight leading-tight">
-            Modélisez votre salle en 2D et 3D
-          </h2>
-
-          <p className="text-sm sm:text-base text-muted leading-relaxed">
-            Placez tables, allées, buffets et lustres, puis visualisez l’ambiance en direct avec cotations réalistes.
-          </p>
+          {/* Boutons d'actions directes vers l'outil */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link href={roomEditorUrl}>
+              <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
+                Ouvrir l’éditeur de salle
+              </Button>
+            </Link>
+            <Link href="/marketplace/salles">
+              <Button variant="secondary" rightIcon={<Building2 className="w-4 h-4" />}>
+                Explorer les salles 3D
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Grille principale : Démonstrateur interactif */}
         <div className="grid lg:grid-cols-12 gap-8 items-stretch">
-          {/* Colonne gauche : Sélecteur de niveaux (5 colonnes) */}
+          {/* Colonne gauche : Niveaux d'éditeur & Liens directs (5 colonnes) */}
           <div className="lg:col-span-5 flex flex-col justify-between space-y-4">
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold uppercase tracking-wider text-muted">
                   Niveaux d’éditeur disponibles :
                 </p>
-                <span className="text-[11px] text-primary font-semibold">Cliquez pour tester</span>
+                <span className="text-[11px] text-primary font-semibold">Bascule instantanée</span>
               </div>
 
               <div className="space-y-2.5">
@@ -174,11 +187,15 @@ export default function LandingRoomEditorShowcase() {
               </div>
             </div>
 
-            <div className="pt-2">
-              <Link href="/register">
-                <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Créer ma salle gratuitement
+            {/* Actions secondaires */}
+            <div className="pt-2 space-y-2">
+              <Link href={roomEditorUrl} className="block">
+                <Button variant="primary" className="w-full justify-between" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  Lancer mon plan de salle maintenant
                 </Button>
+              </Link>
+              <Link href="/register?kind=VENDOR&intent=vendor" className="block text-center text-xs text-muted hover:text-primary transition py-1">
+                Vous possédez une salle ? Référencez votre espace gratuitement →
               </Link>
             </div>
           </div>
@@ -312,12 +329,9 @@ export default function LandingRoomEditorShowcase() {
                     : 'bg-[#faf9f6] dark:bg-[#0e1117] text-foreground',
                 )}
               >
-                {/* ──────────────────────────────────────────────────────── */}
-                {/* MODE 3D AMBIANCE SHOWCASE                                */}
-                {/* ──────────────────────────────────────────────────────── */}
+                {/* MODE 3D AMBIANCE */}
                 {viewMode3D ? (
                   <div className="h-full w-full relative flex flex-col justify-between overflow-hidden">
-                    {/* Éclairage volumétrique & Lustres descendants */}
                     <div
                       className={cn(
                         'absolute top-0 inset-x-1/6 h-36 blur-xl pointer-events-none opacity-45 mix-blend-screen transition-all duration-500',
@@ -329,7 +343,6 @@ export default function LandingRoomEditorShowcase() {
                       )}
                     />
 
-                    {/* Badge d'ambiance haut */}
                     <div className="relative z-10 flex items-center justify-between text-[10px] text-white/90">
                       <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-xs">
                         <Sparkles className="w-3 h-3 text-amber-300" />
@@ -348,9 +361,7 @@ export default function LandingRoomEditorShowcase() {
                       </span>
                     </div>
 
-                    {/* Scène centrale 3D */}
                     <div className="relative z-10 my-auto flex flex-col items-center justify-center">
-                      {/* Scène haute (si Premium ou Complet) */}
                       {selectedTierIndex >= 2 && (
                         <div
                           className={cn(
@@ -374,9 +385,7 @@ export default function LandingRoomEditorShowcase() {
                         </div>
                       )}
 
-                      {/* Disposition des Tables 3D */}
                       <div className="flex items-center justify-center gap-5 sm:gap-9">
-                        {/* Table Gauche */}
                         <div
                           onMouseEnter={() => setHoveredTable('table-1')}
                           onMouseLeave={() => setHoveredTable(null)}
@@ -394,7 +403,6 @@ export default function LandingRoomEditorShowcase() {
                           )}
                         </div>
 
-                        {/* Table Centrale */}
                         <div
                           onMouseEnter={() => setHoveredTable('table-honour')}
                           onMouseLeave={() => setHoveredTable(null)}
@@ -413,7 +421,6 @@ export default function LandingRoomEditorShowcase() {
                           )}
                         </div>
 
-                        {/* Table Droite */}
                         <div
                           onMouseEnter={() => setHoveredTable('table-2')}
                           onMouseLeave={() => setHoveredTable(null)}
@@ -433,28 +440,23 @@ export default function LandingRoomEditorShowcase() {
                       </div>
                     </div>
 
-                    {/* Bas de canevas 3D */}
                     <div className="relative z-10 flex items-center justify-between text-[10px] text-white/80 pt-1.5 border-t border-white/15">
                       <span className="flex items-center gap-1.5 font-medium">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Piste de danse centrale & allée d’honneur activées
                       </span>
-                      <span className="text-amber-200 font-semibold">
-                        Survolez une table pour afficher les détails
-                      </span>
+                      <Link href={roomEditorUrl} className="text-amber-200 hover:underline font-semibold flex items-center gap-1">
+                        Ouvrir le vrai canevas d’édition →
+                      </Link>
                     </div>
                   </div>
                 ) : (
-                  /* ──────────────────────────────────────────────────────── */
-                  /* MODE 2D PLAN ARCHITECTURAL                               */
-                  /* ──────────────────────────────────────────────────────── */
+                  /* MODE 2D CAD */
                   <div className="h-full w-full relative p-2 flex flex-col justify-between">
-                    {/* Grille millimétrée */}
                     <div
                       className="absolute inset-0 pointer-events-none opacity-45 bg-[linear-gradient(to_right,#00000010_1px,transparent_1px),linear-gradient(to_bottom,#00000010_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff10_1px,transparent_1px),linear-gradient(to_bottom,#ffffff10_1px,transparent_1px)] bg-[size:16px_16px]"
                     />
 
-                    {/* Scène haute (si Business, Premium, Complet) */}
                     {selectedTierIndex >= 1 ? (
                       <div className="relative z-10 mx-auto w-3/4 h-8 rounded-lg border-2 border-amber-500/50 bg-amber-500/15 flex items-center justify-between px-3 text-[10px] font-bold text-amber-800 dark:text-amber-300 shadow-xs">
                         <span className="flex items-center gap-1.5">
@@ -471,9 +473,7 @@ export default function LandingRoomEditorShowcase() {
                       </div>
                     )}
 
-                    {/* Agencement 2D des tables avec chaises satellites */}
                     <div className="relative z-10 grid grid-cols-3 gap-4 my-auto px-2 items-center justify-items-center">
-                      {/* Table 1 */}
                       <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-surface dark:bg-surface/60 border border-primary/40 shadow-xs hover:border-primary transition group cursor-pointer">
                         <span className="absolute -top-1 w-2 h-2 rounded-full bg-primary/50 border border-primary/70" />
                         <span className="absolute -bottom-1 w-2 h-2 rounded-full bg-primary/50 border border-primary/70" />
@@ -487,7 +487,6 @@ export default function LandingRoomEditorShowcase() {
                         <span className="text-[8px] font-bold text-foreground mt-0.5">Orchidée</span>
                       </div>
 
-                      {/* Table 2 (Honneur ou Banquet) */}
                       <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-[color:var(--festive-accent-soft)] border-2 border-amber-500 shadow-xs hover:scale-105 transition cursor-pointer">
                         <span className="absolute -top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-600" />
                         <span className="absolute -bottom-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-600" />
@@ -501,7 +500,6 @@ export default function LandingRoomEditorShowcase() {
                         <span className="text-[8px] font-black text-amber-800 dark:text-amber-300 mt-0.5">Mariés (10)</span>
                       </div>
 
-                      {/* Table 3 */}
                       <div className="relative flex flex-col items-center justify-center p-2 rounded-xl bg-surface dark:bg-surface/60 border border-primary/40 shadow-xs hover:border-primary transition group cursor-pointer">
                         <span className="absolute -top-1 w-2 h-2 rounded-full bg-primary/50 border border-primary/70" />
                         <span className="absolute -bottom-1 w-2 h-2 rounded-full bg-primary/50 border border-primary/70" />
@@ -516,12 +514,11 @@ export default function LandingRoomEditorShowcase() {
                       </div>
                     </div>
 
-                    {/* Zone basse : Buffet, Bar et Entrée Protocole QR */}
                     <div className="relative z-10 grid grid-cols-12 gap-2 text-[9px] pt-1">
                       <div className="col-span-4 h-6 rounded-md bg-surface border border-border flex items-center justify-center font-bold text-muted">
                         Buffet Traiteur
                       </div>
-                      <div className="col-span-3 h-6 rounded-md bg-surface border border-border flex items-center justify-center font-bold text-muted">
+                      <div className="col-span-3 h-6 rounded-md bg-surface border border-border flex items-center justify-center font-semibold text-muted">
                         Bar à Vins
                       </div>
                       <div className="col-span-5 h-6 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-700 dark:text-emerald-300">
@@ -532,11 +529,11 @@ export default function LandingRoomEditorShowcase() {
                 )}
               </div>
 
-              {/* Barre d'outils / Palette d'éléments rapide de l'éditeur */}
+              {/* Barre d'outils avec action directe */}
               <div className="flex items-center justify-between border-t border-border/80 pt-3">
                 <div className="flex items-center gap-1.5 overflow-x-auto text-[11px] text-muted [scrollbar-width:none]">
                   <span className="font-bold text-foreground shrink-0 flex items-center gap-1">
-                    <Grid className="w-3.5 h-3.5 text-primary" /> Outils :
+                    <Grid className="w-3.5 h-3.5 text-primary" /> Palette :
                   </span>
                   <span className="px-2 py-0.5 rounded bg-surface border border-border shrink-0">
                     + Table Ronde
@@ -554,6 +551,10 @@ export default function LandingRoomEditorShowcase() {
                     + Porte Battante
                   </span>
                 </div>
+
+                <Link href={roomEditorUrl} className="shrink-0 text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                  Tester en direct <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
 
               {/* Liste des fonctionnalités incluses */}
@@ -576,10 +577,10 @@ export default function LandingRoomEditorShowcase() {
             <div className="p-3.5 rounded-lg bg-surface-muted/50 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted">
               <span className="flex items-center gap-2">
                 <Maximize2 className="w-4 h-4 text-primary shrink-0" />
-                Les invités reçoivent automatiquement leur numéro de table et le pin GPS après validation RSVP.
+                Vos invités visualisent leur table sur leur smartphone après confirmation WhatsApp.
               </span>
-              <Link href="/#tarifs" className="font-semibold text-primary hover:underline shrink-0">
-                Comparer tous les forfaits →
+              <Link href={roomEditorUrl} className="font-semibold text-primary hover:underline shrink-0">
+                Créer ma salle maintenant →
               </Link>
             </div>
           </div>
