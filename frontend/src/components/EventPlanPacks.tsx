@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Check, ListChecks, Pin, RefreshCw, Store, Bookmark } from 'lucide-react';
+import { Check, Eye, ListChecks, Pin, RefreshCw, Store, Bookmark } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import FavoriteHeart from '@/components/FavoriteHeart';
@@ -17,6 +17,7 @@ function PackItemRow({
   onToggleFavorite,
   onReplace,
   onKeep,
+  onOpenListing,
 }: {
   item: PlanItem;
   leftoverFc: number;
@@ -24,39 +25,74 @@ function PackItemRow({
   onToggleFavorite: (kind: 'venue' | 'service', slug: string) => void;
   onReplace: (next: PlanItem) => void;
   onKeep?: (item: PlanItem) => void;
+  onOpenListing?: (item: PlanItem) => void;
 }) {
   const [open, setOpen] = useState(false);
   const room = leftoverFc + item.estimatedFc;
   const alternatives = (item.alternatives || []).filter((alt) => alt.estimatedFc <= room);
+  const kindLabel = item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Location' : 'Métier');
+
+  const titleClass = 'text-sm font-semibold text-foreground hover:text-primary truncate block text-left';
+  const titleNode = onOpenListing ? (
+    <button type="button" onClick={() => onOpenListing(item)} className={`${titleClass} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm`}>
+      {item.title}
+    </button>
+  ) : (
+    <Link href={item.href} className={titleClass}>
+      {item.title}
+    </Link>
+  );
 
   return (
     <li className="rounded-xl border border-border p-2 space-y-2">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-muted shrink-0">
-          {item.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.coverUrl}
-              alt={item.title || 'Visuel du prestataire'}
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted">
-              <Store className="w-4 h-4" />
-            </div>
-          )}
-        </div>
+        {onOpenListing ? (
+          <button
+            type="button"
+            onClick={() => onOpenListing(item)}
+            className="w-12 h-12 rounded-lg overflow-hidden bg-surface-muted shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            aria-label={`Voir la fiche ${kindLabel.toLowerCase()} ${item.title}`}
+          >
+            {item.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.coverUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted">
+                <Store className="w-4 h-4" />
+              </div>
+            )}
+          </button>
+        ) : (
+          <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-muted shrink-0">
+            {item.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.coverUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted">
+                <Store className="w-4 h-4" />
+              </div>
+            )}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-wider text-muted">
-            {item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Location' : 'Métier')}
+            {kindLabel}
             {item.favorite ? ' · favori' : ''}
             {item.match === 'exact' ? ' · adapté' : ''}
           </p>
-          <Link href={item.href} className="text-sm font-semibold text-foreground hover:text-primary truncate block">
-            {item.title}
-          </Link>
+          {titleNode}
           <p className="text-[11px] text-muted truncate">
             {item.orgName}{item.location ? ` · ${item.location}` : ''}
             {item.kind === 'venue' && item.capacity ? ` · ${item.capacity} places` : ''}
@@ -97,14 +133,14 @@ function PackItemRow({
       {open && alternatives.length > 0 ? (
         <ul className="mt-2 space-y-1.5">
           {alternatives.map((alt) => (
-            <li key={alt.slug}>
+            <li key={alt.slug} className="flex items-stretch gap-1">
               <button
                 type="button"
                 onClick={() => {
                   onReplace(alt);
                   setOpen(false);
                 }}
-                className="w-full text-left rounded-lg border border-border px-2 py-1.5 hover:border-primary/40 hover:bg-surface-muted"
+                className="min-w-0 flex-1 text-left rounded-lg border border-border px-2 py-1.5 hover:border-primary/40 hover:bg-surface-muted"
               >
                 <span className="block text-xs font-semibold text-foreground truncate">{alt.title}</span>
                 <span className="block text-[11px] text-muted">
@@ -113,6 +149,16 @@ function PackItemRow({
                   {alt.estimatedFc < item.estimatedFc ? ' · moins cher' : alt.estimatedFc > item.estimatedFc ? ' · plus cher' : ''}
                 </span>
               </button>
+              {onOpenListing ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenListing(alt)}
+                  className="shrink-0 rounded-lg border border-border px-2 text-muted hover:text-foreground hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  aria-label={`Voir la fiche de ${alt.title}`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -132,6 +178,7 @@ export default function EventPlanPacks({
   onChooseFinal,
   onKeep,
   onWidenSlot,
+  onOpenListing,
 }: {
   packages: PlanPackage[];
   budgetFc: number;
@@ -143,6 +190,7 @@ export default function EventPlanPacks({
   onChooseFinal?: (pack: PlanPackage) => void;
   onKeep?: (item: PlanItem) => void;
   onWidenSlot?: (slot: PlanMissingSlot) => void;
+  onOpenListing?: (item: PlanItem) => void;
 }) {
   const envelope = spendableFc || budgetFc;
   return (
@@ -250,6 +298,7 @@ export default function EventPlanPacks({
                   onToggleFavorite={onToggleFavorite}
                   onReplace={(next) => onReplace(pack.id, item.slug, next)}
                   onKeep={onKeep}
+                  onOpenListing={onOpenListing}
                 />
               ))}
             </ul>

@@ -810,6 +810,7 @@ export default function EventPrepPanel({
             venue: pack.venue,
             services: pack.services,
           }, prep))}
+          onOpenListing={(target) => openPreview(target)}
         />
       ) : null}
 

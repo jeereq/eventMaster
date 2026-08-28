@@ -66,9 +66,9 @@ export default function EventPrepListingModal({
   initialView?: EventPrepListingView;
   pipeline?: PrepListingPipeline | null;
   onClose: () => void;
-  onRetainVenue: (venue: PublicVenue) => void;
-  onRetainService: (service: PublicService) => void;
-  onRemove: () => void;
+  onRetainVenue?: (venue: PublicVenue) => void;
+  onRetainService?: (service: PublicService) => void;
+  onRemove?: () => void;
   onPipelineChange?: () => void;
 }) {
   const [view, setView] = useState<EventPrepListingView>('details');
@@ -173,9 +173,10 @@ export default function EventPrepListingModal({
         ? 'Demande de date avec acompte hors plateforme. Le professionnel doit encore accepter.'
         : `${kindLabel}${listing?.orgName ? ` · ${listing.orgName}` : ''}`;
 
+  const canRetain = Boolean(onRetainVenue || onRetainService);
   const retainListing = () => {
-    if (venue) onRetainVenue(venue);
-    else if (service) onRetainService(service);
+    if (venue) onRetainVenue?.(venue);
+    else if (service) onRetainService?.(service);
   };
 
   return (
@@ -188,13 +189,13 @@ export default function EventPrepListingModal({
       footer={
         listing && view === 'details' ? (
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 w-full">
-            {selected ? (
+            {selected && onRemove ? (
               <Button variant="secondary" onClick={onRemove}>
                 Retirer de la préparation
               </Button>
-            ) : (
+            ) : canRetain ? (
               <Button onClick={retainListing}>Retenir pour l’événement</Button>
-            )}
+            ) : null}
             {pipeline?.stage === 'booking' ? (
               <Link href={followHref} className="inline-flex">
                 <Button variant="secondary">Suivre la réservation</Button>
@@ -232,7 +233,7 @@ export default function EventPrepListingModal({
           defaultMessage={eventTitle ? `Demande pour l’événement « ${eventTitle} ».` : undefined}
           eventId={eventId}
           onSent={() => {
-            if (!selected) retainListing();
+            if (!selected && canRetain) retainListing();
             onPipelineChange?.();
           }}
         />
@@ -249,7 +250,7 @@ export default function EventPrepListingModal({
           eventDate={dateKey || undefined}
           eventId={eventId}
           onSent={() => {
-            if (!selected) retainListing();
+            if (!selected && canRetain) retainListing();
             onPipelineChange?.();
           }}
         />

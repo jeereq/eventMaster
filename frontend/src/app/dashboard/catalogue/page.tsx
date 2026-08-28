@@ -81,6 +81,7 @@ import EventPlanPacks from '@/components/EventPlanPacks';
 import EventSavedPacks from '@/components/EventSavedPacks';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
+import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
 
 type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
 type PlanPrepView = 'manual' | 'ai' | 'final';
@@ -149,6 +150,7 @@ function ClientMarketplaceInner() {
   const [saveName, setSaveName] = useState('');
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [listingPreview, setListingPreview] = useState<EventPrepPreviewTarget | null>(null);
 
   const urlTab = parseHubTab(searchParams);
   const urlPlanView = parsePlanPrepView(searchParams);
@@ -774,6 +776,7 @@ function ClientMarketplaceInner() {
                   ].map((item) => item.slug),
                 }}
                 applyLabel="Retenir cette proposition"
+                onOpenListing={(target) => setListingPreview(target)}
                 onApply={(pack) => {
                   setAiPackages((current) => {
                     const next = eventPlanAiToPackage(pack, brief.budgetMaxFc);
@@ -889,6 +892,7 @@ function ClientMarketplaceInner() {
                 spendableFc={spendableFc || brief.budgetMaxFc}
                 isFavorite={isFavorite}
                 onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
+                onOpenListing={(item) => setListingPreview({ kind: item.kind, slug: item.slug })}
                 onReplace={replacePackItem}
                 onChooseFinal={planView !== 'final' ? (pack) => {
                   setFinalPackage({
@@ -988,6 +992,14 @@ function ClientMarketplaceInner() {
         />
         {saveError ? <Alert variant="error" className="mt-3">{saveError}</Alert> : null}
       </Modal>
+
+      <EventPrepListingModal
+        target={listingPreview}
+        selected={false}
+        dateKey={brief.eventDate?.slice(0, 10) || ''}
+        guestCount={brief.guestCount}
+        onClose={() => setListingPreview(null)}
+      />
     </div>
     </>
   );

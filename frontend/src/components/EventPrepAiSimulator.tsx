@@ -29,12 +29,14 @@ export default function EventPrepAiSimulator({
   applyLabel = 'Appliquer à la préparation',
   onApply,
   onApplyAll,
+  onOpenListing,
   defaultOpen = false,
 }: {
   defaults?: EventPrepAiDefaults;
   applyLabel?: string;
   onApply: (pack: EventPlanAiPackage) => void;
   onApplyAll?: (packages: EventPlanAiPackage[]) => void;
+  onOpenListing?: (target: { kind: 'venue' | 'service'; slug: string }) => void;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -275,6 +277,7 @@ export default function EventPrepAiSimulator({
                               title={pack.venue.title}
                               meta={[pack.venue.orgName, pack.venue.location]}
                               price={pack.venue.estimatedFc}
+                              onOpen={onOpenListing ? () => onOpenListing({ kind: 'venue', slug: pack.venue!.slug }) : undefined}
                             />
                           </li>
                         ) : null}
@@ -290,6 +293,7 @@ export default function EventPrepAiSimulator({
                                 title={item.title}
                                 meta={[item.categoryLabel, item.orgName]}
                                 price={item.estimatedFc}
+                                onOpen={onOpenListing ? () => onOpenListing({ kind: 'service', slug: item.slug }) : undefined}
                               />
                             </li>
                           );
@@ -335,6 +339,7 @@ function AiPickRow({
   title,
   meta,
   price,
+  onOpen,
 }: {
   href: string;
   cover?: string | null;
@@ -343,9 +348,10 @@ function AiPickRow({
   title: string;
   meta: Array<string | null | undefined>;
   price: number;
+  onOpen?: () => void;
 }) {
-  return (
-    <div className="flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2">
+  const body = (
+    <>
       <div className="w-11 h-11 rounded-lg overflow-hidden bg-surface-muted shrink-0">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -362,10 +368,35 @@ function AiPickRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[10px] uppercase tracking-wider text-muted">{kind}</p>
-        <Link href={href} className="text-sm font-semibold truncate block hover:text-primary">{title}</Link>
+        {onOpen ? (
+          <span className="text-sm font-semibold truncate block hover:text-primary">{title}</span>
+        ) : (
+          <Link href={href} className="text-sm font-semibold truncate block hover:text-primary">{title}</Link>
+        )}
         <p className="text-[11px] text-muted truncate">{meta.filter(Boolean).join(' · ')}</p>
       </div>
       {price > 0 ? <span className="text-[11px] font-semibold shrink-0">{formatFc(price)}</span> : <span className="text-[11px] text-muted shrink-0">Sur devis</span>}
+    </>
+  );
+
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen();
+        }}
+        className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2 text-left hover:border-primary/40 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2">
+      {body}
     </div>
   );
 }
