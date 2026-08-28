@@ -38,7 +38,7 @@ interface RealEditorFeature {
 const REAL_EDITOR_FEATURES: RealEditorFeature[] = [
   {
     title: 'Agencement 2D au millimètre',
-    badge: 'Conception CAD',
+    badge: 'Plan sur mesure',
     description:
       'Dessinez la géométrie exacte de votre salle avec cotations réelles, grille magnétique et alignements intelligents.',
     icon: LayoutGrid,
@@ -49,23 +49,23 @@ const REAL_EDITOR_FEATURES: RealEditorFeature[] = [
       'Comptoirs buffets, bars et loges',
     ],
     ctaLabel: 'Créer un plan de salle 2D',
-    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/rooms' : '/register?kind=ORGANIZER&intent=personal'),
+    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/rooms' : '/register?kind=ORGANIZER&intent=personal&action=room_editor'),
     primary: true,
   },
   {
-    title: 'Immersion & Visite 3D WebGL',
-    badge: 'Moteur 3D',
+    title: 'Immersion & Visite 3D interactive',
+    badge: 'Visite 3D',
     description:
       'Passez en vue 3D interactive directement dans le navigateur, sans plugin ni logiciel lourd à installer.',
     icon: Eye,
     highlights: [
-      'Visite virtuelle interactive et caméra orbitale',
+      'Visite virtuelle fluide et exploration à 360°',
       'Gestion multi-niveaux (RDC, Mezzanine, Balcon VIP)',
       'Éclairages d’ambiance (2700K chaleureux, gala, spots)',
       'Lustres suspendus et textures de sol réalistes',
     ],
     ctaLabel: 'Lancer l’expérience 3D',
-    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/rooms' : '/register?kind=ORGANIZER&intent=personal'),
+    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/rooms' : '/register?kind=ORGANIZER&intent=personal&action=room_editor'),
   },
   {
     title: 'Placement d’invités & Attribution',
@@ -80,7 +80,7 @@ const REAL_EDITOR_FEATURES: RealEditorFeature[] = [
       'Statut d’occupation en direct selon les confirmations RSVP',
     ],
     ctaLabel: 'Organiser le plan de table',
-    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal'),
+    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=seating'),
   },
   {
     title: 'Repérage WhatsApp & Accueil QR',
@@ -95,7 +95,7 @@ const REAL_EDITOR_FEATURES: RealEditorFeature[] = [
       'Alerte immédiate en cas de doublon ou d’erreur de zone',
     ],
     ctaLabel: 'Tester le protocole d’accueil',
-    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/protocol' : '/register?kind=ORGANIZER&intent=personal'),
+    href: (isLoggedIn) => (isLoggedIn ? '/dashboard/protocol' : '/register?kind=ORGANIZER&intent=personal&action=protocol'),
   },
 ];
 
@@ -126,7 +126,9 @@ const EDITOR_LEVELS_SUMMARY = [
 export default function LandingRoomEditorShowcase() {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
-  const roomEditorUrl = isLoggedIn ? '/dashboard/rooms' : '/register?kind=ORGANIZER&intent=personal';
+  const roomEditorUrl = isLoggedIn
+    ? '/dashboard/rooms'
+    : '/register?kind=ORGANIZER&intent=personal&action=room_editor';
 
   return (
     <section id="editeur" className="py-16 sm:py-24 bg-surface border-t border-border scroll-mt-14">
@@ -149,7 +151,7 @@ export default function LandingRoomEditorShowcase() {
             </h2>
 
             <p className="text-sm sm:text-base text-muted leading-relaxed">
-              Un véritable outil de CAO simplifié dans votre navigateur : agencement au millimètre, visite 3D WebGL fluide et synchronisation automatique avec les invitations WhatsApp et le scan QR.
+              Un outil intuitif de conception spatiale dans votre navigateur : agencement précis au millimètre, visite 3D fluide et synchronisation automatique avec les invitations WhatsApp et le scan QR.
             </p>
           </div>
 

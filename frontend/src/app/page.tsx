@@ -154,7 +154,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── ÉDITEUR DE SALLE 2D / 3D (CAO, 3D WebGL, Placement, Scan QR) ─── */}
+      {/* ─── ÉDITEUR DE SALLE 2D / 3D (Agencement, Visite 3D, Placement, Scan QR) ─── */}
       <LandingRoomEditorShowcase />
 
       {/* ─── MODÈLES D'INVITATION (Papeterie digitale) ─── */}
@@ -231,7 +231,13 @@ export default function Home() {
             <Button type="button" variant="secondary" size="sm" onClick={() => setModalTemplate(null)}>
               Fermer
             </Button>
-            <Link href="/register">
+            <Link
+              href={
+                modalTemplate
+                  ? `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(modalTemplate.id)}`
+                  : '/register?kind=ORGANIZER&intent=personal&action=template'
+              }
+            >
               <Button size="sm">Utiliser ce modèle</Button>
             </Link>
           </div>

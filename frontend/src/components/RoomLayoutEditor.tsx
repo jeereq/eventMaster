@@ -964,7 +964,7 @@ export default function RoomLayoutEditor({
     updateBlueprint({
       ...blueprint,
       metadata: { ...blueprint.metadata, depthAmount: next, depthView: next > 0 },
-    }, { message: next <= 0 ? 'Vue du dessus' : `Perspective WebGL : ${next}%`, kind: 'settings' });
+    }, { message: next <= 0 ? 'Vue du dessus' : `Perspective 3D : ${next}%`, kind: 'settings' });
   };
 
   const outline = blueprint.roomOutline!;
@@ -2560,7 +2560,7 @@ export default function RoomLayoutEditor({
                 className="w-full accent-primary"
               />
               <p className="text-[10px] text-muted leading-relaxed">
-                0 = vue du dessus · 100 = caméra WebGL en perspective immersive.
+                0 = vue du dessus · 100 = vue 3D en perspective immersive.
               </p>
             </div>
             </div>
@@ -4854,7 +4854,7 @@ export default function RoomLayoutEditor({
       <div>
         <p className="text-sm font-bold text-foreground flex items-center gap-2">
           <Move className="w-4 h-4 text-primary" />
-          Éditeur WebGL — {roomTypeLabels[blueprint.roomType as RoomType]}
+          Éditeur 3D — {roomTypeLabels[blueprint.roomType as RoomType]}
         </p>
         <p className="text-xs text-muted mt-0.5">
           {blueprint.metadata.totalSeats} places · {(blueprint.walls ?? []).length} murs · {roomOutlineLabels[outline.shape]}

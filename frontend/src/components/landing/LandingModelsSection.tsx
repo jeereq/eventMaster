@@ -58,7 +58,7 @@ export default function LandingModelsSection({
             </p>
           </div>
 
-          <Link href="/register">
+          <Link href="/register?kind=ORGANIZER&intent=personal&action=template">
             <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
               Créer mon invitation
             </Button>
@@ -122,7 +122,7 @@ export default function LandingModelsSection({
                         <Eye className="w-3.5 h-3.5" /> Aperçu
                       </button>
                       <Link
-                        href="/register"
+                        href={`/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`}
                         className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
                       >
                         Utiliser <ArrowRight className="w-3.5 h-3.5" />
