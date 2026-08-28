@@ -34,12 +34,12 @@ export default function LandingMobileStickyBar({
   return (
     <aside
       aria-label="Accès rapide inscription"
-      className="fixed bottom-0 inset-x-0 z-40 p-3 sm:hidden bg-surface/90 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] animate-slide-up"
+      className="fixed bottom-0 inset-x-0 z-40 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden bg-surface/95 backdrop-blur-md border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.1)] animate-slide-up"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-[color:var(--festive-accent)] shrink-0" />
+            <Sparkles className="w-3.5 h-3.5 text-[color:var(--festive-accent)] shrink-0" />
             100% dans le navigateur
           </p>
           <p className="text-[10px] text-muted truncate">Sans carte bancaire · Essai gratuit</p>

@@ -51,11 +51,15 @@ export default function LandingProductOverview() {
           {PILLARS.map(({ icon: Icon, title, text }) => (
             <li
               key={title}
-              className="rounded-[var(--radius-card)] border border-border bg-background p-4 shadow-[var(--shadow-soft)] em-soft-hover"
+              className="rounded-[var(--radius-card)] border border-border bg-background p-4.5 shadow-[var(--shadow-soft)] em-soft-hover flex flex-col justify-between"
             >
-              <Icon className="w-5 h-5 text-[color:var(--festive-accent)] mb-3" />
-              <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
-              <p className="text-xs text-muted leading-relaxed">{text}</p>
+              <div>
+                <div className="w-8 h-8 rounded-lg bg-[color:var(--festive-accent-soft)] flex items-center justify-center mb-3">
+                  <Icon className="w-4 h-4 text-[color:var(--festive-accent)]" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground mb-1.5 leading-snug">{title}</h3>
+                <p className="text-xs text-muted leading-relaxed">{text}</p>
+              </div>
             </li>
           ))}
         </ul>

@@ -48,7 +48,7 @@ export default function PublicAccentPicker({ className }: { className?: string }
           type="button"
           onClick={() => setOpen((v) => !v)}
           className={cn(
-            'p-2 rounded-md text-muted hover:bg-surface-muted hover:text-foreground transition',
+            'p-2.5 sm:p-2 min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition active:scale-95 touch-manipulation',
             open && 'bg-surface-muted text-foreground',
           )}
           aria-label="Changer l'accent personnel"

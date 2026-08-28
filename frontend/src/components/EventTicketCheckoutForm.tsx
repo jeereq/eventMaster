@@ -446,19 +446,19 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                   type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   disabled={quantity <= 1}
-                  className="w-9 h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40"
+                  className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40 active:scale-95 transition touch-manipulation"
                   aria-label="Diminuer"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <div className="w-16 h-9 rounded-lg border border-border bg-surface flex items-center justify-center font-bold text-sm text-foreground">
+                <div className="w-16 h-10 sm:h-9 rounded-lg border border-border bg-surface flex items-center justify-center font-bold text-sm text-foreground tabular-nums">
                   {quantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => Math.min(8, q + 1))}
                   disabled={quantity >= 8}
-                  className="w-9 h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40"
+                  className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40 active:scale-95 transition touch-manipulation"
                   aria-label="Augmenter"
                 >
                   <Plus className="w-4 h-4" />

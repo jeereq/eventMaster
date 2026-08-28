@@ -104,6 +104,14 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased">
+      {/* 
+        THESIS: Plateforme événementielle tout-en-un unifiant plan de table 2D/3D immersif, RSVP WhatsApp et billetterie Mobile Money locale sans friction.
+        OWN-WORLD: Univers Prestige & Célébration (Fraunces serif & Inter tabular, ardoise/or ambré, verre dépoli doux et micro-interactions 2D/3D).
+        STORY: Le visiteur identifie immédiatement son persona, teste le visualiseur de salle interactif en direct et crée son événement en 1 clic.
+        FIRST VIEWPORT: Hero split 7/5 cols avec accroche, CTA immédiat par persona, réassurance navigateur mobile et simulateur 2D/3D en direct.
+        FORM: Surface Persuade de prestige avec sélecteur de persona direct et showcase technique complet.
+        FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+      */}
       <SiteHeader variant="landing" />
 
       <section className="relative em-landing-hero">

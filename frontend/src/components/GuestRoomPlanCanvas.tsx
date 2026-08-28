@@ -176,20 +176,30 @@ export default function GuestRoomPlanCanvas({
   return (
     <div className={`space-y-2 ${fill ? 'h-full min-h-0 flex flex-col' : ''} ${className}`} data-guest-no-swipe>
       <div className="flex items-center justify-end gap-1.5 shrink-0">
-        <button type="button" onClick={() => adjustZoom(-0.15)} className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition" aria-label="Zoom arrière">
-          <ZoomOut className="w-3.5 h-3.5" />
+        <button
+          type="button"
+          onClick={() => adjustZoom(-0.15)}
+          className="p-2 sm:p-1.5 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
+          aria-label="Zoom arrière"
+        >
+          <ZoomOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </button>
-        <span className="text-[10px] text-muted font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
-        <button type="button" onClick={() => adjustZoom(0.15)} className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition" aria-label="Zoom avant">
-          <ZoomIn className="w-3.5 h-3.5" />
+        <span className="text-[11px] text-muted font-mono w-10 text-center select-none">{Math.round(zoom * 100)}%</span>
+        <button
+          type="button"
+          onClick={() => adjustZoom(0.15)}
+          className="p-2 sm:p-1.5 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
+          aria-label="Zoom avant"
+        >
+          <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </button>
         <button
           type="button"
           onClick={fitToContainer}
-          className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition"
+          className="p-2 sm:p-1.5 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
           aria-label="Réinitialiser"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </button>
       </div>
 

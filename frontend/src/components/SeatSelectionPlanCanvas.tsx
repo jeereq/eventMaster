@@ -146,31 +146,31 @@ export default function SeatSelectionPlanCanvas({
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] text-muted">Touchez un siège libre sur le plan</p>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => adjustZoom(-0.1)}
-            className="p-1 rounded border border-border text-muted hover:text-foreground"
+            className="p-2 sm:p-1 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
             aria-label="Zoom arrière"
           >
-            <ZoomOut className="w-3.5 h-3.5" />
+            <ZoomOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
-          <span className="text-[10px] text-muted font-mono w-9 text-center">{Math.round(zoom * 100)}%</span>
+          <span className="text-[11px] text-muted font-mono w-9 text-center select-none">{Math.round(zoom * 100)}%</span>
           <button
             type="button"
             onClick={() => adjustZoom(0.1)}
-            className="p-1 rounded border border-border text-muted hover:text-foreground"
+            className="p-2 sm:p-1 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
             aria-label="Zoom avant"
           >
-            <ZoomIn className="w-3.5 h-3.5" />
+            <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
           <button
             type="button"
             onClick={() => setZoom(1)}
-            className="p-1 rounded border border-border text-muted hover:text-foreground"
+            className="p-2 sm:p-1 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
             aria-label="Réinitialiser"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
       </div>

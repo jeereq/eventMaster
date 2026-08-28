@@ -32,14 +32,17 @@ const TRUST_POINTS = [
 
 export default function LandingTrustBanner() {
   return (
-    <section className="border-y border-border bg-surface-muted/30 py-8">
+    <section className="border-y border-border bg-surface-muted/30 py-8 relative">
       <div className="page-container">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
           {TRUST_POINTS.map((point) => {
             const Icon = point.icon;
             return (
-              <div key={point.title} className="flex items-start gap-3.5">
-                <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+              <div
+                key={point.title}
+                className="flex items-start gap-3.5 p-2 rounded-xl transition-colors hover:bg-surface/60"
+              >
+                <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5 shadow-xs border border-primary/15">
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="space-y-1">
