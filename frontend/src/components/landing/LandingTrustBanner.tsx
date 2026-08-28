@@ -40,7 +40,7 @@ export default function LandingTrustBanner() {
             return (
               <div
                 key={point.title}
-                className="flex items-start gap-3.5 p-2 rounded-xl transition-colors hover:bg-surface/60"
+                className="flex items-start gap-3.5 p-2 rounded-[var(--radius-card)] transition-colors hover:bg-surface/60"
               >
                 <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5 shadow-xs border border-primary/15">
                   <Icon className="w-4 h-4" />

@@ -170,7 +170,7 @@ export default function LandingRoomEditorShowcase() {
           </div>
 
           {/* Colonne droite : Canevas Visuel Dynamique (7 colonnes) */}
-          <div className="lg:col-span-7 rounded-2xl border border-border bg-background p-5 sm:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.06)] flex flex-col justify-between space-y-6">
+          <div className="lg:col-span-7 rounded-[var(--radius-card)] border border-border bg-background p-5 sm:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.06)] flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               {/* En-tête du canevas avec commandes de vue */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
@@ -246,7 +246,7 @@ export default function LandingRoomEditorShowcase() {
               {/* CANEVAS VISUEL PRINCIPAL */}
               <div
                 className={cn(
-                  'relative h-[290px] rounded-xl border border-border overflow-hidden transition-all duration-500 select-none flex flex-col justify-between p-3.5',
+                  'relative h-[290px] rounded-[var(--radius-card)] border border-border overflow-hidden transition-all duration-500 select-none flex flex-col justify-between p-3.5',
                   viewMode3D
                     ? 'bg-radial-[at_50%_40%] from-amber-950/80 via-slate-950 to-black text-white shadow-inner'
                     : 'bg-[#faf9f6] dark:bg-[#15171a] text-foreground',

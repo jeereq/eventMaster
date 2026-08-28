@@ -46,7 +46,7 @@ export default function LandingProfileGate({
                 onClick={() => onSelect(profile.id)}
                 aria-pressed={selected}
                 className={cn(
-                  'w-full h-full text-left rounded-xl border p-4 sm:p-4.5 transition-all duration-200 flex flex-col justify-between relative overflow-hidden',
+                  'w-full h-full text-left rounded-[var(--radius-card)] border p-4 sm:p-4.5 transition-all duration-200 flex flex-col justify-between relative overflow-hidden',
                   selected
                     ? 'border-primary bg-primary/[0.04] shadow-md ring-2 ring-primary/30'
                     : 'border-border bg-surface hover:border-foreground/20 hover:bg-surface/80 shadow-xs',

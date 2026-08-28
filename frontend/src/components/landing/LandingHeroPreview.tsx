@@ -168,7 +168,7 @@ export default function LandingHeroPreview() {
               {/* CANEVAS DE RENDU 2D / 3D */}
               <div
                 className={cn(
-                  'relative h-[255px] rounded-xl border border-border overflow-hidden transition-all duration-500 select-none',
+                  'relative h-[255px] rounded-[var(--radius-card)] border border-border overflow-hidden transition-all duration-500 select-none',
                   viewMode3D
                     ? lightingTheme === 'gala'
                       ? 'bg-radial-[at_50%_40%] from-amber-950/90 via-slate-950 to-black text-amber-100 shadow-inner'
