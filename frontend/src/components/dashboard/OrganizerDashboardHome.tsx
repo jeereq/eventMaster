@@ -215,12 +215,19 @@ export default function OrganizerDashboardHome({
                 <ScanLine className="w-3 h-3 text-amber-500" />
                 Scanner QR Protocole
               </Link>
-              <Link
-                href="/dashboard/catalogue"
-                className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
-              >
-                Marketplace & Devis
-              </Link>
+                  <Link
+                    href="/dashboard/catalogue"
+                    className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
+                  >
+                    Marketplace & Devis
+                  </Link>
+                  <Link
+                    href="/dashboard/catalogue?tab=plan&planView=ai"
+                    className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-[11px] font-bold text-primary transition inline-flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Simulateur IA (3 Packs)
+                  </Link>
             </div>
           </div>
         </div>
@@ -541,59 +548,60 @@ export default function OrganizerDashboardHome({
             </Button>
           </div>
 
-          {/* Carte 2 : Trouver des prestataires & Packs */}
-          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:shadow-xs transition group flex flex-col justify-between gap-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
-                  <Compass className="w-5 h-5" />
+              {/* Carte 2 : Trouver des prestataires & Packs IA */}
+              <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:shadow-xs transition group flex flex-col justify-between gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                      Simulateur IA & Marketplace
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                      Simulateur IA & Packs Clés en Main
+                    </h3>
+                    <p className="text-xs text-muted leading-relaxed mt-1">
+                      Calculez instantanément 3 combinaisons (éco, équilibré, confort) dans votre enveloppe budgétaire avec salle et prestataires certifiés.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <Link
+                      href="/dashboard/catalogue?tab=plan&planView=ai"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary text-white hover:bg-primary-hover transition"
+                    >
+                      ✨ Simuler 3 Packs IA
+                    </Link>
+                    <Link
+                      href="/dashboard/catalogue?kind=venue"
+                      className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
+                    >
+                      Salles
+                    </Link>
+                    <Link
+                      href="/dashboard/catalogue?kind=service"
+                      className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
+                    >
+                      Traiteurs & DJ
+                    </Link>
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                  Marketplace RDC
-                </span>
-              </div>
 
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Salles & Prestataires
-                </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  Découvrez les meilleures salles, traiteurs, photographes et loueurs de matériel en RDC ou composez un pack sur-mesure.
-                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
+                  rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                  className="shadow-xs shadow-primary/20"
+                >
+                  Lancer une simulation IA
+                </Button>
               </div>
-
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                <Link
-                  href="/dashboard/catalogue?kind=venue"
-                  className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
-                >
-                  Salles
-                </Link>
-                <Link
-                  href="/dashboard/catalogue?kind=service"
-                  className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
-                >
-                  Traiteurs & DJ
-                </Link>
-                <Link
-                  href="/dashboard/catalogue?tab=plan&planView=ai"
-                  className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
-                >
-                  Packs IA
-                </Link>
-              </div>
-            </div>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              fullWidth
-              onClick={() => router.push('/dashboard/catalogue')}
-              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-            >
-              Explorer le catalogue
-            </Button>
-          </div>
 
           {/* Carte 3 : Devis, Réservations & Suivi */}
           <div className="p-5 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:shadow-xs transition group flex flex-col justify-between gap-4">
@@ -778,20 +786,23 @@ export default function OrganizerDashboardHome({
         <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/5 via-surface to-surface-muted p-5 sm:p-7 space-y-6 shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-border/80">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   <Crown className="w-3.5 h-3.5" />
                   Formules & Tarification transparente
                 </span>
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                  <Percent className="w-3 h-3" /> −10 % en abonnement annuel
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                  <Percent className="w-3 h-3" /> −10 % immédiat en paiement annuel (365 jours)
+                </span>
+                <span className="text-xs font-medium text-primary flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                  <Sparkles className="w-3 h-3" /> Codes promos & parrainages déductibles à l&apos;activation
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-foreground">
+              <h3 className="text-xl font-bold text-foreground mt-1">
                 Besoin d’invités supplémentaires ou de fonctionnalités avancées ?
               </h3>
               <p className="text-xs text-muted max-w-2xl leading-relaxed">
-                EventMaster propose des abonnements conçus pour chaque besoin : de la fête privée au grand gala d’entreprise. Changez de formule ou prolongez votre licence en quelques secondes.
+                EventMaster propose des abonnements conçus pour chaque besoin : de la fête privée au grand gala d’entreprise. Les réductions annuelles (−10 %) et vos remises commerciales sont appliquées directement lors du passage de commande.
               </p>
             </div>
 

@@ -27,7 +27,7 @@ export type LandingJourneyStep = {
 };
 
 /** Ancres de la landing — le hero y envoie selon le profil. */
-export type LandingSectionId = 'profils' | 'editeur' | 'modeles' | 'salles' | 'catalogue' | 'prestataires' | 'tarifs';
+export type LandingSectionId = 'profils' | 'editeur' | 'modeles' | 'simulateur-ia' | 'salles' | 'catalogue' | 'prestataires' | 'tarifs';
 
 export type LandingProfile = {
   id: LandingProfileId;
@@ -83,7 +83,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     ],
     icon: Heart,
     pricingAudience: 'B2C',
-    faqIds: ['what-is-eventmaster', 'mobile-app', 'placement-delivery', 'free-trial', 'b2c-annual'],
+    faqIds: ['what-is-eventmaster', 'event-packs', 'mobile-app', 'placement-delivery', 'free-trial', 'b2c-annual'],
     steps: [
       {
         title: '1. Créer l’événement',
@@ -137,7 +137,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     ],
     icon: Sparkles,
     pricingAudience: 'B2B',
-    faqIds: ['what-is-eventmaster', 'public-events', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
+    faqIds: ['what-is-eventmaster', 'event-packs', 'public-events', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
     steps: [
       {
         title: '1. Configurer la billetterie',

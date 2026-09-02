@@ -280,7 +280,10 @@ function buildDashboardNav(opts: {
 
  const marketItems: NavItem[] = [
   ...(workspace.showBrowseCatalogue
-   ? [{ name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, métiers, locations (comme le client)' }]
+   ? [
+      { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, métiers, locations (comme le client)' },
+      { name: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
+     ]
    : []),
   ...(workspace.showEvents || workspace.showBrowseCatalogue
    ? [

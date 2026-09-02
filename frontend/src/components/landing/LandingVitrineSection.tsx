@@ -297,6 +297,28 @@ export default function LandingVitrineSection() {
           </Link>
         </div>
 
+        {/* Bannière d'appel au simulateur de pack IA */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-surface to-primary/5 border border-primary/25 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-foreground">Besoin d’un pack complet selon votre budget ?</p>
+              <p className="text-[11px] text-muted">
+                Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.
+              </p>
+            </div>
+          </div>
+          <a
+            href="#simulateur-ia"
+            className="shrink-0 px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs flex items-center gap-1.5 w-full sm:w-auto justify-center"
+          >
+            <span>Tester la simulation IA</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           {tabs.map(({ id, label, icon: Icon, hash }) => (
             <button

@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   ExternalLink,
+  Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -37,13 +38,21 @@ export interface ActionCard {
 export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   personal: [
     {
+      title: 'Simulateur de Budget & Packs IA',
+      badge: 'Pack Clé en Main',
+      description: 'Laissez l’IA calculer 3 formules chiffrées selon votre budget : salle, traiteur, déco, photo & DJ.',
+      icon: Wand2,
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/register?kind=ORGANIZER&intent=personal&action=ai_simulator'),
+      ctaLabel: 'Simuler mon événement',
+      highlight: true,
+    },
+    {
       title: 'Éditeur de Salle 2D / 3D',
       badge: 'Inclus Complet',
       description: 'Dessinez votre plan de salle, positionnez tables d’honneur, allées et lustres.',
       icon: LayoutGrid,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/rooms' : '/register?kind=ORGANIZER&intent=personal&action=room_editor'),
       ctaLabel: 'Ouvrir l’éditeur de salle',
-      highlight: true,
     },
     {
       title: 'Créer l’Événement & RSVP',
@@ -52,14 +61,6 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       icon: Heart,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=event'),
       ctaLabel: 'Créer mon événement',
-    },
-    {
-      title: 'Modèles de Faire-part Digitaux',
-      badge: 'Papeterie',
-      description: 'Sélectionnez un faire-part élégant et personnalisez date, lieu et dress code.',
-      icon: Sparkles,
-      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/templates' : '/register?kind=ORGANIZER&intent=personal&action=template'),
-      ctaLabel: 'Choisir un modèle',
     },
     {
       title: 'Scanner Protocole Jour J',
@@ -81,6 +82,14 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       highlight: true,
     },
     {
+      title: 'Simulateur Budgétaire & Packs IA',
+      badge: 'Gestion Pro',
+      description: 'Estimez vos coûts globaux et générez des packs prévisionnels clés en main pour vos clients & comités.',
+      icon: Wand2,
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/register?kind=ORGANIZER&intent=pro&action=ai_simulator'),
+      ctaLabel: 'Simuler un budget pro',
+    },
+    {
       title: 'Contrôle d’Accès & Scan QR Anti-Fraude',
       badge: 'Smartphone Jour J',
       description: 'Pour votre équipe d’accueil : scannez les e-billets à l’entrée avec alerte sonore en cas de faux billet ou doublon.',
@@ -96,16 +105,17 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/tickets' : '/register?kind=ORGANIZER&intent=pro&action=sales'),
       ctaLabel: 'Voir le suivi des ventes',
     },
-    {
-      title: 'Coordination d’Équipe & Accès Protocole',
-      badge: 'Multi-comptes',
-      description: 'Pour agences événementielles : donnez des accès sécurisés à vos agents d’accueil sans exposer vos données financières.',
-      icon: Users,
-      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/team' : '/register?kind=ORGANIZER&intent=pro&action=team'),
-      ctaLabel: 'Gérer les rôles d’équipe',
-    },
   ],
   seeker: [
+    {
+      title: 'Simulateur IA & Formules Budget',
+      badge: '3 Packs Clés en Main',
+      description: 'Indiquez votre budget en Francs Congolais : l’IA compose 3 packs complets avec salle et prestataires certifiés.',
+      icon: Wand2,
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/register?kind=CLIENT&intent=seeker&action=ai_simulator'),
+      ctaLabel: 'Lancer le simulateur IA',
+      highlight: true,
+    },
     {
       title: 'Explorer les Salles de Fête',
       badge: 'Visite 3D',
@@ -113,7 +123,6 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       icon: Building2,
       href: (isLoggedIn) => (isLoggedIn ? '/marketplace/salles' : '/register?kind=CLIENT&intent=seeker&action=venues'),
       ctaLabel: 'Rechercher une salle',
-      highlight: true,
     },
     {
       title: 'Trouver un Prestataire Vérifié',
@@ -122,14 +131,6 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       icon: Store,
       href: (isLoggedIn) => (isLoggedIn ? '/marketplace/prestataires' : '/register?kind=CLIENT&intent=seeker&action=services'),
       ctaLabel: 'Trouver un prestataire',
-    },
-    {
-      title: 'Location de Matériel & Véhicules',
-      badge: 'Logistique',
-      description: 'Chaises, sonorisation, podiums et éclairage pour votre événement.',
-      icon: Layers,
-      href: () => '/marketplace/locations',
-      ctaLabel: 'Louer du matériel',
     },
     {
       title: 'Billetterie & Événements Publics',
@@ -159,20 +160,21 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       ctaLabel: 'Ajouter mes services',
     },
     {
+      title: 'Recommandation IA & Devis Directs',
+      badge: 'Visibilité Automatique',
+      description: 'Vos offres sont automatiquement suggérées dans les packs budget générés par les organisateurs.',
+      icon: Sparkles,
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue' : '/register?kind=VENDOR&intent=vendor&action=ai_recommendation'),
+      ctaLabel: 'Recevoir des demandes IA',
+      highlight: true,
+    },
+    {
       title: 'Éditer mes Modélisations 3D',
       badge: 'Plan de Salle',
       description: 'Modélisez les plans de vos espaces pour permettre le placement virtuel aux clients.',
       icon: LayoutGrid,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/rooms' : '/register?kind=VENDOR&intent=vendor&action=room_editor'),
       ctaLabel: 'Configurer mes plans 3D',
-    },
-    {
-      title: 'Forfaits & Formules Partenaires',
-      badge: 'Zéro Commission',
-      description: 'Découvrez nos formules adaptées à votre volume d’activité sans frais cachés.',
-      icon: Sparkles,
-      href: () => '#tarifs',
-      ctaLabel: 'Voir les forfaits pro',
     },
   ],
 };

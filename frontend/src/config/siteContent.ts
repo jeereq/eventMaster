@@ -91,9 +91,9 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     id: 'event-packs',
-    question: 'Comment fonctionne la préparation d’événement (packs) ?',
+    question: 'Comment fonctionne la simulation d’événement et de packs budget par IA ?',
     answer:
-      'Indiquez le type d’événement, le budget, la ville et le nombre d’invités. Vous obtenez trois packs (éco, équilibré, confort) à ajuster. Rien n’est réservé tant que vous n’envoyez pas de devis.',
+      'Indiquez votre type d’événement (mariage, fête, gala), votre budget en Francs Congolais (CDF), votre ville et votre nombre d’invités. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et génère instantanément 3 formules optimisées (Économique, Équilibré, Confort). Vous pouvez ajuster chaque poste, sauvegarder votre simulation et envoyer des demandes de devis directes en 1 clic.',
   },
   {
     id: 'free-trial',

@@ -13,6 +13,7 @@ import LandingRoomEditorShowcase from '@/components/landing/LandingRoomEditorSho
 import LandingMobileStickyBar from '@/components/landing/LandingMobileStickyBar';
 import FaqSection from '@/components/landing/FaqSection';
 import LandingModelsSection from '@/components/landing/LandingModelsSection';
+import LandingAiSimulationShowcase from '@/components/landing/LandingAiSimulationShowcase';
 import LandingVitrineSection from '@/components/landing/LandingVitrineSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import PublicCtaBand from '@/components/PublicCtaBand';
@@ -163,6 +164,9 @@ export default function Home() {
         loading={loadingPublicTemplates}
         onPreview={setModalTemplate}
       />
+
+      {/* ─── SIMULATION D'ÉVÉNEMENT PAR IA & PACKS BUDGET CLÉS EN MAIN ─── */}
+      <LandingAiSimulationShowcase />
 
       {/* ─── CATALOGUE & MARKETPLACE (Salles, Prestataires, Billetteries) ─── */}
       <LandingVitrineSection />
