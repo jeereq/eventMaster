@@ -234,7 +234,7 @@ export default function LandingHeroPreview({
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
                 className={cn(
-                  'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 flex flex-col justify-between group hover:border-primary/60 hover:shadow-md cursor-pointer block',
+                  'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 flex flex-col justify-between h-full group hover:border-primary/60 hover:shadow-md cursor-pointer block',
                   act.highlight
                     ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/30'
                     : 'bg-surface/80 dark:bg-slate-900/60 border-border',

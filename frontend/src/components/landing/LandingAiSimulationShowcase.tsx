@@ -462,7 +462,7 @@ export default function LandingAiSimulationShowcase() {
                     type="button"
                     onClick={() => setSelectedPackTier(tier.id)}
                     className={cn(
-                      'p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 cursor-pointer touch-manipulation',
+                      'p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between h-full gap-3 cursor-pointer touch-manipulation',
                       isSelected ? tier.color : 'border-border bg-surface hover:border-border/80 opacity-80 hover:opacity-100',
                     )}
                   >
@@ -481,7 +481,7 @@ export default function LandingAiSimulationShowcase() {
                       <p className="text-[11px] text-muted">{tier.desc}</p>
                     </div>
 
-                    <div className="pt-2 border-t border-border/60 w-full">
+                    <div className="pt-2 border-t border-border/60 w-full mt-auto">
                       <p className="text-lg font-black text-foreground tracking-tight">
                         {formatFc(tier.data.totalFc)}
                       </p>
@@ -524,57 +524,69 @@ export default function LandingAiSimulationShowcase() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1">
-                  <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-purple-600" /> Salle & Espace
-                  </span>
-                  <p className="font-semibold text-foreground">{activePack.venue}</p>
-                  <p className="text-[10px] text-muted">Avec plan 2D/3D & visite virtuelle</p>
+                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-purple-600" /> Salle & Espace
+                    </span>
+                    <p className="font-semibold text-foreground mt-1">{activePack.venue}</p>
+                  </div>
+                  <p className="text-[10px] text-muted pt-1">Avec plan 2D/3D & visite virtuelle</p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1">
-                  <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                    <Utensils className="w-3.5 h-3.5 text-emerald-600" /> Traiteur & Boissons
-                  </span>
-                  <p className="font-semibold text-foreground">{activePack.caterer}</p>
-                  <p className="text-[10px] text-muted">Calculé pour {activeScenario.guests} convives</p>
+                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                      <Utensils className="w-3.5 h-3.5 text-emerald-600" /> Traiteur & Boissons
+                    </span>
+                    <p className="font-semibold text-foreground mt-1">{activePack.caterer}</p>
+                  </div>
+                  <p className="text-[10px] text-muted pt-1">Calculé pour {activeScenario.guests} convives</p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1">
-                  <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-rose-500" /> Décoration & Mobilier
-                  </span>
-                  <p className="font-semibold text-foreground">{activePack.decor}</p>
-                  <p className="text-[10px] text-muted">Chaises, tables & arche selon style</p>
+                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                      <Palette className="w-3.5 h-3.5 text-rose-500" /> Décoration & Mobilier
+                    </span>
+                    <p className="font-semibold text-foreground mt-1">{activePack.decor}</p>
+                  </div>
+                  <p className="text-[10px] text-muted pt-1">Chaises, tables & arche selon style</p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1">
-                  <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5 text-blue-600" /> Photo & Vidéo
-                  </span>
-                  <p className="font-semibold text-foreground">{activePack.photo}</p>
-                  <p className="text-[10px] text-muted">Remise des fichiers HD & galerie web</p>
+                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-blue-600" /> Photo & Vidéo
+                    </span>
+                    <p className="font-semibold text-foreground mt-1">{activePack.photo}</p>
+                  </div>
+                  <p className="text-[10px] text-muted pt-1">Remise des fichiers HD & galerie web</p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1">
-                  <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                    <Music className="w-3.5 h-3.5 text-amber-500" /> Sonorisation & DJ
-                  </span>
-                  <p className="font-semibold text-foreground">{activePack.dj}</p>
-                  <p className="text-[10px] text-muted">Micros, éclairage d’ambiance & DJ</p>
+                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                      <Music className="w-3.5 h-3.5 text-amber-500" /> Sonorisation & DJ
+                    </span>
+                    <p className="font-semibold text-foreground mt-1">{activePack.dj}</p>
+                  </div>
+                  <p className="text-[10px] text-muted pt-1">Micros, éclairage d’ambiance & DJ</p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 space-y-1 flex flex-col justify-between">
-                  <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5" /> Action immédiate
-                  </span>
-                  <p className="text-[11px] text-muted leading-tight">
-                    Envoyez des demandes de devis directes aux prestataires en 1 clic.
-                  </p>
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 space-y-1 flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5" /> Action immédiate
+                    </span>
+                    <p className="text-[11px] text-muted leading-tight mt-1">
+                      Envoyez des demandes de devis directes aux prestataires en 1 clic.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setViewMode('live')}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline pt-1 text-left"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline pt-2 text-left cursor-pointer"
                   >
                     Personnaliser avec mon budget <ArrowRight className="w-3 h-3" />
                   </button>

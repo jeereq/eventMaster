@@ -358,11 +358,11 @@ export default function ClientDashboardHome() {
       </div>
 
       {/* ─── WIDGETS D'ACTIVITÉS EN TEMPS RÉEL (5 CARTES) ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* 1. Simulateur & Mes Packs */}
         <Link
           href="/dashboard/catalogue?tab=packs"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Packs</span>
@@ -385,7 +385,7 @@ export default function ClientDashboardHome() {
         {/* 2. Billets */}
         <Link
           href="/dashboard/tickets"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Billets</span>
@@ -408,7 +408,7 @@ export default function ClientDashboardHome() {
         {/* 3. Devis envoyés */}
         <Link
           href="/dashboard/bookings?tab=quotes"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Devis</span>
@@ -431,7 +431,7 @@ export default function ClientDashboardHome() {
         {/* 4. Réservations */}
         <Link
           href="/dashboard/bookings?tab=bookings"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Réservations</span>
@@ -454,7 +454,7 @@ export default function ClientDashboardHome() {
         {/* 5. Favoris */}
         <Link
           href="/dashboard/catalogue?tab=favorites"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-pink-500/40 hover:bg-pink-500/5 transition group flex flex-col justify-between col-span-2 sm:col-span-1"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-pink-500/40 hover:bg-pink-500/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Favoris</span>
@@ -494,7 +494,7 @@ export default function ClientDashboardHome() {
               <div
                 key={intent.id}
                 className={cn(
-                  'p-4 sm:p-5 rounded-2xl border bg-surface transition-all flex flex-col justify-between gap-3 relative hover:border-primary/50 hover:shadow-xs group',
+                  'p-4 sm:p-5 rounded-2xl border bg-surface transition-all flex flex-col justify-between h-full gap-3 relative hover:border-primary/50 hover:shadow-xs group',
                   intent.id === 'ai-plan' ? 'border-primary/40 bg-linear-to-br from-primary/5 via-surface to-emerald-500/5' : 'border-border',
                   intent.isPaidPlanRequired ? 'border-amber-500/30' : '',
                 )}
@@ -528,7 +528,7 @@ export default function ClientDashboardHome() {
                   </div>
                 </div>
 
-                <div className="space-y-2.5 pt-2 border-t border-border/70">
+                <div className="space-y-2.5 pt-3 mt-auto border-t border-border/70">
                   {/* Raccourcis rapides */}
                   <div className="flex flex-wrap gap-1">
                     {intent.quickFilters.slice(0, 3).map((qf, idx) => (

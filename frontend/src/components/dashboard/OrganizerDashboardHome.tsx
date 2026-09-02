@@ -246,10 +246,10 @@ export default function OrganizerDashboardHome({
         )}
 
         {/* Indicateurs clés en temps réel (5 Cartes) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <Link
             href="/dashboard/events"
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Événements</span>
@@ -267,7 +267,7 @@ export default function OrganizerDashboardHome({
 
           <Link
             href="/dashboard/events"
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Invités</span>
@@ -285,7 +285,7 @@ export default function OrganizerDashboardHome({
 
           <Link
             href={isVendor ? '/dashboard/marketplace' : '/dashboard/rooms'}
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-muted uppercase tracking-wider">
@@ -309,7 +309,7 @@ export default function OrganizerDashboardHome({
 
           <Link
             href="/dashboard/bookings"
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Devis & Packs</span>
@@ -328,7 +328,7 @@ export default function OrganizerDashboardHome({
 
           <Link
             href="/dashboard/billing"
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between col-span-2 sm:col-span-1"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Mon Forfait</span>
@@ -372,7 +372,7 @@ export default function OrganizerDashboardHome({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Carte 1 : Faire-part & Invitations WhatsApp */}
-          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:shadow-xs transition group flex flex-col justify-between gap-4">
+          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -408,7 +408,7 @@ export default function OrganizerDashboardHome({
               </div>
             </div>
 
-            <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
               <div className="flex items-center gap-1.5">
                 <Link
                   href="/dashboard/templates"
@@ -428,7 +428,7 @@ export default function OrganizerDashboardHome({
           </div>
 
           {/* Carte 2 : Protocole & Contrôle d'Accès QR */}
-          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:shadow-xs transition group flex flex-col justify-between gap-4">
+          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -464,7 +464,7 @@ export default function OrganizerDashboardHome({
               </div>
             </div>
 
-            <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
               <div className="flex items-center gap-1.5">
                 <Link
                   href="/dashboard/team"
@@ -510,7 +510,7 @@ export default function OrganizerDashboardHome({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Carte 1 : Plan de Salle 2D/3D */}
-          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between gap-4">
+          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
@@ -543,68 +543,69 @@ export default function OrganizerDashboardHome({
               fullWidth
               onClick={() => router.push('/dashboard/rooms')}
               rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              className="mt-auto"
             >
               Éditeur de salle 2D/3D
             </Button>
           </div>
 
-              {/* Carte 2 : Trouver des prestataires & Packs IA */}
-              <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:shadow-xs transition group flex flex-col justify-between gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
-                      Simulateur IA & Marketplace
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                      Simulateur IA & Packs Clés en Main
-                    </h3>
-                    <p className="text-xs text-muted leading-relaxed mt-1">
-                      Calculez instantanément 3 combinaisons (éco, équilibré, confort) dans votre enveloppe budgétaire avec salle et prestataires certifiés.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <Link
-                      href="/dashboard/catalogue?tab=plan&planView=ai"
-                      className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary text-white hover:bg-primary-hover transition"
-                    >
-                      ✨ Simuler 3 Packs IA
-                    </Link>
-                    <Link
-                      href="/dashboard/catalogue?kind=venue"
-                      className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
-                    >
-                      Salles
-                    </Link>
-                    <Link
-                      href="/dashboard/catalogue?kind=service"
-                      className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
-                    >
-                      Traiteurs & DJ
-                    </Link>
-                  </div>
+          {/* Carte 2 : Trouver des prestataires & Packs IA */}
+          <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
                 </div>
-
-                <Button
-                  variant="primary"
-                  size="sm"
-                  fullWidth
-                  onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
-                  rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                  className="shadow-xs shadow-primary/20"
-                >
-                  Lancer une simulation IA
-                </Button>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                  Simulateur IA & Marketplace
+                </span>
               </div>
 
+              <div>
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                  Simulateur IA & Packs Clés en Main
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Calculez instantanément 3 combinaisons (éco, équilibré, confort) dans votre enveloppe budgétaire avec salle et prestataires certifiés.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <Link
+                  href="/dashboard/catalogue?tab=plan&planView=ai"
+                  className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary text-white hover:bg-primary-hover transition"
+                >
+                  ✨ Simuler 3 Packs IA
+                </Link>
+                <Link
+                  href="/dashboard/catalogue?kind=venue"
+                  className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
+                >
+                  Salles
+                </Link>
+                <Link
+                  href="/dashboard/catalogue?kind=service"
+                  className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
+                >
+                  Traiteurs & DJ
+                </Link>
+              </div>
+            </div>
+
+            <Button
+              variant="primary"
+              size="sm"
+              fullWidth
+              onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
+              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              className="shadow-xs shadow-primary/20 mt-auto"
+            >
+              Lancer une simulation IA
+            </Button>
+          </div>
+
           {/* Carte 3 : Devis, Réservations & Suivi */}
-          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:shadow-xs transition group flex flex-col justify-between gap-4">
+          <div className="p-5 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -646,6 +647,7 @@ export default function OrganizerDashboardHome({
               fullWidth
               onClick={() => router.push('/dashboard/bookings')}
               rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              className="mt-auto"
             >
               Suivre mes réservations
             </Button>
@@ -820,7 +822,7 @@ export default function OrganizerDashboardHome({
           {/* Grille détaillée des 4 types d'abonnements */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5">
             {/* 1. Formules Particulier (B2C) */}
-            <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between gap-3 hover:border-emerald-500/40 transition">
+            <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 hover:border-emerald-500/40 transition">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
@@ -841,14 +843,14 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border"
+                className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
                 Découvrir Particulier <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
             {/* 2. Formules Business & Professionnel */}
-            <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between gap-3 shadow-xs">
+            <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between h-full gap-3 shadow-xs">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary/20 text-primary">
@@ -869,14 +871,14 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20"
+                className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
               >
                 Passer en Business <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
             {/* 3. Formules Enterprise */}
-            <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between gap-3 hover:border-amber-500/40 transition">
+            <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 hover:border-amber-500/40 transition">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300">
@@ -897,14 +899,14 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-amber-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border"
+                className="text-[11px] font-bold text-amber-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
                 Voir Enterprise <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
             {/* 4. Formules Vitrine & Catalogue */}
-            <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between gap-3 hover:border-purple-500/40 transition">
+            <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 hover:border-purple-500/40 transition">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300">
@@ -925,7 +927,7 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border"
+                className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
                 Découvrir Vitrine <ArrowRight className="w-3 h-3" />
               </Link>
