@@ -11,6 +11,7 @@ import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import BrandFaviconSync from "@/components/BrandFaviconSync";
 import GlobalAiSimulatorFab from "@/components/GlobalAiSimulatorFab";
+import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
 const inter = Inter({
@@ -43,29 +44,36 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export const metadata: Metadata = {
-  title: "EventMaster — Préparez votre événement en un clic",
-  description: "Invitez, placez, accueillez. Trouvez une salle ou un prestataire. RSVP, plan de table et scan QR dans le navigateur.",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "EventMaster",
-  },
-  icons: {
-    icon: [
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      }
-    ],
-    apple: [
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      }
-    ]
-  }
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await fetchPublicSiteSnapshot();
+  const title = `${site.platformName} — ${site.platformTagline}`;
+  const origin = await resolveMetadataBase();
+
+  return {
+    metadataBase: origin,
+    title,
+    description: site.description,
+    applicationName: site.platformName,
+    openGraph: {
+      type: 'website',
+      locale: 'fr_FR',
+      url: '/',
+      siteName: site.platformName,
+      title,
+      description: site.description,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: site.description,
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'black-translucent',
+      title: site.platformName,
+    },
+  };
+}
 
 export default function RootLayout({
   children,

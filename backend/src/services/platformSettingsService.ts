@@ -1,8 +1,14 @@
 import fs from 'fs';
 import path from 'path';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../db';
 import { parseRateInput, rateToPercent } from '../utils/ratePercent';
 
 const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
+const PLATFORM_CONFIG_ID = 'default';
+
+/** Cache processus : source de vérité après hydratation BD (le fichier est un secours local). */
+let memoryCache: PlatformSettings | null = null;
 
 export interface PlatformSettings {
   platformName: string;
@@ -149,18 +155,39 @@ export function getSaasPaymentMode(settings = loadPlatformSettings()): SaasPayme
   return settings.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
 }
 
-export function loadPlatformSettings(): PlatformSettings {
+function mergeStoredSettings(raw: Partial<PlatformSettings> | null | undefined): PlatformSettings {
+  const { plans: _ignored, ...rest } = (raw || {}) as Partial<PlatformSettings> & { plans?: unknown };
+  return normalizeStoredRates({ ...DEFAULT_PLATFORM_SETTINGS, ...rest });
+}
+
+function readSettingsFromFile(): PlatformSettings | null {
   try {
     if (fs.existsSync(settingsFilePath)) {
       const raw = JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8')) as Partial<PlatformSettings>;
-      const { plans: _ignored, ...rest } = raw as Partial<PlatformSettings> & { plans?: unknown };
-      const merged = { ...DEFAULT_PLATFORM_SETTINGS, ...rest };
-      return normalizeStoredRates(merged);
+      return mergeStoredSettings(raw);
     }
   } catch (error) {
     console.warn('[PlatformSettings] Impossible de lire settings.json:', error);
   }
-  return { ...DEFAULT_PLATFORM_SETTINGS };
+  return null;
+}
+
+function writeSettingsFileBestEffort(settings: PlatformSettings) {
+  try {
+    ensureSettingsDir();
+    fs.writeFileSync(settingsFilePath, JSON.stringify(settings, null, 2), 'utf-8');
+  } catch (error) {
+    console.warn(
+      '[PlatformSettings] Écriture settings.json ignorée (volume éphémère ou lecture seule).',
+      error,
+    );
+  }
+}
+
+export function loadPlatformSettings(): PlatformSettings {
+  if (memoryCache) return memoryCache;
+  memoryCache = readSettingsFromFile() || { ...DEFAULT_PLATFORM_SETTINGS };
+  return memoryCache;
 }
 
 function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
@@ -173,10 +200,9 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
   };
 }
 
-export function savePlatformSettings(
+function buildNextSettings(
   partial: Partial<PlatformSettings> & Record<string, unknown>,
 ): PlatformSettings {
-  ensureSettingsDir();
   const current = loadPlatformSettings();
   const { plans: _plans, ...rest } = partial;
 
@@ -195,9 +221,67 @@ export function savePlatformSettings(
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
-
-  fs.writeFileSync(settingsFilePath, JSON.stringify(next, null, 2), 'utf-8');
   return next;
+}
+
+async function persistPlatformConfigToDb(settings: PlatformSettings): Promise<void> {
+  const payload = JSON.parse(JSON.stringify(settings)) as Prisma.InputJsonValue;
+  await prisma.platformConfig.upsert({
+    where: { id: PLATFORM_CONFIG_ID },
+    create: { id: PLATFORM_CONFIG_ID, payload },
+    update: { payload },
+  });
+}
+
+function applySettingsToCache(next: PlatformSettings): PlatformSettings {
+  memoryCache = next;
+  writeSettingsFileBestEffort(next);
+  return next;
+}
+
+export function savePlatformSettings(
+  partial: Partial<PlatformSettings> & Record<string, unknown>,
+): PlatformSettings {
+  const next = applySettingsToCache(buildNextSettings(partial));
+  void persistPlatformConfigToDb(next).catch((error) => {
+    console.error('[PlatformSettings] Persistance en base échouée:', error);
+  });
+  return next;
+}
+
+/** Sauvegarde admin : cache + fichier local + Postgres (survit aux déploiements). */
+export async function savePlatformSettingsDurable(
+  partial: Partial<PlatformSettings> & Record<string, unknown>,
+): Promise<PlatformSettings> {
+  const previous = loadPlatformSettings();
+  const next = applySettingsToCache(buildNextSettings(partial));
+  try {
+    await persistPlatformConfigToDb(next);
+    return next;
+  } catch (error) {
+    applySettingsToCache(previous);
+    throw error;
+  }
+}
+
+/** Charge les réglages depuis Postgres au boot, ou y recopie fichier/défauts si la table est vide. */
+export async function hydratePlatformSettingsFromDb(): Promise<void> {
+  try {
+    const row = await prisma.platformConfig.findUnique({ where: { id: PLATFORM_CONFIG_ID } });
+    if (row?.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)) {
+      memoryCache = mergeStoredSettings(row.payload as Partial<PlatformSettings>);
+      writeSettingsFileBestEffort(memoryCache);
+      console.log('[PlatformSettings] Réglages chargés depuis la base.');
+      return;
+    }
+
+    const seed = loadPlatformSettings();
+    await persistPlatformConfigToDb(seed);
+    console.log('[PlatformSettings] Réglages initiaux enregistrés en base.');
+  } catch (error) {
+    console.warn('[PlatformSettings] Hydratation BD impossible — fichier ou défauts.', error);
+    loadPlatformSettings();
+  }
 }
 
 export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSiteConfig {

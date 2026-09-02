@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
 import type { PlanId } from '@/config/landingPricing';
-import { applyBrandToDocument, clearBrandFromDocument, type TenantBranding } from '@/lib/brandTheme';
+import { applyBrandToDocument, type TenantBranding } from '@/lib/brandTheme';
 import type { TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath } from '@/lib/safeAppPath';
 import { appendFirstTourQuery } from '@/lib/firstLoginTour';
@@ -417,16 +417,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (tenant?.branding) {
       applyBrandToDocument(tenant.branding);
-    } else if (!tenant) {
-      clearBrandFromDocument();
-    } else {
-      applyBrandToDocument(null);
     }
-    // Laisse la personnalisation de vue (accent user) se réappliquer par-dessus
+    // visiteur / org sans branding perso : la marque plateforme est gérée par PlatformSiteContext
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('em-brand-applied'));
     }
   }, [tenant?.id, tenant?.branding?.primary, tenant?.branding?.accent, tenant?.branding?.sidebar]);
+
+  useEffect(() => {
+    if (!tenant?.branding) return;
+    const keepTenantBrand = () => applyBrandToDocument(tenant.branding);
+    window.addEventListener('em-brand-applied', keepTenantBrand);
+    return () => window.removeEventListener('em-brand-applied', keepTenantBrand);
+  }, [tenant?.branding]);
 
   const updateBranding = async (payload: TenantBranding & { reset?: boolean }) => {
     const data = await api.put('/billing/branding', payload);

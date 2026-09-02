@@ -92,9 +92,11 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
           primary: next.brandPrimary || undefined,
           accent: next.brandAccent || next.brandPrimary || undefined,
         });
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('em-brand-applied'));
-        }
+      } else {
+        applyBrandToDocument(null);
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('em-brand-applied'));
       }
 
       if (typeof document !== 'undefined' && next.platformName) {

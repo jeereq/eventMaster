@@ -1,9 +1,11 @@
-const CACHE_NAME = 'eventmaster-cache-v2';
-const ASSETS_TO_CACHE = ['/icon.svg'];
+const CACHE_NAME = 'eventmaster-cache-v3';
+const ASSETS_TO_CACHE: string[] = [];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)),
+    caches.open(CACHE_NAME).then((cache) =>
+      ASSETS_TO_CACHE.length > 0 ? cache.addAll(ASSETS_TO_CACHE) : cache,
+    ),
   );
   self.skipWaiting();
 });

@@ -26,7 +26,7 @@ import {
 import { resolvePhoneFields } from '../utils/phone';
 import {
   loadPlatformSettings,
-  savePlatformSettings,
+  savePlatformSettingsDurable,
   mergeSettingsUpdate,
   maskSecretsForAdmin,
   DEFAULT_PLATFORM_SETTINGS,
@@ -1581,7 +1581,7 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
     const { plans: incomingPlans, ...otherSettings } = req.body || {};
     const current = loadPlatformSettings();
     const merged = mergeSettingsUpdate(current, otherSettings as Record<string, unknown>);
-    const updatedSettings = savePlatformSettings(merged);
+    const updatedSettings = await savePlatformSettingsDurable(merged);
 
     let plans = getPlansConfiguration();
     if (incomingPlans) {

@@ -1147,3 +1147,11 @@ model AiTokenOrder {
   @@index([deviceId])
 }
 
+/** Réglages Super Admin (FlexPay, marque, e-mails, commissions…) — persistés hors FS éphémère. */
+model PlatformConfig {
+  id        String   @id @default("default")
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

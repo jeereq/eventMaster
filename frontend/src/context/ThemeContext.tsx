@@ -19,6 +19,7 @@ function applyThemeClass(next: Theme) {
   } else {
     document.documentElement.classList.remove('dark');
   }
+  window.dispatchEvent(new CustomEvent('em-theme-changed'));
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -32,11 +33,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const initialTheme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark';
     setThemeState(initialTheme);
     applyThemeClass(initialTheme);
-
-    // Palette par défaut / env — remplacée ensuite par le branding tenant si connecté
-    void import('@/lib/brandTheme').then(({ applyDefaultBrandToDocument }) => {
-      applyDefaultBrandToDocument();
-    });
   }, []);
 
   useEffect(() => {

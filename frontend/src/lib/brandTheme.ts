@@ -148,19 +148,25 @@ export function buildBrandFaviconSvg(primary: string, accent: string): string {
 }
 
 function upsertLinkIcon(rel: string, href: string, type = 'image/svg+xml') {
-  const links = Array.from(document.querySelectorAll<HTMLLinkElement>(`link[rel="${rel}"]`));
+  const selector =
+    rel === 'icon' || rel === 'shortcut icon'
+      ? 'link[rel="icon"], link[rel="shortcut icon"]'
+      : `link[rel="${rel}"]`;
+  const links = Array.from(document.querySelectorAll<HTMLLinkElement>(selector));
   if (links.length === 0) {
     const link = document.createElement('link');
-    link.rel = rel;
+    link.rel = rel === 'shortcut icon' ? 'icon' : rel;
     link.type = type;
     link.href = href;
     document.head.appendChild(link);
     return;
   }
-  for (const link of links) {
-    link.type = type;
-    link.href = href;
-  }
+  links[0].rel = rel === 'shortcut icon' ? 'icon' : rel;
+  links[0].type = type;
+  links[0].href = href;
+  links[0].removeAttribute('sizes');
+  links[0].removeAttribute('media');
+  for (let i = 1; i < links.length; i++) links[i].remove();
 }
 
 /** Met à jour favicon + theme-color navigateur selon la marque active. */
@@ -173,7 +179,6 @@ export function syncBrandFavicon(primary: string, accent?: string) {
 
   upsertLinkIcon('icon', href);
   upsertLinkIcon('apple-touch-icon', href);
-  upsertLinkIcon('shortcut icon', href);
 
   let themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (!themeMeta) {
@@ -184,17 +189,36 @@ export function syncBrandFavicon(primary: string, accent?: string) {
   themeMeta.content = from;
 }
 
+/** Favicon depuis les variables CSS déjà appliquées (thème clair/sombre ou marque). */
+export function syncFaviconFromComputedStyles() {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  const defaults = resolveDefaultBrandPalette();
+  const primary =
+    getComputedStyle(root).getPropertyValue('--primary').trim() || defaults.primary;
+  const accent =
+    getComputedStyle(root).getPropertyValue('--brand-accent').trim() || primary || defaults.accent;
+  syncBrandFavicon(primary, accent);
+}
+
 export function applyBrandToDocument(branding?: TenantBranding | null) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   const defaults = resolveDefaultBrandPalette();
-  const primary = branding?.primary || defaults.primary;
-  const accent = branding?.accent || branding?.primary || defaults.accent;
-  const primaryHover = adjustHex(primary, -12);
+  const hasCustom = Boolean(branding?.primary || branding?.accent);
 
-  root.style.setProperty('--primary', primary);
-  root.style.setProperty('--primary-hover', primaryHover);
-  root.style.setProperty('--brand-accent', accent);
+  if (hasCustom) {
+    const primary = branding?.primary || branding?.accent || defaults.primary;
+    const accent = branding?.accent || branding?.primary || defaults.accent;
+    root.style.setProperty('--primary', primary);
+    root.style.setProperty('--primary-hover', adjustHex(primary, -12));
+    root.style.setProperty('--brand-accent', accent);
+  } else {
+    root.style.removeProperty('--primary');
+    root.style.removeProperty('--primary-hover');
+    root.style.removeProperty('--brand-accent');
+  }
+
   setAuthPanelVars(root, branding, defaults);
 
   if (branding?.sidebar) {
@@ -203,7 +227,7 @@ export function applyBrandToDocument(branding?: TenantBranding | null) {
     root.style.removeProperty('--sidebar');
   }
 
-  syncBrandFavicon(primary, accent);
+  syncFaviconFromComputedStyles();
 }
 
 /** Applique uniquement la palette par défaut / env (pages publiques, auth). */

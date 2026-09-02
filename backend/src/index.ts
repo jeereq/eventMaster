@@ -22,6 +22,7 @@ import { startReminderWorker } from './services/reminderService';
 import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryService';
 import { startCommercialPayoutWorker } from './services/commercialPayoutWorker';
 import { loadSubscriptionPlansFromDb } from './services/subscriptionPlanCatalogService';
+import { hydratePlatformSettingsFromDb } from './services/platformSettingsService';
 import { isSendGridConfigured, logNotificationConfigStatus } from './config/notificationConfig';
 import { maintenanceGuard } from './middleware/maintenanceGuard';
 
@@ -79,9 +80,15 @@ app.use('/api/notifications', notificationRoutes);
 app.post('/api/billing/webhook', handleStripeWebhook);
 app.use('/api/billing', billingRoutes);
 
-// Start Server
-app.listen(PORT, async () => {
-  console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
+async function bootstrap() {
+  try {
+    await hydratePlatformSettingsFromDb();
+  } catch (error) {
+    console.error(
+      '[EventMaster Server] Impossible de charger les réglages plateforme depuis la BD — fallback fichier/défauts.',
+      error,
+    );
+  }
 
   try {
     await loadSubscriptionPlansFromDb();
@@ -92,25 +99,30 @@ app.listen(PORT, async () => {
     );
   }
 
-  if (!isSendGridConfigured()) {
-    console.error(
-      '[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM (ou les réglages plateforme).',
-    );
-  } else {
-    logNotificationConfigStatus();
-  }
+  app.listen(PORT, () => {
+    console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
 
-  if (!process.env.CLOUDINARY_CLOUD_NAME) {
-    console.warn(
-      '[EventMaster Server] Cloudinary non configuré — uploads d\'images modèles désactivés. CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.',
-    );
-  }
+    if (!isSendGridConfigured()) {
+      console.error(
+        '[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM (ou les réglages plateforme).',
+      );
+    } else {
+      logNotificationConfigStatus();
+    }
 
-  // Start background workers
-  startReminderWorker();
-  startSubscriptionExpiryWorker();
-  startCommercialPayoutWorker();
-});
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      console.warn(
+        "[EventMaster Server] Cloudinary non configuré — uploads d'images modèles désactivés. CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.",
+      );
+    }
+
+    startReminderWorker();
+    startSubscriptionExpiryWorker();
+    startCommercialPayoutWorker();
+  });
+}
+
+void bootstrap();
 
 // Reload ts-node-dev after Prisma generate (maxServices + forfaits VENUE / SERVICE / CATALOG).
 
