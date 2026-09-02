@@ -21,6 +21,7 @@ import {
   AI_TOKEN_PACK_PRICE_FC,
   addPurchasedAiTokens,
   getOrCreateDeviceId,
+  syncDeviceAiTokensWithBackend,
 } from '@/lib/aiTokens';
 import { api } from '@/lib/api';
 
@@ -64,6 +65,7 @@ export default function AiTokenPurchaseModal({
     (tokensCount = AI_TOKEN_PACK_SIZE, orderId?: string | null) => {
       clearTimer();
       addPurchasedAiTokens(tokensCount, orderId || activeOrderId);
+      void syncDeviceAiTokensWithBackend(api);
       setStep('success');
       if (onSuccess) {
         onSuccess(tokensCount);

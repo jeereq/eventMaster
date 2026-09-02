@@ -121,7 +121,7 @@ router.get('/ai-simulations', optionalAuth, listPublicAiSimulations);
 router.post('/ai-simulations/claim', requireAuth, claimPublicAiSimulations);
 router.post('/ai-tokens/checkout', optionalAuth, checkoutAiTokens);
 router.get('/ai-tokens/orders/:orderId/verify', verifyAiTokensOrder);
-router.get('/ai-tokens/device/:deviceId/balance', getAiTokensDeviceBalance);
+router.get('/ai-tokens/device/:deviceId/balance', optionalAuth, getAiTokensDeviceBalance);
 
 router.post('/payments/flexpay/callback', flexPayCardCallback);
 router.get('/payments/flexpay/callback', flexPayCardCallback);

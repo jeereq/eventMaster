@@ -91,8 +91,9 @@ export type EventPlanAiPackage = {
 };
 
 export type EventPlanAiResult = {
-  catalog: { venues: number; trades: number; rentals: number };
+  catalog: { venues: number; trades: number; rentals: number; widenedCommune?: boolean };
   packages: EventPlanAiPackage[];
+  warnings?: string[];
 };
 
 const AI_STYLES: Array<{ id: EventPlanAiStyleId; label: string; blurb: string; maxTrades: number; maxRentals: number }> = [
@@ -303,9 +304,25 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     ? body.keepServiceSlugs.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
     : [];
 
-  const catalog = await loadCatalog({ city, commune, dateKey, guestCount: guests });
+  const catalogWarnings: string[] = [];
+  let widenedCommune = false;
+  let catalog = await loadCatalog({ city, commune, dateKey, guestCount: guests });
+  if (!catalog.venues.length && !catalog.services.length && commune) {
+    catalog = await loadCatalog({ city, commune: '', dateKey, guestCount: guests });
+    if (catalog.venues.length || catalog.services.length) {
+      widenedCommune = true;
+      catalogWarnings.push(
+        `La commune « ${commune} » n’avait pas assez de fiches publiques : recherche élargie à ${city || 'toute la ville'}.`,
+      );
+    }
+  }
   if (!catalog.venues.length && !catalog.services.length) {
-    fail(404, 'Aucune fiche publique ne correspond à ces critères.');
+    const where = city || 'Kinshasa / Lubumbashi';
+    const communeHint = commune ? ` (${commune})` : '';
+    fail(
+      404,
+      `Aucune salle/presta publique à ${where}${communeHint} — élargissez la commune ou le budget.`,
+    );
   }
 
   const compact = [...(includeVenue ? catalog.venues : []), ...catalog.services.filter((row) => {
@@ -421,9 +438,10 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     items: T[],
     style: EventPlanAiStyleId,
     used: Set<string>,
+    allowReuse = true,
   ): T | null => {
     const available = items.filter((item) => !used.has(item.slug));
-    const pool = available.length ? available : items;
+    const pool = available.length ? available : (allowReuse ? items : []);
     if (!pool.length) return null;
     const sorted = [...pool].sort((a, b) => a.estimatedFc - b.estimatedFc);
     if (style === 'eco') return sorted[0];
@@ -435,7 +453,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     const venue = includeVenue
       ? (keepVenueSlug && venueBySlug.has(keepVenueSlug)
         ? venueBySlug.get(keepVenueSlug) || null
-        : pickByStyle(venuesPool, style.id, usedVenues))
+        : pickByStyle(venuesPool, style.id, usedVenues, false))
       : null;
     if (venue) usedVenues.add(venue.slug);
 
@@ -502,8 +520,39 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     return pack;
   });
 
+  if (!keepVenueSlug) {
+    const assignedVenues = new Set<string>();
+    for (let index = 0; index < packages.length; index += 1) {
+      const pack = packages[index];
+      if (!pack.venue) continue;
+      if (!assignedVenues.has(pack.venue.slug)) {
+        assignedVenues.add(pack.venue.slug);
+        continue;
+      }
+      const alt = pickByStyle(venuesPool, pack.id, assignedVenues, false);
+      if (!alt) continue;
+      assignedVenues.add(alt.slug);
+      const estimatedTotalFc = (alt.estimatedFc || 0)
+        + pack.services.reduce((sum, item) => sum + (item.estimatedFc || 0), 0);
+      packages[index] = {
+        ...pack,
+        venue: alt,
+        estimatedTotalFc,
+        warnings: pack.warnings.includes('Salle distincte choisie pour différencier ce pack.')
+          ? pack.warnings
+          : [...pack.warnings, 'Salle distincte choisie pour différencier ce pack.'],
+      };
+    }
+  }
+
   if (!packages.some((pack) => pack.venue || pack.services.length > 0)) {
     fail(404, 'Impossible de composer 3 propositions avec le catalogue actuel.');
+  }
+
+  if (catalogWarnings.length) {
+    for (const pack of packages) {
+      pack.warnings = [...catalogWarnings, ...pack.warnings];
+    }
   }
 
   return {
@@ -511,7 +560,9 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       venues: catalog.venues.length,
       trades: catalog.services.filter((row) => row.kind === 'trade').length,
       rentals: catalog.services.filter((row) => row.kind === 'rental').length,
+      widenedCommune: widenedCommune || undefined,
     },
     packages,
+    warnings: catalogWarnings.length ? catalogWarnings : undefined,
   };
 }

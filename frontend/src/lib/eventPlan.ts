@@ -387,8 +387,11 @@ export type EventPlanAiPackage = {
 };
 
 export type EventPlanAiResult = {
-  catalog: { venues: number; trades: number; rentals: number };
+  catalog: { venues: number; trades: number; rentals: number; widenedCommune?: boolean };
   packages: EventPlanAiPackage[];
+  warnings?: string[];
+  remaining?: number;
+  historyId?: string;
 };
 
 export function eventPlanAiToPackage(pack: EventPlanAiPackage, budgetMaxFc = 0): PlanPackage {

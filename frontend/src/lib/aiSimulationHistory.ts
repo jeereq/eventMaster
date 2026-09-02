@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { getOrCreateDeviceId } from '@/lib/aiTokens';
+import { getOrCreateDeviceId, applyServerAllowance } from '@/lib/aiTokens';
 import type { EventPlanAiResult, EventPlanAiPackage } from '@/lib/eventPlan';
 import type { ListingEventTypeId } from '@/lib/listingDetails';
 
@@ -94,6 +94,7 @@ export async function claimAiSimulationHistory(): Promise<AiSimulationHistoryIte
   const deviceId = getOrCreateDeviceId();
   try {
     const data = await api.post('/public/ai-simulations/claim', { deviceId });
+    if (data?.allowance) applyServerAllowance(data.allowance);
     const items = Array.isArray(data?.items) ? data.items : [];
     return items.filter((item: AiSimulationHistoryItem) => Array.isArray(item?.result?.packages));
   } catch {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, KeyRound, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Loader2, Sparkles, UserPlus, Wand2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -11,12 +11,16 @@ import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetai
 import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 import { communesForCity } from '@/lib/rdcCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
+import { snapshotPlanItems } from '@/lib/eventPlan';
 import {
+  applyServerAllowance,
+  AI_ALLOWANCE_CHANGED,
   consumeAiSimulation,
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
+import { useAuth } from '@/context/AuthContext';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
 import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
@@ -37,6 +41,7 @@ export type EventPrepAiDefaults = {
   guestCount?: number;
   eventDate?: string;
   eventTitle?: string;
+  prompt?: string;
   budgetMaxFc?: number;
   keepVenueSlug?: string;
   keepServiceSlugs?: string[];
@@ -49,6 +54,10 @@ export default function EventPrepAiSimulator({
   onApplyAll,
   onOpenListing,
   defaultOpen = false,
+  embedded = false,
+  preferDefaults = false,
+  className,
+  onAllowanceChange,
 }: {
   defaults?: EventPrepAiDefaults;
   applyLabel?: string;
@@ -56,17 +65,22 @@ export default function EventPrepAiSimulator({
   onApplyAll?: (packages: EventPlanAiPackage[]) => void;
   onOpenListing?: (target: { kind: 'venue' | 'service'; slug: string }) => void;
   defaultOpen?: boolean;
+  embedded?: boolean;
+  preferDefaults?: boolean;
+  className?: string;
+  onAllowanceChange?: (allowance: AiAllowance) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const { user, access } = useAuth();
+  const isLoggedIn = Boolean(user);
+  const canCreateEvents = Boolean(access?.canCreateEvents);
+  const [open, setOpen] = useState(defaultOpen || embedded);
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
   const [city, setCity] = useState(defaults?.city || '');
   const [commune, setCommune] = useState(defaults?.commune || '');
   const [guestCount, setGuestCount] = useState(defaults?.guestCount && defaults.guestCount > 0 ? String(defaults.guestCount) : '');
   const [budgetMaxFc, setBudgetMaxFc] = useState(defaults?.budgetMaxFc && defaults.budgetMaxFc > 0 ? String(defaults.budgetMaxFc) : '');
   const [eventDate, setEventDate] = useState(defaults?.eventDate?.slice(0, 10) || '');
-  const [prompt, setPrompt] = useState(
-    defaults?.eventTitle ? `Préparer « ${defaults.eventTitle} » avec un mix salle / prestataires / matériel & équipements.` : '',
-  );
+  const [prompt, setPrompt] = useState(initialPrompt(defaults));
   const [keepVenue, setKeepVenue] = useState(Boolean(defaults?.keepVenueSlug));
   const [includeVenue, setIncludeVenue] = useState(true);
   const [includeTrades, setIncludeTrades] = useState(true);
@@ -79,8 +93,17 @@ export default function EventPrepAiSimulator({
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
   const [history, setHistory] = useState<AiSimulationHistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
   const communes = useMemo(() => communesForCity(city), [city]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
+  const budgetValue = budgetMaxFc ? Number(budgetMaxFc) : 0;
+  const leftover = selected && budgetValue > 0 ? budgetValue - selected.estimatedTotalFc : null;
+
+  const publishAllowance = (next: AiAllowance) => {
+    setAllowance(next);
+    onAllowanceChange?.(next);
+  };
 
   const applyCached = (
     cached: ReturnType<typeof historyItemToCache>,
@@ -97,34 +120,75 @@ export default function EventPrepAiSimulator({
     setResult(cached.result);
     setSelectedId(cached.selectedId);
     setActiveHistoryId(historyId || null);
-    if (openForm || defaultOpen) setOpen(true);
+    setSaveMessage('');
+    if (openForm || defaultOpen || embedded) setOpen(true);
+  };
+
+  const applyDefaults = (seed?: EventPrepAiDefaults) => {
+    if (!seed) return;
+    if (seed.eventType) setEventType(seed.eventType);
+    if (seed.city != null) setCity(seed.city);
+    if (seed.commune != null) setCommune(seed.commune);
+    if (seed.guestCount && seed.guestCount > 0) setGuestCount(String(seed.guestCount));
+    if (seed.budgetMaxFc && seed.budgetMaxFc > 0) setBudgetMaxFc(String(seed.budgetMaxFc));
+    if (seed.eventDate) setEventDate(seed.eventDate.slice(0, 10));
+    if (seed.keepVenueSlug) setKeepVenue(true);
+    const nextPrompt = initialPrompt(seed);
+    if (nextPrompt) setPrompt(nextPrompt);
   };
 
   useEffect(() => {
-    setAllowance(getAiSimulationAllowance());
-    const cached = readCachedAiSimulation();
+    publishAllowance(getAiSimulationAllowance());
+    const cached = preferDefaults ? null : readCachedAiSimulation();
     if (cached) applyCached(cached);
+    else if (preferDefaults) applyDefaults(defaults);
     void syncDeviceAiTokensWithBackend(api).then((synced) => {
-      if (synced) setAllowance(synced);
+      if (synced) publishAllowance(synced);
     });
     void (async () => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const items = token ? await claimAiSimulationHistory() : await fetchAiSimulationHistory();
       setHistory(items);
-      if (!cached && items[0]) applyCached(historyItemToCache(items[0]), items[0].id);
+      if (!cached && !preferDefaults && items[0]) applyCached(historyItemToCache(items[0]), items[0].id);
     })();
+    const onChange = () => publishAllowance(getAiSimulationAllowance());
+    window.addEventListener(AI_ALLOWANCE_CHANGED, onChange);
+    return () => window.removeEventListener(AI_ALLOWANCE_CHANGED, onChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!preferDefaults || !defaults) return;
+    applyDefaults(defaults);
+    setResult(null);
+    setSelectedId(null);
+    setActiveHistoryId(null);
+    setSaveMessage('');
+    setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    preferDefaults,
+    defaults?.eventType,
+    defaults?.city,
+    defaults?.commune,
+    defaults?.guestCount,
+    defaults?.budgetMaxFc,
+    defaults?.eventDate,
+    defaults?.eventTitle,
+    defaults?.prompt,
+  ]);
 
   const run = async () => {
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
       setError('Plus de simulations disponibles. Rechargez 20 recherches pour continuer.');
-      setAllowance(current);
+      publishAllowance(current);
       return;
     }
     setLoading(true);
     setError('');
+    setSaveMessage('');
     try {
       const data = (await api.post('/public/event-plan-ai', simulationEndpointBody({
         eventType,
@@ -139,13 +203,17 @@ export default function EventPrepAiSimulator({
         includeRentals,
         keepVenueSlug: keepVenue ? defaults?.keepVenueSlug : undefined,
         keepServiceSlugs: defaults?.keepServiceSlugs || [],
-      }))) as EventPlanAiResult & { historyId?: string };
+      }))) as EventPlanAiResult & { historyId?: string; remaining?: number; allowance?: AiAllowance };
       const packages = Array.isArray(data.packages) ? data.packages : [];
       const nextResult = { ...data, packages };
       const nextSelected = packages[1]?.id || packages[0]?.id || null;
       setResult(nextResult);
       setSelectedId(nextSelected);
-      setAllowance(consumeAiSimulation());
+      if (data.allowance) {
+        publishAllowance(applyServerAllowance(data.allowance));
+      } else {
+        publishAllowance(consumeAiSimulation());
+      }
       writeCachedAiSimulation({
         brief: {
           prompt,
@@ -163,6 +231,13 @@ export default function EventPrepAiSimulator({
       if (data.historyId) setActiveHistoryId(data.historyId);
       void fetchAiSimulationHistory().then(setHistory);
     } catch (err: unknown) {
+      const status = err && typeof err === 'object' && 'status' in err
+        ? Number((err as { status?: number }).status)
+        : 0;
+      if (status === 402) {
+        setPurchaseModalOpen(true);
+        void syncDeviceAiTokensWithBackend(api).then(publishAllowance);
+      }
       setResult(null);
       setSelectedId(null);
       setError(err instanceof Error ? err.message : 'Simulation impossible.');
@@ -171,22 +246,54 @@ export default function EventPrepAiSimulator({
     }
   };
 
+  const saveSelectedPack = async () => {
+    if (!selected) return;
+    setSaveBusy(true);
+    setSaveMessage('');
+    try {
+      const items = snapshotPlanItems(selected.venue ? [selected.venue, ...selected.services] : selected.services);
+      await api.post('/marketplace/event-packs', {
+        name: `${selected.label} · ${city || 'EventMaster'}`,
+        eventType,
+        budgetFc: budgetValue > 0 ? budgetValue : selected.estimatedTotalFc,
+        city: city || undefined,
+        guestCount: guestCount ? Number(guestCount) : undefined,
+        eventDate: eventDate || undefined,
+        source: 'search',
+        styleLabel: selected.label,
+        items,
+      });
+      setSaveMessage('Pack retenu. Vous le retrouvez dans Catalogue → Packs.');
+    } catch (err: unknown) {
+      setSaveMessage(err instanceof Error ? err.message : 'Impossible de retenir ce pack.');
+    } finally {
+      setSaveBusy(false);
+    }
+  };
+
   return (
-    <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="space-y-1 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
-            <Wand2 className="w-4 h-4 text-primary" />
-            Simulation IA
-          </h3>
-          <p className="text-xs text-muted leading-relaxed">
-            L’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort — comme la simulation par critères.
-          </p>
+    <section className={cn(
+      embedded
+        ? 'space-y-3'
+        : 'rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3',
+      className,
+    )}>
+      {!embedded ? (
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <h3 className="text-sm font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" />
+              Simulation IA
+            </h3>
+            <p className="text-xs text-muted leading-relaxed">
+              L’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort — comme la simulation par critères.
+            </p>
+          </div>
+          <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)} className="shrink-0">
+            {open ? 'Masquer' : 'Brief'}
+          </Button>
         </div>
-        <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)} className="shrink-0">
-          {open ? 'Masquer' : 'Brief'}
-        </Button>
-      </div>
+      ) : null}
 
       <AiSimulationCounter
         allowance={allowance}
@@ -317,7 +424,18 @@ export default function EventPrepAiSimulator({
         </div>
       ) : null}
 
-      {error ? <Alert variant="error">{error}</Alert> : null}
+      {error ? (
+        <Alert variant="error">
+          <div className="space-y-2">
+            <p>{error}</p>
+            {error.toLowerCase().includes('aucune salle') || error.toLowerCase().includes('élargir') ? (
+              <p className="text-[11px] opacity-90">
+                Essayez une autre commune, toute la ville, ou un budget plus large.
+              </p>
+            ) : null}
+          </div>
+        </Alert>
+      ) : null}
 
       {loading && !result?.packages.length ? (
         <p className="text-xs text-muted inline-flex items-center gap-2">
@@ -338,10 +456,16 @@ export default function EventPrepAiSimulator({
             </span>
           </div>
 
-          {/* Grille des 3 packs au choix */}
+          {result.catalog.widenedCommune || (result.warnings && result.warnings.length > 0) ? (
+            <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+              {(result.warnings && result.warnings[0]) || 'Recherche élargie à toute la ville faute de fiches dans la commune.'}
+            </p>
+          ) : null}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3" role="radiogroup" aria-label="Propositions IA">
             {result.packages.map((pack) => {
               const active = (selected?.id || result.packages[0]?.id) === pack.id;
+              const packLeftover = budgetValue > 0 ? budgetValue - pack.estimatedTotalFc : null;
               return (
                 <button
                   key={pack.id}
@@ -382,13 +506,19 @@ export default function EventPrepAiSimulator({
                     <p className="text-[10px] text-muted">
                       {pack.venue ? '1 salle' : 'Sans salle'} + {pack.services.length} prestataire{pack.services.length > 1 ? 's' : ''}
                     </p>
+                    {packLeftover != null ? (
+                      <p className={cn('text-[10px] font-semibold mt-0.5', packLeftover >= 0 ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-300')}>
+                        {packLeftover >= 0
+                          ? `Reste ${formatFc(packLeftover)} vs budget`
+                          : `Dépassement ${formatFc(Math.abs(packLeftover))}`}
+                      </p>
+                    ) : null}
                   </div>
                 </button>
               );
             })}
           </div>
 
-          {/* Détail complet du pack sélectionné */}
           {selected && (
             <div className="p-4 rounded-2xl border border-primary/25 bg-surface space-y-3 animate-fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border">
@@ -400,9 +530,16 @@ export default function EventPrepAiSimulator({
                     <p className="text-[11px] text-muted mt-0.5">{selected.rationale}</p>
                   )}
                 </div>
-                <span className="text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 shrink-0">
-                  Total : {formatFc(selected.estimatedTotalFc)}
-                </span>
+                <div className="text-right shrink-0">
+                  <span className="text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 inline-block">
+                    Total : {formatFc(selected.estimatedTotalFc)}
+                  </span>
+                  {leftover != null ? (
+                    <p className={cn('text-[10px] font-semibold mt-1', leftover >= 0 ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-300')}>
+                      {leftover >= 0 ? `Reste ${formatFc(leftover)}` : `Dépassement ${formatFc(Math.abs(leftover))}`}
+                    </p>
+                  ) : null}
+                </div>
               </div>
 
               <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -440,9 +577,11 @@ export default function EventPrepAiSimulator({
               </ul>
 
               {selected.warnings.length > 0 && (
-                <p className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
-                  {selected.warnings[0]}
-                </p>
+                <ul className="space-y-1.5 text-[11px] text-amber-800 dark:text-amber-200 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+                  {selected.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
               )}
 
               {onApply ? (
@@ -472,9 +611,46 @@ export default function EventPrepAiSimulator({
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-muted pt-1">
-                  Cette simulation est enregistrée. Vous la retrouverez ici et sur le tableau de bord.
-                </p>
+                <div className="pt-2 space-y-3 border-t border-border">
+                  <p className="text-[11px] text-muted">
+                    Rouvrir cet historique ne consomme pas de jeton. Les actions ci-dessous non plus.
+                  </p>
+                  {saveMessage ? (
+                    <p className="text-[11px] font-medium text-foreground">{saveMessage}</p>
+                  ) : null}
+                  {isLoggedIn ? (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        leftIcon={<BookmarkPlus className="w-3.5 h-3.5" />}
+                        loading={saveBusy}
+                        disabled={!selected.venue && selected.services.length === 0}
+                        onClick={() => void saveSelectedPack()}
+                      >
+                        Retenir ce pack
+                      </Button>
+                      {canCreateEvents ? (
+                        <Link href="/dashboard/events?create=1" className="w-full sm:w-auto">
+                          <Button size="sm" variant="secondary" fullWidth leftIcon={<CalendarPlus className="w-3.5 h-3.5" />}>
+                            Créer l’événement avec ce mix
+                          </Button>
+                        </Link>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Link href="/register?kind=CLIENT&intent=seeker&action=ai_simulator" className="w-full sm:w-auto">
+                        <Button size="sm" variant="primary" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />}>
+                          Créer un compte pour retenir ce pack
+                        </Button>
+                      </Link>
+                      <Button size="sm" variant="secondary" onClick={() => setPurchaseModalOpen(true)}>
+                        Acheter 20 sims
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -484,10 +660,18 @@ export default function EventPrepAiSimulator({
       <AiTokenPurchaseModal
         open={purchaseModalOpen}
         onClose={() => setPurchaseModalOpen(false)}
-        onSuccess={() => setAllowance(getAiSimulationAllowance())}
+        onSuccess={() => {
+          void syncDeviceAiTokensWithBackend(api).then(publishAllowance);
+        }}
       />
     </section>
   );
+}
+
+function initialPrompt(defaults?: EventPrepAiDefaults) {
+  if (defaults?.prompt) return defaults.prompt;
+  if (defaults?.eventTitle) return `Préparer « ${defaults.eventTitle} » avec un mix salle / prestataires / matériel & équipements.`;
+  return '';
 }
 
 function AiPickRow({

@@ -5,7 +5,12 @@ import { usePathname } from 'next/navigation';
 import { Wand2 } from 'lucide-react';
 import { Modal } from '@/components/ui';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
-import { getAiSimulationAllowance } from '@/lib/aiTokens';
+import { api } from '@/lib/api';
+import {
+  AI_ALLOWANCE_CHANGED,
+  getAiSimulationAllowance,
+  syncDeviceAiTokensWithBackend,
+} from '@/lib/aiTokens';
 
 const HIDDEN_PREFIXES = ['/rsvp/', '/invite/', '/print'];
 
@@ -17,7 +22,13 @@ export default function GlobalAiSimulatorFab() {
   const hidden = HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   useEffect(() => {
-    setRemaining(getAiSimulationAllowance().totalRemaining);
+    const sync = () => setRemaining(getAiSimulationAllowance().totalRemaining);
+    sync();
+    void syncDeviceAiTokensWithBackend(api).then((allowance) => {
+      setRemaining(allowance.totalRemaining);
+    });
+    window.addEventListener(AI_ALLOWANCE_CHANGED, sync);
+    return () => window.removeEventListener(AI_ALLOWANCE_CHANGED, sync);
   }, [open, pathname]);
 
   if (hidden) return null;
@@ -44,9 +55,12 @@ export default function GlobalAiSimulatorFab() {
         onClose={() => setOpen(false)}
         size="xl"
         title="Simulation IA"
-        description="Générez 3 packs à partir du catalogue. Votre historique est conservé, même si vous changez de page."
+        description="Générez 3 packs à partir du catalogue. Rouvrir un historique ne consomme pas de jeton."
       >
-        <EventPrepAiSimulator defaultOpen />
+        <EventPrepAiSimulator
+          defaultOpen
+          onAllowanceChange={(allowance) => setRemaining(allowance.totalRemaining)}
+        />
       </Modal>
     </>
   );

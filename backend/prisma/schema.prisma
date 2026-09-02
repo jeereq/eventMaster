@@ -228,6 +228,7 @@ model User {
   ticketOrders          TicketOrder[]
   aiTokenOrders         AiTokenOrder[]
   aiSimulationRuns      AiSimulationRun[]
+  aiSimulationWallets   AiSimulationWallet[]
 }
 
 model Event {
@@ -1082,6 +1083,21 @@ model PaymentTrace {
 
   @@index([kind, createdAt])
   @@index([payerUserId])
+}
+
+/** Solde de simulations IA par appareil (essais gratuits + jetons payés). */
+model AiSimulationWallet {
+  id                String   @id @default(uuid())
+  deviceId          String   @unique
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  freeTrialsUsed    Int      @default(0)
+  bonusTokens       Int      @default(0)
+  creditedOrderIds  Json     @default("[]")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
 }
 
 /** Historique des simulations IA (landing + dashboard), rattaché au compte et/ou à l’appareil. */

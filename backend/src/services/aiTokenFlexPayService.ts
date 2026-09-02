@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import { notifyAiTokenPayment } from './paymentTraceService';
+import { creditPaidAiTokenOrder } from './aiSimulationWalletService';
 import {
   buildFlexPayMetadataUpdate,
   buildFlexPayReference,
@@ -287,6 +288,9 @@ export async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber: string): Pr
   }
 
   if (order.status === 'PAID') {
+    void creditPaidAiTokenOrder(order).catch((err) =>
+      console.error('[AiTokenPayment] wallet credit:', err),
+    );
     return {
       found: true,
       paid: true,
@@ -358,6 +362,9 @@ export async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber: string): Pr
 
     void notifyAiTokenPayment(order).catch((err) =>
       console.error('[AiTokenPayment] notify:', err),
+    );
+    void creditPaidAiTokenOrder(order).catch((err) =>
+      console.error('[AiTokenPayment] wallet credit:', err),
     );
 
     return {

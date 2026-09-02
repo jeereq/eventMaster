@@ -17,6 +17,12 @@ import {
   getDeviceAiTokensSummary,
   type AiTokenPaymentMethod,
 } from '../services/aiTokenFlexPayService';
+import {
+  claimAiSimulationWallet,
+  consumeAiSimulationCredit,
+  getAiSimulationWalletAllowance,
+  requireAiSimulationCredit,
+} from '../services/aiSimulationWalletService';
 
 function parseKind(value: unknown): 'venue' | 'service' | null {
   return value === 'venue' || value === 'service' ? value : null;
@@ -233,13 +239,31 @@ async function persistSimulation(
   }
 }
 
+async function runEventPlanAi(
+  req: Request,
+  source: AiSimulationSource,
+  rateLimitKey: string,
+) {
+  const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+  const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
+  if (!deviceId) {
+    const error: Error & { status?: number } = new Error('Identifiant d’appareil manquant pour la simulation.');
+    error.status = 400;
+    throw error;
+  }
+  const userId = (req as AuthenticatedRequest).user?.id || null;
+  await requireAiSimulationCredit(deviceId, userId);
+  const result = await simulateEventPlanAi(rateLimitKey, body);
+  const allowance = await consumeAiSimulationCredit(deviceId, userId);
+  const historyId = await persistSimulation(req, result, source);
+  return { ...result, historyId, remaining: allowance.totalRemaining, allowance };
+}
+
 export async function planEventAi(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
-    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
-    const result = await simulateEventPlanAi(req.user.id, body);
-    const historyId = await persistSimulation(req, result, 'dashboard');
-    return res.json({ ...result, historyId });
+    const payload = await runEventPlanAi(req, 'dashboard', req.user.id);
+    return res.json(payload);
   } catch (error: any) {
     if (error?.status) {
       return res.status(error.status).json({ error: error.message });
@@ -251,11 +275,10 @@ export async function planEventAi(req: AuthenticatedRequest, res: Response) {
 
 export async function publicPlanEventAi(req: Request, res: Response): Promise<void> {
   try {
-    const callerId = (req as AuthenticatedRequest).user?.id || req.ip || 'public-guest';
-    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
-    const result = await simulateEventPlanAi(callerId, body);
-    const historyId = await persistSimulation(req, result, (req as AuthenticatedRequest).user?.id ? 'dashboard' : 'landing');
-    res.json({ ...result, historyId });
+    const userId = (req as AuthenticatedRequest).user?.id || null;
+    const callerId = userId || req.ip || 'public-guest';
+    const payload = await runEventPlanAi(req, userId ? 'dashboard' : 'landing', callerId);
+    res.json(payload);
   } catch (error: any) {
     if (error?.status) {
       res.status(error.status).json({ error: error.message });
@@ -286,8 +309,16 @@ export async function claimPublicAiSimulations(req: AuthenticatedRequest, res: R
     }
     const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
     const result = await claimDeviceSimulations(req.user.id, deviceId);
+    let allowance = null;
+    if (deviceId.trim()) {
+      try {
+        allowance = await claimAiSimulationWallet(req.user.id, deviceId.trim());
+      } catch (err) {
+        console.error('[AiSimulation] claim wallet:', err);
+      }
+    }
     const items = await listAiSimulationRuns({ userId: req.user.id, deviceId, limit: 20 });
-    res.json({ ...result, items });
+    res.json({ ...result, items, allowance });
   } catch (error: any) {
     console.error('claimPublicAiSimulations:', error);
     res.status(500).json({ error: 'Impossible de rattacher l’historique à votre compte.' });
@@ -331,6 +362,14 @@ export async function getAiTokensDeviceBalance(req: Request, res: Response): Pro
     }
 
     const summary = await getDeviceAiTokensSummary(deviceId);
+    const userId = (req as AuthenticatedRequest).user?.id || null;
+    try {
+      const allowance = await getAiSimulationWalletAllowance(deviceId, userId);
+      res.status(200).json({ ...summary, ...allowance });
+      return;
+    } catch (err) {
+      console.error('[AiSimulation] wallet balance:', err);
+    }
     res.status(200).json(summary);
   } catch (error: any) {
     console.error('getAiTokensDeviceBalance:', error);

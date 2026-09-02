@@ -6,6 +6,7 @@ export const STORAGE_KEY_AI_DEVICE_ID = 'em_ai_device_id';
 export const STORAGE_KEY_AI_TRIALS = 'em_ai_free_trials_count';
 export const STORAGE_KEY_AI_BONUS_TOKENS = 'em_ai_bonus_tokens';
 export const STORAGE_KEY_AI_CREDITED_ORDERS = 'em_ai_credited_orders';
+export const AI_ALLOWANCE_CHANGED = 'em-ai-allowance-changed';
 
 export interface AiAllowance {
   deviceId: string;
@@ -62,6 +63,26 @@ function persistDeviceCookie(deviceId: string) {
   }
 }
 
+function emitAllowanceChanged(allowance: AiAllowance) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new CustomEvent(AI_ALLOWANCE_CHANGED, { detail: allowance }));
+  } catch {
+    /* ignore */
+  }
+}
+
+function writeLocalAllowance(freeTrialsUsed: number, bonusTokens: number) {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_AI_TRIALS, String(Math.max(0, freeTrialsUsed)));
+      localStorage.setItem(STORAGE_KEY_AI_BONUS_TOKENS, String(Math.max(0, bonusTokens)));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Récupère la liste des identifiants de commandes déjà créditées sur cet appareil.
  */
@@ -81,7 +102,7 @@ export function getCreditedOrders(): string[] {
 }
 
 /**
- * Récupère le solde actuel de simulations (10 essais gratuits + jetons achetés rattachés à cet appareil).
+ * Récupère le solde actuel de simulations (cache local ; la vérité est le portefeuille serveur).
  */
 export function getAiSimulationAllowance(): AiAllowance {
   let freeTrialsUsed = 0;
@@ -114,8 +135,24 @@ export function getAiSimulationAllowance(): AiAllowance {
   };
 }
 
+/** Applique le solde renvoyé par l’API et met à jour le cache hors-ligne. */
+export function applyServerAllowance(data: Partial<AiAllowance> | null | undefined): AiAllowance {
+  if (!data || typeof data !== 'object') return getAiSimulationAllowance();
+  const current = getAiSimulationAllowance();
+  const freeTrialsUsed = typeof data.freeTrialsUsed === 'number'
+    ? Math.max(0, data.freeTrialsUsed)
+    : current.freeTrialsUsed;
+  const bonusTokens = typeof data.bonusTokens === 'number'
+    ? Math.max(0, data.bonusTokens)
+    : current.bonusTokens;
+  writeLocalAllowance(freeTrialsUsed, bonusTokens);
+  const next = getAiSimulationAllowance();
+  emitAllowanceChanged(next);
+  return next;
+}
+
 /**
- * Consomme 1 crédit de simulation IA (priorité aux jetons achetés puis aux essais gratuits).
+ * Consomme 1 crédit de simulation IA en cache local (hors-ligne / repli).
  */
 export function consumeAiSimulation(): AiAllowance {
   let { freeTrialsUsed, bonusTokens } = getAiSimulationAllowance();
@@ -126,16 +163,10 @@ export function consumeAiSimulation(): AiAllowance {
     freeTrialsUsed += 1;
   }
 
-  try {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_AI_TRIALS, String(freeTrialsUsed));
-      localStorage.setItem(STORAGE_KEY_AI_BONUS_TOKENS, String(bonusTokens));
-    }
-  } catch {
-    // Ignorer si impossible d'écrire
-  }
-
-  return getAiSimulationAllowance();
+  writeLocalAllowance(freeTrialsUsed, bonusTokens);
+  const next = getAiSimulationAllowance();
+  emitAllowanceChanged(next);
+  return next;
 }
 
 /**
@@ -165,11 +196,13 @@ export function addPurchasedAiTokens(amount = AI_TOKEN_PACK_SIZE, orderId?: stri
     // Ignorer si impossible d'écrire
   }
 
-  return getAiSimulationAllowance();
+  const next = getAiSimulationAllowance();
+  emitAllowanceChanged(next);
+  return next;
 }
 
 /**
- * Synchronise les jetons de l'appareil avec le backend si des paiements ont été confirmés hors-ligne.
+ * Synchronise le cache local avec le portefeuille serveur (essais + jetons payés restants).
  */
 export async function syncDeviceAiTokensWithBackend(apiClient: any): Promise<AiAllowance> {
   const deviceId = getOrCreateDeviceId();
@@ -179,9 +212,11 @@ export async function syncDeviceAiTokensWithBackend(apiClient: any): Promise<AiA
 
   try {
     const data = await apiClient.get(`/public/ai-tokens/device/${encodeURIComponent(deviceId)}/balance`);
+    if (data && (typeof data.freeTrialsUsed === 'number' || typeof data.bonusTokens === 'number')) {
+      return applyServerAllowance(data);
+    }
     if (data && typeof data.totalPaidTokens === 'number') {
       const current = getAiSimulationAllowance();
-      // Si le total payé sur le serveur pour cet appareil dépasse le solde enregistré
       if (data.totalPaidTokens > current.bonusTokens) {
         const diff = data.totalPaidTokens - current.bonusTokens;
         return addPurchasedAiTokens(diff, `sync_server_${Date.now()}`);
