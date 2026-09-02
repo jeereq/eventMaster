@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const commercialController_1 = require("../controllers/commercialController");
+const router = (0, express_1.Router)();
+router.use(auth_1.requireAuth);
+router.get('/dashboard', commercialController_1.getCommercialDashboard);
+router.get('/referral', commercialController_1.getCommercialReferralInfo);
+router.post('/organizations', commercialController_1.createCommercialOrganization);
+router.post('/organizations/:managerId/resend-verification', commercialController_1.resendCommercialManagerVerification);
+exports.default = router;

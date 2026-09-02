@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { PartyPopper, Sun, Moon, Menu, X, Sparkles } from 'lucide-react';
+import { PartyPopper, Sun, Moon, Menu, X, Sparkles, LayoutDashboard, ArrowRight } from 'lucide-react';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
 
 export type SiteHeaderLink = {
@@ -147,29 +147,32 @@ export default function SiteHeader({
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
 
-          <div className="hidden md:flex items-center gap-2 ml-1">
-            {user ? (
-              <Link href="/dashboard">
-                <Button size="sm">Tableau de bord</Button>
+          {user ? (
+            <Link href="/dashboard" className="flex items-center ml-1">
+              <Button size="sm" className="hidden sm:inline-flex shadow-sm shadow-primary/20" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                Tableau de bord
+              </Button>
+              <Button size="sm" className="sm:hidden text-xs px-2.5 py-1.5 h-8 font-semibold shadow-xs" rightIcon={<LayoutDashboard className="w-3 h-3" />}>
+                Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <div className="hidden md:flex items-center gap-2 ml-1">
+              <Link
+                href="/login"
+                className="text-xs font-semibold text-muted hover:text-foreground px-2 py-1.5 rounded-md transition hover:bg-surface-muted"
+              >
+                Connexion
               </Link>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="text-xs font-semibold text-muted hover:text-foreground px-2 py-1.5 rounded-md transition hover:bg-surface-muted"
-                >
-                  Connexion
+              {site.allowRegistration ? (
+                <Link href="/register">
+                  <Button size="sm" rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
+                    Démarrer
+                  </Button>
                 </Link>
-                {site.allowRegistration ? (
-                  <Link href="/register">
-                    <Button size="sm" rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
-                      Démarrer
-                    </Button>
-                  </Link>
-                ) : null}
-              </>
-            )}
-          </div>
+              ) : null}
+            </div>
+          )}
 
           {/* Bouton burger mobile */}
           <button

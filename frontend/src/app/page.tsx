@@ -17,6 +17,7 @@ import LandingModelsSection from '@/components/landing/LandingModelsSection';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
 import { Modal, Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 
@@ -54,7 +55,7 @@ import {
   scrollToLandingSection,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
-import { ArrowRight, Smartphone, Sparkles } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, Smartphone, Sparkles } from 'lucide-react';
 
 function getCategoryLabel(category: string) {
   if (category === 'private') return 'Célébrations';
@@ -160,6 +161,32 @@ export default function Home() {
                 {' '}Zéro application à installer pour vous ou vos invités.
               </p>
             </div>
+
+            {/* Raccourci d'accès immédiat au tableau de bord pour utilisateur connecté */}
+            {user && (
+              <div className="pt-2">
+                <div className="p-4 sm:p-5 rounded-2xl bg-surface/90 dark:bg-slate-900/90 border border-primary/30 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-primary/10 animate-fade-in text-left">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-11 h-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md shadow-primary/25">
+                      <LayoutDashboard className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm sm:text-base font-bold text-foreground truncate">
+                        Ravi de vous revoir{user.name ? `, ${user.name}` : ''} !
+                      </p>
+                      <p className="text-xs text-muted">
+                        Vous êtes connecté. Retrouvez vos événements, réservations et outils.
+                      </p>
+                    </div>
+                  </div>
+                  <Link href="/dashboard" className="shrink-0 w-full sm:w-auto">
+                    <Button size="md" className="w-full sm:w-auto shadow-md font-semibold" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                      Accéder à mon tableau de bord
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Grille des 4 Solutions / Produits (Visibles immédiatement) */}
@@ -250,6 +277,7 @@ export default function Home() {
       />
 
       <LandingMobileStickyBar ctaLabel={profile.cta.label} ctaHref={profile.cta.href} />
+      <LandingDashboardQuickAccess />
 
       <SiteFooter faqHref="/#faq" />
 

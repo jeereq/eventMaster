@@ -3,37 +3,61 @@ import { ServiceCategory, VenuePriceUnit } from '@prisma/client';
 const PRICE_UNITS: VenuePriceUnit[] = ['EVENT', 'DAY', 'HOUR', 'MINUTE', 'PERSON', 'QUOTA'];
 
 export function parsePriceUnit(value: unknown): VenuePriceUnit {
-  if (typeof value === 'string' && PRICE_UNITS.includes(value as VenuePriceUnit)) {
-    return value as VenuePriceUnit;
+  if (typeof value === 'string') {
+    const upper = value.trim().toUpperCase();
+    if (PRICE_UNITS.includes(upper as VenuePriceUnit)) {
+      return upper as VenuePriceUnit;
+    }
   }
   return 'EVENT';
 }
 
+export function parsePriceUnitFilter(value: unknown): VenuePriceUnit | undefined {
+  if (typeof value === 'string') {
+    const upper = value.trim().toUpperCase();
+    if (PRICE_UNITS.includes(upper as VenuePriceUnit)) {
+      return upper as VenuePriceUnit;
+    }
+  }
+  return undefined;
+}
+
 const SERVICE_CATEGORIES = [
   'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION',
-  'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
+  'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'BEAUTY_HAIR',
+  'EVENT_PLANNER', 'ENTERTAINMENT', 'OFFICIANT', 'CHILDCARE',
+  'AV_TECHNICIAN', 'STATIONERY', 'OTHER',
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE',
+  'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT',
 ] as ServiceCategory[];
 
 const RENTAL_CATEGORIES = [
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE',
+  'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT',
 ] as ServiceCategory[];
 
 export function parseServiceCategory(value: unknown): ServiceCategory | undefined {
-  if (typeof value === 'string' && (SERVICE_CATEGORIES as string[]).includes(value)) {
-    return value as ServiceCategory;
+  if (typeof value === 'string') {
+    const upper = value.trim().toUpperCase();
+    if ((SERVICE_CATEGORIES as string[]).includes(upper)) {
+      return upper as ServiceCategory;
+    }
   }
   return undefined;
 }
 
 export function isServiceRentalCategory(category?: string | null): boolean {
-  return Boolean(category && (RENTAL_CATEGORIES as string[]).includes(category));
+  return Boolean(category && (RENTAL_CATEGORIES as string[]).includes(category.trim().toUpperCase() as ServiceCategory));
 }
 
 export function parseServiceGroup(value: unknown): 'trade' | 'rental' | null {
-  return value === 'trade' || value === 'rental' ? value : null;
+  if (typeof value === 'string') {
+    const lower = value.trim().toLowerCase();
+    if (lower === 'trade' || lower === 'rental') return lower;
+  }
+  return null;
 }
 
 export function serviceGroupPrismaFilter(group: 'trade' | 'rental' | null) {
@@ -53,13 +77,25 @@ export function serviceCategoryLabel(category: ServiceCategory): string {
     FLORIST: 'Fleuriste',
     TRANSPORT: 'Transport',
     MC: 'Maître de cérémonie',
+    BEAUTY_HAIR: 'Coiffure & Maquillage',
+    EVENT_PLANNER: 'Organisation & Wedding Planner',
+    ENTERTAINMENT: 'Animation & Spectacle',
+    OFFICIANT: 'Officiant de cérémonie',
+    CHILDCARE: 'Garde d’enfants',
+    AV_TECHNICIAN: 'Régie & Technique',
+    STATIONERY: 'Papeterie & Faire-part',
     OTHER: 'Autre prestation',
     RENTAL_CLOTHING_MEN: 'Location habits homme',
     RENTAL_CLOTHING_WOMEN: 'Location habits femme',
     RENTAL_CLOTHING_CHILD: 'Location habits enfant',
     RENTAL_CAR: 'Location voiture',
     RENTAL_MOTO: 'Location moto',
-    RENTAL_EQUIPMENT: 'Location matériel',
+    RENTAL_EQUIPMENT: 'Location matériel divers',
+    RENTAL_FURNITURE: 'Location mobilier & chaises',
+    RENTAL_AV: 'Location sonorisation & éclairage',
+    RENTAL_TABLEWARE: 'Location vaisselle & linge',
+    RENTAL_DECOR: 'Location matériel de décoration',
+    RENTAL_TENT: 'Location tentes & chapiteaux',
   };
   return labels[category] || String(category);
 }

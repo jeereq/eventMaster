@@ -11,6 +11,7 @@ import {
   coverFromMedia,
   MARKETPLACE_MAX_VIDEOS,
   parsePriceUnit,
+  parsePriceUnitFilter,
   parseServiceCategory,
   parseServiceGroup,
   serviceGroupPrismaFilter,
@@ -709,10 +710,7 @@ export async function listPublicServices(req: Request, res: Response) {
     const street = readStreetQuery(req);
     const category = parseServiceCategory(req.query.category);
     const group = parseServiceGroup(req.query.group);
-    const priceUnit = parsePriceUnit(req.query.priceUnit);
-    const wantUnit = typeof req.query.priceUnit === 'string' && req.query.priceUnit.trim()
-      ? priceUnit
-      : null;
+    const priceUnit = parsePriceUnitFilter(req.query.priceUnit);
     const priceRange = readPriceRange(req);
     const availability = readAvailabilityRange(req);
     const mobility = typeof req.query.mobility === 'string' ? req.query.mobility.trim() : '';
@@ -728,7 +726,7 @@ export async function listPublicServices(req: Request, res: Response) {
       ...(commune ? { commune: { contains: commune, mode: 'insensitive' as const } } : {}),
       ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' as const } } : {}),
       ...(category ? { category } : serviceGroupPrismaFilter(group)),
-      ...(wantUnit ? { priceUnit: wantUnit } : {}),
+      ...(priceUnit ? { priceUnit } : {}),
       ...(priceRange ? { priceFromFc: priceRange } : {}),
       ...(travelsFilter == null ? {} : { travels: travelsFilter }),
       ...((street || q)

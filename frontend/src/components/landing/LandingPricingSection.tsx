@@ -26,6 +26,7 @@ import {
 } from '@/config/landingPricing';
 import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import { cn } from '@/lib/cn';
+import { useAuth } from '@/context/AuthContext';
 
 interface DbPlan {
  name?: string;
@@ -95,6 +96,7 @@ export default function LandingPricingSection({
  defaultAudience = 'B2B',
  lead,
 }: LandingPricingSectionProps) {
+ const { user } = useAuth();
  const [billing, setBilling] = useState<BillingCycle>('monthly');
  const [showComparison, setShowComparison] = useState(false);
  const [audience, setAudience] = useState<'B2B' | 'B2C' | 'VENDOR'>(defaultAudience);
@@ -475,7 +477,7 @@ export default function LandingPricingSection({
 
  <div className="px-6 sm:px-7 pb-6 sm:pb-7 pt-0">
  <Link
- href={plan.ctaHref}
+ href={user ? `/dashboard/billing?plan=${plan.id}&billing=${billing}` : plan.ctaHref}
  className={`block w-full text-center py-2.5 rounded-[var(--radius-button)] text-sm font-medium transition ${
  plan.ctaVariant === 'outline' || plan.ctaVariant === 'contact'
  ? 'border border-border text-foreground hover:bg-surface-muted'
@@ -484,7 +486,7 @@ export default function LandingPricingSection({
  : 'bg-surface-muted hover:bg-border text-foreground border border-border'
  }`}
  >
- {plan.cta}
+ {user ? (plan.id === 'FREE' ? 'Mon espace gratuit' : 'Choisir ce forfait') : plan.cta}
  </Link>
  </div>
  </article>

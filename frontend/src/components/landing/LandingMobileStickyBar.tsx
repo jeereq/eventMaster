@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LandingMobileStickyBar({
   ctaLabel = 'Créer mon événement',
@@ -12,6 +13,7 @@ export default function LandingMobileStickyBar({
   ctaLabel?: string;
   ctaHref?: string;
 }) {
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -31,23 +33,42 @@ export default function LandingMobileStickyBar({
 
   if (!visible) return null;
 
+  const targetHref = user ? '/dashboard' : ctaHref;
+  const targetLabel = user ? 'Tableau de bord' : ctaLabel;
+  const displayName = user ? (user.name || user.email || '') : '';
+
   return (
     <aside
-      aria-label="Accès rapide inscription"
+      aria-label="Accès rapide inscription ou tableau de bord"
       className="fixed bottom-0 inset-x-0 z-40 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden bg-surface/95 backdrop-blur-md border-t border-border shadow-[0_-4px_24px_rgba(0,0,0,0.1)] animate-slide-up"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[color:var(--festive-accent)] shrink-0" />
-            100% dans le navigateur
-          </p>
-          <p className="text-[10px] text-muted truncate">Sans carte bancaire · Essai gratuit</p>
+          {user ? (
+            <>
+              <p className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                <LayoutDashboard className="w-3.5 h-3.5 text-primary shrink-0" />
+                Connecté{displayName ? ` (${displayName})` : ''}
+              </p>
+              <p className="text-[10px] text-muted truncate">Retrouvez vos événements et réservations</p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[color:var(--festive-accent)] shrink-0" />
+                100% dans le navigateur
+              </p>
+              <p className="text-[10px] text-muted truncate">Sans carte bancaire · Essai gratuit</p>
+            </>
+          )}
         </div>
 
-        <Link href={ctaHref} className="shrink-0">
-          <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-            {ctaLabel}
+        <Link href={targetHref} className="shrink-0">
+          <Button
+            size="sm"
+            rightIcon={user ? <LayoutDashboard className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
+          >
+            {targetLabel}
           </Button>
         </Link>
       </div>
