@@ -562,6 +562,103 @@ export default function ClientDashboardHome() {
         </div>
       </div>
 
+      {/* ─── THÉMATIQUE 3 : 💎 FORMULES & ABONNEMENTS POUR ORGANISATEURS ─── */}
+      <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/5 via-surface to-surface-muted p-5 sm:p-7 space-y-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-border/80">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <Crown className="w-3.5 h-3.5" />
+                Formules d’Abonnement Organisateur
+              </span>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                −10 % en paiement annuel
+              </span>
+            </div>
+            <h3 className="text-xl font-bold text-foreground">
+              Envie de créer vos propres faire-part et d’inviter vos proches ?
+            </h3>
+            <p className="text-xs text-muted max-w-2xl leading-relaxed">
+              L’exploration du catalogue est 100 % gratuite. Si vous préparez un mariage, un anniversaire ou une réception et souhaitez envoyer des invitations WhatsApp nominatives et générer des pass QR, activez une formule adaptée.
+            </p>
+          </div>
+
+          <Link
+            href="/register?kind=ORGANIZER&intent=personal&action=template"
+            className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition shadow-xs shadow-primary/20 flex items-center gap-1.5 shrink-0"
+          >
+            <span>Choisir un forfait</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Détails précis des forfaits disponibles */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between gap-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  Particulier
+                </span>
+                <span className="text-xs font-bold text-foreground">Dès 60 000 FC / trim.</span>
+              </div>
+              <h4 className="text-sm font-bold text-foreground">Mariages & Fêtes privées</h4>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Formules 50, 100, 200 ou +200 invités valables 90 jours. Invitations WhatsApp, QR codes d&apos;accès et éditeur 2D/3D complet inclus.
+              </p>
+            </div>
+            <Link
+              href="/register?kind=ORGANIZER&intent=personal&plan=PERSONAL_100"
+              className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border"
+            >
+              Voir Particulier 100 <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between gap-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20 text-primary">
+                  Professionnel
+                </span>
+                <span className="text-xs font-bold text-foreground">Dès 30 000 FC / mois</span>
+              </div>
+              <h4 className="text-sm font-bold text-foreground">Business & Premium</h4>
+              <p className="text-[11px] text-muted leading-relaxed">
+                De 150 à 1 000 invités par mois. Idéal pour plusieurs événements par an, avec OCR de texte, desk d&apos;accueil smartphone et billetterie en ligne.
+              </p>
+            </div>
+            <Link
+              href="/register?kind=ORGANIZER&intent=pro&plan=STANDARD"
+              className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20"
+            >
+              Découvrir Business <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between gap-3 sm:col-span-2 lg:col-span-1">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                  Prestataires & Salles
+                </span>
+                <span className="text-xs font-bold text-foreground">Dès 9 900 FC / mois</span>
+              </div>
+              <h4 className="text-sm font-bold text-foreground">Vitrine & Référencement</h4>
+              <p className="text-[11px] text-muted leading-relaxed">
+                Publiez vos salles et prestations sur le catalogue pour recevoir des demandes de devis d&apos;organisateurs dans toute la RDC.
+              </p>
+            </div>
+            <Link
+              href="/register?kind=VENDOR&intent=vendor&action=listing"
+              className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border"
+            >
+              Créer mon compte Pro <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* ─── GUIDE RAPIDE & ASSISTANCE ─── */}
       <div className="p-4 sm:p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
