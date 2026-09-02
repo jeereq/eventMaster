@@ -203,7 +203,7 @@ export async function flexPayCardCallback(req: Request, res: Response) {
 
       if (!success) {
         try {
-          await prisma.aiTokenOrder.update({
+          await (prisma as any).aiTokenOrder.update({
             where: { id: aiOrder.id },
             data: { status: 'FAILED', ...meta },
           });
@@ -214,7 +214,7 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       }
 
       try {
-        await prisma.aiTokenOrder.update({
+        await (prisma as any).aiTokenOrder.update({
           where: { id: aiOrder.id },
           data: { status: 'PAID', paidAt: new Date(), ...meta },
         });
