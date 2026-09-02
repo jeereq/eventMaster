@@ -18,6 +18,7 @@ import {
   Compass,
   Crown,
   Zap,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -584,12 +585,27 @@ export default function ClientDashboardHome() {
           </div>
 
           <Link
-            href="/register?kind=ORGANIZER&intent=personal&action=template"
+            href="/dashboard/billing"
             className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition shadow-xs shadow-primary/20 flex items-center gap-1.5 shrink-0"
           >
             <span>Choisir un forfait</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
+        </div>
+
+        {/* Encadré d'explication claire pour le compte client */}
+        <div className="p-3.5 rounded-xl bg-surface border border-primary/25 flex items-start gap-3 text-xs shadow-xs">
+          <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-bold text-foreground">
+              Information sur votre type de compte : Compte Client Gratuit
+            </p>
+            <p className="text-[11px] text-muted leading-relaxed">
+              Votre compte actuel est un <strong>Compte Client Particulier</strong> (100% gratuit à vie, dédié à la recherche de prestataires, aux devis directs, aux billets et aux simulations IA sans abonnement). Si vous souhaitez gérer vous-même vos événements (invitations WhatsApp, plan de table 2D/3D, pass QR) ou référencer vos prestations, vous devrez <strong>créer un compte dédié (Organisateur ou Prestataire) distinct</strong> de celui-ci.
+            </p>
+          </div>
         </div>
 
         {/* Détails précis des forfaits disponibles */}
@@ -608,7 +624,7 @@ export default function ClientDashboardHome() {
               </p>
             </div>
             <Link
-              href="/register?kind=ORGANIZER&intent=personal&plan=PERSONAL_100"
+              href="/dashboard/billing?plan=PERSONAL_100"
               className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
             >
               Voir Particulier 100 <ArrowRight className="w-3 h-3" />
@@ -629,7 +645,7 @@ export default function ClientDashboardHome() {
               </p>
             </div>
             <Link
-              href="/register?kind=ORGANIZER&intent=pro&plan=STANDARD"
+              href="/dashboard/billing?plan=STANDARD"
               className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
             >
               Découvrir Business <ArrowRight className="w-3 h-3" />
@@ -650,10 +666,10 @@ export default function ClientDashboardHome() {
               </p>
             </div>
             <Link
-              href="/register?kind=VENDOR&intent=vendor&action=listing"
+              href="/dashboard/billing?plan=VENUE"
               className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
             >
-              Créer mon compte Pro <ArrowRight className="w-3 h-3" />
+              Voir Formules Prestataire <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
         </div>

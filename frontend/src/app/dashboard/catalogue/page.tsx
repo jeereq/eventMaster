@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Minimize2, Store, Wallet, Bookmark } from 'lucide-react';
+import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -780,15 +780,10 @@ function ClientMarketplaceInner() {
                 applyLabel="Retenir cette proposition"
                 onOpenListing={(target) => setListingPreview(target)}
                 onApply={(pack) => {
-                  setAiPackages((current) => {
+                  setAiPackages(() => {
                     const next = eventPlanAiToPackage(pack, brief.budgetMaxFc);
-                    const without = current.filter((item) => item.id !== next.id);
-                    return [...without, next];
+                    return [next];
                   });
-                  setPlanError('');
-                }}
-                onApplyAll={(packages) => {
-                  setAiPackages(packages.map((pack) => eventPlanAiToPackage(pack, brief.budgetMaxFc)));
                   setPlanError('');
                 }}
               />
@@ -888,52 +883,71 @@ function ClientMarketplaceInner() {
             ) : null}
 
             {workingPackages.length > 0 ? (
-              <EventPlanPacks
-                packages={workingPackages}
-                budgetFc={brief.budgetMaxFc}
-                spendableFc={spendableFc || brief.budgetMaxFc}
-                isFavorite={isFavorite}
-                onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
-                onOpenListing={(item) => setListingPreview({ kind: item.kind, slug: item.slug })}
-                onReplace={replacePackItem}
-                onChooseFinal={planView !== 'final' ? (pack) => {
-                  setFinalPackage({
-                    ...pack,
-                    id: `final-${pack.id}`,
-                    label: pack.label,
-                  });
-                  setPlanView('final');
-                } : undefined}
-                onSave={(pack) => {
-                  setSaveName(`${eventTypeLabel(brief.eventType)} · ${pack.label}`);
-                  setSaveError('');
-                  setSaveTarget(pack);
-                }}
-                onKeep={planView === 'manual' ? (item) => {
-                  const lock: EventPlanLock = {
-                    kind: item.kind,
-                    slug: item.slug,
-                    category: item.kind === 'service' ? item.category : undefined,
-                  };
-                  setPlanLock(lock);
-                  void runPlan({ lock });
-                } : undefined}
-                onWidenSlot={planView === 'manual' ? (slot: PlanMissingSlot) => {
-                  const nextBrief: EventPlanBrief = { ...brief, matchMode: 'widen', missingStrategy: 'widen_city' };
-                  if (slot.slot === 'venue') {
-                    nextBrief.includeVenue = 'yes';
-                  } else {
-                    nextBrief.slots = { ...brief.slots, [slot.slot]: 'required' };
-                    const nextFlex = flexSlots.includes(slot.slot) ? flexSlots : [...flexSlots, slot.slot];
-                    setFlexSlots(nextFlex);
+              <div className="space-y-3 pt-2 animate-fade-in">
+                {planView === 'ai' ? (
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-primary/10 border border-primary/25">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          Formule IA sélectionnée & prête pour votre projet
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          Vous pouvez ajuster chaque ligne, sauvegarder dans Mes packs ou contacter directement les prestataires certifiés.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                <EventPlanPacks
+                  packages={workingPackages}
+                  budgetFc={brief.budgetMaxFc}
+                  spendableFc={spendableFc || brief.budgetMaxFc}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
+                  onOpenListing={(item) => setListingPreview({ kind: item.kind, slug: item.slug })}
+                  onReplace={replacePackItem}
+                  onChooseFinal={planView !== 'final' ? (pack) => {
+                    setFinalPackage({
+                      ...pack,
+                      id: `final-${pack.id}`,
+                      label: pack.label,
+                    });
+                    setPlanView('final');
+                  } : undefined}
+                  onSave={(pack) => {
+                    setSaveName(`${eventTypeLabel(brief.eventType)} · ${pack.label}`);
+                    setSaveError('');
+                    setSaveTarget(pack);
+                  }}
+                  onKeep={planView === 'manual' ? (item) => {
+                    const lock: EventPlanLock = {
+                      kind: item.kind,
+                      slug: item.slug,
+                      category: item.kind === 'service' ? item.category : undefined,
+                    };
+                    setPlanLock(lock);
+                    void runPlan({ lock });
+                  } : undefined}
+                  onWidenSlot={planView === 'manual' ? (slot: PlanMissingSlot) => {
+                    const nextBrief: EventPlanBrief = { ...brief, matchMode: 'widen', missingStrategy: 'widen_city' };
+                    if (slot.slot === 'venue') {
+                      nextBrief.includeVenue = 'yes';
+                    } else {
+                      nextBrief.slots = { ...brief.slots, [slot.slot]: 'required' };
+                      const nextFlex = flexSlots.includes(slot.slot) ? flexSlots : [...flexSlots, slot.slot];
+                      setFlexSlots(nextFlex);
+                      setBrief(nextBrief);
+                      void runPlan({ flexSlots: nextFlex, brief: nextBrief });
+                      return;
+                    }
                     setBrief(nextBrief);
-                    void runPlan({ flexSlots: nextFlex, brief: nextBrief });
-                    return;
-                  }
-                  setBrief(nextBrief);
-                  void runPlan({ lock: planLock, brief: nextBrief });
-                } : undefined}
-              />
+                    void runPlan({ lock: planLock, brief: nextBrief });
+                  } : undefined}
+                />
+              </div>
             ) : !planning && (planView !== 'manual' || !planError) ? (
               <EmptyState
                 icon={<Wallet className="w-5 h-5" />}

@@ -19,6 +19,7 @@ export type AiTokenPaymentMethod = 'mobile' | 'card';
 
 export interface InitiateAiTokenPaymentInput {
   userId?: string | null;
+  deviceId?: string | null;
   paymentMethod: AiTokenPaymentMethod;
   phone?: string | null;
   operator?: string | null;
@@ -66,9 +67,10 @@ export async function initiateAiTokenPayment(
   // Création initiale de la commande
   let dbOrder: any = null;
   try {
-    dbOrder = await prisma.aiTokenOrder.create({
+    dbOrder = await (prisma as any).aiTokenOrder.create({
       data: {
         userId: input.userId || null,
+        deviceId: input.deviceId || null,
         tokensCount,
         amountFc,
         currency: 'CDF',
@@ -84,6 +86,7 @@ export async function initiateAiTokenPayment(
     dbOrder = {
       id: mockId,
       userId: input.userId || null,
+      deviceId: input.deviceId || null,
       tokensCount,
       amountFc,
       currency: 'CDF',
@@ -123,7 +126,7 @@ export async function initiateAiTokenPayment(
     }
 
     try {
-      await prisma.aiTokenOrder.update({
+      await (prisma as any).aiTokenOrder.update({
         where: { id: orderId },
         data: {
           flexPayOrderNumber: flex.orderNumber,
@@ -181,7 +184,7 @@ export async function initiateAiTokenPayment(
   }
 
   try {
-    await prisma.aiTokenOrder.update({
+    await (prisma as any).aiTokenOrder.update({
       where: { id: orderId },
       data: {
         flexPayOrderNumber: flexCard.orderNumber,
@@ -220,17 +223,17 @@ export async function findAiTokenOrderForFlexPay(opts: {
 }) {
   try {
     if (opts.orderId) {
-      const order = await prisma.aiTokenOrder.findUnique({ where: { id: opts.orderId } });
+      const order = await (prisma as any).aiTokenOrder.findUnique({ where: { id: opts.orderId } });
       if (order) return order;
     }
     if (opts.orderNumber) {
-      const order = await prisma.aiTokenOrder.findFirst({
+      const order = await (prisma as any).aiTokenOrder.findFirst({
         where: { flexPayOrderNumber: opts.orderNumber },
       });
       if (order) return order;
     }
     if (opts.reference) {
-      const order = await prisma.aiTokenOrder.findFirst({
+      const order = await (prisma as any).aiTokenOrder.findFirst({
         where: {
           OR: [{ id: opts.reference }, { flexPayReference: opts.reference }],
         },
@@ -333,7 +336,7 @@ export async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber: string): Pr
 
   if (isSuccess) {
     try {
-      await prisma.aiTokenOrder.update({
+      await (prisma as any).aiTokenOrder.update({
         where: { id: order.id },
         data: {
           status: 'PAID',
@@ -365,7 +368,7 @@ export async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber: string): Pr
 
   if (isFailed) {
     try {
-      await prisma.aiTokenOrder.update({
+      await (prisma as any).aiTokenOrder.update({
         where: { id: order.id },
         data: {
           status: 'FAILED',
@@ -403,3 +406,62 @@ export async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber: string): Pr
     message: 'En attente de validation sur votre téléphone...',
   };
 }
+
+/**
+ * Récupère le total des jetons payés et validés attachés à un identifiant d'appareil (device).
+ */
+export async function getDeviceAiTokensSummary(deviceId: string): Promise<{
+  deviceId: string;
+  totalPaidTokens: number;
+  paidOrdersCount: number;
+  lastPaidOrderAt?: string | null;
+}> {
+  if (!deviceId || typeof deviceId !== 'string') {
+    return {
+      deviceId: '',
+      totalPaidTokens: 0,
+      paidOrdersCount: 0,
+    };
+  }
+
+  let totalPaidTokens = 0;
+  let paidOrdersCount = 0;
+  let lastPaidOrderAt: Date | null = null;
+
+  try {
+    const orders = await (prisma as any).aiTokenOrder.findMany({
+      where: {
+        deviceId,
+        status: 'PAID',
+      },
+      select: {
+        tokensCount: true,
+        paidAt: true,
+      },
+    });
+
+    for (const ord of orders) {
+      totalPaidTokens += ord.tokensCount || 0;
+      paidOrdersCount += 1;
+      if (ord.paidAt && (!lastPaidOrderAt || ord.paidAt > lastPaidOrderAt)) {
+        lastPaidOrderAt = ord.paidAt;
+      }
+    }
+  } catch (err) {
+    console.warn('[AiTokenPayment] getDeviceAiTokensSummary fallback to memory:', err);
+    for (const order of memoryOrders.values()) {
+      if (order.deviceId === deviceId && order.status === 'PAID') {
+        totalPaidTokens += order.tokensCount || 0;
+        paidOrdersCount += 1;
+      }
+    }
+  }
+
+  return {
+    deviceId,
+    totalPaidTokens,
+    paidOrdersCount,
+    lastPaidOrderAt: lastPaidOrderAt ? lastPaidOrderAt.toISOString() : null,
+  };
+}
+

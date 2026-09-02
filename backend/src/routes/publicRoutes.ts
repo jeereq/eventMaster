@@ -26,7 +26,12 @@ import {
   getTicketOrderBySession,
   listPublicEventSeats,
 } from '../controllers/publicEventController';
-import { publicPlanEventAi, checkoutAiTokens, verifyAiTokensOrder } from '../controllers/marketplaceClientController';
+import {
+  publicPlanEventAi,
+  checkoutAiTokens,
+  verifyAiTokensOrder,
+  getAiTokensDeviceBalance,
+} from '../controllers/marketplaceClientController';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -112,6 +117,7 @@ router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
 router.post('/event-plan-ai', optionalAuth, publicPlanEventAi);
 router.post('/ai-tokens/checkout', checkoutAiTokens);
 router.get('/ai-tokens/orders/:orderId/verify', verifyAiTokensOrder);
+router.get('/ai-tokens/device/:deviceId/balance', getAiTokensDeviceBalance);
 
 router.post('/payments/flexpay/callback', flexPayCardCallback);
 router.get('/payments/flexpay/callback', flexPayCardCallback);

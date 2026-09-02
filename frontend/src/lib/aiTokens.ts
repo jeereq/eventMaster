@@ -2,10 +2,13 @@ export const MAX_FREE_TRIALS = 10;
 export const AI_TOKEN_PACK_SIZE = 20;
 export const AI_TOKEN_PACK_PRICE_FC = 2000;
 
+export const STORAGE_KEY_AI_DEVICE_ID = 'em_ai_device_id';
 export const STORAGE_KEY_AI_TRIALS = 'em_ai_free_trials_count';
 export const STORAGE_KEY_AI_BONUS_TOKENS = 'em_ai_bonus_tokens';
+export const STORAGE_KEY_AI_CREDITED_ORDERS = 'em_ai_credited_orders';
 
 export interface AiAllowance {
+  deviceId: string;
   freeTrialsUsed: number;
   freeTrialsMax: number;
   freeRemaining: number;
@@ -15,11 +18,75 @@ export interface AiAllowance {
 }
 
 /**
- * Récupère le solde actuel de simulations (10 essais gratuits + jetons achetés).
+ * Récupère ou génère un identifiant unique persistant et rattaché à cet appareil (device).
+ * Stocké à la fois en localStorage et dans un cookie à longue durée (1 an).
+ */
+export function getOrCreateDeviceId(): string {
+  if (typeof window === 'undefined') return 'server_placeholder_device';
+
+  try {
+    // 1) Vérifier localStorage
+    let deviceId = localStorage.getItem(STORAGE_KEY_AI_DEVICE_ID);
+    if (deviceId && deviceId.trim()) {
+      persistDeviceCookie(deviceId.trim());
+      return deviceId.trim();
+    }
+
+    // 2) Vérifier cookie
+    const match = document.cookie.match(new RegExp('(^|;\\s*)em_ai_device_id=([^;]*)'));
+    if (match && match[2]) {
+      deviceId = decodeURIComponent(match[2]);
+      localStorage.setItem(STORAGE_KEY_AI_DEVICE_ID, deviceId);
+      return deviceId;
+    }
+
+    // 3) Générer un nouvel identifiant d'appareil
+    const randomHex = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+    const newId = `dev_${Date.now()}_${randomHex}`;
+    localStorage.setItem(STORAGE_KEY_AI_DEVICE_ID, newId);
+    persistDeviceCookie(newId);
+    return newId;
+  } catch {
+    return 'fallback_device_local';
+  }
+}
+
+function persistDeviceCookie(deviceId: string) {
+  try {
+    if (typeof document !== 'undefined') {
+      const oneYear = 60 * 60 * 24 * 365;
+      document.cookie = `em_ai_device_id=${encodeURIComponent(deviceId)}; max-age=${oneYear}; path=/; SameSite=Lax`;
+    }
+  } catch {
+    // safe fallback
+  }
+}
+
+/**
+ * Récupère la liste des identifiants de commandes déjà créditées sur cet appareil.
+ */
+export function getCreditedOrders(): string[] {
+  try {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem(STORAGE_KEY_AI_CREDITED_ORDERS);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    }
+  } catch {
+    // safe fallback
+  }
+  return [];
+}
+
+/**
+ * Récupère le solde actuel de simulations (10 essais gratuits + jetons achetés rattachés à cet appareil).
  */
 export function getAiSimulationAllowance(): AiAllowance {
   let freeTrialsUsed = 0;
   let bonusTokens = 0;
+  const deviceId = getOrCreateDeviceId();
 
   try {
     if (typeof window !== 'undefined') {
@@ -37,6 +104,7 @@ export function getAiSimulationAllowance(): AiAllowance {
   const totalRemaining = freeRemaining + bonusTokens;
 
   return {
+    deviceId,
     freeTrialsUsed,
     freeTrialsMax: MAX_FREE_TRIALS,
     freeRemaining,
@@ -71,18 +139,56 @@ export function consumeAiSimulation(): AiAllowance {
 }
 
 /**
- * Crédite des jetons de simulation supplémentaires (ex: 20 jetons pour 2000 FC).
+ * Crédite des jetons de simulation supplémentaires sur cet appareil (ex: 20 jetons pour 2 000 FC).
+ * Enregistre également la commande pour éviter tout double crédit.
  */
-export function addPurchasedAiTokens(amount = AI_TOKEN_PACK_SIZE): AiAllowance {
+export function addPurchasedAiTokens(amount = AI_TOKEN_PACK_SIZE, orderId?: string | null): AiAllowance {
   const current = getAiSimulationAllowance();
+  const credited = getCreditedOrders();
+
+  // Si l'orderId a déjà été crédité sur cet appareil, on ne le recompte pas
+  if (orderId && credited.includes(orderId)) {
+    return current;
+  }
+
   const nextBonus = current.bonusTokens + Math.max(1, amount);
 
   try {
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY_AI_BONUS_TOKENS, String(nextBonus));
+      if (orderId) {
+        credited.push(orderId);
+        localStorage.setItem(STORAGE_KEY_AI_CREDITED_ORDERS, JSON.stringify(credited));
+      }
     }
   } catch {
     // Ignorer si impossible d'écrire
+  }
+
+  return getAiSimulationAllowance();
+}
+
+/**
+ * Synchronise les jetons de l'appareil avec le backend si des paiements ont été confirmés hors-ligne.
+ */
+export async function syncDeviceAiTokensWithBackend(apiClient: any): Promise<AiAllowance> {
+  const deviceId = getOrCreateDeviceId();
+  if (!deviceId || deviceId.startsWith('server_') || !apiClient) {
+    return getAiSimulationAllowance();
+  }
+
+  try {
+    const data = await apiClient.get(`/public/ai-tokens/device/${encodeURIComponent(deviceId)}/balance`);
+    if (data && typeof data.totalPaidTokens === 'number') {
+      const current = getAiSimulationAllowance();
+      // Si le total payé sur le serveur pour cet appareil dépasse le solde enregistré
+      if (data.totalPaidTokens > current.bonusTokens) {
+        const diff = data.totalPaidTokens - current.bonusTokens;
+        return addPurchasedAiTokens(diff, `sync_server_${Date.now()}`);
+      }
+    }
+  } catch {
+    // safe fallback si hors ligne
   }
 
   return getAiSimulationAllowance();

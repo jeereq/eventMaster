@@ -8,6 +8,7 @@ import { simulateEventPlanAi } from '../services/eventPlanAiService';
 import {
   initiateAiTokenPayment,
   verifyAndFinalizeAiTokenOrder,
+  getDeviceAiTokensSummary,
   type AiTokenPaymentMethod,
 } from '../services/aiTokenFlexPayService';
 
@@ -227,10 +228,12 @@ export async function checkoutAiTokens(req: Request, res: Response): Promise<voi
     const operator = typeof rawBody.operator === 'string' ? rawBody.operator.trim() : undefined;
     const tokensCount = Number(rawBody.tokensCount) || 20;
     const amountFc = Number(rawBody.amountFc) || 2000;
+    const deviceId = typeof rawBody.deviceId === 'string' ? rawBody.deviceId.trim() : null;
     const userId = (req as any).user?.id || null;
 
     const result = await initiateAiTokenPayment({
       userId,
+      deviceId,
       paymentMethod: paymentMethod as AiTokenPaymentMethod,
       phone,
       operator,
@@ -242,6 +245,22 @@ export async function checkoutAiTokens(req: Request, res: Response): Promise<voi
   } catch (error: any) {
     console.error('checkoutAiTokens:', error);
     res.status(400).json({ error: error?.message || 'Impossible de traiter le paiement des jetons IA.' });
+  }
+}
+
+export async function getAiTokensDeviceBalance(req: Request, res: Response): Promise<void> {
+  try {
+    const deviceId = String(req.params.deviceId || req.query.deviceId || '').trim();
+    if (!deviceId) {
+      res.status(400).json({ error: 'Identifiant d’appareil manquant.' });
+      return;
+    }
+
+    const summary = await getDeviceAiTokensSummary(deviceId);
+    res.status(200).json(summary);
+  } catch (error: any) {
+    console.error('getAiTokensDeviceBalance:', error);
+    res.status(500).json({ error: error?.message || 'Erreur lors de la récupération du solde de l’appareil.' });
   }
 }
 

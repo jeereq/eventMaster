@@ -20,6 +20,7 @@ import {
   AI_TOKEN_PACK_SIZE,
   AI_TOKEN_PACK_PRICE_FC,
   addPurchasedAiTokens,
+  getOrCreateDeviceId,
 } from '@/lib/aiTokens';
 import { api } from '@/lib/api';
 
@@ -60,9 +61,9 @@ export default function AiTokenPurchaseModal({
   }, []);
 
   const handleSuccess = useCallback(
-    (tokensCount = AI_TOKEN_PACK_SIZE) => {
+    (tokensCount = AI_TOKEN_PACK_SIZE, orderId?: string | null) => {
       clearTimer();
-      addPurchasedAiTokens(tokensCount);
+      addPurchasedAiTokens(tokensCount, orderId || activeOrderId);
       setStep('success');
       if (onSuccess) {
         onSuccess(tokensCount);
@@ -73,7 +74,7 @@ export default function AiTokenPurchaseModal({
         setActiveOrderId(null);
       }, 2000);
     },
-    [onClose, onSuccess],
+    [activeOrderId, onClose, onSuccess],
   );
 
   const checkPaymentStatus = useCallback(
@@ -88,7 +89,7 @@ export default function AiTokenPurchaseModal({
         };
 
         if (res?.paid || res?.status === 'PAID') {
-          handleSuccess(res.tokensCount || AI_TOKEN_PACK_SIZE);
+          handleSuccess(res.tokensCount || AI_TOKEN_PACK_SIZE, orderId);
         } else if (res?.status === 'FAILED') {
           clearTimer();
           setError('Le paiement a échoué ou a été refusé par l’opérateur Mobile Money.');
@@ -136,12 +137,14 @@ export default function AiTokenPurchaseModal({
 
     setLoading(true);
     try {
+      const deviceId = getOrCreateDeviceId();
       const res = (await api.post('/public/ai-tokens/checkout', {
         paymentMethod,
         phone: cleanPhone || undefined,
         operator: paymentMethod === 'mobile' ? operator : undefined,
         tokensCount: AI_TOKEN_PACK_SIZE,
         amountFc: AI_TOKEN_PACK_PRICE_FC,
+        deviceId,
       })) as {
         success?: boolean;
         orderId?: string;
@@ -163,7 +166,7 @@ export default function AiTokenPurchaseModal({
           return;
         }
         // Fallback validation directe si sandbox local
-        handleSuccess(AI_TOKEN_PACK_SIZE);
+        handleSuccess(AI_TOKEN_PACK_SIZE, res.orderId);
         return;
       }
 
@@ -172,7 +175,7 @@ export default function AiTokenPurchaseModal({
         setActiveOrderId(res.orderId);
         setStep('waiting_mobile');
       } else {
-        handleSuccess(AI_TOKEN_PACK_SIZE);
+        handleSuccess(AI_TOKEN_PACK_SIZE, res.orderId);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de lancer le paiement.');

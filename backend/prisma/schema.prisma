@@ -1068,6 +1068,7 @@ model AiTokenOrder {
   id                       String    @id @default(uuid())
   userId                   String?
   user                     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId                 String?
   tokensCount              Int       @default(20)
   amountFc                 Float     @default(2000)
   currency                 String    @default("CDF")
@@ -1086,5 +1087,6 @@ model AiTokenOrder {
 
   @@index([flexPayReference])
   @@index([userId])
+  @@index([deviceId])
 }
 

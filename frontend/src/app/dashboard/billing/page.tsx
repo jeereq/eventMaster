@@ -5,11 +5,11 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   CreditCard, Check, Loader2, Sparkles,
-  Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck, FileText,
+  Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck, FileText, ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Alert, SkeletonBillingView } from '@/components/ui';
+import { Alert, SkeletonBillingView, Button } from '@/components/ui';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import PaymentPendingView from '@/components/PaymentPendingView';
@@ -338,35 +338,94 @@ function BillingPageInner() {
     return <SkeletonBillingView />;
   }
 
+  const isClientAccount = tenant?.accountKind === 'CLIENT';
+
   return (
     <div className="space-y-10 w-full">
       <div className="text-center space-y-3">
-        <p className="text-sm font-semibold text-primary uppercase tracking-widest">Facturation</p>
+        <p className="text-sm font-semibold text-primary uppercase tracking-widest">Facturation & Forfaits</p>
         <h1 className="text-3xl font-bold text-foreground">
-          Forfait de {tenant?.name || 'votre organisation'}
+          {isClientAccount ? 'Espace Forfaits & Abonnements' : `Forfait de ${tenant?.name || 'votre organisation'}`}
         </h1>
         <p className="text-muted text-sm">
-          Forfaits adaptés à votre type de compte · tarifs en {CURRENCY_NAME} (FC) · annuel −{ANNUAL_DISCOUNT_PERCENT} % (y compris Particulier)
+          {isClientAccount
+            ? 'Information sur votre type de compte et découverte des forfaits d’organisation'
+            : `Forfaits adaptés à votre type de compte · tarifs en ${CURRENCY_NAME} (FC) · annuel −${ANNUAL_DISCOUNT_PERCENT} % (y compris Particulier)`}
         </p>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
-      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Versements de vos commerciaux</p>
-          <p className="text-xs text-muted mt-1">
-            Votre organisation verse hors plateforme, puis vous joignez une preuve. Distinct d’EventMaster.
-          </p>
+      {isClientAccount && (
+        <div className="rounded-3xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-surface to-surface-muted p-6 sm:p-8 space-y-5 shadow-md animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                Compte Client Actif · 100 % Gratuit à vie
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                Votre compte actuel est un Compte Client (Recherche & Réservations)
+              </h2>
+              <p className="text-sm text-muted leading-relaxed max-w-3xl">
+                Vous êtes actuellement connecté avec un <strong>Compte Client Particulier</strong>. Ce compte est 100 % gratuit : il vous permet d&apos;explorer le catalogue, d&apos;effectuer des simulations IA, de demander des devis directs aux prestataires et d&apos;acheter vos billets d&apos;événements <strong>sans aucun abonnement SaaS payant</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-surface border border-border space-y-3 text-xs">
+            <div className="flex items-start gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-bold text-foreground text-sm">
+                  Vous souhaitez créer vos propres événements ou publier vos prestations sur la plateforme ?
+                </p>
+                <p className="text-xs text-muted leading-relaxed">
+                  Les forfaits d&apos;abonnement ci-dessous (Particulier Organisateur, Business B2B, Vitrine Prestataire) sont réservés aux espaces de gestion événementielle. Pour y souscrire et accéder aux outils d&apos;organisation (plans de table 2D/3D, invitations WhatsApp, pass QR), <strong>vous devez créer un compte dédié (Organisateur ou Prestataire) distinct de votre compte client actuel</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border">
+              <Link href="/register?kind=ORGANIZER&intent=personal">
+                <Button size="md" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  Créer un compte Organisateur
+                </Button>
+              </Link>
+              <Link href="/register?kind=VENDOR&intent=vendor">
+                <Button size="md" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  Créer un compte Prestataire / Salle
+                </Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button size="md" variant="ghost">
+                  Retourner à mon tableau de bord client
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
-        <Link
-          href="/dashboard/billing/payouts"
-          className="text-sm font-semibold text-primary hover:underline shrink-0"
-        >
-          Ouvrir la file →
-        </Link>
-      </div>
+      )}
+
+      {!isClientAccount && (
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Versements de vos commerciaux</p>
+            <p className="text-xs text-muted mt-1">
+              Votre organisation verse hors plateforme, puis vous joignez une preuve. Distinct d’EventMaster.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/billing/payouts"
+            className="text-sm font-semibold text-primary hover:underline shrink-0"
+          >
+            Ouvrir la file →
+          </Link>
+        </div>
+      )}
 
       {(!billing || billing.plan === 'FREE') && (
         <Alert variant="info">

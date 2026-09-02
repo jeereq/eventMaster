@@ -46,6 +46,7 @@ import {
   getAiSimulationAllowance,
   consumeAiSimulation,
   addPurchasedAiTokens,
+  syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
@@ -236,9 +237,10 @@ export default function LandingAiSimulationShowcase() {
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const aiStatus = params.get('ai_tokens_status') || params.get('ai_tokens');
+        const orderId = params.get('orderId');
         if (aiStatus === 'success' || aiStatus === 'paid') {
           const added = parseInt(params.get('tokens') || String(AI_TOKEN_PACK_SIZE), 10) || AI_TOKEN_PACK_SIZE;
-          addPurchasedAiTokens(added);
+          addPurchasedAiTokens(added, orderId);
           // Nettoyage propre de l'URL sans rechargement
           const url = new URL(window.location.href);
           url.searchParams.delete('ai_tokens_status');
@@ -252,6 +254,10 @@ export default function LandingAiSimulationShowcase() {
       // safe fallback
     }
     setAllowance(getAiSimulationAllowance());
+    // Synchronisation en arrière-plan avec le backend pour cet appareil
+    void syncDeviceAiTokensWithBackend(api).then((synced) => {
+      if (synced) setAllowance(synced);
+    });
   }, []);
 
   // Formulaire live personnalisé
