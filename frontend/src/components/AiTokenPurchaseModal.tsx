@@ -274,14 +274,14 @@ export default function AiTokenPurchaseModal({
       {/* ─── ÉTAPE 1 : FORMULAIRE DE PAIEMENT RÉEL ─── */}
       {step === 'form' && (
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-          {/* Carte d'offre Pack 20 Jetons */}
+          {/* Carte d'offre Pack 15 Jetons */}
           <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                 <Coins className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">Pack 20 Simulations IA</p>
+                <p className="text-xs font-bold text-foreground">Pack {AI_TOKEN_PACK_SIZE} Simulations IA</p>
                 <p className="text-[11px] text-muted">3 packs budget calculés par simulation</p>
               </div>
             </div>

@@ -176,9 +176,9 @@ export async function notifyAiTokenPayment(order: {
     payerEmail,
     payerPhone,
     deviceId: order.deviceId,
-    summary: `Recharge ${order.tokensCount || 20} simulations IA (${order.paymentMethod === 'card' ? 'carte' : 'Mobile Money'})`,
+    summary: `Recharge ${order.tokensCount || 15} simulations IA (${order.paymentMethod === 'card' ? 'carte' : 'Mobile Money'})`,
     metadata: {
-      tokensCount: order.tokensCount || 20,
+      tokensCount: order.tokensCount || 15,
       paymentMethod: order.paymentMethod || null,
       orderId: order.id,
     },

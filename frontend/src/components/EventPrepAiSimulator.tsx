@@ -15,6 +15,7 @@ import { snapshotPlanItems } from '@/lib/eventPlan';
 import {
   applyServerAllowance,
   AI_ALLOWANCE_CHANGED,
+  AI_TOKEN_PACK_SIZE,
   consumeAiSimulation,
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
@@ -182,7 +183,7 @@ export default function EventPrepAiSimulator({
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
-      setError('Plus de simulations disponibles. Rechargez 20 recherches pour continuer.');
+      setError('Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
       publishAllowance(current);
       return;
     }
@@ -646,7 +647,7 @@ export default function EventPrepAiSimulator({
                         </Button>
                       </Link>
                       <Button size="sm" variant="secondary" onClick={() => setPurchaseModalOpen(true)}>
-                        Acheter 20 sims
+                        Acheter {AI_TOKEN_PACK_SIZE} sims
                       </Button>
                     </div>
                   )}

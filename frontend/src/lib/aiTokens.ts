@@ -1,6 +1,6 @@
 export const MAX_FREE_TRIALS = 10;
-export const AI_TOKEN_PACK_SIZE = 20;
-export const AI_TOKEN_PACK_PRICE_FC = 2000;
+export const AI_TOKEN_PACK_SIZE = 15;
+export const AI_TOKEN_PACK_PRICE_FC = 2500;
 
 export const STORAGE_KEY_AI_DEVICE_ID = 'em_ai_device_id';
 export const STORAGE_KEY_AI_TRIALS = 'em_ai_free_trials_count';
@@ -170,7 +170,7 @@ export function consumeAiSimulation(): AiAllowance {
 }
 
 /**
- * Crédite des jetons de simulation supplémentaires sur cet appareil (ex: 20 jetons pour 2 000 FC).
+ * Crédite des jetons de simulation supplémentaires sur cet appareil (ex: 15 jetons pour 2 500 FC).
  * Enregistre également la commande pour éviter tout double crédit.
  */
 export function addPurchasedAiTokens(amount = AI_TOKEN_PACK_SIZE, orderId?: string | null): AiAllowance {

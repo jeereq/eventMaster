@@ -331,8 +331,8 @@ export async function checkoutAiTokens(req: Request, res: Response): Promise<voi
     const paymentMethod = String(rawBody.paymentMethod || 'mobile').toLowerCase() === 'card' ? 'card' : 'mobile';
     const phone = typeof rawBody.phone === 'string' ? rawBody.phone.trim() : '';
     const operator = typeof rawBody.operator === 'string' ? rawBody.operator.trim() : undefined;
-    const tokensCount = Number(rawBody.tokensCount) || 20;
-    const amountFc = Number(rawBody.amountFc) || 2000;
+    const tokensCount = Number(rawBody.tokensCount) || 15;
+    const amountFc = Number(rawBody.amountFc) || 2500;
     const deviceId = typeof rawBody.deviceId === 'string' ? rawBody.deviceId.trim() : null;
     const userId = (req as any).user?.id || null;
 

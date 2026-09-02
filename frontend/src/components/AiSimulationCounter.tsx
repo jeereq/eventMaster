@@ -4,7 +4,7 @@ import React from 'react';
 import { Coins, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
-import { AI_TOKEN_PACK_PRICE_FC, type AiAllowance } from '@/lib/aiTokens';
+import { AI_TOKEN_PACK_PRICE_FC, AI_TOKEN_PACK_SIZE, type AiAllowance } from '@/lib/aiTokens';
 
 export default function AiSimulationCounter({
   allowance,
@@ -90,7 +90,7 @@ export default function AiSimulationCounter({
           className="inline-flex items-center justify-center gap-1.5 min-h-11 sm:min-h-9 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation"
         >
           <Coins className="w-3.5 h-3.5 text-amber-500" />
-          <span>Acheter 20 sims ({formatFc(AI_TOKEN_PACK_PRICE_FC)})</span>
+          <span>Acheter {AI_TOKEN_PACK_SIZE} sims ({formatFc(AI_TOKEN_PACK_PRICE_FC)})</span>
         </button>
       </div>
 

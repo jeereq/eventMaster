@@ -198,7 +198,7 @@ export async function requireAiSimulationCredit(deviceId: string, userId?: strin
   if (!allowance.canSimulate) {
     fail(
       402,
-      'Plus de simulations disponibles. Rechargez 20 recherches pour continuer.',
+      'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.',
     );
   }
   return allowance;
@@ -211,7 +211,7 @@ export async function consumeAiSimulationCredit(
   const { wallet, paid } = await ensureAiSimulationWallet(deviceId, userId);
   const remaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed) + Math.max(0, wallet.bonusTokens);
   if (remaining <= 0) {
-    fail(402, 'Plus de simulations disponibles. Rechargez 20 recherches pour continuer.');
+    fail(402, 'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
   }
 
   if (wallet.bonusTokens > 0) {
@@ -220,7 +220,7 @@ export async function consumeAiSimulationCredit(
       data: { bonusTokens: { decrement: 1 } },
     });
     if (!result.count) {
-      fail(402, 'Plus de simulations disponibles. Rechargez 20 recherches pour continuer.');
+      fail(402, 'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
     }
   } else {
     const result = await prisma.aiSimulationWallet.updateMany({
@@ -228,7 +228,7 @@ export async function consumeAiSimulationCredit(
       data: { freeTrialsUsed: { increment: 1 } },
     });
     if (!result.count) {
-      fail(402, 'Plus de simulations disponibles. Rechargez 20 recherches pour continuer.');
+      fail(402, 'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
     }
   }
 
@@ -252,12 +252,12 @@ export async function creditPaidAiTokenOrder(order: {
   const updated = await prisma.aiSimulationWallet.update({
     where: { id: wallet.id },
     data: {
-      bonusTokens: wallet.bonusTokens + Math.max(1, order.tokensCount || 20),
+      bonusTokens: wallet.bonusTokens + Math.max(1, order.tokensCount || 15),
       creditedOrderIds: [...credited, order.id],
     },
   });
   return serialize(updated, {
-    totalPaidTokens: paid.totalPaidTokens + Math.max(1, order.tokensCount || 20),
+    totalPaidTokens: paid.totalPaidTokens + Math.max(1, order.tokensCount || 15),
     paidOrdersCount: paid.paidOrdersCount + 1,
   });
 }
