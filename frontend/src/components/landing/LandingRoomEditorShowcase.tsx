@@ -131,8 +131,8 @@ export default function LandingRoomEditorShowcase() {
     : '/register?kind=ORGANIZER&intent=personal&action=room_editor';
 
   return (
-    <section id="editeur" className="py-16 sm:py-24 bg-surface border-t border-border scroll-mt-14">
-      <div className="page-container space-y-12">
+    <section id="editeur" className="py-16 sm:py-24 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-14 em-landing-section-glow">
+      <div className="page-container relative z-10 space-y-12">
         {/* En-tête de section avec CTAs directs */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
           <div className="max-w-2xl space-y-3">

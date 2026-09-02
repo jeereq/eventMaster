@@ -5273,7 +5273,7 @@ function DashboardPageContent() {
       )}
 
       {user?.role === 'USER' && tenant?.accountKind !== 'VENDOR' && (planQuota == null || (planQuota.limits.maxEvents ?? 0) > 0) ? (
-        <Card>
+        <Card className="em-dashboard-card-glow">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="space-y-1">
               <h3 className="text-base font-semibold tracking-tight">Vos devis, réservations et sélections</h3>
@@ -5282,15 +5282,15 @@ function DashboardPageContent() {
             <Button size="sm" onClick={() => router.push('/dashboard/bookings')}>Ouvrir</Button>
           </div>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <Link href="/dashboard/bookings?tab=quotes" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
+            <Link href="/dashboard/bookings?tab=quotes" className="rounded-[var(--radius-card)] border border-border/80 bg-surface/80 hover:bg-surface px-3 py-2.5 hover:border-primary/50 hover:shadow-xs transition">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Devis</p>
               <p className="text-sm font-semibold mt-0.5">Demandes en cours</p>
             </Link>
-            <Link href="/dashboard/bookings?tab=bookings" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
+            <Link href="/dashboard/bookings?tab=bookings" className="rounded-[var(--radius-card)] border border-border/80 bg-surface/80 hover:bg-surface px-3 py-2.5 hover:border-primary/50 hover:shadow-xs transition">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Réservations</p>
               <p className="text-sm font-semibold mt-0.5">Dates confirmées</p>
             </Link>
-            <Link href="/dashboard/bookings?tab=packs" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
+            <Link href="/dashboard/bookings?tab=packs" className="rounded-[var(--radius-card)] border border-border/80 bg-surface/80 hover:bg-surface px-3 py-2.5 hover:border-primary/50 hover:shadow-xs transition">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Packs & favoris</p>
               <p className="text-sm font-semibold mt-0.5">Vos sélections</p>
             </Link>
@@ -5300,7 +5300,7 @@ function DashboardPageContent() {
 
       {showStats && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="bg-surface/90 dark:bg-slate-900/80 border border-border/80 hover:border-primary/40 rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3 transition-all duration-200 hover:shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Événements</span>
               <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
@@ -5314,7 +5314,7 @@ function DashboardPageContent() {
               <p className="text-[11px] text-muted mt-1">Vos événements créés</p>
             </div>
           </div>
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="bg-surface/90 dark:bg-slate-900/80 border border-border/80 hover:border-primary/40 rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3 transition-all duration-200 hover:shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Invités</span>
               <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 p-1.5 rounded-[var(--radius-button)]">
@@ -5328,7 +5328,7 @@ function DashboardPageContent() {
               <p className="text-[11px] text-muted mt-1">Invités sur votre forfait</p>
             </div>
           </div>
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="bg-surface/90 dark:bg-slate-900/80 border border-border/80 hover:border-primary/40 rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3 transition-all duration-200 hover:shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Modèles</span>
               <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
@@ -5342,7 +5342,7 @@ function DashboardPageContent() {
               <p className="text-[11px] text-muted mt-1">Modèles d&apos;invitations</p>
             </div>
           </div>
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="bg-surface/90 dark:bg-slate-900/80 border border-border/80 hover:border-primary/40 rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3 transition-all duration-200 hover:shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Forfait</span>
               <div className="bg-primary/10 dark:bg-primary/15 text-primary p-1.5 rounded-[var(--radius-button)]">

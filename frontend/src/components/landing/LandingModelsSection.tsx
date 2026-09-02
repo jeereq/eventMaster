@@ -36,9 +36,9 @@ export default function LandingModelsSection({
     <section
       ref={revealRef}
       id="modeles"
-      className="em-reveal py-16 sm:py-20 bg-background border-t border-border scroll-mt-16"
+      className="em-reveal py-16 sm:py-20 bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow-alt"
     >
-      <div className="page-container space-y-8">
+      <div className="page-container relative z-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
             <div className="flex items-center gap-2">

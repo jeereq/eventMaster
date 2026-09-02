@@ -857,9 +857,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </aside>
 
       {/* Contenu principal */}
-      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
+      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col em-dashboard-glow-bg">
         <DashboardTopBar />
-        <div className="page-container pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
+        <div className="page-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
           <UserLegalGate>
             {children}
             <FirstLoginTourHost />

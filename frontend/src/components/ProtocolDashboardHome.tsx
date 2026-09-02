@@ -106,28 +106,28 @@ export default function ProtocolDashboardHome() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Link
           href="/dashboard/protocol"
-          className="rounded-2xl border border-border bg-surface px-3.5 py-3 hover:border-primary/40 hover:bg-primary/5 transition"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
         >
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-            <ScanLine className="w-3.5 h-3.5" /> Accueil
+            <ScanLine className="w-3.5 h-3.5 text-primary" /> Accueil
           </p>
           <p className="text-sm font-semibold mt-1">Événements du jour J</p>
         </Link>
         <Link
           href="/dashboard/bookings?tab=quotes"
-          className="rounded-2xl border border-border bg-surface px-3.5 py-3 hover:border-primary/40 hover:bg-primary/5 transition"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
         >
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-            <Inbox className="w-3.5 h-3.5" /> Devis
+            <Inbox className="w-3.5 h-3.5 text-primary" /> Devis
           </p>
           <p className="text-sm font-semibold mt-1">Suivi des demandes</p>
         </Link>
         <Link
           href="/dashboard/bookings?tab=bookings"
-          className="rounded-2xl border border-border bg-surface px-3.5 py-3 hover:border-primary/40 hover:bg-primary/5 transition"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
         >
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-            <CalendarCheck className="w-3.5 h-3.5" /> Réservations
+            <CalendarCheck className="w-3.5 h-3.5 text-primary" /> Réservations
           </p>
           <p className="text-sm font-semibold mt-1">Dates confirmées</p>
         </Link>

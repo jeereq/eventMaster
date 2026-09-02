@@ -209,9 +209,9 @@ export default function LandingPricingSection({
  return (
  <section
  id="tarifs"
- className="py-16 sm:py-20 bg-background border-t border-border scroll-mt-16"
+ className="py-16 sm:py-20 bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow-alt"
  >
- <div className="page-container">
+ <div className="page-container relative z-10">
         <div className="max-w-2xl mb-10 space-y-2.5">
           <div className="flex items-center gap-2">
             <span className="em-festive-chip">

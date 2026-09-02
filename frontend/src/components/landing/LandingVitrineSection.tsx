@@ -265,13 +265,13 @@ export default function LandingVitrineSection() {
   );
 
   return (
-    <section ref={revealRef} className="em-reveal py-14 sm:py-16 border-t border-border bg-surface">
+    <section ref={revealRef} className="em-reveal py-14 sm:py-16 border-t border-border bg-surface/80 dark:bg-background/80 em-landing-section-glow">
       <div id="catalogue" className="scroll-mt-16" />
       <div id="salles" className="scroll-mt-16" />
       <div id="prestataires" className="scroll-mt-16" />
       <div id="locations" className="scroll-mt-16" />
       <div id="evenements" className="scroll-mt-16" />
-      <div className="page-container space-y-8">
+      <div className="page-container relative z-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
             <div className="flex items-center gap-2">
