@@ -1271,14 +1271,20 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
                       writeRouteVoiceEnabled(next);
                       if (!next) stopRouteVoice();
                     }}
-                    className="p-1 rounded-md text-muted hover:text-foreground"
+                    className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-md text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation active:scale-95 cursor-pointer"
                     aria-label={voiceOn ? 'Couper la voix' : 'Activer la voix'}
                     title={voiceOn ? 'Couper la voix féminine' : 'Activer la voix féminine'}
                   >
                     {voiceOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                   </button>
                 ) : null}
-                <button type="button" onClick={clearRoute} className="p-1 rounded-md text-muted hover:text-foreground" aria-label="Annuler la navigation">
+                <button
+                  type="button"
+                  onClick={clearRoute}
+                  className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-md text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation active:scale-95 cursor-pointer"
+                  aria-label="Annuler la navigation"
+                  title="Annuler la navigation"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>

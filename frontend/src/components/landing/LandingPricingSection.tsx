@@ -515,8 +515,13 @@ export default function LandingPricingSection({
  </button>
 
  {showComparison && (
- <div className="overflow-x-auto border-t border-border dark:border-border">
- <table className="w-full text-left min-w-[960px]">
+ <div className="border-t border-border dark:border-border">
+   <div className="sm:hidden px-4 py-2 bg-primary/5 text-primary text-xs font-medium flex items-center justify-between border-b border-border/80">
+     <span>↔ Faites glisser pour comparer tous les forfaits</span>
+     <span className="font-mono text-[10px] bg-primary/10 px-1.5 py-0.5 rounded">9 forfaits</span>
+   </div>
+   <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
+     <table className="w-full text-left min-w-[960px]">
  <thead>
  <tr className="bg-surface-muted dark:bg-background border-b border-border dark:border-border">
  <th className="py-3 px-4 text-xs font-bold text-muted uppercase sticky left-0 bg-surface-muted dark:bg-background z-10">
@@ -571,6 +576,7 @@ export default function LandingPricingSection({
  })}
  </tbody>
  </table>
+   </div>
  </div>
  )}
  </div>

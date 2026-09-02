@@ -384,11 +384,11 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                               <button
                                 type="button"
                                 onClick={() => removeSeat(s.tableId, s.seatIndex)}
-                                className="text-muted hover:text-rose-600 ml-1 p-1 -mr-1 rounded-md min-w-[24px] min-h-[24px] inline-flex items-center justify-center touch-manipulation active:scale-90 hover:bg-rose-50"
+                                className="text-muted hover:text-rose-600 ml-1 p-1.5 -mr-1 rounded-md min-w-[36px] min-h-[36px] sm:min-w-[28px] sm:min-h-[28px] inline-flex items-center justify-center touch-manipulation active:scale-95 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                                 title="Retirer ce siège"
                                 aria-label={`Retirer le siège ${s.tableName} n°${s.seatIndex + 1}`}
                               >
-                                <X className="w-3.5 h-3.5" />
+                                <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                               </button>
                             </span>
                           );

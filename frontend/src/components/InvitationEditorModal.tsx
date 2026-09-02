@@ -173,11 +173,25 @@ export default function InvitationEditorModal({
           <span className="text-lg font-bold">
             {editingId ? "Modifier l'invitation" : "Créer une invitation"}
           </span>
-          <div className="flex items-center gap-2 mr-6 text-muted">
-            <button type="button" onClick={handleUndo} disabled={historyIndex <= 0} className="p-1.5 hover:text-foreground disabled:opacity-30 rounded-lg hover:bg-surface-muted transition" title="Annuler (Ctrl+Z)">
+          <div className="flex items-center gap-1.5 mr-6 text-muted">
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center hover:text-foreground disabled:opacity-30 rounded-lg hover:bg-surface-muted transition touch-manipulation active:scale-95 cursor-pointer"
+              title="Annuler (Ctrl+Z)"
+              aria-label="Annuler la modification"
+            >
               <Undo className="w-4 h-4" />
             </button>
-            <button type="button" onClick={handleRedo} disabled={historyIndex >= history.length - 1} className="p-1.5 hover:text-foreground disabled:opacity-30 rounded-lg hover:bg-surface-muted transition" title="Rétablir (Ctrl+Y)">
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center hover:text-foreground disabled:opacity-30 rounded-lg hover:bg-surface-muted transition touch-manipulation active:scale-95 cursor-pointer"
+              title="Rétablir (Ctrl+Y)"
+              aria-label="Rétablir la modification"
+            >
               <Redo className="w-4 h-4" />
             </button>
           </div>

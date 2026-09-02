@@ -51,7 +51,7 @@ export default function SiteHeader({
 
   const links = variant === 'minimal' ? [] : PUBLIC_LINKS;
   const iconBtn =
-    'p-2.5 sm:p-2 min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary';
+    'p-2.5 sm:p-2 min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer';
 
   const isLinkActive = (href: string) => {
     if (href === '/marketplace') {

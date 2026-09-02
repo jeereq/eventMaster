@@ -150,8 +150,9 @@ export default function SeatSelectionPlanCanvas({
           <button
             type="button"
             onClick={() => adjustZoom(-0.1)}
-            className="p-2 sm:p-1 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
+            className="p-2 sm:p-1 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
             aria-label="Zoom arrière"
+            title="Zoom arrière"
           >
             <ZoomOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
@@ -159,16 +160,18 @@ export default function SeatSelectionPlanCanvas({
           <button
             type="button"
             onClick={() => adjustZoom(0.1)}
-            className="p-2 sm:p-1 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
+            className="p-2 sm:p-1 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
             aria-label="Zoom avant"
+            title="Zoom avant"
           >
             <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
           <button
             type="button"
             onClick={() => setZoom(1)}
-            className="p-2 sm:p-1 min-w-[38px] min-h-[38px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
-            aria-label="Réinitialiser"
+            className="p-2 sm:p-1 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
+            aria-label="Recentrer le plan"
+            title="Recentrer le plan"
           >
             <RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>

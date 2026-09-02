@@ -648,8 +648,13 @@ function BillingPageInner() {
           {showComparison ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
         {showComparison && (
-          <div className="overflow-x-auto border-t border-border">
-            <table className="w-full text-sm min-w-[960px]">
+          <div className="border-t border-border">
+            <div className="sm:hidden px-4 py-2 bg-primary/5 text-primary text-xs font-medium flex items-center justify-between border-b border-border/80">
+              <span>↔ Faites glisser pour comparer tous les forfaits</span>
+              <span className="font-mono text-[10px] bg-primary/10 px-1.5 py-0.5 rounded">9 forfaits</span>
+            </div>
+            <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
+              <table className="w-full text-sm min-w-[960px]">
               <thead>
                 <tr className="bg-surface-muted">
                   <th className="text-left px-4 py-2 text-xs text-muted">Fonctionnalité</th>
@@ -673,6 +678,7 @@ function BillingPageInner() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
