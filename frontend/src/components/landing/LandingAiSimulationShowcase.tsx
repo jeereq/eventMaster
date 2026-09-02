@@ -40,7 +40,6 @@ import { useLandingReveal } from '@/components/landing/useLandingReveal';
 import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
 import { communesForCity } from '@/lib/rdcCities';
 import {
-  MAX_FREE_TRIALS,
   AI_TOKEN_PACK_SIZE,
   AI_TOKEN_PACK_PRICE_FC,
   getAiSimulationAllowance,
@@ -50,6 +49,7 @@ import {
   type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
+import AiSimulationCounter from '@/components/AiSimulationCounter';
 
 interface SimulationScenario {
   id: string;
@@ -286,7 +286,7 @@ export default function LandingAiSimulationShowcase() {
     : '/register?kind=CLIENT&intent=seeker&action=ai_simulator';
 
   const handleRunLiveSimulation = async () => {
-    if (!isLoggedIn && allowance.totalRemaining <= 0) {
+    if (allowance.totalRemaining <= 0) {
       setPurchaseModalOpen(true);
       return;
     }
@@ -314,10 +314,7 @@ export default function LandingAiSimulationShowcase() {
       setLiveResult(res);
       setLiveSelectedPackId(packages[1]?.id || packages[0]?.id || 'balanced');
 
-      if (!isLoggedIn) {
-        const nextAllowance = consumeAiSimulation();
-        setAllowance(nextAllowance);
-      }
+      setAllowance(consumeAiSimulation());
     } catch (err: any) {
       setLiveError(err?.message || 'Impossible de lancer la simulation IA en direct.');
     } finally {
@@ -343,22 +340,13 @@ export default function LandingAiSimulationShowcase() {
               <Wand2 className="w-3.5 h-3.5 text-primary" />
               Intelligence Artificielle & Budget
             </span>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              {isLoggedIn
-                ? 'Compte Connecté · Simulations illimitées'
-                : allowance.totalRemaining > 0
-                ? `${allowance.totalRemaining} simulation${allowance.totalRemaining > 1 ? 's' : ''} disponible${allowance.totalRemaining > 1 ? 's' : ''}${allowance.bonusTokens > 0 ? ` (${allowance.bonusTokens} bonus)` : ' sans compte'}`
-                : '0 simulation restante'}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPurchaseModalOpen(true)}
-              className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25 hover:bg-amber-500/20 inline-flex items-center gap-1 transition cursor-pointer touch-manipulation shadow-xs"
-            >
-              <Coins className="w-3 h-3 text-amber-500" />
-              <span>Pack 20 simulations : {formatFc(AI_TOKEN_PACK_PRICE_FC)}</span>
-            </button>
+          </div>
+          <div className="max-w-xl mx-auto text-left">
+            <AiSimulationCounter
+              allowance={allowance}
+              onBuy={() => setPurchaseModalOpen(true)}
+              compact
+            />
           </div>
 
           <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
@@ -399,11 +387,9 @@ export default function LandingAiSimulationShowcase() {
             >
               <Wand2 className="w-3.5 h-3.5 text-amber-400" />
               <span>Tester mon événement en direct</span>
-              {!isLoggedIn && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold">
-                  {allowance.totalRemaining} dispo
-                </span>
-              )}
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold tabular-nums">
+                {allowance.totalRemaining} sim{allowance.totalRemaining > 1 ? 's' : ''}
+              </span>
             </button>
           </div>
         </div>
@@ -774,7 +760,7 @@ export default function LandingAiSimulationShowcase() {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/80">
               <div className="flex items-center gap-2 text-xs text-muted">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>10 simulations gratuites sans compte · Recharge 20 jetons IA disponible connecté · Devis directs</span>
+                <span>{allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} restante{allowance.totalRemaining > 1 ? 's' : ''} · 10 essais gratuits · recharge 20 sims</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
@@ -807,67 +793,10 @@ export default function LandingAiSimulationShowcase() {
         {viewMode === 'live' && (
           <div className="bg-surface/90 dark:bg-slate-900/90 border-2 border-primary/40 rounded-3xl p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-6 max-w-5xl mx-auto animate-fade-in">
             {/* Bannière de statut d'essais */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
-                  <Wand2 className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">
-                    Simulateur IA en Direct — Sans Inscription Obligatoire
-                  </p>
-                  <p className="text-[11px] text-muted">
-                    {isLoggedIn
-                      ? 'Votre compte est connecté : simulations et devis illimités. Recharge de 20 jetons IA disponible pour vos recherches personnalisées.'
-                      : allowance.totalRemaining > 0
-                      ? `Il vous reste ${allowance.totalRemaining} simulation(s) disponible(s)${allowance.bonusTokens > 0 ? ` (${allowance.bonusTokens} jetons bonus actifs)` : ' sans compte'}.`
-                      : 'Vos 10 essais gratuits sont terminés. Vous pouvez recharger 20 simulations pour 2 000 FC.'}
-                  </p>
-                </div>
-              </div>
-
-              {!isLoggedIn ? (
-                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
-                  <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-0.5 no-scrollbar">
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
-                      const used = num <= allowance.freeTrialsUsed;
-                      return (
-                        <span
-                          key={num}
-                          className={cn(
-                            'w-5 h-5 sm:w-6 sm:h-6 shrink-0 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-[10px] font-bold border transition',
-                            used
-                              ? 'bg-muted/20 border-border text-muted line-through'
-                              : 'bg-emerald-500 text-white border-emerald-600 shadow-xs',
-                          )}
-                          title={`Essai gratuit n°${num}`}
-                        >
-                          {num}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setPurchaseModalOpen(true)}
-                    className="px-2.5 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-bold inline-flex items-center gap-1 transition cursor-pointer touch-manipulation shrink-0"
-                  >
-                    <Coins className="w-3.5 h-3.5 text-amber-500" />
-                    <span>+20 sims (2 000 FC)</span>
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPurchaseModalOpen(true)}
-                  className="inline-flex items-center justify-center w-full sm:w-auto gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation"
-                >
-                  <Coins className="w-3.5 h-3.5" />
-                  Acheter 20 Jetons IA (2 000 FC)
-                </button>
-              )}
-            </div>
+            <AiSimulationCounter
+              allowance={allowance}
+              onBuy={() => setPurchaseModalOpen(true)}
+            />
 
             {/* Formulaire de saisie du brief */}
             <div className="space-y-4">
@@ -957,14 +886,14 @@ export default function LandingAiSimulationShowcase() {
                   size="md"
                   disabled={liveLoading}
                   onClick={handleRunLiveSimulation}
-                  leftIcon={liveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : allowance.totalRemaining <= 0 && !isLoggedIn ? <Coins className="w-4 h-4" /> : <Wand2 className="w-4 h-4" />}
+                  leftIcon={liveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : allowance.totalRemaining <= 0 ? <Coins className="w-4 h-4" /> : <Wand2 className="w-4 h-4" />}
                   className="w-full sm:w-auto shadow-md shadow-primary/20 font-bold order-1 sm:order-2"
                 >
                   {liveLoading
                     ? 'L’IA compose vos 3 packs…'
-                    : allowance.totalRemaining <= 0 && !isLoggedIn
+                    : allowance.totalRemaining <= 0
                     ? `Recharger 20 simulations (${formatFc(AI_TOKEN_PACK_PRICE_FC)})`
-                    : 'Générer les 3 packs clés en main'}
+                    : `Générer les 3 packs (${allowance.totalRemaining} restante${allowance.totalRemaining > 1 ? 's' : ''})`}
                 </Button>
               </div>
             </div>

@@ -8,8 +8,9 @@ import {
   LANDING_PROFILES,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
-import { Button } from '@/components/ui';
-import { ArrowRight, Check, Sparkles, Zap, ShieldCheck } from 'lucide-react';
+import { Button, Modal } from '@/components/ui';
+import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
+import { ArrowRight, Check, Sparkles, ShieldCheck, Layers } from 'lucide-react';
 
 export default function LandingProfileGate({
   selectedId,
@@ -20,6 +21,7 @@ export default function LandingProfileGate({
 }) {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const getProfileHref = (profileId: LandingProfileId, defaultHref: string) => {
     if (!isLoggedIn) return defaultHref;
@@ -53,8 +55,9 @@ export default function LandingProfileGate({
     }
   };
 
-  const handleMobileCardSelect = (id: LandingProfileId) => {
+  const openDetails = (id: LandingProfileId) => {
     onSelect(id);
+    setDetailsOpen(true);
   };
 
   const activeProfile = LANDING_PROFILES.find((p) => p.id === selectedId) || LANDING_PROFILES[0];
@@ -78,12 +81,11 @@ export default function LandingProfileGate({
             Quel est votre projet ?
           </h2>
           <p className="text-xs sm:text-sm text-muted">
-            Sélectionnez votre cas pour ouvrir immédiatement vos outils et actions directes.
+            Choisissez votre cas : vos outils et actions s’ouvrent dans le détail, une fois le profil sélectionné.
           </p>
         </div>
       </div>
 
-      {/* Sélecteur en grille 2x2 sur mobile : toucher une carte ouvre instantanément la modale d'actions */}
       <div className="sm:hidden grid grid-cols-2 gap-2.5" role="tablist" aria-label="Choisir votre profil">
         {LANDING_PROFILES.map((p) => {
           const selected = selectedId === p.id;
@@ -94,7 +96,7 @@ export default function LandingProfileGate({
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => handleMobileCardSelect(p.id)}
+              onClick={() => openDetails(p.id)}
               className={cn(
                 'p-3.5 rounded-xl text-left border transition-all flex flex-col justify-between gap-2.5 touch-manipulation relative active:scale-[0.98]',
                 selected
@@ -117,7 +119,7 @@ export default function LandingProfileGate({
                   </span>
                 ) : (
                   <span className="text-[10px] text-muted flex items-center gap-0.5">
-                    Ouvrir <ArrowRight className="w-3 h-3" />
+                    Détail <ArrowRight className="w-3 h-3" />
                   </span>
                 )}
               </div>
@@ -139,42 +141,6 @@ export default function LandingProfileGate({
         })}
       </div>
 
-      {/* Carte résumé sur mobile avec CTA direct */}
-      <div className="sm:hidden rounded-[var(--radius-card)] p-4 bg-surface dark:bg-slate-900 border-2 border-primary/40 shadow-lg shadow-primary/10 space-y-3 animate-fade-in">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/25 text-[11px] font-semibold text-primary">
-            <Zap className="w-3.5 h-3.5 shrink-0" />
-            <span>{activeProfile.targetAudience}</span>
-          </div>
-
-          <h3 className="text-base font-bold text-foreground leading-snug pt-1">
-            {activeProfile.title}
-          </h3>
-          <p className="text-xs text-muted leading-relaxed">
-            {activeProfile.intro}
-          </p>
-        </div>
-
-        <div className="pt-1">
-          <Link href={activeCtaHref} className="block w-full">
-            <Button
-              size="md"
-              variant="primary"
-              fullWidth
-              className="shadow-sm font-bold text-xs py-3 justify-center min-h-[44px]"
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-            >
-              {activeCtaLabel}
-            </Button>
-          </Link>
-          <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted mt-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-            <span>{activeProfile.registerHint}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Grille des 4 solutions (Desktop / Tablette) */}
       <ul
         id="profils"
         className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4"
@@ -183,8 +149,6 @@ export default function LandingProfileGate({
         {LANDING_PROFILES.map((profile) => {
           const Icon = profile.icon;
           const selected = selectedId === profile.id;
-          const ctaHref = getProfileHref(profile.id, profile.cta.href);
-          const ctaLabel = getProfileCtaLabel(profile.id, profile.cta.label);
 
           return (
             <li key={profile.id} className="w-full">
@@ -192,12 +156,12 @@ export default function LandingProfileGate({
                 role="button"
                 tabIndex={0}
                 aria-pressed={selected}
-                aria-label={`Sélectionner la solution ${profile.label}`}
-                onClick={() => onSelect(profile.id)}
+                aria-label={`Ouvrir les outils de ${profile.label}`}
+                onClick={() => openDetails(profile.id)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    onSelect(profile.id);
+                    openDetails(profile.id);
                   }
                 }}
                 className={cn(
@@ -207,7 +171,6 @@ export default function LandingProfileGate({
                     : 'em-hud-card border-border hover:border-primary/50 hover:bg-surface/90',
                 )}
               >
-                {/* Spotlight lumineux d'arrière-plan */}
                 <div
                   className={cn(
                     'absolute -inset-10 bg-radial from-primary/20 to-transparent blur-2xl pointer-events-none transition-opacity duration-300 -z-10',
@@ -216,7 +179,6 @@ export default function LandingProfileGate({
                   aria-hidden
                 />
 
-                {/* Barre accentuée supérieure */}
                 <div
                   className={cn(
                     'absolute top-0 left-0 right-0 h-1 transition-all',
@@ -224,7 +186,6 @@ export default function LandingProfileGate({
                   )}
                 />
 
-                {/* Indicateur de sélection actif */}
                 {selected && (
                   <span className="absolute top-3.5 right-3.5 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] shadow-sm shadow-primary/40">
                     <Check className="w-3 h-3 stroke-[3]" />
@@ -232,7 +193,6 @@ export default function LandingProfileGate({
                 )}
 
                 <div>
-                  {/* Badge & Icône */}
                   <div className="flex items-center gap-2.5 mb-2.5">
                     <div
                       className={cn(
@@ -249,12 +209,10 @@ export default function LandingProfileGate({
                     </span>
                   </div>
 
-                  {/* Pour qui ? */}
                   <p className="text-[11px] font-semibold text-primary/90 mb-1.5 leading-snug">
                     {profile.targetAudience}
                   </p>
 
-                  {/* Titre Produit */}
                   <h3
                     className={cn(
                       'text-base font-bold mb-1.5 leading-snug transition-colors',
@@ -264,62 +222,92 @@ export default function LandingProfileGate({
                     {profile.label}
                   </h3>
 
-                  {/* Description courte */}
-                  <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-3.5">
+                  <p className="text-xs text-muted leading-relaxed line-clamp-3 mb-4">
                     {profile.intro}
                   </p>
-
-                  {/* 3 micro-puces de fonctionnalités */}
-                  <div className="space-y-1.5 py-3 border-y border-border/60">
-                    {profile.results.map((res) => {
-                      const ResIcon = res.icon;
-                      return (
-                        <div
-                          key={res.label}
-                          className="flex items-center gap-2 text-[11px] font-medium text-foreground/90"
-                        >
-                          <span
-                            className={cn(
-                              'w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[9px]',
-                              selected
-                                ? 'bg-primary/15 text-primary'
-                                : 'bg-surface-muted text-muted group-hover:text-primary',
-                            )}
-                          >
-                            <ResIcon className="w-2.5 h-2.5" />
-                          </span>
-                          <span className="truncate">{res.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
 
-                {/* Bouton d'action direct */}
-                <div className="pt-4 mt-auto">
-                  <Link
-                    href={ctaHref}
-                    onClick={(e) => e.stopPropagation()}
-                    className="block w-full"
+                <div className="pt-1 mt-auto">
+                  <span
+                    className={cn(
+                      'w-full py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center justify-between border transition-all',
+                      selected
+                        ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
+                        : 'bg-surface-muted text-foreground border-border group-hover:border-primary/40 group-hover:text-primary',
+                    )}
                   >
-                    <Button
-                      size="sm"
-                      variant={selected ? 'primary' : 'secondary'}
-                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                      className={cn(
-                        'w-full text-xs font-semibold justify-between transition-all duration-200',
-                        selected ? 'shadow-md shadow-primary/30' : 'hover:border-primary/40',
-                      )}
-                    >
-                      {ctaLabel}
-                    </Button>
-                  </Link>
+                    Voir outils & actions
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
                 </div>
               </div>
             </li>
           );
         })}
       </ul>
+
+      <Modal
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        size="xl"
+        title={activeProfile.label}
+        description={activeProfile.targetAudience}
+        footer={
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span>{activeProfile.registerHint}</span>
+            </div>
+            <Link href={activeCtaHref} className="w-full sm:w-auto">
+              <Button
+                size="md"
+                variant="primary"
+                fullWidth
+                className="shadow-sm font-bold text-xs justify-center min-h-[44px] sm:min-w-[14rem]"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
+                {activeCtaLabel}
+              </Button>
+            </Link>
+          </div>
+        }
+      >
+        <div className="space-y-5">
+          <div className="space-y-1.5">
+            <h3 className="text-base font-bold text-foreground leading-snug">
+              {activeProfile.title}
+            </h3>
+            <p className="text-sm text-muted leading-relaxed">
+              {activeProfile.intro}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-primary" />
+              Vos outils
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {activeProfile.results.map((res) => {
+                const ResIcon = res.icon;
+                return (
+                  <div
+                    key={res.label}
+                    className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted/70 px-3 py-2 text-xs font-medium text-foreground"
+                  >
+                    <span className="w-7 h-7 rounded-lg em-glow-icon-box flex items-center justify-center shrink-0">
+                      <ResIcon className="w-3.5 h-3.5" />
+                    </span>
+                    <span>{res.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <LandingHeroPreview profileId={activeProfile.id} embedded />
+        </div>
+      </Modal>
     </div>
   );
 }

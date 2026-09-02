@@ -39,7 +39,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   personal: [
     {
       title: 'Simulateur de Budget & Packs IA',
-      badge: '3 Essais Gratuits',
+      badge: '10 simulations',
       description: 'Laissez l’IA calculer 3 formules chiffrées selon votre budget : salle, traiteur, déco, photo & DJ (sans connexion requise).',
       icon: Wand2,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
@@ -83,7 +83,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     },
     {
       title: 'Simulateur Budgétaire & Packs IA',
-      badge: '3 Essais Gratuits',
+      badge: '10 simulations',
       description: 'Estimez vos coûts globaux et générez 3 packs prévisionnels clés en main pour vos clients & comités sans engagement.',
       icon: Wand2,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
@@ -109,7 +109,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   seeker: [
     {
       title: 'Simulateur IA & Formules Budget',
-      badge: '10 Essais Gratuits Sans Compte',
+      badge: '10 simulations',
       description: 'Indiquez votre budget en Francs Congolais : l’IA compose 3 packs complets avec salle et prestataires certifiés (10 essais gratuits sans compte).',
       icon: Wand2,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
@@ -181,22 +181,25 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
 
 export default function LandingHeroPreview({
   profileId = 'personal',
+  embedded = false,
 }: {
   profileId?: LandingProfileId;
+  embedded?: boolean;
 } = {}) {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
   const actions = PROFILE_ACTIONS[profileId] || PROFILE_ACTIONS.personal;
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto">
-      {/* Halo festif d'arrière-plan */}
-      <div
-        className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-primary/20 via-[color:var(--festive-accent-soft)] to-primary/10 blur-2xl -z-10 opacity-75 pointer-events-none"
-        aria-hidden
-      />
+    <div className={cn('relative w-full', !embedded && 'max-w-4xl mx-auto')}>
+      {!embedded ? (
+        <div
+          className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-primary/20 via-[color:var(--festive-accent-soft)] to-primary/10 blur-2xl -z-10 opacity-75 pointer-events-none"
+          aria-hidden
+        />
+      ) : null}
 
-      <div className="em-hud-card overflow-hidden p-4 sm:p-6 space-y-4">
+      <div className={cn('overflow-hidden space-y-4', embedded ? 'p-0' : 'em-hud-card p-4 sm:p-6')}>
         {/* En-tête de la console d'actions directes */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-border/80 pb-3">
           <div className="flex items-center gap-2">

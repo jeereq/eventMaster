@@ -9,7 +9,6 @@ import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import dynamic from 'next/dynamic';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingProfileGate from '@/components/landing/LandingProfileGate';
-import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
 import LandingRoomEditorShowcase from '@/components/landing/LandingRoomEditorShowcase';
 import LandingMobileStickyBar from '@/components/landing/LandingMobileStickyBar';
 import FaqSection from '@/components/landing/FaqSection';
@@ -195,16 +194,6 @@ export default function Home() {
               selectedId={profileId}
               onSelect={(id) => selectProfile(id, false)}
             />
-          </div>
-
-          {/* Console d'Actions Directes & Lancement Rapide (visible sur grand écran, masquée sur mobile/responsive) */}
-          <div className="pt-2 max-w-4xl mx-auto animate-fade-in hidden md:block">
-            <div className="text-center mb-3">
-              <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-                Actions directes · {profile.label}
-              </span>
-            </div>
-            <LandingHeroPreview profileId={profileId} />
           </div>
         </div>
       </section>
