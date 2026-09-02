@@ -211,8 +211,8 @@ export default function GuestTablePlanView({
         </div>
         <h3 className="font-display font-semibold text-foreground text-base">Votre place arrive</h3>
         <p className="text-muted text-xs leading-relaxed">
-          Votre plan de table, invitation PDF et localisation GPS sont disponibles dès votre confirmation RSVP,
-          dès que les organisateurs vous ont assigné une place.
+          Le plan de table et l&apos;invitation PDF apparaissent dès que l&apos;organisateur vous a assigné une place.
+          L&apos;itinéraire est déjà dans l&apos;onglet Itinéraire.
         </p>
       </div>
     );

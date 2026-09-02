@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import CelebrateMood from '@/components/CelebrateMood';
 
 interface GuestPortalShellProps {
   title: string;
@@ -47,7 +49,8 @@ export default function GuestPortalShell({
   activeTabId,
   onTabChange,
 }: GuestPortalShellProps) {
-  const brandLabel = organizationName?.trim() || 'EventMaster';
+  const { site } = usePlatformSite();
+  const brandLabel = organizationName?.trim() || site.platformName || 'EventMaster';
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -74,6 +77,7 @@ export default function GuestPortalShell({
 
   return (
     <div className={cn('em-guest-page flex flex-col min-h-dvh', className)}>
+      <CelebrateMood />
       <header className="sticky top-0 z-40 border-b border-border/70 bg-surface/85 backdrop-blur-md">
         <div className="page-container max-w-xl mx-auto min-h-12 sm:min-h-14 flex items-center justify-between gap-3 py-2.5">
           {showBrand ? (

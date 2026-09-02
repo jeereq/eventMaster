@@ -318,10 +318,21 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
         @media print {
           .guest-print-doc { background: #fff !important; }
           .guest-print-page { box-shadow: none !important; }
+          .guest-print-actions { display: none !important; }
         }
       `}</style>
 
       <div className="mx-auto py-10 px-5 flex flex-col items-center gap-6" style={{ maxWidth: cardMax + 48 }}>
+        <div className="guest-print-actions flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            disabled={!pdfReady}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:opacity-95 transition disabled:opacity-50"
+          >
+            {pdfReady ? 'Imprimer' : 'Préparation…'}
+          </button>
+        </div>
         <article
           className="guest-print-page w-full overflow-hidden border"
           style={{

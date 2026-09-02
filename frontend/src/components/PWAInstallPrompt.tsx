@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Download, Share, Smartphone, X } from 'lucide-react';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -36,6 +37,7 @@ export default function PWAInstallPrompt({
   storageKey = 'pwa_install_dismissed',
   variant = 'default',
 }: PWAInstallPromptProps) {
+  const { site } = usePlatformSite();
   const [visible, setVisible] = useState(false);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIosHelp, setShowIosHelp] = useState(false);
@@ -125,7 +127,9 @@ export default function PWAInstallPrompt({
           <Smartphone className="w-5 h-5" />
         </div>
         <div className="space-y-2">
-          <p className="font-semibold text-sm leading-tight">Installez EventMaster sur votre appareil</p>
+          <p className="font-semibold text-sm leading-tight">
+            Installez {site.platformName} sur votre appareil
+          </p>
           <p className={`text-xs leading-relaxed ${variant === 'guest' ? 'text-muted' : 'opacity-90'}`}>
             Accédez plus rapidement à vos invitations, badge et fil d&apos;actualité depuis votre écran d&apos;accueil.
           </p>

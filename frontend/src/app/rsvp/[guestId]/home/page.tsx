@@ -11,6 +11,7 @@ import {
 import GuestPortalShell, { GuestPortalCard } from '@/components/GuestPortalShell';
 import ShareButton from '@/components/ShareButton';
 import { guestRsvpUrl } from '@/lib/share';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Skeleton, SkeletonListRow } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 
@@ -127,6 +128,7 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
 export default function GuestHomePage() {
   const params = useParams();
   const guestId = params.guestId as string;
+  const { site } = usePlatformSite();
 
   const [data, setData] = useState<GuestInvitationsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -194,7 +196,7 @@ export default function GuestHomePage() {
       organizationName={current?.organizationName}
       headerRight={
         <ShareButton
-          title="Mes invitations EventMaster"
+          title={`Mes invitations ${site.platformName}`}
           text="Retrouvez vos invitations et votre badge QR."
           url={guestRsvpUrl(guestId)}
           className="h-8 w-8 !bg-surface border-border"

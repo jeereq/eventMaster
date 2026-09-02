@@ -1,12 +1,17 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import UserGuideView from '@/components/guide/UserGuideView';
 import GuestPortalShell from '@/components/GuestPortalShell';
 import { ArrowLeft } from 'lucide-react';
+import { fetchPublicSiteSnapshot } from '@/lib/publicSiteServer';
 
-export const metadata = {
-  title: 'Aide invité — EventMaster',
-  description: 'Guide pour confirmer votre RSVP, consulter votre placement et utiliser le portail invité EventMaster.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await fetchPublicSiteSnapshot();
+  return {
+    title: `Aide invité — ${site.platformName}`,
+    description: `Confirmer votre RSVP, consulter votre placement et utiliser l’espace invité ${site.platformName}.`,
+  };
+}
 
 export default function GuestGuidePage() {
   return (

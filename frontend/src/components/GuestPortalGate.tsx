@@ -7,6 +7,8 @@ import { Loader2 } from 'lucide-react';
 import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import GuestBrandSync from '@/components/GuestBrandSync';
+import CelebrateMood from '@/components/CelebrateMood';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 interface GuestLegalStatus {
   termsAccepted: boolean;
@@ -23,6 +25,7 @@ interface GuestLegalStatus {
 export default function GuestPortalGate({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const pathname = usePathname();
+  const { site } = usePlatformSite();
   const guestId = params.guestId as string;
   const isPrint = Boolean(pathname?.endsWith('/print'));
 
@@ -79,6 +82,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
 
   return (
     <>
+      {!isPrint && <CelebrateMood />}
       <GuestBrandSync branding={legalStatus?.branding} />
       <LegalAcceptanceModal
         open={requiresAcceptance}
@@ -86,7 +90,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
         subtitle={
           legalStatus?.organizationName
             ? `Avant d’accéder à vos invitations de ${legalStatus.organizationName}, veuillez accepter les conditions d’utilisation et la politique de confidentialité.`
-            : "Avant d'accéder à vos invitations, veuillez accepter nos conditions d'utilisation et notre politique de confidentialité."
+            : `Avant d’accéder à vos invitations sur ${site.platformName}, veuillez accepter les conditions d’utilisation et la politique de confidentialité.`
         }
         submitting={submitting}
         error={error}

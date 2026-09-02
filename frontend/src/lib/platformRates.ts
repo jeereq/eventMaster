@@ -17,11 +17,12 @@ export function renewalPercent(site?: Pick<PublicSiteConfig, 'commercialRenewalC
   return site?.commercialRenewalCommissionPercent ?? 20;
 }
 
-/** Remplace {depositPercent}, {commissionPercent}, {commercialPercent}, {renewalPercent}. */
+/** Remplace {depositPercent}, {commissionPercent}, {commercialPercent}, {renewalPercent}, {platformName}. */
 export function interpolateRates(text: string, site?: PublicSiteConfig | null) {
   return text
     .replaceAll('{depositPercent}', String(depositPercent(site)))
     .replaceAll('{commissionPercent}', String(commissionPercent(site)))
     .replaceAll('{commercialPercent}', String(commercialPercent(site)))
-    .replaceAll('{renewalPercent}', String(renewalPercent(site)));
+    .replaceAll('{renewalPercent}', String(renewalPercent(site)))
+    .replaceAll('{platformName}', site?.platformName || 'EventMaster');
 }

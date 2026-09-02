@@ -3,21 +3,29 @@
 import { useEffect } from 'react';
 import {
   applyBrandToDocument,
-  clearBrandFromDocument,
   type TenantBranding,
 } from '@/lib/brandTheme';
 
-/** Applique le thème de l’organisation sur les vues invité (CSS vars + favicon). */
+/**
+ * Applique le thème de l’organisation sur les vues invité (CSS vars + favicon)
+ * et le rétablit si le branding plateforme le remplace.
+ */
 export default function GuestBrandSync({ branding }: { branding?: TenantBranding | null }) {
   useEffect(() => {
-    if (branding?.primary || branding?.accent || branding?.sidebar) {
-      applyBrandToDocument(branding);
-    }
+    const apply = () => {
+      if (branding?.primary || branding?.accent || branding?.sidebar) {
+        applyBrandToDocument(branding);
+      }
+    };
+    apply();
+    window.addEventListener('em-brand-applied', apply);
+    return () => window.removeEventListener('em-brand-applied', apply);
   }, [branding?.primary, branding?.accent, branding?.sidebar]);
 
   useEffect(() => {
     return () => {
-      clearBrandFromDocument();
+      applyBrandToDocument(null);
+      window.dispatchEvent(new CustomEvent('em-platform-settings-updated'));
     };
   }, []);
 

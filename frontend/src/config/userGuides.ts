@@ -717,21 +717,23 @@ export const USER_GUIDES: UserGuide[] = [
   {
     id: 'guest',
     title: 'Guide Invité',
-    badge: 'Portail RSVP',
+    badge: 'Espace invité',
     summary:
-      'Vous accédez à votre invitation personnelle via un lien reçu par e-mail ou WhatsApp. Aucun compte EventMaster n\'est requis.',
+      'Vous ouvrez votre invitation via un lien reçu par e-mail, WhatsApp ou après l’achat d’un billet. Aucun compte {platformName} n’est obligatoire.',
     canDo: [
       'Confirmer ou décliner votre présence (RSVP)',
-      'Consulter les détails de l\'événement (date, lieu, description)',
-      'Afficher votre badge QR pour l\'accueil',
-      'Recevoir votre placement (PDF, plan, GPS) dès confirmation RSVP',
-      'Participer au fil d\'actualité et au livre d\'or si activés',
+      'Voir toutes vos invitations regroupées (même e-mail ou téléphone)',
+      'Consulter date, lieu, consignes du jour J et itinéraire',
+      'Afficher votre badge QR pour l’accueil',
+      'Recevoir votre placement (plan, voisins, PDF) une fois le RSVP accepté',
+      'Participer au fil d’actualité et au livre d’or si l’organisateur les a ouverts',
+      'Installer l’espace invité sur l’écran d’accueil (PWA)',
     ],
     cannotDo: [
-      'Modifier la liste d\'invités ou créer des événements',
-      'Accéder au dashboard organisateur',
-      'Voir le plan de table / GPS avant d\'avoir accepté l\'invitation',
-      'Voir les informations d\'autres invités (hors voisins de table une fois placé)',
+      'Modifier la liste d’invités ou créer des événements',
+      'Accéder au tableau de bord organisateur',
+      'Voir le plan de table / l’itinéraire avant d’avoir accepté l’invitation',
+      'Voir les informations d’autres invités (hors voisins de table une fois placé)',
     ],
     navLinks: [],
     workflows: [
@@ -739,31 +741,45 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'confirm-rsvp',
         title: 'Confirmer votre présence',
         content:
-          '1. Ouvrez le lien reçu dans votre invitation.\n2. Acceptez les conditions d\'utilisation si demandé.\n3. Consultez les détails : date, lieu, dress code, avantages et notes pratiques.\n4. Choisissez Accepter ou Décliner et remplissez les champs demandés (menu, plus-one…).',
+          '1. Ouvrez le lien reçu (invitation ou billet).\n2. Acceptez les conditions si demandé — le thème de l’organisateur s’applique ensuite.\n3. Consultez l’invitation : date, lieu, tenue, notes pratiques.\n4. Choisissez Accepter ou Décliner et remplissez les champs demandés (menu, accompagnant…).\n5. Après un « oui », le badge QR, le plan et l’itinéraire deviennent disponibles.',
+      },
+      {
+        id: 'all-invites',
+        title: 'Retrouver toutes vos invitations',
+        content:
+          '1. Dans l’en-tête, touchez Mes invitations.\n2. Vous voyez les événements à venir et passés liés à votre e-mail ou téléphone.\n3. Un événement terminé reste consultable, mais le RSVP ne se modifie plus.\n4. Partagez ce lien uniquement avec vous-même : il est personnel.',
       },
       {
         id: 'view-seating',
-        title: 'Consulter votre placement',
+        title: 'Badge, placement et itinéraire',
         content:
-          '1. Après avoir accepté l\'invitation, votre badge QR et votre placement (si déjà assigné) sont disponibles.\n2. Vous recevez aussi le PDF et le GPS par e-mail ou WhatsApp (selon le forfait).\n3. Présentez le QR à l\'accueil le jour J pour valider votre entrée.',
+          '1. Onglet Badge : QR à présenter à l’accueil (plein écran possible) et lien Imprimer l’invitation.\n2. Onglet Ma table : votre table, vos voisins et le plan de salle dès que l’organisateur vous a assis ; PDF téléchargeable.\n3. Onglet Itinéraire : carte et consignes d’accès si l’organisateur a renseigné le lieu.\n4. Un PDF peut aussi partir par e-mail ou WhatsApp selon le forfait.',
       },
       {
         id: 'event-feed',
-        title: 'Participer au fil et au livre d\'or',
+        title: 'Fil d’actualité et livre d’or',
         content:
-          '1. Après avoir accepté l\'invitation, ouvrez l\'onglet Actualités.\n2. Consultez les photos et annonces de l\'organisateur, aimez et commentez.\n3. Onglet Livre d\'or : laissez un message et des photos — l\'organisateur les voit dans son fil.\n4. Le jour J, le fil reste le canal des annonces en direct.',
+          '1. Après un RSVP accepté, ouvrez Actualités pour les photos et annonces de l’organisateur.\n2. Livre d’or : laissez un message et des photos — l’organisateur les voit dans son fil.\n3. Le jour J, le fil reste le canal des annonces en direct.',
+      },
+      {
+        id: 'tickets',
+        title: 'Billet marketplace',
+        content:
+          '1. Si vous avez acheté un billet public, la page de succès contient le lien vers votre espace invité.\n2. Ouvrez ce lien pour le badge QR, comme pour une invitation privée.\n3. Connecté, vos billets restent aussi dans Mes billets du compte.',
+        links: [{ label: 'Mes billets', href: '/dashboard/tickets' }],
       },
       {
         id: 'event-day',
-        title: 'Le jour de l\'événement',
+        title: 'Le jour de l’événement',
         content:
-          '1. Présentez votre QR code (portail ou message de confirmation) à l\'accueil.\n2. Le protocole scanne votre code dans le navigateur (téléphone ou tablette — pas d’app native pour l’instant).\n3. Consultez le fil d\'actualité pour les annonces en direct.',
+          '1. Présentez votre QR (portail, page d’impression ou message de confirmation).\n2. Le protocole scanne le code dans le navigateur (téléphone ou tablette).\n3. Consultez Actualités pour les annonces en direct.\n4. Sur mobile, installez {platformName} sur l’écran d’accueil pour rouvrir plus vite.',
       },
     ],
     tips: [
       'Conservez le lien RSVP — il est unique et personnel.',
-      'Le PDF et la localisation GPS partent dès votre RSVP positif, dès que votre place est assignée.',
-      'Si le lien ne fonctionne pas, contactez directement l\'organisateur.',
+      'Le PDF part une fois la place assignée. L’itinéraire est disponible dès la confirmation RSVP.',
+      'Si le lien ne s’ouvre pas, contactez l’organisateur.',
+      'Le thème (couleurs, nom) suit l’organisation qui vous invite, pas seulement le site public.',
     ],
   },
 ];

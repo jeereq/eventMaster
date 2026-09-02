@@ -124,7 +124,7 @@ export default function GuestInvitationPrintPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 text-sm text-rose-600">
+      <div className="min-h-screen em-guest-page flex items-center justify-center p-6 text-sm text-rose-600">
         {error}
       </div>
     );
@@ -132,7 +132,7 @@ export default function GuestInvitationPrintPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen em-guest-page flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );

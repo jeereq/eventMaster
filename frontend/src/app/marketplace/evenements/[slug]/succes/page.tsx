@@ -8,7 +8,7 @@ import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PaymentPendingView from '@/components/PaymentPendingView';
 import { Alert, Button } from '@/components/ui';
 import { eventPublicHref, eventPublicListHref } from '@/lib/safeAppPath';
-import { CheckCircle2, ArrowLeft, QrCode, Ticket } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, QrCode, Ticket, HelpCircle } from 'lucide-react';
 
 type SuccessGuestItem = {
   id: string;
@@ -151,7 +151,7 @@ function SuccessInner() {
             </div>
             {error && <Alert variant="error">{error}</Alert>}
             <p className="text-sm text-muted leading-relaxed">
-              Conservez les liens de vos espaces invités : badges QR, consignes et plan de table.
+              Conservez les liens de vos espaces invités : badges QR, consignes, itinéraire et plan de table.
             </p>
 
             {guestsList.length > 1 ? (
@@ -200,6 +200,13 @@ function SuccessInner() {
               >
                 <Ticket className="w-3.5 h-3.5" />
                 Voir tous mes billets dans mon compte
+              </Link>
+              <Link
+                href="/guide/invite"
+                className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                Aide espace invité
               </Link>
               <Link
                 href={eventPublicHref(slug)}

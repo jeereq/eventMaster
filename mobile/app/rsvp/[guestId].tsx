@@ -108,7 +108,7 @@ export default function RsvpGuestScreen() {
         <Text style={styles.errorText}>{error || 'Ce lien RSVP est invalide ou expiré.'}</Text>
         <Text style={styles.errorHint}>
           Vérifiez le lien reçu par e-mail ou WhatsApp, ou contactez l&apos;organisateur. Aucun
-          compte EventMaster n&apos;est requis pour les invités.
+          compte n&apos;est requis pour les invités.
         </Text>
         <Button title="Réessayer" onPress={onRefresh} variant="secondary" />
       </View>
