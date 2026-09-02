@@ -35,6 +35,13 @@ const LandingVitrineSection = dynamic(
   },
 );
 
+const LandingVisualBanner = dynamic(
+  () => import('@/components/landing/LandingVisualBanner'),
+  {
+    loading: () => <div className="py-16 text-center text-xs text-muted">Chargement des inspirations…</div>,
+  },
+);
+
 const LandingInvitationPreview = dynamic(
   () => import('@/components/landing/LandingInvitationPreview'),
   {
@@ -187,6 +194,9 @@ export default function Home() {
         loading={loadingPublicTemplates}
         onPreview={setModalTemplate}
       />
+
+      {/* ─── GALERIE D'INSPIRATION & RÉALISATIONS EN IMAGES ─── */}
+      <LandingVisualBanner />
 
       {/* ─── CATALOGUE & MARKETPLACE (Salles, Prestataires, Billetteries) ─── */}
       <LandingVitrineSection />

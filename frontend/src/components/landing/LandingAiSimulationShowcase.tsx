@@ -57,6 +57,7 @@ interface SimulationScenario {
   city: string;
   guests: number;
   budgetTargetFc: number;
+  imageUrl: string;
   packs: {
     eco: {
       name: string;
@@ -99,6 +100,7 @@ const SCENARIOS: SimulationScenario[] = [
     city: 'Kinshasa (Gombe)',
     guests: 150,
     budgetTargetFc: 8500000,
+    imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80',
     packs: {
       eco: {
         name: 'Pack Économique',
@@ -139,6 +141,7 @@ const SCENARIOS: SimulationScenario[] = [
     city: 'Lubumbashi',
     guests: 80,
     budgetTargetFc: 3800000,
+    imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1000&q=80',
     packs: {
       eco: {
         name: 'Pack Éco Fête',
@@ -179,6 +182,7 @@ const SCENARIOS: SimulationScenario[] = [
     city: 'Kinshasa',
     guests: 250,
     budgetTargetFc: 16000000,
+    imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1000&q=80',
     packs: {
       eco: {
         name: 'Pack Standard Business',
@@ -430,33 +434,58 @@ export default function LandingAiSimulationShowcase() {
               </div>
             </div>
 
-            {/* Paramètres simulés du scénario */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-primary/5 border border-primary/15 rounded-2xl p-3.5 sm:p-4 text-xs">
-              <div className="space-y-0.5">
-                <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
-                  <Heart className="w-3.5 h-3.5 text-primary" /> Type d’événement
-                </span>
-                <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
+            {/* Aperçu Visuel & Paramètres simulés du scénario */}
+            <div className="relative rounded-2xl overflow-hidden border border-border shadow-sm">
+              <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-slate-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={activeScenario.imageUrl}
+                  alt={activeScenario.name}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary text-white inline-block mb-1">
+                      Scénario Modèle
+                    </span>
+                    <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400 bg-black/50 px-2.5 py-1 rounded-lg border border-white/20 backdrop-blur-sm self-start sm:self-auto">
+                    Budget cible : {formatFc(activeScenario.budgetTargetFc)}
+                  </span>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-primary" /> Ville & Commune
-                </span>
-                <p className="font-bold text-foreground truncate">{activeScenario.city}</p>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
-                  <Users className="w-3.5 h-3.5 text-primary" /> Nombre d’invités
-                </span>
-                <p className="font-bold text-foreground">{activeScenario.guests} personnes</p>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Budget alloué
-                </span>
-                <p className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatFc(activeScenario.budgetTargetFc)}
-                </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3.5 sm:p-4 text-xs">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
+                    <Heart className="w-3.5 h-3.5 text-primary" /> Type d’événement
+                  </span>
+                  <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-primary" /> Ville & Commune
+                  </span>
+                  <p className="font-bold text-foreground truncate">{activeScenario.city}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
+                    <Users className="w-3.5 h-3.5 text-primary" /> Nombre d’invités
+                  </span>
+                  <p className="font-bold text-foreground">{activeScenario.guests} personnes</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Budget alloué
+                  </span>
+                  <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatFc(activeScenario.budgetTargetFc)}
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -83,7 +83,7 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
   {
     id: 'service',
     title: 'Trouver les bons prestataires',
-    badge: 'Métiers & Prestations',
+    badge: 'Prestataires & Prestations',
     tagline: 'Traiteurs, décorateurs, photographes, DJ et animation',
     description:
       'Découvrez le travail des professionnels, consultez leurs photos et vidéos récentes, et demandez un devis personnalisé pour votre fête.',

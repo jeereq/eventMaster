@@ -453,7 +453,7 @@ export default function EventPlanBriefForm({
                 <option value="exact">Uniquement adapté au type</option>
               </FieldSelect>
               <FieldSelect
-                label="Métier introuvable"
+                label="Prestataire introuvable"
                 hint="Réallouer : l’argent du poste manquant va aux autres. Trou : le pack reste incomplet. Ville : on cherche plus loin."
                 value={brief.missingStrategy}
                 onChange={(value) => patch({ missingStrategy: value as MissingStrategy })}

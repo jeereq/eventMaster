@@ -34,14 +34,14 @@ import { Building2, CalendarCheck, CheckCircle2, Inbox, KeyRound, Mail, Phone, S
 const KIND_OPTIONS = [
   { id: 'all', label: 'Tous' },
   { id: 'venue', label: 'Salles' },
-  { id: 'service', label: 'Métiers' },
-  { id: 'rental', label: 'Locations' },
+  { id: 'service', label: 'Prestataires' },
+  { id: 'rental', label: 'Matériel & Équipements' },
 ] as const;
 
 function kindLabel(kind: MarketplaceInquiryItem['kind']) {
   if (kind === 'venue') return 'Salle';
-  if (kind === 'rental') return 'Location';
-  return 'Métier';
+  if (kind === 'rental') return 'Matériel & Équipements';
+  return 'Prestataire';
 }
 
 function kindIcon(kind: MarketplaceInquiryItem['kind']) {

@@ -30,7 +30,7 @@ function PackItemRow({
   const [open, setOpen] = useState(false);
   const room = leftoverFc + item.estimatedFc;
   const alternatives = (item.alternatives || []).filter((alt) => alt.estimatedFc <= room);
-  const kindLabel = item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Location' : 'Métier');
+  const kindLabel = item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Matériel & Équipements' : 'Prestataire');
 
   const titleClass = 'text-sm font-semibold text-foreground hover:text-primary truncate block text-left';
   const titleNode = onOpenListing ? (

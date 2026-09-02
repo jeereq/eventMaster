@@ -17,8 +17,8 @@ export default function MarketplacePublicNav({
   const items = [
     { id: 'hub' as const, href: '/marketplace', label: 'Marketplace', short: 'Hub', icon: Store },
     { id: 'venues' as const, href: '/marketplace/salles', label: 'Salles', short: 'Salles', icon: Building2 },
-    { id: 'services' as const, href: '/marketplace/prestataires', label: 'Métiers', short: 'Métiers', icon: Sparkles },
-    { id: 'rentals' as const, href: '/marketplace/locations', label: 'Locations', short: 'Loc.', icon: KeyRound },
+    { id: 'services' as const, href: '/marketplace/prestataires', label: 'Prestataires', short: 'Prestataires', icon: Sparkles },
+    { id: 'rentals' as const, href: '/marketplace/locations', label: 'Matériel & Équipements', short: 'Matériel', icon: KeyRound },
     { id: 'events' as const, href: '/marketplace/evenements', label: 'Événements', short: 'Agenda', icon: Calendar },
   ];
   return (

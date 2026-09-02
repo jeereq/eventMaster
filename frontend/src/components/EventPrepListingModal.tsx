@@ -126,7 +126,7 @@ export default function EventPrepListingModal({
 
   const listing = venue || service;
   const rental = Boolean(service && isServiceRentalCategory(service.category));
-  const kindLabel = target?.kind === 'venue' ? 'Salle' : rental ? 'Location' : 'Métier';
+  const kindLabel = target?.kind === 'venue' ? 'Salle' : rental ? 'Matériel & Équipements' : 'Prestataire';
   const title = venue?.headline || venue?.name || service?.title || 'Fiche';
   const photos = useMemo(() => (listing ? photosOf(listing) : []), [listing]);
   const location = listing
