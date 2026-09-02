@@ -54,18 +54,14 @@ export default function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   const requestClose = useCallback(() => {
     // Le tap/clic qui ouvre la fenêtre retombe parfois sur le fond (iOS / Focus / carte).
     if (Date.now() - openedAtRef.current < 450) return;
-    onClose();
-  }, [onClose]);
-
-  const handleEscape = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') requestClose();
-    },
-    [requestClose],
-  );
+    onCloseRef.current();
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -75,22 +71,25 @@ export default function Modal({
     if (!open || !mounted) return;
     openedAtRef.current = Date.now();
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (dismissible) {
-      document.addEventListener('keydown', handleEscape);
-    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (dismissible && e.key === 'Escape') requestClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const focusTimer = window.setTimeout(() => {
+      const alreadyInside = panelRef.current?.contains(document.activeElement);
+      if (alreadyInside) return;
       const closeBtn = panelRef.current?.querySelector<HTMLElement>('[data-modal-close]');
       (closeBtn || panelRef.current)?.focus();
     }, 0);
     return () => {
       window.clearTimeout(focusTimer);
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
       previousFocusRef.current?.focus?.();
     };
-  }, [open, mounted, handleEscape, dismissible]);
+  }, [open, mounted, dismissible, requestClose]);
 
   if (!open || !mounted) return null;
 
