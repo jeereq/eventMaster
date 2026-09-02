@@ -93,7 +93,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'event-packs',
     question: 'Comment fonctionne la simulation d’événement et de packs budget par IA ?',
     answer:
-      'Indiquez votre type d’événement (mariage, fête, gala), votre budget en Francs Congolais (CDF), votre ville et votre nombre d’invités. Vous disposez de 3 simulations complètes gratuites sans connexion ni compte préalable. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et génère instantanément 3 formules optimisées (Économique, Équilibré, Confort). Vous pouvez ajuster chaque poste, sauvegarder votre simulation et envoyer des demandes de devis directes en 1 clic.',
+      'Indiquez votre type d’événement (mariage, fête, gala), votre budget en Francs Congolais (CDF), votre ville et votre nombre d’invités. Vous disposez de 10 simulations complètes gratuites sans compte préalable. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et génère instantanément 3 formules optimisées (Économique, Équilibré, Confort). Une fois les essais gratuits terminés, vous pouvez recharger 20 simulations supplémentaires pour seulement 2 000 FC (payables par Orange Money, M-Pesa, Airtel Money ou Carte). Une fois connecté, vous accédez aux coordonnées complètes et fiches directes des prestataires.',
   },
   {
     id: 'free-trial',

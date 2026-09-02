@@ -251,7 +251,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités', '3 essais IA sans connexion (3 packs)', 'Invitations, RSVP, QR, PDF/GPS', '1 salle simple · 1 prestation'],
+    highlights: ['3 événements · 50 invités', '10 essais IA sans connexion (3 packs)', 'Invitations, RSVP, QR, PDF/GPS', '1 salle simple · 1 prestation'],
   },
   {
     id: 'PERSONAL_50',
@@ -824,7 +824,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     category: 'Intelligence Artificielle & Packs',
     label: 'Simulateur budget IA (3 packs éco/équilibré/confort)',
     values: {
-      FREE: '3 essais gratuits',
+      FREE: '10 essais gratuits',
       ...b2cSame('Illimité (3 packs)'),
       STANDARD: 'Illimité (3 packs)',
       PREMIUM_1: 'Illimité (3 packs)',
@@ -835,6 +835,23 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       VENUE: 'Visibilité dans les packs',
       SERVICE: 'Recommandation directe',
       CATALOG: 'Recommandation directe',
+    },
+  },
+  {
+    category: 'Intelligence Artificielle & Packs',
+    label: 'Recharge simulations supplémentaires',
+    values: {
+      FREE: '2 000 FC / 20 simulations',
+      ...b2cSame('Inclus illimité'),
+      STANDARD: 'Inclus illimité',
+      PREMIUM_1: 'Inclus illimité',
+      PREMIUM_2: 'Inclus illimité',
+      ENTERPRISE_1: 'Inclus illimité',
+      ENTERPRISE_2: 'Inclus illimité',
+      ENTERPRISE_3: 'Inclus illimité',
+      VENUE: '2 000 FC / 20 sims',
+      SERVICE: '2 000 FC / 20 sims',
+      CATALOG: '2 000 FC / 20 sims',
     },
   },
   {

@@ -30,6 +30,8 @@ import {
   AlertCircle,
   Loader2,
   Check,
+  Lock,
+  Coins,
 } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -37,6 +39,15 @@ import { formatFc } from '@/config/landingPricing';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
 import { communesForCity } from '@/lib/rdcCities';
+import {
+  MAX_FREE_TRIALS,
+  AI_TOKEN_PACK_SIZE,
+  AI_TOKEN_PACK_PRICE_FC,
+  getAiSimulationAllowance,
+  consumeAiSimulation,
+  type AiAllowance,
+} from '@/lib/aiTokens';
+import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 
 interface SimulationScenario {
   id: string;
@@ -202,9 +213,6 @@ const SCENARIOS: SimulationScenario[] = [
   },
 ];
 
-const MAX_FREE_TRIALS = 3;
-const STORAGE_KEY_AI_TRIALS = 'em_ai_free_trials_count';
-
 export default function LandingAiSimulationShowcase() {
   const revealRef = useLandingReveal<HTMLElement>();
   const router = useRouter();
@@ -214,21 +222,13 @@ export default function LandingAiSimulationShowcase() {
   // Mode de visualisation : Scénarios modèles ou Simulateur en direct personnalisé
   const [viewMode, setViewMode] = useState<'presets' | 'live'>('presets');
 
-  // Compteur d'essais gratuits sans connexion (3 max)
-  const [trialsUsed, setTrialsUsed] = useState(0);
+  // Solde de simulations (10 essais gratuits + packs de 20 jetons payés)
+  const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const stored = parseInt(localStorage.getItem(STORAGE_KEY_AI_TRIALS) || '0', 10);
-        setTrialsUsed(Number.isFinite(stored) ? stored : 0);
-      }
-    } catch {
-      // Fallback si localStorage est inaccessible en navigation privée
-    }
+    setAllowance(getAiSimulationAllowance());
   }, []);
-
-  const remainingTrials = Math.max(0, MAX_FREE_TRIALS - trialsUsed);
 
   // Formulaire live personnalisé
   const [customPrompt, setCustomPrompt] = useState('');
@@ -256,8 +256,8 @@ export default function LandingAiSimulationShowcase() {
     : '/register?kind=CLIENT&intent=seeker&action=ai_simulator';
 
   const handleRunLiveSimulation = async () => {
-    if (!isLoggedIn && trialsUsed >= MAX_FREE_TRIALS) {
-      router.push('/register?kind=CLIENT&intent=seeker&action=ai_simulator');
+    if (!isLoggedIn && allowance.totalRemaining <= 0) {
+      setPurchaseModalOpen(true);
       return;
     }
 
@@ -285,15 +285,8 @@ export default function LandingAiSimulationShowcase() {
       setLiveSelectedPackId(packages[1]?.id || packages[0]?.id || 'balanced');
 
       if (!isLoggedIn) {
-        const nextCount = trialsUsed + 1;
-        setTrialsUsed(nextCount);
-        try {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY_AI_TRIALS, String(nextCount));
-          }
-        } catch {
-          // Ignorer si quota ou restriction de stockage
-        }
+        const nextAllowance = consumeAiSimulation();
+        setAllowance(nextAllowance);
       }
     } catch (err: any) {
       setLiveError(err?.message || 'Impossible de lancer la simulation IA en direct.');
@@ -313,7 +306,7 @@ export default function LandingAiSimulationShowcase() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] sm:w-[600px] sm:h-[600px] bg-primary/10 rounded-full blur-2xl sm:blur-3xl pointer-events-none -z-10" />
 
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
-        {/* En-tête de la section avec badge des 3 essais gratuits */}
+        {/* En-tête de la section avec badge des 10 essais gratuits et recharge 20 jetons */}
         <div className="text-center max-w-3xl mx-auto space-y-3.5">
           <div className="inline-flex flex-wrap items-center justify-center gap-2">
             <span className="em-festive-chip">
@@ -322,8 +315,20 @@ export default function LandingAiSimulationShowcase() {
             </span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
-              {isLoggedIn ? 'Essais illimités (Connecté)' : `${remainingTrials} essai${remainingTrials > 1 ? 's' : ''} gratuit${remainingTrials > 1 ? 's' : ''} sans connexion`}
+              {isLoggedIn
+                ? 'Compte Connecté · Simulations illimitées'
+                : allowance.totalRemaining > 0
+                ? `${allowance.totalRemaining} simulation${allowance.totalRemaining > 1 ? 's' : ''} disponible${allowance.totalRemaining > 1 ? 's' : ''}${allowance.bonusTokens > 0 ? ` (${allowance.bonusTokens} bonus)` : ' sans compte'}`
+                : '0 simulation restante'}
             </span>
+            <button
+              type="button"
+              onClick={() => setPurchaseModalOpen(true)}
+              className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25 hover:bg-amber-500/20 inline-flex items-center gap-1 transition cursor-pointer touch-manipulation shadow-xs"
+            >
+              <Coins className="w-3 h-3 text-amber-500" />
+              <span>Pack 20 simulations : {formatFc(AI_TOKEN_PACK_PRICE_FC)}</span>
+            </button>
           </div>
 
           <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
@@ -366,7 +371,7 @@ export default function LandingAiSimulationShowcase() {
               <span>Tester mon événement en direct</span>
               {!isLoggedIn && (
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold">
-                  {remainingTrials}/3
+                  {allowance.totalRemaining} dispo
                 </span>
               )}
             </button>
@@ -521,10 +526,14 @@ export default function LandingAiSimulationShowcase() {
                   </span>
                   <div>
                     <h4 className="text-sm font-bold text-foreground">
-                      Composition détaillée du {activePack.name}
+                      {isLoggedIn
+                        ? `Composition détaillée du ${activePack.name}`
+                        : `Composition synthétique du ${activePack.name}`}
                     </h4>
                     <p className="text-[11px] text-muted">
-                      Mix optimisé à partir des prestataires certifiés sur EventMaster
+                      {isLoggedIn
+                        ? 'Mix complet optimisé à partir des prestataires certifiés sur EventMaster'
+                        : 'Aperçu synthétique budgétaire · Les fiches officielles et contacts réels sont débloqués à la connexion'}
                     </p>
                   </div>
                 </div>
@@ -534,82 +543,183 @@ export default function LandingAiSimulationShowcase() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
-                  <div>
-                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-purple-600" /> Salle & Espace
-                    </span>
-                    <p className="font-semibold text-foreground mt-1">{activePack.venue}</p>
+              {isLoggedIn ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-purple-600" /> Salle & Espace
+                      </span>
+                      <p className="font-semibold text-foreground mt-1">{activePack.venue}</p>
+                    </div>
+                    <p className="text-[10px] text-muted pt-1">Avec plan 2D/3D & visite virtuelle</p>
                   </div>
-                  <p className="text-[10px] text-muted pt-1">Avec plan 2D/3D & visite virtuelle</p>
-                </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
-                  <div>
-                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                      <Utensils className="w-3.5 h-3.5 text-emerald-600" /> Traiteur & Boissons
-                    </span>
-                    <p className="font-semibold text-foreground mt-1">{activePack.caterer}</p>
+                  <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                        <Utensils className="w-3.5 h-3.5 text-emerald-600" /> Traiteur & Boissons
+                      </span>
+                      <p className="font-semibold text-foreground mt-1">{activePack.caterer}</p>
+                    </div>
+                    <p className="text-[10px] text-muted pt-1">Calculé pour {activeScenario.guests} convives</p>
                   </div>
-                  <p className="text-[10px] text-muted pt-1">Calculé pour {activeScenario.guests} convives</p>
-                </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
-                  <div>
-                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                      <Palette className="w-3.5 h-3.5 text-rose-500" /> Décoration & Mobilier
-                    </span>
-                    <p className="font-semibold text-foreground mt-1">{activePack.decor}</p>
+                  <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                        <Palette className="w-3.5 h-3.5 text-rose-500" /> Décoration & Mobilier
+                      </span>
+                      <p className="font-semibold text-foreground mt-1">{activePack.decor}</p>
+                    </div>
+                    <p className="text-[10px] text-muted pt-1">Chaises, tables & arche selon style</p>
                   </div>
-                  <p className="text-[10px] text-muted pt-1">Chaises, tables & arche selon style</p>
-                </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
-                  <div>
-                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                      <Camera className="w-3.5 h-3.5 text-blue-600" /> Photo & Vidéo
-                    </span>
-                    <p className="font-semibold text-foreground mt-1">{activePack.photo}</p>
+                  <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5 text-blue-600" /> Photo & Vidéo
+                      </span>
+                      <p className="font-semibold text-foreground mt-1">{activePack.photo}</p>
+                    </div>
+                    <p className="text-[10px] text-muted pt-1">Remise des fichiers HD & galerie web</p>
                   </div>
-                  <p className="text-[10px] text-muted pt-1">Remise des fichiers HD & galerie web</p>
-                </div>
 
-                <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
-                  <div>
-                    <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
-                      <Music className="w-3.5 h-3.5 text-amber-500" /> Sonorisation & DJ
-                    </span>
-                    <p className="font-semibold text-foreground mt-1">{activePack.dj}</p>
+                  <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                        <Music className="w-3.5 h-3.5 text-amber-500" /> Sonorisation & DJ
+                      </span>
+                      <p className="font-semibold text-foreground mt-1">{activePack.dj}</p>
+                    </div>
+                    <p className="text-[10px] text-muted pt-1">Micros, éclairage d’ambiance & DJ</p>
                   </div>
-                  <p className="text-[10px] text-muted pt-1">Micros, éclairage d’ambiance & DJ</p>
-                </div>
 
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 space-y-1 flex flex-col justify-between h-full">
-                  <div>
-                    <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5" /> Action immédiate
-                    </span>
-                    <p className="text-[11px] text-muted leading-tight mt-1">
-                      Envoyez des demandes de devis directes aux prestataires en 1 clic.
-                    </p>
+                  <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 space-y-1 flex flex-col justify-between h-full">
+                    <div>
+                      <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5" /> Action immédiate
+                      </span>
+                      <p className="text-[11px] text-muted leading-tight mt-1">
+                        Envoyez des demandes de devis directes aux prestataires en 1 clic.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('live')}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline pt-2 text-left cursor-pointer"
+                    >
+                      Personnaliser avec mon budget <ArrowRight className="w-3 h-3" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('live')}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline pt-2 text-left cursor-pointer"
-                  >
-                    Personnaliser avec mon budget <ArrowRight className="w-3 h-3" />
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                      <div>
+                        <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-purple-600" /> Salle & Espace
+                        </span>
+                        <p className="font-semibold text-foreground mt-1">Salle de réception certifiée ({activeScenario.guests} places)</p>
+                      </div>
+                      <p className="text-[10px] text-muted pt-1">Plan 2D/3D & visite virtuelle inclus</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                      <div>
+                        <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                          <Utensils className="w-3.5 h-3.5 text-emerald-600" /> Traiteur & Boissons
+                        </span>
+                        <p className="font-semibold text-foreground mt-1">Service traiteur complet & boissons</p>
+                      </div>
+                      <p className="text-[10px] text-muted pt-1">Menu adapté pour {activeScenario.guests} convives</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                      <div>
+                        <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                          <Palette className="w-3.5 h-3.5 text-rose-500" /> Décoration & Mobilier
+                        </span>
+                        <p className="font-semibold text-foreground mt-1">Scénographie & habillage des tables</p>
+                      </div>
+                      <p className="text-[10px] text-muted pt-1">Tables, chaises d’apparat & arche</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                      <div>
+                        <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                          <Camera className="w-3.5 h-3.5 text-blue-600" /> Photo & Vidéo
+                        </span>
+                        <p className="font-semibold text-foreground mt-1">Couverture média & reportage HD</p>
+                      </div>
+                      <p className="text-[10px] text-muted pt-1">Galerie numérique privée & fichiers HD</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 flex flex-col justify-between h-full">
+                      <div>
+                        <span className="text-[11px] font-bold text-muted flex items-center gap-1.5">
+                          <Music className="w-3.5 h-3.5 text-amber-500" /> Sonorisation & DJ
+                        </span>
+                        <p className="font-semibold text-foreground mt-1">Régie son, jeux de lumière & DJ pro</p>
+                      </div>
+                      <p className="text-[10px] text-muted pt-1">Micros sans fil & ambiance sur mesure</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-primary/10 border border-primary/25 space-y-1 flex flex-col justify-between h-full">
+                      <div>
+                        <span className="text-[11px] font-bold text-primary flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5" /> Fiches prestataires masquées
+                        </span>
+                        <p className="text-[11px] text-muted leading-tight mt-1">
+                          Noms officiels et contacts directs réservés aux comptes connectés.
+                        </p>
+                      </div>
+                      <Link href={simulatorUrl} className="pt-2">
+                        <Button size="sm" variant="primary" fullWidth className="text-[11px] h-8">
+                          Débloquer ce pack
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Bandeau d'explication déblocage et 20 jetons IA */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-primary/10 via-surface to-primary/5 border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground">
+                          Détails des prestataires et devis complets masqués
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          Vous avez droit à <strong>10 essais gratuits sans compte</strong>. Une fois connecté, vous accédez aux contacts complets et pouvez acheter des <strong>recharges de 20 jetons de recherche IA</strong>.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                      <Link href="/register?kind=CLIENT&intent=seeker&action=ai_simulator" className="flex-1 sm:flex-none">
+                        <Button size="sm" variant="primary" rightIcon={<ArrowRight className="w-3 h-3" />}>
+                          Créer un compte gratuit
+                        </Button>
+                      </Link>
+                      <Link href="/login" className="flex-1 sm:flex-none">
+                        <Button size="sm" variant="secondary">
+                          Connexion
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Appel à l'action final du simulateur */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/80">
               <div className="flex items-center gap-2 text-xs text-muted">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>3 simulations gratuites sans compte · Aucune carte requise · Devis directs</span>
+                <span>10 simulations gratuites sans compte · Recharge 20 jetons IA disponible connecté · Devis directs</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
@@ -619,7 +729,7 @@ export default function LandingAiSimulationShowcase() {
                   className="flex-1 sm:flex-none"
                 >
                   <Button variant="secondary" size="md" fullWidth>
-                    Tester en direct (3 essais)
+                    Tester en direct (10 essais gratuits)
                   </Button>
                 </button>
                 <Link href={simulatorUrl} className="flex-1 sm:flex-none">
@@ -638,7 +748,7 @@ export default function LandingAiSimulationShowcase() {
           </div>
         )}
 
-        {/* ─── VUE 2 : SIMULATEUR EN DIRECT (3 ESSAIS SANS CONNEXION) ─── */}
+        {/* ─── VUE 2 : SIMULATEUR EN DIRECT (10 ESSAIS SANS CONNEXION) ─── */}
         {viewMode === 'live' && (
           <div className="bg-surface/90 dark:bg-slate-900/90 border-2 border-primary/40 rounded-3xl p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-6 max-w-5xl mx-auto animate-fade-in">
             {/* Bannière de statut d'essais */}
@@ -653,32 +763,54 @@ export default function LandingAiSimulationShowcase() {
                   </p>
                   <p className="text-[11px] text-muted">
                     {isLoggedIn
-                      ? 'Votre compte est connecté : simulations et devis illimités.'
-                      : `Il vous reste ${remainingTrials} essai(s) gratuit(s) sans compte pour tester 3 packs complets.`}
+                      ? 'Votre compte est connecté : simulations et devis illimités. Recharge de 20 jetons IA disponible pour vos recherches personnalisées.'
+                      : allowance.totalRemaining > 0
+                      ? `Il vous reste ${allowance.totalRemaining} simulation(s) disponible(s)${allowance.bonusTokens > 0 ? ` (${allowance.bonusTokens} jetons bonus actifs)` : ' sans compte'}.`
+                      : 'Vos 10 essais gratuits sont terminés. Vous pouvez recharger 20 simulations pour 2 000 FC.'}
                   </p>
                 </div>
               </div>
 
-              {!isLoggedIn && (
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3].map((num) => {
-                    const used = num <= trialsUsed;
-                    return (
-                      <span
-                        key={num}
-                        className={cn(
-                          'w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold border transition',
-                          used
-                            ? 'bg-muted/20 border-border text-muted line-through'
-                            : 'bg-emerald-500 text-white border-emerald-600 shadow-xs',
-                        )}
-                        title={`Essai n°${num}`}
-                      >
-                        {num}
-                      </span>
-                    );
-                  })}
+              {!isLoggedIn ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
+                      const used = num <= allowance.freeTrialsUsed;
+                      return (
+                        <span
+                          key={num}
+                          className={cn(
+                            'w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-[10px] font-bold border transition',
+                            used
+                              ? 'bg-muted/20 border-border text-muted line-through'
+                              : 'bg-emerald-500 text-white border-emerald-600 shadow-xs',
+                          )}
+                          title={`Essai gratuit n°${num}`}
+                        >
+                          {num}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setPurchaseModalOpen(true)}
+                    className="px-2.5 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-bold inline-flex items-center gap-1 transition cursor-pointer touch-manipulation"
+                  >
+                    <Coins className="w-3.5 h-3.5 text-amber-500" />
+                    <span>+20 sims (2 000 FC)</span>
+                  </button>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPurchaseModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation"
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  Acheter 20 Jetons IA (2 000 FC)
+                </button>
               )}
             </div>
 
@@ -768,15 +900,15 @@ export default function LandingAiSimulationShowcase() {
                 <Button
                   variant="primary"
                   size="md"
-                  disabled={liveLoading || (!isLoggedIn && remainingTrials <= 0)}
+                  disabled={liveLoading}
                   onClick={handleRunLiveSimulation}
-                  leftIcon={liveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                  leftIcon={liveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : allowance.totalRemaining <= 0 && !isLoggedIn ? <Coins className="w-4 h-4" /> : <Wand2 className="w-4 h-4" />}
                   className="w-full sm:w-auto shadow-md shadow-primary/20 font-bold order-1 sm:order-2"
                 >
                   {liveLoading
                     ? 'L’IA compose vos 3 packs…'
-                    : remainingTrials <= 0 && !isLoggedIn
-                    ? 'Limite atteinte · Créer un compte gratuit'
+                    : allowance.totalRemaining <= 0 && !isLoggedIn
+                    ? `Recharger 20 simulations (${formatFc(AI_TOKEN_PACK_PRICE_FC)})`
                     : 'Générer les 3 packs clés en main'}
                 </Button>
               </div>
@@ -847,41 +979,104 @@ export default function LandingAiSimulationShowcase() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
-                      {selectedLivePack.venue && (
-                        <div className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
-                          <span className="text-[10px] font-bold text-purple-600 flex items-center gap-1">
-                            <Building2 className="w-3 h-3" /> Salle & Espace
-                          </span>
-                          <p className="font-semibold text-foreground truncate">{selectedLivePack.venue.title}</p>
-                          <p className="text-[10px] text-muted">{selectedLivePack.venue.location || 'Kinshasa'}</p>
-                          <p className="text-[10px] font-bold text-emerald-600">{formatFc(selectedLivePack.venue.estimatedFc)}</p>
-                        </div>
-                      )}
+                    {isLoggedIn ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                        {selectedLivePack.venue && (
+                          <div className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
+                            <span className="text-[10px] font-bold text-purple-600 flex items-center gap-1">
+                              <Building2 className="w-3 h-3" /> Salle & Espace
+                            </span>
+                            <p className="font-semibold text-foreground truncate">{selectedLivePack.venue.title}</p>
+                            <p className="text-[10px] text-muted">{selectedLivePack.venue.location || 'Kinshasa'}</p>
+                            <p className="text-[10px] font-bold text-emerald-600">{formatFc(selectedLivePack.venue.estimatedFc)}</p>
+                          </div>
+                        )}
 
-                      {Array.isArray(selectedLivePack.services) && selectedLivePack.services.map((svc: any) => (
-                        <div key={svc.slug} className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
-                          <span className="text-[10px] font-bold text-primary flex items-center gap-1 truncate">
-                            <Sparkles className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{svc.categoryLabel || svc.title}</span>
-                          </span>
-                          <p className="font-semibold text-foreground truncate">{svc.title}</p>
-                          <p className="text-[10px] text-muted truncate">{svc.orgName || svc.location}</p>
-                          <p className="text-[10px] font-bold text-emerald-600">{formatFc(svc.estimatedFc)}</p>
-                        </div>
-                      ))}
-                    </div>
+                        {Array.isArray(selectedLivePack.services) && selectedLivePack.services.map((svc: any) => (
+                          <div key={svc.slug} className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
+                            <span className="text-[10px] font-bold text-primary flex items-center gap-1 truncate">
+                              <Sparkles className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{svc.categoryLabel || svc.title}</span>
+                            </span>
+                            <p className="font-semibold text-foreground truncate">{svc.title}</p>
+                            <p className="text-[10px] text-muted truncate">{svc.orgName || svc.location}</p>
+                            <p className="text-[10px] font-bold text-emerald-600">{formatFc(svc.estimatedFc)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                          {selectedLivePack.venue && (
+                            <div className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
+                              <span className="text-[10px] font-bold text-purple-600 flex items-center gap-1">
+                                <Building2 className="w-3 h-3" /> Salle & Espace ({selectedLivePack.venue.location || customCity})
+                              </span>
+                              <p className="font-semibold text-foreground truncate">Salle partenaire certifiée (Identité masquée)</p>
+                              <p className="text-[10px] text-muted">Plan 2D/3D & capacité certifiée</p>
+                              <p className="text-[10px] font-bold text-emerald-600">{formatFc(selectedLivePack.venue.estimatedFc)}</p>
+                            </div>
+                          )}
 
-                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
-                      <p className="text-[11px] text-muted">
-                        Ces prestataires certifiés sont prêts à recevoir votre demande de réservation.
-                      </p>
-                      <Link href={simulatorUrl} className="w-full sm:w-auto">
-                        <Button size="sm" variant="primary" fullWidth rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                          Sauvegarder ce pack & Contacter
-                        </Button>
-                      </Link>
-                    </div>
+                          {Array.isArray(selectedLivePack.services) && selectedLivePack.services.map((svc: any, idx: number) => (
+                            <div key={svc.slug || idx} className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
+                              <span className="text-[10px] font-bold text-primary flex items-center gap-1 truncate">
+                                <Sparkles className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{svc.categoryLabel || 'Prestation'} ({svc.location || customCity})</span>
+                              </span>
+                              <p className="font-semibold text-foreground truncate">Prestataire vérifié (Identité masquée)</p>
+                              <p className="text-[10px] text-muted truncate">Tarif négocié inclus dans l'enveloppe</p>
+                              <p className="text-[10px] font-bold text-emerald-600">{formatFc(svc.estimatedFc)}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-surface border border-primary/25 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                              <Lock className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-foreground">
+                                Identité des prestataires et devis complets verrouillés
+                              </p>
+                              <p className="text-[11px] text-muted">
+                                Vous disposez de <strong>10 essais gratuits sans compte</strong>. Créez un compte gratuit pour débloquer les coordonnées ou <strong>rechargez 20 simulations pour {formatFc(AI_TOKEN_PACK_PRICE_FC)}</strong>.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setPurchaseModalOpen(true)}
+                              className="flex-1 sm:flex-none"
+                            >
+                              <Button size="sm" variant="secondary" leftIcon={<Coins className="w-3.5 h-3.5" />}>
+                                +20 Sims ({formatFc(AI_TOKEN_PACK_PRICE_FC)})
+                              </Button>
+                            </button>
+                            <Link href={simulatorUrl} className="flex-1 sm:flex-none">
+                              <Button size="sm" variant="primary" fullWidth rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                                Créer un compte
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isLoggedIn && (
+                      <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+                        <p className="text-[11px] text-muted">
+                          Ces prestataires certifiés sont prêts à recevoir votre demande de réservation.
+                        </p>
+                        <Link href={simulatorUrl} className="w-full sm:w-auto">
+                          <Button size="sm" variant="primary" fullWidth rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                            Sauvegarder ce pack & Contacter
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -922,6 +1117,13 @@ export default function LandingAiSimulationShowcase() {
           </div>
         </div>
       </div>
+
+      {/* Modale d'achat de 20 simulations IA pour 2 000 FC */}
+      <AiTokenPurchaseModal
+        open={purchaseModalOpen}
+        onClose={() => setPurchaseModalOpen(false)}
+        onSuccess={() => setAllowance(getAiSimulationAllowance())}
+      />
     </section>
   );
 }

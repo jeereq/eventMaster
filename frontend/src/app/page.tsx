@@ -175,6 +175,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── SIMULATION D'ÉVÉNEMENT PAR IA & PACKS BUDGET CLÉS EN MAIN (Positionnée en amont pour visibilité immédiate) ─── */}
+      <LandingAiSimulationShowcase />
+
       {/* ─── ÉDITEUR DE SALLE 2D / 3D (Agencement, Visite 3D, Placement, Scan QR) ─── */}
       <LandingRoomEditorShowcase />
 
@@ -184,9 +187,6 @@ export default function Home() {
         loading={loadingPublicTemplates}
         onPreview={setModalTemplate}
       />
-
-      {/* ─── SIMULATION D'ÉVÉNEMENT PAR IA & PACKS BUDGET CLÉS EN MAIN ─── */}
-      <LandingAiSimulationShowcase />
 
       {/* ─── CATALOGUE & MARKETPLACE (Salles, Prestataires, Billetteries) ─── */}
       <LandingVitrineSection />

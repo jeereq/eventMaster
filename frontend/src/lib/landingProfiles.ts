@@ -79,7 +79,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     results: [
       { icon: Heart, label: 'Faire-part & RSVP WhatsApp' },
       { icon: LayoutGrid, label: 'Plan de table 2D / 3D' },
-      { icon: Sparkles, label: 'Simulation IA (3 essais gratuits)' },
+      { icon: Sparkles, label: 'Simulation IA (10 essais gratuits)' },
       { icon: ScanLine, label: 'Pass QR & Émargement' },
     ],
     icon: Heart,
@@ -134,7 +134,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     results: [
       { icon: Wallet, label: 'Paiements Orange Money, M-Pesa, Airtel & Cartes' },
       { icon: ScanLine, label: 'Scan QR d’entrée anti-fraude' },
-      { icon: Sparkles, label: 'Simulateur budget IA (3 essais)' },
+      { icon: Sparkles, label: 'Simulateur budget IA (10 essais gratuits)' },
       { icon: Users, label: 'Comptes pour l’équipe d’accueil' },
     ],
     icon: Sparkles,
@@ -187,7 +187,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     cta: { href: '/marketplace', label: 'Explorer les lieux & prestataires' },
     registerHint: 'Compte 100% gratuit sans engagement. Devis directs.',
     results: [
-      { icon: Sparkles, label: 'Simulation IA (3 essais gratuits sans compte)' },
+      { icon: Sparkles, label: 'Simulation IA (10 essais gratuits sans compte)' },
       { icon: Building2, label: 'Salles avec visite 3D' },
       { icon: Store, label: 'Prestataires vérifiés' },
       { icon: MessageSquare, label: 'Devis en direct sans frais' },

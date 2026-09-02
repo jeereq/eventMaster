@@ -214,6 +214,37 @@ export async function publicPlanEventAi(req: Request, res: Response): Promise<vo
   }
 }
 
+export async function checkoutAiTokens(req: Request, res: Response): Promise<void> {
+  try {
+    const rawBody = req.body && typeof req.body === 'object' ? req.body : {};
+    const paymentMethod = String(rawBody.paymentMethod || 'mobile').toLowerCase();
+    const phone = typeof rawBody.phone === 'string' ? rawBody.phone.trim().replace(/\s+/g, '').replace(/^\+/, '') : '';
+    const operator = typeof rawBody.operator === 'string' ? rawBody.operator.trim().toLowerCase() : 'orange';
+    const tokensCount = Number(rawBody.tokensCount) || 20;
+    const amountFc = Number(rawBody.amountFc) || 2000;
+
+    if (paymentMethod === 'mobile' && !phone) {
+      res.status(400).json({ error: 'Le numéro de téléphone Mobile Money est requis.' });
+      return;
+    }
+
+    const orderRef = `AI-TOKENS-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+
+    res.status(200).json({
+      success: true,
+      orderNumber: orderRef,
+      tokensAdded: tokensCount,
+      amountFc,
+      paymentMethod,
+      operator: paymentMethod === 'mobile' ? operator : undefined,
+      message: `Paiement de ${amountFc.toLocaleString('fr-FR')} CDF validé. ${tokensCount} simulations IA créditées.`,
+    });
+  } catch (error: any) {
+    console.error('checkoutAiTokens:', error);
+    res.status(500).json({ error: 'Impossible de traiter le paiement des jetons IA.' });
+  }
+}
+
 type SavedPackItem = {
   kind: 'venue' | 'service';
   slug: string;

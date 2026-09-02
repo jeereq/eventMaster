@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, KeyRound, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { Building2, KeyRound, Loader2, Sparkles, Wand2, Coins } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -11,6 +11,13 @@ import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetai
 import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 import { communesForCity } from '@/lib/rdcCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
+import {
+  AI_TOKEN_PACK_SIZE,
+  AI_TOKEN_PACK_PRICE_FC,
+  getAiSimulationAllowance,
+  type AiAllowance,
+} from '@/lib/aiTokens';
+import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 
 export type EventPrepAiDefaults = {
   eventType?: ListingEventTypeId;
@@ -57,6 +64,7 @@ export default function EventPrepAiSimulator({
   const [error, setError] = useState('');
   const [result, setResult] = useState<EventPlanAiResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const communes = useMemo(() => communesForCity(city), [city]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
@@ -103,9 +111,19 @@ export default function EventPrepAiSimulator({
             L’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort — comme la simulation par critères.
           </p>
         </div>
-        <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)}>
-          {open ? 'Masquer le brief' : 'Ouvrir le brief'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPurchaseModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer touch-manipulation shadow-xs shrink-0"
+          >
+            <Coins className="w-3.5 h-3.5 text-amber-500" />
+            <span>+20 simulations ({formatFc(AI_TOKEN_PACK_PRICE_FC)})</span>
+          </button>
+          <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)}>
+            {open ? 'Masquer le brief' : 'Ouvrir le brief'}
+          </Button>
+        </div>
       </div>
 
       {open ? (
@@ -327,6 +345,11 @@ export default function EventPrepAiSimulator({
           </div>
         </div>
       ) : null}
+
+      <AiTokenPurchaseModal
+        open={purchaseModalOpen}
+        onClose={() => setPurchaseModalOpen(false)}
+      />
     </section>
   );
 }
