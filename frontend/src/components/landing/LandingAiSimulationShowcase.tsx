@@ -850,7 +850,9 @@ export default function LandingAiSimulationShowcase() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
                       {selectedLivePack.venue && (
                         <div className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
-                          <span className="text-[10px] font-bold text-purple-600 block">🏛️ Salle</span>
+                          <span className="text-[10px] font-bold text-purple-600 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" /> Salle & Espace
+                          </span>
                           <p className="font-semibold text-foreground truncate">{selectedLivePack.venue.title}</p>
                           <p className="text-[10px] text-muted">{selectedLivePack.venue.location || 'Kinshasa'}</p>
                           <p className="text-[10px] font-bold text-emerald-600">{formatFc(selectedLivePack.venue.estimatedFc)}</p>
@@ -859,8 +861,9 @@ export default function LandingAiSimulationShowcase() {
 
                       {Array.isArray(selectedLivePack.services) && selectedLivePack.services.map((svc: any) => (
                         <div key={svc.slug} className="p-2.5 rounded-xl bg-surface border border-border space-y-0.5">
-                          <span className="text-[10px] font-bold text-primary block truncate">
-                            ✨ {svc.categoryLabel || svc.title}
+                          <span className="text-[10px] font-bold text-primary flex items-center gap-1 truncate">
+                            <Sparkles className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{svc.categoryLabel || svc.title}</span>
                           </span>
                           <p className="font-semibold text-foreground truncate">{svc.title}</p>
                           <p className="text-[10px] text-muted truncate">{svc.orgName || svc.location}</p>

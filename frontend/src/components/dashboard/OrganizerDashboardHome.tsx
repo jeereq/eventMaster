@@ -573,9 +573,9 @@ export default function OrganizerDashboardHome({
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <Link
                   href="/dashboard/catalogue?tab=plan&planView=ai"
-                  className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary text-white hover:bg-primary-hover transition"
+                  className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary text-white hover:bg-primary-hover transition inline-flex items-center gap-1"
                 >
-                  ✨ Simuler 3 Packs IA
+                  <Sparkles className="w-2.5 h-2.5" /> Simuler 3 Packs IA
                 </Link>
                 <Link
                   href="/dashboard/catalogue?kind=venue"

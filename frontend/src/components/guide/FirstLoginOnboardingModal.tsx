@@ -255,9 +255,9 @@ export default function FirstLoginOnboardingModal({
                   type="button"
                   onClick={() => setTravels(true)}
                   className={cn(
-                    'p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all',
+                    'p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     travels
-                      ? 'border-primary bg-primary/10 text-primary'
+                      ? 'border-primary bg-primary/10 text-primary shadow-xs'
                       : 'border-border bg-surface-muted text-muted hover:text-foreground',
                   )}
                 >
@@ -268,9 +268,9 @@ export default function FirstLoginOnboardingModal({
                   type="button"
                   onClick={() => setTravels(false)}
                   className={cn(
-                    'p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all',
+                    'p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     !travels
-                      ? 'border-primary bg-primary/10 text-primary'
+                      ? 'border-primary bg-primary/10 text-primary shadow-xs'
                       : 'border-border bg-surface-muted text-muted hover:text-foreground',
                   )}
                 >

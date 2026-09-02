@@ -492,8 +492,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('card')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                    paymentMethod === 'card' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    paymentMethod === 'card' ? 'bg-primary text-white border-primary shadow-xs' : 'border-border text-muted hover:text-foreground hover:bg-surface-muted'
                   }`}
                 >
                   Visa / Mastercard
@@ -501,8 +501,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('mobile')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                    paymentMethod === 'mobile' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    paymentMethod === 'mobile' ? 'bg-primary text-white border-primary shadow-xs' : 'border-border text-muted hover:text-foreground hover:bg-surface-muted'
                   }`}
                 >
                   Mobile Money (Orange, M-Pesa, Airtel)
