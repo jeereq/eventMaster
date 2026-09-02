@@ -39,10 +39,10 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   personal: [
     {
       title: 'Simulateur de Budget & Packs IA',
-      badge: 'Pack Clé en Main',
-      description: 'Laissez l’IA calculer 3 formules chiffrées selon votre budget : salle, traiteur, déco, photo & DJ.',
+      badge: '3 Essais Gratuits',
+      description: 'Laissez l’IA calculer 3 formules chiffrées selon votre budget : salle, traiteur, déco, photo & DJ (sans connexion requise).',
       icon: Wand2,
-      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/register?kind=ORGANIZER&intent=personal&action=ai_simulator'),
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
       ctaLabel: 'Simuler mon événement',
       highlight: true,
     },
@@ -74,8 +74,8 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   pro: [
     {
       title: 'Billetterie & Ventes Mobile Money',
-      badge: 'M-Pesa, Airtel, Cartes',
-      description: 'Pour organisateurs de concerts & conférences : vendez vos billets par catégorie (VIP, Standard) en ligne.',
+      badge: 'Orange, M-Pesa, Airtel, Cartes',
+      description: 'Pour organisateurs de concerts & conférences : vendez vos billets par Orange Money, M-Pesa, Airtel Money et Cartes en ligne.',
       icon: Wallet,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=pro&action=ticketing'),
       ctaLabel: 'Créer ma billetterie',
@@ -83,10 +83,10 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     },
     {
       title: 'Simulateur Budgétaire & Packs IA',
-      badge: 'Gestion Pro',
-      description: 'Estimez vos coûts globaux et générez des packs prévisionnels clés en main pour vos clients & comités.',
+      badge: '3 Essais Gratuits',
+      description: 'Estimez vos coûts globaux et générez 3 packs prévisionnels clés en main pour vos clients & comités sans engagement.',
       icon: Wand2,
-      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/register?kind=ORGANIZER&intent=pro&action=ai_simulator'),
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
       ctaLabel: 'Simuler un budget pro',
     },
     {
@@ -109,10 +109,10 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   seeker: [
     {
       title: 'Simulateur IA & Formules Budget',
-      badge: '3 Packs Clés en Main',
-      description: 'Indiquez votre budget en Francs Congolais : l’IA compose 3 packs complets avec salle et prestataires certifiés.',
+      badge: '3 Essais Gratuits Sans Compte',
+      description: 'Indiquez votre budget en Francs Congolais : l’IA compose 3 packs complets avec salle et prestataires certifiés (3 essais sans connexion).',
       icon: Wand2,
-      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/register?kind=CLIENT&intent=seeker&action=ai_simulator'),
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
       ctaLabel: 'Lancer le simulateur IA',
       highlight: true,
     },

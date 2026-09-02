@@ -8,8 +8,7 @@ import {
   LANDING_PROFILES,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
-import { Button, Modal } from '@/components/ui';
-import { PROFILE_ACTIONS } from '@/components/landing/LandingHeroPreview';
+import { Button } from '@/components/ui';
 import { ArrowRight, Check, Sparkles, Zap, ShieldCheck } from 'lucide-react';
 
 export default function LandingProfileGate({
@@ -21,7 +20,6 @@ export default function LandingProfileGate({
 }) {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
-  const [mobileModalOpen, setMobileModalOpen] = useState(false);
 
   const getProfileHref = (profileId: LandingProfileId, defaultHref: string) => {
     if (!isLoggedIn) return defaultHref;
@@ -57,11 +55,9 @@ export default function LandingProfileGate({
 
   const handleMobileCardSelect = (id: LandingProfileId) => {
     onSelect(id);
-    setMobileModalOpen(true);
   };
 
   const activeProfile = LANDING_PROFILES.find((p) => p.id === selectedId) || LANDING_PROFILES[0];
-  const activeActions = PROFILE_ACTIONS[activeProfile.id] || PROFILE_ACTIONS.personal;
   const activeCtaHref = getProfileHref(activeProfile.id, activeProfile.cta.href);
   const activeCtaLabel = getProfileCtaLabel(activeProfile.id, activeProfile.cta.label);
 
@@ -143,7 +139,7 @@ export default function LandingProfileGate({
         })}
       </div>
 
-      {/* Carte résumé sur mobile avec bouton pour rouvrir la modale */}
+      {/* Carte résumé sur mobile avec CTA direct */}
       <div className="sm:hidden rounded-[var(--radius-card)] p-4 bg-surface dark:bg-slate-900 border-2 border-primary/40 shadow-lg shadow-primary/10 space-y-3 animate-fade-in">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/25 text-[11px] font-semibold text-primary">
@@ -159,130 +155,24 @@ export default function LandingProfileGate({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <button
-            type="button"
-            onClick={() => setMobileModalOpen(true)}
-            className="w-full py-2.5 px-3 rounded-lg bg-surface-muted hover:bg-surface border border-border text-xs font-bold text-foreground flex items-center justify-center gap-1.5 touch-manipulation transition"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span>Voir les 4 actions</span>
-          </button>
+        <div className="pt-1">
           <Link href={activeCtaHref} className="block w-full">
             <Button
-              size="sm"
+              size="md"
               variant="primary"
-              className="w-full shadow-sm font-bold text-xs py-2.5 min-h-[42px] justify-center"
-              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              fullWidth
+              className="shadow-sm font-bold text-xs py-3 justify-center min-h-[44px]"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
             >
               {activeCtaLabel}
             </Button>
           </Link>
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted mt-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span>{activeProfile.registerHint}</span>
+          </div>
         </div>
       </div>
-
-      {/* Modale d'actions directes pour mobile */}
-      <Modal
-        open={mobileModalOpen}
-        onClose={() => setMobileModalOpen(false)}
-        title={
-          <div className="flex items-center gap-2">
-            <activeProfile.icon className="w-5 h-5 text-primary shrink-0" />
-            <span className="font-bold text-base sm:text-lg">{activeProfile.label}</span>
-          </div>
-        }
-        description={
-          <span className="text-xs font-medium text-primary block mt-0.5">
-            {activeProfile.targetAudience}
-          </span>
-        }
-        size="lg"
-      >
-        <div className="space-y-4 pt-1">
-          <p className="text-xs sm:text-sm text-muted leading-relaxed">
-            {activeProfile.intro}
-          </p>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-primary" />
-                Actions directes disponibles
-              </span>
-              <span className="text-[10px] font-semibold text-muted">
-                1 clic pour démarrer
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2.5">
-              {activeActions.map((act) => {
-                const Icon = act.icon;
-                const targetHref = act.href(isLoggedIn);
-                const isExternal = targetHref.startsWith('http');
-
-                return (
-                  <Link
-                    key={act.title}
-                    href={targetHref}
-                    target={isExternal ? '_blank' : undefined}
-                    rel={isExternal ? 'noopener noreferrer' : undefined}
-                    onClick={() => setMobileModalOpen(false)}
-                    className={cn(
-                      'p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 group active:scale-[0.99] touch-manipulation block',
-                      act.highlight
-                        ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/30 shadow-xs'
-                        : 'bg-surface hover:bg-surface-muted dark:bg-slate-900 border-border',
-                    )}
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg em-glow-icon-box shrink-0 flex items-center justify-center mt-0.5">
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                            {act.title}
-                          </span>
-                          <span className="text-[9px] font-semibold text-muted px-1.5 py-0.2 rounded bg-surface border border-border shrink-0">
-                            {act.badge}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted leading-snug line-clamp-2">
-                          {act.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform">
-                      <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-border space-y-2">
-            <Link
-              href={activeCtaHref}
-              onClick={() => setMobileModalOpen(false)}
-              className="block w-full"
-            >
-              <Button
-                size="lg"
-                variant="primary"
-                className="w-full shadow-lg shadow-primary/30 font-bold text-xs min-h-11 justify-center"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                {activeCtaLabel}
-              </Button>
-            </Link>
-            <div className="flex items-center justify-center gap-2 text-[10px] text-muted">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span>{activeProfile.registerHint}</span>
-            </div>
-          </div>
-        </div>
-      </Modal>
 
       {/* Grille des 4 solutions (Desktop / Tablette) */}
       <ul

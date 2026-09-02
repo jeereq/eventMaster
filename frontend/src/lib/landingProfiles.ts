@@ -79,6 +79,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     results: [
       { icon: Heart, label: 'Faire-part & RSVP WhatsApp' },
       { icon: LayoutGrid, label: 'Plan de table 2D / 3D' },
+      { icon: Sparkles, label: 'Simulation IA (3 essais gratuits)' },
       { icon: ScanLine, label: 'Pass QR & Émargement' },
     ],
     icon: Heart,
@@ -122,7 +123,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     eyebrow: 'Concerts, Conférences & Galas',
     targetAudience: 'Pour : Organisateurs de concerts, conférences, festivals, galas et agences événementielles',
     title: 'Vendez vos billets et contrôlez les accès par QR code',
-    intro: 'Créez votre billetterie en ligne, encaissez les paiements par Mobile Money (M-Pesa, Airtel, Orange) ou Carte, et contrôlez les entrées avec votre smartphone.',
+    intro: 'Créez votre billetterie en ligne, encaissez les paiements par Mobile Money (Orange Money, M-Pesa, Airtel) ou Carte, et contrôlez les entrées avec votre smartphone.',
     examples: 'Concerts, festivals, conférences, galas d’entreprise, séminaires, spectacles.',
     clicks: ['1. Billetterie & Tarifs', '2. Paiements Mobile Money', '3. Contrôle d’accès QR'],
     clickHrefs: ['#tarifs', '#catalogue', '#editeur'],
@@ -131,8 +132,9 @@ export const LANDING_PROFILES: LandingProfile[] = [
     cta: { href: '/register?kind=ORGANIZER&intent=pro&action=ticketing', label: 'Créer ma billetterie en ligne' },
     registerHint: 'Idéal pour événements payants ou avec contrôle d’accès. Sans matériel coûteux.',
     results: [
-      { icon: Wallet, label: 'Paiements M-Pesa, Airtel & Cartes' },
+      { icon: Wallet, label: 'Paiements Orange Money, M-Pesa, Airtel & Cartes' },
       { icon: ScanLine, label: 'Scan QR d’entrée anti-fraude' },
+      { icon: Sparkles, label: 'Simulateur budget IA (3 essais)' },
       { icon: Users, label: 'Comptes pour l’équipe d’accueil' },
     ],
     icon: Sparkles,
@@ -185,6 +187,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     cta: { href: '/marketplace', label: 'Explorer les lieux & prestataires' },
     registerHint: 'Compte 100% gratuit sans engagement. Devis directs.',
     results: [
+      { icon: Sparkles, label: 'Simulation IA (3 essais gratuits sans compte)' },
       { icon: Building2, label: 'Salles avec visite 3D' },
       { icon: Store, label: 'Prestataires vérifiés' },
       { icon: MessageSquare, label: 'Devis en direct sans frais' },

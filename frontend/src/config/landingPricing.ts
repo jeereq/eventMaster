@@ -249,7 +249,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités', 'Invitations, RSVP, QR, PDF/GPS', '1 salle simple · 1 prestation'],
+    highlights: ['3 événements · 50 invités', '3 essais IA sans connexion (3 packs)', 'Invitations, RSVP, QR, PDF/GPS', '1 salle simple · 1 prestation'],
   },
   {
     id: 'PERSONAL_50',
@@ -263,7 +263,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '50 invités',
-    highlights: ['3 événements · 50 invités', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
+    highlights: ['3 événements · 50 invités', 'Simulateur budget IA (3 packs illimité)', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
   },
   {
     id: 'PERSONAL_100',
@@ -277,7 +277,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '100 invités',
-    highlights: ['3 événements · 100 invités', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
+    highlights: ['3 événements · 100 invités', 'Simulateur budget IA (3 packs illimité)', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
   },
   {
     id: 'PERSONAL_200',
@@ -292,7 +292,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     audience: 'B2C',
     highlighted: true,
     badge: '200 invités',
-    highlights: ['3 événements · 200 invités', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
+    highlights: ['3 événements · 200 invités', 'Simulateur budget IA (3 packs illimité)', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
   },
   {
     id: 'PERSONAL_PLUS',
@@ -306,7 +306,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '+200 invités',
-    highlights: ['3 événements · invités illimités', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
+    highlights: ['3 événements · invités illimités', 'Simulateur budget IA (3 packs illimité)', 'QR, modèles, éditeur 2D/3D complet', '2 salles · hors marketplace'],
   },
   {
     id: 'STANDARD',
@@ -816,6 +816,23 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       VENUE: false,
       SERVICE: false,
       CATALOG: false,
+    },
+  },
+  {
+    category: 'Intelligence Artificielle & Packs',
+    label: 'Simulateur budget IA (3 packs éco/équilibré/confort)',
+    values: {
+      FREE: '3 essais gratuits',
+      ...b2cSame('Illimité (3 packs)'),
+      STANDARD: 'Illimité (3 packs)',
+      PREMIUM_1: 'Illimité (3 packs)',
+      PREMIUM_2: 'Illimité (3 packs)',
+      ENTERPRISE_1: 'Illimité (3 packs)',
+      ENTERPRISE_2: 'Illimité (3 packs)',
+      ENTERPRISE_3: 'Illimité (3 packs)',
+      VENUE: 'Visibilité dans les packs',
+      SERVICE: 'Recommandation directe',
+      CATALOG: 'Recommandation directe',
     },
   },
   {

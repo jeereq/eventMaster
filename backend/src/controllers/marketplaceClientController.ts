@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel, isServiceRentalCategory } from '../utils/publicVenue';
@@ -193,6 +193,24 @@ export async function planEventAi(req: AuthenticatedRequest, res: Response) {
     }
     console.error('planEventAi:', error);
     return res.status(500).json({ error: 'Impossible de lancer la simulation IA.' });
+  }
+}
+
+export async function publicPlanEventAi(req: Request, res: Response): Promise<void> {
+  try {
+    const callerId = (req as any).user?.id || req.ip || 'public-guest';
+    const result = await simulateEventPlanAi(
+      callerId,
+      req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    if (error?.status) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+    console.error('publicPlanEventAi:', error);
+    res.status(500).json({ error: 'Impossible de lancer la simulation IA.' });
   }
 }
 

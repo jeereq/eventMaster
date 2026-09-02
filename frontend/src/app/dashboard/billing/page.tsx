@@ -488,19 +488,23 @@ function BillingPageInner() {
                 payMethod === 'mobile' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
               }`}
             >
-              Mobile Money
+              Mobile Money (Orange, M-Pesa, Airtel)
             </button>
           </div>
           {payMethod === 'mobile' && (
             <>
-              <p className="text-[11px] text-muted">
-                Opérateurs : {FLEXPAY_MOBILE_OPERATORS_LABEL}
-              </p>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-muted">
+                <span className="font-semibold text-foreground">Opérateurs acceptés :</span>
+                <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 font-bold text-[11px] border border-orange-500/20">Orange Money</span>
+                <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 font-bold text-[11px] border border-red-500/20">M-Pesa Vodacom</span>
+                <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 font-bold text-[11px] border border-rose-500/20">Airtel Money</span>
+                <span className="px-2 py-0.5 rounded-md bg-surface-muted text-muted font-medium text-[11px] border border-border">Afrimoney</span>
+              </div>
               <input
                 type="tel"
                 value={payPhone}
                 onChange={(e) => setPayPhone(e.target.value)}
-                placeholder="243XXXXXXXXX"
+                placeholder="Ex. 24389XXXXXXX (Orange, Vodacom, Airtel)"
                 className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white"
               />
             </>

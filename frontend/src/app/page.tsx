@@ -143,8 +143,8 @@ export default function Home() {
             />
           </div>
 
-          {/* Console d'Actions Directes & Lancement Rapide */}
-          <div className="pt-2 max-w-4xl mx-auto animate-fade-in">
+          {/* Console d'Actions Directes & Lancement Rapide (visible sur grand écran, masquée sur mobile/responsive) */}
+          <div className="pt-2 max-w-4xl mx-auto animate-fade-in hidden md:block">
             <div className="text-center mb-3">
               <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
                 Actions directes · {profile.label}

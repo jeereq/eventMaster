@@ -26,6 +26,7 @@ import {
   getTicketOrderBySession,
   listPublicEventSeats,
 } from '../controllers/publicEventController';
+import { publicPlanEventAi } from '../controllers/marketplaceClientController';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -108,6 +109,7 @@ router.get('/events/:slug', getPublicEvent);
 router.get('/events/:slug/seats', listPublicEventSeats);
 router.post('/events/:slug/checkout', requireAuth, checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
+router.post('/event-plan-ai', optionalAuth, publicPlanEventAi);
 
 router.post('/payments/flexpay/callback', flexPayCardCallback);
 router.get('/payments/flexpay/callback', flexPayCardCallback);

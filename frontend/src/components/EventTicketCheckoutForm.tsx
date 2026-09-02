@@ -491,19 +491,22 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                     paymentMethod === 'mobile' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
                   }`}
                 >
-                  Mobile Money
+                  Mobile Money (Orange, M-Pesa, Airtel)
                 </button>
               </div>
               {paymentMethod === 'mobile' && (
                 <>
-                  <p className="text-[11px] text-muted">
-                    Opérateurs : {FLEXPAY_MOBILE_OPERATORS_LABEL}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px] text-muted">
+                    <span className="font-semibold text-foreground">Opérateurs :</span>
+                    <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 font-bold text-[10px] border border-orange-500/20">Orange Money</span>
+                    <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 font-bold text-[10px] border border-red-500/20">M-Pesa</span>
+                    <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 font-bold text-[10px] border border-rose-500/20">Airtel</span>
+                  </div>
                   <Input
-                    label="Numéro Mobile Money"
+                    label="Numéro Mobile Money (ex: 24389XXXXXXX)"
                     value={mmPhone}
                     onChange={(e) => setMmPhone(e.target.value)}
-                    placeholder="243XXXXXXXXX"
+                    placeholder="24389XXXXXXX"
                   />
                 </>
               )}

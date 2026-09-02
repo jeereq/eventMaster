@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Check, Minus, ChevronDown, ChevronUp, Sparkles, Tag } from 'lucide-react';
+import { Check, Minus, ChevronDown, ChevronUp, Sparkles, Tag, ShieldCheck, CreditCard, Smartphone, Wallet } from 'lucide-react';
 import {
  LANDING_PLANS,
  FEATURE_COMPARISON,
@@ -575,7 +575,33 @@ export default function LandingPricingSection({
  )}
  </div>
 
- <p className="text-center text-xs text-muted mt-10 max-w-2xl mx-auto leading-relaxed">
+ {/* Bandeau des moyens de paiement acceptés (Orange Money, M-Pesa, Airtel, Cartes) */}
+ <div className="mt-8 p-4 rounded-2xl bg-surface/80 dark:bg-slate-900/80 border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+ <div className="flex items-center gap-2.5 text-xs text-muted">
+ <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+ <div>
+ <span className="font-bold text-foreground block">Paiements 100% sécurisés via FlexPay</span>
+ <span className="text-[11px] text-muted">Activation instantanée de votre forfait ou billets en Francs Congolais (CDF) et USD</span>
+ </div>
+ </div>
+
+ <div className="flex flex-wrap items-center justify-center gap-2">
+ <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold text-xs border border-orange-500/25">
+ <Smartphone className="w-3.5 h-3.5" /> Orange Money
+ </span>
+ <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs border border-red-500/25">
+ <Smartphone className="w-3.5 h-3.5" /> M-Pesa
+ </span>
+ <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-500/25">
+ <Smartphone className="w-3.5 h-3.5" /> Airtel Money
+ </span>
+ <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-500/25">
+ <CreditCard className="w-3.5 h-3.5" /> Visa & Mastercard
+ </span>
+ </div>
+ </div>
+
+ <p className="text-center text-xs text-muted mt-8 max-w-2xl mx-auto leading-relaxed">
  Réduction annuelle de {ANNUAL_DISCOUNT_PERCENT} % sur le total (12 mois ou 4 trimestres). Promotions configurables
  par l&apos;administrateur. Tous les forfaits incluent l&apos;isolation multi-tenant et le portail RSVP invité.
  </p>
