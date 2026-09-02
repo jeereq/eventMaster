@@ -1,0 +1,405 @@
+import { prisma } from '../db';
+import {
+  buildFlexPayMetadataUpdate,
+  buildFlexPayReference,
+  checkFlexPayCardOrder,
+  createFlexPayCardCheckout,
+  createFlexPayMobileCheckout,
+  getPublicApiBaseUrl,
+  isFlexPayCardConfigured,
+  normalizeFlexPayPhone,
+  type FlexPayCheckResult,
+  type FlexPayMetadataUpdate,
+} from './flexPayCardService';
+
+export const AI_TOKEN_PACK_COUNT = 20;
+export const AI_TOKEN_PACK_PRICE_CDF = 2000;
+
+export type AiTokenPaymentMethod = 'mobile' | 'card';
+
+export interface InitiateAiTokenPaymentInput {
+  userId?: string | null;
+  paymentMethod: AiTokenPaymentMethod;
+  phone?: string | null;
+  operator?: string | null;
+  tokensCount?: number;
+  amountFc?: number;
+}
+
+export interface InitiateAiTokenPaymentResult {
+  success: boolean;
+  orderId: string;
+  orderNumber: string;
+  reference: string;
+  paymentMethod: AiTokenPaymentMethod;
+  status: 'PENDING' | 'PAID' | 'FAILED';
+  redirectUrl?: string | null;
+  tokensCount: number;
+  amountFc: number;
+  message?: string;
+}
+
+// Mémoire de secours en cas d'indisponibilité momentanée de la table DB
+const memoryOrders = new Map<string, any>();
+
+/**
+ * Crée une commande et lance le paiement réel FlexPay (Mobile Money ou Carte).
+ */
+export async function initiateAiTokenPayment(
+  input: InitiateAiTokenPaymentInput,
+): Promise<InitiateAiTokenPaymentResult> {
+  const paymentMethod: AiTokenPaymentMethod =
+    input.paymentMethod === 'card' ? 'card' : 'mobile';
+  const tokensCount = input.tokensCount && input.tokensCount > 0 ? input.tokensCount : AI_TOKEN_PACK_COUNT;
+  const amountFc = input.amountFc && input.amountFc > 0 ? input.amountFc : AI_TOKEN_PACK_PRICE_CDF;
+
+  let normalizedPhone: string | null = null;
+  if (paymentMethod === 'mobile') {
+    normalizedPhone = normalizeFlexPayPhone(input.phone || '');
+    if (!normalizedPhone) {
+      throw new Error(
+        'Numéro Mobile Money invalide. Veuillez saisir un numéro RDC valide (ex: 24389XXXXXXX, 24381XXXXXXX, 24399XXXXXXX).',
+      );
+    }
+  }
+
+  // Création initiale de la commande
+  let dbOrder: any = null;
+  try {
+    dbOrder = await prisma.aiTokenOrder.create({
+      data: {
+        userId: input.userId || null,
+        tokensCount,
+        amountFc,
+        currency: 'CDF',
+        status: 'PENDING',
+        paymentMethod,
+        phone: normalizedPhone || input.phone || null,
+        operator: input.operator || null,
+      },
+    });
+  } catch (err) {
+    console.warn('[AiTokenPayment] Prisma create order fallback to memory:', err);
+    const mockId = `aitok_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    dbOrder = {
+      id: mockId,
+      userId: input.userId || null,
+      tokensCount,
+      amountFc,
+      currency: 'CDF',
+      status: 'PENDING',
+      paymentMethod,
+      phone: normalizedPhone || input.phone || null,
+      operator: input.operator || null,
+      createdAt: new Date(),
+    };
+  }
+
+  const orderId = dbOrder.id;
+  const reference = buildFlexPayReference('aitok', orderId);
+  const apiBase = getPublicApiBaseUrl();
+  const callbackUrl = `${apiBase}/api/public/payments/flexpay/callback`;
+
+  // 1) Paiement Mobile Money (Orange Money, M-Pesa, Airtel Money)
+  if (paymentMethod === 'mobile') {
+    let flex: { orderNumber: string; redirectUrl: string | null; raw: Record<string, unknown> };
+
+    if (isFlexPayCardConfigured()) {
+      flex = await createFlexPayMobileCheckout({
+        reference,
+        amount: amountFc,
+        currency: 'CDF',
+        phone: normalizedPhone!,
+        callbackUrl,
+      });
+    } else {
+      // Si FlexPay n'est pas configuré en dev local
+      const mockOrderNumber = `FLEX-MM-${Date.now()}`;
+      flex = {
+        orderNumber: mockOrderNumber,
+        redirectUrl: null,
+        raw: { code: '0', message: 'Mode sandbox / dev' },
+      };
+    }
+
+    try {
+      await prisma.aiTokenOrder.update({
+        where: { id: orderId },
+        data: {
+          flexPayOrderNumber: flex.orderNumber,
+          flexPayReference: reference,
+        },
+      });
+    } catch {
+      memoryOrders.set(orderId, {
+        ...dbOrder,
+        flexPayOrderNumber: flex.orderNumber,
+        flexPayReference: reference,
+      });
+    }
+
+    return {
+      success: true,
+      orderId,
+      orderNumber: flex.orderNumber,
+      reference,
+      paymentMethod: 'mobile',
+      status: 'PENDING',
+      tokensCount,
+      amountFc,
+      message:
+        'Une demande de paiement a été envoyée sur votre téléphone. Veuillez valider le code secret PIN sur votre mobile.',
+    };
+  }
+
+  // 2) Paiement Carte Bancaire (Visa / Mastercard)
+  const approveUrl = `${apiBase}/api/public/payments/flexpay/return?kind=ai_tokens&result=approve&orderId=${encodeURIComponent(orderId)}`;
+  const cancelUrl = `${apiBase}/api/public/payments/flexpay/return?kind=ai_tokens&result=cancel&orderId=${encodeURIComponent(orderId)}`;
+  const declineUrl = `${apiBase}/api/public/payments/flexpay/return?kind=ai_tokens&result=decline&orderId=${encodeURIComponent(orderId)}`;
+
+  let flexCard: { orderNumber: string; redirectUrl: string | null; raw: Record<string, unknown> };
+
+  if (isFlexPayCardConfigured()) {
+    flexCard = await createFlexPayCardCheckout({
+      reference,
+      amount: amountFc,
+      currency: 'CDF',
+      description: `Recharge ${tokensCount} simulations IA — EventMaster`,
+      callbackUrl,
+      approveUrl,
+      cancelUrl,
+      declineUrl,
+      language: 'fr',
+    });
+  } else {
+    const mockOrderNumber = `FLEX-CARD-${Date.now()}`;
+    flexCard = {
+      orderNumber: mockOrderNumber,
+      redirectUrl: `${apiBase}/api/public/payments/flexpay/return?kind=ai_tokens&result=approve&orderId=${encodeURIComponent(orderId)}`,
+      raw: { code: '0', message: 'Mode sandbox / dev' },
+    };
+  }
+
+  try {
+    await prisma.aiTokenOrder.update({
+      where: { id: orderId },
+      data: {
+        flexPayOrderNumber: flexCard.orderNumber,
+        flexPayReference: reference,
+      },
+    });
+  } catch {
+    memoryOrders.set(orderId, {
+      ...dbOrder,
+      flexPayOrderNumber: flexCard.orderNumber,
+      flexPayReference: reference,
+    });
+  }
+
+  return {
+    success: true,
+    orderId,
+    orderNumber: flexCard.orderNumber,
+    reference,
+    paymentMethod: 'card',
+    status: 'PENDING',
+    redirectUrl: flexCard.redirectUrl,
+    tokensCount,
+    amountFc,
+    message: 'Redirection vers la passerelle sécurisée FlexPay (Visa / Mastercard)...',
+  };
+}
+
+/**
+ * Recherche une commande de jetons IA par référence ou orderNumber FlexPay.
+ */
+export async function findAiTokenOrderForFlexPay(opts: {
+  reference?: string;
+  orderNumber?: string;
+  orderId?: string;
+}) {
+  try {
+    if (opts.orderId) {
+      const order = await prisma.aiTokenOrder.findUnique({ where: { id: opts.orderId } });
+      if (order) return order;
+    }
+    if (opts.orderNumber) {
+      const order = await prisma.aiTokenOrder.findFirst({
+        where: { flexPayOrderNumber: opts.orderNumber },
+      });
+      if (order) return order;
+    }
+    if (opts.reference) {
+      const order = await prisma.aiTokenOrder.findFirst({
+        where: {
+          OR: [{ id: opts.reference }, { flexPayReference: opts.reference }],
+        },
+      });
+      if (order) return order;
+    }
+  } catch (err) {
+    console.warn('[AiTokenPayment] findAiTokenOrder fallback to memory:', err);
+  }
+
+  // Recherche dans la mémoire si non trouvé en DB
+  for (const order of memoryOrders.values()) {
+    if (opts.orderId && order.id === opts.orderId) return order;
+    if (opts.orderNumber && order.flexPayOrderNumber === opts.orderNumber) return order;
+    if (opts.reference && (order.id === opts.reference || order.flexPayReference === opts.reference)) {
+      return order;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Vérifie le statut réel du paiement auprès de FlexPay et met à jour la commande.
+ */
+export async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber: string): Promise<{
+  found: boolean;
+  paid: boolean;
+  status: string;
+  tokensCount: number;
+  orderId: string;
+  orderNumber?: string | null;
+  message?: string;
+}> {
+  const order = await findAiTokenOrderForFlexPay({
+    orderId: orderIdOrNumber,
+    orderNumber: orderIdOrNumber,
+    reference: orderIdOrNumber,
+  });
+
+  if (!order) {
+    return {
+      found: false,
+      paid: false,
+      status: 'NOT_FOUND',
+      tokensCount: 0,
+      orderId: orderIdOrNumber,
+      message: 'Commande de jetons introuvable.',
+    };
+  }
+
+  if (order.status === 'PAID') {
+    return {
+      found: true,
+      paid: true,
+      status: 'PAID',
+      tokensCount: order.tokensCount,
+      orderId: order.id,
+      orderNumber: order.flexPayOrderNumber,
+      message: 'Paiement déjà validé.',
+    };
+  }
+
+  const orderNumber = order.flexPayOrderNumber;
+  if (!orderNumber) {
+    return {
+      found: true,
+      paid: false,
+      status: order.status,
+      tokensCount: order.tokensCount,
+      orderId: order.id,
+      message: 'En attente d’initialisation.',
+    };
+  }
+
+  let checked: FlexPayCheckResult;
+  try {
+    checked = await checkFlexPayCardOrder(orderNumber);
+  } catch (err) {
+    console.warn('[AiTokenPayment] checkFlexPayCardOrder error:', err);
+    return {
+      found: true,
+      paid: false,
+      status: 'PENDING',
+      tokensCount: order.tokensCount,
+      orderId: order.id,
+      orderNumber,
+      message: 'Vérification en cours auprès de l’opérateur...',
+    };
+  }
+
+  const isSuccess = checked.status === 'success';
+  const isFailed = checked.status === 'failed';
+
+  const metaUpdate: FlexPayMetadataUpdate = buildFlexPayMetadataUpdate({
+    channel: checked.channel,
+    amountCustomer: checked.amountCustomer,
+    providerReference: checked.providerReference,
+  });
+
+  if (isSuccess) {
+    try {
+      await prisma.aiTokenOrder.update({
+        where: { id: order.id },
+        data: {
+          status: 'PAID',
+          paidAt: new Date(),
+          ...metaUpdate,
+        },
+      });
+    } catch {
+      if (memoryOrders.has(order.id)) {
+        memoryOrders.set(order.id, {
+          ...memoryOrders.get(order.id),
+          status: 'PAID',
+          paidAt: new Date(),
+          ...metaUpdate,
+        });
+      }
+    }
+
+    return {
+      found: true,
+      paid: true,
+      status: 'PAID',
+      tokensCount: order.tokensCount,
+      orderId: order.id,
+      orderNumber,
+      message: 'Paiement validé avec succès ! Jetons crédités.',
+    };
+  }
+
+  if (isFailed) {
+    try {
+      await prisma.aiTokenOrder.update({
+        where: { id: order.id },
+        data: {
+          status: 'FAILED',
+          ...metaUpdate,
+        },
+      });
+    } catch {
+      if (memoryOrders.has(order.id)) {
+        memoryOrders.set(order.id, {
+          ...memoryOrders.get(order.id),
+          status: 'FAILED',
+          ...metaUpdate,
+        });
+      }
+    }
+
+    return {
+      found: true,
+      paid: false,
+      status: 'FAILED',
+      tokensCount: order.tokensCount,
+      orderId: order.id,
+      orderNumber,
+      message: 'Le paiement a échoué ou a été refusé par l’opérateur.',
+    };
+  }
+
+  return {
+    found: true,
+    paid: false,
+    status: 'PENDING',
+    tokensCount: order.tokensCount,
+    orderId: order.id,
+    orderNumber,
+    message: 'En attente de validation sur votre téléphone...',
+  };
+}

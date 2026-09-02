@@ -226,6 +226,7 @@ model User {
   savedRoomAmbiences    SavedRoomAmbience[]
   orgRoomAmbiences      OrgRoomAmbience[]
   ticketOrders          TicketOrder[]
+  aiTokenOrders         AiTokenOrder[]
 }
 
 model Event {
@@ -1062,3 +1063,28 @@ model SubscriptionPlan {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
+
+model AiTokenOrder {
+  id                       String    @id @default(uuid())
+  userId                   String?
+  user                     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tokensCount              Int       @default(20)
+  amountFc                 Float     @default(2000)
+  currency                 String    @default("CDF")
+  status                   String    @default("PENDING") // PENDING | PAID | FAILED | CANCELLED
+  paymentMethod            String    // mobile | card
+  phone                    String?
+  operator                 String?
+  flexPayOrderNumber       String?   @unique
+  flexPayReference         String?   @unique
+  flexPayChannel           String?
+  flexPayAmountCustomer    Float?
+  flexPayProviderReference String?
+  paidAt                   DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@index([flexPayReference])
+  @@index([userId])
+}
+

@@ -17,6 +17,10 @@ import {
 } from '../services/flexPayCardService';
 import { finalizeCommercialFlexPayPayout } from '../services/commercialFlexPayPayoutService';
 import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
+import {
+  findAiTokenOrderForFlexPay,
+  verifyAndFinalizeAiTokenOrder,
+} from '../services/aiTokenFlexPayService';
 
 function frontendBaseUrl(): string {
   return (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
@@ -181,6 +185,50 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       return res.json({ ok: true, paid: true, kind: 'subscription', requestId: sub.id });
     }
 
+    // 3) Recharge Jetons IA
+    const aiOrder = await findAiTokenOrderForFlexPay({
+      reference: parsed.reference || undefined,
+      orderNumber: parsed.orderNumber || undefined,
+    });
+
+    if (aiOrder) {
+      if (aiOrder.status === 'PAID') {
+        return res.json({ ok: true, alreadyPaid: true, kind: 'ai_tokens', orderId: aiOrder.id });
+      }
+
+      const orderNumber = aiOrder.flexPayOrderNumber || parsed.orderNumber;
+      const { success, checkMeta } = await confirmFlexPaySuccess(orderNumber, parsed.success);
+      const meta = mergeMetadata(callbackMeta, checkMeta);
+
+      if (!success) {
+        try {
+          await prisma.aiTokenOrder.update({
+            where: { id: aiOrder.id },
+            data: { status: 'FAILED', ...meta },
+          });
+        } catch {
+          /* fallback */
+        }
+        return res.json({ ok: true, paid: false, kind: 'ai_tokens', orderId: aiOrder.id });
+      }
+
+      try {
+        await prisma.aiTokenOrder.update({
+          where: { id: aiOrder.id },
+          data: { status: 'PAID', paidAt: new Date(), ...meta },
+        });
+      } catch {
+        /* fallback */
+      }
+      return res.json({
+        ok: true,
+        paid: true,
+        kind: 'ai_tokens',
+        orderId: aiOrder.id,
+        tokensCount: aiOrder.tokensCount,
+      });
+    }
+
     console.warn('[FlexPay] callback sans commande / demande', parsed);
 
     // 3) Pay Out commissions
@@ -272,6 +320,25 @@ export async function flexPayCardReturn(req: Request, res: Response) {
 
       return res.redirect(
         `${FRONTEND_URL}/dashboard/billing?flexpay=return&requestId=${encodeURIComponent(requestId)}`,
+      );
+    }
+
+    if (kind === 'ai_tokens') {
+      const orderId = String(req.query.orderId || '');
+      if (result === 'cancel' || result === 'decline') {
+        return res.redirect(`${FRONTEND_URL}/#simulateur-ia?ai_tokens_status=canceled`);
+      }
+
+      if (orderId) {
+        try {
+          await verifyAndFinalizeAiTokenOrder(orderId);
+        } catch (err) {
+          console.warn('[FlexPay] verify ai_tokens on return:', err);
+        }
+      }
+
+      return res.redirect(
+        `${FRONTEND_URL}/#simulateur-ia?ai_tokens_status=success&tokens=20&orderId=${encodeURIComponent(orderId)}`,
       );
     }
 

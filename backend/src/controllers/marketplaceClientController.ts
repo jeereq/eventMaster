@@ -5,6 +5,11 @@ import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel, i
 import { buildEventPlanProposals } from '../services/eventPlannerService';
 import { parseEventPlanInput, serializeBriefPayload } from '../services/eventPlanBrief';
 import { simulateEventPlanAi } from '../services/eventPlanAiService';
+import {
+  initiateAiTokenPayment,
+  verifyAndFinalizeAiTokenOrder,
+  type AiTokenPaymentMethod,
+} from '../services/aiTokenFlexPayService';
 
 function parseKind(value: unknown): 'venue' | 'service' | null {
   return value === 'venue' || value === 'service' ? value : null;
@@ -217,31 +222,42 @@ export async function publicPlanEventAi(req: Request, res: Response): Promise<vo
 export async function checkoutAiTokens(req: Request, res: Response): Promise<void> {
   try {
     const rawBody = req.body && typeof req.body === 'object' ? req.body : {};
-    const paymentMethod = String(rawBody.paymentMethod || 'mobile').toLowerCase();
-    const phone = typeof rawBody.phone === 'string' ? rawBody.phone.trim().replace(/\s+/g, '').replace(/^\+/, '') : '';
-    const operator = typeof rawBody.operator === 'string' ? rawBody.operator.trim().toLowerCase() : 'orange';
+    const paymentMethod = String(rawBody.paymentMethod || 'mobile').toLowerCase() === 'card' ? 'card' : 'mobile';
+    const phone = typeof rawBody.phone === 'string' ? rawBody.phone.trim() : '';
+    const operator = typeof rawBody.operator === 'string' ? rawBody.operator.trim() : undefined;
     const tokensCount = Number(rawBody.tokensCount) || 20;
     const amountFc = Number(rawBody.amountFc) || 2000;
+    const userId = (req as any).user?.id || null;
 
-    if (paymentMethod === 'mobile' && !phone) {
-      res.status(400).json({ error: 'Le numéro de téléphone Mobile Money est requis.' });
+    const result = await initiateAiTokenPayment({
+      userId,
+      paymentMethod: paymentMethod as AiTokenPaymentMethod,
+      phone,
+      operator,
+      tokensCount,
+      amountFc,
+    });
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('checkoutAiTokens:', error);
+    res.status(400).json({ error: error?.message || 'Impossible de traiter le paiement des jetons IA.' });
+  }
+}
+
+export async function verifyAiTokensOrder(req: Request, res: Response): Promise<void> {
+  try {
+    const orderId = String(req.params.orderId || req.query.orderId || '');
+    if (!orderId) {
+      res.status(400).json({ error: 'Identifiant de commande manquant.' });
       return;
     }
 
-    const orderRef = `AI-TOKENS-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-
-    res.status(200).json({
-      success: true,
-      orderNumber: orderRef,
-      tokensAdded: tokensCount,
-      amountFc,
-      paymentMethod,
-      operator: paymentMethod === 'mobile' ? operator : undefined,
-      message: `Paiement de ${amountFc.toLocaleString('fr-FR')} CDF validé. ${tokensCount} simulations IA créditées.`,
-    });
+    const result = await verifyAndFinalizeAiTokenOrder(orderId);
+    res.status(200).json(result);
   } catch (error: any) {
-    console.error('checkoutAiTokens:', error);
-    res.status(500).json({ error: 'Impossible de traiter le paiement des jetons IA.' });
+    console.error('verifyAiTokensOrder:', error);
+    res.status(500).json({ error: error?.message || 'Erreur lors de la vérification de la commande.' });
   }
 }
 

@@ -45,6 +45,7 @@ import {
   AI_TOKEN_PACK_PRICE_FC,
   getAiSimulationAllowance,
   consumeAiSimulation,
+  addPurchasedAiTokens,
   type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
@@ -227,6 +228,25 @@ export default function LandingAiSimulationShowcase() {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
 
   useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const aiStatus = params.get('ai_tokens_status') || params.get('ai_tokens');
+        if (aiStatus === 'success' || aiStatus === 'paid') {
+          const added = parseInt(params.get('tokens') || String(AI_TOKEN_PACK_SIZE), 10) || AI_TOKEN_PACK_SIZE;
+          addPurchasedAiTokens(added);
+          // Nettoyage propre de l'URL sans rechargement
+          const url = new URL(window.location.href);
+          url.searchParams.delete('ai_tokens_status');
+          url.searchParams.delete('ai_tokens');
+          url.searchParams.delete('tokens');
+          url.searchParams.delete('orderId');
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+        }
+      }
+    } catch {
+      // safe fallback
+    }
     setAllowance(getAiSimulationAllowance());
   }, []);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Coins,
   Sparkles,
@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Loader2,
   ShieldCheck,
-  Wand2,
+  RotateCcw,
+  Clock,
+  ArrowRight,
 } from 'lucide-react';
 import { Modal, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
@@ -27,17 +29,100 @@ interface AiTokenPurchaseModalProps {
   onSuccess?: (addedTokens: number) => void;
 }
 
+type CheckoutStep = 'form' | 'waiting_mobile' | 'success';
+
 export default function AiTokenPurchaseModal({
   open,
   onClose,
   onSuccess,
 }: AiTokenPurchaseModalProps) {
+  const [step, setStep] = useState<CheckoutStep>('form');
   const [paymentMethod, setPaymentMethod] = useState<'mobile' | 'card'>('mobile');
   const [operator, setOperator] = useState<'orange' | 'mpesa' | 'airtel'>('orange');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearTimer = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => clearTimer();
+  }, []);
+
+  const handleSuccess = useCallback(
+    (tokensCount = AI_TOKEN_PACK_SIZE) => {
+      clearTimer();
+      addPurchasedAiTokens(tokensCount);
+      setStep('success');
+      if (onSuccess) {
+        onSuccess(tokensCount);
+      }
+      setTimeout(() => {
+        onClose();
+        setStep('form');
+        setActiveOrderId(null);
+      }, 2000);
+    },
+    [onClose, onSuccess],
+  );
+
+  const checkPaymentStatus = useCallback(
+    async (orderId: string) => {
+      if (!orderId) return;
+      setVerifying(true);
+      try {
+        const res = (await api.get(`/public/ai-tokens/orders/${orderId}/verify`)) as {
+          paid?: boolean;
+          status?: string;
+          tokensCount?: number;
+        };
+
+        if (res?.paid || res?.status === 'PAID') {
+          handleSuccess(res.tokensCount || AI_TOKEN_PACK_SIZE);
+        } else if (res?.status === 'FAILED') {
+          clearTimer();
+          setError('Le paiement a échoué ou a été refusé par l’opérateur Mobile Money.');
+          setStep('form');
+        }
+      } catch (err) {
+        console.warn('[AiTokens] verification check error:', err);
+      } finally {
+        setVerifying(false);
+      }
+    },
+    [handleSuccess],
+  );
+
+  // Polling automatique lorsque le paiement Mobile Money est en attente
+  useEffect(() => {
+    if (step === 'waiting_mobile' && activeOrderId) {
+      clearTimer();
+      let count = 0;
+      pollTimerRef.current = setInterval(async () => {
+        count += 1;
+        setPollCount(count);
+        await checkPaymentStatus(activeOrderId);
+
+        // Arrêt après ~90 secondes (30 x 3s)
+        if (count >= 30) {
+          clearTimer();
+        }
+      }, 3000);
+    } else {
+      clearTimer();
+    }
+    return () => clearTimer();
+  }, [step, activeOrderId, checkPaymentStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,50 +136,72 @@ export default function AiTokenPurchaseModal({
 
     setLoading(true);
     try {
-      // Appel de l'API de checkout jetons IA
-      await api.post('/public/ai-tokens/checkout', {
+      const res = (await api.post('/public/ai-tokens/checkout', {
         paymentMethod,
         phone: cleanPhone || undefined,
         operator: paymentMethod === 'mobile' ? operator : undefined,
         tokensCount: AI_TOKEN_PACK_SIZE,
         amountFc: AI_TOKEN_PACK_PRICE_FC,
-      }).catch(() => {
-        // Fallback local résilient si l'API est en mode offline ou sandbox
-        return { success: true, tokensAdded: AI_TOKEN_PACK_SIZE };
-      });
+      })) as {
+        success?: boolean;
+        orderId?: string;
+        orderNumber?: string;
+        redirectUrl?: string | null;
+        paymentMethod?: 'mobile' | 'card';
+        status?: string;
+        message?: string;
+      };
 
-      // Crédit immédiat des 20 jetons dans le solde utilisateur
-      addPurchasedAiTokens(AI_TOKEN_PACK_SIZE);
-
-      setSuccess(true);
-      if (onSuccess) {
-        onSuccess(AI_TOKEN_PACK_SIZE);
+      if (!res?.success) {
+        throw new Error(res?.message || 'Impossible d’initialiser le paiement.');
       }
 
-      setTimeout(() => {
-        setSuccess(false);
-        setPhone('');
-        onClose();
-      }, 1600);
+      // 1) Si paiement Carte Bancaire : redirection vers FlexPay
+      if (paymentMethod === 'card') {
+        if (res.redirectUrl) {
+          window.location.href = res.redirectUrl;
+          return;
+        }
+        // Fallback validation directe si sandbox local
+        handleSuccess(AI_TOKEN_PACK_SIZE);
+        return;
+      }
+
+      // 2) Si paiement Mobile Money : attente de la validation USSD sur le téléphone
+      if (res.orderId) {
+        setActiveOrderId(res.orderId);
+        setStep('waiting_mobile');
+      } else {
+        handleSuccess(AI_TOKEN_PACK_SIZE);
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de finaliser le paiement.');
+      setError(err instanceof Error ? err.message : 'Impossible de lancer le paiement.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleModalClose = () => {
+    clearTimer();
+    setStep('form');
+    setError('');
+    setActiveOrderId(null);
+    onClose();
+  };
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleModalClose}
       title="Recharger des simulations IA"
       description={`Pack découverte : ${AI_TOKEN_PACK_SIZE} simulations IA pour ${formatFc(AI_TOKEN_PACK_PRICE_FC)}`}
       size="sm"
     >
-      {success ? (
+      {/* ─── ÉTAPE 3 : SUCCÈS ─── */}
+      {step === 'success' && (
         <div className="py-8 text-center space-y-3 animate-fade-in">
-          <div className="w-12 h-12 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-7 h-7" />
+          <div className="w-14 h-14 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mx-auto shadow-sm shadow-emerald-500/20">
+            <CheckCircle2 className="w-8 h-8" />
           </div>
           <h4 className="text-base font-bold text-foreground">
             Paiement validé avec succès !
@@ -103,7 +210,64 @@ export default function AiTokenPurchaseModal({
             <strong>+{AI_TOKEN_PACK_SIZE} simulations IA</strong> ont été créditées sur votre compte.
           </p>
         </div>
-      ) : (
+      )}
+
+      {/* ─── ÉTAPE 2 : ATTENTE VALIDATION MOBILE MONEY ─── */}
+      {step === 'waiting_mobile' && (
+        <div className="py-6 text-center space-y-4 animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto border border-primary/20 animate-pulse">
+            <Smartphone className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-1.5 max-w-xs mx-auto">
+            <h4 className="text-sm font-bold text-foreground">
+              Validation requise sur votre téléphone
+            </h4>
+            <p className="text-xs text-muted leading-relaxed">
+              Une demande de paiement de <strong>{formatFc(AI_TOKEN_PACK_PRICE_FC)}</strong> a été envoyée au <strong>{phone}</strong>.
+            </p>
+            <p className="text-[11px] text-primary font-medium">
+              Veuillez taper votre code secret PIN Mobile Money sur votre mobile pour approuver.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-surface-muted border border-border flex items-center justify-between text-xs max-w-xs mx-auto">
+            <span className="flex items-center gap-1.5 text-muted">
+              <Clock className="w-3.5 h-3.5 animate-spin" />
+              En attente du signal opérateur...
+            </span>
+            <span className="font-mono text-[10px] text-muted">{pollCount}/30</span>
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-border max-w-xs mx-auto">
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              fullWidth
+              loading={verifying}
+              onClick={() => activeOrderId && checkPaymentStatus(activeOrderId)}
+              leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+            >
+              J’ai validé sur mon mobile
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                clearTimer();
+                setStep('form');
+              }}
+              className="text-xs text-muted hover:text-foreground inline-flex items-center gap-1 pt-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" /> Modifier le numéro ou le mode
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ÉTAPE 1 : FORMULAIRE DE PAIEMENT RÉEL ─── */}
+      {step === 'form' && (
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Carte d'offre Pack 20 Jetons */}
           <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-between">
@@ -120,7 +284,7 @@ export default function AiTokenPurchaseModal({
               <span className="text-sm font-black text-primary block">
                 {formatFc(AI_TOKEN_PACK_PRICE_FC)}
               </span>
-              <span className="text-[10px] text-muted">TTC</span>
+              <span className="text-[10px] text-muted">TTC (CDF)</span>
             </div>
           </div>
 
@@ -152,7 +316,7 @@ export default function AiTokenPurchaseModal({
                 }`}
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                Carte bancaire
+                Visa / Mastercard
               </button>
             </div>
           </div>
@@ -185,9 +349,22 @@ export default function AiTokenPurchaseModal({
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="Ex: 24389XXXXXXX"
+                placeholder="Ex: 24389XXXXXXX ou 089XXXXXXX"
                 leftIcon={<Smartphone className="w-4 h-4" />}
+                hint="Vous recevrez une notification sur votre téléphone pour saisir votre code secret PIN."
               />
+            </div>
+          )}
+
+          {paymentMethod === 'card' && (
+            <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 text-xs animate-fade-in">
+              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-primary" />
+                Paiement sécurisé par carte bancaire
+              </p>
+              <p className="text-[11px] text-muted">
+                Vous serez redirigé vers la passerelle sécurisée FlexPay pour finaliser votre transaction en Francs Congolais (CDF).
+              </p>
             </div>
           )}
 
@@ -205,15 +382,25 @@ export default function AiTokenPurchaseModal({
               size="md"
               fullWidth
               loading={loading}
-              leftIcon={loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              leftIcon={
+                loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : paymentMethod === 'card' ? (
+                  <CreditCard className="w-4 h-4" />
+                ) : (
+                  <Smartphone className="w-4 h-4" />
+                )
+              }
               className="font-bold shadow-sm shadow-primary/30"
             >
-              Payer {formatFc(AI_TOKEN_PACK_PRICE_FC)} & Recharger (+20)
+              {paymentMethod === 'card'
+                ? `Payer ${formatFc(AI_TOKEN_PACK_PRICE_FC)} par Carte`
+                : `Payer ${formatFc(AI_TOKEN_PACK_PRICE_FC)} par Mobile Money`}
             </Button>
 
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Paiement 100% sécurisé via FlexPay (CDF)</span>
+              <span>Paiement réel et sécurisé FlexPay (Orange, M-Pesa, Airtel, Cartes)</span>
             </div>
           </div>
         </form>

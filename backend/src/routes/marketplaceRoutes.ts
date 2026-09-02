@@ -21,6 +21,7 @@ import {
   planEvent,
   planEventAi,
   checkoutAiTokens,
+  verifyAiTokensOrder,
   listSavedPacks,
   createSavedPack,
   deleteSavedPack,
@@ -52,6 +53,7 @@ router.delete('/favorites/:kind/:slug', removeFavorite);
 router.post('/event-plan', planEvent);
 router.post('/event-plan-ai', planEventAi);
 router.post('/ai-tokens/checkout', checkoutAiTokens);
+router.get('/ai-tokens/orders/:orderId/verify', verifyAiTokensOrder);
 router.get('/event-packs', listSavedPacks);
 router.post('/event-packs', createSavedPack);
 router.delete('/event-packs/:id', deleteSavedPack);
