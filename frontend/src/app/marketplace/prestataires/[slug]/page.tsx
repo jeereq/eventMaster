@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, usePathname } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import PublicPageShell from '@/components/PublicPageShell';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
@@ -11,7 +10,8 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
-import { Button } from '@/components/ui';
+import ListingMapPanel from '@/components/ListingMapPanel';
+import ListingRelationStatus from '@/components/ListingRelationStatus';
 import {
   catalogueItemToMapMarker,
   formatLocationLine,
@@ -22,15 +22,7 @@ import {
   type PublicService,
 } from '@/lib/marketplace';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Navigation, Sparkles, KeyRound } from 'lucide-react';
-
-const MarketplaceLocationsMap = dynamic(
-  () => import('@/components/MarketplaceLocationsMap'),
-  {
-    ssr: false,
-    loading: () => <div className="h-[16.5rem] sm:h-[26.25rem] bg-surface-muted" aria-hidden />,
-  },
-);
+import { Sparkles, KeyRound } from 'lucide-react';
 
 export default function MarketplaceServiceDetailPage() {
   const params = useParams();
@@ -141,39 +133,20 @@ export default function MarketplaceServiceDetailPage() {
             }}
           />
         ) : null}
+        relationStatus={service?.slug ? <ListingRelationStatus kind="service" slug={service.slug} /> : null}
         map={service && item ? (
           service.latitude != null && service.longitude != null ? (
-            <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border-b border-border">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground">Mode itinéraire</p>
-                  <p className="text-xs text-muted">
-                    Une voix féminine lit le guidage. Autorisez la localisation, ou cliquez la carte pour le départ.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="min-h-11 sm:min-h-0"
-                  onClick={() => {
-                    setWantRoute(true);
-                    mapRef.current?.startDirectionsFor(item.id);
-                  }}
-                  leftIcon={<Navigation className="w-3.5 h-3.5" />}
-                >
-                  Démarrer
-                </Button>
-              </div>
-              <div className="h-[16.5rem] sm:h-[26.25rem]">
-                <MarketplaceLocationsMap
-                  ref={mapRef}
-                  markers={[catalogueItemToMapMarker(item)]}
-                  height="100%"
-                  navigateOnClick={false}
-                  autoDirections={wantRoute}
-                  city={service.city}
-                />
-              </div>
-            </div>
+            <ListingMapPanel
+              mapRef={mapRef}
+              marker={catalogueItemToMapMarker(item)}
+              city={service.city}
+              locationLine={formatLocationLine(service)}
+              wantRoute={wantRoute}
+              onStartRoute={() => {
+                setWantRoute(true);
+                mapRef.current?.startDirectionsFor(item.id);
+              }}
+            />
           ) : (
             <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette prestation.</p>
           )

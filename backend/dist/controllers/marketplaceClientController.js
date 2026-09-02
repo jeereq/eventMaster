@@ -15,6 +15,7 @@ exports.deleteSavedPack = deleteSavedPack;
 exports.listSavedBriefs = listSavedBriefs;
 exports.createSavedBrief = createSavedBrief;
 exports.deleteSavedBrief = deleteSavedBrief;
+exports.getListingRelation = getListingRelation;
 exports.listMyTickets = listMyTickets;
 const db_1 = require("../db");
 const publicVenue_1 = require("../utils/publicVenue");
@@ -477,6 +478,91 @@ async function deleteSavedBrief(req, res) {
     }
 }
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+async function getListingRelation(req, res) {
+    try {
+        if (!req.user)
+            return res.status(401).json({ error: 'Non authentifié.' });
+        const tenantId = req.user.tenantId;
+        const userId = req.user.id;
+        const kind = parseKind(req.query.kind);
+        const slug = parseSlug(req.query.slug);
+        if (!tenantId || !kind || !slug) {
+            return res.status(400).json({ error: 'Fiche invalide.' });
+        }
+        const listing = kind === 'venue'
+            ? await db_1.prisma.venueListing.findFirst({ where: { slug }, select: { id: true, tenantId: true } })
+            : await db_1.prisma.serviceOffering.findFirst({ where: { slug }, select: { id: true, tenantId: true } });
+        if (!listing)
+            return res.status(404).json({ error: 'Fiche introuvable.' });
+        const viewerRole = listing.tenantId === tenantId ? 'vendor' : 'organizer';
+        const listingFilter = kind === 'venue' ? { listingId: listing.id } : { offeringId: listing.id };
+        const sender = viewerRole === 'organizer'
+            ? await db_1.prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+            : null;
+        const senderEmail = sender?.email?.trim().toLowerCase() || '';
+        const [inquiry, booking] = await Promise.all([
+            db_1.prisma.marketplaceInquiry.findFirst({
+                where: viewerRole === 'vendor'
+                    ? listingFilter
+                    : {
+                        ...listingFilter,
+                        OR: [
+                            { fromTenantId: tenantId },
+                            ...(senderEmail ? [{ fromEmail: senderEmail }] : []),
+                        ],
+                    },
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    status: true,
+                    eventDate: true,
+                    createdAt: true,
+                },
+            }),
+            db_1.prisma.marketplaceBooking.findFirst({
+                where: viewerRole === 'vendor'
+                    ? { ...listingFilter, vendorTenantId: tenantId }
+                    : { ...listingFilter, organizerTenantId: tenantId },
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    status: true,
+                    eventDate: true,
+                    eventEndDate: true,
+                    depositMarkedAt: true,
+                    createdAt: true,
+                },
+            }),
+        ]);
+        return res.json({
+            kind,
+            slug,
+            viewerRole,
+            inquiry: inquiry
+                ? {
+                    id: inquiry.id,
+                    status: inquiry.status,
+                    eventDate: inquiry.eventDate,
+                    createdAt: inquiry.createdAt,
+                }
+                : null,
+            booking: booking
+                ? {
+                    id: booking.id,
+                    status: booking.status,
+                    eventDate: booking.eventDate,
+                    eventEndDate: booking.eventEndDate,
+                    depositMarkedAt: booking.depositMarkedAt,
+                    createdAt: booking.createdAt,
+                }
+                : null,
+        });
+    }
+    catch (error) {
+        console.error('getListingRelation:', error);
+        return res.status(500).json({ error: 'Impossible de charger le suivi devis / réservation.' });
+    }
+}
 async function listMyTickets(req, res) {
     try {
         if (!req.user)

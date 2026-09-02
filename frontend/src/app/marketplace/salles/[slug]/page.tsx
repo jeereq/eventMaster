@@ -11,7 +11,8 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
-import { Button } from '@/components/ui';
+import ListingMapPanel from '@/components/ListingMapPanel';
+import ListingRelationStatus from '@/components/ListingRelationStatus';
 import {
   catalogueItemToMapMarker,
   formatLocationLine,
@@ -21,15 +22,7 @@ import {
 } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Building2, Navigation } from 'lucide-react';
-
-const MarketplaceLocationsMap = dynamic(
-  () => import('@/components/MarketplaceLocationsMap'),
-  {
-    ssr: false,
-    loading: () => <div className="h-[16.5rem] sm:h-[26.25rem] bg-surface-muted" aria-hidden />,
-  },
-);
+import { Building2 } from 'lucide-react';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
@@ -152,39 +145,21 @@ export default function MarketplaceVenueDetailPage() {
             }}
           />
         ) : null}
+        relationStatus={venue?.slug ? <ListingRelationStatus kind="venue" slug={venue.slug} /> : null}
         map={venue && item ? (
           venue.latitude != null && venue.longitude != null ? (
-            <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border-b border-border">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground">Mode itinéraire</p>
-                  <p className="text-xs text-muted">
-                    Une voix féminine lit le guidage. Autorisez la localisation, ou cliquez la carte pour le départ.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  className="min-h-11 sm:min-h-0"
-                  onClick={() => {
-                    setWantRoute(true);
-                    mapRef.current?.startDirectionsFor(item.id);
-                  }}
-                  leftIcon={<Navigation className="w-3.5 h-3.5" />}
-                >
-                  Démarrer
-                </Button>
-              </div>
-              <div className="h-[16.5rem] sm:h-[26.25rem]">
-                <MarketplaceLocationsMap
-                  ref={mapRef}
-                  markers={[catalogueItemToMapMarker(item)]}
-                  height="100%"
-                  navigateOnClick={false}
-                  autoDirections={wantRoute}
-                  city={venue.city}
-                />
-              </div>
-            </div>
+            <ListingMapPanel
+              mapRef={mapRef}
+              marker={catalogueItemToMapMarker(item)}
+              city={venue.city}
+              locationLine={formatLocationLine(venue)}
+              address={venue.address}
+              wantRoute={wantRoute}
+              onStartRoute={() => {
+                setWantRoute(true);
+                mapRef.current?.startDirectionsFor(item.id);
+              }}
+            />
           ) : (
             <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette salle.</p>
           )

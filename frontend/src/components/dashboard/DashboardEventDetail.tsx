@@ -2,13 +2,12 @@
 
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import EventTicketCheckoutForm from '@/components/EventTicketCheckoutForm';
-import { Button } from '@/components/ui';
+import ListingMapPanel from '@/components/ListingMapPanel';
 import {
   catalogueItemToMapMarker,
   CLIENT_AGENDA_HREF,
@@ -19,16 +18,8 @@ import {
 } from '@/lib/marketplace';
 import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQuery';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Navigation, Ticket } from 'lucide-react';
+import { Ticket } from 'lucide-react';
 import { cn } from '@/lib/cn';
-
-const MarketplaceLocationsMap = dynamic(
-  () => import('@/components/MarketplaceLocationsMap'),
-  {
-    ssr: false,
-    loading: () => <div className="h-[16.5rem] sm:h-[26.25rem] bg-surface-muted" aria-hidden />,
-  },
-);
 
 function eventDateKey(iso: string) {
   return String(iso || '').slice(0, 10);
@@ -183,36 +174,16 @@ export default function DashboardEventDetail() {
       ) : null}
       map={event && item ? (
         event.latitude != null && event.longitude != null ? (
-          <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border-b border-border">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">Mode itinéraire</p>
-                <p className="text-xs text-muted">
-                  Une voix féminine lit le guidage. Autorisez la localisation, ou cliquez la carte pour le départ.
-                </p>
-              </div>
-              <Button
-                size="sm"
-                className="min-h-11 sm:min-h-0"
-                onClick={() => {
-                  setWantRoute(true);
-                  mapRef.current?.startDirectionsFor(item.id);
-                }}
-                leftIcon={<Navigation className="w-3.5 h-3.5" />}
-              >
-                Démarrer
-              </Button>
-            </div>
-            <div className="h-[16.5rem] sm:h-[26.25rem]">
-              <MarketplaceLocationsMap
-                ref={mapRef}
-                markers={[catalogueItemToMapMarker(item)]}
-                height="100%"
-                navigateOnClick={false}
-                autoDirections={wantRoute}
-              />
-            </div>
-          </div>
+          <ListingMapPanel
+            mapRef={mapRef}
+            marker={catalogueItemToMapMarker(item)}
+            locationLine={event.location}
+            wantRoute={wantRoute}
+            onStartRoute={() => {
+              setWantRoute(true);
+              mapRef.current?.startDirectionsFor(item.id);
+            }}
+          />
         ) : (
           <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cet événement.</p>
         )

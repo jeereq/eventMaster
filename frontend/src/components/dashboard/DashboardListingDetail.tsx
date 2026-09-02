@@ -10,7 +10,9 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
-import { Badge, Button } from '@/components/ui';
+import ListingMapPanel from '@/components/ListingMapPanel';
+import ListingRelationStatus from '@/components/ListingRelationStatus';
+import { Badge } from '@/components/ui';
 import {
   catalogueItemToMapMarker,
   formatLocationLine,
@@ -30,15 +32,7 @@ import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { listingPublicUrl } from '@/lib/share';
 import { useListingFavorites } from '@/lib/listingFavorites';
-import { Building2, Navigation, Sparkles } from 'lucide-react';
-
-const MarketplaceLocationsMap = dynamic(
-  () => import('@/components/MarketplaceLocationsMap'),
-  {
-    ssr: false,
-    loading: () => <div className="h-[16.5rem] sm:h-[26.25rem] bg-surface-muted" aria-hidden />,
-  },
-);
+import { Building2, Sparkles } from 'lucide-react';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
@@ -233,37 +227,21 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           />
         ) : null
       }
+      relationStatus={slug ? <ListingRelationStatus kind={kind} slug={slug} /> : null}
       map={item ? (
         lat != null && lng != null ? (
-          <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border-b border-border">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">Carte</p>
-                <p className="text-xs text-muted">Position de la fiche, sans quitter le tableau de bord.</p>
-              </div>
-              <Button
-                size="sm"
-                className="min-h-11 sm:min-h-0"
-                onClick={() => {
-                  setWantRoute(true);
-                  mapRef.current?.startDirectionsFor(item.id);
-                }}
-                leftIcon={<Navigation className="w-3.5 h-3.5" />}
-              >
-                Itinéraire
-              </Button>
-            </div>
-            <div className="h-[16.5rem] sm:h-[26.25rem]">
-              <MarketplaceLocationsMap
-                ref={mapRef}
-                markers={[catalogueItemToMapMarker(item)]}
-                height="100%"
-                navigateOnClick={false}
-                autoDirections={wantRoute}
-                city={venue?.city || service?.city}
-              />
-            </div>
-          </div>
+          <ListingMapPanel
+            mapRef={mapRef}
+            marker={catalogueItemToMapMarker(item)}
+            city={venue?.city || service?.city}
+            locationLine={venue ? formatLocationLine(venue) : service ? formatLocationLine(service) : ''}
+            address={venue?.address}
+            wantRoute={wantRoute}
+            onStartRoute={() => {
+              setWantRoute(true);
+              mapRef.current?.startDirectionsFor(item.id);
+            }}
+          />
         ) : (
           <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette fiche.</p>
         )

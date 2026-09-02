@@ -29,6 +29,7 @@ import {
   createSavedBrief,
   deleteSavedBrief,
   listMyTickets,
+  getListingRelation,
 } from '../controllers/marketplaceClientController';
 
 const router = Router();
@@ -47,6 +48,7 @@ router.post('/inquiries/:id/book', convertInquiryToBooking);
 router.get('/bookings', listBookings);
 router.post('/bookings', createBooking);
 router.patch('/bookings/:id', updateBooking);
+router.get('/listing-relation', getListingRelation);
 router.get('/favorites', listFavorites);
 router.post('/favorites', addFavorite);
 router.delete('/favorites/:kind/:slug', removeFavorite);

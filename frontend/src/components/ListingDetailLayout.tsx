@@ -83,6 +83,7 @@ export default function ListingDetailLayout({
   quotaLabel,
   inquiry,
   booking,
+  relationStatus,
   availability,
   preview,
   embedded,
@@ -119,6 +120,7 @@ export default function ListingDetailLayout({
   quotaLabel?: string | null;
   inquiry?: React.ReactNode;
   booking?: React.ReactNode;
+  relationStatus?: React.ReactNode;
   /** Calendrier collé aux CTA devis / réservation (colonne contact). */
   availability?: React.ReactNode;
   preview?: boolean;
@@ -307,8 +309,11 @@ export default function ListingDetailLayout({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12 items-start">
-            <div className="lg:col-span-3 flex flex-col gap-4 min-w-0">
+          <div className={cn(
+            'grid grid-cols-1 items-start gap-8 lg:gap-12',
+            viewTab === 'map' ? 'lg:grid-cols-1' : 'lg:grid-cols-5',
+          )}>
+            <div className={cn('flex flex-col gap-4 min-w-0', viewTab === 'map' ? '' : 'lg:col-span-3')}>
               <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
                 <MarketplaceFormTabs
                   value={viewTab}
@@ -318,9 +323,14 @@ export default function ListingDetailLayout({
                 />
               </div>
 
+              {viewTab === 'details' && relationStatus ? (
+                <div className="lg:hidden">{relationStatus}</div>
+              ) : null}
+
               {viewTab === 'map' ? map : details}
             </div>
 
+            {viewTab === 'map' ? null : (
             <aside
               id="listing-contact"
               className={cn(
@@ -331,6 +341,10 @@ export default function ListingDetailLayout({
               <div className="hidden lg:block">
                 {priceBlock}
               </div>
+
+              {relationStatus ? (
+                <div className="hidden lg:block">{relationStatus}</div>
+              ) : null}
 
               {showCommerce || availability || preview ? (
                 <div className="flex flex-col gap-3">
@@ -397,6 +411,7 @@ export default function ListingDetailLayout({
                 </div>
               ) : null}
             </aside>
+            )}
           </div>
         </>
       )}

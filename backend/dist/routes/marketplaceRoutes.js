@@ -19,6 +19,7 @@ router.post('/inquiries/:id/book', marketplaceBookingController_1.convertInquiry
 router.get('/bookings', marketplaceBookingController_1.listBookings);
 router.post('/bookings', marketplaceBookingController_1.createBooking);
 router.patch('/bookings/:id', marketplaceBookingController_1.updateBooking);
+router.get('/listing-relation', marketplaceClientController_1.getListingRelation);
 router.get('/favorites', marketplaceClientController_1.listFavorites);
 router.post('/favorites', marketplaceClientController_1.addFavorite);
 router.delete('/favorites/:kind/:slug', marketplaceClientController_1.removeFavorite);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Building2, KeyRound, Loader2, Sparkles, Wand2, Coins } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -12,9 +12,10 @@ import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 import { communesForCity } from '@/lib/rdcCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 import {
-  AI_TOKEN_PACK_SIZE,
   AI_TOKEN_PACK_PRICE_FC,
+  consumeAiSimulation,
   getAiSimulationAllowance,
+  syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
@@ -65,10 +66,25 @@ export default function EventPrepAiSimulator({
   const [result, setResult] = useState<EventPlanAiResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
   const communes = useMemo(() => communesForCity(city), [city]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
+  useEffect(() => {
+    setAllowance(getAiSimulationAllowance());
+    void syncDeviceAiTokensWithBackend(api).then((synced) => {
+      if (synced) setAllowance(synced);
+    });
+  }, []);
+
   const run = async () => {
+    const current = getAiSimulationAllowance();
+    if (!current.canSimulate) {
+      setPurchaseModalOpen(true);
+      setError('Plus de simulations disponibles. Rechargez 20 recherches pour continuer.');
+      setAllowance(current);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -89,6 +105,7 @@ export default function EventPrepAiSimulator({
       const packages = Array.isArray(data.packages) ? data.packages : [];
       setResult({ ...data, packages });
       setSelectedId(packages[1]?.id || packages[0]?.id || null);
+      setAllowance(consumeAiSimulation());
     } catch (err: unknown) {
       setResult(null);
       setSelectedId(null);
@@ -100,7 +117,7 @@ export default function EventPrepAiSimulator({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <h3 className="text-sm font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
             <Wand2 className="w-4 h-4 text-primary" />
@@ -110,18 +127,26 @@ export default function EventPrepAiSimulator({
             L’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort — comme la simulation par critères.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPurchaseModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer touch-manipulation shadow-xs shrink-0"
-          >
-            <Coins className="w-3.5 h-3.5 text-amber-500" />
-            <span>+20 simulations ({formatFc(AI_TOKEN_PACK_PRICE_FC)})</span>
-          </button>
-          <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)}>
-            {open ? 'Masquer le brief' : 'Ouvrir le brief'}
-          </Button>
+        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+          <div className="inline-flex items-center justify-center sm:justify-end gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>
+              {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} restante{allowance.totalRemaining > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPurchaseModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer touch-manipulation shadow-xs shrink-0"
+            >
+              <Coins className="w-3.5 h-3.5 text-amber-500" />
+              <span>Acheter 20 sims ({formatFc(AI_TOKEN_PACK_PRICE_FC)})</span>
+            </button>
+            <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)}>
+              {open ? 'Masquer' : 'Brief'}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -230,8 +255,13 @@ export default function EventPrepAiSimulator({
             ) : null}
           </div>
 
-          <Button onClick={() => void run()} loading={loading} leftIcon={<Sparkles className="w-4 h-4" />}>
-            Lancer la simulation
+          <Button
+            onClick={() => void run()}
+            loading={loading}
+            leftIcon={<Sparkles className="w-4 h-4" />}
+            disabled={!allowance.canSimulate && !loading}
+          >
+            {allowance.canSimulate ? 'Lancer la simulation' : 'Recharger pour simuler'}
           </Button>
         </div>
       ) : null}
@@ -388,6 +418,7 @@ export default function EventPrepAiSimulator({
       <AiTokenPurchaseModal
         open={purchaseModalOpen}
         onClose={() => setPurchaseModalOpen(false)}
+        onSuccess={() => setAllowance(getAiSimulationAllowance())}
       />
     </section>
   );
