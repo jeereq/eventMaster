@@ -75,9 +75,34 @@ export default function LandingProfileGate({
         </div>
       </div>
 
+      {/* Sélecteur compact en pastilles horizontales sur mobile */}
+      <div className="sm:hidden flex items-center gap-1.5 p-1 rounded-xl bg-surface-muted/80 border border-border overflow-x-auto no-scrollbar scroll-smooth">
+        {LANDING_PROFILES.map((p) => {
+          const selected = selectedId === p.id;
+          const PIcon = p.icon;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelect(p.id)}
+              className={cn(
+                'flex-1 min-w-[7.5rem] py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 touch-manipulation',
+                selected
+                  ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                  : 'text-muted hover:text-foreground hover:bg-surface/60',
+              )}
+            >
+              <PIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{p.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Grille des 4 solutions (Desktop / Tablette) */}
       <ul
         id="profils"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4"
         role="list"
       >
         {LANDING_PROFILES.map((profile) => {

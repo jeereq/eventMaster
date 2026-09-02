@@ -345,14 +345,14 @@ export default function LandingPricingSection({
  )}
  </div>
  <div
- className={`grid gap-5 items-stretch ${
+ className={`flex sm:grid gap-5 items-stretch overflow-x-auto pb-4 sm:pb-0 no-scrollbar snap-x snap-mandatory ${
  ids.length === 1
  ? 'max-w-md mx-auto'
  : ids.length === 2
- ? 'md:grid-cols-2'
+ ? 'sm:grid-cols-2'
  : ids.length === 3
- ? 'md:grid-cols-2 lg:grid-cols-3'
- : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+ ? 'sm:grid-cols-2 lg:grid-cols-3'
+ : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
  }`}
  >
  {plans
@@ -360,9 +360,9 @@ export default function LandingPricingSection({
  .map((plan) => (
  <article
  key={plan.id}
- className={`relative flex flex-col rounded-[var(--radius-card)] overflow-hidden transition-all duration-300 ${
+ className={`relative flex flex-col rounded-[var(--radius-card)] overflow-hidden transition-all duration-300 min-w-[17.5rem] sm:min-w-0 shrink-0 snap-start flex-1 ${
  plan.highlighted
- ? 'border-2 border-primary bg-surface dark:bg-slate-900 shadow-xl shadow-primary/25 ring-2 ring-primary/30 scale-[1.02] z-10'
+ ? 'border-2 border-primary bg-surface dark:bg-slate-900 shadow-xl shadow-primary/25 ring-2 ring-primary/30 sm:scale-[1.02] z-10'
  : plan.promoActive
  ? 'border border-rose-500/40 bg-surface dark:bg-slate-900 shadow-md'
  : 'em-hud-card border-border'

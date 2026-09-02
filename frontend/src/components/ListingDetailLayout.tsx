@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Skeleton, SkeletonListingDetail } from '@/components/ui';
+import { Button, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
@@ -136,6 +136,7 @@ export default function ListingDetailLayout({
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
+  const [mobileModalOpen, setMobileModalOpen] = useState(false);
   const shareHref = shareUrl || (shareSlug ? listingPublicUrl(shareKind, shareSlug) : undefined);
   const priceLabel = priceCaption ?? (priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis');
   const showCommerce = !preview && Boolean(inquiry || booking);
@@ -172,6 +173,11 @@ export default function ListingDetailLayout({
       }
     }
     router.push(stored);
+  };
+
+  const openMobileCommerce = (action: 'inquire' | 'book') => {
+    setMobileAction(action);
+    setMobileModalOpen(true);
   };
 
   const scrollToContact = (action: 'inquire' | 'book') => {
@@ -418,11 +424,11 @@ export default function ListingDetailLayout({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate tabular-nums">{priceLabel}</p>
                 </div>
-                <Button size="md" className="shrink-0 min-h-11" onClick={() => scrollToContact('inquire')}>
+                <Button size="md" className="shrink-0 min-h-11" onClick={() => openMobileCommerce('inquire')}>
                   {inquireLabel}
                 </Button>
                 {showBooking ? (
-                <Button size="md" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>
+                <Button size="md" variant="secondary" className="shrink-0 min-h-11" onClick={() => openMobileCommerce('book')}>
                   {bookLabel}
                 </Button>
                 ) : null}
@@ -430,6 +436,56 @@ export default function ListingDetailLayout({
             )}
           </div>
         </div>
+      )}
+
+      {/* Modal / Tiroir d'action directe sur mobile */}
+      {showCommerce && (
+        <Modal
+          open={mobileModalOpen}
+          onClose={() => setMobileModalOpen(false)}
+          title={mobileAction === 'inquire' ? inquireLabel : bookLabel}
+          description={title}
+          size="md"
+        >
+          <div className="space-y-4 pt-1">
+            {showBooking && (
+              <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Devis ou réservation">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mobileAction === 'inquire'}
+                  onClick={() => setMobileAction('inquire')}
+                  className={cn(
+                    'flex-1 min-h-10 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                    mobileAction === 'inquire'
+                      ? 'bg-surface text-foreground shadow-xs'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  {inquireLabel}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mobileAction === 'book'}
+                  onClick={() => setMobileAction('book')}
+                  className={cn(
+                    'flex-1 min-h-10 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                    mobileAction === 'book'
+                      ? 'bg-surface text-foreground shadow-xs'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  {bookLabel}
+                </button>
+              </div>
+            )}
+
+            <div>
+              {mobileAction === 'inquire' ? inquiry : booking}
+            </div>
+          </div>
+        </Modal>
       )}
     </main>
   );

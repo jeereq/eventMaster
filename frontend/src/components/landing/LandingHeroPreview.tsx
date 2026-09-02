@@ -226,54 +226,52 @@ export default function LandingHeroPreview({
             const isExternal = targetHref.startsWith('http');
 
             return (
-              <div
+              <Link
                 key={act.title}
+                href={targetHref}
+                target={isExternal ? '_blank' : undefined}
+                rel={isExternal ? 'noopener noreferrer' : undefined}
                 className={cn(
-                  'rounded-[var(--radius-card)] p-4 border transition-all duration-200 flex flex-col justify-between group hover:border-primary/60 hover:shadow-md',
+                  'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 flex flex-col justify-between group hover:border-primary/60 hover:shadow-md cursor-pointer block',
                   act.highlight
                     ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/30'
                     : 'bg-surface/80 dark:bg-slate-900/60 border-border',
                 )}
               >
-                <div className="space-y-2 mb-3">
+                <div className="space-y-1.5 sm:space-y-2 mb-2.5 sm:mb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg em-glow-icon-box shrink-0">
-                        <Icon className="w-4 h-4" />
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg em-glow-icon-box shrink-0 flex items-center justify-center">
+                        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
-                      <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                      <h4 className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">
                         {act.title}
                       </h4>
                     </div>
-                    <span className="text-[10px] font-semibold text-muted px-2 py-0.5 rounded bg-surface border border-border shrink-0">
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-muted px-1.5 sm:px-2 py-0.5 rounded bg-surface border border-border shrink-0">
                       {act.badge}
                     </span>
                   </div>
 
-                  <p className="text-xs text-muted leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-muted leading-relaxed line-clamp-2">
                     {act.description}
                   </p>
                 </div>
 
-                <Link
-                  href={targetHref}
-                  target={isExternal ? '_blank' : undefined}
-                  rel={isExternal ? 'noopener noreferrer' : undefined}
-                  className="block mt-auto pt-2"
-                >
-                  <Button
-                    size="sm"
-                    variant={act.highlight ? 'primary' : 'secondary'}
-                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                <div className="mt-auto pt-1 sm:pt-2">
+                  <div
                     className={cn(
-                      'w-full text-xs font-semibold justify-between transition-all duration-200',
-                      act.highlight ? 'shadow-sm shadow-primary/30' : 'hover:border-primary/40',
+                      'w-full py-1.5 sm:py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold flex items-center justify-between transition-all duration-200',
+                      act.highlight
+                        ? 'bg-primary text-white shadow-sm shadow-primary/30 group-hover:bg-primary-hover'
+                        : 'bg-surface-muted text-foreground border border-border group-hover:border-primary/40 group-hover:text-primary',
                     )}
                   >
                     <span>{act.ctaLabel}</span>
-                  </Button>
-                </Link>
-              </div>
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                </div>
+              </Link>
             );
           })}
         </div>

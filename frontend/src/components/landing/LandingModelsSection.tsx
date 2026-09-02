@@ -66,9 +66,9 @@ export default function LandingModelsSection({
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-2 sm:pb-0 no-scrollbar snap-x snap-mandatory">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 rounded-[var(--radius-card)]" />
+              <Skeleton key={i} className="min-w-[16rem] sm:min-w-0 h-64 rounded-[var(--radius-card)] shrink-0 snap-start" />
             ))}
           </div>
         ) : templates.length === 0 ? (
@@ -79,51 +79,51 @@ export default function LandingModelsSection({
           </div>
         ) : (
           <>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 em-stagger">
+            <ul className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-3 sm:pb-0 no-scrollbar snap-x snap-mandatory em-stagger">
               {shown.map((template) => (
-                <li key={template.id}>
-                  <article className="h-full rounded-[var(--radius-card)] em-hud-card p-3.5 flex flex-col justify-between transition-all group">
+                <li key={template.id} className="min-w-[16.5rem] sm:min-w-0 shrink-0 snap-start flex-1">
+                  <article className="h-full rounded-[var(--radius-card)] em-hud-card p-3 sm:p-3.5 flex flex-col justify-between transition-all group">
                     <div>
-                      <button
-                        type="button"
-                        onClick={() => onPreview(template)}
-                        className="w-full text-left rounded-[var(--radius-button)] overflow-hidden focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary relative group/preview cursor-pointer"
+                      <Link
+                        href={`/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`}
+                        className="block w-full text-left rounded-[var(--radius-button)] overflow-hidden focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary relative group/preview cursor-pointer"
+                        title={`Choisir le modèle ${template.name}`}
                       >
-                        <LandingInvitationPreview template={template} compact className="!max-h-[200px]" />
+                        <LandingInvitationPreview template={template} compact className="!max-h-[190px] sm:!max-h-[200px]" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 backdrop-blur-[2px]">
-                          <Eye className="w-4 h-4" />
-                          <span>Aperçu interactif</span>
+                          <ArrowRight className="w-4 h-4" />
+                          <span>Choisir ce modèle</span>
                         </div>
-                      </button>
+                      </Link>
 
-                      <div className="mt-3 space-y-1.5">
+                      <div className="mt-2.5 sm:mt-3 space-y-1">
                         <div className="flex items-center justify-between gap-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
                             {categoryLabel(template.category)}
                           </span>
                         </div>
-                        <h3 className="text-sm font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+                        <h3 className="text-xs sm:text-sm font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
                           {template.name}
                         </h3>
                         {template.description ? (
-                          <p className="text-xs text-muted leading-relaxed line-clamp-2">
+                          <p className="text-[11px] sm:text-xs text-muted leading-relaxed line-clamp-2">
                             {template.description}
                           </p>
                         ) : null}
                       </div>
                     </div>
 
-                    <div className="mt-3 pt-3 border-t border-border/80 flex items-center justify-between gap-2">
+                    <div className="mt-2.5 sm:mt-3 pt-2.5 sm:pt-3 border-t border-border/80 flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => onPreview(template)}
-                        className="text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1"
+                        className="text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1 touch-manipulation cursor-pointer py-1"
                       >
                         <Eye className="w-3.5 h-3.5" /> Aperçu
                       </button>
                       <Link
                         href={`/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`}
-                        className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                        className="py-1 px-2.5 rounded-md bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all inline-flex items-center gap-1 touch-manipulation"
                       >
                         Utiliser <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
