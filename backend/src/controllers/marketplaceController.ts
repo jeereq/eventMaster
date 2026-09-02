@@ -1245,3 +1245,113 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
     return res.status(500).json({ error: 'Impossible de mettre à jour la demande.' });
   }
 }
+
+export async function saveVendorOnboarding(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    const {
+      displayName,
+      category,
+      city,
+      commune,
+      neighborhood,
+      travels = true,
+      coverageRadiusKm,
+      title,
+      description,
+      priceFromFc,
+      priceUnit = 'EVENT',
+    } = req.body || {};
+
+    const nameToUse = String(displayName || '').trim() || 'Mon Entreprise';
+    const place = normalizeListingPlace(city, commune, neighborhood);
+    const resolvedCity = ('error' in place ? null : place.city) || (city ? String(city).trim() : null);
+
+    // 1. S'assurer du profil prestataire
+    let profile = await prisma.vendorProfile.findUnique({ where: { tenantId } });
+    if (profile) {
+      profile = await prisma.vendorProfile.update({
+        where: { tenantId },
+        data: {
+          displayName: nameToUse,
+          city: resolvedCity,
+        },
+      });
+    } else {
+      const slug = await uniqueSlug(nameToUse, async (s) => {
+        const hit = await prisma.vendorProfile.findUnique({ where: { slug: s }, select: { id: true } });
+        return Boolean(hit);
+      });
+      profile = await prisma.vendorProfile.create({
+        data: {
+          tenantId,
+          slug,
+          displayName: nameToUse,
+          city: resolvedCity,
+        },
+      });
+    }
+
+    // 2. Créer ou mettre à jour la 1ère prestation si category est fournie
+    let offering = null;
+    if (category) {
+      const parsedCategory = parseServiceCategory(category) || 'OTHER';
+      const parsedPrice = Number.parseInt(String(priceFromFc ?? ''), 10);
+      const parsedRadius = Number.parseInt(String(coverageRadiusKm ?? ''), 10);
+      const offerTitle = String(title || '').trim() || `Prestation ${parsedCategory}`;
+
+      const existingOffer = await prisma.serviceOffering.findFirst({
+        where: { tenantId, vendorProfileId: profile.id },
+      });
+
+      const offerSlug = existingOffer?.slug || await uniqueSlug(`${offerTitle}-${resolvedCity || 'kinshasa'}`, async (s) => {
+        const hit = await prisma.serviceOffering.findUnique({ where: { slug: s }, select: { id: true } });
+        return Boolean(hit);
+      });
+
+      const offerData = {
+        title: offerTitle,
+        description: description?.trim() || null,
+        category: parsedCategory,
+        city: resolvedCity,
+        commune: ('error' in place ? null : place.commune) || (commune ? String(commune).trim() : null),
+        neighborhood: ('error' in place ? null : place.neighborhood) || (neighborhood ? String(neighborhood).trim() : null),
+        travels: Boolean(travels),
+        coverageRadiusKm: travels && Number.isFinite(parsedRadius) && parsedRadius > 0 ? parsedRadius : null,
+        priceFromFc: Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null,
+        priceUnit: parsePriceUnit(priceUnit),
+      };
+
+      if (existingOffer) {
+        offering = await prisma.serviceOffering.update({
+          where: { id: existingOffer.id },
+          data: offerData,
+        });
+      } else {
+        offering = await prisma.serviceOffering.create({
+          data: {
+            ...offerData,
+            tenantId,
+            vendorProfileId: profile.id,
+            slug: offerSlug,
+            isPublic: false,
+          },
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      vendorProfile: profile,
+      serviceOffering: offering,
+    });
+  } catch (error) {
+    console.error('saveVendorOnboarding error:', error);
+    return res.status(500).json({ error: 'Erreur lors de la configuration initiale du profil prestataire.' });
+  }
+}

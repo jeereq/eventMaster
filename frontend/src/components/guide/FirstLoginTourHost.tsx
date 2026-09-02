@@ -11,10 +11,13 @@ import { buildNavTourOptions, getProductTour } from '@/lib/buildNavProductTour';
 import {
   getFirstLoginWelcome,
   getFirstTourStatus,
+  getVendorOnboardingStatus,
   markGettingStartedGuideDone,
   setFirstTourStatus,
+  setVendorOnboardingStatus,
   shouldAutoOfferFirstTour,
 } from '@/lib/firstLoginTour';
+import FirstLoginOnboardingModal from './FirstLoginOnboardingModal';
 
 export default function FirstLoginTourHost() {
   const { user, access, tenant, planQuota, planFeatures, supportSession } = useAuth();
@@ -24,6 +27,7 @@ export default function FirstLoginTourHost() {
   const searchParams = useSearchParams();
   const launchedRef = useRef(false);
   const [offerOpen, setOfferOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const resolved = useMemo(
     () => resolveUserGuideRole({ role: user?.role, access }),
@@ -72,6 +76,15 @@ export default function FirstLoginTourHost() {
     const status = getFirstTourStatus(user.id);
     const fromOtp = searchParams.get('tour') === '1';
 
+    const isVendor = tenant?.accountKind === 'VENDOR' || tenant?.accountKind === 'BOTH';
+    const onboardingDone = getVendorOnboardingStatus(user.id);
+
+    if (isVendor && !onboardingDone) {
+      setOnboardingOpen(true);
+      if (fromOtp) stripTourParam();
+      return;
+    }
+
     if (status === 'seen' || status === 'skipped') {
       if (fromOtp) stripTourParam();
       return;
@@ -82,7 +95,7 @@ export default function FirstLoginTourHost() {
       setOfferOpen(true);
       if (fromOtp) stripTourParam();
     }
-  }, [user?.id, supportSession, isActive, resolved.guideId, searchParams, stripTourParam]);
+  }, [user?.id, supportSession, isActive, resolved.guideId, tenant?.accountKind, searchParams, stripTourParam]);
 
   useEffect(() => {
     const onStopped = (event: Event) => {
@@ -113,36 +126,62 @@ export default function FirstLoginTourHost() {
     window.setTimeout(() => startTour(resolved.guideId, access, tourOpts), 80);
   };
 
-  if (!offerOpen) return null;
+  const handleOnboardingComplete = () => {
+    if (user?.id) {
+      setVendorOnboardingStatus(user.id, true);
+    }
+    setOnboardingOpen(false);
+    // Enchaîner sur la proposition de visite guidée
+    setFirstTourStatus(user!.id, 'pending');
+    setOfferOpen(true);
+  };
+
+  const handleOnboardingClose = () => {
+    if (user?.id) {
+      setVendorOnboardingStatus(user.id, true);
+    }
+    setOnboardingOpen(false);
+  };
 
   return (
-    <Modal
-      open={offerOpen}
-      onClose={skip}
-      title={welcome.title}
-      description="Visite guidée de votre espace"
-      size="sm"
-      footer={
-        <div className="flex w-full flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={skip}>
-            Plus tard
-          </Button>
-          <Button type="button" onClick={launch} leftIcon={<Map className="w-4 h-4" />}>
-            {welcome.cta}
-          </Button>
-        </div>
-      }
-    >
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 w-10 h-10 rounded-[var(--radius-button)] border border-border bg-surface-muted flex items-center justify-center text-primary">
-          <Sparkles className="w-5 h-5" />
-        </div>
-        <p className="text-sm text-muted leading-relaxed">{welcome.body}</p>
-      </div>
-      <p className="text-[11px] text-muted mt-4">
-        Vous pourrez relancer la visite complète depuis{' '}
-        <span className="font-medium text-foreground">Guide utilisateur</span>.
-      </p>
-    </Modal>
+    <>
+      <FirstLoginOnboardingModal
+        open={onboardingOpen}
+        onClose={handleOnboardingClose}
+        onComplete={handleOnboardingComplete}
+        tenantName={tenant?.name}
+      />
+
+      {offerOpen && (
+        <Modal
+          open={offerOpen}
+          onClose={skip}
+          title={welcome.title}
+          description="Visite guidée de votre espace"
+          size="sm"
+          footer={
+            <div className="flex w-full flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={skip}>
+                Plus tard
+              </Button>
+              <Button type="button" onClick={launch} leftIcon={<Map className="w-4 h-4" />}>
+                {welcome.cta}
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-[var(--radius-button)] border border-border bg-surface-muted flex items-center justify-center text-primary">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <p className="text-sm text-muted leading-relaxed">{welcome.body}</p>
+          </div>
+          <p className="text-[11px] text-muted mt-4">
+            Vous pourrez relancer la visite complète depuis{' '}
+            <span className="font-medium text-foreground">Guide utilisateur</span>.
+          </p>
+        </Modal>
+      )}
+    </>
   );
 }

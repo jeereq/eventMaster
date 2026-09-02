@@ -1,6 +1,7 @@
 import type { UserGuideId } from '@/config/userGuides';
 
 const TOUR_KEY_PREFIX = 'em-first-tour:';
+const ONBOARDING_KEY_PREFIX = 'em-vendor-onboarding:';
 export const GETTING_STARTED_STORAGE_KEY = 'em-getting-started';
 export const GETTING_STARTED_CHANGED_EVENT = 'em-getting-started-changed';
 
@@ -8,6 +9,31 @@ export type FirstTourStatus = 'pending' | 'seen' | 'skipped';
 
 function storageKey(userId: string) {
   return `${TOUR_KEY_PREFIX}${userId}`;
+}
+
+function onboardingStorageKey(userId: string) {
+  return `${ONBOARDING_KEY_PREFIX}${userId}`;
+}
+
+export function getVendorOnboardingStatus(userId: string | null | undefined): boolean {
+  if (!userId || typeof window === 'undefined') return true;
+  try {
+    return localStorage.getItem(onboardingStorageKey(userId)) === 'done';
+  } catch {
+    return true;
+  }
+}
+
+export function setVendorOnboardingStatus(userId: string, done = true) {
+  try {
+    if (done) {
+      localStorage.setItem(onboardingStorageKey(userId), 'done');
+    } else {
+      localStorage.removeItem(onboardingStorageKey(userId));
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function getFirstTourStatus(userId: string | null | undefined): FirstTourStatus | null {

@@ -6,6 +6,7 @@ import {
   deleteService,
   listMyInquiries,
   updateInquiryStatus,
+  saveVendorOnboarding,
 } from '../controllers/marketplaceController';
 import {
   createBooking,
@@ -35,6 +36,7 @@ router.use(requireActiveLicense);
 
 router.get('/services', listMyServices);
 router.post('/services', upsertService);
+router.post('/onboarding', saveVendorOnboarding);
 router.put('/services/:id', upsertService);
 router.delete('/services/:id', deleteService);
 router.get('/inquiries', listMyInquiries);
