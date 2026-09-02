@@ -8,7 +8,8 @@ import { useTheme } from '@/context/ThemeContext';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import UserAvatar from '@/components/UserAvatar';
 import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
-import { Sun, Moon, User } from 'lucide-react';
+import { Tooltip } from '@/components/ui';
+import { Sun, Moon, User, PanelLeft, PanelLeftClose } from 'lucide-react';
 
 export function useDashboardTitle(): { title: string; subtitle?: string } {
   const pathname = usePathname();
@@ -81,7 +82,13 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
   }, [pathname, tab, user?.role]);
 }
 
-export default function DashboardTopBar() {
+export default function DashboardTopBar({
+  sidebarCollapsed,
+  onToggleSidebar,
+}: {
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+} = {}) {
   const { user, tenant } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { title, subtitle } = useDashboardTitle();
@@ -96,12 +103,30 @@ export default function DashboardTopBar() {
   return (
     <header className="hidden md:block sticky top-0 z-20 shrink-0 border-b border-border bg-surface/90 backdrop-blur-md">
       <div className="page-container h-14 flex items-center justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="text-sm font-semibold text-foreground tracking-tight truncate">{title}</h1>
-        {subtitle && <p className="text-[11px] text-muted truncate">{subtitle}</p>}
-      </div>
+        <div className="flex items-center gap-3 min-w-0">
+          {onToggleSidebar && (
+            <Tooltip
+              content={sidebarCollapsed ? 'Déplier la barre latérale (Ctrl+B)' : 'Réduire la barre latérale (Ctrl+B)'}
+              side="bottom"
+            >
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation cursor-pointer shrink-0"
+                aria-label={sidebarCollapsed ? 'Déplier la barre latérale' : 'Réduire la barre latérale'}
+              >
+                {sidebarCollapsed ? <PanelLeft className="w-4 h-4 text-primary" /> : <PanelLeftClose className="w-4 h-4" />}
+              </button>
+            </Tooltip>
+          )}
 
-      <div className="flex items-center gap-2 shrink-0">
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold text-foreground tracking-tight truncate">{title}</h1>
+            {subtitle && <p className="text-[11px] text-muted truncate">{subtitle}</p>}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
         <NotificationBell />
         <ViewCustomizerTrigger />
         <button

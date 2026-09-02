@@ -480,6 +480,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  };
 
  useEffect(() => {
+   const onKeyDown = (e: KeyboardEvent) => {
+     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+       const tag = (e.target as HTMLElement)?.tagName;
+       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) {
+         return;
+       }
+       e.preventDefault();
+       toggleSidebarCollapsed();
+     }
+   };
+   window.addEventListener('keydown', onKeyDown);
+   return () => window.removeEventListener('keydown', onKeyDown);
+ }, []);
+
+ useEffect(() => {
  if (!loading && !token) {
  router.push('/login');
  }
@@ -653,7 +668,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <aside
           className={cn(
             'fixed inset-y-0 left-0 z-[70] w-[min(86vw,20rem)] bg-sidebar border-r border-border shadow-2xl',
-            'flex flex-col transform transition-transform duration-300 ease-out',
+            'flex flex-col transition-[width,transform] duration-200 ease-in-out',
             'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:max-w-none md:z-30 md:shadow-none',
             mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
             sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
@@ -861,7 +876,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Contenu principal */}
       <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col em-dashboard-glow-bg">
-        <DashboardTopBar />
+        <DashboardTopBar
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={toggleSidebarCollapsed}
+        />
         <div className="page-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
           <UserLegalGate>
             {children}
