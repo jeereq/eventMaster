@@ -55,7 +55,7 @@ export default function GlobalAiSimulatorFab() {
         onClose={() => setOpen(false)}
         size="xl"
         title="Simulation IA"
-        description="Générez 3 packs à partir du catalogue. Rouvrir un historique ne consomme pas de jeton."
+        description="Générez 3 packs à partir du catalogue. Rouvrir un historique n’utilise pas de jeton."
       >
         <EventPrepAiSimulator
           defaultOpen

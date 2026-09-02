@@ -177,7 +177,7 @@ export default function LandingAiSimulationShowcase() {
 
           <p className="text-sm sm:text-base text-muted leading-relaxed">
             Indiquez votre budget en Francs Congolais, votre ville et vos envies : l’assistant EventMaster compose{' '}
-            <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples ci-dessous préremplissent le brief — une simulation n’est lancée qu’au clic « Générer ».
+            <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples ci-dessous préremplissent votre projet — une simulation n’est lancée qu’au clic « Générer ».
           </p>
 
           <div className="inline-flex items-center p-1 rounded-2xl bg-surface border border-border shadow-xs mt-2">
@@ -191,7 +191,7 @@ export default function LandingAiSimulationShowcase() {
                   : 'text-muted hover:text-foreground',
               )}
             >
-              Exemples & briefs types
+              Exemples & projets types
             </button>
             <button
               type="button"
@@ -216,7 +216,7 @@ export default function LandingAiSimulationShowcase() {
           <div className="bg-surface/90 dark:bg-slate-900/90 border border-primary/25 rounded-3xl p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
               <p className="text-xs font-bold text-foreground">
-                Choisissez un brief type, puis générez de vrais packs catalogue.
+                Choisissez un projet type, puis générez de vrais packs catalogue.
               </p>
               <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1">
                 {SCENARIOS.map((scenario) => {
@@ -254,7 +254,7 @@ export default function LandingAiSimulationShowcase() {
                 <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary text-white inline-block mb-1">
-                      Brief type
+                      Projet type
                     </span>
                     <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
                   </div>
@@ -316,7 +316,7 @@ export default function LandingAiSimulationShowcase() {
                   rightIcon={<ArrowRight className="w-4 h-4" />}
                   onClick={() => openLiveWithScenario(activeScenario)}
                 >
-                  Préremplir et simuler ce brief
+                  Préremplir et simuler ce projet
                 </Button>
                 <Link href={simulatorUrl} className="flex-1 sm:flex-none">
                   <Button variant="secondary" size="md" fullWidth>

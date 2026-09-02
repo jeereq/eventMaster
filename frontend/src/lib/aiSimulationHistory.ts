@@ -13,6 +13,13 @@ export type AiSimulationBrief = {
   guestCount?: number | null;
   budgetMaxFc?: number | null;
   eventDate?: string | null;
+  neighborhood?: string;
+  ambiance?: string;
+  moment?: string;
+  setting?: string;
+  budgetMinFc?: number | null;
+  wantedCategories?: string[];
+  venueAmenities?: string[];
 };
 
 export type AiSimulationHistoryItem = {
@@ -72,6 +79,7 @@ export function historyItemToCache(item: AiSimulationHistoryItem): CachedAiSimul
       guestCount: item.guestCount,
       budgetMaxFc: item.budgetMaxFc,
       eventDate: item.eventDate,
+      ...(item.result?.criteria || {}),
     },
     result: { catalog: item.result?.catalog || { venues: 0, trades: 0, rentals: 0 }, packages },
     selectedId: selected?.id || null,

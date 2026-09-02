@@ -392,6 +392,15 @@ export type EventPlanAiResult = {
   warnings?: string[];
   remaining?: number;
   historyId?: string;
+  criteria?: {
+    ambiance?: string;
+    moment?: string;
+    setting?: string;
+    neighborhood?: string;
+    budgetMinFc?: number | null;
+    wantedCategories?: string[];
+    venueAmenities?: string[];
+  };
 };
 
 export function eventPlanAiToPackage(pack: EventPlanAiPackage, budgetMaxFc = 0): PlanPackage {

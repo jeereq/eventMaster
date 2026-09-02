@@ -55,11 +55,13 @@ type CatalogRow = {
   category: string;
   city: string | null;
   commune: string | null;
+  neighborhood: string | null;
   priceFromFc: number | null;
   estimatedFc: number;
   capacity: number | null;
   travels: boolean | null;
   summary: string;
+  amenities: string[];
 };
 
 export type EventPlanAiItem = {
@@ -94,11 +96,20 @@ export type EventPlanAiResult = {
   catalog: { venues: number; trades: number; rentals: number; widenedCommune?: boolean };
   packages: EventPlanAiPackage[];
   warnings?: string[];
+  criteria?: {
+    ambiance?: string;
+    moment?: string;
+    setting?: string;
+    neighborhood?: string;
+    budgetMinFc?: number | null;
+    wantedCategories?: string[];
+    venueAmenities?: string[];
+  };
 };
 
 const AI_STYLES: Array<{ id: EventPlanAiStyleId; label: string; blurb: string; maxTrades: number; maxRentals: number }> = [
   { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe, sans options.', maxTrades: 2, maxRentals: 1 },
-  { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre brief, options si le budget le permet.', maxTrades: 3, maxRentals: 1 },
+  { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre projet, options si le budget le permet.', maxTrades: 3, maxRentals: 1 },
   { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 2 },
 ];
 
@@ -108,11 +119,31 @@ function parseEventType(value: unknown): EventPlanType {
     : 'private';
 }
 
+function scoreVenue(
+  amenities: string[],
+  opts: { venueAmenities: string[]; setting: string; neighborhood: string },
+  neighborhood?: string | null,
+): number {
+  let score = 0;
+  if (opts.venueAmenities.length) {
+    score += opts.venueAmenities.filter((id) => amenities.includes(id)).length * 4;
+  }
+  if (opts.setting === 'outdoor' && amenities.includes('garden')) score += 5;
+  if (opts.setting === 'indoor' && amenities.includes('garden')) score -= 1;
+  const needle = opts.neighborhood.trim().toLowerCase();
+  if (needle && neighborhood && neighborhood.toLowerCase().includes(needle)) score += 6;
+  return score;
+}
+
 async function loadCatalog(opts: {
   city: string;
   commune: string;
   dateKey: string;
   guestCount: number;
+  wantedCategories: string[];
+  venueAmenities: string[];
+  setting: string;
+  neighborhood: string;
 }): Promise<{
   venues: Array<CatalogRow & { item: EventPlanAiItem }>;
   services: Array<CatalogRow & { item: EventPlanAiItem }>;
@@ -188,14 +219,18 @@ async function loadCatalog(opts: {
         category: 'VENUE',
         city: row.city,
         commune: row.commune,
+        neighborhood: row.neighborhood,
         priceFromFc: row.priceFromFc,
         estimatedFc,
         capacity: row.room.capacity,
         travels: null,
         summary: snippet(extra.description || row.room.description),
+        amenities: extra.amenities.slice(0, 10),
       };
-      return { ...catalog, item };
-    });
+      return { ...catalog, item, score: scoreVenue(extra.amenities, opts, row.neighborhood) };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map(({ score: _score, ...row }) => row);
 
   const services = available(serviceRows).slice(0, 72).map((row) => {
     const extra = parseListingDetails(row.details);
@@ -223,17 +258,27 @@ async function loadCatalog(opts: {
       category: row.category,
       city: row.city,
       commune: row.commune,
+      neighborhood: row.neighborhood,
       priceFromFc: row.priceFromFc,
       estimatedFc,
       capacity: null,
       travels: Boolean(row.travels),
       summary: snippet(extra.description || row.description),
+      amenities: extra.amenities.slice(0, 8),
     };
     return { ...catalog, item };
   });
 
-  const trades = services.filter((row) => row.kind === 'trade').slice(0, 36);
-  const rentals = services.filter((row) => row.kind === 'rental').slice(0, 24);
+  const preferred = opts.wantedCategories.length
+    ? services.filter((row) => opts.wantedCategories.includes(row.category))
+    : [];
+  const rest = opts.wantedCategories.length
+    ? services.filter((row) => !opts.wantedCategories.includes(row.category))
+    : services;
+  const rankedServices = preferred.length ? [...preferred, ...rest] : rest;
+
+  const trades = rankedServices.filter((row) => row.kind === 'trade').slice(0, 36);
+  const rentals = rankedServices.filter((row) => row.kind === 'rental').slice(0, 24);
   return { venues, services: [...trades, ...rentals] };
 }
 
@@ -303,12 +348,43 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const keepServiceSlugs = Array.isArray(body.keepServiceSlugs)
     ? body.keepServiceSlugs.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
     : [];
+  const neighborhood = typeof body.neighborhood === 'string' ? body.neighborhood.trim().slice(0, 80) : '';
+  const ambiance = typeof body.ambiance === 'string' ? body.ambiance.trim().slice(0, 32) : '';
+  const moment = typeof body.moment === 'string' ? body.moment.trim().slice(0, 32) : '';
+  const setting = typeof body.setting === 'string' ? body.setting.trim().slice(0, 32) : '';
+  const budgetMinRaw = Number(body.budgetMinFc);
+  const budgetMinFc = Number.isFinite(budgetMinRaw) && budgetMinRaw > 0 ? Math.round(budgetMinRaw) : 0;
+  const wantedCategories = Array.isArray(body.wantedCategories)
+    ? body.wantedCategories.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 12)
+    : [];
+  const venueAmenities = Array.isArray(body.venueAmenities)
+    ? body.venueAmenities.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 10)
+    : [];
+  const criteria = {
+    ambiance: ambiance || undefined,
+    moment: moment || undefined,
+    setting: setting || undefined,
+    neighborhood: neighborhood || undefined,
+    budgetMinFc: budgetMinFc || null,
+    wantedCategories,
+    venueAmenities,
+  };
+  const catalogOpts = {
+    city,
+    commune,
+    dateKey,
+    guestCount: guests,
+    wantedCategories,
+    venueAmenities,
+    setting,
+    neighborhood,
+  };
 
   const catalogWarnings: string[] = [];
   let widenedCommune = false;
-  let catalog = await loadCatalog({ city, commune, dateKey, guestCount: guests });
+  let catalog = await loadCatalog(catalogOpts);
   if (!catalog.venues.length && !catalog.services.length && commune) {
-    catalog = await loadCatalog({ city, commune: '', dateKey, guestCount: guests });
+    catalog = await loadCatalog({ ...catalogOpts, commune: '' });
     if (catalog.venues.length || catalog.services.length) {
       widenedCommune = true;
       catalogWarnings.push(
@@ -336,10 +412,12 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     category: row.category,
     city: row.city,
     commune: row.commune,
+    neighborhood: row.neighborhood,
     estimatedFc: row.estimatedFc,
     capacity: row.capacity,
     travels: row.travels,
     summary: row.summary,
+    amenities: row.amenities,
   }));
 
   const allowed = new Set(compact.map((row) => row.slug));
@@ -361,6 +439,8 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     'Chaque pack : au plus 1 salle, métiers et locations cohérents. Varie les slugs entre packs quand le catalogue le permet.',
     'Si un budget est donné, chaque pack vise un total estimé inférieur ou égal. Sinon, explique-le dans warnings.',
     'Préfère le même quartier / commune. Si keepVenueSlug est fourni, utilise-le pour les 3 packs.',
+    'Si ambiance, moment, intérieur/extérieur, quartier ou prestations souhaitées sont fournis, oriente les packs dessus sans inventer de fiches.',
+    'Si un budget min est donné, évite les packs trop en dessous sauf le pack économique.',
   ].join(' ');
 
   const user = JSON.stringify({
@@ -377,6 +457,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       includeRentals,
       keepVenueSlug: keepVenueSlug || null,
       keepServiceSlugs,
+      ...criteria,
     },
     catalog: compact,
   });
@@ -469,7 +550,12 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
 
     let trades = 0;
     let rentals = 0;
-    for (const group of byCategory.values()) {
+    const groups = [...byCategory.entries()].sort(([a], [b]) => {
+      const aw = wantedCategories.includes(a) ? 0 : 1;
+      const bw = wantedCategories.includes(b) ? 0 : 1;
+      return aw - bw;
+    });
+    for (const [, group] of groups) {
       const rental = Boolean(group[0]?.category && isServiceRentalCategory(group[0].category));
       if (rental && rentals >= style.maxRentals) continue;
       if (!rental && trades >= style.maxTrades) continue;
@@ -564,5 +650,6 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     },
     packages,
     warnings: catalogWarnings.length ? catalogWarnings : undefined,
+    criteria,
   };
 }

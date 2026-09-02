@@ -1,21 +1,19 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Loader2, Sparkles, UserPlus, Wand2 } from 'lucide-react';
+import { ChevronDown, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
-import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
-import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
+import { LISTING_EVENT_TYPES, VENUE_AMENITIES, type ListingAmenityId, type ListingEventTypeId } from '@/lib/listingDetails';
+import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
 import { communesForCity } from '@/lib/rdcCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 import { snapshotPlanItems } from '@/lib/eventPlan';
 import {
   applyServerAllowance,
   AI_ALLOWANCE_CHANGED,
-  AI_TOKEN_PACK_SIZE,
   consumeAiSimulation,
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
@@ -25,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
 import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
+import AiSimulationPackModal from '@/components/AiSimulationPackModal';
 import {
   claimAiSimulationHistory,
   fetchAiSimulationHistory,
@@ -32,8 +31,20 @@ import {
   readCachedAiSimulation,
   simulationEndpointBody,
   writeCachedAiSimulation,
-  type AiSimulationHistoryItem,
 } from '@/lib/aiSimulationHistory';
+import {
+  AI_AMBIANCES,
+  AI_MOMENTS,
+  AI_SETTINGS,
+  suggestedCategoriesForEvent,
+  type AiAmbianceId,
+  type AiMomentId,
+  type AiSettingId,
+} from '@/lib/aiSimulationCriteria';
+
+const VENUE_PARAM_AMENITIES = VENUE_AMENITIES.filter((item) =>
+  ['parking', 'ac', 'generator', 'garden', 'sound', 'wifi', 'stage', 'security'].includes(item.id),
+);
 
 export type EventPrepAiDefaults = {
   eventType?: ListingEventTypeId;
@@ -75,13 +86,22 @@ export default function EventPrepAiSimulator({
   const isLoggedIn = Boolean(user);
   const canCreateEvents = Boolean(access?.canCreateEvents);
   const [open, setOpen] = useState(defaultOpen || embedded);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [packModalOpen, setPackModalOpen] = useState(false);
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
   const [city, setCity] = useState(defaults?.city || '');
   const [commune, setCommune] = useState(defaults?.commune || '');
+  const [neighborhood, setNeighborhood] = useState('');
   const [guestCount, setGuestCount] = useState(defaults?.guestCount && defaults.guestCount > 0 ? String(defaults.guestCount) : '');
+  const [budgetMinFc, setBudgetMinFc] = useState('');
   const [budgetMaxFc, setBudgetMaxFc] = useState(defaults?.budgetMaxFc && defaults.budgetMaxFc > 0 ? String(defaults.budgetMaxFc) : '');
   const [eventDate, setEventDate] = useState(defaults?.eventDate?.slice(0, 10) || '');
   const [prompt, setPrompt] = useState(initialPrompt(defaults));
+  const [ambiance, setAmbiance] = useState<AiAmbianceId | ''>('');
+  const [moment, setMoment] = useState<AiMomentId | ''>('');
+  const [setting, setSetting] = useState<AiSettingId | ''>('');
+  const [wantedCategories, setWantedCategories] = useState<ServiceCategory[]>([]);
+  const [venueAmenities, setVenueAmenities] = useState<ListingAmenityId[]>([]);
   const [keepVenue, setKeepVenue] = useState(Boolean(defaults?.keepVenueSlug));
   const [includeVenue, setIncludeVenue] = useState(true);
   const [includeTrades, setIncludeTrades] = useState(true);
@@ -92,18 +112,36 @@ export default function EventPrepAiSimulator({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
-  const [history, setHistory] = useState<AiSimulationHistoryItem[]>([]);
+  const [history, setHistory] = useState<Awaited<ReturnType<typeof fetchAiSimulationHistory>>>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const communes = useMemo(() => communesForCity(city), [city]);
+  const categoryChoices = useMemo(() => suggestedCategoriesForEvent(eventType), [eventType]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
   const budgetValue = budgetMaxFc ? Number(budgetMaxFc) : 0;
-  const leftover = selected && budgetValue > 0 ? budgetValue - selected.estimatedTotalFc : null;
 
   const publishAllowance = (next: AiAllowance) => {
     setAllowance(next);
     onAllowanceChange?.(next);
+  };
+
+  const criteriaFromCache = (cached: ReturnType<typeof historyItemToCache>) => {
+    const fromResult = cached.result.criteria || {};
+    const fromBrief = cached.brief;
+    setNeighborhood(String(fromBrief.neighborhood || fromResult.neighborhood || ''));
+    setAmbiance((fromBrief.ambiance || fromResult.ambiance || '') as AiAmbianceId | '');
+    setMoment((fromBrief.moment || fromResult.moment || '') as AiMomentId | '');
+    setSetting((fromBrief.setting || fromResult.setting || '') as AiSettingId | '');
+    const min = fromBrief.budgetMinFc ?? fromResult.budgetMinFc;
+    setBudgetMinFc(min ? String(min) : '');
+    const cats = fromBrief.wantedCategories || fromResult.wantedCategories || [];
+    setWantedCategories(cats.filter((id): id is ServiceCategory => Boolean(id)));
+    const amenities = fromBrief.venueAmenities || fromResult.venueAmenities || [];
+    setVenueAmenities(amenities.filter((id): id is ListingAmenityId => Boolean(id)));
+    if (cats.length || amenities.length || fromBrief.neighborhood || fromResult.neighborhood) {
+      setAdvancedOpen(true);
+    }
   };
 
   const applyCached = (
@@ -118,6 +156,7 @@ export default function EventPrepAiSimulator({
     if (cached.brief.budgetMaxFc) setBudgetMaxFc(String(cached.brief.budgetMaxFc));
     if (cached.brief.eventDate) setEventDate(String(cached.brief.eventDate).slice(0, 10));
     if (cached.brief.prompt != null) setPrompt(cached.brief.prompt);
+    criteriaFromCache(cached);
     setResult(cached.result);
     setSelectedId(cached.selectedId);
     setActiveHistoryId(historyId || null);
@@ -137,6 +176,16 @@ export default function EventPrepAiSimulator({
     const nextPrompt = initialPrompt(seed);
     if (nextPrompt) setPrompt(nextPrompt);
   };
+
+  const currentCriteria = () => ({
+    ambiance: ambiance || undefined,
+    moment: moment || undefined,
+    setting: setting || undefined,
+    neighborhood: neighborhood.trim() || undefined,
+    budgetMinFc: budgetMinFc ? Number(budgetMinFc) : null,
+    wantedCategories,
+    venueAmenities,
+  });
 
   useEffect(() => {
     publishAllowance(getAiSimulationAllowance());
@@ -165,6 +214,7 @@ export default function EventPrepAiSimulator({
     setSelectedId(null);
     setActiveHistoryId(null);
     setSaveMessage('');
+    setPackModalOpen(false);
     setOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -191,6 +241,7 @@ export default function EventPrepAiSimulator({
     setError('');
     setSaveMessage('');
     try {
+      const criteria = currentCriteria();
       const data = (await api.post('/public/event-plan-ai', simulationEndpointBody({
         eventType,
         city,
@@ -204,12 +255,14 @@ export default function EventPrepAiSimulator({
         includeRentals,
         keepVenueSlug: keepVenue ? defaults?.keepVenueSlug : undefined,
         keepServiceSlugs: defaults?.keepServiceSlugs || [],
+        ...criteria,
       }))) as EventPlanAiResult & { historyId?: string; remaining?: number; allowance?: AiAllowance };
       const packages = Array.isArray(data.packages) ? data.packages : [];
-      const nextResult = { ...data, packages };
+      const nextResult = { ...data, packages, criteria };
       const nextSelected = packages[1]?.id || packages[0]?.id || null;
       setResult(nextResult);
       setSelectedId(nextSelected);
+      setPackModalOpen(true);
       if (data.allowance) {
         publishAllowance(applyServerAllowance(data.allowance));
       } else {
@@ -224,6 +277,7 @@ export default function EventPrepAiSimulator({
           guestCount: guestCount ? Number(guestCount) : null,
           budgetMaxFc: budgetMaxFc ? Number(budgetMaxFc) : null,
           eventDate,
+          ...criteria,
         },
         result: nextResult,
         selectedId: nextSelected,
@@ -272,6 +326,10 @@ export default function EventPrepAiSimulator({
     }
   };
 
+  const toggleChip = <T extends string>(value: T, current: T | '', set: (next: T | '') => void) => {
+    set(current === value ? '' : value);
+  };
+
   return (
     <section className={cn(
       embedded
@@ -287,11 +345,11 @@ export default function EventPrepAiSimulator({
               Simulation IA
             </h3>
             <p className="text-xs text-muted leading-relaxed">
-              L’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort — comme la simulation par critères.
+              Décrivez votre événement : l’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort.
             </p>
           </div>
           <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)} className="shrink-0">
-            {open ? 'Masquer' : 'Brief'}
+            {open ? 'Masquer' : 'Projet'}
           </Button>
         </div>
       ) : null}
@@ -304,13 +362,16 @@ export default function EventPrepAiSimulator({
       <AiSimulationHistoryList
         items={history}
         activeId={activeHistoryId}
-        onRestore={(item) => applyCached(historyItemToCache(item), item.id, true)}
+        onOpen={(item) => {
+          applyCached(historyItemToCache(item), item.id, true);
+          setPackModalOpen(true);
+        }}
       />
 
       {open ? (
         <div className="space-y-3">
           <label className="space-y-1 block">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Votre brief</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Décrivez votre événement</span>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -412,6 +473,141 @@ export default function EventPrepAiSimulator({
             ) : null}
           </div>
 
+          <div className="rounded-[var(--radius-card)] border border-border">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((value) => !value)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold text-foreground"
+            >
+              Plus de paramètres
+              <ChevronDown className={cn('w-4 h-4 text-muted transition', advancedOpen && 'rotate-180')} />
+            </button>
+            {advancedOpen ? (
+              <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Ambiance</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AI_AMBIANCES.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleChip(item.id, ambiance, setAmbiance)}
+                        className={cn(
+                          'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
+                          ambiance === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Moment</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {AI_MOMENTS.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => toggleChip(item.id, moment, setMoment)}
+                          className={cn(
+                            'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
+                            moment === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                          )}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Lieu</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {AI_SETTINGS.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => toggleChip(item.id, setting, setSetting)}
+                          className={cn(
+                            'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
+                            setting === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                          )}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    label="Quartier"
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    placeholder="Gombe, Golf…"
+                  />
+                  <Input
+                    label="Budget min (FC)"
+                    type="number"
+                    min={0}
+                    value={budgetMinFc}
+                    onChange={(e) => setBudgetMinFc(e.target.value)}
+                    placeholder="Optionnel"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Prestations souhaitées</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {categoryChoices.map((id) => {
+                      const active = wantedCategories.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setWantedCategories((prev) =>
+                            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+                          )}
+                          className={cn(
+                            'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
+                            active ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                          )}
+                        >
+                          {SERVICE_CATEGORY_LABELS[id]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {includeVenue ? (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Équipements salle</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {VENUE_PARAM_AMENITIES.map((item) => {
+                        const active = venueAmenities.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setVenueAmenities((prev) =>
+                              prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id],
+                            )}
+                            className={cn(
+                              'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
+                              active ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                            )}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
           <Button
             onClick={() => void run()}
             loading={loading}
@@ -450,7 +646,7 @@ export default function EventPrepAiSimulator({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
             <span className="font-bold text-foreground flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              3 Formules générées par l’IA selon votre budget
+              3 formules — touchez-en une pour voir les éléments
             </span>
             <span className="text-[11px] text-muted">
               {result.catalog.venues} salles · {result.catalog.trades} prestataires · {result.catalog.rentals} matériels
@@ -473,7 +669,10 @@ export default function EventPrepAiSimulator({
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  onClick={() => setSelectedId(pack.id)}
+                  onClick={() => {
+                    setSelectedId(pack.id);
+                    setPackModalOpen(true);
+                  }}
                   className={cn(
                     'text-left rounded-2xl border p-4 space-y-2 transition flex flex-col justify-between h-full gap-2 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     active
@@ -486,11 +685,7 @@ export default function EventPrepAiSimulator({
                       <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface border border-border text-foreground">
                         {pack.label}
                       </span>
-                      {active && (
-                        <span className="text-[10px] font-bold text-primary px-1.5 py-0.5 rounded bg-primary/15">
-                          Sélectionné
-                        </span>
-                      )}
+                      <span className="text-[10px] font-semibold text-primary">Éléments</span>
                     </div>
                     {pack.summary ? (
                       <p className="text-xs font-bold text-foreground leading-snug mt-1">{pack.summary}</p>
@@ -519,144 +714,38 @@ export default function EventPrepAiSimulator({
               );
             })}
           </div>
-
-          {selected && (
-            <div className="p-4 rounded-2xl border border-primary/25 bg-surface space-y-3 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border">
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    Composition détaillée du {selected.label}
-                  </h4>
-                  {selected.rationale && (
-                    <p className="text-[11px] text-muted mt-0.5">{selected.rationale}</p>
-                  )}
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 inline-block">
-                    Total : {formatFc(selected.estimatedTotalFc)}
-                  </span>
-                  {leftover != null ? (
-                    <p className={cn('text-[10px] font-semibold mt-1', leftover >= 0 ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-300')}>
-                      {leftover >= 0 ? `Reste ${formatFc(leftover)}` : `Dépassement ${formatFc(Math.abs(leftover))}`}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {selected.venue ? (
-                  <li>
-                    <AiPickRow
-                      href={selected.venue.href}
-                      cover={selected.venue.coverUrl}
-                      icon={<Building2 className="w-4 h-4" />}
-                      kind="Salle"
-                      title={selected.venue.title}
-                      meta={[selected.venue.orgName, selected.venue.location]}
-                      price={selected.venue.estimatedFc}
-                      onOpen={onOpenListing ? () => onOpenListing({ kind: 'venue', slug: selected.venue!.slug }) : undefined}
-                    />
-                  </li>
-                ) : null}
-                {selected.services.map((item) => {
-                  const rental = isServiceRentalCategory(item.category);
-                  return (
-                    <li key={item.slug}>
-                      <AiPickRow
-                        href={item.href}
-                        cover={item.coverUrl}
-                        icon={rental ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                        kind={rental ? 'Matériel' : 'Prestataire'}
-                        title={item.title}
-                        meta={[item.categoryLabel, item.orgName]}
-                        price={item.estimatedFc}
-                        onOpen={onOpenListing ? () => onOpenListing({ kind: 'service', slug: item.slug }) : undefined}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {selected.warnings.length > 0 && (
-                <ul className="space-y-1.5 text-[11px] text-amber-800 dark:text-amber-200 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
-                  {selected.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              )}
-
-              {onApply ? (
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border">
-                  <p className="text-[11px] text-muted">
-                    Retenez cette formule pour enregistrer le devis et contacter les prestataires.
-                  </p>
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => selected && onApply(selected)}
-                      disabled={!selected || (!selected.venue && selected.services.length === 0)}
-                      fullWidth
-                    >
-                      {applyLabel}
-                    </Button>
-                    {onApplyAll && result?.packages.length ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onApplyAll(result.packages)}
-                      >
-                        Tout appliquer
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              ) : (
-                <div className="pt-2 space-y-3 border-t border-border">
-                  <p className="text-[11px] text-muted">
-                    Rouvrir cet historique ne consomme pas de jeton. Les actions ci-dessous non plus.
-                  </p>
-                  {saveMessage ? (
-                    <p className="text-[11px] font-medium text-foreground">{saveMessage}</p>
-                  ) : null}
-                  {isLoggedIn ? (
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        leftIcon={<BookmarkPlus className="w-3.5 h-3.5" />}
-                        loading={saveBusy}
-                        disabled={!selected.venue && selected.services.length === 0}
-                        onClick={() => void saveSelectedPack()}
-                      >
-                        Retenir ce pack
-                      </Button>
-                      {canCreateEvents ? (
-                        <Link href="/dashboard/events?create=1" className="w-full sm:w-auto">
-                          <Button size="sm" variant="secondary" fullWidth leftIcon={<CalendarPlus className="w-3.5 h-3.5" />}>
-                            Créer l’événement avec ce mix
-                          </Button>
-                        </Link>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Link href="/register?kind=CLIENT&intent=seeker&action=ai_simulator" className="w-full sm:w-auto">
-                        <Button size="sm" variant="primary" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />}>
-                          Créer un compte pour retenir ce pack
-                        </Button>
-                      </Link>
-                      <Button size="sm" variant="secondary" onClick={() => setPurchaseModalOpen(true)}>
-                        Acheter {AI_TOKEN_PACK_SIZE} sims
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       ) : null}
+
+      <AiSimulationPackModal
+        open={packModalOpen}
+        onClose={() => setPackModalOpen(false)}
+        result={result}
+        selectedId={selectedId}
+        onSelectPack={setSelectedId}
+        budgetMaxFc={budgetValue}
+        eventDate={eventDate}
+        guestCount={guestCount ? Number(guestCount) : undefined}
+        isLoggedIn={isLoggedIn}
+        canCreateEvents={canCreateEvents}
+        saveBusy={saveBusy}
+        saveMessage={saveMessage}
+        onSavePack={onApply ? undefined : () => void saveSelectedPack()}
+        onBuyTokens={() => {
+          setPackModalOpen(false);
+          setPurchaseModalOpen(true);
+        }}
+        onApply={onApply ? (pack) => {
+          onApply(pack);
+          setPackModalOpen(false);
+        } : undefined}
+        applyLabel={applyLabel}
+        onApplyAll={onApplyAll ? (packs) => {
+          onApplyAll(packs);
+          setPackModalOpen(false);
+        } : undefined}
+        onOpenListing={onOpenListing}
+      />
 
       <AiTokenPurchaseModal
         open={purchaseModalOpen}
@@ -673,74 +762,4 @@ function initialPrompt(defaults?: EventPrepAiDefaults) {
   if (defaults?.prompt) return defaults.prompt;
   if (defaults?.eventTitle) return `Préparer « ${defaults.eventTitle} » avec un mix salle / prestataires / matériel & équipements.`;
   return '';
-}
-
-function AiPickRow({
-  href,
-  cover,
-  icon,
-  kind,
-  title,
-  meta,
-  price,
-  onOpen,
-}: {
-  href: string;
-  cover?: string | null;
-  icon: React.ReactNode;
-  kind: string;
-  title: string;
-  meta: Array<string | null | undefined>;
-  price: number;
-  onOpen?: () => void;
-}) {
-  const body = (
-    <>
-      <div className="w-11 h-11 rounded-lg overflow-hidden bg-surface-muted shrink-0">
-        {cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={sizedMediaUrl(cover, 96)}
-            alt={title ? `Visuel de ${title}` : 'Visuel du service'}
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted">{icon}</div>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] uppercase tracking-wider text-muted">{kind}</p>
-        {onOpen ? (
-          <span className="text-sm font-semibold truncate block hover:text-primary">{title}</span>
-        ) : (
-          <Link href={href} className="text-sm font-semibold truncate block hover:text-primary">{title}</Link>
-        )}
-        <p className="text-[11px] text-muted truncate">{meta.filter(Boolean).join(' · ')}</p>
-      </div>
-      {price > 0 ? <span className="text-[11px] font-semibold shrink-0">{formatFc(price)}</span> : <span className="text-[11px] text-muted shrink-0">Sur devis</span>}
-    </>
-  );
-
-  if (onOpen) {
-    return (
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpen();
-        }}
-        className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2 min-h-11 text-left hover:border-primary/40 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-      >
-        {body}
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2">
-      {body}
-    </div>
-  );
 }
