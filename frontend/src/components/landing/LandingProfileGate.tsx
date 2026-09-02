@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/cn';
@@ -8,8 +8,9 @@ import {
   LANDING_PROFILES,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
-import { Button } from '@/components/ui';
-import { ArrowRight, Check, Sparkles } from 'lucide-react';
+import { Button, Modal } from '@/components/ui';
+import { PROFILE_ACTIONS } from '@/components/landing/LandingHeroPreview';
+import { ArrowRight, Check, Sparkles, Zap, ShieldCheck } from 'lucide-react';
 
 export default function LandingProfileGate({
   selectedId,
@@ -20,6 +21,7 @@ export default function LandingProfileGate({
 }) {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
+  const [mobileModalOpen, setMobileModalOpen] = useState(false);
 
   const getProfileHref = (profileId: LandingProfileId, defaultHref: string) => {
     if (!isLoggedIn) return defaultHref;
@@ -53,6 +55,16 @@ export default function LandingProfileGate({
     }
   };
 
+  const handleMobileCardSelect = (id: LandingProfileId) => {
+    onSelect(id);
+    setMobileModalOpen(true);
+  };
+
+  const activeProfile = LANDING_PROFILES.find((p) => p.id === selectedId) || LANDING_PROFILES[0];
+  const activeActions = PROFILE_ACTIONS[activeProfile.id] || PROFILE_ACTIONS.personal;
+  const activeCtaHref = getProfileHref(activeProfile.id, activeProfile.cta.href);
+  const activeCtaLabel = getProfileCtaLabel(activeProfile.id, activeProfile.cta.label);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 px-1">
@@ -70,13 +82,13 @@ export default function LandingProfileGate({
             Quel est votre projet ?
           </h2>
           <p className="text-xs sm:text-sm text-muted">
-            Choisissez votre solution pour accéder immédiatement aux actions et outils dédiés.
+            Sélectionnez votre cas pour ouvrir immédiatement vos outils et actions directes.
           </p>
         </div>
       </div>
 
-      {/* Sélecteur compact en grille 2x2 sur mobile (100% visible sans scroll coupé) */}
-      <div className="sm:hidden grid grid-cols-2 gap-2" role="tablist" aria-label="Choisir votre profil">
+      {/* Sélecteur en grille 2x2 sur mobile : toucher une carte ouvre instantanément la modale d'actions */}
+      <div className="sm:hidden grid grid-cols-2 gap-2.5" role="tablist" aria-label="Choisir votre profil">
         {LANDING_PROFILES.map((p) => {
           const selected = selectedId === p.id;
           const PIcon = p.icon;
@@ -86,9 +98,9 @@ export default function LandingProfileGate({
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => onSelect(p.id)}
+              onClick={() => handleMobileCardSelect(p.id)}
               className={cn(
-                'p-3 rounded-xl text-left border transition-all flex flex-col justify-between gap-2 touch-manipulation relative',
+                'p-3.5 rounded-xl text-left border transition-all flex flex-col justify-between gap-2.5 touch-manipulation relative active:scale-[0.98]',
                 selected
                   ? 'border-2 border-primary bg-primary/10 shadow-md shadow-primary/20 ring-1 ring-primary/40'
                   : 'bg-surface/90 dark:bg-slate-900/80 border-border hover:border-primary/40',
@@ -97,19 +109,23 @@ export default function LandingProfileGate({
               <div className="flex items-center justify-between gap-1 w-full">
                 <div
                   className={cn(
-                    'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                    'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
                     selected ? 'bg-primary text-white shadow-xs' : 'em-glow-icon-box',
                   )}
                 >
-                  <PIcon className="w-3.5 h-3.5" />
+                  <PIcon className="w-4 h-4" />
                 </div>
-                {selected && (
-                  <span className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-[9px]">
-                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                {selected ? (
+                  <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px] shadow-xs">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted flex items-center gap-0.5">
+                    Ouvrir <ArrowRight className="w-3 h-3" />
                   </span>
                 )}
               </div>
-              <div>
+              <div className="space-y-0.5">
                 <span className="text-[10px] font-bold uppercase text-muted block truncate">
                   {p.eyebrow}
                 </span>
@@ -127,63 +143,146 @@ export default function LandingProfileGate({
         })}
       </div>
 
-      {/* Carte explicative complète de la solution active sur mobile */}
-      {(() => {
-        const activeProfile = LANDING_PROFILES.find((p) => p.id === selectedId) || LANDING_PROFILES[0];
-        const ActiveIcon = activeProfile.icon;
-        const ctaHref = getProfileHref(activeProfile.id, activeProfile.cta.href);
-        const ctaLabel = getProfileCtaLabel(activeProfile.id, activeProfile.cta.label);
+      {/* Carte résumé sur mobile avec bouton pour rouvrir la modale */}
+      <div className="sm:hidden rounded-[var(--radius-card)] p-4 bg-surface dark:bg-slate-900 border-2 border-primary/40 shadow-lg shadow-primary/10 space-y-3 animate-fade-in">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/25 text-[11px] font-semibold text-primary">
+            <Zap className="w-3.5 h-3.5 shrink-0" />
+            <span>{activeProfile.targetAudience}</span>
+          </div>
 
-        return (
-          <div className="sm:hidden rounded-[var(--radius-card)] p-4 bg-surface dark:bg-slate-900 border-2 border-primary/40 shadow-lg shadow-primary/10 space-y-3.5 animate-fade-in">
-            <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/25 text-[11px] font-semibold text-primary">
-                <ActiveIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>{activeProfile.targetAudience}</span>
-              </div>
+          <h3 className="text-base font-bold text-foreground leading-snug pt-1">
+            {activeProfile.title}
+          </h3>
+          <p className="text-xs text-muted leading-relaxed">
+            {activeProfile.intro}
+          </p>
+        </div>
 
-              <h3 className="text-base font-bold text-foreground leading-snug pt-1">
-                {activeProfile.title}
-              </h3>
-              <p className="text-xs text-muted leading-relaxed">
-                {activeProfile.intro}
-              </p>
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setMobileModalOpen(true)}
+            className="w-full py-2.5 px-3 rounded-lg bg-surface-muted hover:bg-surface border border-border text-xs font-bold text-foreground flex items-center justify-center gap-1.5 touch-manipulation transition"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span>Voir les 4 actions</span>
+          </button>
+          <Link href={activeCtaHref} className="block w-full">
+            <Button
+              size="sm"
+              variant="primary"
+              className="w-full shadow-sm font-bold text-xs py-2.5 min-h-[42px] justify-center"
+              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+            >
+              {activeCtaLabel}
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Modale d'actions directes pour mobile */}
+      <Modal
+        open={mobileModalOpen}
+        onClose={() => setMobileModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <activeProfile.icon className="w-5 h-5 text-primary shrink-0" />
+            <span className="font-bold text-base sm:text-lg">{activeProfile.label}</span>
+          </div>
+        }
+        description={
+          <span className="text-xs font-medium text-primary block mt-0.5">
+            {activeProfile.targetAudience}
+          </span>
+        }
+        size="lg"
+      >
+        <div className="space-y-4 pt-1">
+          <p className="text-xs sm:text-sm text-muted leading-relaxed">
+            {activeProfile.intro}
+          </p>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-primary" />
+                Actions directes disponibles
+              </span>
+              <span className="text-[10px] font-semibold text-muted">
+                1 clic pour démarrer
+              </span>
             </div>
 
-            {/* 3 points clés avec icônes */}
-            <div className="grid grid-cols-1 gap-1.5 py-2.5 border-y border-border/80">
-              {activeProfile.results.map((res) => {
-                const ResIcon = res.icon;
+            <div className="grid grid-cols-1 gap-2.5">
+              {activeActions.map((act) => {
+                const Icon = act.icon;
+                const targetHref = act.href(isLoggedIn);
+                const isExternal = targetHref.startsWith('http');
+
                 return (
-                  <div key={res.label} className="flex items-center gap-2 text-xs font-medium text-foreground">
-                    <div className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                      <ResIcon className="w-2.5 h-2.5" />
+                  <Link
+                    key={act.title}
+                    href={targetHref}
+                    target={isExternal ? '_blank' : undefined}
+                    rel={isExternal ? 'noopener noreferrer' : undefined}
+                    onClick={() => setMobileModalOpen(false)}
+                    className={cn(
+                      'p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 group active:scale-[0.99] touch-manipulation block',
+                      act.highlight
+                        ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/30 shadow-xs'
+                        : 'bg-surface hover:bg-surface-muted dark:bg-slate-900 border-border',
+                    )}
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg em-glow-icon-box shrink-0 flex items-center justify-center mt-0.5">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                            {act.title}
+                          </span>
+                          <span className="text-[9px] font-semibold text-muted px-1.5 py-0.2 rounded bg-surface border border-border shrink-0">
+                            {act.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted leading-snug line-clamp-2">
+                          {act.description}
+                        </p>
+                      </div>
                     </div>
-                    <span>{res.label}</span>
-                  </div>
+                    <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform">
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </Link>
                 );
               })}
             </div>
+          </div>
 
-            {/* CTA principal de la solution */}
-            <div className="space-y-1.5 pt-0.5">
-              <Link href={ctaHref} className="block w-full">
-                <Button
-                  size="md"
-                  variant="primary"
-                  className="w-full shadow-md shadow-primary/30 font-bold text-xs min-h-11 justify-center"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                >
-                  {ctaLabel}
-                </Button>
-              </Link>
-              <p className="text-[10px] text-muted text-center">
-                {activeProfile.registerHint}
-              </p>
+          <div className="pt-3 border-t border-border space-y-2">
+            <Link
+              href={activeCtaHref}
+              onClick={() => setMobileModalOpen(false)}
+              className="block w-full"
+            >
+              <Button
+                size="lg"
+                variant="primary"
+                className="w-full shadow-lg shadow-primary/30 font-bold text-xs min-h-11 justify-center"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
+                {activeCtaLabel}
+              </Button>
+            </Link>
+            <div className="flex items-center justify-center gap-2 text-[10px] text-muted">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span>{activeProfile.registerHint}</span>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      </Modal>
 
       {/* Grille des 4 solutions (Desktop / Tablette) */}
       <ul

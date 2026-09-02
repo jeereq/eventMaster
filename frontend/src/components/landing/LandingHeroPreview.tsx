@@ -24,7 +24,7 @@ import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { LandingProfileId } from '@/lib/landingProfiles';
 
-interface ActionCard {
+export interface ActionCard {
   title: string;
   badge: string;
   description: string;
@@ -34,7 +34,7 @@ interface ActionCard {
   highlight?: boolean;
 }
 
-const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
+export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   personal: [
     {
       title: 'Éditeur de Salle 2D / 3D',
