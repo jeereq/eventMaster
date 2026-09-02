@@ -212,7 +212,7 @@ export function computeEventWorkflowState(input: {
     {
       id: 'prep',
       title: 'Préparation',
-      description: 'Retenez une salle, des métiers ou des locations. Les devis se lient à cet événement.',
+      description: 'Retenez une salle, des prestataires ou des locations. Les devis se lient à cet événement.',
       tab: 'prep',
       optional: true,
       detail: input.hasPrepShortlist

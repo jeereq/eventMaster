@@ -308,7 +308,7 @@ function PrepLane({
     ? 'Aucune salle publique pour ces filtres.'
     : lane === 'rental'
       ? 'Aucune location publique pour ces filtres.'
-      : 'Aucun métier public pour ces filtres.';
+      : 'Aucun prestataire public pour ces filtres.';
 
   return (
     <div className="space-y-3">
@@ -387,8 +387,8 @@ function PrepLane({
           </>
         ) : (
           <>
-            <FilterSelect label={lane === 'rental' ? 'Type de location' : 'Métier'} value={category} onChange={setCategory}>
-              <option value="">{lane === 'rental' ? 'Tous les types' : 'Tous les métiers'}</option>
+            <FilterSelect label={lane === 'rental' ? 'Type de location' : 'Prestataire'} value={category} onChange={setCategory}>
+              <option value="">{lane === 'rental' ? 'Tous les types' : 'Tous les prestataires'}</option>
               {categories.map((item) => (
                 <option key={item} value={item}>{SERVICE_CATEGORY_LABELS[item]}</option>
               ))}
@@ -836,7 +836,7 @@ export default function EventPrepPanel({
                 ? 'Choisissez ci-dessus les options des deux simulations, puis appliquez.'
                 : view === 'ai'
                   ? 'Lancez une simulation IA, puis retenez le mix proposé.'
-                  : 'Parcourez le catalogue et retenez une salle, des métiers et des locations.'
+                  : 'Parcourez le catalogue et retenez une salle, des prestataires et des locations.'
               : estimate.priced > 0
                 ? `À partir de ${formatFc(estimate.total)} · ${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''}`
                 : `${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''} retenue${estimate.totalItems > 1 ? 's' : ''}`
@@ -883,9 +883,9 @@ export default function EventPrepPanel({
           </RetainedColumn>
           <RetainedColumn
             tone="trade"
-            label="Métiers"
+            label="Prestataires"
             icon={<Sparkles className="w-3.5 h-3.5" />}
-            empty="Aucun métier retenu"
+            empty="Aucun prestataire retenu"
             onBrowse={() => setLane('trade')}
           >
             {trades.map((vendor) => (
@@ -1037,7 +1037,7 @@ export default function EventPrepPanel({
             <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" />
           </summary>
           <div className="px-5 pb-4 space-y-2">
-            <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, métiers et locations se remplissent ici, sans réserver.</p>
+            <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, prestataires et locations se remplissent ici, sans réserver.</p>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {savedPacks.slice(0, 6).map((pack) => (
                 <li key={pack.id} className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 space-y-2">

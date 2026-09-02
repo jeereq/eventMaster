@@ -254,7 +254,7 @@ export function eventPrepSummary(prep: EventPrep): string | null {
   if (prep.venue) parts.push(prep.venue.name);
   const { trades, rentals } = splitEventPrepVendors(prep.vendors);
   if (trades.length === 1) parts.push(trades[0].title);
-  else if (trades.length > 1) parts.push(`${trades.length} métiers`);
+  else if (trades.length > 1) parts.push(`${trades.length} prestataires`);
   if (rentals.length === 1) parts.push(rentals[0].title);
   else if (rentals.length > 1) parts.push(`${rentals.length} locations`);
   if (parts.length === 0) return null;

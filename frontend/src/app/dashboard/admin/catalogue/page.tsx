@@ -561,7 +561,7 @@ export default function AdminCataloguePage() {
           { label: 'Favoris', value: overview?.engagement?.favorites ?? 0 },
           { label: 'Packs enregistrés', value: overview?.engagement?.packs ?? 0 },
           { label: 'GMV salles', value: formatFc(overview?.gmv?.venueFc ?? 0) },
-          { label: 'GMV métiers', value: formatFc(overview?.gmv?.tradeFc ?? 0) },
+          { label: 'GMV prestataires', value: formatFc(overview?.gmv?.tradeFc ?? 0) },
           { label: 'GMV locations', value: formatFc(overview?.gmv?.rentalFc ?? 0) },
         ].map((card) => (
           <div key={card.label} className="bg-surface px-4 py-3">

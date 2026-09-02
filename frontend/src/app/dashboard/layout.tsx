@@ -281,7 +281,7 @@ function buildDashboardNav(opts: {
  const marketItems: NavItem[] = [
   ...(workspace.showBrowseCatalogue
    ? [
-      { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, métiers, locations (comme le client)' },
+      { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, locations (comme le client)' },
       { name: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
      ]
    : []),
@@ -292,7 +292,7 @@ function buildDashboardNav(opts: {
      ]
    : []),
   ...(workspace.showMarketplace
-   ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / métier / location)' }]
+   ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / prestataire / location)' }]
    : []),
   ...(workspace.showRooms
    ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]

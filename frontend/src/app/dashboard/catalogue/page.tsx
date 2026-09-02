@@ -720,7 +720,7 @@ function ClientMarketplaceInner() {
                   <Input
                     value={favQ}
                     onChange={(e) => setFavQ(e.target.value)}
-                    placeholder="Filtrer par nom, ville, métier…"
+                    placeholder="Filtrer par nom, ville, prestataire…"
                     leftIcon={<Store className="w-4 h-4" />}
                   />
                 </div>
@@ -949,7 +949,7 @@ function ClientMarketplaceInner() {
                     ? 'Décrivez l’événement ci-dessus, lancez la simulation, puis retenez le mix proposé.'
                     : planView === 'final'
                       ? 'Choisissez un pack issu de la simulation par critères ou de l’IA.'
-                      : 'Indiquez le budget, la date et les métiers, puis lancez la recherche.'
+                      : 'Indiquez le budget, la date et les prestataires, puis lancez la recherche.'
                 }
               />
             ) : null}

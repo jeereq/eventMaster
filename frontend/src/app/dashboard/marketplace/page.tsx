@@ -567,7 +567,7 @@ export default function MarketplaceDeskPage() {
             title={listingIsRental ? 'Aucune location pour ces filtres' : 'Aucune prestation pour ces filtres'}
             description={listingIsRental
               ? 'Élargissez le type de location, la ville ou la visibilité.'
-              : 'Élargissez le métier, la ville ou la visibilité.'}
+              : 'Élargissez la catégorie, la ville ou la visibilité.'}
           />
         ) : (
           <>

@@ -231,7 +231,7 @@ export default function EventSavedPacks({
         open={open}
         onClose={() => setOpen(false)}
         title="Créer un pack parfait"
-        description="Choisissez une salle, des métiers et des locations parmi vos favoris."
+        description="Choisissez une salle, des prestataires et des locations parmi vos favoris."
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
@@ -257,12 +257,12 @@ export default function EventSavedPacks({
           </label>
           {error ? <Alert variant="error">{error}</Alert> : null}
           {favorites.length === 0 ? (
-            <p className="text-sm text-muted">Ajoutez d’abord des salles, métiers ou locations en favoris.</p>
+            <p className="text-sm text-muted">Ajoutez d’abord des salles, prestataires ou locations en favoris.</p>
           ) : (
             <div className="space-y-3 max-h-72 overflow-y-auto">
               {([
                 ['Salles', favorites.filter((row) => row.kind === 'venue')],
-                ['Métiers', favorites.filter((row) => row.kind === 'service' && !isServiceRentalCategory(row.category))],
+                ['Prestataires', favorites.filter((row) => row.kind === 'service' && !isServiceRentalCategory(row.category))],
                 ['Locations', favorites.filter((row) => row.kind === 'service' && isServiceRentalCategory(row.category))],
               ] as Array<[string, FavoriteListing[]]>).filter(([, rows]) => rows.length > 0).map(([label, rows]) => (
                   <div key={label} className="space-y-1.5">

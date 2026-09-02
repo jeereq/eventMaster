@@ -4361,7 +4361,7 @@ function DashboardPageContent() {
                               { label: 'Favoris catalogue', value: platformInsights?.marketplace.favorites ?? 0 },
                               { label: 'Packs enregistrés', value: platformInsights?.marketplace.packs ?? 0 },
                               { label: 'GMV salles', value: formatFc(platformInsights?.marketplace.gmvVenueFc ?? 0) },
-                              { label: 'GMV métiers', value: formatFc(platformInsights?.marketplace.gmvTradeFc ?? 0) },
+                              { label: 'GMV prestataires', value: formatFc(platformInsights?.marketplace.gmvTradeFc ?? 0) },
                               { label: 'GMV locations', value: formatFc(platformInsights?.marketplace.gmvRentalFc ?? 0) },
                             ].map((row) => (
                               <div key={row.label} className="flex justify-between text-sm">

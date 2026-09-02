@@ -999,29 +999,29 @@ export function catalogueItemDisplayKind(item: Pick<CatalogueItem, 'kind' | 'cat
 
 export function catalogueKindLabel(kind?: CatalogueDisplayKind | string | null): string {
   if (kind === 'rental') return 'Location';
-  if (kind === 'service') return 'Métier';
+  if (kind === 'service') return 'Prestataire';
   if (kind === 'event') return 'Événement';
   return 'Salle';
 }
 
 export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | 'rental' | string | null): string {
   if (kind === 'venue') return 'Salles';
-  if (kind === 'service') return 'Métiers';
+  if (kind === 'service') return 'Prestataires';
   if (kind === 'rental') return 'Locations';
   if (kind === 'event') return 'Événements';
   return 'Tous';
 }
 
-/** Pastille courte sur un pin (jamais « Presta », trop ambigu avec les locations). */
+/** Pastille courte sur un pin. */
 export function catalogueKindChipLabel(kind?: CatalogueDisplayKind | string | null): string {
   if (kind === 'rental') return 'Location';
-  if (kind === 'service') return 'Métier';
+  if (kind === 'service') return 'Presta';
   if (kind === 'event') return 'Évén.';
   return 'Salle';
 }
 
 export function catalogueKindHint(kind?: CatalogueDisplayKind | string | null): string {
-  if (kind === 'service') return 'La personne — DJ, photo, traiteur…';
+  if (kind === 'service') return 'Le professionnel — DJ, photographe, traiteur, décorateur…';
   if (kind === 'rental') return 'Le bien — habits, véhicule, matériel…';
   if (kind === 'venue') return 'Le lieu de l’événement';
   if (kind === 'event') return 'Fête, concert, gala…';
@@ -1084,7 +1084,7 @@ export function groupCatalogueItemsByDisplayKind<T extends Pick<CatalogueItem, '
     .filter((group) => group.items.length > 0);
 }
 
-/** Alterne salles / métiers / locations / événements pour qu’une page du hub ne montre pas un seul type. */
+/** Alterne salles / prestataires / locations / événements pour qu’une page du hub ne montre pas un seul type. */
 export function mixCatalogueByDisplayKind<T extends Pick<CatalogueItem, 'kind' | 'category'> & { distanceKm?: number | null }>(
   items: T[],
 ): T[] {

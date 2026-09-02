@@ -47,7 +47,7 @@ export default function EventPrepAiSimulator({
   const [budgetMaxFc, setBudgetMaxFc] = useState(defaults?.budgetMaxFc && defaults.budgetMaxFc > 0 ? String(defaults.budgetMaxFc) : '');
   const [eventDate, setEventDate] = useState(defaults?.eventDate?.slice(0, 10) || '');
   const [prompt, setPrompt] = useState(
-    defaults?.eventTitle ? `Préparer « ${defaults.eventTitle} » avec un mix salle / métiers / locations.` : '',
+    defaults?.eventTitle ? `Préparer « ${defaults.eventTitle} » avec un mix salle / prestataires / locations.` : '',
   );
   const [keepVenue, setKeepVenue] = useState(Boolean(defaults?.keepVenueSlug));
   const [includeVenue, setIncludeVenue] = useState(true);
@@ -231,7 +231,7 @@ export default function EventPrepAiSimulator({
       {result?.packages.length ? (
         <div className="space-y-3">
           <p className="text-xs text-muted">
-            {result.packages.length} proposition{result.packages.length > 1 ? 's' : ''} · catalogue : {result.catalog.venues} salles · {result.catalog.trades} métiers · {result.catalog.rentals} locations.
+            {result.packages.length} proposition{result.packages.length > 1 ? 's' : ''} · catalogue : {result.catalog.venues} salles · {result.catalog.trades} prestataires · {result.catalog.rentals} locations.
           </p>
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-3" role="radiogroup" aria-label="Propositions IA">
             {result.packages.map((pack) => {

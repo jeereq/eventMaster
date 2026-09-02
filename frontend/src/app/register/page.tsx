@@ -423,7 +423,7 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
     orgLabel: '',
     orgPlaceholder: '',
     features: [
-      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, métiers, locations. Trouvez exactement ce qu’il vous faut.' },
+      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, prestataires, locations. Trouvez exactement ce qu’il vous faut.' },
       { step: 2, icon: Wallet, title: 'Composer', desc: 'Un pack sur mesure. Rien n’est réservé tant que le devis n’est pas envoyé.' },
       { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Versez l’acompte directement au pro et sécurisez votre date.' },
     ],

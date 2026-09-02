@@ -306,7 +306,7 @@ function OrganizerDemandesPage() {
         <EmptyState
           icon={<Heart className="w-5 h-5" />}
           title="Aucun favori"
-          description="Enregistrez des salles, métiers ou locations depuis le marketplace pour les retrouver ici."
+          description="Enregistrez des salles, prestataires ou locations depuis le marketplace pour les retrouver ici."
           action={
             <Link href="/dashboard/catalogue">
               <Button size="sm">Parcourir le marketplace</Button>

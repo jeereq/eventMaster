@@ -54,14 +54,14 @@ export const EVENT_ENTRY_OPTIONS = [
 export const KIND_FILTER_OPTIONS = [
   { id: 'all', label: 'Tous' },
   { id: 'venue', label: 'Salles' },
-  { id: 'service', label: 'Métiers' },
+  { id: 'service', label: 'Prestataires' },
   { id: 'rental', label: 'Locations' },
   { id: 'event', label: 'Événements' },
 ];
 
 export function catalogueKindFilterTitle(kind: CatalogueKind, fallback = 'Filtrer'): string {
   if (kind === 'venue') return 'Filtrer les salles';
-  if (kind === 'service') return 'Filtrer les métiers';
+  if (kind === 'service') return 'Filtrer les prestataires';
   if (kind === 'rental') return 'Filtrer les locations';
   if (kind === 'event') return 'Filtrer les événements';
   return fallback;

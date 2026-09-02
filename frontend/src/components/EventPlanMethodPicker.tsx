@@ -17,7 +17,7 @@ const SIM_METHODS: Array<{
     id: 'manual',
     label: 'Par critères',
     kicker: 'Sans IA',
-    description: 'Vous fixez le budget, la ville, la date et les métiers. EventMaster calcule 3 packs dans l’enveloppe.',
+    description: 'Vous fixez le budget, la ville, la date et les prestataires souhaités. EventMaster calcule 3 packs dans l’enveloppe.',
     icon: MousePointerClick,
   },
   {

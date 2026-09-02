@@ -44,8 +44,8 @@ export const USER_GUIDES: UserGuide[] = [
       'Traiter la file du jour : demandes d’abonnement, licences J-7, factures ouvertes',
       'Créer et modifier les organisations, forfaits et durées (trimestre 90 j, mois, annuel 365 j −10 %)',
       'Ouvrir l’espace d’une organisation (impersonation support, bandeau visible)',
-      'Modérer le catalogue : salles, métiers, locations ; dépublier / republier avec motif',
-      'Suivre packs, favoris, GMV salles / métiers / locations et commissions {commissionPercent} %',
+      'Modérer le catalogue : salles, prestataires, locations ; dépublier / republier avec motif',
+      'Suivre packs, favoris, GMV salles / prestataires / locations et commissions {commissionPercent} %',
       'Publier des modèles globaux sur la landing, éditer les messages invités',
       'Consulter les analyses SaaS, le funnel RSVP / PDF / scan, le journal d’audit et les réglages',
       'Verser les commissions des commerciaux plateforme hors EventMaster (preuve + motif), via Versements SaaS',
@@ -97,7 +97,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'moderate-catalog',
         title: 'Modérer le marketplace et les commissions {commissionPercent} %',
         content:
-          '1. Ouvrez Catalogue.\n2. Filtrez salles, métiers ou locations. Dépublier exige un motif (journalisé) ; Republier remet la fiche en vitrine.\n3. Les compteurs GMV distinguent salles, métiers et locations ; favoris et packs mesurent l’usage de « Préparer un événement ».\n4. Onglet Commissions {commissionPercent} % : marquez payée après versement hors plateforme, ou exportez le CSV.',
+          '1. Ouvrez Catalogue.\n2. Filtrez salles, prestataires ou locations. Dépublier exige un motif (journalisé) ; Republier remet la fiche en vitrine.\n3. Les compteurs GMV distinguent salles, prestataires et locations ; favoris et packs mesurent l’usage de « Préparer un événement ».\n4. Onglet Commissions {commissionPercent} % : marquez payée après versement hors plateforme, ou exportez le CSV.',
         links: [{ label: 'Catalogue', href: '/dashboard/admin/catalogue' }],
       },
       {
@@ -199,9 +199,9 @@ export const USER_GUIDES: UserGuide[] = [
       'Gérer l\'équipe (managers, protocoles)',
       'Créer des salles multi-étages (Duplex, Villa…) et peaufiner le plan 3D selon le niveau d’éditeur du forfait',
       'Créer des événements privés ou publics (billets), tâches d’équipe et mode Protocole',
-      'Explorer le catalogue acheteur (comme un client) : salles, métiers, locations',
+      'Explorer le catalogue acheteur (comme un client) : salles, prestataires, locations',
       'Suivre séparément les demandes de devis et les réservations',
-      'Publier vos offres vendeur (Mes offres) : métiers / locations ; salles via Salles',
+      'Publier vos offres vendeur (Mes offres) : prestations / locations ; salles via Salles',
       'Accéder à la facturation, au forfait et aux factures',
       'Personnaliser modèles d’invitation et messages invités',
     ],
@@ -296,7 +296,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'marketplace-desk',
         title: 'Publier une offre (Mes offres)',
         content:
-          '1. Menu Mes offres (vendeur) — distinct d’Explorer.\n2. Prestations : métier ou location ; photos, tarif, ville ; publiez. Salle : Salles → plan → publier.\n3. Demandes reçues → contacter / convertir en réservation.\n4. Réservations vendeur : accepter → acompte hors plateforme → confirmer.',
+          '1. Menu Mes offres (vendeur) — distinct d’Explorer.\n2. Prestations : prestataire ou location ; photos, tarif, ville ; publiez. Salle : Salles → plan → publier.\n3. Demandes reçues → contacter / convertir en réservation.\n4. Réservations vendeur : accepter → acompte hors plateforme → confirmer.',
         links: [{ label: 'Mes offres', href: '/dashboard/marketplace' }],
       },
       {
@@ -433,7 +433,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'marketplace-desk',
         title: 'Gérer Mes offres (vendeur)',
         content:
-          '1. Mes offres — pas Explorer.\n2. Publiez métier / location ; salles via Salles.\n3. Traitez devis reçus et réservations (accepter → acompte → confirmer).',
+          '1. Mes offres — pas Explorer.\n2. Publiez prestation / location ; salles via Salles.\n3. Traitez devis reçus et réservations (accepter → acompte → confirmer).',
         links: [{ label: 'Mes offres', href: '/dashboard/marketplace' }],
       },
     ],
@@ -613,7 +613,7 @@ export const USER_GUIDES: UserGuide[] = [
     summary:
       'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace (Explorer), Agenda, billets, Demandes de devis et Réservations (séparés). Pour organiser ou publier, changez le type de compte dans Mon compte.',
     canDo: [
-      'Explorer salles, métiers, locations et événements (filtres, carte, grille / liste)',
+      'Explorer salles, prestataires, locations et événements (filtres, carte, grille / liste)',
       'Agenda : s’inscrire ou acheter un billet',
       'Favoris, packs budget, partage d’URL',
       'Suivre Demandes de devis et Réservations dans deux menus distincts',
@@ -649,7 +649,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'explore-favorites',
         title: 'Explorer et enregistrer des favoris',
         content:
-          '1. Ouvrez Marketplace.\n2. Onglet Explorer : filtrez par mot-clé, ville, commune, type (salles / prestataires / locations / événements), métier ou location (habits, véhicules, matériel), prix, places.\n3. Passez en grille, liste, carte ou Focus (plein écran). Les pastilles indiquent Salle, Presta, Loc. ou Évén.\n4. Cliquez sur le cœur d’une salle, d’un prestataire ou d’une location.\n5. Onglet Favoris : filtrez salles / prestataires / locations et changez la vue.\n6. Bouton Partager : copie l’URL actuelle, avec vos filtres.',
+          '1. Ouvrez Marketplace.\n2. Onglet Explorer : filtrez par mot-clé, ville, commune, type (salles / prestataires / locations / événements), prestataire ou location (habits, véhicules, matériel), prix, places.\n3. Passez en grille, liste, carte ou Focus (plein écran). Les pastilles indiquent Salle, Presta, Loc. ou Évén.\n4. Cliquez sur le cœur d’une salle, d’un prestataire ou d’une location.\n5. Onglet Favoris : filtrez salles / prestataires / locations et changez la vue.\n6. Bouton Partager : copie l’URL actuelle, avec vos filtres.',
         links: [{ label: 'Marketplace', href: '/dashboard/catalogue' }],
       },
       {
@@ -663,7 +663,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'prepare-event',
         title: 'Préparer un événement avec un brief budget',
         content:
-          'À quoi ça sert : vous donnez un budget max et ce dont vous avez besoin. EventMaster propose 3 packs (économique, équilibré, confort) qui tiennent dans l’enveloppe — salle et prestataires déjà combinés. Rien n’est réservé : vous comparez, puis contactez.\n\nCas d’usage — Marie, mariage à Kinshasa, 100 invités, 1 500 000 FC :\n1. Onglet Préparer un événement.\n2. (Facultatif) ouvrez « Exemple — mariage à Kinshasa » et cliquez Appliquer cet exemple.\n3. Budget max = 1 500 000 FC. Marge 5 % = 75 000 FC de réserve ; la recherche porte sur 1 425 000 FC. Les pourcentages (salle 38 %, traiteur 28 %…) s’affichent aussi en francs.\n4. Ville Kinshasa, 100 invités, date. Salle obligatoire. Métiers : un clic = obligatoire → si ça rentre → exclu.\n5. Lancez la recherche, comparez les 3 packs (chaque barre montre le montant exact). Élargissez un poste manquant ou figez une ligne puis relancez.\n6. Sauvegardez le brief et/ou le pack dans Mes packs, puis envoyez un devis depuis une fiche.',
+          'À quoi ça sert : vous donnez un budget max et ce dont vous avez besoin. EventMaster propose 3 packs (économique, équilibré, confort) qui tiennent dans l’enveloppe — salle et prestataires déjà combinés. Rien n’est réservé : vous comparez, puis contactez.\n\nCas d’usage — Marie, mariage à Kinshasa, 100 invités, 1 500 000 FC :\n1. Onglet Préparer un événement.\n2. (Facultatif) ouvrez « Exemple — mariage à Kinshasa » et cliquez Appliquer cet exemple.\n3. Budget max = 1 500 000 FC. Marge 5 % = 75 000 FC de réserve ; la recherche porte sur 1 425 000 FC. Les pourcentages (salle 38 %, traiteur 28 %…) s’affichent aussi en francs.\n4. Ville Kinshasa, 100 invités, date. Salle obligatoire. Prestataires : un clic = obligatoire → si ça rentre → exclu.\n5. Lancez la recherche, comparez les 3 packs (chaque barre montre le montant exact). Élargissez un poste manquant ou figez une ligne puis relancez.\n6. Sauvegardez le brief et/ou le pack dans Mes packs, puis envoyez un devis depuis une fiche.',
         links: [{ label: 'Préparer un événement', href: '/dashboard/catalogue?hub=plan' }],
       },
       {

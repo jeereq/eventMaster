@@ -198,7 +198,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     steps: [
       {
         title: '1. Explorer',
-        description: 'Salles et métiers filtrés par ville, capacité et budget.',
+        description: 'Salles et prestataires filtrés par ville, capacité et budget.',
         detail: 'Recherche géolocalisée. Photos HD, plans 3D et équipements disponibles.',
         outcome: 'Trouvez les professionnels adaptés.',
         icon: LayoutGrid,
