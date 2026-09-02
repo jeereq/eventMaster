@@ -1,21 +1,20 @@
 'use client';
 
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  CreditCard, Check, Loader2, Sparkles, Smartphone,
+  CreditCard, Check, Loader2, Sparkles,
   Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck, FileText, ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Alert, Input, SkeletonBillingView, Button } from '@/components/ui';
+import { Alert, SkeletonBillingView, Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
-import PaymentPendingView from '@/components/PaymentPendingView';
+import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
 import { formatQuotaRemaining } from '@/lib/quotaDisplay';
-import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
 import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
@@ -24,6 +23,7 @@ import {
   VENDOR_PLAN_IDS,
   paidPlanIdsForAccountKind,
   ANNUAL_DISCOUNT_PERCENT,
+  formatFc,
   getPlanDisplayPrice,
   durationDaysForPlan,
   planPricePeriodSuffix,
@@ -118,11 +118,15 @@ function BillingPageInner() {
   const [saasPaymentMode, setSaasPaymentMode] = useState<'manual' | 'flexpay'>(
     site.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual',
   );
-  const [payMethod, setPayMethod] = useState<'card' | 'mobile'>('mobile');
-  const [payOperator, setPayOperator] = useState<'orange' | 'mpesa' | 'airtel'>('orange');
-  const [payPhone, setPayPhone] = useState('');
-  const [pendingFlexPayRequestId, setPendingFlexPayRequestId] = useState<string | null>(null);
-  const [pendingPayMethod, setPendingPayMethod] = useState<'card' | 'mobile'>('card');
+  const [flexPayCheckout, setFlexPayCheckout] = useState<{
+    planId?: PlanId;
+    planName: string;
+    priceLabel: string;
+    isRenew?: boolean;
+    retryRequestId?: string | null;
+    startPending?: boolean;
+    initialMethod?: 'mobile' | 'card';
+  } | null>(null);
 
   const loadBillingStatus = async () => {
     try {
@@ -144,15 +148,6 @@ function BillingPageInner() {
       }
       if (requestsData) {
         setRequests(requestsData);
-        const openFlex = (requestsData as SubscriptionRequest[]).find(
-          (r) =>
-            (r.status === 'PENDING' || r.status === 'REJECTED') &&
-            (r.paymentProvider === 'flexpay_card' || r.paymentProvider === 'flexpay_mobile'),
-        );
-        if (openFlex && !searchParams.get('requestId')) {
-          setPendingFlexPayRequestId(openFlex.id);
-          setPendingPayMethod(openFlex.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card');
-        }
       }
       setInvoices(invoicesData.invoices || []);
     } catch (err: any) {
@@ -178,58 +173,16 @@ function BillingPageInner() {
       return;
     }
     if (requestId && (flexpay === 'return' || flexpay === 'pending')) {
-      setPendingFlexPayRequestId(requestId);
-      setPendingPayMethod('card');
+      setFlexPayCheckout({
+        planName: 'Abonnement',
+        priceLabel: '',
+        retryRequestId: requestId,
+        startPending: true,
+        initialMethod: 'card',
+      });
       setSuccessMsg('');
     }
   }, [searchParams]);
-
-  const pollPendingFlexPay = useCallback(async () => {
-    if (!pendingFlexPayRequestId) {
-      return { status: 'error' as const, message: 'Demande manquante.' };
-    }
-    const data = await api.get(`/subscriptions/requests/${pendingFlexPayRequestId}/verify`);
-    if (data.paid) {
-      setSuccessMsg('Paiement confirmé. Forfait activé.');
-      setPendingFlexPayRequestId(null);
-      await loadBillingStatus();
-      return { status: 'paid' as const };
-    }
-    if (data.status === 'failed') {
-      return {
-        status: 'failed' as const,
-        message: data.message || 'Paiement non confirmé. Vous pouvez relancer.',
-      };
-    }
-    return {
-      status: 'pending' as const,
-      message: data.message || 'Paiement encore en cours…',
-    };
-  }, [pendingFlexPayRequestId]);
-
-  const retryPendingFlexPay = useCallback(async () => {
-    if (!pendingFlexPayRequestId) return;
-    if (payMethod === 'mobile' && !payPhone.trim()) {
-      throw new Error('Saisissez votre numéro Mobile Money (243…) pour relancer.');
-    }
-    const data = await api.post(`/subscriptions/requests/${pendingFlexPayRequestId}/retry-payment`, {
-      paymentMethod: payMethod,
-      ...(payMethod === 'mobile' ? { phone: payPhone.trim() } : {}),
-    });
-    setPendingPayMethod(payMethod);
-    if (data.checkoutUrl) {
-      window.location.href = data.checkoutUrl;
-      return;
-    }
-    if (data.paid) {
-      setSuccessMsg(data.message || 'Paiement confirmé. Forfait activé.');
-      setPendingFlexPayRequestId(null);
-      await loadBillingStatus();
-      return;
-    }
-    setSuccessMsg(data.message || 'Nouvelle tentative initiée.');
-    await loadBillingStatus();
-  }, [pendingFlexPayRequestId, payMethod, payPhone]);
 
   const allowedPaidIds = useMemo(
     () => paidPlanIdsForAccountKind(tenant?.accountKind),
@@ -285,8 +238,16 @@ function BillingPageInner() {
       setError('Ce forfait ne correspond pas à votre type de compte.');
       return;
     }
-    if (saasPaymentMode === 'flexpay' && payMethod === 'mobile' && !payPhone.trim()) {
-      setError('Saisissez votre numéro Mobile Money (243…).');
+    if (saasPaymentMode === 'flexpay') {
+      const meta = plans.find((item) => item.id === plan);
+      setError('');
+      setSuccessMsg('');
+      setFlexPayCheckout({
+        planId: plan,
+        planName: meta?.displayName || plan,
+        priceLabel: meta?.price || '',
+        isRenew: billing?.plan === plan,
+      });
       return;
     }
     setError('');
@@ -295,35 +256,6 @@ function BillingPageInner() {
     try {
       const isRenew = billing?.plan === plan;
       const durationDays = durationDaysForPlan(plan, billingCycle);
-      if (saasPaymentMode === 'flexpay') {
-        const data = await api.post('/subscriptions/checkout', {
-          requestedPlan: plan,
-          durationDays,
-          paymentMethod: payMethod,
-          ...(payMethod === 'mobile' ? { phone: payPhone.trim(), operator: payOperator } : {}),
-        });
-        if (data.checkoutUrl) {
-          window.location.href = data.checkoutUrl;
-          return;
-        }
-        if (data.paid) {
-          setSuccessMsg(
-            data.message ||
-              (isRenew ? `Renouvellement ${plan} activé.` : `Forfait ${plan} activé.`),
-          );
-          await loadBillingStatus();
-          return;
-        }
-        if (data.requestId) {
-          setPendingFlexPayRequestId(data.requestId);
-          setPendingPayMethod(payMethod);
-          setSuccessMsg('');
-          return;
-        }
-        setSuccessMsg(data.message || 'Paiement initié.');
-        return;
-      }
-
       await api.post('/subscriptions/request', {
         requestedPlan: plan,
         durationDays,
@@ -532,99 +464,9 @@ function BillingPageInner() {
       </div>
 
       {saasPaymentMode === 'flexpay' && (
-        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4 max-w-xl mx-auto w-full">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Comment voulez-vous payer ?</p>
-            <p className="text-xs text-muted mt-0.5">
-              Choisissez Mobile Money ou carte, puis cliquez sur le forfait à activer.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setPayMethod('mobile')}
-              className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition ${
-                payMethod === 'mobile'
-                  ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                  : 'border-border bg-surface text-muted hover:text-foreground'
-              }`}
-            >
-              <Smartphone className="w-5 h-5" />
-              Mobile Money
-              <span className="text-[10px] font-medium opacity-80">Orange · M-Pesa · Airtel</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setPayMethod('card')}
-              className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition ${
-                payMethod === 'card'
-                  ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                  : 'border-border bg-surface text-muted hover:text-foreground'
-              }`}
-            >
-              <CreditCard className="w-5 h-5" />
-              Carte bancaire
-              <span className="text-[10px] font-medium opacity-80">Visa · Mastercard</span>
-            </button>
-          </div>
-          {payMethod === 'mobile' && (
-            <div className="space-y-3 animate-fade-in">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {[
-                  { id: 'orange' as const, label: 'Orange Money', color: 'text-orange-600 bg-orange-500/10 border-orange-500/30' },
-                  { id: 'mpesa' as const, label: 'M-Pesa', color: 'text-red-600 bg-red-500/10 border-red-500/30' },
-                  { id: 'airtel' as const, label: 'Airtel Money', color: 'text-rose-600 bg-rose-500/10 border-rose-500/30' },
-                ].map((op) => (
-                  <button
-                    key={op.id}
-                    type="button"
-                    onClick={() => setPayOperator(op.id)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
-                      payOperator === op.id ? op.color : 'border-border bg-surface text-muted opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    {op.label}
-                  </button>
-                ))}
-              </div>
-              <Input
-                label="Numéro Mobile Money"
-                type="tel"
-                value={payPhone}
-                onChange={(e) => setPayPhone(e.target.value)}
-                placeholder="Ex. 24389XXXXXXX ou 089XXXXXXX"
-                hint={`Paiement ${FLEXPAY_MOBILE_OPERATORS_LABEL}. Validez le PIN sur votre téléphone.`}
-              />
-            </div>
-          )}
-          {payMethod === 'card' && (
-            <div className="p-3 rounded-xl bg-surface-muted border border-border text-xs space-y-1 animate-fade-in">
-              <p className="font-semibold text-foreground inline-flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-primary" />
-                Paiement sécurisé par carte
-              </p>
-              <p className="text-[11px] text-muted">
-                Après avoir choisi un forfait, vous serez redirigé vers FlexPay pour payer en Francs Congolais.
-              </p>
-            </div>
-          )}
-          {pendingFlexPayRequestId && (
-            <PaymentPendingView
-              method={pendingPayMethod}
-              title="Paiement FlexPay en cours"
-              description={
-                pendingPayMethod === 'mobile'
-                  ? 'Confirmez sur votre téléphone (USSD / app). Cette zone se met à jour automatiquement.'
-                  : 'Nous confirmons votre paiement carte. Cette zone se met à jour automatiquement.'
-              }
-              onPoll={pollPendingFlexPay}
-              onRetry={() => retryPendingFlexPay()}
-              onPaid={() => {
-                setPendingFlexPayRequestId(null);
-              }}
-            />
-          )}
-        </div>
+        <p className="text-xs text-muted text-center max-w-lg mx-auto">
+          Au clic sur un forfait, une fenêtre s’ouvre pour choisir Mobile Money ou Visa / Mastercard.
+        </p>
       )}
 
       {visibleTiers.map(({ label, ids }) => (
@@ -836,11 +678,14 @@ function BillingPageInner() {
                         type="button"
                         className="text-xs font-semibold text-primary"
                         onClick={() => {
-                          setPendingFlexPayRequestId(req.id);
-                          setPendingPayMethod(req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card');
+                          setFlexPayCheckout({
+                            planName: req.requestedPlan,
+                            priceLabel: req.approvedAmount ? formatFc(req.approvedAmount) : '',
+                            retryRequestId: req.id,
+                            initialMethod: req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card',
+                          });
                           setError('');
-                          setSuccessMsg('Demande sélectionnée — vous pouvez vérifier ou relancer le paiement ci-dessus.');
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                          setSuccessMsg('');
                         }}
                       >
                         Reprendre / relancer le paiement
@@ -891,11 +736,14 @@ function BillingPageInner() {
                               type="button"
                               className="font-semibold text-primary"
                               onClick={() => {
-                                setPendingFlexPayRequestId(req.id);
-                                setPendingPayMethod(req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card');
+                                setFlexPayCheckout({
+                                  planName: req.requestedPlan,
+                                  priceLabel: req.approvedAmount ? formatFc(req.approvedAmount) : '',
+                                  retryRequestId: req.id,
+                                  initialMethod: req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card',
+                                });
                                 setError('');
-                                setSuccessMsg('Demande sélectionnée — vérifiez ou relancez le paiement ci-dessus.');
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                setSuccessMsg('');
                               }}
                             >
                               Relancer
@@ -913,6 +761,25 @@ function BillingPageInner() {
           </>
         )}
       </div>
+
+      {flexPayCheckout && saasPaymentMode === 'flexpay' ? (
+        <SubscriptionFlexPayModal
+          open
+          onClose={() => setFlexPayCheckout(null)}
+          planId={flexPayCheckout.planId}
+          planName={flexPayCheckout.planName}
+          priceLabel={flexPayCheckout.priceLabel}
+          billingCycle={billingCycle}
+          isRenew={flexPayCheckout.isRenew}
+          retryRequestId={flexPayCheckout.retryRequestId}
+          startPending={flexPayCheckout.startPending}
+          initialMethod={flexPayCheckout.initialMethod}
+          onPaid={async () => {
+            setSuccessMsg('Paiement confirmé. Forfait activé.');
+            await loadBillingStatus();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
