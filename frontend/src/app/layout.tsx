@@ -10,6 +10,7 @@ import PWARegister from "@/components/PWARegister";
 import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import BrandFaviconSync from "@/components/BrandFaviconSync";
+import GlobalAiSimulatorFab from "@/components/GlobalAiSimulatorFab";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
 const inter = Inter({
@@ -104,6 +105,9 @@ export default function RootLayout({
                 <MaintenanceOverlay />
                 <Suspense fallback={null}>
                   {children}
+                </Suspense>
+                <Suspense fallback={null}>
+                  <GlobalAiSimulatorFab />
                 </Suspense>
               </ViewPreferencesBridge>
             </AuthProvider>

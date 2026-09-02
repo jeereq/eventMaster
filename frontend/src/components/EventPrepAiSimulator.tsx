@@ -19,6 +19,16 @@ import {
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
+import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
+import {
+  claimAiSimulationHistory,
+  fetchAiSimulationHistory,
+  historyItemToCache,
+  readCachedAiSimulation,
+  simulationEndpointBody,
+  writeCachedAiSimulation,
+  type AiSimulationHistoryItem,
+} from '@/lib/aiSimulationHistory';
 
 export type EventPrepAiDefaults = {
   eventType?: ListingEventTypeId;
@@ -42,7 +52,7 @@ export default function EventPrepAiSimulator({
 }: {
   defaults?: EventPrepAiDefaults;
   applyLabel?: string;
-  onApply: (pack: EventPlanAiPackage) => void;
+  onApply?: (pack: EventPlanAiPackage) => void;
   onApplyAll?: (packages: EventPlanAiPackage[]) => void;
   onOpenListing?: (target: { kind: 'venue' | 'service'; slug: string }) => void;
   defaultOpen?: boolean;
@@ -67,14 +77,42 @@ export default function EventPrepAiSimulator({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
+  const [history, setHistory] = useState<AiSimulationHistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const communes = useMemo(() => communesForCity(city), [city]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
+  const applyCached = (
+    cached: ReturnType<typeof historyItemToCache>,
+    historyId?: string | null,
+    openForm = false,
+  ) => {
+    if (cached.brief.eventType) setEventType(cached.brief.eventType as ListingEventTypeId);
+    if (cached.brief.city != null) setCity(cached.brief.city);
+    if (cached.brief.commune != null) setCommune(cached.brief.commune);
+    if (cached.brief.guestCount) setGuestCount(String(cached.brief.guestCount));
+    if (cached.brief.budgetMaxFc) setBudgetMaxFc(String(cached.brief.budgetMaxFc));
+    if (cached.brief.eventDate) setEventDate(String(cached.brief.eventDate).slice(0, 10));
+    if (cached.brief.prompt != null) setPrompt(cached.brief.prompt);
+    setResult(cached.result);
+    setSelectedId(cached.selectedId);
+    setActiveHistoryId(historyId || null);
+    if (openForm || defaultOpen) setOpen(true);
+  };
+
   useEffect(() => {
     setAllowance(getAiSimulationAllowance());
+    const cached = readCachedAiSimulation();
+    if (cached) applyCached(cached);
     void syncDeviceAiTokensWithBackend(api).then((synced) => {
       if (synced) setAllowance(synced);
     });
+    void (async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const items = token ? await claimAiSimulationHistory() : await fetchAiSimulationHistory();
+      setHistory(items);
+      if (!cached && items[0]) applyCached(historyItemToCache(items[0]), items[0].id);
+    })();
   }, []);
 
   const run = async () => {
@@ -88,7 +126,7 @@ export default function EventPrepAiSimulator({
     setLoading(true);
     setError('');
     try {
-      const data = (await api.post('/marketplace/event-plan-ai', {
+      const data = (await api.post('/public/event-plan-ai', simulationEndpointBody({
         eventType,
         city,
         commune,
@@ -101,11 +139,29 @@ export default function EventPrepAiSimulator({
         includeRentals,
         keepVenueSlug: keepVenue ? defaults?.keepVenueSlug : undefined,
         keepServiceSlugs: defaults?.keepServiceSlugs || [],
-      })) as EventPlanAiResult;
+      }))) as EventPlanAiResult & { historyId?: string };
       const packages = Array.isArray(data.packages) ? data.packages : [];
-      setResult({ ...data, packages });
-      setSelectedId(packages[1]?.id || packages[0]?.id || null);
+      const nextResult = { ...data, packages };
+      const nextSelected = packages[1]?.id || packages[0]?.id || null;
+      setResult(nextResult);
+      setSelectedId(nextSelected);
       setAllowance(consumeAiSimulation());
+      writeCachedAiSimulation({
+        brief: {
+          prompt,
+          eventType,
+          city,
+          commune,
+          guestCount: guestCount ? Number(guestCount) : null,
+          budgetMaxFc: budgetMaxFc ? Number(budgetMaxFc) : null,
+          eventDate,
+        },
+        result: nextResult,
+        selectedId: nextSelected,
+        savedAt: new Date().toISOString(),
+      });
+      if (data.historyId) setActiveHistoryId(data.historyId);
+      void fetchAiSimulationHistory().then(setHistory);
     } catch (err: unknown) {
       setResult(null);
       setSelectedId(null);
@@ -135,6 +191,12 @@ export default function EventPrepAiSimulator({
       <AiSimulationCounter
         allowance={allowance}
         onBuy={() => setPurchaseModalOpen(true)}
+      />
+
+      <AiSimulationHistoryList
+        items={history}
+        activeId={activeHistoryId}
+        onRestore={(item) => applyCached(historyItemToCache(item), item.id, true)}
       />
 
       {open ? (
@@ -383,22 +445,37 @@ export default function EventPrepAiSimulator({
                 </p>
               )}
 
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border">
-                <p className="text-[11px] text-muted">
-                  Retenez cette formule pour enregistrer le devis et contacter les prestataires.
-                </p>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => selected && onApply(selected)}
-                    disabled={!selected || (!selected.venue && selected.services.length === 0)}
-                    fullWidth
-                  >
-                    {applyLabel}
-                  </Button>
+              {onApply ? (
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border">
+                  <p className="text-[11px] text-muted">
+                    Retenez cette formule pour enregistrer le devis et contacter les prestataires.
+                  </p>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => selected && onApply(selected)}
+                      disabled={!selected || (!selected.venue && selected.services.length === 0)}
+                      fullWidth
+                    >
+                      {applyLabel}
+                    </Button>
+                    {onApplyAll && result?.packages.length ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onApplyAll(result.packages)}
+                      >
+                        Tout appliquer
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-[11px] text-muted pt-1">
+                  Cette simulation est enregistrée. Vous la retrouverez ici et sur le tableau de bord.
+                </p>
+              )}
             </div>
           )}
         </div>

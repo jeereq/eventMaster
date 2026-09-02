@@ -227,6 +227,7 @@ model User {
   orgRoomAmbiences      OrgRoomAmbience[]
   ticketOrders          TicketOrder[]
   aiTokenOrders         AiTokenOrder[]
+  aiSimulationRuns      AiSimulationRun[]
 }
 
 model Event {
@@ -1062,6 +1063,46 @@ model SubscriptionPlan {
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+/** Journal idempotent des paiements réussis (notifs + audit). */
+model PaymentTrace {
+  id          String   @id @default(uuid())
+  kind        String
+  reference   String   @unique
+  amountFc    Float
+  currency    String   @default("CDF")
+  payerUserId String?
+  payerEmail  String?
+  payerPhone  String?
+  deviceId    String?
+  summary     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([payerUserId])
+}
+
+/** Historique des simulations IA (landing + dashboard), rattaché au compte et/ou à l’appareil. */
+model AiSimulationRun {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId    String?
+  source      String
+  prompt      String?
+  eventType   String?
+  city        String?
+  commune     String?
+  guestCount  Int?
+  budgetMaxFc Int?
+  eventDate   String?
+  result      Json
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([deviceId, createdAt])
 }
 
 model AiTokenOrder {

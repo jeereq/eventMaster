@@ -21,6 +21,7 @@ import {
   findAiTokenOrderForFlexPay,
   verifyAndFinalizeAiTokenOrder,
 } from '../services/aiTokenFlexPayService';
+import { notifyAiTokenPayment } from '../services/paymentTraceService';
 
 function frontendBaseUrl(): string {
   return (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
@@ -220,6 +221,9 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       } catch {
         /* fallback */
       }
+      void notifyAiTokenPayment(aiOrder).catch((err) =>
+        console.error('[FlexPay] notify ai_tokens:', err),
+      );
       return res.json({
         ok: true,
         paid: true,

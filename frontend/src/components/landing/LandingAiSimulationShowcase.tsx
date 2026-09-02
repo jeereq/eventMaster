@@ -50,6 +50,15 @@ import {
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
+import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
+import {
+  fetchAiSimulationHistory,
+  historyItemToCache,
+  readCachedAiSimulation,
+  simulationEndpointBody,
+  writeCachedAiSimulation,
+  type AiSimulationHistoryItem,
+} from '@/lib/aiSimulationHistory';
 
 interface SimulationScenario {
   id: string;
@@ -231,6 +240,35 @@ export default function LandingAiSimulationShowcase() {
   // Solde de simulations (10 essais gratuits + packs de 20 jetons payés)
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [customEventType, setCustomEventType] = useState<ListingEventTypeId>('private');
+  const [customCity, setCustomCity] = useState('Kinshasa');
+  const [customCommune, setCustomCommune] = useState('');
+  const [customGuests, setCustomGuests] = useState('120');
+  const [customBudgetFc, setCustomBudgetFc] = useState('7500000');
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState('');
+  const [liveResult, setLiveResult] = useState<any | null>(null);
+  const [liveSelectedPackId, setLiveSelectedPackId] = useState<string | null>(null);
+  const [history, setHistory] = useState<AiSimulationHistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
+  const restoreCachedSimulation = (cached: ReturnType<typeof historyItemToCache>, historyId?: string | null) => {
+    if (cached.brief.eventType) setCustomEventType(cached.brief.eventType as ListingEventTypeId);
+    if (cached.brief.city) setCustomCity(cached.brief.city);
+    if (cached.brief.commune != null) setCustomCommune(cached.brief.commune);
+    if (cached.brief.guestCount) setCustomGuests(String(cached.brief.guestCount));
+    if (cached.brief.budgetMaxFc) setCustomBudgetFc(String(cached.brief.budgetMaxFc));
+    if (cached.brief.prompt != null) setCustomPrompt(cached.brief.prompt);
+    setLiveResult(cached.result);
+    setLiveSelectedPackId(cached.selectedId);
+    setActiveHistoryId(historyId || null);
+    setViewMode('live');
+  };
+
+  const restoreHistoryItem = (item: AiSimulationHistoryItem) => {
+    restoreCachedSimulation(historyItemToCache(item), item.id);
+  };
 
   useEffect(() => {
     try {
@@ -241,7 +279,6 @@ export default function LandingAiSimulationShowcase() {
         if (aiStatus === 'success' || aiStatus === 'paid') {
           const added = parseInt(params.get('tokens') || String(AI_TOKEN_PACK_SIZE), 10) || AI_TOKEN_PACK_SIZE;
           addPurchasedAiTokens(added, orderId);
-          // Nettoyage propre de l'URL sans rechargement
           const url = new URL(window.location.href);
           url.searchParams.delete('ai_tokens_status');
           url.searchParams.delete('ai_tokens');
@@ -254,23 +291,17 @@ export default function LandingAiSimulationShowcase() {
       // safe fallback
     }
     setAllowance(getAiSimulationAllowance());
-    // Synchronisation en arrière-plan avec le backend pour cet appareil
+    const cached = readCachedAiSimulation();
+    if (cached) restoreCachedSimulation(cached);
     void syncDeviceAiTokensWithBackend(api).then((synced) => {
       if (synced) setAllowance(synced);
     });
+    void fetchAiSimulationHistory().then((items) => {
+      setHistory(items);
+      if (!cached && items[0]) restoreHistoryItem(items[0]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Formulaire live personnalisé
-  const [customPrompt, setCustomPrompt] = useState('');
-  const [customEventType, setCustomEventType] = useState<ListingEventTypeId>('private');
-  const [customCity, setCustomCity] = useState('Kinshasa');
-  const [customCommune, setCustomCommune] = useState('');
-  const [customGuests, setCustomGuests] = useState('120');
-  const [customBudgetFc, setCustomBudgetFc] = useState('7500000');
-  const [liveLoading, setLiveLoading] = useState(false);
-  const [liveError, setLiveError] = useState('');
-  const [liveResult, setLiveResult] = useState<any | null>(null);
-  const [liveSelectedPackId, setLiveSelectedPackId] = useState<string | null>(null);
 
   const communes = useMemo(() => communesForCity(customCity), [customCity]);
 
@@ -297,24 +328,39 @@ export default function LandingAiSimulationShowcase() {
       const cleanGuests = customGuests ? Math.max(1, parseInt(customGuests.replace(/\D/g, ''), 10) || 1) : undefined;
       const cleanBudget = customBudgetFc ? Math.max(0, parseInt(customBudgetFc.replace(/\D/g, ''), 10) || 0) : undefined;
 
-      const res = await api.post('/public/event-plan-ai', {
+      const res = await api.post('/public/event-plan-ai', simulationEndpointBody({
         eventType: customEventType,
         city: customCity,
         commune: customCommune || undefined,
         guestCount: cleanGuests,
         budgetMaxFc: cleanBudget,
         prompt: customPrompt.trim() || undefined,
-      });
+      }));
 
       const packages = Array.isArray(res?.packages) ? res.packages : [];
       if (!packages.length) {
         throw new Error('Aucun pack disponible pour ces critères dans le catalogue.');
       }
 
+      const selectedId = packages[1]?.id || packages[0]?.id || 'balanced';
       setLiveResult(res);
-      setLiveSelectedPackId(packages[1]?.id || packages[0]?.id || 'balanced');
-
+      setLiveSelectedPackId(selectedId);
+      setActiveHistoryId(res.historyId || null);
       setAllowance(consumeAiSimulation());
+      writeCachedAiSimulation({
+        brief: {
+          prompt: customPrompt,
+          eventType: customEventType,
+          city: customCity,
+          commune: customCommune,
+          guestCount: cleanGuests,
+          budgetMaxFc: cleanBudget,
+        },
+        result: res,
+        selectedId,
+        savedAt: new Date().toISOString(),
+      });
+      void fetchAiSimulationHistory().then(setHistory);
     } catch (err: any) {
       setLiveError(err?.message || 'Impossible de lancer la simulation IA en direct.');
     } finally {
@@ -796,6 +842,12 @@ export default function LandingAiSimulationShowcase() {
             <AiSimulationCounter
               allowance={allowance}
               onBuy={() => setPurchaseModalOpen(true)}
+            />
+
+            <AiSimulationHistoryList
+              items={history}
+              activeId={activeHistoryId}
+              onRestore={restoreHistoryItem}
             />
 
             {/* Formulaire de saisie du brief */}

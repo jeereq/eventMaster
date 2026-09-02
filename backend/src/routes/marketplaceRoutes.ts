@@ -30,6 +30,7 @@ import {
   deleteSavedBrief,
   listMyTickets,
   getListingRelation,
+  listPublicAiSimulations,
 } from '../controllers/marketplaceClientController';
 
 const router = Router();
@@ -54,6 +55,7 @@ router.post('/favorites', addFavorite);
 router.delete('/favorites/:kind/:slug', removeFavorite);
 router.post('/event-plan', planEvent);
 router.post('/event-plan-ai', planEventAi);
+router.get('/ai-simulations', listPublicAiSimulations);
 router.post('/ai-tokens/checkout', checkoutAiTokens);
 router.get('/ai-tokens/orders/:orderId/verify', verifyAiTokensOrder);
 router.get('/event-packs', listSavedPacks);

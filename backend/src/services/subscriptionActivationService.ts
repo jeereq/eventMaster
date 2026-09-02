@@ -12,6 +12,7 @@ import {
   type TenantBillingAction,
 } from './tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from './invoiceService';
+import { notifySubscriptionPayment } from './paymentTraceService';
 
 function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -125,6 +126,15 @@ export async function activateSubscriptionRequest(
       },
     }),
   ]);
+
+  if (opts?.markPaid) {
+    void notifySubscriptionPayment({
+      requestId,
+      tenantId: request.tenantId,
+      amountFc: pricing.finalAmount,
+      plan: request.requestedPlan,
+    }).catch((err) => console.error('[Subscription] notify payment:', err));
+  }
 
   void (async () => {
     try {

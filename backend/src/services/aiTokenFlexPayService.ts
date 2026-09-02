@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { notifyAiTokenPayment } from './paymentTraceService';
 import {
   buildFlexPayMetadataUpdate,
   buildFlexPayReference,
@@ -354,6 +355,10 @@ export async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber: string): Pr
         });
       }
     }
+
+    void notifyAiTokenPayment(order).catch((err) =>
+      console.error('[AiTokenPayment] notify:', err),
+    );
 
     return {
       found: true,

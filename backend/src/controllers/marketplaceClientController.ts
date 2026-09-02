@@ -6,6 +6,12 @@ import { buildEventPlanProposals } from '../services/eventPlannerService';
 import { parseEventPlanInput, serializeBriefPayload } from '../services/eventPlanBrief';
 import { simulateEventPlanAi } from '../services/eventPlanAiService';
 import {
+  saveAiSimulationRun,
+  listAiSimulationRuns,
+  claimDeviceSimulations,
+  type AiSimulationSource,
+} from '../services/aiSimulationHistoryService';
+import {
   initiateAiTokenPayment,
   verifyAndFinalizeAiTokenOrder,
   getDeviceAiTokensSummary,
@@ -185,14 +191,55 @@ export async function planEvent(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+function briefFromBody(body: Record<string, unknown>) {
+  const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : null;
+  const prompt = typeof body.prompt === 'string' ? body.prompt : null;
+  const eventType = typeof body.eventType === 'string' ? body.eventType : null;
+  const city = typeof body.city === 'string' ? body.city : null;
+  const commune = typeof body.commune === 'string' ? body.commune : null;
+  const guestCount = Number(body.guestCount);
+  const budgetMaxFc = Number(body.budgetMaxFc);
+  const eventDate = typeof body.eventDate === 'string' ? body.eventDate : null;
+  return {
+    deviceId,
+    prompt,
+    eventType,
+    city,
+    commune,
+    guestCount: Number.isFinite(guestCount) ? guestCount : null,
+    budgetMaxFc: Number.isFinite(budgetMaxFc) ? budgetMaxFc : null,
+    eventDate,
+  };
+}
+
+async function persistSimulation(
+  req: Request,
+  result: Awaited<ReturnType<typeof simulateEventPlanAi>>,
+  source: AiSimulationSource,
+) {
+  const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
+  const brief = briefFromBody(body);
+  try {
+    const saved = await saveAiSimulationRun({
+      userId: (req as AuthenticatedRequest).user?.id || null,
+      source,
+      result,
+      ...brief,
+    });
+    return saved?.id || null;
+  } catch (err) {
+    console.error('[AiSimulation] persist:', err);
+    return null;
+  }
+}
+
 export async function planEventAi(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
-    const result = await simulateEventPlanAi(
-      req.user.id,
-      req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {},
-    );
-    return res.json(result);
+    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+    const result = await simulateEventPlanAi(req.user.id, body);
+    const historyId = await persistSimulation(req, result, 'dashboard');
+    return res.json({ ...result, historyId });
   } catch (error: any) {
     if (error?.status) {
       return res.status(error.status).json({ error: error.message });
@@ -204,12 +251,11 @@ export async function planEventAi(req: AuthenticatedRequest, res: Response) {
 
 export async function publicPlanEventAi(req: Request, res: Response): Promise<void> {
   try {
-    const callerId = (req as any).user?.id || req.ip || 'public-guest';
-    const result = await simulateEventPlanAi(
-      callerId,
-      req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {},
-    );
-    res.json(result);
+    const callerId = (req as AuthenticatedRequest).user?.id || req.ip || 'public-guest';
+    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+    const result = await simulateEventPlanAi(callerId, body);
+    const historyId = await persistSimulation(req, result, (req as AuthenticatedRequest).user?.id ? 'dashboard' : 'landing');
+    res.json({ ...result, historyId });
   } catch (error: any) {
     if (error?.status) {
       res.status(error.status).json({ error: error.message });
@@ -217,6 +263,34 @@ export async function publicPlanEventAi(req: Request, res: Response): Promise<vo
     }
     console.error('publicPlanEventAi:', error);
     res.status(500).json({ error: 'Impossible de lancer la simulation IA.' });
+  }
+}
+
+export async function listPublicAiSimulations(req: Request, res: Response): Promise<void> {
+  try {
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const userId = (req as AuthenticatedRequest).user?.id || null;
+    const items = await listAiSimulationRuns({ userId, deviceId, limit: 20 });
+    res.json({ items });
+  } catch (error: any) {
+    console.error('listPublicAiSimulations:', error);
+    res.status(500).json({ error: 'Impossible de charger l’historique des simulations.' });
+  }
+}
+
+export async function claimPublicAiSimulations(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'Non authentifié.' });
+      return;
+    }
+    const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
+    const result = await claimDeviceSimulations(req.user.id, deviceId);
+    const items = await listAiSimulationRuns({ userId: req.user.id, deviceId, limit: 20 });
+    res.json({ ...result, items });
+  } catch (error: any) {
+    console.error('claimPublicAiSimulations:', error);
+    res.status(500).json({ error: 'Impossible de rattacher l’historique à votre compte.' });
   }
 }
 

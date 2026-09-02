@@ -8,6 +8,7 @@ import { applyBrandToDocument, clearBrandFromDocument, type TenantBranding } fro
 import type { TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath } from '@/lib/safeAppPath';
 import { appendFirstTourQuery } from '@/lib/firstLoginTour';
+import { claimAiSimulationHistory } from '@/lib/aiSimulationHistory';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -255,6 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSupportSession(false);
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
+      void claimAiSimulationHistory();
 
       router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null));
     } catch (error: any) {
@@ -330,6 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSupportSession(false);
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
+      void claimAiSimulationHistory();
       const dest = safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null);
       router.push(safeAppPath(options?.next) ? dest : appendFirstTourQuery(dest));
     } catch (error) {

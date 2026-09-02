@@ -1,6 +1,7 @@
 import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { sendRealEmail } from './notificationService';
+import { notifyTicketPayment } from './paymentTraceService';
 import { assignSeatInTablePlan, assignMultipleSeatsInTablePlan } from './seatSelectionService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -146,6 +147,17 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
   await prisma.seatHold.deleteMany({
     where: { orderId: order.id },
   }).catch(() => undefined);
+
+  void notifyTicketPayment({
+    id: order.id,
+    userId: order.userId,
+    buyerEmail: order.buyerEmail,
+    buyerPhone: order.buyerPhone,
+    buyerName: order.buyerName,
+    amountFc: order.amountFc,
+    quantity: order.quantity,
+    eventTitle: event.title,
+  }).catch((err) => console.error('[Ticket] notify payment:', err));
 
   const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
   if (primary) {
