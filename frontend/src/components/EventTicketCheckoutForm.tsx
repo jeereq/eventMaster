@@ -174,6 +174,20 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     setBusy(true);
     setError('');
     try {
+      const cleanBuyerName = buyerName.trim();
+      const cleanBuyerPhone = buyerPhone.trim().replace(/\s+/g, '');
+      const rawMobilePhone = (mmPhone.trim() || buyerPhone.trim()).replace(/\s+/g, '').replace(/^\+/, '');
+
+      if (!cleanBuyerName) {
+        setError('Veuillez renseigner votre nom complet.');
+        setBusy(false);
+        return;
+      }
+      if (!cleanBuyerPhone) {
+        setError('Veuillez renseigner votre numéro de téléphone ou WhatsApp.');
+        setBusy(false);
+        return;
+      }
       if (seatMode && selectedSeats.length === 0) {
         setError('Sélectionnez au moins une place sur le plan.');
         setBusy(false);
@@ -184,18 +198,18 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         setBusy(false);
         return;
       }
-      if (event.paid && paymentMethod === 'mobile' && !mmPhone.trim() && !buyerPhone.trim()) {
-        setError('Indiquez un numéro Mobile Money (243…).');
+      if (event.paid && paymentMethod === 'mobile' && !rawMobilePhone) {
+        setError('Indiquez un numéro Mobile Money valide (ex: 24389XXXXXXX).');
         setBusy(false);
         return;
       }
       const data = await api.post(`/public/events/${slug}/checkout`, {
-        buyerName,
-        buyerPhone,
+        buyerName: cleanBuyerName,
+        buyerPhone: cleanBuyerPhone,
         quantity: seatMode ? selectedSeats.length : quantity,
         ...(event.paid ? { paymentMethod } : {}),
         ...(event.paid && paymentMethod === 'mobile'
-          ? { phone: mmPhone.trim() || buyerPhone.trim() }
+          ? { phone: rawMobilePhone }
           : {}),
         ...(seatMode && selectedSeats.length > 0 ? { seats: selectedSeats } : {}),
         ...(zonePricing && !seatMode && selectedZoneId ? { pricingZoneId: selectedZoneId } : {}),

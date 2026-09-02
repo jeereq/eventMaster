@@ -1718,8 +1718,8 @@ export default function RsvpPage() {
           minHeight: canvasStyle.minHeight,
         }}
         className={`w-full border border-border shadow-[var(--shadow-soft)] relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
- template && frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-[var(--radius-card)]'
- }`}
+          template && frameType === 'arch' ? 'rounded-t-[240px] border border-amber-200/60' : 'rounded-[var(--radius-card)]'
+        }`}
       >
         {/* Top visual envelope flap (only shown if not using custom template) */}
         {!template && <div className="h-3 bg-gradient-to-r from-primary to-primary/80" />}

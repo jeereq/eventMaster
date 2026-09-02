@@ -218,9 +218,13 @@ export default function LandingAiSimulationShowcase() {
   const [trialsUsed, setTrialsUsed] = useState(0);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = parseInt(localStorage.getItem(STORAGE_KEY_AI_TRIALS) || '0', 10);
-      setTrialsUsed(Number.isFinite(stored) ? stored : 0);
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = parseInt(localStorage.getItem(STORAGE_KEY_AI_TRIALS) || '0', 10);
+        setTrialsUsed(Number.isFinite(stored) ? stored : 0);
+      }
+    } catch {
+      // Fallback si localStorage est inaccessible en navigation privée
     }
   }, []);
 
@@ -260,12 +264,15 @@ export default function LandingAiSimulationShowcase() {
     setLiveLoading(true);
     setLiveError('');
     try {
+      const cleanGuests = customGuests ? Math.max(1, parseInt(customGuests.replace(/\D/g, ''), 10) || 1) : undefined;
+      const cleanBudget = customBudgetFc ? Math.max(0, parseInt(customBudgetFc.replace(/\D/g, ''), 10) || 0) : undefined;
+
       const res = await api.post('/public/event-plan-ai', {
         eventType: customEventType,
         city: customCity,
         commune: customCommune || undefined,
-        guestCount: customGuests ? Number(customGuests) : undefined,
-        budgetMaxFc: customBudgetFc ? Number(customBudgetFc) : undefined,
+        guestCount: cleanGuests,
+        budgetMaxFc: cleanBudget,
         prompt: customPrompt.trim() || undefined,
       });
 
@@ -280,8 +287,12 @@ export default function LandingAiSimulationShowcase() {
       if (!isLoggedIn) {
         const nextCount = trialsUsed + 1;
         setTrialsUsed(nextCount);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY_AI_TRIALS, String(nextCount));
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY_AI_TRIALS, String(nextCount));
+          }
+        } catch {
+          // Ignorer si quota ou restriction de stockage
         }
       }
     } catch (err: any) {

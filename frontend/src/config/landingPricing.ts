@@ -191,8 +191,10 @@ export const ENTERPRISE_PLAN_IDS: PlanId[] = ['ENTERPRISE_1', 'ENTERPRISE_2', 'E
 export const CURRENCY_CODE = 'FC';
 export const CURRENCY_NAME = 'franc congolais';
 
-export function formatFc(amount: number): string {
-  return `${Number(amount || 0).toLocaleString('fr-FR')} ${CURRENCY_CODE}`;
+export function formatFc(amount: number | string | null | undefined): string {
+  const num = typeof amount === 'number' ? amount : parseFloat(String(amount ?? 0));
+  const val = Number.isFinite(num) ? num : 0;
+  return `${val.toLocaleString('fr-FR')} ${CURRENCY_CODE}`;
 }
 
 /** Normalise un libellé de prix (jamais USD/EUR). */

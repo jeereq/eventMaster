@@ -1862,7 +1862,7 @@ export default function TemplatesPage() {
  ...getCanvasStyle({ canvasSizePreset, canvasWidth, canvasHeight }),
  }}
  className={`border border-border p-8 shadow-md relative overflow-hidden transition-all duration-300 ${
- frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-3xl'
+ frameType === 'arch' ? 'rounded-t-[240px] border border-amber-200/60' : 'rounded-3xl'
  }`}
  >
  {/* Double Border Frame */}
@@ -3470,10 +3470,10 @@ export default function TemplatesPage() {
  className="border-2 border-dashed border-amber-400 absolute pointer-events-none z-10 shadow-[0_0_0_9999px_rgba(15,23,42,0.65)] rounded-lg"
  >
  {/* Corner markers */}
- <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-t-4 border-l-4 border-amber-400" />
- <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-t-4 border-r-4 border-amber-400" />
- <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b-4 border-l-4 border-amber-400" />
- <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b-4 border-r-4 border-amber-400" />
+ <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-t-2 border-l-2 border-amber-400" />
+ <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-t-2 border-r-2 border-amber-400" />
+ <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b-2 border-l-2 border-amber-400" />
+ <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b-2 border-r-2 border-amber-400" />
  </div>
  </div>
 

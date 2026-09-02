@@ -84,6 +84,13 @@ export default function FirstLoginOnboardingModal({
     setError('');
     setSaving(true);
     try {
+      const cleanPrice = priceFromFc.trim()
+        ? Math.max(0, parseInt(priceFromFc.replace(/\D/g, ''), 10) || 0)
+        : null;
+      const cleanRadius = travels && coverageRadiusKm
+        ? Math.max(1, parseInt(coverageRadiusKm.replace(/\D/g, ''), 10) || 25)
+        : null;
+
       await api.post('/marketplace/onboarding', {
         displayName: displayName.trim(),
         city,
@@ -92,8 +99,8 @@ export default function FirstLoginOnboardingModal({
         category,
         title: title.trim() || `Prestation ${SERVICE_CATEGORY_LABELS[category] || ''}`,
         travels,
-        coverageRadiusKm: travels ? coverageRadiusKm : null,
-        priceFromFc: priceFromFc || null,
+        coverageRadiusKm: cleanRadius,
+        priceFromFc: cleanPrice,
         priceUnit,
         description: description.trim() || null,
       });
