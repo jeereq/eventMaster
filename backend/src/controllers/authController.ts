@@ -485,27 +485,15 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Non authentifié.' });
     }
 
-    const { name, email, phone, phoneCountryCode, nationalNumber, avatarUrl, password, tenantName, accountKind } = req.body;
+    const { name, phone, phoneCountryCode, nationalNumber, avatarUrl, password, tenantName, accountKind } = req.body;
 
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Le nom et l\'adresse e-mail sont obligatoires.' });
-    }
-
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email,
-        id: { not: req.user.id },
-      },
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ error: 'Cette adresse e-mail est déjà utilisée par un autre compte.' });
+    if (!name) {
+      return res.status(400).json({ error: 'Le nom est obligatoire.' });
     }
 
     const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
     const updateData: any = {
       name,
-      email,
       phone: phoneFields.phone,
       phoneCountryCode: phoneFields.phoneCountryCode,
     };

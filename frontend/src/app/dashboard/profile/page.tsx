@@ -275,7 +275,15 @@ function ProfilePageContent() {
                 </h2>
                 <div className="space-y-3">
                   <Input label="Nom complet" leftIcon={<User className="w-4 h-4" />} required value={name} onChange={(e) => setName(e.target.value)} />
-                  <Input label="E-mail" type="email" leftIcon={<Mail className="w-4 h-4" />} required value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <Input
+                    label="E-mail"
+                    type="email"
+                    leftIcon={<Mail className="w-4 h-4" />}
+                    value={email}
+                    disabled
+                    readOnly
+                    hint="L’adresse e-mail est l’identifiant unique sécurisé de votre compte et ne peut pas être modifiée."
+                  />
                   <PhoneInput
                     id="profile-phone"
                     label="Téléphone (WhatsApp)"

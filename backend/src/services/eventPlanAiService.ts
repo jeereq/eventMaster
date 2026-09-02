@@ -239,7 +239,8 @@ async function loadCatalog(opts: {
 async function askOpenAi(system: string, user: string): Promise<Record<string, unknown>> {
   const key = String(process.env.OPENAI_API_KEY || '').trim();
   if (!key) {
-    fail(503, 'La simulation IA n’est pas configurée. Ajoutez OPENAI_API_KEY sur le serveur.');
+    // Si la clé OpenAI n'est pas définie sur le serveur, basculer proprement sur le moteur heuristique intelligent
+    return { packages: [] };
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
@@ -266,18 +267,18 @@ async function askOpenAi(system: string, user: string): Promise<Record<string, u
       choices?: Array<{ message?: { content?: string } }>;
     };
     if (!response.ok) {
-      fail(502, payload.error?.message || 'OpenAI n’a pas pu préparer la simulation.');
+      console.warn('OpenAI API warning:', payload.error?.message);
+      return { packages: [] };
     }
     const raw = payload.choices?.[0]?.message?.content || '{}';
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      fail(502, 'Réponse IA invalide.');
+      return { packages: [] };
     }
     return parsed as Record<string, unknown>;
   } catch (error) {
-    if ((error as HttpError).status) throw error;
-    if ((error as Error).name === 'AbortError') fail(504, 'La simulation IA a mis trop longtemps.');
-    fail(502, 'Impossible de joindre OpenAI.');
+    console.warn('Simulation IA fetch fallback to heuristic:', (error as Error)?.message);
+    return { packages: [] };
   } finally {
     clearTimeout(timer);
   }

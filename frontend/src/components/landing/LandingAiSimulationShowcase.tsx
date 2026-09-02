@@ -413,12 +413,12 @@ export default function LandingAiSimulationShowcase() {
           <div className="bg-surface/90 dark:bg-slate-900/90 border border-primary/25 rounded-3xl p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
             {/* Barre de sélection de scénario */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
-              <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+              <div className="flex items-center gap-2 text-xs font-bold text-foreground shrink-0">
                 <Sliders className="w-4 h-4 text-primary" />
                 <span>Tester une simulation type :</span>
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1">
                 {SCENARIOS.map((scenario) => {
                   const isSelected = scenario.id === selectedScenarioId;
                   return (
@@ -427,7 +427,7 @@ export default function LandingAiSimulationShowcase() {
                       type="button"
                       onClick={() => setSelectedScenarioId(scenario.id)}
                       className={cn(
-                        'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all touch-manipulation cursor-pointer',
+                        'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink',
                         isSelected
                           ? 'bg-primary text-white shadow-xs shadow-primary/30 ring-2 ring-primary/20'
                           : 'bg-surface-muted border border-border text-muted hover:text-foreground hover:bg-surface',
@@ -827,15 +827,15 @@ export default function LandingAiSimulationShowcase() {
               </div>
 
               {!isLoggedIn ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex flex-wrap items-center gap-1">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                  <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-0.5 no-scrollbar">
                     {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
                       const used = num <= allowance.freeTrialsUsed;
                       return (
                         <span
                           key={num}
                           className={cn(
-                            'w-5 h-5 sm:w-6 sm:h-6 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-[10px] font-bold border transition',
+                            'w-5 h-5 sm:w-6 sm:h-6 shrink-0 rounded-md sm:rounded-lg flex items-center justify-center text-[9px] sm:text-[10px] font-bold border transition',
                             used
                               ? 'bg-muted/20 border-border text-muted line-through'
                               : 'bg-emerald-500 text-white border-emerald-600 shadow-xs',
@@ -851,7 +851,7 @@ export default function LandingAiSimulationShowcase() {
                   <button
                     type="button"
                     onClick={() => setPurchaseModalOpen(true)}
-                    className="px-2.5 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-bold inline-flex items-center gap-1 transition cursor-pointer touch-manipulation"
+                    className="px-2.5 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-bold inline-flex items-center gap-1 transition cursor-pointer touch-manipulation shrink-0"
                   >
                     <Coins className="w-3.5 h-3.5 text-amber-500" />
                     <span>+20 sims (2 000 FC)</span>
@@ -861,7 +861,7 @@ export default function LandingAiSimulationShowcase() {
                 <button
                   type="button"
                   onClick={() => setPurchaseModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation"
+                  className="inline-flex items-center justify-center w-full sm:w-auto gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation"
                 >
                   <Coins className="w-3.5 h-3.5" />
                   Acheter 20 Jetons IA (2 000 FC)

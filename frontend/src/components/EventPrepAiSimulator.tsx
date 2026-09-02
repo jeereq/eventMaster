@@ -138,14 +138,14 @@ export default function EventPrepAiSimulator({
             />
           </label>
 
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1">
             {LISTING_EVENT_TYPES.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setEventType(item.id)}
                 className={cn(
-                  'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition',
+                  'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition whitespace-nowrap shrink-0 sm:shrink',
                   eventType === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
                 )}
               >
