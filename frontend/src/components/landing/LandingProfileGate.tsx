@@ -75,8 +75,8 @@ export default function LandingProfileGate({
         </div>
       </div>
 
-      {/* Sélecteur compact en pastilles horizontales sur mobile */}
-      <div className="sm:hidden flex items-center gap-1.5 p-1 rounded-xl bg-surface-muted/80 border border-border overflow-x-auto no-scrollbar scroll-smooth">
+      {/* Sélecteur compact en grille 2x2 sur mobile (100% visible sans scroll coupé) */}
+      <div className="sm:hidden grid grid-cols-2 gap-2" role="tablist" aria-label="Choisir votre profil">
         {LANDING_PROFILES.map((p) => {
           const selected = selectedId === p.id;
           const PIcon = p.icon;
@@ -84,20 +84,106 @@ export default function LandingProfileGate({
             <button
               key={p.id}
               type="button"
+              role="tab"
+              aria-selected={selected}
               onClick={() => onSelect(p.id)}
               className={cn(
-                'flex-1 min-w-[7.5rem] py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 touch-manipulation',
+                'p-3 rounded-xl text-left border transition-all flex flex-col justify-between gap-2 touch-manipulation relative',
                 selected
-                  ? 'bg-primary text-white shadow-sm shadow-primary/30'
-                  : 'text-muted hover:text-foreground hover:bg-surface/60',
+                  ? 'border-2 border-primary bg-primary/10 shadow-md shadow-primary/20 ring-1 ring-primary/40'
+                  : 'bg-surface/90 dark:bg-slate-900/80 border-border hover:border-primary/40',
               )}
             >
-              <PIcon className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{p.label}</span>
+              <div className="flex items-center justify-between gap-1 w-full">
+                <div
+                  className={cn(
+                    'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
+                    selected ? 'bg-primary text-white shadow-xs' : 'em-glow-icon-box',
+                  )}
+                >
+                  <PIcon className="w-3.5 h-3.5" />
+                </div>
+                {selected && (
+                  <span className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-[9px]">
+                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  </span>
+                )}
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-muted block truncate">
+                  {p.eyebrow}
+                </span>
+                <span
+                  className={cn(
+                    'text-xs font-bold leading-tight line-clamp-2',
+                    selected ? 'text-primary' : 'text-foreground',
+                  )}
+                >
+                  {p.label}
+                </span>
+              </div>
             </button>
           );
         })}
       </div>
+
+      {/* Carte explicative complète de la solution active sur mobile */}
+      {(() => {
+        const activeProfile = LANDING_PROFILES.find((p) => p.id === selectedId) || LANDING_PROFILES[0];
+        const ActiveIcon = activeProfile.icon;
+        const ctaHref = getProfileHref(activeProfile.id, activeProfile.cta.href);
+        const ctaLabel = getProfileCtaLabel(activeProfile.id, activeProfile.cta.label);
+
+        return (
+          <div className="sm:hidden rounded-[var(--radius-card)] p-4 bg-surface dark:bg-slate-900 border-2 border-primary/40 shadow-lg shadow-primary/10 space-y-3.5 animate-fade-in">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/25 text-[11px] font-semibold text-primary">
+                <ActiveIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>{activeProfile.targetAudience}</span>
+              </div>
+
+              <h3 className="text-base font-bold text-foreground leading-snug pt-1">
+                {activeProfile.title}
+              </h3>
+              <p className="text-xs text-muted leading-relaxed">
+                {activeProfile.intro}
+              </p>
+            </div>
+
+            {/* 3 points clés avec icônes */}
+            <div className="grid grid-cols-1 gap-1.5 py-2.5 border-y border-border/80">
+              {activeProfile.results.map((res) => {
+                const ResIcon = res.icon;
+                return (
+                  <div key={res.label} className="flex items-center gap-2 text-xs font-medium text-foreground">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <ResIcon className="w-2.5 h-2.5" />
+                    </div>
+                    <span>{res.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* CTA principal de la solution */}
+            <div className="space-y-1.5 pt-0.5">
+              <Link href={ctaHref} className="block w-full">
+                <Button
+                  size="md"
+                  variant="primary"
+                  className="w-full shadow-md shadow-primary/30 font-bold text-xs min-h-11 justify-center"
+                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                >
+                  {ctaLabel}
+                </Button>
+              </Link>
+              <p className="text-[10px] text-muted text-center">
+                {activeProfile.registerHint}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Grille des 4 solutions (Desktop / Tablette) */}
       <ul
@@ -158,7 +244,7 @@ export default function LandingProfileGate({
 
                 <div>
                   {/* Badge & Icône */}
-                  <div className="flex items-center gap-2.5 mb-3">
+                  <div className="flex items-center gap-2.5 mb-2.5">
                     <div
                       className={cn(
                         'w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0',
@@ -173,6 +259,11 @@ export default function LandingProfileGate({
                       {profile.eyebrow}
                     </span>
                   </div>
+
+                  {/* Pour qui ? */}
+                  <p className="text-[11px] font-semibold text-primary/90 mb-1.5 leading-snug">
+                    {profile.targetAudience}
+                  </p>
 
                   {/* Titre Produit */}
                   <h3

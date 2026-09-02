@@ -72,37 +72,37 @@ const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   ],
   pro: [
     {
-      title: 'Billetterie & Ventes FlexPay',
-      badge: 'Mobile Money & Cartes',
-      description: 'Configurez vos tarifs par zone (VIP, Standard) et encaissez directement en CDF.',
+      title: 'Billetterie & Ventes Mobile Money',
+      badge: 'M-Pesa, Airtel, Cartes',
+      description: 'Pour organisateurs de concerts & conférences : vendez vos billets par catégorie (VIP, Standard) en ligne.',
       icon: Wallet,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=pro&action=ticketing'),
-      ctaLabel: 'Créer une billetterie',
+      ctaLabel: 'Créer ma billetterie',
       highlight: true,
     },
     {
-      title: 'Contrôle d’Accès & Scanner Protocole',
-      badge: 'Temps Réel',
-      description: 'Émargement instantané avec validation sonore anti-fraude à l’entrée.',
+      title: 'Contrôle d’Accès & Scan QR Anti-Fraude',
+      badge: 'Smartphone Jour J',
+      description: 'Pour votre équipe d’accueil : scannez les e-billets à l’entrée avec alerte sonore en cas de faux billet ou doublon.',
       icon: ScanLine,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/protocol' : '/register?kind=ORGANIZER&intent=pro&action=protocol'),
-      ctaLabel: 'Accéder au scanner QR',
+      ctaLabel: 'Ouvrir le scanner d’accès',
     },
     {
-      title: 'Suivi des Ventes & Recettes',
-      badge: 'Analytique',
-      description: 'Consultez le tableau de bord des encaissements et téléchargez les listes d’entrées.',
+      title: 'Suivi des Ventes & Recettes en Direct',
+      badge: 'Tableau de bord',
+      description: 'Suivez le chiffre d’affaires en temps réel, visualisez les jauges et téléchargez les listes d’émargement.',
       icon: Sparkles,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/tickets' : '/register?kind=ORGANIZER&intent=pro&action=sales'),
-      ctaLabel: 'Gérer la billetterie',
+      ctaLabel: 'Voir le suivi des ventes',
     },
     {
-      title: 'Coordination d’Équipe & Rôles',
-      badge: 'Multi-accès',
-      description: 'Attribuez des droits sécurisés à vos managers et agents d’accueil.',
+      title: 'Coordination d’Équipe & Accès Protocole',
+      badge: 'Multi-comptes',
+      description: 'Pour agences événementielles : donnez des accès sécurisés à vos agents d’accueil sans exposer vos données financières.',
       icon: Users,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/team' : '/register?kind=ORGANIZER&intent=pro&action=team'),
-      ctaLabel: 'Configurer mon équipe',
+      ctaLabel: 'Gérer les rôles d’équipe',
     },
   ],
   seeker: [
@@ -253,7 +253,7 @@ export default function LandingHeroPreview({
                     </span>
                   </div>
 
-                  <p className="text-[11px] sm:text-xs text-muted leading-relaxed line-clamp-2">
+                  <p className="text-[11px] sm:text-xs text-muted leading-relaxed line-clamp-3">
                     {act.description}
                   </p>
                 </div>
