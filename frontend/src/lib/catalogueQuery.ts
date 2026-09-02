@@ -68,7 +68,7 @@ export function catalogueReturnBackLabel(href: string): string {
   if (path === '/marketplace') return 'Marketplace';
   if (path === '/marketplace/salles') return 'Salles';
   if (path === '/marketplace/prestataires') return 'Prestataires';
-  if (path === '/marketplace/locations') return 'Locations';
+  if (path === '/marketplace/locations') return 'Matériel & Équipements';
   if (path === '/marketplace/evenements') return 'Événements';
   return 'Retour';
 }

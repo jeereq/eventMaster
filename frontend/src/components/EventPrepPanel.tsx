@@ -307,7 +307,7 @@ function PrepLane({
   const emptySearch = isVenue
     ? 'Aucune salle publique pour ces filtres.'
     : lane === 'rental'
-      ? 'Aucune location publique pour ces filtres.'
+      ? 'Aucun matériel / équipement public pour ces filtres.'
       : 'Aucun prestataire public pour ces filtres.';
 
   return (
@@ -387,7 +387,7 @@ function PrepLane({
           </>
         ) : (
           <>
-            <FilterSelect label={lane === 'rental' ? 'Type de location' : 'Prestataire'} value={category} onChange={setCategory}>
+            <FilterSelect label={lane === 'rental' ? 'Type de matériel' : 'Prestataire'} value={category} onChange={setCategory}>
               <option value="">{lane === 'rental' ? 'Tous les types' : 'Tous les prestataires'}</option>
               {categories.map((item) => (
                 <option key={item} value={item}>{SERVICE_CATEGORY_LABELS[item]}</option>
@@ -731,8 +731,8 @@ export default function EventPrepPanel({
 
   const tabs: Array<{ id: PrepLaneId; label: string; count: number; icon: typeof Building2; hint: string }> = [
     { id: 'venue', label: 'Salle', count: working.venue ? 1 : 0, icon: Building2, hint: 'Le lieu — 1 choix' },
-    { id: 'trade', label: 'Métiers', count: trades.length, icon: Sparkles, hint: 'Le savoir-faire' },
-    { id: 'rental', label: 'Locations', count: rentals.length, icon: KeyRound, hint: 'Le bien loué' },
+    { id: 'trade', label: 'Prestataires', count: trades.length, icon: Sparkles, hint: 'Le savoir-faire' },
+    { id: 'rental', label: 'Matériel & Équipements', count: rentals.length, icon: KeyRound, hint: 'Matériel et équipements' },
   ];
   const estimate = eventPrepEstimateFc(working);
 
@@ -836,7 +836,7 @@ export default function EventPrepPanel({
                 ? 'Choisissez ci-dessus les options des deux simulations, puis appliquez.'
                 : view === 'ai'
                   ? 'Lancez une simulation IA, puis retenez le mix proposé.'
-                  : 'Parcourez le catalogue et retenez une salle, des prestataires et des locations.'
+                  : 'Parcourez le catalogue et retenez une salle, des prestataires et du matériel.'
               : estimate.priced > 0
                 ? `À partir de ${formatFc(estimate.total)} · ${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''}`
                 : `${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''} retenue${estimate.totalItems > 1 ? 's' : ''}`
@@ -912,9 +912,9 @@ export default function EventPrepPanel({
           </RetainedColumn>
           <RetainedColumn
             tone="rental"
-            label="Locations"
+            label="Matériel & Équipements"
             icon={<KeyRound className="w-3.5 h-3.5" />}
-            empty="Aucune location retenue"
+            empty="Aucun équipement retenu"
             onBrowse={() => setLane('rental')}
           >
             {rentals.map((vendor) => (
@@ -1037,7 +1037,7 @@ export default function EventPrepPanel({
             <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" />
           </summary>
           <div className="px-5 pb-4 space-y-2">
-            <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, prestataires et locations se remplissent ici, sans réserver.</p>
+            <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, prestataires et matériel & équipements se remplissent ici, sans réserver.</p>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {savedPacks.slice(0, 6).map((pack) => (
                 <li key={pack.id} className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 space-y-2">
@@ -1361,7 +1361,7 @@ function PrepFinalComposer({
 
           {vendorOptions.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Métiers & locations</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Prestataires & Matériel</p>
               <ul className="space-y-1.5">
                 {vendorOptions.map((option) => {
                   const pick = vendorPicks[option.slug] || 'none';

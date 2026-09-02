@@ -141,10 +141,10 @@ export default function EventPlanBriefForm({
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground">Brief budget</h2>
         <p className="text-sm text-muted leading-relaxed">
-          Vous décrivez l’événement et l’enveloppe. EventMaster cherche ensuite <strong className="font-semibold text-foreground">3 packs</strong> (économique, équilibré, confort) dans ce budget : salle, prestataires et locations déjà combinés, sans dépasser le maximum.
+          Vous décrivez l’événement et l’enveloppe. EventMaster cherche ensuite <strong className="font-semibold text-foreground">3 packs</strong> (économique, équilibré, confort) dans ce budget : salle, prestataires et matériel & équipements déjà combinés, sans dépasser le maximum.
         </p>
         <p className="text-xs text-muted leading-relaxed">
-          Vous pouvez tout laisser par défaut et lancer la recherche, ou préciser ville, date, prestataires, locations et répartition. Rien n’est réservé : vous comparez, sauvegardez, puis contactez les professionnels.
+          Vous pouvez tout laisser par défaut et lancer la recherche, ou préciser ville, date, prestataires, matériel & équipements et répartition. Rien n’est réservé : vous comparez, sauvegardez, puis contactez les professionnels.
         </p>
       </div>
 
@@ -182,7 +182,7 @@ export default function EventPlanBriefForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <FieldSelect
           label="Type d’événement"
-          hint="Préremplit les prestataires et locations (mariage = traiteur, photo, DJ, habits…)."
+          hint="Préremplit les prestataires et le matériel (mariage = traiteur, photo, DJ, habits…)."
           value={brief.eventType}
           onChange={(value) => onChange(briefWithEventType(brief, value as ListingEventTypeId))}
         >
@@ -216,7 +216,7 @@ export default function EventPlanBriefForm({
         </FieldSelect>
         <FieldSelect
           label="Ville"
-          hint="Limite la recherche aux salles, prestataires et locations de cette ville."
+          hint="Limite la recherche aux salles, prestataires et matériel & équipements de cette ville."
           value={brief.city}
           onChange={(value) => patch({ city: normalizeRdcCity(value) || '', commune: '' })}
         >
@@ -280,7 +280,7 @@ export default function EventPlanBriefForm({
           {([
             ['yes', 'Obligatoire', 'Chaque pack contient une salle.'],
             ['if_fits', 'Si ça rentre', 'Salle ajoutée seulement s’il reste du budget.'],
-            ['no', 'Sans salle', 'Uniquement prestataires et locations (vous avez déjà un lieu).'],
+            ['no', 'Sans salle', 'Uniquement prestataires et matériel & équipements (vous avez déjà un lieu).'],
           ] as Array<[IncludeVenue, string, string]>).map(([id, label, hint]) => (
             <button
               key={id}
@@ -337,9 +337,9 @@ export default function EventPlanBriefForm({
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted">Locations</p>
+        <p className="text-xs font-semibold text-muted">Matériel & Équipements</p>
         <p className="text-[11px] text-muted leading-relaxed">
-          Habits, véhicules, matériel. Même logique, séparée des prestataires de service.
+          Mobilier, sonorisation, véhicules, tentes, habits. Même logique, séparée des prestataires de service.
         </p>
         <div className="flex flex-wrap gap-1.5">
           {visibleRentals.map((category) => {
@@ -369,7 +369,7 @@ export default function EventPlanBriefForm({
             className="text-[11px] font-semibold text-primary"
             onClick={() => setShowAllRentals((value) => !value)}
           >
-            {showAllRentals ? 'Masquer les autres locations' : 'Afficher toutes les locations'}
+            {showAllRentals ? 'Masquer les autres équipements' : 'Afficher tout le matériel & équipements'}
           </button>
         ) : null}
       </div>

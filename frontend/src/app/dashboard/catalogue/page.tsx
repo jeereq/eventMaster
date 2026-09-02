@@ -591,12 +591,12 @@ function ClientMarketplaceInner() {
           tab === 'plan'
             ? 'Choisissez comment simuler (par critères ou avec l’IA), puis retenez le pack utilisé pour les devis.'
             : tab === 'favorites'
-              ? 'Salles, prestataires et locations enregistrés. Filtrez et changez la vue grille ou liste.'
+              ? 'Salles, prestataires et matériel & équipements enregistrés. Filtrez et changez la vue grille ou liste.'
               : tab === 'packs'
                 ? 'Packs et briefs sauvegardés, à reprendre ou à envoyer en devis.'
                 : searchParams.get('kind') === 'event'
                   ? 'Événements publics du marketplace. Inscrivez-vous ou achetez un billet — il apparaît dans Mes billets.'
-                  : 'Explorez les salles, prestataires et locations, enregistrez vos favoris, puis préparez un événement selon votre budget.'
+                  : 'Explorez les salles, prestataires et matériel & équipements, enregistrez vos favoris, puis préparez un événement selon votre budget.'
         }
         breadcrumbs={
           <Breadcrumbs
@@ -670,7 +670,7 @@ function ClientMarketplaceInner() {
                   mode={mode === 'list' ? 'list' : 'grid'}
                   gridCols={gridCols}
                   emptyTitle="Aucune fiche pour cette recherche"
-                  emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles, prestataires, locations et événements."
+                  emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles, prestataires, matériel & équipements et événements."
                   isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
                   onToggleFavorite={onToggleFavorite}
                 />
@@ -698,7 +698,7 @@ function ClientMarketplaceInner() {
                   ['all', 'Tous'],
                   ['venue', 'Salles'],
                   ['service', 'Prestataires'],
-                  ['rental', 'Locations'],
+                  ['rental', 'Matériel & Équipements'],
                 ] as const).map(([id, label]) => (
                   <button
                     key={id}
@@ -738,8 +738,8 @@ function ClientMarketplaceInner() {
               gridCols={gridCols}
               emptyTitle={favoriteItems.length === 0 ? 'Aucun favori pour le moment' : 'Aucun favori pour ce filtre'}
               emptyDescription={favoriteItems.length === 0
-                ? 'Dans Explorer, cliquez sur le cœur d’une salle, d’un prestataire ou d’une location pour le retrouver ici.'
-                : 'Changez le type (salles / prestataires / locations) ou le mot-clé.'}
+                ? 'Dans Explorer, cliquez sur le cœur d’une salle, d’un prestataire ou d’un équipement pour le retrouver ici.'
+                : 'Changez le type (salles / prestataires / matériel & équipements) ou le mot-clé.'}
               isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
               onToggleFavorite={onToggleFavorite}
             />

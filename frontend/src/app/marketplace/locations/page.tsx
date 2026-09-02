@@ -75,7 +75,7 @@ function MarketplaceRentalsPageInner() {
       const data = await api.get(`/public/services${params.toString() ? `?${params}` : ''}`);
       setServices(data.services || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de charger les locations.');
+      setError(err instanceof Error ? err.message : 'Impossible de charger le matériel & équipements.');
       setServices([]);
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ function MarketplaceRentalsPageInner() {
     if (applied.category) {
       extra.push({
         id: 'category',
-        label: 'Location',
+        label: 'Matériel & Équipement',
         value: SERVICE_CATEGORY_LABELS[applied.category as keyof typeof SERVICE_CATEGORY_LABELS] || applied.category,
       });
     }
@@ -128,8 +128,8 @@ function MarketplaceRentalsPageInner() {
   return (
     <CatalogueSearchLayout
       activeNav="rentals"
-      heroTitle="Louez habits, véhicules et matériel"
-      heroDescription="Costumes, robes, voitures, motos, chapiteaux… Filtrez par type, zone et dates de disponibilité."
+      heroTitle="Matériel, équipements & véhicules pour vos événements"
+      heroDescription="Mobilier, sonorisation, tentes, véhicules, tenues de cérémonie… Trouvez et réservez les équipements adaptés à votre réception."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -138,21 +138,21 @@ function MarketplaceRentalsPageInner() {
       loading={loading}
       error={error}
       emptyTitle="Nous cherchons encore la perle rare..."
-      emptyDescription="Aucune location ne correspond exactement à vos critères. Élargissez votre recherche pour découvrir d'autres options."
+      emptyDescription="Aucun équipement ou matériel ne correspond exactement à vos critères. Élargissez votre recherche pour découvrir d'autres options."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
       onPageSizeChange={setPageSize}
-      itemLabel="locations"
+      itemLabel="équipements"
       searchCenter={searchCenter}
       radiusKm={searchCenter ? applied.radiusKm : 0}
       city={applied.city}
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
-        title: 'Vous louez du matériel ou des tenues ?',
-        description: 'Publiez vos articles avec photos, caution et calendrier de disponibilité.',
+        title: 'Vous proposez du matériel ou des équipements ?',
+        description: 'Publiez vos fiches avec photos, caution et calendrier de disponibilité.',
         primaryHref: '/register',
-        primaryLabel: 'Proposer mes locations',
+        primaryLabel: 'Proposer du matériel',
         secondaryHref: '/contact',
         secondaryLabel: 'Nous contacter',
       }}
@@ -163,13 +163,13 @@ function MarketplaceRentalsPageInner() {
           compactToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}
-          searchPlaceholder="Habits, voiture, matériel…"
+          searchPlaceholder="Mobilier, sono, véhicule, tente…"
           view={mode}
           onViewChange={setView}
           gridCols={gridCols}
           onGridColsChange={setGridCols}
           chips={chips}
-          resultLabel={!loading ? `${items.length} location${items.length > 1 ? 's' : ''}` : undefined}
+          resultLabel={!loading ? `${items.length} offre${items.length > 1 ? 's' : ''}` : undefined}
           onRemoveChip={(id) => applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id))}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
@@ -185,7 +185,7 @@ function MarketplaceRentalsPageInner() {
               throw err;
             }
           }}
-          modalTitle="Filtrer les locations"
+          modalTitle="Filtrer le matériel & équipements"
           filters={
             <CatalogueEntityFilterFields
               entity="rental"
@@ -214,7 +214,7 @@ function MarketplaceRentalsPageInner() {
 
 export default function MarketplaceRentalsPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des locations…</div>}>
+    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement du matériel & équipements…</div>}>
       <MarketplaceRentalsPageInner />
     </Suspense>
   );

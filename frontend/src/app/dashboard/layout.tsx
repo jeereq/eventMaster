@@ -115,7 +115,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Mon compte': 'Profil et sécurité du compte',
  Salles: 'Plans 2D, publication et disponibilités',
  Équipe: 'Managers et protocole d’accueil',
- Marketplace: 'Prestations, locations et réservations reçues',
+ Marketplace: 'Prestations, matériel & équipements et réservations reçues',
  'Devis & réservations': 'Devis envoyés, réservations, packs et favoris',
  'Parrainage & commissions': 'Code parrainage et gains',
  'Réseau commercial': 'Organisations que vous parrainez',
@@ -233,7 +233,7 @@ function buildDashboardNav(opts: {
     { name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Accueil QR, événements et tâches du jour' },
    ]),
    navSection('Marketplace', [
-    { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et locations — comme le catalogue client' },
+    { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et matériel & équipements — comme le catalogue client' },
     { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
     { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
    ]),
@@ -248,7 +248,7 @@ function buildDashboardNav(opts: {
   return buildNavSections(
    navSection('Mon Espace', [
     { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Définir vos objectifs, recommandations et synthèse de vos activités' },
-    { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations et fiches publiques' },
+    { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
     { name: 'Simulateur de pack', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' },
     { name: 'Mes packs créés', href: '/dashboard/catalogue?tab=packs', tourId: 'nav-my-packs', icon: Bookmark, description: 'Retrouver et gérer tous vos packs d’événements enregistrés' },
     { name: 'Agenda & Billets', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
@@ -281,7 +281,7 @@ function buildDashboardNav(opts: {
  const marketItems: NavItem[] = [
   ...(workspace.showBrowseCatalogue
    ? [
-      { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, locations (comme le client)' },
+      { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, matériel & équipements (comme le client)' },
       { name: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
      ]
    : []),
@@ -292,7 +292,7 @@ function buildDashboardNav(opts: {
      ]
    : []),
   ...(workspace.showMarketplace
-   ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / prestataire / location)' }]
+   ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / prestataire / matériel & équipements)' }]
    : []),
   ...(workspace.showRooms
    ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]

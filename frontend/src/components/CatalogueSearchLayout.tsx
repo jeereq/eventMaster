@@ -297,15 +297,15 @@ export default function CatalogueSearchLayout({
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2 h-2 rotate-45 rounded-[1px] bg-cyan-700" />
-                  Locations
-                  <span className="hidden sm:inline text-[11px]">(matériel & équipements)</span>
+                  Matériel & Équipements
+                  <span className="hidden sm:inline text-[11px]">(mobilier, sono, véhicules)</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" />
                   Événements
                 </span>
                 <span className="w-full sm:w-auto text-[11px] leading-relaxed">
-                  Cercle orange = prestataire (DJ, photo, traiteur). Losange cyan = location (habits, véhicule, sono).
+                  Cercle orange = prestataire (DJ, photo, traiteur). Losange cyan = matériel & équipements (habits, véhicule, sono, mobilier).
                 </span>
               </div>
             )}

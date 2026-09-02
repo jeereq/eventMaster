@@ -256,7 +256,7 @@ export function eventPrepSummary(prep: EventPrep): string | null {
   if (trades.length === 1) parts.push(trades[0].title);
   else if (trades.length > 1) parts.push(`${trades.length} prestataires`);
   if (rentals.length === 1) parts.push(rentals[0].title);
-  else if (rentals.length > 1) parts.push(`${rentals.length} locations`);
+  else if (rentals.length > 1) parts.push(`${rentals.length} matériels/équipements`);
   if (parts.length === 0) return null;
   return parts.join(' · ');
 }

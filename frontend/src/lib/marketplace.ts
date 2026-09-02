@@ -732,7 +732,7 @@ export function previewMarketplaceAmounts(
 }
 
 export const PRICE_UNIT_OPTIONS: Array<{ id: VenuePriceUnit; label: string; hint: string }> = [
-  { id: 'EVENT', label: 'Par événement', hint: 'Un forfait pour toute la prestation ou la location.' },
+  { id: 'EVENT', label: 'Par événement', hint: 'Un forfait pour toute la prestation ou la mise à disposition.' },
   { id: 'DAY', label: 'Par jour', hint: 'Journée civile (voiture, chapiteau, sécurité…).' },
   { id: 'HOUR', label: 'Par heure', hint: 'DJ, photo, moto, salle de conférence…' },
   { id: 'MINUTE', label: 'Par minute', hint: 'Rare : studio, captation courte.' },
@@ -998,7 +998,7 @@ export function catalogueItemDisplayKind(item: Pick<CatalogueItem, 'kind' | 'cat
 }
 
 export function catalogueKindLabel(kind?: CatalogueDisplayKind | string | null): string {
-  if (kind === 'rental') return 'Location';
+  if (kind === 'rental') return 'Matériel & Équipements';
   if (kind === 'service') return 'Prestataire';
   if (kind === 'event') return 'Événement';
   return 'Salle';
@@ -1007,14 +1007,14 @@ export function catalogueKindLabel(kind?: CatalogueDisplayKind | string | null):
 export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | 'rental' | string | null): string {
   if (kind === 'venue') return 'Salles';
   if (kind === 'service') return 'Prestataires';
-  if (kind === 'rental') return 'Locations';
+  if (kind === 'rental') return 'Matériel & Équipements';
   if (kind === 'event') return 'Événements';
   return 'Tous';
 }
 
 /** Pastille courte sur un pin. */
 export function catalogueKindChipLabel(kind?: CatalogueDisplayKind | string | null): string {
-  if (kind === 'rental') return 'Location';
+  if (kind === 'rental') return 'Matériel';
   if (kind === 'service') return 'Presta';
   if (kind === 'event') return 'Évén.';
   return 'Salle';
@@ -1022,7 +1022,7 @@ export function catalogueKindChipLabel(kind?: CatalogueDisplayKind | string | nu
 
 export function catalogueKindHint(kind?: CatalogueDisplayKind | string | null): string {
   if (kind === 'service') return 'Le professionnel — DJ, photographe, traiteur, décorateur…';
-  if (kind === 'rental') return 'Le bien — habits, véhicule, matériel…';
+  if (kind === 'rental') return 'Le bien — matériel, mobilier, sono, véhicules, tentes, habits…';
   if (kind === 'venue') return 'Le lieu de l’événement';
   if (kind === 'event') return 'Fête, concert, gala…';
   return '';

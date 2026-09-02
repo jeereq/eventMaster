@@ -231,7 +231,7 @@ export default function EventSavedPacks({
         open={open}
         onClose={() => setOpen(false)}
         title="Créer un pack parfait"
-        description="Choisissez une salle, des prestataires et des locations parmi vos favoris."
+        description="Choisissez une salle, des prestataires et du matériel & équipements parmi vos favoris."
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
@@ -257,13 +257,13 @@ export default function EventSavedPacks({
           </label>
           {error ? <Alert variant="error">{error}</Alert> : null}
           {favorites.length === 0 ? (
-            <p className="text-sm text-muted">Ajoutez d’abord des salles, prestataires ou locations en favoris.</p>
+            <p className="text-sm text-muted">Ajoutez d’abord des salles, prestataires ou équipements en favoris.</p>
           ) : (
             <div className="space-y-3 max-h-72 overflow-y-auto">
               {([
                 ['Salles', favorites.filter((row) => row.kind === 'venue')],
                 ['Prestataires', favorites.filter((row) => row.kind === 'service' && !isServiceRentalCategory(row.category))],
-                ['Locations', favorites.filter((row) => row.kind === 'service' && isServiceRentalCategory(row.category))],
+                ['Matériel & Équipements', favorites.filter((row) => row.kind === 'service' && isServiceRentalCategory(row.category))],
               ] as Array<[string, FavoriteListing[]]>).filter(([, rows]) => rows.length > 0).map(([label, rows]) => (
                   <div key={label} className="space-y-1.5">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</p>
@@ -289,7 +289,7 @@ export default function EventSavedPacks({
                               </span>
                               <div className="min-w-0 flex-1">
                                 <p className="text-[10px] uppercase tracking-wider text-muted">
-                                  {row.kind === 'venue' ? 'Salle' : row.categoryLabel || (isServiceRentalCategory(row.category) ? 'Location' : 'Métier')}
+                                  {row.kind === 'venue' ? 'Salle' : row.categoryLabel || (isServiceRentalCategory(row.category) ? 'Matériel' : 'Prestataire')}
                                 </p>
                                 <p className="text-sm font-semibold truncate">{row.title}</p>
                               </div>

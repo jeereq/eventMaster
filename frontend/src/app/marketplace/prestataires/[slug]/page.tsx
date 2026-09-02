@@ -82,11 +82,11 @@ export default function MarketplaceServiceDetailPage() {
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       <ListingDetailLayout
         backHref={isRental ? '/marketplace/locations' : '/marketplace/prestataires'}
-        backLabel={isRental ? 'Toutes les locations' : 'Tous les prestataires'}
+        backLabel={isRental ? 'Tout le matériel & équipements' : 'Tous les prestataires'}
         loading={loading}
-        error={error || (!loading && !service ? (isRental ? 'Location introuvable.' : 'Prestation introuvable.') : '')}
+        error={error || (!loading && !service ? (isRental ? 'Fiche matériel introuvable.' : 'Prestation introuvable.') : '')}
         errorIcon={isRental ? <KeyRound className="w-10 h-10 text-muted mx-auto mb-3" /> : <Sparkles className="w-10 h-10 text-muted mx-auto mb-3" />}
-        errorMessage={isRental ? 'Location introuvable.' : 'Prestation introuvable.'}
+        errorMessage={isRental ? 'Fiche matériel introuvable.' : 'Prestation introuvable.'}
         onRetry={() => setReloadNonce((n) => n + 1)}
         heroUrl={service?.photos[0]}
         fallbackIcon={isRental ? <KeyRound className="w-12 h-12" /> : <Sparkles className="w-12 h-12" />}

@@ -216,14 +216,14 @@ export default function FirstLoginOnboardingModal({
                 onChange={(e) => setCategory(e.target.value as ServiceCategory)}
                 className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
               >
-                <optgroup label="Services & Métiers événementiels">
+                <optgroup label="Prestations & Services">
                   {SERVICE_TRADE_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
                       {SERVICE_CATEGORY_LABELS[cat]}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="Location de matériel & équipement">
+                <optgroup label="Matériel & Équipements">
                   {SERVICE_RENTAL_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
                       {SERVICE_CATEGORY_LABELS[cat]}

@@ -255,7 +255,7 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
     orgLabel: 'Nom de la salle ou complexe',
     orgPlaceholder: 'Ex: Domaine Royal / Complexe Grand Duc',
     features: [
-      { step: 1, icon: Building2, title: 'Fiche vitrine 3D', desc: 'Photos haute résolution, tarifs de location et capacité d’accueil.' },
+      { step: 1, icon: Building2, title: 'Fiche vitrine 3D', desc: 'Photos haute résolution, tarifs de réservation et capacité d’accueil.' },
       { step: 2, icon: MessageSquare, title: 'Demandes de devis directes', desc: 'Échangez sans intermédiaire avec les futurs organisateurs.' },
       { step: 3, icon: CalendarCheck, title: 'Planning de réservation', desc: 'Bloquez vos dates fermes et gérez vos acomptes.' },
     ],
@@ -423,7 +423,7 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
     orgLabel: '',
     orgPlaceholder: '',
     features: [
-      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, prestataires, locations. Trouvez exactement ce qu’il vous faut.' },
+      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, prestataires, matériel & équipements. Trouvez exactement ce qu’il vous faut.' },
       { step: 2, icon: Wallet, title: 'Composer', desc: 'Un pack sur mesure. Rien n’est réservé tant que le devis n’est pas envoyé.' },
       { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Versez l’acompte directement au pro et sécurisez votre date.' },
     ],

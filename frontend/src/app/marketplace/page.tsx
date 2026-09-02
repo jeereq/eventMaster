@@ -129,8 +129,8 @@ function MarketplaceHubPageInner() {
               : applied.kind === 'venue' ? 'venues'
                 : 'hub'
       }
-      heroTitle="Salles, prestataires, locations et événements près de chez vous"
-      heroDescription="Explorez le marketplace EventMaster : salles, prestataires certifiés, locations (habits, véhicules, matériel) et événements publics. Affinez par ville, commune, prix ou autour de vous."
+      heroTitle="Salles, prestataires, matériel & événements près de chez vous"
+      heroDescription="Explorez le marketplace EventMaster : salles, prestataires certifiés, matériel & équipements (habits, véhicules, mobilier, sono) et événements publics. Affinez par ville, commune, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -150,7 +150,7 @@ function MarketplaceHubPageInner() {
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       showKindLegend
       cta={{
-        title: 'Vous proposez une salle, une prestation ou du matériel en location ?',
+        title: 'Vous proposez une salle, une prestation ou du matériel & équipements ?',
         description: 'Publiez une fiche depuis votre organisation EventMaster, avec photos, vidéos, carte et calendrier.',
         primaryHref: '/register',
         primaryLabel: 'Créer un compte',

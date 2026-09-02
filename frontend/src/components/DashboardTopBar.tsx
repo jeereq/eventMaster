@@ -26,7 +26,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/invoices')) return { title: 'Factures', subtitle: 'Historique des paiements' };
     if (pathname.startsWith('/dashboard/rooms')) return { title: 'Salles', subtitle: 'Plans 2D et fiches' };
     if (pathname.startsWith('/dashboard/team')) return { title: 'Équipe', subtitle: 'Membres et rôles' };
-    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Offres, locations et réservations' };
+    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Offres, matériel & réservations' };
     if (pathname.startsWith('/dashboard/bookings')) return { title: 'Devis & Réservations', subtitle: 'Échanges et dates confirmées' };
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
@@ -34,7 +34,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/tickets')) return { title: 'Mes billets', subtitle: 'Pass d’accès et QR codes' };
     if (pathname.startsWith('/dashboard/catalogue/salles')) return { title: 'Salle', subtitle: 'Fiche du lieu' };
     if (pathname.startsWith('/dashboard/catalogue/prestataires')) return { title: 'Prestation', subtitle: 'Fiche professionnelle' };
-    if (pathname.startsWith('/dashboard/catalogue/locations')) return { title: 'Location', subtitle: 'Fiche équipement' };
+    if (pathname.startsWith('/dashboard/catalogue/locations')) return { title: 'Matériel & Équipements', subtitle: 'Fiche équipement' };
     if (pathname.startsWith('/dashboard/catalogue')) {
       const hub = searchParams.get('hub');
       const kind = searchParams.get('kind');
@@ -44,7 +44,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
       if (hub === 'plan') return { title: 'Préparer un événement', subtitle: 'Simulateur et packs clé en main' };
       if (hub === 'favorites') return { title: 'Favoris', subtitle: 'Vos coups de cœur enregistrés' };
       if (hub === 'packs') return { title: 'Mes packs', subtitle: 'Vos sélections sur mesure' };
-      return { title: 'Marketplace', subtitle: 'Salles, prestataires et location de matériel' };
+      return { title: 'Marketplace', subtitle: 'Salles, prestataires et matériel & équipements' };
     }
     if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
     if (pathname.startsWith('/dashboard/admin/payouts')) return { title: 'Versements SaaS', subtitle: 'Commissions hors plateforme' };

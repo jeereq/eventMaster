@@ -124,7 +124,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-marketplace': {
     title: 'Mes offres',
     description:
-      'Espace vendeur : publiez salles, prestations ou locations, traitez les devis reçus et confirmez les réservations (accepter → acompte hors plateforme → bloquer la date).',
+      'Espace vendeur : publiez salles, prestations ou matériel & équipements, traitez les devis reçus et confirmez les réservations (accepter → acompte hors plateforme → bloquer la date).',
     route: '/dashboard/marketplace',
   },
   'nav-protocol': {
@@ -166,7 +166,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-catalog-admin': {
     title: 'Catalogue',
     description:
-      'Modération des fiches salles, prestataires et locations, devis, réservations, et file des commissions vendeur {commissionPercent} %.',
+      'Modération des fiches salles, prestataires et matériel & équipements, devis, réservations, et file des commissions vendeur {commissionPercent} %.',
     route: '/dashboard/admin/catalogue',
   },
   'nav-guide': {
@@ -184,7 +184,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-catalogue': {
     title: 'Explorer',
     description:
-      'Catalogue acheteur (comme le client) : salles, prestataires, locations et événements — filtres, carte Focus, grille ou liste, favoris et packs budget.',
+      'Catalogue acheteur (comme le client) : salles, prestataires, matériel & équipements et événements — filtres, carte Focus, grille ou liste, favoris et packs budget.',
     route: '/dashboard/catalogue',
   },
   'nav-agenda': {

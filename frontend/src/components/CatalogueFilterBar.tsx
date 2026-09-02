@@ -345,7 +345,7 @@ export default function CatalogueFilterBar({
           <ShareButton
             variant="fab"
             title={shareTitle || 'Recherche EventMaster'}
-            text="Salles, prestataires, locations et événements filtrés sur EventMaster."
+            text="Salles, prestataires, matériel & équipements et événements filtrés sur EventMaster."
             label="Partager la recherche"
             url={shareUrl}
             className="!h-10 !w-10 !rounded-[var(--radius-button)]"
@@ -416,7 +416,7 @@ export default function CatalogueFilterBar({
           <ShareButton
             variant="button"
             title={shareTitle || 'Recherche EventMaster'}
-            text="Salles, prestataires, locations et événements filtrés sur EventMaster."
+            text="Salles, prestataires, matériel & équipements et événements filtrés sur EventMaster."
             label="Partager"
             url={shareUrl}
             className="shrink-0 px-2.5 sm:px-3"
@@ -689,7 +689,7 @@ export function CatalogueEntityFilterFields({
       {showKind ? (
         <CatalogueFilterField
           label="Type de fiche"
-          hint={kind === 'all' ? 'Choisissez salles, prestataires, locations ou événements pour afficher les filtres correspondants.' : undefined}
+          hint={kind === 'all' ? 'Choisissez salles, prestataires, matériel & équipements ou événements pour afficher les filtres correspondants.' : undefined}
         >
           <CatalogueChoicePills
             options={KIND_FILTER_OPTIONS}
@@ -720,7 +720,7 @@ export function CatalogueEntityFilterFields({
         availabilityHint={showEvent
           ? 'Date de l’événement (un jour ou du… au…).'
           : showRental
-            ? 'N’affiche que les locations libres sur toute la période.'
+            ? 'N’affiche que le matériel libre sur toute la période.'
             : showTrade
               ? 'N’affiche que les prestataires libres sur toute la période.'
               : showVenue
@@ -757,7 +757,7 @@ export function CatalogueEntityFilterFields({
           </CatalogueFilterField>
           ) : null}
           {showRental ? (
-          <CatalogueFilterField label="Type de location">
+          <CatalogueFilterField label="Type de matériel / équipement">
                 <CatalogueChoicePills
                   options={SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}

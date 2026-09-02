@@ -48,8 +48,8 @@ import { commissionPercent, depositPercent } from '@/lib/platformRates';
 const KIND_OPTIONS = [
   { id: 'all', label: 'Tous' },
   { id: 'venue', label: 'Salles' },
-  { id: 'service', label: 'Métiers' },
-  { id: 'rental', label: 'Locations' },
+  { id: 'service', label: 'Prestataires' },
+  { id: 'rental', label: 'Matériel & Équipements' },
 ] as const;
 
 function toneFor(status: MarketplaceBookingStatus): 'amber' | 'emerald' | 'slate' | 'rose' {
@@ -61,7 +61,7 @@ function toneFor(status: MarketplaceBookingStatus): 'amber' | 'emerald' | 'slate
 
 function kindLabel(item: MarketplaceBookingItem) {
   if (item.kind === 'venue') return 'Salle';
-  return isServiceRentalCategory(item.offeringCategory) ? 'Location' : 'Métier';
+  return isServiceRentalCategory(item.offeringCategory) ? 'Matériel & Équipements' : 'Prestataire';
 }
 
 function kindIcon(item: MarketplaceBookingItem) {
@@ -342,7 +342,7 @@ export default function MarketplaceBookingsPanel({
             ? 'Ajustez vos filtres pour trouver ce que vous cherchez.'
             : organizerView
               ? 'Sécurisez vos prestataires et lieux favoris pour les voir apparaître ici.'
-              : 'Vos demandes de réservation (salles, prestations et locations) s\'afficheront ici une fois confirmées.'}
+              : 'Vos demandes de réservation (salles, prestations et matériel & équipements) s\'afficheront ici une fois confirmées.'}
         />
       ) : (
         <>

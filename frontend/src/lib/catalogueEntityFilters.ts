@@ -55,14 +55,14 @@ export const KIND_FILTER_OPTIONS = [
   { id: 'all', label: 'Tous' },
   { id: 'venue', label: 'Salles' },
   { id: 'service', label: 'Prestataires' },
-  { id: 'rental', label: 'Locations' },
+  { id: 'rental', label: 'Matériel & Équipements' },
   { id: 'event', label: 'Événements' },
 ];
 
 export function catalogueKindFilterTitle(kind: CatalogueKind, fallback = 'Filtrer'): string {
   if (kind === 'venue') return 'Filtrer les salles';
   if (kind === 'service') return 'Filtrer les prestataires';
-  if (kind === 'rental') return 'Filtrer les locations';
+  if (kind === 'rental') return 'Filtrer le matériel & équipements';
   if (kind === 'event') return 'Filtrer les événements';
   return fallback;
 }
@@ -106,9 +106,9 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
       value: extras.kind === 'venue'
         ? 'Salles'
         : extras.kind === 'service'
-          ? 'Métiers'
+          ? 'Prestataires'
           : extras.kind === 'rental'
-            ? 'Locations'
+            ? 'Matériel & Équipements'
             : 'Événements',
       tone: extras.kind === 'rental' ? 'service' : extras.kind,
     });
@@ -124,7 +124,7 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
   if (extras.category) {
     chips.push({
       id: 'category',
-      label: extras.kind === 'rental' || isServiceRentalCategory(extras.category) ? 'Location' : 'Métier',
+      label: extras.kind === 'rental' || isServiceRentalCategory(extras.category) ? 'Matériel' : 'Prestataire',
       value: SERVICE_CATEGORY_LABELS[extras.category as keyof typeof SERVICE_CATEGORY_LABELS] || extras.category,
       tone: 'service',
     });

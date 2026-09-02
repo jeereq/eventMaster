@@ -164,7 +164,7 @@ export default function LandingVitrineSection() {
   const tabs: Array<{ id: VitrineTab; label: string; icon: typeof Building2; hash: string }> = [
     { id: 'venues', label: 'Salles', icon: Building2, hash: 'salles' },
     { id: 'services', label: 'Prestataires', icon: Sparkles, hash: 'prestataires' },
-    { id: 'rentals', label: 'Locations', icon: KeyRound, hash: 'locations' },
+    { id: 'rentals', label: 'Matériel & Équipements', icon: KeyRound, hash: 'locations' },
     { id: 'events', label: 'Événements', icon: Calendar, hash: 'evenements' },
   ];
 
@@ -191,7 +191,7 @@ export default function LandingVitrineSection() {
           : tab === 'services'
             ? 'Rechercher un prestataire…'
             : tab === 'rentals'
-              ? 'Rechercher une location…'
+              ? 'Rechercher du matériel ou équipement…'
               : 'Rechercher un événement…'
       }
       view="grid"
@@ -207,7 +207,7 @@ export default function LandingVitrineSection() {
           : tab === 'services'
             ? 'Prestataires EventMaster'
             : tab === 'rentals'
-              ? 'Locations EventMaster'
+              ? 'Matériel & Équipements EventMaster'
               : 'Événements EventMaster'
       }
       resultLabel={!loadingCatalog
@@ -216,7 +216,7 @@ export default function LandingVitrineSection() {
           : tab === 'services'
             ? `${serviceItems.length} prestataire${serviceItems.length > 1 ? 's' : ''}`
             : tab === 'rentals'
-              ? `${rentalItems.length} location${rentalItems.length > 1 ? 's' : ''}`
+              ? `${rentalItems.length} offre${rentalItems.length > 1 ? 's' : ''} de matériel`
               : `${eventItems.length} événement${eventItems.length > 1 ? 's' : ''}`
         : undefined}
       chips={chips}
@@ -249,7 +249,7 @@ export default function LandingVitrineSection() {
           : tab === 'services'
             ? 'Filtrer les prestataires'
             : tab === 'rentals'
-              ? 'Filtrer les locations'
+              ? 'Filtrer le matériel & équipements'
               : 'Filtrer les événements'
       }
       filters={
@@ -403,8 +403,8 @@ export default function LandingVitrineSection() {
                   items={pagedRentals}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle="Aucune offre de location"
-                  emptyDescription="Les matériels et équipements en location apparaîtront ici."
+                  emptyTitle="Aucune offre de matériel ou équipement"
+                  emptyDescription="Les matériels et équipements disponibles apparaîtront ici."
                 />
                 <Pagination
                   page={page}
@@ -412,7 +412,7 @@ export default function LandingVitrineSection() {
                   total={rentalItems.length}
                   onPageChange={setPage}
                   onPageSizeChange={setPageSize}
-                  itemLabel="locations"
+                  itemLabel="offres"
                 />
               </>
             )}

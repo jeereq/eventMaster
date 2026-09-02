@@ -999,7 +999,7 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Prestataire',
-    description: 'Publie prestations et locations. Les demandes arrivent dans votre espace.',
+    description: 'Publie prestations, matériel et équipements. Les demandes arrivent dans votre espace.',
     icon: 'briefcase',
   },
   {
@@ -1037,7 +1037,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Marketplace',
-    description: 'Salles, prestataires, locations. Acompte {depositPercent} % hors plateforme · commission vendeur {commissionPercent} %.',
+    description: 'Salles, prestataires, matériel & équipements. Acompte {depositPercent} % hors plateforme · commission vendeur {commissionPercent} %.',
     icon: 'calendar',
   },
   {

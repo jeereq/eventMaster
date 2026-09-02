@@ -487,7 +487,7 @@ export default function AdminCataloguePage() {
   const tabs: Array<{ id: CatalogTab; label: string; count?: number }> = [
     { id: 'venues', label: 'Salles', count: overview?.venues.total },
     { id: 'offerings', label: 'Prestataires', count: overview?.trades?.total ?? overview?.offerings.total },
-    { id: 'rentals', label: 'Locations', count: overview?.rentals?.total },
+    { id: 'rentals', label: 'Matériel & Équipements', count: overview?.rentals?.total },
     { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total },
     { id: 'bookings', label: 'Réservations', count: overview?.bookings.total },
     { id: 'commissions', label: `Commissions ${commissionPct} %`, count: overview?.commissions?.dueCount },
@@ -544,7 +544,7 @@ export default function AdminCataloguePage() {
         {[
           { label: 'Salles publiques', value: overview?.venues.publicCount ?? 0 },
           { label: 'Prestataires publics', value: overview?.trades?.publicCount ?? overview?.offerings.publicCount ?? 0 },
-          { label: 'Locations publiques', value: overview?.rentals?.publicCount ?? 0 },
+          { label: 'Matériels & Équipements publics', value: overview?.rentals?.publicCount ?? 0 },
           { label: 'Devis nouveaux', value: overview?.inquiries.newCount ?? 0 },
           { label: 'Réservations demandées', value: overview?.bookings.requestedCount ?? 0 },
           { label: 'Commissions dues', value: formatFc(overview?.commissions?.dueFc ?? 0) },
@@ -562,7 +562,7 @@ export default function AdminCataloguePage() {
           { label: 'Packs enregistrés', value: overview?.engagement?.packs ?? 0 },
           { label: 'GMV salles', value: formatFc(overview?.gmv?.venueFc ?? 0) },
           { label: 'GMV prestataires', value: formatFc(overview?.gmv?.tradeFc ?? 0) },
-          { label: 'GMV locations', value: formatFc(overview?.gmv?.rentalFc ?? 0) },
+          { label: 'GMV matériel & équipements', value: formatFc(overview?.gmv?.rentalFc ?? 0) },
         ].map((card) => (
           <div key={card.label} className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground">{card.value}</div>
@@ -747,11 +747,11 @@ export default function AdminCataloguePage() {
               items={catalogItems}
               mode={view === 'list' ? 'list' : 'grid'}
               gridCols={gridCols}
-              emptyTitle={tab === 'venues' ? 'Aucune salle' : tab === 'rentals' ? 'Aucune location' : 'Aucun prestataire'}
+              emptyTitle={tab === 'venues' ? 'Aucune salle' : tab === 'rentals' ? 'Aucun matériel / équipement' : 'Aucun prestataire'}
               emptyDescription={tab === 'venues'
                 ? 'Les fiches salles apparaîtront ici.'
                 : tab === 'rentals'
-                  ? 'Les locations publiées apparaîtront ici.'
+                  ? 'Le matériel et les équipements publiés apparaîtront ici.'
                   : 'Les prestations publiées apparaîtront ici.'}
             />
             {catalogItems.length > 0 && (

@@ -287,8 +287,8 @@ export default function MarketplaceDeskPage() {
       if (editing) await api.put(`/marketplace/services/${editing.id}`, payload);
       else await api.post('/marketplace/services', payload);
       setSuccess(publish
-        ? (isServiceRentalCategory(draft.category) ? 'Location publiée.' : 'Prestation publiée.')
-        : (isServiceRentalCategory(draft.category) ? 'Location enregistrée.' : 'Prestation enregistrée.'));
+        ? (isServiceRentalCategory(draft.category) ? 'Matériel / équipement publié.' : 'Prestation publiée.')
+        : (isServiceRentalCategory(draft.category) ? 'Matériel / équipement enregistré.' : 'Prestation enregistrée.'));
       setEditorOpen(false);
       await load();
       await refreshProfile?.();
@@ -303,7 +303,7 @@ export default function MarketplaceDeskPage() {
     if (!confirm(`Supprimer « ${item.title} » ?`)) return;
     try {
       await api.delete(`/marketplace/services/${item.id}`);
-      setSuccess(isServiceRentalCategory(item.category) ? 'Location supprimée.' : 'Prestation supprimée.');
+      setSuccess(isServiceRentalCategory(item.category) ? 'Matériel / équipement supprimé.' : 'Prestation supprimée.');
       await load();
     } catch (err: any) {
       setError(err.message || 'Suppression impossible.');
@@ -373,7 +373,7 @@ export default function MarketplaceDeskPage() {
     <div className="space-y-6">
       <PageHeader
         title="Marketplace"
-        description={`Prestations, locations, devis, réservations de dates. Acompte hors plateforme · commission vendeur ${commissionPercent(site)} % (≠ abo SaaS).`}
+        description={`Prestations, matériel & équipements, devis, réservations de dates. Acompte hors plateforme · commission vendeur ${commissionPercent(site)} % (≠ abo SaaS).`}
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Marketplace' }]} />
         }
@@ -395,7 +395,7 @@ export default function MarketplaceDeskPage() {
                 disabled={servicesAtLimit}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                {listingIsRental ? 'Nouvelle location' : 'Nouvelle prestation'}
+                {listingIsRental ? 'Nouveau matériel' : 'Nouvelle prestation'}
               </Button>
             </div>
           ) : undefined
@@ -431,7 +431,7 @@ export default function MarketplaceDeskPage() {
             tab === 'rentals' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
           )}
         >
-          Locations
+          Matériel & Équipements
         </button>
         <button
           type="button"
@@ -483,12 +483,12 @@ export default function MarketplaceDeskPage() {
             setFilterMobility('');
           }}
           resultLabel={`${filteredServices.length} ${listingIsRental
-            ? `location${filteredServices.length > 1 ? 's' : ''}`
+            ? `matériel${filteredServices.length > 1 ? 's' : ''}`
             : `prestation${filteredServices.length > 1 ? 's' : ''}`}`}
-          modalTitle={listingIsRental ? 'Filtrer les locations' : 'Filtrer les prestations'}
+          modalTitle={listingIsRental ? 'Filtrer le matériel & équipements' : 'Filtrer les prestations'}
           filters={
             <>
-              <CatalogueFilterField label={listingIsRental ? 'Type de location' : 'Métier'}>
+              <CatalogueFilterField label={listingIsRental ? 'Type de matériel' : 'Prestataire'}>
                 <CatalogueChoicePills
                   options={(listingIsRental ? SERVICE_RENTAL_CATEGORIES : SERVICE_TRADE_CATEGORIES).map((id) => ({
                     id,
@@ -546,9 +546,9 @@ export default function MarketplaceDeskPage() {
       ) : listingPool.length === 0 ? (
           <EmptyState
             icon={listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
-            title={listingIsRental ? 'Aucune location' : 'Aucune prestation'}
+            title={listingIsRental ? 'Aucun matériel / équipement' : 'Aucune prestation'}
             description={listingIsRental
-              ? 'Ajoutez une location d’habits, de véhicule ou de matériel, puis publiez la fiche.'
+              ? 'Ajoutez du matériel (mobilier, véhicule, sonorisation, tentes…), puis publiez la fiche.'
               : 'Ajoutez un traiteur, un DJ, un photographe… puis publiez la fiche.'}
             action={
               <Button
@@ -557,16 +557,16 @@ export default function MarketplaceDeskPage() {
                 disabled={servicesAtLimit}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                {listingIsRental ? 'Créer une location' : 'Créer une prestation'}
+                {listingIsRental ? 'Créer un équipement' : 'Créer une prestation'}
               </Button>
             }
           />
         ) : filteredServices.length === 0 ? (
           <EmptyState
             icon={listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
-            title={listingIsRental ? 'Aucune location pour ces filtres' : 'Aucune prestation pour ces filtres'}
+            title={listingIsRental ? 'Aucun matériel pour ces filtres' : 'Aucune prestation pour ces filtres'}
             description={listingIsRental
-              ? 'Élargissez le type de location, la ville ou la visibilité.'
+              ? 'Élargissez le type de matériel, la ville ou la visibilité.'
               : 'Élargissez la catégorie, la ville ou la visibilité.'}
           />
         ) : (
@@ -670,7 +670,7 @@ export default function MarketplaceDeskPage() {
             total={filteredServices.length}
             onPageChange={setServicesPage}
             onPageSizeChange={setServicesPageSize}
-            itemLabel={listingIsRental ? 'locations' : 'prestations'}
+            itemLabel={listingIsRental ? 'équipements' : 'prestations'}
           />
           </>
         )}
@@ -679,9 +679,9 @@ export default function MarketplaceDeskPage() {
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         title={editing
-          ? `${isServiceRentalCategory(editing.category) ? 'Location' : 'Prestation'} — ${editing.title}`
+          ? `${isServiceRentalCategory(editing.category) ? 'Matériel & Équipement' : 'Prestation'} — ${editing.title}`
           : isServiceRentalCategory(draft.category)
-            ? 'Nouvelle location'
+            ? 'Nouveau matériel & équipement'
             : 'Nouvelle prestation'}
         description="Visible sur le marketplace uniquement après publication."
         size="xl"

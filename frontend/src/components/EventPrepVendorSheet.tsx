@@ -184,8 +184,8 @@ export default function EventPrepVendorSheet({
 
   const kindLabel = (lane: SheetOffer['lane']) => {
     if (lane === 'venue') return 'Salle';
-    if (lane === 'rental') return 'Location';
-    return 'Métier';
+    if (lane === 'rental') return 'Matériel & Équipement';
+    return 'Prestataire';
   };
 
   return (

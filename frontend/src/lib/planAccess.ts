@@ -120,7 +120,7 @@ export const QUOTA_GUIDES: Record<QuotaKind, PlanLimitGuide> = {
   },
   services: {
     title: 'Limite de prestations',
-    what: 'Le nombre de fiches prestataire / location est plafonné.',
+    what: 'Le nombre de fiches prestataire / matériel & équipements est plafonné.',
     why: 'Chaque fiche apparaît sur le marketplace et consomme photos, carte et demandes.',
     how: 'Passez au forfait Prestataire ou Salle & presta, ou archivez une fiche pour en créer une autre.',
     href: '/dashboard/billing',

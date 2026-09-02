@@ -14,7 +14,7 @@ export const SITE_CONTACT = {
 export const FOOTER_FEATURES = [
   'Préparez votre événement en un clic',
   'Invitations, réponses, plan de table, accueil QR',
-  'Marketplace : salles, prestataires, locations',
+  'Marketplace : salles, prestataires, matériel & équipements',
   'Favoris, packs budget et réservations',
   'Événements publics et billets',
   'Tout dans le navigateur — l’app arrive bientôt',
@@ -75,7 +75,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Parcourez salles, prestataires et locations sans compte. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
+      'Oui. Parcourez salles, prestataires, matériel et équipements sans compte. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
   },
   {
     id: 'marketplace-booking',

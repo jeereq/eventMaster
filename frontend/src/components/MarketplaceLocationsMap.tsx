@@ -1067,7 +1067,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           listingSearch
             ? presentKinds.length <= 1
               ? `Rechercher ${catalogueKindFilterLabel(presentKinds[0] || 'all').toLowerCase()}…`
-              : 'Rechercher salles, prestataires, locations ou événements…'
+              : 'Rechercher salles, prestataires, matériel ou événements…'
             : 'Chercher un lieu sur la carte…'
         }
         className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-border bg-surface text-sm shadow-[var(--shadow-soft)]"

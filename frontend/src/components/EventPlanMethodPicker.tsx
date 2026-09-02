@@ -24,7 +24,7 @@ const SIM_METHODS: Array<{
     id: 'ai',
     label: 'Assisté par l’IA',
     kicker: 'Recommandation',
-    description: 'Vous décrivez l’événement en quelques phrases. L’IA propose un mix salle, prestataires et locations.',
+    description: 'Vous décrivez l’événement en quelques phrases. L’IA propose un mix salle, prestataires et matériel & équipements.',
     icon: Wand2,
   },
 ];
