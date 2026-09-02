@@ -260,8 +260,6 @@ export default function LandingInvitationPreview({
  : visibleElements;
 
  return (
- <>
- <link href={LANDING_PREVIEW_FONTS} rel="stylesheet" />
  <div
  className={[
  'rounded-[var(--radius-card)] border shadow-[var(--shadow-soft)] transition-all duration-300 flex flex-col relative overflow-hidden',
@@ -304,6 +302,5 @@ export default function LandingInvitationPreview({
  ))}
  </div>
  </div>
- </>
  );
 }

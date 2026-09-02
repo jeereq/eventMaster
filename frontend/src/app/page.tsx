@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
+import dynamic from 'next/dynamic';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingProfileGate from '@/components/landing/LandingProfileGate';
 import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
@@ -13,14 +14,33 @@ import LandingRoomEditorShowcase from '@/components/landing/LandingRoomEditorSho
 import LandingMobileStickyBar from '@/components/landing/LandingMobileStickyBar';
 import FaqSection from '@/components/landing/FaqSection';
 import LandingModelsSection from '@/components/landing/LandingModelsSection';
-import LandingAiSimulationShowcase from '@/components/landing/LandingAiSimulationShowcase';
-import LandingVitrineSection from '@/components/landing/LandingVitrineSection';
-import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Modal, Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+
+// Chargement différé des sections lourdes sous la ligne de flottaison
+const LandingAiSimulationShowcase = dynamic(
+  () => import('@/components/landing/LandingAiSimulationShowcase'),
+  {
+    loading: () => <div className="py-16 text-center text-xs text-muted">Chargement du simulateur IA…</div>,
+  },
+);
+
+const LandingVitrineSection = dynamic(
+  () => import('@/components/landing/LandingVitrineSection'),
+  {
+    loading: () => <div className="py-16 text-center text-xs text-muted">Chargement de la vitrine…</div>,
+  },
+);
+
+const LandingInvitationPreview = dynamic(
+  () => import('@/components/landing/LandingInvitationPreview'),
+  {
+    ssr: false,
+  },
+);
 import {
   getLandingProfile,
   isLandingProfileId,

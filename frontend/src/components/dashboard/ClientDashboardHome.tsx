@@ -594,7 +594,7 @@ export default function ClientDashboardHome() {
 
         {/* Détails précis des forfaits disponibles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between gap-3">
+          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
@@ -609,13 +609,13 @@ export default function ClientDashboardHome() {
             </div>
             <Link
               href="/register?kind=ORGANIZER&intent=personal&plan=PERSONAL_100"
-              className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border"
+              className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
             >
               Voir Particulier 100 <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
-          <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between gap-3">
+          <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between h-full gap-3">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20 text-primary">
@@ -630,13 +630,13 @@ export default function ClientDashboardHome() {
             </div>
             <Link
               href="/register?kind=ORGANIZER&intent=pro&plan=STANDARD"
-              className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20"
+              className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
             >
               Découvrir Business <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
-          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between gap-3 sm:col-span-2 lg:col-span-1">
+          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 sm:col-span-2 lg:col-span-1">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
@@ -651,7 +651,7 @@ export default function ClientDashboardHome() {
             </div>
             <Link
               href="/register?kind=VENDOR&intent=vendor&action=listing"
-              className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border"
+              className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
             >
               Créer mon compte Pro <ArrowRight className="w-3 h-3" />
             </Link>
