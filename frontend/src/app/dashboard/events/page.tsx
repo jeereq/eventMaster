@@ -818,6 +818,16 @@ function EventsPageInner() {
  setShowEventModal(true);
  };
 
+ useEffect(() => {
+  if (searchParams.get('create') !== '1') return;
+  openCreateEventModal();
+  const next = new URLSearchParams(searchParams.toString());
+  next.delete('create');
+  const qs = next.toString();
+  router.replace(qs ? `/dashboard/events?${qs}` : '/dashboard/events', { scroll: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [searchParams]);
+
  const defaultRsvpInviteBody = (title: string) =>
  `Bonjour {{firstName}},
 
@@ -1909,7 +1919,7 @@ Merci de confirmer votre présence :
  ) : (
  <>
  {events.length === 0 && !protocolDesk && (
- <GettingStartedChecklist hasEvents={false} />
+ <GettingStartedChecklist hasEvents={false} onCreateEvent={openCreateEventModal} />
  )}
  {events.length > 0 && (
  <CatalogueFilterBar

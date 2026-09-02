@@ -4,12 +4,13 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  CreditCard, Check, Loader2, Sparkles,
+  CreditCard, Check, Loader2, Sparkles, Smartphone,
   Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck, FileText, ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Alert, SkeletonBillingView, Button } from '@/components/ui';
+import { Alert, Input, SkeletonBillingView, Button } from '@/components/ui';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import PaymentPendingView from '@/components/PaymentPendingView';
@@ -101,6 +102,7 @@ const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
 
 function BillingPageInner() {
   const { tenant } = useAuth();
+  const { site } = usePlatformSite();
   const searchParams = useSearchParams();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [dynamicPlans, setDynamicPlans] = useState<Record<string, any> | null>(null);
@@ -113,8 +115,11 @@ function BillingPageInner() {
   const [showComparison, setShowComparison] = useState(false);
   const [invoices, setInvoices] = useState<PlatformInvoiceItem[]>([]);
 
-  const [saasPaymentMode, setSaasPaymentMode] = useState<'manual' | 'flexpay'>('manual');
-  const [payMethod, setPayMethod] = useState<'card' | 'mobile'>('card');
+  const [saasPaymentMode, setSaasPaymentMode] = useState<'manual' | 'flexpay'>(
+    site.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual',
+  );
+  const [payMethod, setPayMethod] = useState<'card' | 'mobile'>('mobile');
+  const [payOperator, setPayOperator] = useState<'orange' | 'mpesa' | 'airtel'>('orange');
   const [payPhone, setPayPhone] = useState('');
   const [pendingFlexPayRequestId, setPendingFlexPayRequestId] = useState<string | null>(null);
   const [pendingPayMethod, setPendingPayMethod] = useState<'card' | 'mobile'>('card');
@@ -131,6 +136,8 @@ function BillingPageInner() {
       setDynamicPlans(plansData || billingData.plans || null);
       if (plansData?.saasPaymentMode === 'flexpay' || plansData?.saasPaymentMode === 'manual') {
         setSaasPaymentMode(plansData.saasPaymentMode);
+      } else if (site.saasPaymentMode === 'flexpay' || site.saasPaymentMode === 'manual') {
+        setSaasPaymentMode(site.saasPaymentMode);
       }
       if (billingData?.billingCycle === 'annual' || billingData?.billingCycle === 'monthly') {
         setBillingCycle(billingData.billingCycle);
@@ -293,7 +300,7 @@ function BillingPageInner() {
           requestedPlan: plan,
           durationDays,
           paymentMethod: payMethod,
-          ...(payMethod === 'mobile' ? { phone: payPhone.trim() } : {}),
+          ...(payMethod === 'mobile' ? { phone: payPhone.trim(), operator: payOperator } : {}),
         });
         if (data.checkoutUrl) {
           window.location.href = data.checkoutUrl;
@@ -525,48 +532,81 @@ function BillingPageInner() {
       </div>
 
       {saasPaymentMode === 'flexpay' && (
-        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-3 max-w-xl mx-auto w-full">
-          <p className="text-sm font-semibold text-foreground">Paiement FlexPay</p>
-          <p className="text-xs text-muted">
-            Choisissez Visa/Mastercard ou Mobile Money, puis cliquez sur le forfait souhaité.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setPayMethod('card')}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${
-                payMethod === 'card' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
-              }`}
-            >
-              Visa / Mastercard
-            </button>
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4 max-w-xl mx-auto w-full">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Comment voulez-vous payer ?</p>
+            <p className="text-xs text-muted mt-0.5">
+              Choisissez Mobile Money ou carte, puis cliquez sur le forfait à activer.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setPayMethod('mobile')}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border ${
-                payMethod === 'mobile' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition ${
+                payMethod === 'mobile'
+                  ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                  : 'border-border bg-surface text-muted hover:text-foreground'
               }`}
             >
-              Mobile Money (Orange, M-Pesa, Airtel)
+              <Smartphone className="w-5 h-5" />
+              Mobile Money
+              <span className="text-[10px] font-medium opacity-80">Orange · M-Pesa · Airtel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPayMethod('card')}
+              className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition ${
+                payMethod === 'card'
+                  ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                  : 'border-border bg-surface text-muted hover:text-foreground'
+              }`}
+            >
+              <CreditCard className="w-5 h-5" />
+              Carte bancaire
+              <span className="text-[10px] font-medium opacity-80">Visa · Mastercard</span>
             </button>
           </div>
           {payMethod === 'mobile' && (
-            <>
-              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-muted">
-                <span className="font-semibold text-foreground">Opérateurs acceptés :</span>
-                <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-600 font-bold text-[11px] border border-orange-500/20">Orange Money</span>
-                <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 font-bold text-[11px] border border-red-500/20">M-Pesa Vodacom</span>
-                <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 font-bold text-[11px] border border-rose-500/20">Airtel Money</span>
-                <span className="px-2 py-0.5 rounded-md bg-surface-muted text-muted font-medium text-[11px] border border-border">Afrimoney</span>
+            <div className="space-y-3 animate-fade-in">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { id: 'orange' as const, label: 'Orange Money', color: 'text-orange-600 bg-orange-500/10 border-orange-500/30' },
+                  { id: 'mpesa' as const, label: 'M-Pesa', color: 'text-red-600 bg-red-500/10 border-red-500/30' },
+                  { id: 'airtel' as const, label: 'Airtel Money', color: 'text-rose-600 bg-rose-500/10 border-rose-500/30' },
+                ].map((op) => (
+                  <button
+                    key={op.id}
+                    type="button"
+                    onClick={() => setPayOperator(op.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                      payOperator === op.id ? op.color : 'border-border bg-surface text-muted opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    {op.label}
+                  </button>
+                ))}
               </div>
-              <input
+              <Input
+                label="Numéro Mobile Money"
                 type="tel"
                 value={payPhone}
                 onChange={(e) => setPayPhone(e.target.value)}
-                placeholder="Ex. 24389XXXXXXX (Orange, Vodacom, Airtel)"
-                className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-white"
+                placeholder="Ex. 24389XXXXXXX ou 089XXXXXXX"
+                hint={`Paiement ${FLEXPAY_MOBILE_OPERATORS_LABEL}. Validez le PIN sur votre téléphone.`}
               />
-            </>
+            </div>
+          )}
+          {payMethod === 'card' && (
+            <div className="p-3 rounded-xl bg-surface-muted border border-border text-xs space-y-1 animate-fade-in">
+              <p className="font-semibold text-foreground inline-flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-primary" />
+                Paiement sécurisé par carte
+              </p>
+              <p className="text-[11px] text-muted">
+                Après avoir choisi un forfait, vous serez redirigé vers FlexPay pour payer en Francs Congolais.
+              </p>
+            </div>
           )}
           {pendingFlexPayRequestId && (
             <PaymentPendingView

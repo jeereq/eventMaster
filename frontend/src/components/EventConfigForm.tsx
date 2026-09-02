@@ -13,6 +13,7 @@ import {
   Search,
   Ticket,
   Sparkles,
+  Check,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
@@ -62,6 +63,8 @@ import {
   type TicketPricingMode,
 } from '@/lib/ticketPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
+import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 
 const SELECT_CLASS =
   'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
@@ -89,6 +92,7 @@ type RoomOption = {
 type TemplateOption = {
   id: string;
   name: string;
+  content?: unknown;
 };
 
 type EventConfigFormProps = {
@@ -992,31 +996,9 @@ export default function EventConfigForm({
                   Chargement de la carte…
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="Latitude"
-                  type="number"
-                  step="any"
-                  value={latitude}
-                  onChange={(e) => {
-                    setLatitude(e.target.value);
-                    syncMarker(e.target.value, longitude);
-                  }}
-                  placeholder="-4.3014"
-                />
-                <Input
-                  label="Longitude"
-                  type="number"
-                  step="any"
-                  value={longitude}
-                  onChange={(e) => {
-                    setLongitude(e.target.value);
-                    syncMarker(latitude, e.target.value);
-                  }}
-                  placeholder="15.3048"
-                />
-              </div>
-              <p className="text-[11px] text-muted">Cliquez sur la carte ou faites glisser le marqueur.</p>
+              <p className="text-[11px] text-muted">
+                Cliquez sur la carte ou faites glisser le marqueur — les coordonnées GPS sont enregistrées automatiquement.
+              </p>
             </div>
           </section>
         )}
@@ -1282,23 +1264,58 @@ export default function EventConfigForm({
               <p className="text-[11px] text-muted">Envoyés aux invités encore « en attente ».</p>
             </label>
 
-            <label className="block space-y-1.5">
+            <div className="block space-y-2">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
                 <LayoutTemplate className="w-3.5 h-3.5" />
-                Modèle de formulaire RSVP
+                Modèle de réponses d’invitation
               </span>
-              <select
-                value={formTemplateId}
-                onChange={(e) => setFormTemplateId(e.target.value)}
-                className={SELECT_CLASS}
-              >
-                <option value="">Aucun — je configurerai plus tard</option>
-                {templates.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+              <p className="text-[11px] text-muted">
+                Choisissez le visuel RSVP que vos invités verront. Aperçu en direct.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormTemplateId('')}
+                  className={cn(
+                    'rounded-xl border p-3 text-left min-h-[7rem] flex flex-col justify-between transition',
+                    !formTemplateId
+                      ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                      : 'border-border hover:border-primary/40',
+                  )}
+                >
+                  <span className="text-[11px] font-bold text-foreground">Plus tard</span>
+                  <span className="text-[10px] text-muted">Je configurerai le formulaire ensuite.</span>
+                </button>
+                {templates.map((item) => {
+                  const selected = formTemplateId === item.id;
+                  const preview = templateContentToLandingPreview({
+                    id: item.id,
+                    name: item.name,
+                    content: item.content,
+                  });
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setFormTemplateId(item.id)}
+                      className={cn(
+                        'rounded-xl border overflow-hidden text-left transition relative',
+                        selected
+                          ? 'border-primary ring-2 ring-primary/30'
+                          : 'border-border hover:border-primary/40',
+                      )}
+                    >
+                      <div className="pointer-events-none max-h-[140px] overflow-hidden">
+                        <LandingInvitationPreview template={preview} compact className="!rounded-none !border-0 !shadow-none !min-h-[120px] !max-h-[140px]" />
+                      </div>
+                      <div className="px-2 py-1.5 border-t border-border bg-surface flex items-center justify-between gap-1">
+                        <span className="text-[11px] font-semibold text-foreground truncate">{item.name}</span>
+                        {selected ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
               {templates.length === 0 ? (
                 <p className="text-[11px] text-muted">
                   Aucun modèle pour l’instant. Créez-en un dans{' '}
@@ -1312,7 +1329,7 @@ export default function EventConfigForm({
                   Une invitation e-mail sera créée (ou mise à jour) avec ce modèle.
                 </p>
               )}
-            </label>
+            </div>
 
             {complete && (
               <div className="space-y-3 pt-1 border-t border-border">

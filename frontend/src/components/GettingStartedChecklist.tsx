@@ -30,6 +30,8 @@ export type GettingStartedProps = {
   hasRooms?: boolean;
   hasServices?: boolean;
   preferServices?: boolean;
+  /** Si fourni (page événements), ouvre la modale au lieu de recharger la même URL. */
+  onCreateEvent?: () => void;
 };
 
 function readFlow(): PersistedFlow {
@@ -75,6 +77,7 @@ export default function GettingStartedChecklist({
   hasRooms = false,
   hasServices = false,
   preferServices = false,
+  onCreateEvent,
 }: GettingStartedProps) {
   const [flow, setFlow] = useState<PersistedFlow>({});
   const [ready, setReady] = useState(false);
@@ -159,7 +162,7 @@ export default function GettingStartedChecklist({
         id: 'event',
         title: '1. Créer votre événement',
         description: 'Donnez un nom, une date et un lieu à votre célébration.',
-        href: '/dashboard/events',
+        href: '/dashboard/events?create=1',
         done: hasEvents,
       },
       {
@@ -296,21 +299,38 @@ export default function GettingStartedChecklist({
             );
           }
 
+          const openCreateHere = step.id === 'event' && Boolean(onCreateEvent);
+          const itemClass = cn(
+            'flex items-center gap-2 rounded-lg px-2.5 py-2.5 transition group w-full text-left',
+            !step.done && nextStep?.id === step.id
+              ? 'bg-primary/10 ring-1 ring-primary/20'
+              : 'hover:bg-surface-muted',
+          );
+
           return (
             <li key={step.id}>
-              <Link
-                href={step.href}
-                onClick={() => onStepClick(step.markOnClick)}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-2.5 transition group',
-                    !step.done && nextStep?.id === step.id
-                    ? 'bg-primary/10 ring-1 ring-primary/20'
-                    : 'hover:bg-surface-muted',
-                )}
-              >
-                {content}
-                <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary shrink-0" />
-              </Link>
+              {openCreateHere ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onStepClick(step.markOnClick);
+                    onCreateEvent?.();
+                  }}
+                  className={itemClass}
+                >
+                  {content}
+                  <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary shrink-0" />
+                </button>
+              ) : (
+                <Link
+                  href={step.href}
+                  onClick={() => onStepClick(step.markOnClick)}
+                  className={itemClass}
+                >
+                  {content}
+                  <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary shrink-0" />
+                </Link>
+              )}
             </li>
           );
         })}
@@ -318,14 +338,28 @@ export default function GettingStartedChecklist({
 
       {nextStep && !nextStep.disabled && (
         <div className="mt-4 pt-4 border-t border-border">
-          <Link
-            href={nextStep.href}
-            onClick={() => onStepClick(nextStep.markOnClick)}
-            className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-sm font-medium transition"
-          >
-            Continuer : {nextStep.title}
-            <ChevronRight className="w-4 h-4" />
-          </Link>
+          {nextStep.id === 'event' && onCreateEvent ? (
+            <button
+              type="button"
+              onClick={() => {
+                onStepClick(nextStep.markOnClick);
+                onCreateEvent();
+              }}
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-sm font-medium transition"
+            >
+              Continuer : {nextStep.title}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <Link
+              href={nextStep.href}
+              onClick={() => onStepClick(nextStep.markOnClick)}
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-sm font-medium transition"
+            >
+              Continuer : {nextStep.title}
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
       )}
     </section>
