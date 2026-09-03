@@ -37,6 +37,11 @@ import {
  getCanvasStyle,
  slugifyAnalyticsKey,
 } from '@/lib/rsvpFormFields';
+import {
+ INVITATION_GOOGLE_FONTS_HREF,
+ INVITATION_GOOGLE_FONTS_ID,
+ useHeadStylesheet,
+} from '@/lib/headStylesheet';
 
 interface TemplateItem {
  id: string;
@@ -122,6 +127,7 @@ const lightenColor = (hex: string, percent = 30) => {
 export default function TemplatesPage() {
  const { user, planFeatures, planQuota, tenant } = useAuth();
  const router = useRouter();
+ useHeadStylesheet(INVITATION_GOOGLE_FONTS_HREF, INVITATION_GOOGLE_FONTS_ID);
  /** admin = ouvert depuis la console Super Admin (?tab=templates) ; studio = concepteur organisation */
  type StudioOrigin = 'admin' | 'studio';
  const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
@@ -1400,12 +1406,6 @@ export default function TemplatesPage() {
  <>
  {renderMockupImportModal()}
  <div className="space-y-6">
- {/* Load Google Fonts stylesheet */}
- <link 
- href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap" 
- rel="stylesheet" 
- />
-
  {/* Editor Header */}
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
  <div className="flex items-center gap-3">

@@ -36,6 +36,11 @@ import { guestRsvpUrl } from '@/lib/share';
 import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 import { Skeleton } from '@/components/ui/Skeleton';
+import {
+  INVITATION_GOOGLE_FONTS_HREF,
+  INVITATION_GOOGLE_FONTS_ID,
+  useHeadStylesheet,
+} from '@/lib/headStylesheet';
 
 interface GuestRsvpData {
   id: string;
@@ -151,6 +156,7 @@ export default function RsvpPage() {
   const params = useParams();
   const guestId = params.guestId as string;
   const { site } = usePlatformSite();
+  useHeadStylesheet(INVITATION_GOOGLE_FONTS_HREF, INVITATION_GOOGLE_FONTS_ID);
 
   const [guest, setGuest] = useState<GuestRsvpData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1698,12 +1704,6 @@ export default function RsvpPage() {
       }
       contentClassName="flex flex-col items-center gap-5 max-w-none"
     >
-      {/* Load Google Fonts stylesheet */}
-      <link 
-        href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap" 
-        rel="stylesheet" 
-      />
-
       <InvitationWrapper {...invitationWrapperProps}>
       <div
         style={{

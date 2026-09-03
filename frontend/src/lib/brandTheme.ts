@@ -148,25 +148,19 @@ export function buildBrandFaviconSvg(primary: string, accent: string): string {
 }
 
 function upsertLinkIcon(rel: string, href: string, type = 'image/svg+xml') {
-  const selector =
-    rel === 'icon' || rel === 'shortcut icon'
-      ? 'link[rel="icon"], link[rel="shortcut icon"]'
-      : `link[rel="${rel}"]`;
-  const links = Array.from(document.querySelectorAll<HTMLLinkElement>(selector));
-  if (links.length === 0) {
-    const link = document.createElement('link');
-    link.rel = rel === 'shortcut icon' ? 'icon' : rel;
-    link.type = type;
-    link.href = href;
+  // Nœud marqué à nous — ne jamais .remove() les <link> Next/React
+  // (sinon removeChild null au prochain reconcile du metadata manager).
+  const mark = rel === 'shortcut icon' ? 'icon' : rel;
+  const ATTR = 'data-em-brand-icon';
+  let link = document.querySelector<HTMLLinkElement>(`link[${ATTR}="${mark}"]`);
+  if (!link) {
+    link = document.createElement('link');
+    link.setAttribute(ATTR, mark);
+    link.rel = mark;
     document.head.appendChild(link);
-    return;
   }
-  links[0].rel = rel === 'shortcut icon' ? 'icon' : rel;
-  links[0].type = type;
-  links[0].href = href;
-  links[0].removeAttribute('sizes');
-  links[0].removeAttribute('media');
-  for (let i = 1; i < links.length; i++) links[i].remove();
+  link.type = type;
+  link.href = href;
 }
 
 /** Met à jour favicon + theme-color navigateur selon la marque active. */
