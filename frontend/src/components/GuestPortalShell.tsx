@@ -78,8 +78,8 @@ export default function GuestPortalShell({
   return (
     <div className={cn('em-guest-page flex flex-col min-h-dvh', className)}>
       <CelebrateMood />
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-surface/85 backdrop-blur-md">
-        <div className="page-container max-w-xl mx-auto min-h-12 sm:min-h-14 flex items-center justify-between gap-3 py-2.5">
+      <header className="sticky top-0 z-40 border-b border-border/70 bg-surface/85 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+        <div className="page-container max-w-xl mx-auto min-h-12 sm:min-h-14 flex items-center justify-between gap-2 sm:gap-3 py-2.5 pl-[max(0px,env(safe-area-inset-left))] pr-[max(0px,env(safe-area-inset-right))]">
           {showBrand ? (
             <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-white text-[11px] font-bold shrink-0 shadow-sm">
@@ -88,12 +88,12 @@ export default function GuestPortalShell({
               <span className="font-semibold text-foreground truncate tracking-tight">{brandLabel}</span>
             </Link>
           ) : (
-            <div className="min-w-0 space-y-0.5">
+            <div className="min-w-0 flex-1 space-y-0.5">
               <p className="em-guest-section-label !tracking-[0.14em] truncate">{eyebrow}</p>
               <h1 className="text-sm font-semibold text-foreground truncate tracking-tight">{title}</h1>
             </div>
           )}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {headerRight}
             {guestId && <GuestPortalHomeLink guestId={guestId} />}
             <Link
@@ -112,7 +112,8 @@ export default function GuestPortalShell({
       <main
         className={cn(
           'page-container mx-auto w-full flex-1 max-w-xl py-4 sm:py-6 relative z-[1]',
-          tabs ? 'pb-[calc(5rem+env(safe-area-inset-bottom))]' : 'pb-10',
+          'pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]',
+          tabs ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'pb-10',
           contentClassName,
         )}
         onTouchStart={handleTouchStart}
@@ -145,33 +146,40 @@ export function GuestPortalTabBar({
   activeId,
   onChange,
 }: {
-  tabs: Array<{ id: string; label: string; icon: React.ReactNode }>;
+  tabs: Array<{ id: string; label: string; shortLabel?: string; icon: React.ReactNode }>;
   activeId: string;
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="page-container max-w-xl mx-auto px-2.5 py-2">
+    <div className="page-container max-w-xl mx-auto px-1.5 sm:px-2.5 py-1.5 sm:py-2 pl-[max(0.375rem,env(safe-area-inset-left))] pr-[max(0.375rem,env(safe-area-inset-right))]">
       <div
         className="grid rounded-2xl border border-border bg-surface-muted/80 p-1 gap-0.5"
         style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
       >
         {tabs.map((tab) => {
           const active = tab.id === activeId;
+          const short = tab.shortLabel || tab.label;
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
               aria-pressed={active}
+              aria-label={tab.label}
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 min-h-[3.25rem] px-1 py-1.5 rounded-xl text-[10px] font-semibold transition',
+                'flex flex-col items-center justify-center gap-0.5 min-h-12 sm:min-h-[3.25rem] px-0.5 sm:px-1 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold transition touch-manipulation',
                 active
                   ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
-                  : 'text-muted hover:text-foreground',
+                  : 'text-muted hover:text-foreground active:bg-surface/70',
               )}
             >
-              <span className={cn('transition', active && 'scale-110')}>{tab.icon}</span>
-              <span className="truncate max-w-full leading-tight">{tab.label}</span>
+              <span className={cn('transition', active && 'scale-110')} aria-hidden>
+                {tab.icon}
+              </span>
+              <span className="truncate max-w-full leading-tight px-0.5">
+                <span className="sm:hidden">{short}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </span>
             </button>
           );
         })}

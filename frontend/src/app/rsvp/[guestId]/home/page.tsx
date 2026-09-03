@@ -81,7 +81,8 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
       href={`/rsvp/${item.guestId}`}
       className={cn(
         'block bg-surface border rounded-[var(--radius-card)] p-4 sm:p-5 shadow-[var(--shadow-soft)]',
-        'hover:bg-card-hover hover:border-border-subtle transition group',
+        'hover:bg-card-hover hover:border-border-subtle active:bg-surface-muted transition group touch-manipulation',
+        'min-h-[7rem]',
         item.isCurrent
           ? 'border-primary/40 ring-1 ring-primary/20'
           : 'border-border',

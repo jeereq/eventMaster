@@ -654,11 +654,11 @@ export default function RsvpPage() {
     // Portail invité confirmé — layout plateforme (simple / moderne)
     if (submitted && rsvpStatus === 'ACCEPTED') {
       const guestTabs = [
-        { id: 'badge', label: 'Badge', icon: <Award className="w-4 h-4" /> },
-        { id: 'table', label: 'Ma table', icon: <LayoutGrid className="w-4 h-4" /> },
-        { id: 'route', label: 'Itinéraire', icon: <Navigation className="w-4 h-4" /> },
-        { id: 'guestbook', label: "Livre d'or", icon: <Heart className="w-4 h-4" /> },
-        { id: 'feed', label: 'Actualités', icon: <MessageCircle className="w-4 h-4" /> },
+        { id: 'badge', label: 'Badge', shortLabel: 'Badge', icon: <Award className="w-4 h-4" /> },
+        { id: 'table', label: 'Ma table', shortLabel: 'Table', icon: <LayoutGrid className="w-4 h-4" /> },
+        { id: 'route', label: 'Itinéraire', shortLabel: 'Lieu', icon: <Navigation className="w-4 h-4" /> },
+        { id: 'guestbook', label: "Livre d'or", shortLabel: 'Livre', icon: <Heart className="w-4 h-4" /> },
+        { id: 'feed', label: 'Actualités', shortLabel: 'Actu', icon: <MessageCircle className="w-4 h-4" /> },
       ];
 
       return (
@@ -685,7 +685,7 @@ export default function RsvpPage() {
               onChange={goGuestTab}
             />
           }
-          contentClassName="space-y-5"
+          contentClassName="space-y-5 pb-[calc(10.75rem+env(safe-area-inset-bottom))]"
         >
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
@@ -947,7 +947,7 @@ export default function RsvpPage() {
                       onChange={(e) => setGuestbookMessage(e.target.value)}
                       placeholder="Écrivez votre message de félicitations ou d'amitié ici..."
                       rows={4}
-                      className="w-full px-4 py-3 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none text-foreground placeholder:text-muted"
+                      className="w-full min-h-[6.5rem] px-4 py-3 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none text-foreground placeholder:text-muted"
                     />
                   </div>
 
@@ -987,8 +987,8 @@ export default function RsvpPage() {
                   )}
 
                   <div className="flex items-center justify-between gap-3 pt-2">
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-muted hover:bg-surface-muted text-foreground/80 font-semibold rounded-xl text-xs cursor-pointer transition">
-                      <Image className="w-4 h-4 text-primary" />
+                    <label className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 py-2 bg-surface-muted hover:bg-surface-muted text-foreground/80 font-semibold rounded-xl text-xs cursor-pointer transition touch-manipulation">
+                      <Image className="w-4 h-4 text-primary" aria-hidden />
                       Ajouter des photos
                       <input
                         type="file"
@@ -1002,7 +1002,7 @@ export default function RsvpPage() {
                     <button
                       type="submit"
                       disabled={submittingGuestbook || isGuestbookUploading || (!guestbookMessage.trim() && guestbookPhotos.length === 0)}
-                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-primary/20"
+                      className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-primary/20 touch-manipulation"
                     >
                       {submittingGuestbook ? (
                         <>
@@ -1254,7 +1254,7 @@ export default function RsvpPage() {
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleCreateGuestComment(post.id);
                                 }}
-                                className="flex-1 px-3.5 py-2 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-xl text-[11px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
+                                className="flex-1 min-h-11 px-3.5 py-2.5 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-xl text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
                               />
                               <button
                                 onClick={() => handleCreateGuestComment(post.id)}
@@ -1280,7 +1280,7 @@ export default function RsvpPage() {
         {/* Expanded Image Modal with Carousel */}
         {expandedImages.length > 0 && (
           <div
-            className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center z-50 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
             role="dialog"
             aria-modal="true"
             aria-label={
@@ -1367,36 +1367,37 @@ export default function RsvpPage() {
           </div>
         )}
 
-        {/* Bouton sticky Pass Express en bas d'écran */}
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-full max-w-sm px-4">
+        {/* Bouton sticky Pass Express — au-dessus de la barre d’onglets + safe-area */}
+        <div className="fixed left-1/2 -translate-x-1/2 z-30 w-full max-w-sm px-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] pointer-events-none">
           <button
             type="button"
             onClick={() => setShowFullScreenQr(true)}
-            className="w-full py-3 px-4 rounded-2xl bg-slate-900 text-white shadow-2xl flex items-center justify-between border border-white/15 active:scale-95 transition-all hover:bg-slate-800 cursor-pointer"
+            className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-slate-900 text-white shadow-2xl flex items-center justify-between gap-3 border border-white/15 active:scale-[0.98] transition-all hover:bg-slate-800 cursor-pointer touch-manipulation"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow-xs">
-                <QrCode className="w-4 h-4" />
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 shrink-0 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow-xs">
+                <QrCode className="w-4 h-4" aria-hidden />
               </div>
-              <div className="text-left">
-                <p className="text-xs font-bold leading-tight">Mon Pass d&apos;entrée QR</p>
-                <p className="text-[11px] text-white/70">
+              <div className="text-left min-w-0">
+                <p className="text-sm font-bold leading-tight truncate">Mon Pass d&apos;entrée QR</p>
+                <p className="text-xs text-white/70 truncate">
                   {guest.tableDetails?.tableName
                     ? `${guest.tableDetails.tableName}${guest.tableDetails.seatIndex != null ? ` • Place ${guest.tableDetails.seatIndex + 1}` : ''}`
                     : 'Toucher pour afficher le pass'}
                 </p>
               </div>
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white">
+            <span className="hidden min-[380px]:inline text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white shrink-0">
               Plein écran
             </span>
+            <Maximize2 className="w-4 h-4 shrink-0 opacity-80 min-[380px]:hidden" aria-hidden />
           </button>
         </div>
 
         {/* Modal QR Code Plein Écran & Contraste Élevé pour le scan d'accueil */}
         {showFullScreenQr && (
           <div
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fade-in"
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] animate-fade-in"
             role="dialog"
             aria-modal="true"
             aria-labelledby="guest-pass-qr-title"
@@ -1507,7 +1508,7 @@ export default function RsvpPage() {
 
   const renderRsvpFieldInput = (field: RsvpField) => {
     const options = parseFieldOptions(field.options);
-    const inputClass = 'w-full px-3.5 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface';
+    const inputClass = 'w-full min-h-11 px-3.5 py-2.5 border border-border rounded-xl text-base sm:text-sm text-foreground focus:outline-primary bg-surface';
     const value = customFieldValues[field.id];
 
     if (field.type === 'textarea') {
@@ -1681,7 +1682,7 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-            className={`py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-border hover:bg-surface-muted text-muted'}`}
+            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
             <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-foreground/80'}`} />
             <span className="text-xs font-semibold">Oui, je serai présent</span>
@@ -1691,7 +1692,7 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-            className={`py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800' : 'border-border hover:bg-surface-muted text-muted'}`}
+            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
             <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-foreground/80'}`} />
             <span className="text-xs font-semibold">Non, je ne pourrai pas</span>
@@ -1723,7 +1724,7 @@ export default function RsvpPage() {
                 <textarea
                   value={additionalNotes}
                   onChange={e => setAdditionalNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface"
+                  className="w-full min-h-11 px-3 py-2.5 border border-border rounded-xl text-base sm:text-sm text-foreground focus:outline-primary bg-surface"
                   placeholder="Ex: Je serai accompagné(e) de..."
                   rows={2}
                 />
@@ -1736,7 +1737,7 @@ export default function RsvpPage() {
         <button
           type="submit"
           disabled={submitting || rsvpLocked}
-          className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
         >
           {submitting ? (
             <>
@@ -1756,11 +1757,11 @@ export default function RsvpPage() {
   const invitationWrapperProps = template
     ? {
         onSubmit: handleSubmitRsvp,
-        className: 'w-full flex flex-col items-center gap-6',
+        className: 'w-full max-w-full flex flex-col items-center gap-6',
         style: { maxWidth: canvasStyle.maxWidth },
       }
     : {
-        className: 'w-full flex flex-col items-center gap-6',
+        className: 'w-full max-w-full flex flex-col items-center gap-6',
         style: { maxWidth: canvasStyle.maxWidth },
       };
 
@@ -1778,7 +1779,7 @@ export default function RsvpPage() {
           className="!bg-surface border-border"
         />
       }
-      contentClassName="flex flex-col items-center gap-5 max-w-none"
+      contentClassName="flex flex-col items-center gap-5 max-w-none w-full overflow-x-clip"
     >
       <InvitationWrapper {...invitationWrapperProps}>
       <div
@@ -1787,8 +1788,8 @@ export default function RsvpPage() {
           maxWidth: canvasStyle.maxWidth,
           minHeight: canvasStyle.minHeight,
         }}
-        className={`w-full border border-border shadow-[var(--shadow-soft)] relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
-          template && frameType === 'arch' ? 'rounded-t-[240px] border border-amber-200/60' : 'rounded-[var(--radius-card)]'
+        className={`w-full max-w-full border border-border shadow-[var(--shadow-soft)] relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
+          template && frameType === 'arch' ? 'rounded-t-[min(240px,40vw)] border border-amber-200/60' : 'rounded-[var(--radius-card)]'
         }`}
       >
         {/* Top visual envelope flap (only shown if not using custom template) */}
@@ -2469,7 +2470,7 @@ export default function RsvpPage() {
                 <button
                   type="submit"
                   disabled={submitting || rsvpLocked}
-                  className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
                 >
                   {submitting ? (
                     <>
