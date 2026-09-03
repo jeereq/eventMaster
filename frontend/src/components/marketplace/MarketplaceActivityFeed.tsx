@@ -13,7 +13,7 @@ import ImageLightbox from '@/components/marketplace/ImageLightbox';
 import {
   Heart, MessageCircle, Send, Trash2, Loader2, Image as ImageIcon,
   Video, X, ChevronLeft, ChevronRight, Plus, Building2, Sparkles,
-  Share2, Check,
+  Share2, Check, Maximize2,
 } from 'lucide-react';
 
 export type MarketplaceFeedMedia = { url: string; type: 'IMAGE' | 'VIDEO' };
@@ -385,8 +385,8 @@ function VenueCommentBox({
           onKeyDown={(e) => {
             if (e.key === 'Enter') void handleSend();
           }}
-          placeholder="Écrire un message ou poser une question…"
-          className="w-full min-h-11 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+          placeholder="Envoyer un message ou commenter…"
+          className="w-full min-h-11 pl-4 pr-10 rounded-full border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition shadow-2xs"
           aria-label={`Commenter la publication de ${authorLabel}`}
         />
       </div>
@@ -394,7 +394,7 @@ function VenueCommentBox({
         type="button"
         onClick={() => void handleSend()}
         disabled={busy || !draft.trim()}
-        className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         aria-label="Publier le commentaire"
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -403,7 +403,7 @@ function VenueCommentBox({
   );
 }
 
-/** Carte de publication mémoïsée */
+/** Carte de publication format Snapchat Spotlight / Stories */
 const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   post,
   authorLabel,
@@ -434,156 +434,353 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   onOpenLightbox: (urls: string[], index: number) => void;
 }) {
   const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [activeSnapIndex, setActiveSnapIndex] = useState(0);
   const likes = Array.isArray(post.likes) ? post.likes : [];
   const liked = Boolean(myLike && likes.includes(myLike));
   const media = (post.mediaUrls || []) as MarketplaceFeedMedia[];
   const images = media
     .filter((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))
     .map((m) => m.url);
+  const hasMedia = media.length > 0;
   const commentCount = post.comments?.length ?? 0;
   const visibleComments = commentsExpanded ? post.comments ?? [] : (post.comments ?? []).slice(0, 2);
+
+  const currentMedia = media[activeSnapIndex] || media[0];
+  const isCurrentVideo = currentMedia ? currentMedia.type === 'VIDEO' || isVideoUrl(currentMedia.url) : false;
+
+  const handlePrevSnap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveSnapIndex((prev) => (prev > 0 ? prev - 1 : media.length - 1));
+  };
+
+  const handleNextSnap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveSnapIndex((prev) => (prev < media.length - 1 ? prev + 1 : 0));
+  };
 
   return (
     <article
       id={`post-${post.id}`}
-      className="group rounded-3xl border border-border/90 bg-surface p-4 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200 [content-visibility:auto] [contain-intrinsic-size:0_380px]"
+      className="group/card rounded-[28px] sm:rounded-[32px] border border-border/80 bg-surface shadow-sm hover:shadow-xl transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
     >
-      {/* En-tête de la publication */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className={cn(
-              'w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center border shadow-2xs',
-              isVenue
-                ? 'bg-primary/10 text-primary border-primary/25'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
-            )}
-          >
-            {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-foreground truncate">{authorLabel}</p>
-            <p className="text-xs text-muted">{formatRelativeDate(post.createdAt)}</p>
-          </div>
-        </div>
-
-        {/* Bouton Partager */}
-        <button
-          type="button"
-          onClick={() => onShare(post.id)}
-          className={cn(
-            'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/80 text-xs font-medium transition',
-            isCopied
-              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/25 shadow-2xs'
-              : 'text-muted hover:text-foreground hover:bg-surface-muted bg-surface',
+      {/* ─── CAS 1 : Publication avec Médias (Format Snap Spotlight) ─── */}
+      {hasMedia ? (
+        <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-slate-950 select-none shadow-inner">
+          {/* Barres de progression segmented façon Story Snapchat en cas de multi-snaps */}
+          {media.length > 1 && (
+            <div className="absolute top-2.5 inset-x-3.5 z-30 flex gap-1.5 pointer-events-none">
+              {media.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    'h-1 flex-1 rounded-full transition-all duration-300',
+                    idx === activeSnapIndex
+                      ? 'bg-white shadow-xs'
+                      : idx < activeSnapIndex
+                        ? 'bg-white/80'
+                        : 'bg-white/30 backdrop-blur-xs',
+                  )}
+                />
+              ))}
+            </div>
           )}
-          title="Copier le lien"
-        >
-          {isCopied ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">Copié !</span>
-            </>
-          ) : (
-            <>
-              <Share2 className="w-3.5 h-3.5" />
-              <span className="text-[11px]">Partager</span>
-            </>
-          )}
-        </button>
-      </div>
 
-      {/* Contenu */}
-      {post.content ? (
-        <p className="text-sm sm:text-[15px] text-foreground/90 whitespace-pre-line leading-relaxed font-normal break-words">
-          {post.content}
-        </p>
-      ) : null}
-
-      {/* Médias */}
-      <PostMediaGrid
-        media={media}
-        onOpenImage={(url) => {
-          const idx = images.indexOf(url);
-          if (idx >= 0) onOpenLightbox(images, idx);
-        }}
-      />
-
-      {/* Barre d'actions */}
-      <div className="flex items-center gap-2 pt-1 border-t border-border/50 text-xs text-muted">
-        <button
-          type="button"
-          onClick={() => onToggleLike(post.id)}
-          disabled={isLikeBusy}
-          className={cn(
-            'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
-            liked
-              ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 shadow-2xs'
-              : 'text-muted hover:text-rose-600 hover:bg-rose-500/5 border border-transparent',
-          )}
-          aria-pressed={liked}
-        >
-          <Heart className={cn('w-4 h-4 transition-transform', liked && 'fill-current scale-110')} />
-          <span>{post.likeCount ?? likes.length}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setCommentsExpanded((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-primary hover:bg-primary/5 transition"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span>{commentCount}</span>
-        </button>
-      </div>
-
-      {/* Commentaires */}
-      {commentCount > 0 && (
-        <div className="space-y-2.5 pt-1">
-          <ul className="space-y-2 max-h-52 overflow-y-auto pr-1">
-            {visibleComments.map((c) => (
-              <li
-                key={c.id}
-                className="text-xs rounded-2xl border border-border/80 bg-surface-muted/50 p-3 space-y-1 hover:border-border transition"
-              >
-                <div className="flex justify-between items-center gap-2">
-                  <span className="font-bold text-foreground">{c.authorName}</span>
-                  <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
+          {/* En-tête flottant Story (Profil) */}
+          <div className={cn(
+            'absolute inset-x-3 sm:inset-x-4 z-20 flex items-center justify-between pointer-events-none',
+            media.length > 1 ? 'top-6' : 'top-3 sm:top-4',
+          )}>
+            <div className="pointer-events-auto inline-flex items-center gap-2 p-1 pr-3 sm:pr-3.5 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white shadow-lg transition-transform hover:scale-[1.02]">
+              <div className={cn(
+                'w-8 h-8 rounded-full p-[1.5px] overflow-hidden shrink-0 flex items-center justify-center',
+                isVenue
+                  ? 'bg-gradient-to-tr from-emerald-400 via-teal-400 to-cyan-500'
+                  : 'bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-500',
+              )}>
+                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-white">
+                  {isVenue ? <Building2 className="w-3.5 h-3.5 text-emerald-400" /> : <Sparkles className="w-3.5 h-3.5 text-amber-400" />}
                 </div>
-                <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <div className="min-w-0 flex flex-col justify-center">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-[13px] font-bold text-white truncate max-w-[140px] sm:max-w-[200px] drop-shadow-xs">
+                    {authorLabel}
+                  </span>
+                  <span className={cn(
+                    'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full border',
+                    isVenue
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                      : 'bg-amber-500/20 text-amber-300 border-amber-400/30',
+                  )}>
+                    {isVenue ? 'Salle' : 'Pro'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-white/70 truncate">
+                  {formatRelativeDate(post.createdAt)}
+                </span>
+              </div>
+            </div>
+          </div>
 
-          {commentCount > 2 && (
+          {/* Affichage du média avec interactions Story (Zones gauche/droite pour multi-snaps) */}
+          {isCurrentVideo ? (
+            <video
+              src={currentMedia.url}
+              controls
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div
+              className="relative w-full h-full cursor-pointer group/image"
+              onClick={() => {
+                const idx = images.indexOf(currentMedia.url);
+                onOpenLightbox(images, Math.max(0, idx));
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={sizedMediaUrl(currentMedia.url, 1200)}
+                alt={`Snap publié par ${authorLabel}`}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover/image:scale-[1.02]"
+                loading="lazy"
+              />
+
+              {/* Zones tactiles Snapchat directes (snap précédent / snap suivant) */}
+              {media.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevSnap}
+                    className="absolute left-0 inset-y-0 w-1/4 z-10 cursor-w-resize focus-visible:outline-none"
+                    aria-label="Snap précédent"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleNextSnap}
+                    className="absolute right-0 inset-y-0 w-1/4 z-10 cursor-e-resize focus-visible:outline-none"
+                    aria-label="Snap suivant"
+                  />
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Dock d'actions flottant façon Snapchat Spotlight (sur le côté droit) */}
+          <div className="absolute right-3 bottom-14 sm:bottom-16 z-20 flex flex-col items-center gap-2.5 pointer-events-auto">
+            {/* Bouton Like (Heart) */}
+            <button
+              type="button"
+              onClick={() => onToggleLike(post.id)}
+              disabled={isLikeBusy}
+              className={cn(
+                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                liked && 'border-rose-500/40 bg-black/60 shadow-rose-500/20',
+              )}
+              aria-pressed={liked}
+              title="J'aime"
+            >
+              <Heart className={cn(
+                'w-5 h-5 transition-transform duration-200',
+                liked ? 'text-rose-500 fill-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]' : 'text-white',
+              )} />
+              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5">
+                {post.likeCount ?? likes.length}
+              </span>
+            </button>
+
+            {/* Bouton Commentaires */}
             <button
               type="button"
               onClick={() => setCommentsExpanded((prev) => !prev)}
-              className="w-full min-h-10 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
+              className={cn(
+                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                commentsExpanded && 'border-primary/60 bg-black/70',
+              )}
+              title="Commentaires"
             >
-              {commentsExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
+              <MessageCircle className="w-5 h-5 text-white" />
+              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5">
+                {commentCount}
+              </span>
             </button>
-          )}
+
+            {/* Bouton Partage */}
+            <button
+              type="button"
+              onClick={() => onShare(post.id)}
+              className={cn(
+                'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
+                isCopied && 'border-emerald-400/60 bg-emerald-950/60 text-emerald-300',
+              )}
+              title="Partager"
+            >
+              {isCopied ? (
+                <Check className="w-5 h-5 text-emerald-400 animate-in zoom-in-75" />
+              ) : (
+                <Share2 className="w-5 h-5 text-white" />
+              )}
+              <span className="text-[9px] font-bold drop-shadow-xs -mt-0.5">
+                {isCopied ? 'OK' : 'Partager'}
+              </span>
+            </button>
+
+            {/* Bouton Agrandir / Plein écran Lightbox */}
+            {images.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const idx = images.indexOf(currentMedia.url);
+                  onOpenLightbox(images, Math.max(0, idx));
+                }}
+                className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md"
+                title="Ouvrir la story en plein écran"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Dégradé immersif bas + Légende / Contenu */}
+          <div className="absolute inset-x-0 bottom-0 pt-16 pb-3 px-4 sm:px-5 bg-gradient-to-t from-black/95 via-black/55 to-transparent z-10 text-white rounded-b-[24px] sm:rounded-b-[28px] pointer-events-none flex flex-col gap-1.5">
+            {/* Badge indicateur de snap si multi-snaps */}
+            {media.length > 1 && (
+              <div className="flex items-center gap-2 pointer-events-auto">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10">
+                  Snap {activeSnapIndex + 1} / {media.length}
+                </span>
+                <span className="text-[10px] text-white/60">Touchez les côtés pour défiler</span>
+              </div>
+            )}
+
+            {/* Texte de la publication */}
+            {post.content ? (
+              <p className="text-xs sm:text-sm text-white/95 leading-relaxed font-normal whitespace-pre-line drop-shadow-xs pointer-events-auto line-clamp-3 hover:line-clamp-none transition-all">
+                {post.content}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        /* ─── CAS 2 : Publication texte sans média (Story Texte Snapchat) ─── */
+        <div className={cn(
+          'relative w-full rounded-[24px] sm:rounded-[28px] p-5 sm:p-7 flex flex-col justify-between min-h-[280px] sm:min-h-[320px] overflow-hidden shadow-inner text-white select-none',
+          isVenue
+            ? 'bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900'
+            : 'bg-gradient-to-br from-amber-600 via-rose-600 to-purple-800',
+        )}>
+          {/* En-tête auteur */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-full p-[1.5px] bg-white/30 backdrop-blur-xs flex items-center justify-center">
+                <div className="w-full h-full rounded-full bg-black/20 flex items-center justify-center text-white">
+                  {isVenue ? <Building2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs">{authorLabel}</span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-white/20 border border-white/20 text-white">
+                    {isVenue ? 'Salle' : 'Pro'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/70">{formatRelativeDate(post.createdAt)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Corps du message expressif façon Story Snapchat */}
+          <div className="my-5">
+            <p className="text-base sm:text-lg font-bold text-white leading-snug drop-shadow-sm whitespace-pre-line">
+              « {post.content} »
+            </p>
+          </div>
+
+          {/* Barre d'action intégrée */}
+          <div className="flex items-center justify-between pt-3 border-t border-white/20">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onToggleLike(post.id)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold',
+                  liked && 'bg-rose-500/80 text-white',
+                )}
+              >
+                <Heart className={cn('w-4 h-4', liked && 'fill-current')} />
+                <span>{post.likeCount ?? likes.length}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCommentsExpanded((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>{commentCount}</span>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => onShare(post.id)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+            >
+              {isCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
+              <span>{isCopied ? 'Copié !' : 'Partager'}</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Saisie commentaire */}
-      {!user ? (
-        <div className="pt-2">
-          <Link
-            href={loginHref}
-            className="w-full inline-flex items-center justify-center min-h-11 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
-          >
-            Connectez-vous pour laisser un commentaire
-          </Link>
+      {/* ─── Section Commentaires (dépliable sous la carte) ─── */}
+      {commentsExpanded && (
+        <div className="px-3 pb-3 pt-2 space-y-3 animate-fade-in border-t border-border/50">
+          {commentCount > 0 && (
+            <div className="space-y-2">
+              <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {visibleComments.map((c) => (
+                  <li
+                    key={c.id}
+                    className="text-xs rounded-2xl border border-border/80 bg-surface-muted/50 p-3 space-y-1 hover:border-border transition"
+                  >
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-bold text-foreground">{c.authorName}</span>
+                      <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
+                    </div>
+                    <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
+                  </li>
+                ))}
+              </ul>
+
+              {commentCount > 2 && (
+                <button
+                  type="button"
+                  onClick={() => setCommentsExpanded((prev) => !prev)}
+                  className="w-full min-h-9 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
+                >
+                  {commentsExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Formulaire de commentaire */}
+          {!user ? (
+            <div className="pt-1">
+              <Link
+                href={loginHref}
+                className="w-full inline-flex items-center justify-center min-h-10 px-4 rounded-full border border-dashed border-border bg-surface-muted/40 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+              >
+                Connectez-vous pour laisser un message
+              </Link>
+            </div>
+          ) : (
+            <VenueCommentBox
+              postId={post.id}
+              onSubmit={onSubmitComment}
+              busy={isCommentBusy}
+              authorLabel={authorLabel}
+            />
+          )}
         </div>
-      ) : (
-        <VenueCommentBox
-          postId={post.id}
-          onSubmit={onSubmitComment}
-          busy={isCommentBusy}
-          authorLabel={authorLabel}
-        />
       )}
     </article>
   );

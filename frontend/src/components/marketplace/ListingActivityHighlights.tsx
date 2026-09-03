@@ -74,62 +74,86 @@ export default function ListingActivityHighlights({
         {items.map((post) => {
           const firstImage = post.mediaUrls?.find((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))?.url;
           const isVideo = !firstImage && Boolean(post.mediaUrls?.find((m) => m.type === 'VIDEO' || isVideoUrl(m.url)));
+          const mediaTotal = post.mediaUrls?.length ?? 0;
 
           return (
             <div
               key={post.id}
-              className="group/card rounded-2xl border border-border bg-surface p-3 space-y-2.5 flex flex-col justify-between hover:border-primary/40 hover:shadow-xs transition-all duration-200 snap-start w-[82%] sm:w-auto shrink-0 sm:shrink"
+              className="group/card rounded-2xl sm:rounded-3xl border border-border/80 bg-slate-950 overflow-hidden relative shadow-xs hover:shadow-lg transition-all duration-300 snap-start w-[78%] sm:w-auto shrink-0 sm:shrink aspect-[3/4] flex flex-col justify-between"
             >
-              <div className="space-y-2">
-                {firstImage ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const idx = allImages.indexOf(firstImage);
-                      setLightbox({ urls: allImages, index: Math.max(0, idx) });
-                    }}
-                    className="relative w-full aspect-16/10 rounded-xl overflow-hidden bg-surface-muted block text-left group-hover/card:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition"
-                    aria-label={`Agrandir la photo de ${authorLabel}`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={sizedMediaUrl(firstImage, 640)}
-                      alt={post.content ? `Photo de publication : ${post.content.slice(0, 80)}` : `Publication de ${authorLabel}`}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300"
+              {/* Segmented bar façon story si multi-photos */}
+              {mediaTotal > 1 && (
+                <div className="absolute top-2 inset-x-2.5 z-20 flex gap-1 pointer-events-none">
+                  {Array.from({ length: Math.min(mediaTotal, 4) }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        'h-0.5 flex-1 rounded-full',
+                        idx === 0 ? 'bg-white' : 'bg-white/40',
+                      )}
                     />
-                    {post.mediaUrls.length > 1 && (
-                      <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-bold">
-                        +{post.mediaUrls.length - 1}
-                      </span>
-                    )}
-                  </button>
-                ) : isVideo ? (
-                  <div className="w-full aspect-16/10 rounded-xl overflow-hidden bg-surface-muted border border-border/50 flex items-center justify-center text-muted">
-                    <Sparkles className="w-6 h-6 text-primary" />
-                  </div>
-                ) : null}
+                  ))}
+                </div>
+              )}
 
-                {post.content ? (
-                  <p className="text-xs text-foreground/90 line-clamp-2 leading-relaxed font-normal break-words">
+              {/* Média en arrière-plan */}
+              {firstImage ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idx = allImages.indexOf(firstImage);
+                    setLightbox({ urls: allImages, index: Math.max(0, idx) });
+                  }}
+                  className="absolute inset-0 w-full h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  aria-label={`Ouvrir la story de ${authorLabel}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={sizedMediaUrl(firstImage, 640)}
+                    alt={post.content ? `Snap de ${authorLabel} : ${post.content.slice(0, 60)}` : `Snap de ${authorLabel}`}
+                    loading="lazy"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
+                  />
+                  {mediaTotal > 1 && (
+                    <span className="absolute top-4 right-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/15">
+                      {mediaTotal} snaps
+                    </span>
+                  )}
+                </button>
+              ) : isVideo ? (
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-900 to-slate-950 flex items-center justify-center text-primary">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+              ) : (
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/80 via-teal-800 to-slate-950 p-4 flex items-center justify-center text-center">
+                  <p className="text-xs sm:text-sm font-semibold text-white leading-relaxed line-clamp-4">
+                    « {post.content} »
+                  </p>
+                </div>
+              )}
+
+              {/* Gradient immersif & interactions façon Snapchat */}
+              <div className="relative z-10 mt-auto p-3 pt-12 bg-gradient-to-t from-black/95 via-black/60 to-transparent text-white space-y-2 pointer-events-none">
+                {firstImage && post.content && (
+                  <p className="text-xs text-white/95 line-clamp-2 leading-relaxed drop-shadow-xs font-medium">
                     {post.content}
                   </p>
-                ) : null}
-              </div>
+                )}
 
-              <div className="flex items-center justify-between text-[11px] text-muted pt-2 border-t border-border/50">
-                <span>{formatRelativeDate(post.createdAt)}</span>
-                <div className="flex items-center gap-2.5">
-                  {post.likeCount > 0 && (
-                    <span className="inline-flex items-center gap-1 text-rose-600 font-medium">
-                      <Heart className="w-3 h-3 fill-current" /> {post.likeCount}
-                    </span>
-                  )}
-                  {post.commentCount > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                      <MessageCircle className="w-3 h-3" /> {post.commentCount}
-                    </span>
-                  )}
+                <div className="flex items-center justify-between text-[10px] text-white/75 pt-1">
+                  <span>{formatRelativeDate(post.createdAt)}</span>
+                  <div className="flex items-center gap-2">
+                    {post.likeCount > 0 && (
+                      <span className="inline-flex items-center gap-1 font-semibold text-rose-400">
+                        <Heart className="w-3 h-3 fill-current" /> {post.likeCount}
+                      </span>
+                    )}
+                    {post.commentCount > 0 && (
+                      <span className="inline-flex items-center gap-1 font-semibold text-white/90">
+                        <MessageCircle className="w-3 h-3" /> {post.commentCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
