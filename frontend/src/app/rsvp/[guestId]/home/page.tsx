@@ -47,7 +47,7 @@ interface GuestInvitationsResponse {
 function RsvpBadge({ status }: { status: string }) {
   if (status === 'ACCEPTED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-emerald-50 text-emerald-700 border border-emerald-100">
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-primary/10 text-primary border border-primary/20">
         <CheckCircle2 className="w-3 h-3" /> Confirmé
       </span>
     );
@@ -115,7 +115,7 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
         {item.eventPassed ? (
           <span className="text-[10px] font-semibold text-muted">Terminé</span>
         ) : (
-          <span className="text-[10px] font-semibold text-emerald-600">À venir</span>
+          <span className="text-[10px] font-semibold text-primary">À venir</span>
         )}
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
           {item.rsvp === 'PENDING' ? 'Répondre' : item.rsvp === 'ACCEPTED' ? 'Mon espace' : 'Voir'}
@@ -212,7 +212,7 @@ export default function GuestHomePage() {
       <div className="grid grid-cols-3 gap-2.5">
         {[
           { label: 'Total', value: data.total, tone: 'text-foreground' },
-          { label: 'À venir', value: data.upcomingCount, tone: 'text-emerald-600' },
+          { label: 'À venir', value: data.upcomingCount, tone: 'text-primary' },
           { label: 'Passés', value: data.pastCount, tone: 'text-muted' },
         ].map((stat) => (
           <GuestPortalCard key={stat.label} padding="sm" className="text-center">

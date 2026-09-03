@@ -36,6 +36,7 @@ import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { collectInvitationFontFamilies, useInvitationFonts } from '@/lib/headStylesheet';
+import { DEFAULT_BRAND_PALETTE } from '@/lib/brandTheme';
 
 const GuestTablePlanView = dynamic(() => import('@/app/rsvp/GuestTablePlanView'), {
   ssr: false,
@@ -767,7 +768,7 @@ export default function RsvpPage() {
                         className="w-44 h-44 sm:w-48 sm:h-48"
                       />
                       <span className="absolute inset-0 rounded-[1.25rem] bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <span className="bg-slate-900/80 text-white text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-xs">
+                        <span className="bg-primary/95 text-white text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-xs shadow-sm shadow-primary/30">
                           <Maximize2 className="w-3 h-3" />
                           Plein écran
                         </span>
@@ -960,8 +961,8 @@ export default function RsvpPage() {
                 </div>
 
                 {guestbookSuccess && (
-                  <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <div className="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
                     Message et photos envoyés avec succès.
                   </div>
                 )}
@@ -1404,15 +1405,15 @@ export default function RsvpPage() {
           <button
             type="button"
             onClick={() => setShowFullScreenQr(true)}
-            className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-slate-900 text-white shadow-2xl flex items-center justify-between gap-3 border border-white/15 active:scale-[0.98] transition-all hover:bg-slate-800 cursor-pointer touch-manipulation"
+            className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-between gap-3 border border-primary/40 active:scale-[0.98] transition-all hover:bg-primary-hover cursor-pointer touch-manipulation"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 shrink-0 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-9 h-9 shrink-0 rounded-xl bg-white/15 text-white flex items-center justify-center font-bold text-xs ring-1 ring-white/25">
                 <QrCode className="w-4 h-4" aria-hidden />
               </div>
               <div className="text-left min-w-0">
                 <p className="text-sm font-bold leading-tight truncate">Mon Pass d&apos;entrée QR</p>
-                <p className="text-xs text-white/70 truncate">
+                <p className="text-xs text-white/80 truncate">
                   {guest.tableDetails?.tableName
                     ? `${guest.tableDetails.tableName}${guest.tableDetails.seatIndex != null ? ` • Place ${guest.tableDetails.seatIndex + 1}` : ''}`
                     : 'Toucher pour afficher le pass'}
@@ -1422,7 +1423,7 @@ export default function RsvpPage() {
             <span className="hidden min-[380px]:inline text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white shrink-0">
               Plein écran
             </span>
-            <Maximize2 className="w-4 h-4 shrink-0 opacity-80 min-[380px]:hidden" aria-hidden />
+            <Maximize2 className="w-4 h-4 shrink-0 opacity-90 min-[380px]:hidden" aria-hidden />
           </button>
         </div>
 
@@ -1446,29 +1447,30 @@ export default function RsvpPage() {
             </button>
 
             <div
-              className="bg-white rounded-3xl p-6 sm:p-8 text-center max-w-sm w-full shadow-2xl space-y-4 animate-scale-up"
+              className="bg-surface rounded-3xl p-6 sm:p-8 text-center max-w-sm w-full shadow-2xl space-y-4 animate-scale-up border border-border"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-1">
                 <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-1 rounded-full">
                   Pass Invité Jour J
                 </span>
-                <h3 id="guest-pass-qr-title" className="text-xl font-bold text-slate-900">
+                <h3 id="guest-pass-qr-title" className="text-xl font-bold text-foreground">
                   {guest.firstName} {guest.lastName}
                 </h3>
               </div>
 
               {guest.tableDetails?.tableName && (
-                <div className="py-2.5 px-4 rounded-xl bg-slate-50 border border-slate-200 text-left">
-                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Placement assigné</p>
-                  <p className="text-base font-extrabold text-slate-900">
+                <div className="py-2.5 px-4 rounded-xl bg-surface-muted border border-border text-left">
+                  <p className="text-[10px] uppercase font-bold text-muted tracking-wider">Placement assigné</p>
+                  <p className="text-base font-extrabold text-foreground">
                     {guest.tableDetails.tableName}
                     {guest.tableDetails.seatIndex != null ? ` • Siège n° ${guest.tableDetails.seatIndex + 1}` : ''}
                   </p>
                 </div>
               )}
 
-              <div className="p-4 bg-white border-2 border-slate-900 rounded-2xl inline-block shadow-inner">
+              {/* Fond blanc volontaire : contraste maximal pour le scan d'accueil */}
+              <div className="p-4 bg-white border-2 border-foreground rounded-2xl inline-block shadow-inner">
                 <img
                   src={getGuestQrImageUrl(guest.id, 320)}
                   alt={`Pass QR de ${guest.firstName} ${guest.lastName}`}
@@ -1476,14 +1478,14 @@ export default function RsvpPage() {
                 />
               </div>
 
-              <p className="text-xs text-slate-500 leading-snug">
+              <p className="text-xs text-muted leading-snug">
                 Présentez ce QR Code directement à l&apos;équipe d&apos;accueil à l&apos;entrée de la salle.
               </p>
 
               <button
                 type="button"
                 onClick={() => setShowFullScreenQr(false)}
-                className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
+                className="w-full py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover transition"
               >
                 Fermer
               </button>
@@ -1714,9 +1716,9 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-border hover:bg-surface-muted text-muted'}`}
+            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'ACCEPTED' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
-            <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-foreground/80'}`} />
+            <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-primary' : 'text-foreground/80'}`} />
             <span className="text-xs font-semibold">Oui, je serai présent</span>
           </button>
 
@@ -1724,7 +1726,7 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800' : 'border-border hover:bg-surface-muted text-muted'}`}
+            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
             <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-foreground/80'}`} />
             <span className="text-xs font-semibold">Non, je ne pourrai pas</span>
@@ -2079,7 +2081,7 @@ export default function RsvpPage() {
         {/* Minimal Leaves Frame */}
         {template && frameType === 'minimal-leaves' && (
           <>
-            <div className="absolute top-4 right-4 w-24 h-24 pointer-events-none opacity-30 text-emerald-800">
+            <div className="absolute top-4 right-4 w-24 h-24 pointer-events-none opacity-30 text-primary">
               <svg className="w-full h-full" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
                 <path d="M10,90 Q50,50 90,10" />
                 <path d="M50,50 Q60,30 75,25 Q65,45 50,50" fill="currentColor" fillOpacity="0.2" />
@@ -2087,7 +2089,7 @@ export default function RsvpPage() {
                 <path d="M70,30 Q80,10 95,5 Q85,25 70,30" fill="currentColor" fillOpacity="0.2" />
               </svg>
             </div>
-            <div className="absolute bottom-4 left-4 w-24 h-24 pointer-events-none opacity-30 text-emerald-800 transform rotate-180">
+            <div className="absolute bottom-4 left-4 w-24 h-24 pointer-events-none opacity-30 text-primary transform rotate-180">
               <svg className="w-full h-full" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
                 <path d="M10,90 Q50,50 90,10" />
                 <path d="M50,50 Q60,30 75,25 Q65,45 50,50" fill="currentColor" fillOpacity="0.2" />
@@ -2183,9 +2185,9 @@ export default function RsvpPage() {
                                 document.getElementById('rsvp-section')?.scrollIntoView({ behavior: 'smooth' });
                               }}
                               style={{ 
-                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#059669', 
-                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : '#ffffff', 
-                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : 'transparent',
+                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || DEFAULT_BRAND_PALETTE.primary, 
+                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || DEFAULT_BRAND_PALETTE.primary : '#ffffff', 
+                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || DEFAULT_BRAND_PALETTE.primary : 'transparent',
                                 fontSize: el.fontSize,
                                 fontFamily: el.fontFamily || 'Cormorant Garamond',
                                 letterSpacing: el.letterSpacing || 'normal',
@@ -2209,9 +2211,9 @@ export default function RsvpPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ 
-                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#059669', 
-                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : '#ffffff', 
-                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : 'transparent',
+                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || DEFAULT_BRAND_PALETTE.primary, 
+                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || DEFAULT_BRAND_PALETTE.primary : '#ffffff', 
+                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || DEFAULT_BRAND_PALETTE.primary : 'transparent',
                                 fontSize: el.fontSize,
                                 fontFamily: el.fontFamily || 'Cormorant Garamond',
                                 letterSpacing: el.letterSpacing || 'normal',
@@ -2234,9 +2236,9 @@ export default function RsvpPage() {
                         ) : (
                           <div 
                             style={{ 
-                              backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#059669', 
-                              color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : '#ffffff', 
-                              borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#059669' : 'transparent',
+                              backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || DEFAULT_BRAND_PALETTE.primary, 
+                              color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || DEFAULT_BRAND_PALETTE.primary : '#ffffff', 
+                              borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || DEFAULT_BRAND_PALETTE.primary : 'transparent',
                               fontSize: el.fontSize,
                               fontFamily: el.fontFamily || 'Cormorant Garamond',
                               letterSpacing: el.letterSpacing || 'normal',
@@ -2430,12 +2432,12 @@ export default function RsvpPage() {
                       className={cn(
                         "py-5 px-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 border-2",
                         rsvpStatus === 'ACCEPTED' 
-                          ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-4 ring-emerald-500/10" 
+                          ? "border-primary bg-primary/10 shadow-sm ring-4 ring-primary/15" 
                           : "border-border/50 bg-surface hover:bg-surface-muted hover:border-border"
                       )}
                     >
-                      <CheckCircle2 className={cn("w-8 h-8", rsvpStatus === 'ACCEPTED' ? "text-emerald-500" : "text-muted")} />
-                      <span className={cn("text-sm font-semibold", rsvpStatus === 'ACCEPTED' ? "text-emerald-700" : "text-foreground")}>
+                      <CheckCircle2 className={cn("w-8 h-8", rsvpStatus === 'ACCEPTED' ? "text-primary" : "text-muted")} />
+                      <span className={cn("text-sm font-semibold", rsvpStatus === 'ACCEPTED' ? "text-primary" : "text-foreground")}>
                         Oui, je serai présent
                       </span>
                     </button>

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapPin, Navigation, Play, Square, Loader2, LocateFixed, AlertCircle } from 'lucide-react';
 import { geocodeLocation, loadLeaflet } from '@/lib/leafletLoader';
+import { DEFAULT_BRAND_PALETTE } from '@/lib/brandTheme';
 
 interface GuestVenueGuideProps {
   location: string;
@@ -15,6 +16,12 @@ interface RouteStep {
   instruction: string;
   distance: number;
   duration: number;
+}
+
+function resolveBrandPrimary(): string {
+  if (typeof document === 'undefined') return DEFAULT_BRAND_PALETTE.primary;
+  const fromCss = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+  return fromCss || DEFAULT_BRAND_PALETTE.primary;
 }
 
 function formatDistance(meters: number) {
@@ -274,7 +281,7 @@ export default function GuestVenueGuide({
             mapRef.current.removeLayer(routeLineRef.current);
           }
           routeLineRef.current = L.polyline(coords, {
-            color: '#059669',
+            color: resolveBrandPrimary(),
             weight: 5,
             opacity: 0.9,
           }).addTo(mapRef.current);
@@ -355,7 +362,7 @@ export default function GuestVenueGuide({
                 {formatDistance(summary.distance)}
               </span>
               <span className="text-muted">· {formatDuration(summary.duration)}</span>
-              {userPos && <LocateFixed className="w-3.5 h-3.5 text-emerald-600 ml-auto" />}
+              {userPos && <LocateFixed className="w-3.5 h-3.5 text-primary ml-auto" />}
             </div>
           )}
 
