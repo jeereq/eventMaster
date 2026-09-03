@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { cn } from "@/lib/cn";
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -8,9 +9,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard } from '@/components/GuestPortalShell';
 import Link from 'next/link';
-import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
-import GuestVenueGuide from '@/components/GuestVenueGuide';
 import type { GuestGuidelines } from '@/lib/guestGuidelines';
 import type { ChairType, RoomLayoutBlueprint, RoomOutlineShape } from '@/lib/roomLayoutUtils';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
@@ -36,11 +35,27 @@ import { guestRsvpUrl } from '@/lib/share';
 import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  INVITATION_GOOGLE_FONTS_HREF,
-  INVITATION_GOOGLE_FONTS_ID,
-  useHeadStylesheet,
-} from '@/lib/headStylesheet';
+import { collectInvitationFontFamilies, useInvitationFonts } from '@/lib/headStylesheet';
+
+const GuestTablePlanView = dynamic(() => import('@/app/rsvp/GuestTablePlanView'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center py-16" role="status" aria-busy="true">
+      <Loader2 className="w-6 h-6 text-primary animate-spin" aria-hidden />
+      <span className="sr-only">Chargement du plan de table…</span>
+    </div>
+  ),
+});
+
+const GuestVenueGuide = dynamic(() => import('@/components/GuestVenueGuide'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center py-16" role="status" aria-busy="true">
+      <Loader2 className="w-6 h-6 text-primary animate-spin" aria-hidden />
+      <span className="sr-only">Chargement de l’itinéraire…</span>
+    </div>
+  ),
+});
 
 interface GuestRsvpData {
   id: string;
@@ -156,7 +171,6 @@ export default function RsvpPage() {
   const params = useParams();
   const guestId = params.guestId as string;
   const { site } = usePlatformSite();
-  useHeadStylesheet(INVITATION_GOOGLE_FONTS_HREF, INVITATION_GOOGLE_FONTS_ID);
 
   const [guest, setGuest] = useState<GuestRsvpData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -193,6 +207,18 @@ export default function RsvpPage() {
   const [loadingGuestbook, setLoadingGuestbook] = useState(false);
   const [rsvpLocked, setRsvpLocked] = useState(false);
   const [showFullScreenQr, setShowFullScreenQr] = useState(false);
+
+  const needsInvitationFonts = Boolean(guest) && !submitted;
+  const invitationFontFamilies = useMemo(
+    () =>
+      collectInvitationFontFamilies(
+        guest?.event?.invitations?.[0]?.template?.content?.elements as
+          | Array<{ fontFamily?: string }>
+          | undefined,
+      ),
+    [guest?.event?.invitations],
+  );
+  useInvitationFonts(invitationFontFamilies, needsInvitationFonts);
 
   const guestTabIds = ['badge', 'table', 'route', 'guestbook', 'feed'] as const;
   const goGuestTab = (id: string) => {
@@ -964,6 +990,8 @@ export default function RsvpPage() {
                               src={photo}
                               alt={`Aperçu photo ${idx + 1} du livre d'or`}
                               className="w-full h-full object-cover"
+                              loading="lazy"
+                              decoding="async"
                             />
                             <button
                               type="button"
@@ -1074,7 +1102,9 @@ export default function RsvpPage() {
                                       src={photo} 
                                       alt={`Photo ${pIdx + 1} du livre d'or`}
                                       onClick={() => openGuestImageModal(photosList, pIdx, `livre-dor-${guestSlug}`)}
-                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                      loading="lazy"
+                                      decoding="async"
                                     />
                                     <button
                                       type="button"
@@ -1181,7 +1211,9 @@ export default function RsvpPage() {
                                           `feed-${sanitizeFilenamePart(post.id)}`
                                         );
                                       }}
-                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                      loading="lazy"
+                                      decoding="async"
                                     />
                                   )}
                                   <button

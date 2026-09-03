@@ -127,7 +127,6 @@ const lightenColor = (hex: string, percent = 30) => {
 export default function TemplatesPage() {
  const { user, planFeatures, planQuota, tenant } = useAuth();
  const router = useRouter();
- useHeadStylesheet(INVITATION_GOOGLE_FONTS_HREF, INVITATION_GOOGLE_FONTS_ID);
  /** admin = ouvert depuis la console Super Admin (?tab=templates) ; studio = concepteur organisation */
  type StudioOrigin = 'admin' | 'studio';
  const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
@@ -158,6 +157,7 @@ export default function TemplatesPage() {
  const [templates, setTemplates] = useState<TemplateItem[]>([]);
  const [loading, setLoading] = useState(true);
  const [editorOpen, setEditorOpen] = useState(false);
+ useHeadStylesheet(INVITATION_GOOGLE_FONTS_HREF, INVITATION_GOOGLE_FONTS_ID, editorOpen);
  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
  const [templateName, setTemplateName] = useState('');
  const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);

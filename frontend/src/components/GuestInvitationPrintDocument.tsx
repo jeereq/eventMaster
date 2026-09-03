@@ -18,14 +18,16 @@ import type { LightingPreset } from '@/lib/roomRenderQuality';
 import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { guestRsvpUrl } from '@/lib/share';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
-import { ensureHeadStylesheet } from '@/lib/headStylesheet';
+import {
+  buildInvitationGoogleFontsHref,
+  collectInvitationFontFamilies,
+  ensureHeadStylesheet,
+} from '@/lib/headStylesheet';
 
 function buildQrCodeUrl(guestId: string, size = 200): string {
   return getGuestQrImageUrl(guestId, size);
 }
 
-const PRINT_FONTS =
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Dancing+Script:wght@500;700&family=Pinyon+Script&display=swap';
 const PRINT_FONTS_ID = 'em-invitation-print-google-fonts';
 
 type TemplateElement = {
@@ -123,14 +125,22 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   const pdfReady = fontsReady && planCaptureState !== 'pending';
 
   useEffect(() => {
-    ensureHeadStylesheet(PRINT_FONTS, PRINT_FONTS_ID);
+    const families = collectInvitationFontFamilies(data.templateContent?.elements, [
+      'Playfair Display',
+      'Great Vibes',
+      'Alex Brush',
+      'Cinzel',
+      'Dancing Script',
+      'Pinyon Script',
+    ]);
+    ensureHeadStylesheet(buildInvitationGoogleFontsHref(families), PRINT_FONTS_ID);
     if (document.fonts?.ready) {
       void document.fonts.ready.then(() => setFontsReady(true));
     } else {
       const t = window.setTimeout(() => setFontsReady(true), 800);
       return () => window.clearTimeout(t);
     }
-  }, []);
+  }, [data.templateContent?.elements]);
 
   const handlePlanCaptureState = useCallback((state: 'pending' | 'ready' | 'skipped') => {
     setPlanCaptureState(state);

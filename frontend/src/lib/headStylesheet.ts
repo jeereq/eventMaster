@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 /**
  * Injecte une feuille de style dans document.head hors de l’arbre React.
@@ -22,14 +22,84 @@ export function ensureHeadStylesheet(href: string, id: string) {
   document.head.appendChild(link);
 }
 
-export function useHeadStylesheet(href: string, id: string) {
+export function useHeadStylesheet(href: string | null | undefined, id: string, enabled = true) {
   useEffect(() => {
+    if (!enabled || !href) return;
     ensureHeadStylesheet(href, id);
-  }, [href, id]);
+  }, [href, id, enabled]);
 }
 
-/** Polices des modèles d’invitation (éditeur + vue RSVP). */
-export const INVITATION_GOOGLE_FONTS_HREF =
-  'https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap';
+/** Paramètres Google Fonts CSS2 par famille d’invitation. */
+export const INVITATION_FONT_CATALOG: Record<string, string> = {
+  'Cormorant Garamond': 'Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400',
+  'Playfair Display': 'Playfair+Display:ital,wght@0,400;0,700;1,400',
+  'Great Vibes': 'Great+Vibes',
+  'Alex Brush': 'Alex+Brush',
+  Montserrat: 'Montserrat:wght@300;400;500;600;700',
+  Cinzel: 'Cinzel:wght@400;600;700',
+  'Dancing Script': 'Dancing+Script:wght@500;700',
+  'Pinyon Script': 'Pinyon+Script',
+  'Monsieur La Doulaise': 'Monsieur+La+Doulaise',
+  Italiana: 'Italiana',
+  'Bodoni Moda': 'Bodoni+Moda:ital,wght@0,400;0,700;1,400',
+  Allura: 'Allura',
+  Parisienne: 'Parisienne',
+  Prata: 'Prata',
+  Sacramento: 'Sacramento',
+  Marcellus: 'Marcellus',
+};
+
+export const INVITATION_FONT_FAMILY_IDS = Object.keys(INVITATION_FONT_CATALOG);
+
+const DEFAULT_INVITATION_FONTS = ['Cormorant Garamond', 'Montserrat'] as const;
 
 export const INVITATION_GOOGLE_FONTS_ID = 'em-invitation-google-fonts';
+
+export function buildInvitationGoogleFontsHref(families: Iterable<string>): string {
+  const unique = new Set<string>();
+  for (const raw of families) {
+    const name = String(raw || '').trim();
+    if (name && INVITATION_FONT_CATALOG[name]) unique.add(name);
+  }
+  for (const fallback of DEFAULT_INVITATION_FONTS) unique.add(fallback);
+
+  const params = [...unique]
+    .sort()
+    .map((name) => `family=${INVITATION_FONT_CATALOG[name]}`)
+    .join('&');
+  return `https://fonts.googleapis.com/css2?${params}&display=swap`;
+}
+
+/** Bundle complet — éditeur de modèles uniquement. */
+export const INVITATION_GOOGLE_FONTS_HREF = buildInvitationGoogleFontsHref(INVITATION_FONT_FAMILY_IDS);
+
+export function collectInvitationFontFamilies(
+  elements?: Array<{ fontFamily?: string | null } | null> | null,
+  extras: string[] = [],
+): string[] {
+  const out = new Set<string>(DEFAULT_INVITATION_FONTS);
+  for (const el of elements || []) {
+    const name = el?.fontFamily?.trim();
+    if (name) out.add(name);
+  }
+  for (const extra of extras) {
+    const name = extra?.trim();
+    if (name) out.add(name);
+  }
+  return [...out];
+}
+
+/** Charge uniquement les familles demandées (vue RSVP / impression). */
+export function useInvitationFonts(
+  families: string[] | null | undefined,
+  enabled = true,
+  id = INVITATION_GOOGLE_FONTS_ID,
+) {
+  const familyKey = (families || []).slice().sort().join('|');
+  const href = useMemo(() => {
+    if (!enabled) return null;
+    return buildInvitationGoogleFontsHref(familyKey ? familyKey.split('|') : DEFAULT_INVITATION_FONTS);
+  }, [enabled, familyKey]);
+
+  useHeadStylesheet(href, id, enabled && Boolean(href));
+}
