@@ -12,10 +12,11 @@ import {
 } from '@/components/marketplace/MarketplaceActivityFeed';
 import { clientLoginHref } from '@/lib/safeAppPath';
 import { cn } from '@/lib/cn';
-import { isVideoUrl } from '@/lib/marketplace';
+import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
+import ImageLightbox from '@/components/marketplace/ImageLightbox';
 import {
   Building2, Heart, Loader2, MessageCircle, Rss, Send, Sparkles,
-  ChevronLeft, ChevronRight, X, MapPin, Share2, Check, ArrowUpRight, Search,
+  X, MapPin, Share2, Check, ArrowUpRight, Search,
 } from 'lucide-react';
 
 export type GlobalFeedKind = 'all' | 'venue' | 'vendor';
@@ -211,7 +212,7 @@ export default function MarketplaceGlobalActivityFeed({
   return (
     <div className={cn('space-y-6', className)}>
       {/* Barre d'outils / Filtres & Recherche */}
-      <div className="flex flex-col md:flex-row gap-3 md:items-center justify-between bg-surface/80 dark:bg-slate-900/80 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-border/80 shadow-xs">
+      <div className="flex flex-col md:flex-row gap-3 md:items-center justify-between bg-surface/90 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-border/80 shadow-xs">
         {/* Onglets Filtres */}
         <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted/80 border border-border/50 max-w-full overflow-x-auto [scrollbar-width:none]">
           {kindTabs.map((tab) => {
@@ -223,7 +224,7 @@ export default function MarketplaceGlobalActivityFeed({
                 type="button"
                 onClick={() => setKind(tab.id)}
                 className={cn(
-                  'inline-flex items-center gap-2 min-h-10 px-3.5 rounded-lg text-xs font-semibold transition shrink-0',
+                  'inline-flex items-center gap-2 min-h-10 px-3.5 rounded-lg text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   active
                     ? 'bg-surface text-primary shadow-xs border border-primary/20 font-bold'
                     : 'text-muted hover:text-foreground hover:bg-surface/50',
@@ -251,7 +252,7 @@ export default function MarketplaceGlobalActivityFeed({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Rechercher un pro, ville…"
-              className="w-full min-h-10 pl-9 pr-16 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary/40 transition"
+              className="w-full min-h-11 pl-9 pr-16 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
               aria-label="Rechercher dans les publications"
             />
             {q.trim() && (
@@ -261,15 +262,16 @@ export default function MarketplaceGlobalActivityFeed({
                   setQ('');
                   setSearch('');
                 }}
-                className="absolute right-10 p-1 text-muted hover:text-foreground rounded-md"
-                title="Effacer"
+                className="absolute right-12 min-h-8 min-w-8 p-1.5 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                title="Effacer la recherche"
+                aria-label="Effacer la recherche"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             )}
             <button
               type="submit"
-              className="absolute right-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition"
+              className="absolute right-1.5 min-h-8 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               Go
             </button>
@@ -357,7 +359,11 @@ export default function MarketplaceGlobalActivityFeed({
                     <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-border/80 bg-surface-muted shrink-0 flex items-center justify-center shadow-xs">
                       {author?.coverUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={author.coverUrl} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={sizedMediaUrl(author.coverUrl, 160)}
+                          alt={author.name ? `Logo ou photo de ${author.name}` : 'Photo de profil'}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className={cn('w-full h-full flex items-center justify-center', isVendor ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary')}>
                           {isVendor ? <Sparkles className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
@@ -448,7 +454,7 @@ export default function MarketplaceGlobalActivityFeed({
                           <div
                             key={`${m.url}-${i}`}
                             className={cn(
-                              'relative overflow-hidden group/media bg-slate-950/10 dark:bg-slate-900',
+                              'relative overflow-hidden group/media bg-surface-muted',
                               media.length === 1 ? 'aspect-16/10 max-h-[460px]' : 'h-full w-full',
                             )}
                           >
@@ -461,23 +467,23 @@ export default function MarketplaceGlobalActivityFeed({
                             ) : (
                               <button
                                 type="button"
-                                className="w-full h-full text-left relative focus:outline-hidden"
+                                className="w-full h-full text-left relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                                 onClick={() => {
                                   const idx = images.indexOf(m.url);
                                   if (idx >= 0) setLightbox({ urls: images, index: idx });
                                 }}
-                                aria-label={`Agrandir l’image ${i + 1}`}
+                                aria-label={`Agrandir l’image ${i + 1} de ${author?.name || 'la publication'}`}
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
-                                  src={m.url}
-                                  alt=""
+                                  src={sizedMediaUrl(m.url, 800)}
+                                  alt={`Photo ${i + 1} publiée par ${author?.name || 'un professionnel'}`}
                                   className="w-full h-full object-cover transition-transform duration-300 group-hover/media:scale-105"
                                   loading="lazy"
                                 />
 
                                 {isFourthAndMore && (
-                                  <div className="absolute inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center text-white text-lg font-bold">
+                                  <div className="absolute inset-0 bg-black/65 backdrop-blur-2xs flex items-center justify-center text-white text-lg font-bold">
                                     +{extraCount + 1} photos
                                   </div>
                                 )}
@@ -568,7 +574,7 @@ export default function MarketplaceGlobalActivityFeed({
                         onClick={() =>
                           setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
                         }
-                        className="w-full min-h-8 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1"
+                        className="w-full min-h-10 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
                       >
                         {isExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
                       </button>
@@ -581,7 +587,7 @@ export default function MarketplaceGlobalActivityFeed({
                   <div className="pt-2">
                     <Link
                       href={loginHref}
-                      className="w-full inline-flex items-center justify-center min-h-10 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+                      className="w-full inline-flex items-center justify-center min-h-11 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
                     >
                       Connectez-vous pour laisser un commentaire
                     </Link>
@@ -597,15 +603,15 @@ export default function MarketplaceGlobalActivityFeed({
                           if (e.key === 'Enter') void submitComment(post.id);
                         }}
                         placeholder="Écrire un message ou poser une question…"
-                        className="w-full min-h-10 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary/40 transition"
-                        aria-label="Commentaire"
+                        className="w-full min-h-11 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+                        aria-label={`Commenter la publication de ${author?.name || 'ce partenaire'}`}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => void submitComment(post.id)}
                       disabled={commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
-                      className="min-h-10 min-w-10 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       aria-label="Publier le commentaire"
                     >
                       {commentBusy[post.id] ? (
@@ -641,71 +647,14 @@ export default function MarketplaceGlobalActivityFeed({
         </button>
       ) : null}
 
-      {/* Lightbox photo plein écran */}
+      {/* Lightbox photo plein écran accessible */}
       {lightbox && (
-        <div
-          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-md flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Visionneuse photo"
-          onClick={() => setLightbox(null)}
-        >
-          <div className="relative max-w-5xl w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightbox.urls[lightbox.index]}
-              alt=""
-              className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl"
-            />
-
-            {/* Bouton Fermer */}
-            <button
-              type="button"
-              onClick={() => setLightbox(null)}
-              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white rounded-full bg-white/10 hover:bg-white/20 transition"
-              aria-label="Fermer"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            {/* Compteur */}
-            <div className="absolute -top-12 left-0 text-white/80 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/10">
-              {lightbox.index + 1} / {lightbox.urls.length}
-            </div>
-
-            {/* Navigation Précédent / Suivant */}
-            {lightbox.urls.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLightbox((prev) =>
-                      prev ? { ...prev, index: (prev.index - 1 + prev.urls.length) % prev.urls.length } : null,
-                    );
-                  }}
-                  className="absolute left-2 sm:-left-12 p-3 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
-                  aria-label="Photo précédente"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLightbox((prev) =>
-                      prev ? { ...prev, index: (prev.index + 1) % prev.urls.length } : null,
-                    );
-                  }}
-                  className="absolute right-2 sm:-right-12 p-3 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
-                  aria-label="Photo suivante"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <ImageLightbox
+          urls={lightbox.urls}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+          title="Fil des publications"
+        />
       )}
     </div>
   );

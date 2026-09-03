@@ -8,7 +8,8 @@ import { useAuth } from '@/context/AuthContext';
 import { uploadMarketplaceMedia } from '@/lib/cloudinaryUpload';
 import { clientLoginHref } from '@/lib/safeAppPath';
 import { cn } from '@/lib/cn';
-import { isVideoUrl } from '@/lib/marketplace';
+import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
+import ImageLightbox from '@/components/marketplace/ImageLightbox';
 import {
   Heart, MessageCircle, Send, Trash2, Loader2, Image as ImageIcon,
   Video, X, ChevronLeft, ChevronRight, Plus, Building2, Sparkles,
@@ -98,7 +99,7 @@ export function PostMediaGrid({
             <div
               key={`${m.url}-${i}`}
               className={cn(
-                'relative overflow-hidden group/media bg-slate-950/10 dark:bg-slate-900',
+                'relative overflow-hidden group/media bg-surface-muted',
                 media.length === 1 ? 'aspect-16/10 max-h-[460px]' : 'h-full w-full',
               )}
             >
@@ -107,14 +108,14 @@ export function PostMediaGrid({
               ) : (
                 <button
                   type="button"
-                  className="w-full h-full text-left relative focus:outline-hidden"
+                  className="w-full h-full text-left relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   onClick={() => onOpenImage?.(m.url)}
-                  aria-label={`Agrandir l’image ${i + 1}`}
+                  aria-label={`Agrandir la photo ${i + 1}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={m.url}
-                    alt=""
+                    src={sizedMediaUrl(m.url, 800)}
+                    alt={`Média ${i + 1} de la publication`}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover/media:scale-105"
                     loading="lazy"
                   />
@@ -624,7 +625,7 @@ export default function MarketplaceActivityFeed({
                         onClick={() =>
                           setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
                         }
-                        className="w-full min-h-8 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1"
+                        className="w-full min-h-10 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
                       >
                         {isExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
                       </button>
@@ -637,7 +638,7 @@ export default function MarketplaceActivityFeed({
                   <div className="pt-2">
                     <Link
                       href={loginHref}
-                      className="w-full inline-flex items-center justify-center min-h-10 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+                      className="w-full inline-flex items-center justify-center min-h-11 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
                     >
                       Connectez-vous pour laisser un commentaire
                     </Link>
@@ -653,7 +654,7 @@ export default function MarketplaceActivityFeed({
                           if (e.key === 'Enter') void submitComment(post.id);
                         }}
                         placeholder="Écrire un message ou poser une question…"
-                        className="w-full min-h-10 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary/40 transition"
+                        className="w-full min-h-11 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
                         aria-label="Commentaire"
                       />
                     </div>
@@ -661,7 +662,7 @@ export default function MarketplaceActivityFeed({
                       type="button"
                       onClick={() => void submitComment(post.id)}
                       disabled={commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
-                      className="min-h-10 min-w-10 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       aria-label="Publier le commentaire"
                     >
                       {commentBusy[post.id] ? (
@@ -689,63 +690,14 @@ export default function MarketplaceActivityFeed({
         </button>
       ) : null}
 
-      {/* Lightbox plein écran */}
+      {/* Lightbox plein écran accessible */}
       {lightbox && (
-        <div
-          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-md flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Visionneuse photo"
-          onClick={() => setLightbox(null)}
-        >
-          <div className="relative max-w-5xl w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightbox.urls[lightbox.index]}
-              alt=""
-              className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl"
-            />
-            <button
-              type="button"
-              onClick={() => setLightbox(null)}
-              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white rounded-full bg-white/10 hover:bg-white/20 transition"
-              aria-label="Fermer"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <div className="absolute -top-12 left-0 text-white/80 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/10">
-              {lightbox.index + 1} / {lightbox.urls.length}
-            </div>
-            {lightbox.urls.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  className="absolute left-2 sm:-left-12 p-3 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
-                  aria-label="Précédente"
-                  onClick={() =>
-                    setLightbox((lb) =>
-                      lb ? { ...lb, index: (lb.index - 1 + lb.urls.length) % lb.urls.length } : null,
-                    )
-                  }
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  type="button"
-                  className="absolute right-2 sm:-right-12 p-3 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
-                  aria-label="Suivante"
-                  onClick={() =>
-                    setLightbox((lb) =>
-                      lb ? { ...lb, index: (lb.index + 1) % lb.urls.length } : lb,
-                    )
-                  }
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <ImageLightbox
+          urls={lightbox.urls}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+          title={authorLabel}
+        />
       )}
     </div>
   );

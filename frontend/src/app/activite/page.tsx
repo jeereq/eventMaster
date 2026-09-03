@@ -69,14 +69,14 @@ export default function ActivitePage() {
                 <PlusCircle className="w-5 h-5" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-base font-bold text-foreground">Vous êtes gestionnaire ou prestataire ?</h3>
+                <h2 className="text-base font-bold text-foreground">Vous êtes gestionnaire ou prestataire ?</h2>
                 <p className="text-xs text-muted leading-relaxed">
                   Publiez vos photos, vidéos et publications pour donner de la visibilité à vos salles et prestations auprès de milliers d’organisateurs.
                 </p>
               </div>
               <Link
                 href={user ? '/dashboard/publications?tab=create' : '/register?intent=vendor'}
-                className="inline-flex items-center justify-center gap-2 w-full min-h-11 px-4 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:opacity-95 transition shadow-xs"
+                className="inline-flex items-center justify-center gap-2 w-full min-h-11 px-4 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:opacity-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <span>{user ? 'Créer une publication' : 'Créer un compte professionnel'}</span>
                 <ArrowRight className="w-4 h-4" />
@@ -85,9 +85,9 @@ export default function ActivitePage() {
 
             {/* Carte Raccourcis Marketplace */}
             <div className="rounded-3xl border border-border bg-surface p-5 sm:p-6 space-y-4 shadow-2xs">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
                 Explorer le catalogue
-              </h4>
+              </h2>
               <nav className="space-y-2">
                 <Link
                   href="/marketplace/salles?city=Kinshasa"

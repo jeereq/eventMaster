@@ -6,7 +6,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { uploadMarketplaceMedia } from '@/lib/cloudinaryUpload';
-import { isVideoUrl } from '@/lib/marketplace';
+import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
 import {
   PageHeader, Breadcrumbs, Alert, Button, EmptyState,
@@ -251,14 +251,20 @@ function PublicationsGrid() {
                 key={post.id}
                 type="button"
                 onClick={() => setSelected(post)}
-                className="group relative aspect-square overflow-hidden rounded-2xl bg-surface-muted border border-border/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:shadow-md transition-all duration-200 text-left"
+                className="group relative aspect-square overflow-hidden rounded-2xl bg-surface-muted border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:shadow-md transition-all duration-200 text-left"
+                aria-label={`Ouvrir la publication de ${post.author?.name || 'ce partenaire'}`}
               >
                 {media ? (
                   video ? (
                     <video src={media.url} muted className="h-full w-full object-cover" />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={media.url} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                    <img
+                      src={sizedMediaUrl(media.url, 480)}
+                      alt={post.content ? `Photo : ${post.content.slice(0, 60)}` : `Publication de ${post.author?.name || 'partenaire'}`}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
                   )
                 ) : (
                   <div className="h-full w-full p-4 flex flex-col justify-between bg-gradient-to-br from-primary/10 via-surface to-surface-muted">
@@ -333,10 +339,10 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition"
-            aria-label="Fermer"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition"
+            aria-label="Fermer la vue détaillée (Échap)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden />
           </button>
         </div>
 
@@ -346,7 +352,11 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
               <video src={media[0].url} controls className="w-full h-full object-cover" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={media[0].url} alt="" className="w-full h-full object-cover" />
+              <img
+                src={sizedMediaUrl(media[0].url, 1200)}
+                alt={post.content ? `Photo de publication : ${post.content.slice(0, 60)}` : 'Photo de la publication'}
+                className="w-full h-full object-cover"
+              />
             )}
           </div>
         ) : null}
@@ -551,14 +561,21 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
             </select>
           </label>
 
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
-            maxLength={4000}
-            placeholder="Décrivez votre activité, une nouveauté, une réalisation…"
-            className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2.5 text-sm resize-y min-h-[6rem] focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
+          <div className="space-y-1.5">
+            <label htmlFor="publication-create-textarea" className="block text-xs font-semibold text-muted">
+              Description de la publication
+            </label>
+            <textarea
+              id="publication-create-textarea"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={4}
+              maxLength={4000}
+              placeholder="Décrivez votre actualité, une nouveauté, un nouveau décor ou une réalisation…"
+              className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-3 text-base sm:text-sm resize-y min-h-[6.5rem] focus:outline-none focus:ring-2 focus:ring-primary/40"
+              aria-label="Description de la publication"
+            />
+          </div>
 
           {media.length > 0 && (
             <div className="flex flex-wrap gap-2">

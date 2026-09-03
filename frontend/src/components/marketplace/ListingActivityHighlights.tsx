@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Rss, Heart, MessageCircle, ArrowRight, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Rss, Heart, MessageCircle, ArrowRight, Sparkles } from 'lucide-react';
 import type { MarketplaceActivityPreviewItem } from '@/lib/marketplace';
-import { isVideoUrl } from '@/lib/marketplace';
+import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
+import ImageLightbox from '@/components/marketplace/ImageLightbox';
 
 function formatRelativeDate(dateStr: string) {
   const date = new Date(dateStr);
@@ -61,7 +62,7 @@ export default function ListingActivityHighlights({
           <button
             type="button"
             onClick={onViewAllActivity}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline underline-offset-2"
+            className="inline-flex items-center gap-1 min-h-10 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <span>Voir tout</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -87,13 +88,14 @@ export default function ListingActivityHighlights({
                       const idx = allImages.indexOf(firstImage);
                       setLightbox({ urls: allImages, index: Math.max(0, idx) });
                     }}
-                    className="relative w-full aspect-16/10 rounded-xl overflow-hidden bg-surface-muted block text-left group-hover/card:opacity-95 transition"
-                    aria-label="Agrandir la photo"
+                    className="relative w-full aspect-16/10 rounded-xl overflow-hidden bg-surface-muted block text-left group-hover/card:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition"
+                    aria-label={`Agrandir la photo de ${authorLabel}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={firstImage}
-                      alt=""
+                      src={sizedMediaUrl(firstImage, 640)}
+                      alt={post.content ? `Photo de publication : ${post.content.slice(0, 80)}` : `Publication de ${authorLabel}`}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300"
                     />
                     {post.mediaUrls.length > 1 && (
@@ -103,13 +105,13 @@ export default function ListingActivityHighlights({
                     )}
                   </button>
                 ) : isVideo ? (
-                  <div className="w-full aspect-16/10 rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center text-white/70">
-                    <Sparkles className="w-6 h-6" />
+                  <div className="w-full aspect-16/10 rounded-xl overflow-hidden bg-surface-muted border border-border/50 flex items-center justify-center text-muted">
+                    <Sparkles className="w-6 h-6 text-primary" />
                   </div>
                 ) : null}
 
                 {post.content ? (
-                  <p className="text-xs text-foreground/90 line-clamp-2 leading-relaxed font-normal">
+                  <p className="text-xs text-foreground/90 line-clamp-2 leading-relaxed font-normal break-words">
                     {post.content}
                   </p>
                 ) : null}
@@ -136,58 +138,12 @@ export default function ListingActivityHighlights({
       </div>
 
       {lightbox && (
-        <div
-          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-md flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Visionneuse photo"
-          onClick={() => setLightbox(null)}
-        >
-          <div className="relative max-w-4xl w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightbox.urls[lightbox.index]}
-              alt=""
-              className="max-h-[85vh] max-w-full object-contain rounded-2xl"
-            />
-            <button
-              type="button"
-              onClick={() => setLightbox(null)}
-              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white rounded-full bg-white/10"
-              aria-label="Fermer"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            {lightbox.urls.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  className="absolute left-2 p-2.5 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
-                  aria-label="Précédente"
-                  onClick={() =>
-                    setLightbox((lb) =>
-                      lb ? { ...lb, index: (lb.index - 1 + lb.urls.length) % lb.urls.length } : null,
-                    )
-                  }
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  type="button"
-                  className="absolute right-2 p-2.5 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
-                  aria-label="Suivante"
-                  onClick={() =>
-                    setLightbox((lb) =>
-                      lb ? { ...lb, index: (lb.index + 1) % lb.urls.length } : lb,
-                    )
-                  }
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+        <ImageLightbox
+          urls={lightbox.urls}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+          title={`Publications — ${authorLabel}`}
+        />
       )}
     </section>
   );
