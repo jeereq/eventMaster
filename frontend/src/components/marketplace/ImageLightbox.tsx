@@ -166,12 +166,12 @@ export default function ImageLightbox({
       <div className="absolute top-0 inset-x-0 p-3 sm:p-6 pt-[max(1.25rem,env(safe-area-inset-top))] flex items-center justify-between z-20 pointer-events-none">
         {/* Compteur & Légende Story */}
         <div
-          className="text-white text-xs font-semibold px-3 py-1.5 rounded-full bg-black/40 border border-white/15 backdrop-blur-md pointer-events-auto flex items-center gap-2 shadow-sm"
+          className="text-white text-xs font-semibold px-3 py-1.5 rounded-full bg-black/40 border border-white/15 backdrop-blur-md pointer-events-auto flex items-center gap-2 shadow-sm tabular-nums"
           aria-live="polite"
         >
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span>{currentIndex + 1} / {total}</span>
-          {title && <span className="hidden sm:inline text-white/80 font-medium">· {title}</span>}
+          <span className="font-semibold">{currentIndex + 1} / {total}</span>
+          {title && <span className="hidden sm:inline text-white/85 font-medium tracking-normal">· {title}</span>}
         </div>
 
         {/* Bouton Fermer */}

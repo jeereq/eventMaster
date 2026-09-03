@@ -56,7 +56,7 @@ export default function ListingActivityHighlights({
             <Rss className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-foreground">Publications</h2>
+            <h2 className="text-sm font-bold tracking-tight text-foreground">Publications</h2>
             <p className="text-[11px] text-muted">Publications récentes de {authorLabel}</p>
           </div>
         </div>
@@ -137,21 +137,21 @@ export default function ListingActivityHighlights({
               {/* Gradient immersif & interactions façon Snapchat */}
               <div className="relative z-10 mt-auto p-3 pt-12 bg-gradient-to-t from-black/95 via-black/60 to-transparent text-white space-y-2 pointer-events-none">
                 {firstImage && post.content && (
-                  <p className="text-xs text-white/95 line-clamp-2 leading-relaxed drop-shadow-xs font-medium">
+                  <p className="text-xs text-white line-clamp-2 leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] font-normal">
                     {post.content}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between text-[10px] text-white/75 pt-1">
-                  <span>{formatRelativeDate(post.createdAt)}</span>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between text-[11px] text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)] pt-1">
+                  <span className="tabular-nums">{formatRelativeDate(post.createdAt)}</span>
+                  <div className="flex items-center gap-2 tabular-nums">
                     {post.likeCount > 0 && (
                       <span className="inline-flex items-center gap-1 font-semibold text-rose-400">
                         <Heart className="w-3 h-3 fill-current" /> {post.likeCount}
                       </span>
                     )}
                     {post.commentCount > 0 && (
-                      <span className="inline-flex items-center gap-1 font-semibold text-white/90">
+                      <span className="inline-flex items-center gap-1 font-semibold text-white/95">
                         <MessageCircle className="w-3 h-3" /> {post.commentCount}
                       </span>
                     )}

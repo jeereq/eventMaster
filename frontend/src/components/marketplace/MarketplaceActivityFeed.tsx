@@ -538,11 +538,11 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               </div>
               <div className="min-w-0 flex flex-col justify-center">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs sm:text-[13px] font-bold text-white truncate max-w-[140px] sm:max-w-[200px] drop-shadow-xs">
+                  <span className="text-xs sm:text-[13px] font-bold tracking-tight text-white truncate max-w-[140px] sm:max-w-[200px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                     {authorLabel}
                   </span>
                   <span className={cn(
-                    'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full border',
+                    'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border',
                     isVenue
                       ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
                       : 'bg-amber-500/20 text-amber-300 border-amber-400/30',
@@ -550,7 +550,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                     {isVenue ? 'Salle' : 'Pro'}
                   </span>
                 </div>
-                <span className="text-[10px] text-white/70 truncate">
+                <span className="text-[11px] text-white/85 font-medium truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
                   {formatRelativeDate(post.createdAt)}
                 </span>
               </div>
@@ -619,7 +619,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 'w-5 h-5 transition-transform duration-200',
                 liked ? 'text-rose-500 fill-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]' : 'text-white',
               )} />
-              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5">
+              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
                 {post.likeCount ?? likes.length}
               </span>
             </button>
@@ -638,7 +638,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               title="Commentaires"
             >
               <MessageCircle className="w-5 h-5 text-white" />
-              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5">
+              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
                 {commentCount}
               </span>
             </button>
@@ -659,7 +659,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               ) : (
                 <Share2 className="w-5 h-5 text-white" />
               )}
-              <span className="text-[9px] font-bold drop-shadow-xs -mt-0.5" aria-live="polite">
+              <span className="text-[9px] font-bold drop-shadow-xs -mt-0.5 tracking-tight" aria-live="polite">
                 {isCopied ? 'OK' : 'Partager'}
               </span>
             </button>
@@ -686,10 +686,10 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
             {/* Badge indicateur de snap si multi-snaps */}
             {media.length > 1 && (
               <div className="flex items-center gap-2 pointer-events-auto">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10 tabular-nums">
                   Snap {activeSnapIndex + 1} / {media.length}
                 </span>
-                <span className="text-[10px] text-white/60">Touchez les côtés ou glissez</span>
+                <span className="text-[11px] text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
               </div>
             )}
 
@@ -698,7 +698,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               <div className="pointer-events-auto flex flex-col items-start gap-0.5">
                 <p
                   className={cn(
-                    'text-xs sm:text-sm text-white/95 leading-relaxed font-normal whitespace-pre-line drop-shadow-xs transition-all',
+                    'text-xs sm:text-sm text-white leading-relaxed font-normal whitespace-pre-line drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] transition-all',
                     !textExpanded && 'line-clamp-2 sm:line-clamp-3',
                   )}
                 >
@@ -708,7 +708,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                   <button
                     type="button"
                     onClick={() => setTextExpanded((prev) => !prev)}
-                    className="text-[11px] font-bold text-white/80 hover:text-white underline underline-offset-2 mt-0.5 focus-visible:outline-none"
+                    className="text-[11px] font-bold text-white/90 hover:text-white underline underline-offset-2 mt-0.5 focus-visible:outline-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                   >
                     {textExpanded ? 'Moins' : 'Lire la suite'}
                   </button>
@@ -747,7 +747,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
 
           {/* Corps du message expressif façon Story Snapchat */}
           <div className="my-5">
-            <p className="text-base sm:text-lg font-bold text-white leading-snug drop-shadow-sm whitespace-pre-line">
+            <p className="text-base sm:text-lg font-bold text-white leading-snug tracking-tight drop-shadow-sm whitespace-pre-line">
               « {post.content} »
             </p>
           </div>
@@ -766,7 +766,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 aria-label={liked ? "Je n'aime plus cette publication" : `Aimer cette publication (${post.likeCount ?? likes.length} mentions j'aime)`}
               >
                 <Heart className={cn('w-4 h-4', liked && 'fill-current')} />
-                <span>{post.likeCount ?? likes.length}</span>
+                <span className="tabular-nums">{post.likeCount ?? likes.length}</span>
               </button>
               <button
                 type="button"
@@ -777,7 +777,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 aria-label={commentsExpanded ? "Masquer les commentaires" : `Afficher les commentaires (${commentCount})`}
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>{commentCount}</span>
+                <span className="tabular-nums">{commentCount}</span>
               </button>
             </div>
             <button
@@ -805,8 +805,8 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                     className="text-xs rounded-2xl border border-border/80 bg-surface-muted/50 p-3 space-y-1 hover:border-border transition"
                   >
                     <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold text-foreground break-words">{c.authorName}</span>
-                      <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
+                      <span className="font-semibold text-foreground break-words tracking-tight">{c.authorName}</span>
+                      <span className="text-[11px] text-muted shrink-0 tabular-nums">{formatRelativeDate(c.createdAt)}</span>
                     </div>
                     <p className="text-foreground/90 whitespace-pre-line leading-relaxed break-words">{c.content}</p>
                   </li>
