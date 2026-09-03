@@ -106,7 +106,7 @@ export default function ActivitePage() {
               <nav className="space-y-2">
                 <Link
                   href="/marketplace/salles?city=Kinshasa"
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-primary/5 hover:text-primary text-xs font-medium text-foreground transition group"
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-primary/5 hover:text-primary text-xs font-medium text-foreground transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <span className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-primary" />
@@ -116,7 +116,7 @@ export default function ActivitePage() {
                 </Link>
                 <Link
                   href="/marketplace/salles?city=Lubumbashi"
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-primary/5 hover:text-primary text-xs font-medium text-foreground transition group"
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-primary/5 hover:text-primary text-xs font-medium text-foreground transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <span className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-primary" />
@@ -126,7 +126,7 @@ export default function ActivitePage() {
                 </Link>
                 <Link
                   href="/marketplace/prestataires"
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-amber-500/5 hover:text-amber-700 dark:hover:text-amber-300 text-xs font-medium text-foreground transition group"
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-amber-500/5 hover:text-amber-700 dark:hover:text-amber-300 text-xs font-medium text-foreground transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <span className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -136,7 +136,7 @@ export default function ActivitePage() {
                 </Link>
                 <Link
                   href="/marketplace"
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-muted text-xs font-medium text-foreground transition group"
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-muted text-xs font-medium text-foreground transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <span className="flex items-center gap-2">
                     <Store className="w-4 h-4 text-muted" />

@@ -719,7 +719,7 @@ export default function MarketplaceGlobalActivityFeed({
                 setQ('');
                 setSearch('');
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               Réinitialiser la recherche
             </button>
@@ -753,7 +753,7 @@ export default function MarketplaceGlobalActivityFeed({
           type="button"
           onClick={() => void loadMore(nextCursor)}
           disabled={loadingMore}
-          className="w-full min-h-12 rounded-2xl border border-border/80 bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition disabled:opacity-50 shadow-xs"
+          className="w-full min-h-12 rounded-2xl border border-border/80 bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition disabled:opacity-50 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           {loadingMore ? (
             <span className="inline-flex items-center gap-2">

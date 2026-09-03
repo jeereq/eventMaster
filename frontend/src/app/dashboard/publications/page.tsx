@@ -292,7 +292,7 @@ function PublicationsGrid() {
         <button
           type="button"
           onClick={() => void load(nextCursor)}
-          className="w-full min-h-11 rounded-2xl border border-border/80 bg-surface text-xs sm:text-sm font-semibold text-foreground hover:bg-surface-muted transition shadow-2xs"
+          className="w-full min-h-11 rounded-2xl border border-border/80 bg-surface text-xs sm:text-sm font-semibold text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           Voir plus de publications
         </button>
