@@ -723,154 +723,129 @@ export default function RsvpPage() {
         >
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
-              <div className="space-y-5 animate-fade-in">
+              <div className="space-y-6 animate-fade-in">
                 <div className="em-guest-hero">
-                  <div className="em-guest-hero__banner">
-                    <div className="relative z-[1] space-y-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 border border-white/25 text-[10px] font-bold uppercase tracking-[0.14em] text-white">
-                          Présence confirmée
-                        </span>
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75 truncate max-w-[50%]">
-                          {guest.organizationName || site.platformName}
-                        </span>
-                      </div>
-                      <div className="text-center sm:text-left space-y-1.5">
-                        <h2 className="text-2xl sm:text-[1.75rem] font-display font-semibold leading-tight tracking-tight text-white">
+                  <div className="em-guest-hero__banner !py-4 !px-5">
+                    <div className="relative z-[1] flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0 space-y-0.5">
+                        <h2 className="text-xl sm:text-2xl font-display font-semibold leading-tight tracking-tight text-white truncate">
                           Bonjour {guest.firstName}
                         </h2>
-                        <p className="text-sm text-white/85 leading-relaxed max-w-md mx-auto sm:mx-0">
-                          Votre pass d&apos;entrée pour{' '}
-                          <span className="font-semibold text-white">{guest.event.title}</span>.
-                          Présentez le badge QR à l&apos;accueil.
-                        </p>
+                        <p className="text-sm text-white/85 truncate">{guest.event.title}</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto sm:mx-0">
-                        <div className="rounded-xl bg-white/12 border border-white/15 px-3 py-2.5 text-center sm:text-left">
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">Date</p>
-                          <p className="text-sm font-semibold text-white mt-0.5">
-                            {new Date(guest.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                          </p>
-                        </div>
-                        <div className="rounded-xl bg-white/12 border border-white/15 px-3 py-2.5 text-center sm:text-left">
-                          <p className="text-[9px] font-bold uppercase tracking-wider text-white/70">Heure</p>
-                          <p className="text-sm font-semibold text-white mt-0.5">
-                            {new Date(guest.event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 border border-white/25 text-[10px] font-semibold text-white shrink-0">
+                        Confirmé
+                      </span>
                     </div>
                   </div>
 
-                  <div className="px-6 py-6 sm:px-8 flex flex-col items-center gap-4 bg-gradient-to-b from-surface to-surface-muted/40">
+                  <div className="px-5 py-7 sm:px-8 flex flex-col items-center gap-5 bg-surface">
                     <button
                       type="button"
                       onClick={() => setShowFullScreenQr(true)}
-                      className="p-4 bg-white rounded-[1.25rem] border border-border shadow-[0_12px_40px_rgba(15,23,42,0.08)] hover:scale-105 active:scale-95 transition-all group relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      className="p-3 sm:p-4 bg-white rounded-2xl border border-border shadow-[0_16px_48px_rgba(15,23,42,0.1)] hover:scale-[1.02] active:scale-[0.98] transition-transform group relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       title="Agrandir le pass QR"
                     >
                       <img
-                        src={getGuestQrImageUrl(guest.id, 200)}
+                        src={getGuestQrImageUrl(guest.id, 280)}
                         alt={`Pass QR de ${guest.firstName} ${guest.lastName}`}
-                        className="w-44 h-44 sm:w-48 sm:h-48"
+                        className="w-52 h-52 sm:w-60 sm:h-60"
                       />
-                      <span className="absolute inset-0 rounded-[1.25rem] bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <span className="bg-primary/95 text-white text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-xs shadow-sm shadow-primary/30">
-                          <Maximize2 className="w-3 h-3" />
-                          Agrandir
+                      <span className="absolute inset-0 rounded-2xl bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <span className="bg-primary text-white text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
+                          <Maximize2 className="w-3.5 h-3.5" aria-hidden />
+                          Agrandir pour le scan
                         </span>
                       </span>
                     </button>
-                    <div className="text-center space-y-3">
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Pass d&apos;entrée</p>
-                        <p className="text-[11px] font-mono text-muted tracking-widest">
-                          {guest.id.split('-')[0]?.toUpperCase()}
-                        </p>
+
+                    <div className="text-center space-y-3 w-full max-w-xs">
+                      <p className="text-sm text-muted leading-snug">
+                        Présentez ce QR à l&apos;accueil
+                      </p>
+                      <p className="text-[11px] font-mono text-muted/80 tracking-widest">
+                        {guest.id.split('-')[0]?.toUpperCase()}
+                      </p>
+                      <div className="flex items-center justify-center gap-4 text-xs text-muted pt-1">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-primary" aria-hidden />
+                          {new Date(guest.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </span>
+                        <span className="text-border" aria-hidden>·</span>
+                        <span>
+                          {new Date(guest.event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                      <Link
-                        href={`/rsvp/${guestId}/print`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted transition"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        Imprimer l&apos;invitation
-                      </Link>
+                      <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowFullScreenQr(true)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        >
+                          <Maximize2 className="w-4 h-4" aria-hidden />
+                          Pass plein écran
+                        </button>
+                        <Link
+                          href={`/rsvp/${guestId}/print`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        >
+                          <Printer className="w-4 h-4" aria-hidden />
+                          Imprimer
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {!rsvpLocked && (
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => setSubmitted(false)}
-                      className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-border bg-surface text-foreground text-xs font-semibold hover:bg-surface-muted transition shadow-sm"
-                    >
-                      Modifier ma réponse
-                    </button>
-                  </div>
-                )}
-
-                <GuestPortalCard className="space-y-4 !p-0 overflow-hidden">
-                  <div className="px-5 pt-5 pb-3 border-b border-border/70 bg-gradient-to-r from-primary/5 to-transparent">
-                    <h3 className="font-display font-semibold text-foreground text-base">
+                <section className="space-y-4 px-0.5">
+                  <div>
+                    <h3 className="font-display font-semibold text-foreground text-base tracking-tight">
                       {guest.event.title}
                     </h3>
-                  </div>
-                  <div className="px-5 pb-5 space-y-4">
                     {guest.event.description?.trim() ? (
-                      <p className="text-muted text-xs leading-relaxed whitespace-pre-line border-l border-primary/35 pl-3">
+                      <p className="mt-2 text-muted text-sm leading-relaxed whitespace-pre-line">
                         {guest.event.description}
                       </p>
                     ) : null}
-
-                    <div className="space-y-3 text-xs text-muted">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0">
-                          <Calendar className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="font-semibold block text-foreground">Date & heure</span>
-                          {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0">
-                          <MapPin className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="font-semibold block text-foreground">Lieu</span>
-                          {guest.event.location}
-                        </div>
-                      </div>
-                    </div>
                   </div>
-                </GuestPortalCard>
 
-                {guest.event.location && (
-                  <GuestPortalCard className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-                        <Navigation className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground">Guide jusqu&apos;au lieu</p>
-                        <p className="text-xs text-muted mt-0.5 leading-relaxed">
-                          Carte interactive : lancez l&apos;itinéraire depuis votre position.
-                        </p>
-                      </div>
-                    </div>
+                  <ul className="space-y-3 text-sm text-muted">
+                    <li className="flex items-start gap-3">
+                      <Calendar className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
+                      <span>
+                        <span className="font-semibold text-foreground block">Date & heure</span>
+                        {new Date(guest.event.date).toLocaleDateString('fr-FR', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
+                      <span>
+                        <span className="font-semibold text-foreground block">Lieu</span>
+                        {guest.event.location}
+                      </span>
+                    </li>
+                  </ul>
+
+                  {guest.event.location ? (
                     <button
                       type="button"
                       onClick={() => goGuestTab('route')}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary-hover transition shadow-sm"
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-2.5 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
-                      Ouvrir la carte
+                      <Navigation className="w-4 h-4 text-primary" aria-hidden />
+                      Guide jusqu&apos;au lieu
                     </button>
-                  </GuestPortalCard>
-                )}
+                  ) : null}
+                </section>
 
                 <GuestGuidelinesView
                   guidelines={guest.event.guestGuidelines}
@@ -878,12 +853,13 @@ export default function RsvpPage() {
                 />
 
                 {!rsvpLocked && (
-                <button
-                  onClick={() => setSubmitted(false)}
-                  className="w-full py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-xs transition"
-                >
-                  Modifier ma réponse
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubmitted(false)}
+                    className="w-full min-h-11 py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  >
+                    Modifier ma réponse
+                  </button>
                 )}
               </div>
             )}

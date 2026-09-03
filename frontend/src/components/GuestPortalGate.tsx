@@ -8,6 +8,7 @@ import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import GuestBrandSync from '@/components/GuestBrandSync';
 import CelebrateMood from '@/components/CelebrateMood';
+import GuestThemeToggle from '@/components/GuestThemeToggle';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 interface GuestLegalStatus {
@@ -100,6 +101,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
         aria-busy="true"
         aria-live="polite"
       >
+        <GuestThemeToggle floating />
         <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden />
         <span className="sr-only">Chargement de votre espace invité…</span>
       </div>
@@ -109,6 +111,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
   if (!isPrint && error && !legalStatus) {
     return (
       <div className="min-h-screen em-guest-page flex items-center justify-center px-6">
+        <GuestThemeToggle floating />
         <div className="max-w-sm w-full text-center space-y-4" role="alert">
           <p className="text-sm text-foreground leading-relaxed">
             {error || 'Impossible de charger votre espace invité. Vérifiez votre connexion.'}
@@ -130,6 +133,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
   return (
     <>
       {!isPrint && <CelebrateMood />}
+      {!isPrint && requiresAcceptance && <GuestThemeToggle floating />}
       <GuestBrandSync branding={legalStatus?.branding} />
       <LegalAcceptanceModal
         open={requiresAcceptance}

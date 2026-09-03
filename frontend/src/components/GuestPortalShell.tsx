@@ -6,6 +6,7 @@ import { HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import GuestThemeToggle from '@/components/GuestThemeToggle';
 import CelebrateMood from '@/components/CelebrateMood';
 
 interface GuestPortalShellProps {
@@ -97,6 +98,7 @@ export default function GuestPortalShell({
           )}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {headerRight}
+            <GuestThemeToggle />
             {guestId && <GuestPortalHomeLink guestId={guestId} />}
             <Link
               href="/guide/invite"

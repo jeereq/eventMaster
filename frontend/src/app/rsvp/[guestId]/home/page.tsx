@@ -80,38 +80,33 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
     <Link
       href={`/rsvp/${item.guestId}`}
       className={cn(
-        'block bg-surface border rounded-[var(--radius-card)] p-4 sm:p-5 shadow-[var(--shadow-soft)]',
-        'hover:bg-card-hover hover:border-border-subtle active:bg-surface-muted transition group touch-manipulation',
-        'min-h-[7rem]',
-        item.isCurrent
-          ? 'border-primary/40 ring-1 ring-primary/20'
-          : 'border-border',
+        'block py-4 border-b border-border/80 last:border-b-0',
+        'hover:bg-surface-muted/50 active:bg-surface-muted transition group touch-manipulation -mx-1 px-1 rounded-lg',
+        item.isCurrent && 'bg-primary/[0.04]',
       )}
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="space-y-1 min-w-0">
-          <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">
-            {item.organizationName}
-          </span>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="space-y-0.5 min-w-0">
           <h3 className="font-semibold text-foreground text-base leading-snug group-hover:text-primary transition">
             {item.event.title}
           </h3>
+          <p className="text-xs text-muted truncate">{item.organizationName}</p>
         </div>
         <RsvpBadge status={item.rsvp} />
       </div>
 
-      <div className="space-y-1.5 text-xs text-muted mb-3">
+      <div className="space-y-1 text-xs text-muted mb-2.5">
         <div className="flex items-start gap-2">
-          <Calendar className="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" />
+          <Calendar className="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" aria-hidden />
           <span>{formattedDate}</span>
         </div>
         <div className="flex items-start gap-2">
-          <MapPin className="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" />
+          <MapPin className="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" aria-hidden />
           <span>{item.event.location}</span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-border">
+      <div className="flex items-center justify-between">
         {item.eventPassed ? (
           <span className="text-[10px] font-semibold text-muted">Terminé</span>
         ) : (
@@ -119,7 +114,7 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
         )}
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
           {item.rsvp === 'PENDING' ? 'Répondre' : item.rsvp === 'ACCEPTED' ? 'Mon espace' : 'Voir'}
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ArrowRight className="w-3.5 h-3.5" aria-hidden />
         </span>
       </div>
     </Link>
@@ -210,25 +205,10 @@ export default function GuestHomePage() {
         Invitations liées à votre e-mail et téléphone, regroupées ici.
       </p>
 
-      <div className="grid grid-cols-3 gap-2.5">
-        {[
-          { label: 'Total', value: data.total, tone: 'text-foreground' },
-          { label: 'À venir', value: data.upcomingCount, tone: 'text-primary' },
-          { label: 'Passés', value: data.pastCount, tone: 'text-muted' },
-        ].map((stat) => (
-          <GuestPortalCard key={stat.label} padding="sm" className="text-center">
-            <div className={cn('text-xl font-semibold', stat.tone)}>{stat.value}</div>
-            <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
-              {stat.label}
-            </div>
-          </GuestPortalCard>
-        ))}
-      </div>
-
       {upcoming.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">À venir</h2>
-          <div className="grid gap-3">
+        <section>
+          <h2 className="text-sm font-semibold text-foreground mb-1">À venir</h2>
+          <div className="divide-y-0">
             {upcoming.map((item) => (
               <InvitationCard key={item.guestId} item={item} />
             ))}
@@ -237,10 +217,10 @@ export default function GuestHomePage() {
       )}
 
       {past.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-1">
           <h2 className="text-sm font-semibold text-foreground">Passés</h2>
-          <p className="text-xs text-muted">Les réponses ne peuvent plus être modifiées après la date de l’événement.</p>
-          <div className="grid gap-3">
+          <p className="text-xs text-muted mb-1">Les réponses ne peuvent plus être modifiées après la date de l’événement.</p>
+          <div>
             {past.map((item) => (
               <InvitationCard key={item.guestId} item={item} />
             ))}
@@ -249,12 +229,12 @@ export default function GuestHomePage() {
       )}
 
       {data.invitations.length === 0 && (
-        <GuestPortalCard className="text-center py-10 space-y-2">
+        <div className="text-center py-12 space-y-2">
           <p className="text-sm font-semibold text-foreground">Aucune invitation pour ce profil</p>
           <p className="text-sm text-muted">
             Ouvrez le lien reçu par WhatsApp ou e-mail, ou demandez un nouvel envoi à l’organisateur.
           </p>
-        </GuestPortalCard>
+        </div>
       )}
     </GuestPortalShell>
   );
