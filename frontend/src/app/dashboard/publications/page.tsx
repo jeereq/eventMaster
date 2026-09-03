@@ -181,18 +181,20 @@ function PublicationsGrid() {
         <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60">
           {(
             [
-              ['all', 'Tout'],
-              ['venue', 'Salles'],
-              ['vendor', 'Prestations'],
+              ['all', 'Tout', 'text-primary border-primary/25'],
+              ['venue', 'Salles', 'text-emerald-700 dark:text-emerald-300 border-emerald-500/30'],
+              ['vendor', 'Prestations', 'text-amber-700 dark:text-amber-300 border-amber-500/30'],
             ] as const
-          ).map(([id, label]) => (
+          ).map(([id, label, activeStyle]) => (
             <button
               key={id}
               type="button"
               onClick={() => setKind(id)}
               className={cn(
                 'min-h-9 px-3.5 rounded-lg text-xs font-semibold transition',
-                kind === id ? 'bg-surface text-primary shadow-xs font-bold' : 'text-muted hover:text-foreground',
+                kind === id
+                  ? cn('bg-surface shadow-xs font-bold border', activeStyle)
+                  : 'text-muted hover:text-foreground',
               )}
             >
               {label}
@@ -332,9 +334,19 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
           <div className="min-w-0">
             <h3 className="text-sm sm:text-base font-bold text-foreground truncate">{post.author?.name || 'Publication'}</h3>
-            <p className="text-xs text-muted">
-              {post.author?.kind === 'venue' ? 'Salle & Espace' : 'Prestataire certifié'}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border',
+                  post.author?.kind === 'vendor'
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                    : 'bg-primary/10 text-primary border-primary/30',
+                )}
+              >
+                {post.author?.kind === 'vendor' ? <Sparkles className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
+                {post.author?.kind === 'venue' ? 'Salle & Espace' : 'Prestataire certifié'}
+              </span>
+            </div>
           </div>
           <button
             type="button"

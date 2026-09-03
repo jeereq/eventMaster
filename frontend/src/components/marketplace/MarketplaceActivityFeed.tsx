@@ -451,7 +451,14 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
       {/* En-tête de la publication */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary shrink-0 flex items-center justify-center border border-primary/20 shadow-2xs">
+          <div
+            className={cn(
+              'w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center border shadow-2xs',
+              isVenue
+                ? 'bg-primary/10 text-primary border-primary/25'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+            )}
+          >
             {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
           </div>
           <div className="min-w-0 flex-1">
@@ -464,13 +471,18 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
         <button
           type="button"
           onClick={() => onShare(post.id)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/80 bg-surface text-xs font-medium text-muted hover:text-foreground hover:bg-surface-muted transition"
+          className={cn(
+            'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/80 text-xs font-medium transition',
+            isCopied
+              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/25 shadow-2xs'
+              : 'text-muted hover:text-foreground hover:bg-surface-muted bg-surface',
+          )}
           title="Copier le lien"
         >
           {isCopied ? (
             <>
-              <Check className="w-3.5 h-3.5 text-primary" />
-              <span className="text-primary text-[11px]">Copié !</span>
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">Copié !</span>
             </>
           ) : (
             <>
@@ -506,8 +518,8 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
           className={cn(
             'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
             liked
-              ? 'text-rose-600 bg-rose-500/10 border border-rose-500/20'
-              : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
+              ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 shadow-2xs'
+              : 'text-muted hover:text-rose-600 hover:bg-rose-500/5 border border-transparent',
           )}
           aria-pressed={liked}
         >
@@ -518,7 +530,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
         <button
           type="button"
           onClick={() => setCommentsExpanded((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+          className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-primary hover:bg-primary/5 transition"
         >
           <MessageCircle className="w-4 h-4" />
           <span>{commentCount}</span>
@@ -532,7 +544,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
             {visibleComments.map((c) => (
               <li
                 key={c.id}
-                className="text-xs rounded-2xl border border-border/70 bg-surface-muted/40 p-3 space-y-1"
+                className="text-xs rounded-2xl border border-border/80 bg-surface-muted/50 p-3 space-y-1 hover:border-border transition"
               >
                 <div className="flex justify-between items-center gap-2">
                   <span className="font-bold text-foreground">{c.authorName}</span>

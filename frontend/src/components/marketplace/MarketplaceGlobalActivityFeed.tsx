@@ -166,7 +166,14 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
           {/* Avatar Profil */}
-          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden border border-border/80 bg-surface-muted shrink-0 flex items-center justify-center shadow-xs">
+          <div
+            className={cn(
+              'relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden border shrink-0 flex items-center justify-center shadow-xs transition',
+              isVendor
+                ? 'border-amber-500/30 ring-2 ring-amber-500/10 bg-amber-500/5'
+                : 'border-primary/30 ring-2 ring-primary/10 bg-primary/5',
+            )}
+          >
             {author?.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -176,7 +183,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 loading="lazy"
               />
             ) : (
-              <div className={cn('w-full h-full flex items-center justify-center', isVendor ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary')}>
+              <div className={cn('w-full h-full flex items-center justify-center', isVendor ? 'text-amber-600 dark:text-amber-400' : 'text-primary')}>
                 {isVendor ? <Sparkles className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
               </div>
             )}
@@ -202,8 +209,8 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 className={cn(
                   'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0',
                   isVendor
-                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
-                    : 'bg-primary/10 text-primary border-primary/20',
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                    : 'bg-primary/10 text-primary border-primary/30',
                 )}
               >
                 {isVendor ? <Sparkles className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
@@ -320,8 +327,8 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             className={cn(
               'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
               liked
-                ? 'text-rose-600 bg-rose-500/10 border border-rose-500/20'
-                : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
+                ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/30 shadow-2xs'
+                : 'text-muted hover:text-rose-600 hover:bg-rose-500/5 border border-transparent',
             )}
             aria-pressed={liked}
           >
@@ -333,7 +340,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
           <button
             type="button"
             onClick={() => setCommentsExpanded((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition border border-transparent"
+            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-primary hover:bg-primary/5 transition border border-transparent"
           >
             <MessageCircle className="w-4 h-4" />
             <span>{commentCount}</span>
@@ -344,13 +351,18 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
         <button
           type="button"
           onClick={() => onShare(post.id)}
-          className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
-          title="Copier le lien"
+          className={cn(
+            'inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl font-semibold transition',
+            isCopied
+              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 shadow-2xs'
+              : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
+          )}
+          title="Copier le lien ou partager"
         >
           {isCopied ? (
             <>
-              <Check className="w-3.5 h-3.5 text-primary" />
-              <span className="text-primary text-[11px]">Copié !</span>
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">Copié !</span>
             </>
           ) : (
             <>
@@ -368,7 +380,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             {visibleComments.map((c) => (
               <li
                 key={c.id}
-                className="text-xs rounded-2xl border border-border/70 bg-surface-muted/40 p-3 space-y-1"
+                className="text-xs rounded-2xl border border-border/80 bg-surface-muted/50 p-3 space-y-1 hover:border-border transition"
               >
                 <div className="flex justify-between items-center gap-2">
                   <span className="font-bold text-foreground">{c.authorName}</span>
@@ -594,11 +606,26 @@ export default function MarketplaceGlobalActivityFeed({
                 className={cn(
                   'inline-flex items-center gap-1.5 sm:gap-2 min-h-10 px-3 sm:px-3.5 rounded-lg text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   active
-                    ? 'bg-surface text-primary shadow-xs border border-primary/20 font-bold'
+                    ? tab.id === 'vendor'
+                      ? 'bg-surface text-amber-700 dark:text-amber-300 shadow-xs border border-amber-500/30 font-bold'
+                      : tab.id === 'venue'
+                      ? 'bg-surface text-emerald-700 dark:text-emerald-300 shadow-xs border border-emerald-500/30 font-bold'
+                      : 'bg-surface text-primary shadow-xs border border-primary/25 font-bold'
                     : 'text-muted hover:text-foreground hover:bg-surface/50',
                 )}
               >
-                <Icon className={cn('w-3.5 h-3.5', active ? 'text-primary' : 'text-muted')} />
+                <Icon
+                  className={cn(
+                    'w-3.5 h-3.5',
+                    active
+                      ? tab.id === 'vendor'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : tab.id === 'venue'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-primary'
+                      : 'text-muted',
+                  )}
+                />
                 <span className="hidden sm:inline">{tab.label}</span>
                 <span className="sm:hidden">{tab.shortLabel}</span>
               </button>
