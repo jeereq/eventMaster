@@ -85,8 +85,8 @@ export function PostMediaGrid({
         className={cn(
           'grid gap-1.5',
           media.length === 1 && 'grid-cols-1',
-          media.length === 2 && 'grid-cols-2 aspect-2/1 sm:aspect-16/9',
-          media.length === 3 && 'grid-cols-3 aspect-2/1 sm:aspect-16/9',
+          media.length === 2 && 'grid-cols-2 aspect-4/3 sm:aspect-16/9',
+          media.length === 3 && 'grid-cols-2 sm:grid-cols-3 aspect-4/3 sm:aspect-16/9',
           media.length >= 4 && 'grid-cols-2 aspect-square sm:aspect-16/10',
         )}
       >
@@ -94,6 +94,7 @@ export function PostMediaGrid({
           const video = m.type === 'VIDEO' || isVideoUrl(m.url);
           const isFourthAndMore = i === 3 && media.length > 4;
           const extraCount = media.length - 4;
+          const isFirstOfThree = media.length === 3 && i === 0;
 
           return (
             <div
@@ -101,6 +102,7 @@ export function PostMediaGrid({
               className={cn(
                 'relative overflow-hidden group/media bg-surface-muted',
                 media.length === 1 ? 'aspect-16/10 max-h-[460px]' : 'h-full w-full',
+                isFirstOfThree && 'col-span-2 sm:col-span-1',
               )}
             >
               {video ? (
@@ -444,7 +446,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className="group rounded-3xl border border-border/90 bg-surface p-5 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200 [content-visibility:auto] [contain-intrinsic-size:0_380px]"
+      className="group rounded-3xl border border-border/90 bg-surface p-4 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200 [content-visibility:auto] [contain-intrinsic-size:0_380px]"
     >
       {/* En-tête de la publication */}
       <div className="flex items-start justify-between gap-3">
@@ -671,16 +673,31 @@ export default function MarketplaceActivityFeed({
 
   const handleShare = useCallback(async (postId: string) => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#post-${postId}` : '';
-    if (navigator.clipboard && url) {
+    // Partage natif mobile (WhatsApp, SMS, etc.) si disponible
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `Publication de ${authorLabel} sur EventMaster`,
+          text: `Découvrez cette publication de ${authorLabel} sur EventMaster`,
+          url,
+        });
+        return;
+      } catch (err: unknown) {
+        if ((err as Error)?.name === 'AbortError') return;
+      }
+    }
+
+    // Repli presse-papier
+    if (typeof navigator !== 'undefined' && navigator.clipboard && url) {
       try {
         await navigator.clipboard.writeText(url);
         setCopiedPostId(postId);
         setTimeout(() => setCopiedPostId(null), 2500);
       } catch {
-        // Fallback
+        // Fallback silencieux
       }
     }
-  }, []);
+  }, [authorLabel]);
 
   const openLightbox = useCallback((urls: string[], index: number) => {
     setLightbox({ urls, index });

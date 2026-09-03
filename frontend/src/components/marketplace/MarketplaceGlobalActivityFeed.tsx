@@ -160,13 +160,13 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className="group rounded-3xl border border-border/90 bg-surface p-5 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200 [content-visibility:auto] [contain-intrinsic-size:0_380px]"
+      className="group rounded-3xl border border-border/90 bg-surface p-4 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200 [content-visibility:auto] [contain-intrinsic-size:0_380px]"
     >
       {/* En-tête de la publication */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3.5 min-w-0">
+        <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
           {/* Avatar Profil */}
-          <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-border/80 bg-surface-muted shrink-0 flex items-center justify-center shadow-xs">
+          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl overflow-hidden border border-border/80 bg-surface-muted shrink-0 flex items-center justify-center shadow-xs">
             {author?.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -184,23 +184,23 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
 
           {/* Détails Auteur */}
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {href ? (
                 <Link
                   href={href}
-                  className="text-sm sm:text-[15px] font-bold text-foreground hover:text-primary transition truncate"
+                  className="text-sm sm:text-[15px] font-bold text-foreground hover:text-primary transition truncate max-w-[170px] sm:max-w-xs"
                 >
                   {author?.name || 'Partenaire EventMaster'}
                 </Link>
               ) : (
-                <span className="text-sm sm:text-[15px] font-bold text-foreground truncate">
+                <span className="text-sm sm:text-[15px] font-bold text-foreground truncate max-w-[170px] sm:max-w-xs">
                   {author?.name || 'Partenaire EventMaster'}
                 </span>
               )}
 
               <span
                 className={cn(
-                  'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border',
+                  'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0',
                   isVendor
                     ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
                     : 'bg-primary/10 text-primary border-primary/20',
@@ -228,11 +228,11 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
         {href && (
           <Link
             href={href}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-surface-muted/50 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition group-hover:border-primary/40 shadow-2xs"
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 min-h-10 min-w-10 sm:min-w-0 px-2 sm:px-3 py-1.5 rounded-xl border border-border/80 bg-surface-muted/50 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition group-hover:border-primary/40 shadow-2xs"
             title="Consulter la fiche détaillée"
           >
             <span className="hidden sm:inline">Voir la fiche</span>
-            <ArrowUpRight className="w-3.5 h-3.5" />
+            <ArrowUpRight className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </Link>
         )}
       </div>
@@ -251,15 +251,16 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             className={cn(
               'grid gap-1.5',
               media.length === 1 && 'grid-cols-1',
-              media.length === 2 && 'grid-cols-2 aspect-2/1 sm:aspect-16/9',
-              media.length === 3 && 'grid-cols-3 aspect-2/1 sm:aspect-16/9',
-              media.length >= 4 && 'grid-cols-2 sm:grid-cols-2 aspect-square sm:aspect-16/10',
+              media.length === 2 && 'grid-cols-2 aspect-4/3 sm:aspect-16/9',
+              media.length === 3 && 'grid-cols-2 sm:grid-cols-3 aspect-4/3 sm:aspect-16/9',
+              media.length >= 4 && 'grid-cols-2 aspect-square sm:aspect-16/10',
             )}
           >
             {media.slice(0, 4).map((m, i) => {
               const video = m.type === 'VIDEO' || isVideoUrl(m.url);
               const isFourthAndMore = i === 3 && media.length > 4;
               const extraCount = media.length - 4;
+              const isFirstOfThree = media.length === 3 && i === 0;
 
               return (
                 <div
@@ -267,6 +268,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   className={cn(
                     'relative overflow-hidden group/media bg-surface-muted',
                     media.length === 1 ? 'aspect-16/10 max-h-[460px]' : 'h-full w-full',
+                    isFirstOfThree && 'col-span-2 sm:col-span-1',
                   )}
                 >
                   {video ? (
@@ -532,13 +534,28 @@ export default function MarketplaceGlobalActivityFeed({
 
   const handleShare = useCallback(async (postId: string) => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/activite#post-${postId}` : '';
-    if (navigator.clipboard && url) {
+    // Partage natif mobile (WhatsApp, SMS, etc.) si disponible
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Publication sur EventMaster',
+          text: 'Découvrez cette réalisation sur EventMaster',
+          url,
+        });
+        return;
+      } catch (err: unknown) {
+        if ((err as Error)?.name === 'AbortError') return;
+      }
+    }
+
+    // Repli sur le presse-papier
+    if (typeof navigator !== 'undefined' && navigator.clipboard && url) {
       try {
         await navigator.clipboard.writeText(url);
         setCopiedPostId(postId);
         setTimeout(() => setCopiedPostId(null), 2500);
       } catch {
-        // Fallback
+        // Fallback silencieux
       }
     }
   }, []);
@@ -549,10 +566,15 @@ export default function MarketplaceGlobalActivityFeed({
 
   const myLike = likeKey(user?.id);
 
-  const kindTabs: Array<{ id: GlobalFeedKind; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { id: 'all', label: 'Toutes les publications', icon: Rss },
-    { id: 'venue', label: 'Salles & Espaces', icon: Building2 },
-    { id: 'vendor', label: 'Prestataires & Métiers', icon: Sparkles },
+  const kindTabs: Array<{
+    id: GlobalFeedKind;
+    label: string;
+    shortLabel: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    { id: 'all', label: 'Toutes les publications', shortLabel: 'Toutes', icon: Rss },
+    { id: 'venue', label: 'Salles & Espaces', shortLabel: 'Salles', icon: Building2 },
+    { id: 'vendor', label: 'Prestataires & Métiers', shortLabel: 'Prestataires', icon: Sparkles },
   ];
 
   return (
@@ -570,14 +592,15 @@ export default function MarketplaceGlobalActivityFeed({
                 type="button"
                 onClick={() => setKind(tab.id)}
                 className={cn(
-                  'inline-flex items-center gap-2 min-h-10 px-3.5 rounded-lg text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  'inline-flex items-center gap-1.5 sm:gap-2 min-h-10 px-3 sm:px-3.5 rounded-lg text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   active
                     ? 'bg-surface text-primary shadow-xs border border-primary/20 font-bold'
                     : 'text-muted hover:text-foreground hover:bg-surface/50',
                 )}
               >
                 <Icon className={cn('w-3.5 h-3.5', active ? 'text-primary' : 'text-muted')} />
-                <span>{tab.label}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.shortLabel}</span>
               </button>
             );
           })}

@@ -319,14 +319,14 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Détail de la publication"
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-auto border border-border shadow-2xl space-y-4 p-5 sm:p-6"
+        className="bg-surface rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-auto border border-border shadow-2xl space-y-4 p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">

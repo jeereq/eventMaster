@@ -21,31 +21,31 @@ export default function ActivitePage() {
         description="Découvrez les coulisses, nouveaux décors, événements récents et publications partagés par les salles et prestataires en RDC."
         compact
       >
-        <div className="flex flex-wrap items-center gap-2 pt-2">
+        <div className="flex items-center gap-2 pt-2 overflow-x-auto no-scrollbar sm:flex-wrap pb-1">
           <Link
             href="/marketplace/salles"
-            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
+            className="shrink-0 inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
           >
             <Building2 className="w-3.5 h-3.5 text-primary" aria-hidden />
             Salles de fête
           </Link>
           <Link
             href="/marketplace/prestataires"
-            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
+            className="shrink-0 inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
             Prestataires & Métiers
           </Link>
           <Link
             href="/marketplace/locations"
-            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
+            className="shrink-0 inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
           >
             <KeyRound className="w-3.5 h-3.5 text-cyan-600" aria-hidden />
             Matériel & Location
           </Link>
           <Link
             href="/marketplace/evenements"
-            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
+            className="shrink-0 inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border/80 bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted hover:border-primary/40 transition shadow-2xs"
           >
             <Calendar className="w-3.5 h-3.5 text-emerald-600" aria-hidden />
             Billetterie
@@ -58,6 +58,21 @@ export default function ActivitePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Colonne principale : fil de publications */}
           <div className="lg:col-span-8 space-y-6">
+            {/* Bandeau d'action rapide Pro visible sur mobile/tablette (< lg) */}
+            <div className="lg:hidden flex items-center justify-between gap-3 p-4 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-surface to-surface text-xs shadow-xs">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="font-bold text-foreground">Gestionnaire ou prestataire ?</p>
+                <p className="text-muted text-[11px] truncate">Donnez de la visibilité à vos réalisations</p>
+              </div>
+              <Link
+                href={user ? '/dashboard/publications?tab=create' : '/register?intent=vendor'}
+                className="shrink-0 inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs shadow-xs hover:opacity-95 transition"
+              >
+                <span>{user ? 'Publier' : 'Rejoindre'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
             <MarketplaceGlobalActivityFeed linkBase="public" />
           </div>
 

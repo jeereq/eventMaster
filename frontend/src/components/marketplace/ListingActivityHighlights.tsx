@@ -70,7 +70,7 @@ export default function ListingActivityHighlights({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory sm:grid sm:grid-cols-3 gap-3 pb-1 sm:pb-0">
         {items.map((post) => {
           const firstImage = post.mediaUrls?.find((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))?.url;
           const isVideo = !firstImage && Boolean(post.mediaUrls?.find((m) => m.type === 'VIDEO' || isVideoUrl(m.url)));
@@ -78,7 +78,7 @@ export default function ListingActivityHighlights({
           return (
             <div
               key={post.id}
-              className="group/card rounded-2xl border border-border bg-surface p-3 space-y-2.5 flex flex-col justify-between hover:border-primary/40 hover:shadow-xs transition-all duration-200"
+              className="group/card rounded-2xl border border-border bg-surface p-3 space-y-2.5 flex flex-col justify-between hover:border-primary/40 hover:shadow-xs transition-all duration-200 snap-start w-[82%] sm:w-auto shrink-0 sm:shrink"
             >
               <div className="space-y-2">
                 {firstImage ? (
