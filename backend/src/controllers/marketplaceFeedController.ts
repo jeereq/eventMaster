@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { resolveOrgAccess } from '../services/permissionsService';
@@ -810,12 +811,8 @@ export async function listMyFeedPosts(req: AuthenticatedRequest, res: Response) 
   }
 }
 
-/** Aperçu pour enrichir getPublicVenue / getPublicVendor. */
-export async function fetchActivityPreview(where: {
-  venueListingId?: string;
-  vendorProfileId?: string;
-  serviceOfferingId?: string;
-}) {
+/** Aperçu pour enrichir getPublicVenue / getPublicVendor / getPublicService. */
+export async function fetchActivityPreview(where: Prisma.MarketplacePostWhereInput) {
   const posts = await prisma.marketplacePost.findMany({
     where: { ...where, isPublished: true },
     orderBy: { createdAt: 'desc' },

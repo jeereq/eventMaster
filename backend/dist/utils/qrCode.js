@@ -7,7 +7,8 @@ exports.getPublicApiBaseUrl = getPublicApiBaseUrl;
 exports.buildGuestQrImageUrl = buildGuestQrImageUrl;
 exports.generateQrPngBuffer = generateQrPngBuffer;
 const qrcode_1 = __importDefault(require("qrcode"));
-const DEFAULT_COLOR = '#4f46e5';
+const brandingUtils_1 = require("./brandingUtils");
+const DEFAULT_COLOR = brandingUtils_1.DEFAULT_TENANT_BRANDING.primary;
 const DEFAULT_BG = '#ffffff';
 /** Base URL publique de l’API (QR WhatsApp / e-mail doivent être joignables). */
 function getPublicApiBaseUrl() {

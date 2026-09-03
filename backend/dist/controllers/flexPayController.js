@@ -11,6 +11,8 @@ const flexPayCardService_1 = require("../services/flexPayCardService");
 const commercialFlexPayPayoutService_1 = require("../services/commercialFlexPayPayoutService");
 const platformSettingsService_1 = require("../services/platformSettingsService");
 const aiTokenFlexPayService_1 = require("../services/aiTokenFlexPayService");
+const paymentTraceService_1 = require("../services/paymentTraceService");
+const aiSimulationWalletService_1 = require("../services/aiSimulationWalletService");
 function frontendBaseUrl() {
     return (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 }
@@ -189,6 +191,8 @@ async function flexPayCardCallback(req, res) {
             catch {
                 /* fallback */
             }
+            void (0, paymentTraceService_1.notifyAiTokenPayment)(aiOrder).catch((err) => console.error('[FlexPay] notify ai_tokens:', err));
+            void (0, aiSimulationWalletService_1.creditPaidAiTokenOrder)(aiOrder).catch((err) => console.error('[FlexPay] wallet credit ai_tokens:', err));
             return res.json({
                 ok: true,
                 paid: true,

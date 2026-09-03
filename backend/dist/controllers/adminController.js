@@ -1377,7 +1377,7 @@ async function updateAdminSettings(req, res) {
         const { plans: incomingPlans, ...otherSettings } = req.body || {};
         const current = (0, platformSettingsService_1.loadPlatformSettings)();
         const merged = (0, platformSettingsService_1.mergeSettingsUpdate)(current, otherSettings);
-        const updatedSettings = (0, platformSettingsService_1.savePlatformSettings)(merged);
+        const updatedSettings = await (0, platformSettingsService_1.savePlatformSettingsDurable)(merged);
         let plans = (0, plansConfig_1.getPlansConfiguration)();
         if (incomingPlans) {
             plans = await (0, subscriptionPlanCatalogService_1.saveSubscriptionPlansToDb)(incomingPlans);

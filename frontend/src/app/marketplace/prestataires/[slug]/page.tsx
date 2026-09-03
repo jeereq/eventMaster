@@ -96,6 +96,7 @@ export default function MarketplaceServiceDetailPage() {
         priceFromFc={service?.priceFromFc ?? null}
         priceUnitLabel={service?.priceUnitLabel}
         quotaLabel={quotaLabel}
+        activityPreview={service?.activityPreview}
         details={service && item ? (
         <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-3 max-w-prose">

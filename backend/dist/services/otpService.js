@@ -15,6 +15,9 @@ exports.maskPhone = maskPhone;
 const crypto_1 = __importDefault(require("crypto"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const notificationService_1 = require("./notificationService");
+const brandedMessaging_1 = require("../utils/brandedMessaging");
+const brandingUtils_1 = require("../utils/brandingUtils");
+const platformSettingsService_1 = require("./platformSettingsService");
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute
 function generateOtpCode() {
@@ -79,20 +82,26 @@ async function sendRegistrationOtp(params) {
         : invitedToTeam
             ? 'Invitation équipe EventMaster'
             : 'Validation de votre compte';
-    const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-      <h2 style="color: #4f46e5; text-align: center;">${htmlTitle}</h2>
-      <p>Bonjour <strong>${name}</strong>,</p>
-      <p>${intro}</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4f46e5; background: #eef2ff; padding: 16px 24px; border-radius: 12px; display: inline-block;">${code}</span>
+    const brand = (0, brandingUtils_1.getPlatformBrand)();
+    const { platformName } = (0, platformSettingsService_1.getContactDestinations)();
+    const tint = (0, brandingUtils_1.mixHexWithWhite)(brand.primary, 0.88);
+    const html = (0, brandedMessaging_1.wrapBrandedEmail)({
+        branding: brand,
+        orgName: platformName,
+        title: htmlTitle,
+        eyebrow: 'Sécurité',
+        headerEmoji: '🔐',
+        innerHtml: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${(0, brandingUtils_1.escapeHtml)(name)}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">${(0, brandingUtils_1.escapeHtml)(intro)}</p>
+      <div style="text-align:center;margin:8px 0 20px;">
+        <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:${brand.primary};background:${tint};padding:16px 24px;border-radius:14px;display:inline-block;">${(0, brandingUtils_1.escapeHtml)(code)}</span>
       </div>
-      <p style="font-size: 0.875rem; color: #6b7280; text-align: center;">Ce code expire dans ${expiryMinutes} minutes.</p>
+      <p style="margin:0;font-size:13px;color:#64748b;text-align:center;">Ce code expire dans ${expiryMinutes} minutes.</p>
       ${postCodeHint}
-      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-      <p style="font-size: 0.875rem; color: #9ca3af; text-align: center;">Si vous n'attendiez pas ce message, ignorez-le.</p>
-    </div>
-  `;
+    `,
+        footerNote: 'Si vous n’attendiez pas ce message, ignorez-le.',
+    });
     await (0, notificationService_1.sendRealEmail)(email, subject, text, html);
     return { sentVia: 'EMAIL' };
 }

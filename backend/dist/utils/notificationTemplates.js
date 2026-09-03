@@ -30,7 +30,7 @@ function renderOperatorNotificationEmail(params) {
     const subject = `EventMaster — ${params.title}`.slice(0, 200);
     const text = [params.message, '', `Ouvrir : ${href}`, '', '— EventMaster'].join('\n');
     const html = (0, brandedMessaging_1.wrapBrandedEmail)({
-        branding: brandingUtils_1.DEFAULT_TENANT_BRANDING,
+        branding: (0, brandingUtils_1.getPlatformBrand)(),
         orgName: 'EventMaster',
         title: params.title,
         eyebrow: params.familyLabel || 'Notification',

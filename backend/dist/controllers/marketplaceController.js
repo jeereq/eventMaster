@@ -22,6 +22,7 @@ const marketplaceNotifyCopy_1 = require("../utils/marketplaceNotifyCopy");
 const publicVenue_1 = require("../utils/publicVenue");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
 const listingDetails_1 = require("../utils/listingDetails");
+const marketplaceFeedController_1 = require("./marketplaceFeedController");
 const client_1 = require("@prisma/client");
 const planFeaturesService_1 = require("../services/planFeaturesService");
 const platformNotificationService_1 = require("../services/platformNotificationService");
@@ -323,7 +324,11 @@ async function getPublicVenue(req, res) {
         if (!listing.isPublic && !canViewUnpublishedListing(req, listing.tenantId)) {
             return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
         }
-        return res.json({ ...toPublicVenue(listing), isPublic: listing.isPublic });
+        return res.json({
+            ...toPublicVenue(listing),
+            isPublic: listing.isPublic,
+            activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({ venueListingId: listing.id }),
+        });
     }
     catch (error) {
         console.error('getPublicVenue:', error);
@@ -667,7 +672,16 @@ async function getPublicService(req, res) {
         if (!offering.isPublic && !canViewUnpublishedListing(req, offering.tenantId)) {
             return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
         }
-        return res.json({ ...toPublicService(offering), isPublic: offering.isPublic });
+        return res.json({
+            ...toPublicService(offering),
+            isPublic: offering.isPublic,
+            activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({
+                OR: [
+                    { serviceOfferingId: offering.id },
+                    { vendorProfileId: offering.vendorProfileId },
+                ],
+            }),
+        });
     }
     catch (error) {
         console.error('getPublicService:', error);
@@ -685,6 +699,7 @@ async function getPublicVendor(req, res) {
                 isBlockedByAdmin: false
             },
             select: {
+                id: true,
                 slug: true,
                 displayName: true,
                 city: true,
@@ -693,7 +708,11 @@ async function getPublicVendor(req, res) {
         });
         if (!profile)
             return res.status(404).json({ error: 'Prestataire introuvable.' });
-        return res.json(profile);
+        const { id, ...publicFields } = profile;
+        return res.json({
+            ...publicFields,
+            activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({ vendorProfileId: id }),
+        });
     }
     catch (error) {
         console.error('getPublicVendor:', error);

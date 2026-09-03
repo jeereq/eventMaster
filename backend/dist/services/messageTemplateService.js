@@ -15,6 +15,11 @@ function applyTemplateVariables(text, vars) {
     return result.trim();
 }
 async function ensureDefaultGuestMessageTemplates() {
+    const syncBodies = new Set([
+        'INVITATION_WHATSAPP',
+        'REMINDER_WHATSAPP',
+        'RSVP_CONFIRMATION_WHATSAPP',
+    ]);
     for (const template of defaultGuestMessageTemplates_1.DEFAULT_GUEST_MESSAGE_TEMPLATES) {
         await db_1.prisma.guestMessageTemplate.upsert({
             where: { type: template.type },
@@ -27,7 +32,16 @@ async function ensureDefaultGuestMessageTemplates() {
                 body: template.body,
                 isActive: true,
             },
-            update: {},
+            update: syncBodies.has(template.type)
+                ? {
+                    name: template.name,
+                    description: template.description,
+                    channel: template.channel,
+                    subject: template.subject || null,
+                    body: template.body,
+                    isActive: true,
+                }
+                : {},
         });
     }
 }

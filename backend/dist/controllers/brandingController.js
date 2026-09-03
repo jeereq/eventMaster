@@ -18,7 +18,7 @@ async function getMyBranding(req, res) {
             return res.status(404).json({ error: 'Organisation introuvable.' });
         }
         return res.json({
-            branding: (0, brandingUtils_1.parseBranding)(tenant.branding) || { primary: '#4f46e5', accent: '#6366f1' },
+            branding: (0, brandingUtils_1.customTenantBranding)(tenant.branding) || (0, brandingUtils_1.getPlatformBrand)(),
             tenant: (0, tenantAccess_1.formatTenantResponse)(tenant),
         });
     }
@@ -48,7 +48,7 @@ async function updateMyBranding(req, res) {
             });
             return res.json({
                 message: 'Couleurs EventMaster restaurées.',
-                branding: { primary: '#4f46e5', accent: '#6366f1' },
+                branding: (0, brandingUtils_1.getPlatformBrand)(),
                 tenant: (0, tenantAccess_1.formatTenantResponse)(tenant),
             });
         }

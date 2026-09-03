@@ -27,6 +27,10 @@ const platformNotificationService_1 = require("./platformNotificationService");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 const invoiceText_1 = require("../utils/invoiceText");
 Object.defineProperty(exports, "formatAmountFc", { enumerable: true, get: function () { return invoiceText_1.formatAmountFc; } });
+const brandingUtils_1 = require("../utils/brandingUtils");
+function platformPrimary() {
+    return (0, brandingUtils_1.getPlatformBrand)().primary;
+}
 function getPlanAmount(plan, durationDays) {
     if (plan === 'FREE')
         return 0;
@@ -148,7 +152,7 @@ function renderInvoiceHtml(params) {
 </head>
 <body style="font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
-    <div style="background:#4f46e5;color:#fff;padding:24px;">
+    <div style="background:${platformPrimary()};color:#fff;padding:24px;">
       <h1 style="margin:0;font-size:20px;">EventMaster - Facture</h1>
       <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">${safeInvoiceNumber}</p>
     </div>
@@ -162,7 +166,7 @@ function renderInvoiceHtml(params) {
         ${periodLine}
         ${discountRows}
         ${commissionRows}
-        <tr><td style="padding:12px 0;color:#64748b;border-top:1px solid #e2e8f0;">Montant TTC</td><td style="padding:12px 0;font-weight:800;font-size:18px;color:#4f46e5;border-top:1px solid #e2e8f0;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(params.amount))}</td></tr>
+        <tr><td style="padding:12px 0;color:#64748b;border-top:1px solid #e2e8f0;">Montant TTC</td><td style="padding:12px 0;font-weight:800;font-size:18px;color:${platformPrimary()};border-top:1px solid #e2e8f0;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(params.amount))}</td></tr>
       </table>
       <p style="margin:24px 0 0;font-size:13px;color:#64748b;">Pour renouveler ou mettre à jour votre abonnement, connectez-vous à votre espace EventMaster, section Facturation.</p>
     </div>
@@ -319,7 +323,7 @@ async function sendLicenseExpiryWarning(params) {
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;">
     <h2 style="margin:0 0 16px;color:#b45309;">Rappel - expiration dans 7 jours</h2>
     <p>L'abonnement de <strong>${safeTenant}</strong> (forfait <strong>${safePlan}</strong>) expire le <strong>${(0, invoiceText_1.escapeHtml)(expiryStr)}</strong>.</p>
-    <p>Montant estime du renouvellement : <strong style="color:#4f46e5;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(payable))}</strong>.</p>
+    <p>Montant estime du renouvellement : <strong style="color:${platformPrimary()};">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(payable))}</strong>.</p>
     <p style="color:#64748b;font-size:14px;">Connectez-vous a EventMaster, section Facturation, pour renouveler avant la date limite.</p>
   </div>
 </body>
@@ -482,7 +486,7 @@ function buildInvoicePdf(invoice) {
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
-        doc.fontSize(20).font('Helvetica-Bold').fillColor('#4f46e5').text('EventMaster', { align: 'left' });
+        doc.fontSize(20).font('Helvetica-Bold').fillColor(platformPrimary()).text('EventMaster', { align: 'left' });
         doc.fontSize(10).font('Helvetica').fillColor('#64748b').text("Facture d'abonnement", { align: 'left' });
         doc.moveDown(1);
         doc.fontSize(16).font('Helvetica-Bold').fillColor('#0f172a').text((0, invoiceText_1.normalizeInvoiceText)(invoice.invoiceNumber));
@@ -527,7 +531,7 @@ function buildInvoicePdf(invoice) {
             doc.moveDown(0.5);
         }
         doc.moveDown(1.5);
-        doc.fontSize(14).font('Helvetica-Bold').fillColor('#4f46e5');
+        doc.fontSize(14).font('Helvetica-Bold').fillColor(platformPrimary());
         doc.text(`Montant TTC : ${(0, invoiceText_1.formatAmountFc)(invoice.amount)}`, { align: 'right' });
         doc.moveDown(2);
         const recipients = Array.isArray(invoice.recipientEmails)

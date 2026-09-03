@@ -20,6 +20,7 @@ const guestPlacementDeliveryService_1 = require("../services/guestPlacementDeliv
 const qrCode_1 = require("../utils/qrCode");
 const brandedMessaging_1 = require("../utils/brandedMessaging");
 const brandingUtils_1 = require("../utils/brandingUtils");
+const guestMessageCopy_1 = require("../utils/guestMessageCopy");
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const publicVenue_1 = require("../utils/publicVenue");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -355,7 +356,7 @@ async function getGuestRsvpDetails(req, res) {
         return res.json({
             ...guestWithoutEvent,
             event: eventForClient,
-            branding: (0, brandingUtils_1.resolveBranding)(tenant?.branding),
+            branding: (0, brandingUtils_1.customTenantBranding)(tenant?.branding),
             organizationName: tenant?.name || 'Organisation',
             placementAccessible,
             seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
@@ -402,7 +403,7 @@ async function getGuestAllInvitations(req, res) {
                 rsvp: record.rsvp,
                 event: record.event,
                 organizationName: record.event.tenant?.name || 'Organisation',
-                branding: (0, brandingUtils_1.resolveBranding)(record.event.tenant?.branding),
+                branding: (0, brandingUtils_1.customTenantBranding)(record.event.tenant?.branding),
                 eventPassed,
                 rsvpLocked: eventPassed,
                 isCurrent: record.id === guestId,
@@ -481,7 +482,7 @@ async function submitRsvp(req, res) {
             const qrCodeUrl = (0, qrCode_1.buildGuestQrImageUrl)(guest.id, 300);
             const orgBrand = (0, brandedMessaging_1.orgBrandFromTenant)(guest.event.tenant);
             const subject = `Confirmation de votre présence - ${guest.event.title}`;
-            const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nVotre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée et selon le forfait de l'organisateur).\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
+            const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\n${guestMessageCopy_1.GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
             const htmlBody = (0, brandedMessaging_1.wrapBrandedEmail)({
                 branding: orgBrand.branding,
                 orgName: orgBrand.orgName,
@@ -500,7 +501,7 @@ async function submitRsvp(req, res) {
                     { label: 'Lieu', value: guest.event.location || 'Non défini' },
                 ])}
         `,
-                footerNote: 'Votre plan de table, invitation PDF et localisation GPS sont débloqués dès cette confirmation, dès que votre place est assignée.',
+                footerNote: guestMessageCopy_1.GUEST_COPY.rsvpEmailFooter,
             });
             const whatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('RSVP_CONFIRMATION_WHATSAPP', {
                 firstName: guest.firstName,
@@ -614,7 +615,7 @@ async function downloadSeatingInvitationPdf(req, res) {
         }
         if (!(0, guestPlacementAccess_1.canGuestAccessPlacement)(guest)) {
             return res.status(403).json({
-                error: 'Votre plan de table, invitation PDF et localisation GPS seront disponibles dès que vous aurez accepté l\'invitation (RSVP).',
+                error: guestMessageCopy_1.GUEST_COPY.pdfRequiresRsvp,
             });
         }
         const assigned = (0, commercialService_1.findGuestSeatInTablePlan)(guest.event.tablePlan, guestId);

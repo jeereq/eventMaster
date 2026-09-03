@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { uploadMarketplaceMedia } from '@/lib/cloudinaryUpload';
@@ -10,7 +11,8 @@ import { cn } from '@/lib/cn';
 import { isVideoUrl } from '@/lib/marketplace';
 import {
   Heart, MessageCircle, Send, Trash2, Loader2, Image as ImageIcon,
-  Video, X, ChevronLeft, ChevronRight, Plus,
+  Video, X, ChevronLeft, ChevronRight, Plus, Building2, Sparkles,
+  Share2, Check,
 } from 'lucide-react';
 
 export type MarketplaceFeedMedia = { url: string; type: 'IMAGE' | 'VIDEO' };
@@ -46,7 +48,7 @@ function formatRelativeDate(dateStr: string) {
   if (diffDays < 7) return `Il y a ${diffDays}j`;
   return date.toLocaleDateString('fr-FR', {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -64,7 +66,74 @@ type PublicScope =
   | { kind: 'venue'; slug: string }
   | { kind: 'vendor'; slug: string };
 
-/** Composer + liste pour le propriétaire. */
+/** Grille de médias adaptative et responsive */
+export function PostMediaGrid({
+  media,
+  onOpenImage,
+  className,
+}: {
+  media: MarketplaceFeedMedia[];
+  onOpenImage?: (url: string) => void;
+  className?: string;
+}) {
+  if (!media.length) return null;
+
+  return (
+    <div className={cn('rounded-2xl overflow-hidden border border-border/70 bg-surface-muted/40', className)}>
+      <div
+        className={cn(
+          'grid gap-1.5',
+          media.length === 1 && 'grid-cols-1',
+          media.length === 2 && 'grid-cols-2 aspect-2/1 sm:aspect-16/9',
+          media.length === 3 && 'grid-cols-3 aspect-2/1 sm:aspect-16/9',
+          media.length >= 4 && 'grid-cols-2 aspect-square sm:aspect-16/10',
+        )}
+      >
+        {media.slice(0, 4).map((m, i) => {
+          const video = m.type === 'VIDEO' || isVideoUrl(m.url);
+          const isFourthAndMore = i === 3 && media.length > 4;
+          const extraCount = media.length - 4;
+
+          return (
+            <div
+              key={`${m.url}-${i}`}
+              className={cn(
+                'relative overflow-hidden group/media bg-slate-950/10 dark:bg-slate-900',
+                media.length === 1 ? 'aspect-16/10 max-h-[460px]' : 'h-full w-full',
+              )}
+            >
+              {video ? (
+                <video src={m.url} controls className="w-full h-full object-cover" />
+              ) : (
+                <button
+                  type="button"
+                  className="w-full h-full text-left relative focus:outline-hidden"
+                  onClick={() => onOpenImage?.(m.url)}
+                  aria-label={`Agrandir l’image ${i + 1}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={m.url}
+                    alt=""
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover/media:scale-105"
+                    loading="lazy"
+                  />
+                  {isFourthAndMore && (
+                    <div className="absolute inset-0 bg-black/65 backdrop-blur-2xs flex items-center justify-center text-white text-base font-bold">
+                      +{extraCount + 1} photos
+                    </div>
+                  )}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Composer + liste pour le propriétaire dans l'espace administration. */
 export function MarketplaceActivityFeedManager({
   scope,
   authorLabel = 'Vous',
@@ -155,8 +224,9 @@ export function MarketplaceActivityFeedManager({
   };
 
   return (
-    <div className={cn('space-y-4', className)}>
-      <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+    <div className={cn('space-y-5', className)}>
+      {/* Composer moderne */}
+      <div className="rounded-3xl border border-border bg-surface p-4 sm:p-5 space-y-3.5 shadow-sm">
         <label htmlFor="marketplace-activity-composer" className="sr-only">
           Nouvelle publication
         </label>
@@ -166,13 +236,14 @@ export function MarketplaceActivityFeedManager({
           onChange={(e) => setContent(e.target.value)}
           rows={3}
           maxLength={4000}
-          placeholder="Partagez une activité, une réalisation, une nouveauté…"
-          className="w-full rounded-xl border border-border bg-surface-muted px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 resize-y min-h-[5rem]"
+          placeholder="Partagez une nouvelle décoration, un événement récent, une promo…"
+          className="w-full rounded-2xl border border-border bg-surface-muted/50 px-3.5 py-3 text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary/40 resize-y min-h-[5.5rem]"
         />
+
         {media.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5 pt-1">
             {media.map((m, i) => (
-              <div key={`${m.url}-${i}`} className="relative w-20 h-20 rounded-xl overflow-hidden border border-border bg-surface-muted">
+              <div key={`${m.url}-${i}`} className="relative w-20 h-20 rounded-2xl overflow-hidden border border-border bg-surface-muted shadow-2xs">
                 {m.type === 'VIDEO' || isVideoUrl(m.url) ? (
                   <video src={m.url} className="w-full h-full object-cover" muted />
                 ) : (
@@ -182,16 +253,17 @@ export function MarketplaceActivityFeedManager({
                 <button
                   type="button"
                   onClick={() => setMedia((prev) => prev.filter((_, idx) => idx !== i))}
-                  className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white"
+                  className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-black transition"
                   aria-label="Retirer le média"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-2">
+
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/50">
           <input
             ref={fileRef}
             type="file"
@@ -204,16 +276,16 @@ export function MarketplaceActivityFeedManager({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading || media.length >= 8}
-            className="inline-flex items-center gap-1.5 min-h-11 px-3 rounded-xl border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-50"
           >
             {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-            Médias
+            Ajouter photos / vidéos
           </button>
           <button
             type="button"
             onClick={() => void publish()}
             disabled={submitting || uploading || (!content.trim() && media.length === 0)}
-            className="ml-auto inline-flex items-center gap-1.5 min-h-11 px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 min-h-10 px-4 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold hover:opacity-95 transition disabled:opacity-50 shadow-xs"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Publier
@@ -221,42 +293,49 @@ export function MarketplaceActivityFeedManager({
         </div>
       </div>
 
-      {error ? <p className="text-sm text-rose-600" role="alert">{error}</p> : null}
+      {error ? (
+        <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 text-xs font-medium" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="flex justify-center py-10">
           <Loader2 className="w-6 h-6 text-primary animate-spin" />
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-10 space-y-1">
-          <p className="text-sm font-semibold text-foreground">Aucune publication</p>
-          <p className="text-xs text-muted">Vos activités apparaîtront sur la fiche publique.</p>
+        <div className="text-center py-10 space-y-1.5 rounded-2xl border border-dashed border-border bg-surface/30">
+          <p className="text-sm font-bold text-foreground">Aucune publication</p>
+          <p className="text-xs text-muted">Vos activités apparaîtront sur votre fiche et sur le fil public.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {posts.map((post) => (
-            <article key={post.id} className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+            <article key={post.id} className="rounded-3xl border border-border bg-surface p-4 sm:p-5 space-y-3 shadow-2xs">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{authorLabel}</p>
+                  <p className="text-sm font-bold text-foreground">{authorLabel}</p>
                   <p className="text-[11px] text-muted">{formatRelativeDate(post.createdAt)}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => void remove(post.id)}
-                  className="p-2 rounded-lg text-muted hover:text-rose-600 hover:bg-rose-50 transition"
+                  className="p-2 rounded-xl text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
                   aria-label="Supprimer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
+
               {post.content ? (
-                <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
+                <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">{post.content}</p>
               ) : null}
+
               <PostMediaGrid media={post.mediaUrls || []} />
-              <div className="flex items-center gap-4 text-xs text-muted pt-1">
+
+              <div className="flex items-center gap-4 text-xs text-muted pt-1 border-t border-border/50">
                 <span className="inline-flex items-center gap-1">
-                  <Heart className="w-3.5 h-3.5" /> {post.likeCount ?? post.likes?.length ?? 0}
+                  <Heart className="w-3.5 h-3.5 text-rose-500" /> {post.likeCount ?? post.likes?.length ?? 0}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MessageCircle className="w-3.5 h-3.5" /> {post.comments?.length ?? 0}
@@ -270,7 +349,7 @@ export function MarketplaceActivityFeedManager({
   );
 }
 
-/** Lecture publique + like/comment (auth). */
+/** Vue publique de l'activité d'une salle ou d'un prestataire. */
 export default function MarketplaceActivityFeed({
   scope,
   authorLabel,
@@ -283,6 +362,7 @@ export default function MarketplaceActivityFeed({
   initialPosts?: MarketplaceFeedPost[];
 }) {
   const { user } = useAuth();
+  const router = useRouter();
   const [posts, setPosts] = useState<MarketplaceFeedPost[]>(initialPosts || []);
   const [loading, setLoading] = useState(!initialPosts?.length);
   const [error, setError] = useState('');
@@ -291,6 +371,8 @@ export default function MarketplaceActivityFeed({
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentBusy, setCommentBusy] = useState<Record<string, boolean>>({});
   const [likeBusy, setLikeBusy] = useState<Record<string, boolean>>({});
+  const [commentsExpanded, setCommentsExpanded] = useState<Record<string, boolean>>({});
+  const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
 
   const feedPath =
@@ -327,7 +409,7 @@ export default function MarketplaceActivityFeed({
 
   const toggleLike = async (postId: string) => {
     if (!user?.id) {
-      window.location.href = loginHref;
+      router.push(loginHref);
       return;
     }
     setLikeBusy((b) => ({ ...b, [postId]: true }));
@@ -343,7 +425,7 @@ export default function MarketplaceActivityFeed({
 
   const submitComment = async (postId: string) => {
     if (!user?.id) {
-      window.location.href = loginHref;
+      router.push(loginHref);
       return;
     }
     const text = (commentDrafts[postId] || '').trim();
@@ -357,6 +439,7 @@ export default function MarketplaceActivityFeed({
         ),
       );
       setCommentDrafts((d) => ({ ...d, [postId]: '' }));
+      setCommentsExpanded((prev) => ({ ...prev, [postId]: true }));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Commentaire impossible.');
     } finally {
@@ -364,118 +447,231 @@ export default function MarketplaceActivityFeed({
     }
   };
 
+  const handleShare = async (postId: string) => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#post-${postId}` : '';
+    if (navigator.clipboard && url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopiedPostId(postId);
+        setTimeout(() => setCopiedPostId(null), 2500);
+      } catch {
+        // Fallback
+      }
+    }
+  };
+
   const myLike = likeKey(user?.id);
+  const isVenue = scope.kind === 'venue';
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-6', className)}>
       {!user ? (
-        <p className="text-xs text-muted rounded-xl border border-border bg-surface-muted/60 px-3 py-2.5">
-          <Link href={loginHref} className="font-semibold text-primary hover:underline">
-            Connectez-vous
-          </Link>{' '}
-          pour aimer ou commenter les publications.
-        </p>
+        <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border border-primary/20 bg-primary/5 text-xs text-foreground">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary shrink-0" />
+            <span>Connectez-vous pour aimer et commenter les publications de {authorLabel}.</span>
+          </div>
+          <Link
+            href={loginHref}
+            className="shrink-0 px-3 py-1 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-95 transition"
+          >
+            Connexion
+          </Link>
+        </div>
       ) : null}
 
-      {error ? <p className="text-sm text-rose-600" role="alert">{error}</p> : null}
+      {error ? (
+        <div className="p-3.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 text-xs font-medium" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-6 h-6 text-primary animate-spin" aria-hidden />
-          <span className="sr-only">Chargement de l’activité…</span>
+        <div className="flex flex-col items-center justify-center py-12 space-y-2">
+          <Loader2 className="w-7 h-7 text-primary animate-spin" aria-hidden />
+          <span className="text-xs text-muted">Chargement de l’activité…</span>
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-12 space-y-1">
-          <p className="text-sm font-semibold text-foreground">Pas encore d’actualité</p>
-          <p className="text-xs text-muted">Les publications de {authorLabel} apparaîtront ici.</p>
+        <div className="text-center py-14 px-4 space-y-2 rounded-3xl border border-dashed border-border bg-surface/30">
+          <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+            {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+          </div>
+          <p className="text-sm font-bold text-foreground">Pas encore d’actualité publiée</p>
+          <p className="text-xs text-muted max-w-sm mx-auto">
+            Les photos, vidéos et annonces récentes de {authorLabel} apparaîtront directement ici.
+          </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {posts.map((post) => {
             const likes = Array.isArray(post.likes) ? post.likes : [];
             const liked = Boolean(myLike && likes.includes(myLike));
-            const images = (post.mediaUrls || [])
+            const media = (post.mediaUrls || []) as MarketplaceFeedMedia[];
+            const images = media
               .filter((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))
               .map((m) => m.url);
+            const commentCount = post.comments?.length ?? 0;
+            const isExpanded = Boolean(commentsExpanded[post.id]);
+            const visibleComments = isExpanded ? post.comments ?? [] : (post.comments ?? []).slice(0, 2);
+            const isCopied = copiedPostId === post.id;
+
             return (
-              <article key={post.id} className="space-y-3 pb-5 border-b border-border/70 last:border-0">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{authorLabel}</p>
-                  <p className="text-[11px] text-muted">{formatRelativeDate(post.createdAt)}</p>
+              <article
+                key={post.id}
+                id={`post-${post.id}`}
+                className="group rounded-3xl border border-border/90 bg-surface p-5 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200"
+              >
+                {/* En-tête de la publication */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary shrink-0 flex items-center justify-center border border-primary/20 shadow-2xs">
+                      {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-foreground truncate">{authorLabel}</p>
+                      <p className="text-xs text-muted">{formatRelativeDate(post.createdAt)}</p>
+                    </div>
+                  </div>
+
+                  {/* Bouton Partager */}
+                  <button
+                    type="button"
+                    onClick={() => void handleShare(post.id)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/80 bg-surface text-xs font-medium text-muted hover:text-foreground hover:bg-surface-muted transition"
+                    title="Copier le lien"
+                  >
+                    {isCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-primary text-[11px]">Copié !</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">Partager</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+
+                {/* Contenu */}
                 {post.content ? (
-                  <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
+                  <p className="text-sm sm:text-[15px] text-foreground/90 whitespace-pre-line leading-relaxed font-normal">
+                    {post.content}
+                  </p>
                 ) : null}
+
+                {/* Médias */}
                 <PostMediaGrid
-                  media={post.mediaUrls || []}
+                  media={media}
                   onOpenImage={(url) => {
                     const idx = images.indexOf(url);
                     if (idx >= 0) setLightbox({ urls: images, index: idx });
                   }}
                 />
-                <div className="flex items-center gap-2">
+
+                {/* Barre d'actions */}
+                <div className="flex items-center gap-2 pt-1 border-t border-border/50 text-xs text-muted">
                   <button
                     type="button"
                     onClick={() => void toggleLike(post.id)}
                     disabled={likeBusy[post.id]}
                     className={cn(
-                      'inline-flex items-center gap-1.5 min-h-11 px-3 rounded-xl text-xs font-semibold transition',
+                      'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
                       liked
-                        ? 'text-pink-600 bg-pink-500/10'
-                        : 'text-muted hover:text-foreground hover:bg-surface-muted',
+                        ? 'text-rose-600 bg-rose-500/10 border border-rose-500/20'
+                        : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
                     )}
                     aria-pressed={liked}
                   >
-                    <Heart className={cn('w-4 h-4', liked && 'fill-current')} />
-                    {post.likeCount ?? likes.length}
+                    <Heart className={cn('w-4 h-4 transition-transform', liked && 'fill-current scale-110')} />
+                    <span>{post.likeCount ?? likes.length}</span>
                   </button>
-                  <span className="inline-flex items-center gap-1.5 text-xs text-muted px-2">
-                    <MessageCircle className="w-4 h-4" />
-                    {post.comments?.length ?? 0}
-                  </span>
-                </div>
 
-                {(post.comments?.length ?? 0) > 0 && (
-                  <ul className="space-y-2 max-h-48 overflow-y-auto">
-                    {post.comments.map((c) => (
-                      <li key={c.id} className="text-xs rounded-xl border border-border bg-surface-muted/50 px-3 py-2">
-                        <div className="flex justify-between gap-2 mb-0.5">
-                          <span className="font-semibold text-foreground">{c.authorName}</span>
-                          <span className="text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
-                        </div>
-                        <p className="text-muted whitespace-pre-line">{c.content}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <div className="flex gap-2 items-stretch">
-                  <input
-                    type="text"
-                    value={commentDrafts[post.id] || ''}
-                    onChange={(e) => setCommentDrafts((d) => ({ ...d, [post.id]: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') void submitComment(post.id);
-                    }}
-                    placeholder={user ? 'Écrire un commentaire…' : 'Connectez-vous pour commenter'}
-                    disabled={!user}
-                    className="flex-1 min-h-11 px-3 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
-                    aria-label="Commentaire"
-                  />
                   <button
                     type="button"
-                    onClick={() => void submitComment(post.id)}
-                    disabled={!user || commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
-                    className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-white disabled:opacity-50"
-                    aria-label="Publier le commentaire"
+                    onClick={() =>
+                      setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
+                    }
+                    className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
                   >
-                    {commentBusy[post.id] ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
+                    <MessageCircle className="w-4 h-4" />
+                    <span>{commentCount}</span>
                   </button>
                 </div>
+
+                {/* Commentaires */}
+                {commentCount > 0 && (
+                  <div className="space-y-2.5 pt-1">
+                    <ul className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                      {visibleComments.map((c) => (
+                        <li
+                          key={c.id}
+                          className="text-xs rounded-2xl border border-border/70 bg-surface-muted/40 p-3 space-y-1"
+                        >
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="font-bold text-foreground">{c.authorName}</span>
+                            <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
+                          </div>
+                          <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {commentCount > 2 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
+                        }
+                        className="w-full min-h-8 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1"
+                      >
+                        {isExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Saisie commentaire */}
+                {!user ? (
+                  <div className="pt-2">
+                    <Link
+                      href={loginHref}
+                      className="w-full inline-flex items-center justify-center min-h-10 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+                    >
+                      Connectez-vous pour laisser un commentaire
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-center pt-1">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={commentDrafts[post.id] || ''}
+                        onChange={(e) => setCommentDrafts((d) => ({ ...d, [post.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void submitComment(post.id);
+                        }}
+                        placeholder="Écrire un message ou poser une question…"
+                        className="w-full min-h-10 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary/40 transition"
+                        aria-label="Commentaire"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void submitComment(post.id)}
+                      disabled={commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
+                      className="min-h-10 min-w-10 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs"
+                      aria-label="Publier le commentaire"
+                    >
+                      {commentBusy[post.id] ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                )}
               </article>
             );
           })}
@@ -487,46 +683,48 @@ export default function MarketplaceActivityFeed({
           type="button"
           onClick={() => void load(nextCursor)}
           disabled={loadingMore}
-          className="w-full min-h-11 rounded-xl border border-border text-sm font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-50"
+          className="w-full min-h-11 rounded-2xl border border-border/80 bg-surface text-xs sm:text-sm font-semibold text-foreground hover:bg-surface-muted transition disabled:opacity-50 shadow-2xs"
         >
-          {loadingMore ? 'Chargement…' : 'Voir plus'}
+          {loadingMore ? 'Chargement…' : 'Voir plus de publications'}
         </button>
       ) : null}
 
+      {/* Lightbox plein écran */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-[120] bg-black/95 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-md flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Visionneuse"
+          aria-label="Visionneuse photo"
           onClick={() => setLightbox(null)}
         >
-          <div className="relative max-w-4xl w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-5xl w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={lightbox.urls[lightbox.index]}
               alt=""
-              className="max-h-[85vh] max-w-full object-contain rounded-lg"
+              className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl"
             />
             <button
               type="button"
               onClick={() => setLightbox(null)}
-              className="absolute top-0 right-0 p-2.5 min-h-11 min-w-11 bg-black/60 text-white rounded-full"
+              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white rounded-full bg-white/10 hover:bg-white/20 transition"
               aria-label="Fermer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
+            <div className="absolute -top-12 left-0 text-white/80 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/10">
+              {lightbox.index + 1} / {lightbox.urls.length}
+            </div>
             {lightbox.urls.length > 1 && (
               <>
                 <button
                   type="button"
-                  className="absolute left-0 p-3 min-h-11 min-w-11 bg-black/50 text-white rounded-full"
+                  className="absolute left-2 sm:-left-12 p-3 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
                   aria-label="Précédente"
                   onClick={() =>
                     setLightbox((lb) =>
-                      lb
-                        ? { ...lb, index: (lb.index - 1 + lb.urls.length) % lb.urls.length }
-                        : lb,
+                      lb ? { ...lb, index: (lb.index - 1 + lb.urls.length) % lb.urls.length } : null,
                     )
                   }
                 >
@@ -534,7 +732,7 @@ export default function MarketplaceActivityFeed({
                 </button>
                 <button
                   type="button"
-                  className="absolute right-0 p-3 min-h-11 min-w-11 bg-black/50 text-white rounded-full"
+                  className="absolute right-2 sm:-right-12 p-3 text-white rounded-full bg-black/60 hover:bg-black/90 transition"
                   aria-label="Suivante"
                   onClick={() =>
                     setLightbox((lb) =>
@@ -549,46 +747,6 @@ export default function MarketplaceActivityFeed({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function PostMediaGrid({
-  media,
-  onOpenImage,
-}: {
-  media: MarketplaceFeedMedia[];
-  onOpenImage?: (url: string) => void;
-}) {
-  if (!media.length) return null;
-  return (
-    <div
-      className={cn(
-        'grid gap-1.5 rounded-xl overflow-hidden border border-border',
-        media.length === 1 ? 'grid-cols-1' : media.length === 2 ? 'grid-cols-2' : 'grid-cols-3',
-      )}
-    >
-      {media.map((m, i) => {
-        const video = m.type === 'VIDEO' || isVideoUrl(m.url);
-        return (
-          <div key={`${m.url}-${i}`} className="relative aspect-video bg-black max-h-64">
-            {video ? (
-              <video src={m.url} controls className="w-full h-full object-contain" />
-            ) : (
-              <button
-                type="button"
-                className="w-full h-full"
-                onClick={() => onOpenImage?.(m.url)}
-                aria-label={`Agrandir l’image ${i + 1}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.url} alt="" className="w-full h-full object-cover" loading="lazy" />
-              </button>
-            )}
-            <span className="sr-only">{video ? <Video className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}</span>
-          </div>
-        );
-      })}
     </div>
   );
 }

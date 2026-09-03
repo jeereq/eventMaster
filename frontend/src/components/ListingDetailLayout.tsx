@@ -6,11 +6,12 @@ import { Button, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui'
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
-import { isVideoUrl, listingSrcSet, sizedMediaUrl } from '@/lib/marketplace';
+import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Play } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
+import ListingActivityHighlights from '@/components/marketplace/ListingActivityHighlights';
 
 function ListingPhotoThumbs({
   photos,
@@ -79,6 +80,8 @@ export default function ListingDetailLayout({
   details,
   map,
   activity,
+  activityPreview,
+  activityCount,
   priceFromFc,
   priceUnitLabel,
   quotaLabel,
@@ -117,6 +120,8 @@ export default function ListingDetailLayout({
   details: React.ReactNode;
   map: React.ReactNode;
   activity?: React.ReactNode;
+  activityPreview?: MarketplaceActivityPreviewItem[] | null;
+  activityCount?: number;
   priceFromFc: number | null;
   priceUnitLabel?: string | null;
   quotaLabel?: string | null;
@@ -208,12 +213,28 @@ export default function ListingDetailLayout({
   const tabInclude: MarketplaceFormTab[] = showActivity
     ? ['details', 'map', 'activity']
     : ['details', 'map'];
+  const resolvedActivityCount = activityCount ?? (activityPreview ? activityPreview.length : undefined);
+  const tabBadges: Partial<Record<MarketplaceFormTab, number | string>> = {
+    ...(resolvedActivityCount != null && resolvedActivityCount > 0 ? { activity: resolvedActivityCount } : {}),
+  };
+
   const mainPanel =
     viewTab === 'map'
       ? map
       : viewTab === 'activity' && activity
         ? activity
-        : details;
+        : (
+          <div className="flex flex-col gap-8">
+            {details}
+            {activityPreview && activityPreview.length > 0 ? (
+              <ListingActivityHighlights
+                activityPreview={activityPreview}
+                authorLabel={title || 'Cette salle'}
+                onViewAllActivity={showActivity ? () => onTab('activity') : undefined}
+              />
+            ) : null}
+          </div>
+        );
 
   return (
     <main
@@ -332,6 +353,7 @@ export default function ListingDetailLayout({
                   onChange={onTab}
                   include={tabInclude}
                   icons={false}
+                  badges={tabBadges}
                 />
               </div>
 

@@ -9,6 +9,8 @@ exports.getTicketPaymentProvider = getTicketPaymentProvider;
 exports.getSaasPaymentMode = getSaasPaymentMode;
 exports.loadPlatformSettings = loadPlatformSettings;
 exports.savePlatformSettings = savePlatformSettings;
+exports.savePlatformSettingsDurable = savePlatformSettingsDurable;
+exports.hydratePlatformSettingsFromDb = hydratePlatformSettingsFromDb;
 exports.getPublicSiteConfig = getPublicSiteConfig;
 exports.getContactDestinations = getContactDestinations;
 exports.maskSecretsForAdmin = maskSecretsForAdmin;
@@ -16,9 +18,13 @@ exports.mergeSettingsUpdate = mergeSettingsUpdate;
 exports.getNotificationCredentials = getNotificationCredentials;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const db_1 = require("../db");
 const ratePercent_1 = require("../utils/ratePercent");
 const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
 exports.settingsFilePath = settingsFilePath;
+const PLATFORM_CONFIG_ID = 'default';
+/** Cache processus : source de vérité après hydratation BD (le fichier est un secours local). */
+let memoryCache = null;
 exports.DEFAULT_PLATFORM_SETTINGS = {
     platformName: 'EventMaster',
     platformTagline: 'Préparez votre événement en un clic.',
@@ -76,19 +82,36 @@ function getTicketPaymentProvider(_settings = loadPlatformSettings()) {
 function getSaasPaymentMode(settings = loadPlatformSettings()) {
     return settings.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
 }
-function loadPlatformSettings() {
+function mergeStoredSettings(raw) {
+    const { plans: _ignored, ...rest } = (raw || {});
+    return normalizeStoredRates({ ...exports.DEFAULT_PLATFORM_SETTINGS, ...rest });
+}
+function readSettingsFromFile() {
     try {
         if (fs_1.default.existsSync(settingsFilePath)) {
             const raw = JSON.parse(fs_1.default.readFileSync(settingsFilePath, 'utf-8'));
-            const { plans: _ignored, ...rest } = raw;
-            const merged = { ...exports.DEFAULT_PLATFORM_SETTINGS, ...rest };
-            return normalizeStoredRates(merged);
+            return mergeStoredSettings(raw);
         }
     }
     catch (error) {
         console.warn('[PlatformSettings] Impossible de lire settings.json:', error);
     }
-    return { ...exports.DEFAULT_PLATFORM_SETTINGS };
+    return null;
+}
+function writeSettingsFileBestEffort(settings) {
+    try {
+        ensureSettingsDir();
+        fs_1.default.writeFileSync(settingsFilePath, JSON.stringify(settings, null, 2), 'utf-8');
+    }
+    catch (error) {
+        console.warn('[PlatformSettings] Écriture settings.json ignorée (volume éphémère ou lecture seule).', error);
+    }
+}
+function loadPlatformSettings() {
+    if (memoryCache)
+        return memoryCache;
+    memoryCache = readSettingsFromFile() || { ...exports.DEFAULT_PLATFORM_SETTINGS };
+    return memoryCache;
 }
 function normalizeStoredRates(settings) {
     return {
@@ -99,8 +122,7 @@ function normalizeStoredRates(settings) {
         commercialRenewalCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
     };
 }
-function savePlatformSettings(partial) {
-    ensureSettingsDir();
+function buildNextSettings(partial) {
     const current = loadPlatformSettings();
     const { plans: _plans, ...rest } = partial;
     const next = { ...current };
@@ -117,8 +139,59 @@ function savePlatformSettings(partial) {
     next.ticketPaymentProvider = 'flexpay_card';
     next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
     next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
-    fs_1.default.writeFileSync(settingsFilePath, JSON.stringify(next, null, 2), 'utf-8');
     return next;
+}
+async function persistPlatformConfigToDb(settings) {
+    const payload = JSON.parse(JSON.stringify(settings));
+    await db_1.prisma.platformConfig.upsert({
+        where: { id: PLATFORM_CONFIG_ID },
+        create: { id: PLATFORM_CONFIG_ID, payload },
+        update: { payload },
+    });
+}
+function applySettingsToCache(next) {
+    memoryCache = next;
+    writeSettingsFileBestEffort(next);
+    return next;
+}
+function savePlatformSettings(partial) {
+    const next = applySettingsToCache(buildNextSettings(partial));
+    void persistPlatformConfigToDb(next).catch((error) => {
+        console.error('[PlatformSettings] Persistance en base échouée:', error);
+    });
+    return next;
+}
+/** Sauvegarde admin : cache + fichier local + Postgres (survit aux déploiements). */
+async function savePlatformSettingsDurable(partial) {
+    const previous = loadPlatformSettings();
+    const next = applySettingsToCache(buildNextSettings(partial));
+    try {
+        await persistPlatformConfigToDb(next);
+        return next;
+    }
+    catch (error) {
+        applySettingsToCache(previous);
+        throw error;
+    }
+}
+/** Charge les réglages depuis Postgres au boot, ou y recopie fichier/défauts si la table est vide. */
+async function hydratePlatformSettingsFromDb() {
+    try {
+        const row = await db_1.prisma.platformConfig.findUnique({ where: { id: PLATFORM_CONFIG_ID } });
+        if (row?.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)) {
+            memoryCache = mergeStoredSettings(row.payload);
+            writeSettingsFileBestEffort(memoryCache);
+            console.log('[PlatformSettings] Réglages chargés depuis la base.');
+            return;
+        }
+        const seed = loadPlatformSettings();
+        await persistPlatformConfigToDb(seed);
+        console.log('[PlatformSettings] Réglages initiaux enregistrés en base.');
+    }
+    catch (error) {
+        console.warn('[PlatformSettings] Hydratation BD impossible — fichier ou défauts.', error);
+        loadPlatformSettings();
+    }
 }
 function getPublicSiteConfig(settings = loadPlatformSettings()) {
     return {

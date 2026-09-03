@@ -44,13 +44,27 @@ function snippet(text, max = 180) {
 }
 const AI_STYLES = [
     { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe, sans options.', maxTrades: 2, maxRentals: 1 },
-    { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre brief, options si le budget le permet.', maxTrades: 3, maxRentals: 1 },
+    { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre projet, options si le budget le permet.', maxTrades: 3, maxRentals: 1 },
     { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 2 },
 ];
 function parseEventType(value) {
     return typeof value === 'string' && eventPlanBrief_1.EVENT_PLAN_TYPES.includes(value)
         ? value
         : 'private';
+}
+function scoreVenue(amenities, opts, neighborhood) {
+    let score = 0;
+    if (opts.venueAmenities.length) {
+        score += opts.venueAmenities.filter((id) => amenities.includes(id)).length * 4;
+    }
+    if (opts.setting === 'outdoor' && amenities.includes('garden'))
+        score += 5;
+    if (opts.setting === 'indoor' && amenities.includes('garden'))
+        score -= 1;
+    const needle = opts.neighborhood.trim().toLowerCase();
+    if (needle && neighborhood && neighborhood.toLowerCase().includes(needle))
+        score += 6;
+    return score;
 }
 async function loadCatalog(opts) {
     const cityFilter = (0, rdcCities_1.allowedCityPrismaFilter)(opts.city);
@@ -120,14 +134,18 @@ async function loadCatalog(opts) {
             category: 'VENUE',
             city: row.city,
             commune: row.commune,
+            neighborhood: row.neighborhood,
             priceFromFc: row.priceFromFc,
             estimatedFc,
             capacity: row.room.capacity,
             travels: null,
             summary: snippet(extra.description || row.room.description),
+            amenities: extra.amenities.slice(0, 10),
         };
-        return { ...catalog, item };
-    });
+        return { ...catalog, item, score: scoreVenue(extra.amenities, opts, row.neighborhood) };
+    })
+        .sort((a, b) => b.score - a.score)
+        .map(({ score: _score, ...row }) => row);
     const services = available(serviceRows).slice(0, 72).map((row) => {
         const extra = (0, listingDetails_1.parseListingDetails)(row.details);
         const photos = (0, publicVenue_1.parsePhotoUrls)(row.photos);
@@ -154,16 +172,25 @@ async function loadCatalog(opts) {
             category: row.category,
             city: row.city,
             commune: row.commune,
+            neighborhood: row.neighborhood,
             priceFromFc: row.priceFromFc,
             estimatedFc,
             capacity: null,
             travels: Boolean(row.travels),
             summary: snippet(extra.description || row.description),
+            amenities: extra.amenities.slice(0, 8),
         };
         return { ...catalog, item };
     });
-    const trades = services.filter((row) => row.kind === 'trade').slice(0, 36);
-    const rentals = services.filter((row) => row.kind === 'rental').slice(0, 24);
+    const preferred = opts.wantedCategories.length
+        ? services.filter((row) => opts.wantedCategories.includes(row.category))
+        : [];
+    const rest = opts.wantedCategories.length
+        ? services.filter((row) => !opts.wantedCategories.includes(row.category))
+        : services;
+    const rankedServices = preferred.length ? [...preferred, ...rest] : rest;
+    const trades = rankedServices.filter((row) => row.kind === 'trade').slice(0, 36);
+    const rentals = rankedServices.filter((row) => row.kind === 'rental').slice(0, 24);
     return { venues, services: [...trades, ...rentals] };
 }
 async function askOpenAi(system, user) {
@@ -230,9 +257,51 @@ async function simulateEventPlanAi(userId, body) {
     const keepServiceSlugs = Array.isArray(body.keepServiceSlugs)
         ? body.keepServiceSlugs.filter((value) => typeof value === 'string' && Boolean(value.trim()))
         : [];
-    const catalog = await loadCatalog({ city, commune, dateKey, guestCount: guests });
+    const neighborhood = typeof body.neighborhood === 'string' ? body.neighborhood.trim().slice(0, 80) : '';
+    const ambiance = typeof body.ambiance === 'string' ? body.ambiance.trim().slice(0, 32) : '';
+    const moment = typeof body.moment === 'string' ? body.moment.trim().slice(0, 32) : '';
+    const setting = typeof body.setting === 'string' ? body.setting.trim().slice(0, 32) : '';
+    const budgetMinRaw = Number(body.budgetMinFc);
+    const budgetMinFc = Number.isFinite(budgetMinRaw) && budgetMinRaw > 0 ? Math.round(budgetMinRaw) : 0;
+    const wantedCategories = Array.isArray(body.wantedCategories)
+        ? body.wantedCategories.filter((value) => typeof value === 'string' && value.trim().length > 0).slice(0, 12)
+        : [];
+    const venueAmenities = Array.isArray(body.venueAmenities)
+        ? body.venueAmenities.filter((value) => typeof value === 'string' && value.trim().length > 0).slice(0, 10)
+        : [];
+    const criteria = {
+        ambiance: ambiance || undefined,
+        moment: moment || undefined,
+        setting: setting || undefined,
+        neighborhood: neighborhood || undefined,
+        budgetMinFc: budgetMinFc || null,
+        wantedCategories,
+        venueAmenities,
+    };
+    const catalogOpts = {
+        city,
+        commune,
+        dateKey,
+        guestCount: guests,
+        wantedCategories,
+        venueAmenities,
+        setting,
+        neighborhood,
+    };
+    const catalogWarnings = [];
+    let widenedCommune = false;
+    let catalog = await loadCatalog(catalogOpts);
+    if (!catalog.venues.length && !catalog.services.length && commune) {
+        catalog = await loadCatalog({ ...catalogOpts, commune: '' });
+        if (catalog.venues.length || catalog.services.length) {
+            widenedCommune = true;
+            catalogWarnings.push(`La commune « ${commune} » n’avait pas assez de fiches publiques : recherche élargie à ${city || 'toute la ville'}.`);
+        }
+    }
     if (!catalog.venues.length && !catalog.services.length) {
-        fail(404, 'Aucune fiche publique ne correspond à ces critères.');
+        const where = city || 'Kinshasa / Lubumbashi';
+        const communeHint = commune ? ` (${commune})` : '';
+        fail(404, `Aucune salle/presta publique à ${where}${communeHint} — élargissez la commune ou le budget.`);
     }
     const compact = [...(includeVenue ? catalog.venues : []), ...catalog.services.filter((row) => {
             if (row.kind === 'trade')
@@ -247,10 +316,12 @@ async function simulateEventPlanAi(userId, body) {
         category: row.category,
         city: row.city,
         commune: row.commune,
+        neighborhood: row.neighborhood,
         estimatedFc: row.estimatedFc,
         capacity: row.capacity,
         travels: row.travels,
         summary: row.summary,
+        amenities: row.amenities,
     }));
     const allowed = new Set(compact.map((row) => row.slug));
     const venueBySlug = new Map(catalog.venues.map((row) => [row.slug, row.item]));
@@ -270,6 +341,8 @@ async function simulateEventPlanAi(userId, body) {
         'Chaque pack : au plus 1 salle, métiers et locations cohérents. Varie les slugs entre packs quand le catalogue le permet.',
         'Si un budget est donné, chaque pack vise un total estimé inférieur ou égal. Sinon, explique-le dans warnings.',
         'Préfère le même quartier / commune. Si keepVenueSlug est fourni, utilise-le pour les 3 packs.',
+        'Si ambiance, moment, intérieur/extérieur, quartier ou prestations souhaitées sont fournis, oriente les packs dessus sans inventer de fiches.',
+        'Si un budget min est donné, évite les packs trop en dessous sauf le pack économique.',
     ].join(' ');
     const user = JSON.stringify({
         brief: {
@@ -285,6 +358,7 @@ async function simulateEventPlanAi(userId, body) {
             includeRentals,
             keepVenueSlug: keepVenueSlug || null,
             keepServiceSlugs,
+            ...criteria,
         },
         catalog: compact,
     });
@@ -335,9 +409,9 @@ async function simulateEventPlanAi(userId, body) {
             services: uniqueServices,
         };
     };
-    const pickByStyle = (items, style, used) => {
+    const pickByStyle = (items, style, used, allowReuse = true) => {
         const available = items.filter((item) => !used.has(item.slug));
-        const pool = available.length ? available : items;
+        const pool = available.length ? available : (allowReuse ? items : []);
         if (!pool.length)
             return null;
         const sorted = [...pool].sort((a, b) => a.estimatedFc - b.estimatedFc);
@@ -351,7 +425,7 @@ async function simulateEventPlanAi(userId, body) {
         const venue = includeVenue
             ? (keepVenueSlug && venueBySlug.has(keepVenueSlug)
                 ? venueBySlug.get(keepVenueSlug) || null
-                : pickByStyle(venuesPool, style.id, usedVenues))
+                : pickByStyle(venuesPool, style.id, usedVenues, false))
             : null;
         if (venue)
             usedVenues.add(venue.slug);
@@ -366,7 +440,12 @@ async function simulateEventPlanAi(userId, body) {
         }
         let trades = 0;
         let rentals = 0;
-        for (const group of byCategory.values()) {
+        const groups = [...byCategory.entries()].sort(([a], [b]) => {
+            const aw = wantedCategories.includes(a) ? 0 : 1;
+            const bw = wantedCategories.includes(b) ? 0 : 1;
+            return aw - bw;
+        });
+        for (const [, group] of groups) {
             const rental = Boolean(group[0]?.category && (0, publicVenue_1.isServiceRentalCategory)(group[0].category));
             if (rental && rentals >= style.maxRentals)
                 continue;
@@ -422,15 +501,49 @@ async function simulateEventPlanAi(userId, body) {
         }
         return pack;
     });
+    if (!keepVenueSlug) {
+        const assignedVenues = new Set();
+        for (let index = 0; index < packages.length; index += 1) {
+            const pack = packages[index];
+            if (!pack.venue)
+                continue;
+            if (!assignedVenues.has(pack.venue.slug)) {
+                assignedVenues.add(pack.venue.slug);
+                continue;
+            }
+            const alt = pickByStyle(venuesPool, pack.id, assignedVenues, false);
+            if (!alt)
+                continue;
+            assignedVenues.add(alt.slug);
+            const estimatedTotalFc = (alt.estimatedFc || 0)
+                + pack.services.reduce((sum, item) => sum + (item.estimatedFc || 0), 0);
+            packages[index] = {
+                ...pack,
+                venue: alt,
+                estimatedTotalFc,
+                warnings: pack.warnings.includes('Salle distincte choisie pour différencier ce pack.')
+                    ? pack.warnings
+                    : [...pack.warnings, 'Salle distincte choisie pour différencier ce pack.'],
+            };
+        }
+    }
     if (!packages.some((pack) => pack.venue || pack.services.length > 0)) {
         fail(404, 'Impossible de composer 3 propositions avec le catalogue actuel.');
+    }
+    if (catalogWarnings.length) {
+        for (const pack of packages) {
+            pack.warnings = [...catalogWarnings, ...pack.warnings];
+        }
     }
     return {
         catalog: {
             venues: catalog.venues.length,
             trades: catalog.services.filter((row) => row.kind === 'trade').length,
             rentals: catalog.services.filter((row) => row.kind === 'rental').length,
+            widenedCommune: widenedCommune || undefined,
         },
         packages,
+        warnings: catalogWarnings.length ? catalogWarnings : undefined,
+        criteria,
     };
 }

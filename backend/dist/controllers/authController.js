@@ -58,6 +58,8 @@ const commercialService_1 = require("../services/commercialService");
 const otpService_1 = require("../services/otpService");
 const platformSettingsService_1 = require("../services/platformSettingsService");
 const phone_1 = require("../utils/phone");
+const brandedMessaging_1 = require("../utils/brandedMessaging");
+const brandingUtils_1 = require("../utils/brandingUtils");
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 async function issueAndSendOtp(params) {
     const code = (0, otpService_1.generateOtpCode)();
@@ -530,19 +532,23 @@ async function forgotPassword(req, res) {
         }
         else {
             const { sendRealEmail } = await Promise.resolve().then(() => __importStar(require('../services/notificationService')));
-            const emailSubject = 'Réinitialisation de votre mot de passe - EventMaster';
-            const emailText = `Bonjour ${user.name || 'Utilisateur'},\n\nVous avez demandé la réinitialisation de votre mot de passe sur EventMaster. Veuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n${resetLink}\n\nSi vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe EventMaster`;
-            const emailHtml = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          <h2 style="color: #4f46e5; text-align: center;">Réinitialisation de mot de passe</h2>
-          <p>Bonjour <strong>${user.name || 'Utilisateur'}</strong>,</p>
-          <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte EventMaster.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Réinitialiser mon mot de passe</a>
-          </div>
-          <p style="font-size: 0.875rem; color: #6b7280;">Lien valable 1 heure.</p>
-        </div>
-      `;
+            const brand = (0, brandingUtils_1.getPlatformBrand)();
+            const { platformName } = (0, platformSettingsService_1.getContactDestinations)();
+            const emailSubject = `Réinitialisation de votre mot de passe - ${platformName}`;
+            const emailText = `Bonjour ${user.name || 'Utilisateur'},\n\nVous avez demandé la réinitialisation de votre mot de passe sur ${platformName}. Veuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n${resetLink}\n\nSi vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe ${platformName}`;
+            const emailHtml = (0, brandedMessaging_1.wrapBrandedEmail)({
+                branding: brand,
+                orgName: platformName,
+                title: 'Réinitialisation de mot de passe',
+                eyebrow: 'Sécurité',
+                headerEmoji: '🔑',
+                innerHtml: `
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${(0, brandingUtils_1.escapeHtml)(user.name || 'Utilisateur')}</strong>,</p>
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#334155;">Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte ${(0, brandingUtils_1.escapeHtml)(platformName)}.</p>
+        `,
+                cta: { href: resetLink, label: 'Réinitialiser mon mot de passe' },
+                footerNote: 'Lien valable 1 heure. Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.',
+            });
             await sendRealEmail(user.email, emailSubject, emailText, emailHtml);
         }
         return res.json({ message: 'Si le compte existe, un lien de réinitialisation a été envoyé.' });

@@ -7,7 +7,11 @@ exports.fulfillTicketOrder = fulfillTicketOrder;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const notificationService_1 = require("./notificationService");
+const paymentTraceService_1 = require("./paymentTraceService");
 const seatSelectionService_1 = require("./seatSelectionService");
+const brandedMessaging_1 = require("../utils/brandedMessaging");
+const brandingUtils_1 = require("../utils/brandingUtils");
+const guestMessageCopy_1 = require("../utils/guestMessageCopy");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function splitBuyerName(fullName) {
     const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -34,7 +38,7 @@ async function fulfillTicketOrder(orderId, stripeSession) {
     const order = await db_1.prisma.ticketOrder.findUnique({
         where: { id: orderId },
         include: {
-            event: { include: { tenant: { select: { id: true, plan: true, accountKind: true, name: true } } } },
+            event: { include: { tenant: { select: { id: true, plan: true, accountKind: true, name: true, branding: true } } } },
             guests: { select: { id: true, email: true, firstName: true, lastName: true } },
         },
     });
@@ -140,6 +144,16 @@ async function fulfillTicketOrder(orderId, stripeSession) {
     await db_1.prisma.seatHold.deleteMany({
         where: { orderId: order.id },
     }).catch(() => undefined);
+    void (0, paymentTraceService_1.notifyTicketPayment)({
+        id: order.id,
+        userId: order.userId,
+        buyerEmail: order.buyerEmail,
+        buyerPhone: order.buyerPhone,
+        buyerName: order.buyerName,
+        amountFc: order.amountFc,
+        quantity: order.quantity,
+        eventTitle: event.title,
+    }).catch((err) => console.error('[Ticket] notify payment:', err));
     const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
     if (primary) {
         const rsvpUrl = `${FRONTEND_URL}/rsvp/${primary.id}`;
@@ -153,9 +167,24 @@ async function fulfillTicketOrder(orderId, stripeSession) {
                     parsedSeats.map((s, idx) => ` - Place ${idx + 1} : table ${s.tableId} · siège ${s.seatIndex + 1}`).join('\n') +
                     '\n';
         }
+        const orgBrand = (0, brandedMessaging_1.orgBrandFromTenant)(event.tenant);
         const subject = `Votre billet — ${event.title}`;
-        const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR) :\n${rsvpUrl}\n\nOrganisé par ${event.tenant.name}.\n`;
-        void (0, notificationService_1.sendRealEmail)(order.buyerEmail, subject, text).catch(() => undefined);
+        const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR et itinéraire) :\n${rsvpUrl}\n\n${guestMessageCopy_1.GUEST_COPY.ticket}\n\nOrganisé par ${event.tenant.name}.\n`;
+        const html = (0, brandedMessaging_1.wrapBrandedEmail)({
+            branding: orgBrand.branding,
+            orgName: orgBrand.orgName,
+            title: 'Billet confirmé',
+            eyebrow: event.title,
+            innerHtml: `
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${(0, brandingUtils_1.escapeHtml)(order.buyerName)}</strong>,</p>
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Votre inscription à <strong>${(0, brandingUtils_1.escapeHtml)(event.title)}</strong> est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).</p>
+        ${seatLine ? `<p style="margin:0 0 16px;font-size:14px;color:#475569;white-space:pre-line;">${(0, brandingUtils_1.escapeHtml)(seatLine.trim())}</p>` : ''}
+        ${(0, brandedMessaging_1.brandedEventDetailsHtml)(orgBrand.branding, [{ label: 'Lieu', value: event.location || '' }])}
+      `,
+            cta: { href: rsvpUrl, label: 'Ouvrir mon espace invité' },
+            footerNote: guestMessageCopy_1.GUEST_COPY.ticket,
+        });
+        void (0, notificationService_1.sendRealEmail)(order.buyerEmail, subject, text, html).catch(() => undefined);
     }
     return paid;
 }

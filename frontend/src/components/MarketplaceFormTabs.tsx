@@ -18,34 +18,51 @@ export default function MarketplaceFormTabs({
   onChange,
   include,
   icons = true,
+  badges,
 }: {
   value: MarketplaceFormTab;
   onChange: (next: MarketplaceFormTab) => void;
   include?: MarketplaceFormTab[];
   icons?: boolean;
+  badges?: Partial<Record<MarketplaceFormTab, number | string>>;
 }) {
   const tabs = include ? TABS.filter((tab) => include.includes(tab.id)) : TABS;
   return (
     <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Sections de la fiche">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          aria-selected={value === tab.id}
-          onClick={() => onChange(tab.id)}
-          className={cn(
-            'flex-1 min-h-11 px-2 sm:px-3 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center justify-center gap-1.5',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-            value === tab.id
-              ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-              : 'text-muted hover:text-foreground',
-          )}
-        >
-          {icons ? tab.icon : null}
-          {tab.label}
-        </button>
-      ))}
+      {tabs.map((tab) => {
+        const badge = badges?.[tab.id];
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={value === tab.id}
+            onClick={() => onChange(tab.id)}
+            className={cn(
+              'flex-1 min-h-11 px-2 sm:px-3 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center justify-center gap-1.5',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              value === tab.id
+                ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                : 'text-muted hover:text-foreground',
+            )}
+          >
+            {icons ? tab.icon : null}
+            <span>{tab.label}</span>
+            {badge != null && Number(badge) > 0 ? (
+              <span
+                className={cn(
+                  'px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular-nums',
+                  value === tab.id
+                    ? 'bg-primary/15 text-primary'
+                    : 'bg-surface-muted text-muted',
+                )}
+              >
+                {badge}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -13,6 +13,7 @@ const guestGuidelines_1 = require("../utils/guestGuidelines");
 const brandedMessaging_1 = require("../utils/brandedMessaging");
 const brandingUtils_1 = require("../utils/brandingUtils");
 const whatsappTone_1 = require("../utils/whatsappTone");
+const guestMessageCopy_1 = require("../utils/guestMessageCopy");
 const taskDueReminderService_1 = require("./taskDueReminderService");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
@@ -171,9 +172,9 @@ async function processReminders() {
                     emailCustom = (0, guestGuidelines_1.applyInvitationGuidelineVariables)((0, messageTemplateService_1.applyTemplateVariables)(latestInvitation.body, templateVars), event.guestGuidelines);
                 }
                 const waCustom = (0, guestGuidelines_1.applyInvitationGuidelineVariables)((0, messageTemplateService_1.applyTemplateVariables)((0, whatsappTone_1.resolveWhatsAppInvitationBody)(latestInvitation.body || '', latestInvitation.whatsappBody), templateVars), event.guestGuidelines);
-                let reminderWa = (await (0, messageTemplateService_1.renderGuestMessage)('REMINDER_WHATSAPP', templateVars)).body;
+                let reminderWa = (0, guestMessageCopy_1.rewriteStaleGuestMessageCopy)((await (0, messageTemplateService_1.renderGuestMessage)('REMINDER_WHATSAPP', templateVars)).body);
                 if (waCustom.trim()) {
-                    reminderWa = `${reminderWa}\n\n---\n\n${waCustom}`;
+                    reminderWa = `${reminderWa}\n\n---\n\n${(0, guestMessageCopy_1.rewriteStaleGuestMessageCopy)(waCustom)}`;
                 }
                 const alreadyGreets = (0, brandedMessaging_1.messageAlreadyGreets)(emailCustom || reminderWa);
                 const whatsappPayload = (0, brandedMessaging_1.wrapBrandedWhatsApp)(reminderWa, orgBrand.orgName, {
@@ -183,7 +184,7 @@ async function processReminders() {
                 const channelsToSend = (0, notificationChannels_1.resolveDeliveryChannels)(channel);
                 for (const chan of channelsToSend) {
                     if (chan === 'EMAIL') {
-                        const emailSource = emailCustom.trim() || reminderWa;
+                        const emailSource = (0, guestMessageCopy_1.rewriteStaleGuestMessageCopy)(emailCustom.trim() || reminderWa);
                         const plainBody = (0, brandingUtils_1.escapeHtml)(emailSource.replace(rsvpLink, '')).replace(/\n/g, '<br />');
                         const htmlBody = (0, brandedMessaging_1.wrapBrandedEmail)({
                             branding: orgBrand.branding,

@@ -6,9 +6,11 @@ exports.findAiTokenOrderForFlexPay = findAiTokenOrderForFlexPay;
 exports.verifyAndFinalizeAiTokenOrder = verifyAndFinalizeAiTokenOrder;
 exports.getDeviceAiTokensSummary = getDeviceAiTokensSummary;
 const db_1 = require("../db");
+const paymentTraceService_1 = require("./paymentTraceService");
+const aiSimulationWalletService_1 = require("./aiSimulationWalletService");
 const flexPayCardService_1 = require("./flexPayCardService");
-exports.AI_TOKEN_PACK_COUNT = 20;
-exports.AI_TOKEN_PACK_PRICE_CDF = 2000;
+exports.AI_TOKEN_PACK_COUNT = 15;
+exports.AI_TOKEN_PACK_PRICE_CDF = 2500;
 // Mémoire de secours en cas d'indisponibilité momentanée de la table DB
 const memoryOrders = new Map();
 /**
@@ -229,6 +231,7 @@ async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber) {
         };
     }
     if (order.status === 'PAID') {
+        void (0, aiSimulationWalletService_1.creditPaidAiTokenOrder)(order).catch((err) => console.error('[AiTokenPayment] wallet credit:', err));
         return {
             found: true,
             paid: true,
@@ -294,6 +297,8 @@ async function verifyAndFinalizeAiTokenOrder(orderIdOrNumber) {
                 });
             }
         }
+        void (0, paymentTraceService_1.notifyAiTokenPayment)(order).catch((err) => console.error('[AiTokenPayment] notify:', err));
+        void (0, aiSimulationWalletService_1.creditPaidAiTokenOrder)(order).catch((err) => console.error('[AiTokenPayment] wallet credit:', err));
         return {
             found: true,
             paid: true,

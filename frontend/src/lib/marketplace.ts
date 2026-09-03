@@ -37,6 +37,15 @@ export type ServiceCategory =
   | 'RENTAL_DECOR'
   | 'RENTAL_TENT';
 
+export interface MarketplaceActivityPreviewItem {
+  id: string;
+  content: string | null;
+  mediaUrls: Array<{ url: string; type: 'IMAGE' | 'VIDEO' }>;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+}
+
 export interface PublicVenue {
   slug: string;
   name: string;
@@ -69,6 +78,7 @@ export interface PublicVenue {
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
+  activityPreview?: MarketplaceActivityPreviewItem[] | null;
 }
 
 export interface VenueListingDraft {
@@ -392,6 +402,7 @@ export interface PublicService {
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
+  activityPreview?: MarketplaceActivityPreviewItem[] | null;
 }
 
 export interface MarketplaceInquiryItem {
@@ -1175,6 +1186,8 @@ export interface CatalogueItem {
   roomType?: RoomType;
   category?: ServiceCategory;
   priceUnit?: VenuePriceUnit;
+  activityPreview?: MarketplaceActivityPreviewItem[] | null;
+  activityCount?: number;
 }
 
 /** Agenda client : événements publics dans le marketplace du tableau de bord. */
@@ -1232,6 +1245,8 @@ export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
     address: venue.address,
     distanceKm: venue.distanceKm ?? null,
     roomType: venue.roomType,
+    activityPreview: venue.activityPreview,
+    activityCount: venue.activityPreview?.length,
   };
 }
 
@@ -1333,6 +1348,8 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     distanceKm: service.distanceKm ?? null,
     category: service.category,
     priceUnit: service.priceUnit,
+    activityPreview: service.activityPreview,
+    activityCount: service.activityPreview?.length,
   };
 }
 

@@ -6,6 +6,8 @@ exports.removeFavorite = removeFavorite;
 exports.planEvent = planEvent;
 exports.planEventAi = planEventAi;
 exports.publicPlanEventAi = publicPlanEventAi;
+exports.listPublicAiSimulations = listPublicAiSimulations;
+exports.claimPublicAiSimulations = claimPublicAiSimulations;
 exports.checkoutAiTokens = checkoutAiTokens;
 exports.getAiTokensDeviceBalance = getAiTokensDeviceBalance;
 exports.verifyAiTokensOrder = verifyAiTokensOrder;
@@ -22,7 +24,9 @@ const publicVenue_1 = require("../utils/publicVenue");
 const eventPlannerService_1 = require("../services/eventPlannerService");
 const eventPlanBrief_1 = require("../services/eventPlanBrief");
 const eventPlanAiService_1 = require("../services/eventPlanAiService");
+const aiSimulationHistoryService_1 = require("../services/aiSimulationHistoryService");
 const aiTokenFlexPayService_1 = require("../services/aiTokenFlexPayService");
+const aiSimulationWalletService_1 = require("../services/aiSimulationWalletService");
 function parseKind(value) {
     return value === 'venue' || value === 'service' ? value : null;
 }
@@ -180,12 +184,64 @@ async function planEvent(req, res) {
         return res.status(500).json({ error: 'Impossible de préparer la proposition.' });
     }
 }
+function briefFromBody(body) {
+    const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : null;
+    const prompt = typeof body.prompt === 'string' ? body.prompt : null;
+    const eventType = typeof body.eventType === 'string' ? body.eventType : null;
+    const city = typeof body.city === 'string' ? body.city : null;
+    const commune = typeof body.commune === 'string' ? body.commune : null;
+    const guestCount = Number(body.guestCount);
+    const budgetMaxFc = Number(body.budgetMaxFc);
+    const eventDate = typeof body.eventDate === 'string' ? body.eventDate : null;
+    return {
+        deviceId,
+        prompt,
+        eventType,
+        city,
+        commune,
+        guestCount: Number.isFinite(guestCount) ? guestCount : null,
+        budgetMaxFc: Number.isFinite(budgetMaxFc) ? budgetMaxFc : null,
+        eventDate,
+    };
+}
+async function persistSimulation(req, result, source) {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const brief = briefFromBody(body);
+    try {
+        const saved = await (0, aiSimulationHistoryService_1.saveAiSimulationRun)({
+            userId: req.user?.id || null,
+            source,
+            result,
+            ...brief,
+        });
+        return saved?.id || null;
+    }
+    catch (err) {
+        console.error('[AiSimulation] persist:', err);
+        return null;
+    }
+}
+async function runEventPlanAi(req, source, rateLimitKey) {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
+    if (!deviceId) {
+        const error = new Error('Identifiant d’appareil manquant pour la simulation.');
+        error.status = 400;
+        throw error;
+    }
+    const userId = req.user?.id || null;
+    await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, userId);
+    const result = await (0, eventPlanAiService_1.simulateEventPlanAi)(rateLimitKey, body);
+    const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, userId);
+    const historyId = await persistSimulation(req, result, source);
+    return { ...result, historyId, remaining: allowance.totalRemaining, allowance };
+}
 async function planEventAi(req, res) {
     try {
         if (!req.user)
             return res.status(401).json({ error: 'Non authentifié.' });
-        const result = await (0, eventPlanAiService_1.simulateEventPlanAi)(req.user.id, req.body && typeof req.body === 'object' ? req.body : {});
-        return res.json(result);
+        const payload = await runEventPlanAi(req, 'dashboard', req.user.id);
+        return res.json(payload);
     }
     catch (error) {
         if (error?.status) {
@@ -197,9 +253,10 @@ async function planEventAi(req, res) {
 }
 async function publicPlanEventAi(req, res) {
     try {
-        const callerId = req.user?.id || req.ip || 'public-guest';
-        const result = await (0, eventPlanAiService_1.simulateEventPlanAi)(callerId, req.body && typeof req.body === 'object' ? req.body : {});
-        res.json(result);
+        const userId = req.user?.id || null;
+        const callerId = userId || req.ip || 'public-guest';
+        const payload = await runEventPlanAi(req, userId ? 'dashboard' : 'landing', callerId);
+        res.json(payload);
     }
     catch (error) {
         if (error?.status) {
@@ -210,14 +267,51 @@ async function publicPlanEventAi(req, res) {
         res.status(500).json({ error: 'Impossible de lancer la simulation IA.' });
     }
 }
+async function listPublicAiSimulations(req, res) {
+    try {
+        const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+        const userId = req.user?.id || null;
+        const items = await (0, aiSimulationHistoryService_1.listAiSimulationRuns)({ userId, deviceId, limit: 20 });
+        res.json({ items });
+    }
+    catch (error) {
+        console.error('listPublicAiSimulations:', error);
+        res.status(500).json({ error: 'Impossible de charger l’historique des simulations.' });
+    }
+}
+async function claimPublicAiSimulations(req, res) {
+    try {
+        if (!req.user?.id) {
+            res.status(401).json({ error: 'Non authentifié.' });
+            return;
+        }
+        const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
+        const result = await (0, aiSimulationHistoryService_1.claimDeviceSimulations)(req.user.id, deviceId);
+        let allowance = null;
+        if (deviceId.trim()) {
+            try {
+                allowance = await (0, aiSimulationWalletService_1.claimAiSimulationWallet)(req.user.id, deviceId.trim());
+            }
+            catch (err) {
+                console.error('[AiSimulation] claim wallet:', err);
+            }
+        }
+        const items = await (0, aiSimulationHistoryService_1.listAiSimulationRuns)({ userId: req.user.id, deviceId, limit: 20 });
+        res.json({ ...result, items, allowance });
+    }
+    catch (error) {
+        console.error('claimPublicAiSimulations:', error);
+        res.status(500).json({ error: 'Impossible de rattacher l’historique à votre compte.' });
+    }
+}
 async function checkoutAiTokens(req, res) {
     try {
         const rawBody = req.body && typeof req.body === 'object' ? req.body : {};
         const paymentMethod = String(rawBody.paymentMethod || 'mobile').toLowerCase() === 'card' ? 'card' : 'mobile';
         const phone = typeof rawBody.phone === 'string' ? rawBody.phone.trim() : '';
         const operator = typeof rawBody.operator === 'string' ? rawBody.operator.trim() : undefined;
-        const tokensCount = Number(rawBody.tokensCount) || 20;
-        const amountFc = Number(rawBody.amountFc) || 2000;
+        const tokensCount = Number(rawBody.tokensCount) || 15;
+        const amountFc = Number(rawBody.amountFc) || 2500;
         const deviceId = typeof rawBody.deviceId === 'string' ? rawBody.deviceId.trim() : null;
         const userId = req.user?.id || null;
         const result = await (0, aiTokenFlexPayService_1.initiateAiTokenPayment)({
@@ -244,6 +338,15 @@ async function getAiTokensDeviceBalance(req, res) {
             return;
         }
         const summary = await (0, aiTokenFlexPayService_1.getDeviceAiTokensSummary)(deviceId);
+        const userId = req.user?.id || null;
+        try {
+            const allowance = await (0, aiSimulationWalletService_1.getAiSimulationWalletAllowance)(deviceId, userId);
+            res.status(200).json({ ...summary, ...allowance });
+            return;
+        }
+        catch (err) {
+            console.error('[AiSimulation] wallet balance:', err);
+        }
         res.status(200).json(summary);
     }
     catch (error) {

@@ -6,6 +6,7 @@ const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const tenantBillingService_1 = require("./tenantBillingService");
 const invoiceService_1 = require("./invoiceService");
+const paymentTraceService_1 = require("./paymentTraceService");
 function generateLicenseKey() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -101,6 +102,14 @@ async function activateSubscriptionRequest(requestId, opts) {
             },
         }),
     ]);
+    if (opts?.markPaid) {
+        void (0, paymentTraceService_1.notifySubscriptionPayment)({
+            requestId,
+            tenantId: request.tenantId,
+            amountFc: pricing.finalAmount,
+            plan: request.requestedPlan,
+        }).catch((err) => console.error('[Subscription] notify payment:', err));
+    }
     void (async () => {
         try {
             await (0, tenantBillingService_1.issueTenantPlanInvoice)({

@@ -29,7 +29,7 @@ async function getGuestLegalStatusHandler(req, res) {
         return res.json({
             ...status,
             requiresAcceptance: !(status.termsAccepted && status.privacyAccepted),
-            branding: (0, brandingUtils_1.resolveBranding)(guest?.event?.tenant?.branding),
+            branding: (0, brandingUtils_1.customTenantBranding)(guest?.event?.tenant?.branding),
             organizationName: guest?.event?.tenant?.name || 'Organisation',
         });
     }
@@ -59,7 +59,7 @@ async function acceptGuestLegalHandler(req, res) {
             message: 'Acceptation enregistrée avec succès.',
             ...status,
             requiresAcceptance: false,
-            branding: (0, brandingUtils_1.resolveBranding)(guest?.event?.tenant?.branding),
+            branding: (0, brandingUtils_1.customTenantBranding)(guest?.event?.tenant?.branding),
             organizationName: guest?.event?.tenant?.name || 'Organisation',
         });
     }

@@ -98,6 +98,7 @@ export default function MarketplaceVenueDetailPage() {
         priceFromFc={venue?.priceFromFc ?? null}
         priceUnitLabel={venue?.priceUnitLabel}
         quotaLabel={quotaLabel}
+        activityPreview={venue?.activityPreview}
         details={venue && item ? (
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-3 max-w-prose">

@@ -811,7 +811,12 @@ export async function getPublicService(req: Request, res: Response) {
     return res.json({
       ...toPublicService(offering),
       isPublic: offering.isPublic,
-      activityPreview: await fetchActivityPreview({ vendorProfileId: offering.vendorProfileId }),
+      activityPreview: await fetchActivityPreview({
+        OR: [
+          { serviceOfferingId: offering.id },
+          { vendorProfileId: offering.vendorProfileId },
+        ],
+      }),
     });
   } catch (error) {
     console.error('getPublicService:', error);
