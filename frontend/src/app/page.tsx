@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 import LandingProfileGate from '@/components/landing/LandingProfileGate';
 import LandingRoomEditorShowcase from '@/components/landing/LandingRoomEditorShowcase';
-import LandingMobileStickyBar from '@/components/landing/LandingMobileStickyBar';
 import FaqSection from '@/components/landing/FaqSection';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
@@ -91,7 +90,7 @@ export default function Home() {
           : 'Invitations WhatsApp, plan de table et forfaits particuliers.';
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased">
+    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased pb-16 md:pb-0">
       <SiteHeader variant="landing" />
 
       {/* ─── HERO & HUB DE SOLUTIONS (Sélection immédiate du produit) ─── */}
@@ -212,7 +211,6 @@ export default function Home() {
         }
       />
 
-      <LandingMobileStickyBar ctaLabel={profile.cta.label} ctaHref={profile.cta.href} />
       <LandingDashboardQuickAccess />
 
       <SiteFooter faqHref="/#faq" />

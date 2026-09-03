@@ -10,6 +10,7 @@ import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { PartyPopper, Sun, Moon, Menu, X, Sparkles, LayoutDashboard, ArrowRight } from 'lucide-react';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
+import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 
 export type SiteHeaderLink = {
   href: string;
@@ -86,13 +87,14 @@ export default function SiteHeader({
   };
 
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-50 backdrop-blur-md bg-background/85 dark:bg-slate-950/80 border-b border-border/80 dark:border-white/10 transition-colors duration-200',
-        className,
-      )}
-    >
-      <div className="page-container h-14 flex items-center justify-between gap-4 sm:gap-6">
+    <>
+      <header
+        className={cn(
+          'sticky top-0 z-50 backdrop-blur-md bg-background/85 dark:bg-slate-950/80 border-b border-border/80 dark:border-white/10 transition-colors duration-200',
+          className,
+        )}
+      >
+        <div className="page-container h-14 flex items-center justify-between gap-4 sm:gap-6">
         {/* Logo & Nom de la plateforme */}
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition shrink-0 group">
           <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm shadow-primary/30 group-hover:scale-105 transition-transform">
@@ -278,5 +280,8 @@ export default function SiteHeader({
         </div>
       )}
     </header>
+
+    {variant !== 'minimal' && <SiteMobileBottomBar />}
+  </>
   );
 }

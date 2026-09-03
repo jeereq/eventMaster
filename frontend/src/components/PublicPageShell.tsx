@@ -20,7 +20,7 @@ export default function PublicPageShell({
 }) {
   return (
     <div className={cn(
-      'flex flex-col min-h-screen bg-background text-foreground font-sans antialiased',
+      'flex flex-col min-h-screen bg-background text-foreground font-sans antialiased pb-16 md:pb-0',
       hideFooter && 'h-dvh overflow-hidden',
     )}>
       {hideHeader ? null : <SiteHeader />}
