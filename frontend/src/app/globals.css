@@ -179,6 +179,14 @@ h1, h2, h3, h4 {
   animation: slide-up 0.22s ease-out;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-scale-up {
+    animation: none !important;
+  }
+}
+
 @keyframes em-laser-scan {
   0% { top: 4%; opacity: 0.7; }
   50% { top: 92%; opacity: 1; }

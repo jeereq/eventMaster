@@ -98,10 +98,11 @@ export default function GuestPortalShell({
             {guestId && <GuestPortalHomeLink guestId={guestId} />}
             <Link
               href="/guide/invite"
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-[11px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-sm"
+              aria-label="Aide invité"
               title="Aide invité"
+              className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 sm:min-w-0 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-[11px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
-              <HelpCircle className="w-3.5 h-3.5" />
+              <HelpCircle className="w-3.5 h-3.5" aria-hidden />
               <span className="hidden sm:inline">Aide</span>
             </Link>
           </div>

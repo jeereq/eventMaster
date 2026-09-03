@@ -35,21 +35,43 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
   const [legalStatus, setLegalStatus] = useState<GuestLegalStatus | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadLegalStatus() {
       if (!guestId) return;
+      setLoading(true);
       try {
         const data = await api.get(`/rsvp/${guestId}/legal-status`);
+        if (cancelled) return;
         setLegalStatus(data);
+        setError('');
       } catch (err: any) {
+        if (cancelled) return;
         setError(err.message || 'Impossible de vérifier les conditions d\'utilisation.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
-    loadLegalStatus();
+    void loadLegalStatus();
+    return () => {
+      cancelled = true;
+    };
   }, [guestId]);
 
+  const retryLegalStatus = async () => {
+    if (!guestId) return;
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get(`/rsvp/${guestId}/legal-status`);
+      setLegalStatus(data);
+    } catch (err: any) {
+      setError(err.message || 'Impossible de vérifier les conditions d\'utilisation.');
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleAccept = async (acceptTerms: boolean, acceptPrivacy: boolean) => {
     setSubmitting(true);
     setError('');
@@ -72,8 +94,33 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
 
   if (loading && !isPrint) {
     return (
-      <div className="min-h-screen em-guest-page flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div
+        className="min-h-screen em-guest-page flex items-center justify-center"
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden />
+        <span className="sr-only">Chargement de votre espace invité…</span>
+      </div>
+    );
+  }
+
+  if (!isPrint && error && !legalStatus) {
+    return (
+      <div className="min-h-screen em-guest-page flex items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center space-y-4" role="alert">
+          <p className="text-sm text-foreground leading-relaxed">
+            {error || 'Impossible de charger votre espace invité.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => void retryLegalStatus()}
+            className="inline-flex items-center justify-center min-h-11 px-4 rounded-[var(--radius-button)] bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            Réessayer
+          </button>
+        </div>
       </div>
     );
   }

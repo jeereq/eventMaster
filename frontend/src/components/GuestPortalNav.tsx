@@ -18,14 +18,17 @@ export function GuestPortalHomeLink({
   return (
     <Link
       href={`/rsvp/${guestId}/home`}
+      aria-label={label}
+      title={label}
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-button)]',
+        'inline-flex items-center justify-center gap-1.5 min-h-11 min-w-11 sm:min-w-0 px-2.5 py-1.5 rounded-[var(--radius-button)]',
         'border border-border bg-surface text-[11px] font-semibold text-muted',
         'hover:text-foreground hover:bg-surface-muted transition',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         className,
       )}
     >
-      <Home className="w-3.5 h-3.5" />
+      <Home className="w-3.5 h-3.5" aria-hidden />
       <span className="hidden sm:inline">{label}</span>
     </Link>
   );

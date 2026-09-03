@@ -199,7 +199,7 @@ export default function GuestHomePage() {
           title={`Mes invitations ${site.platformName}`}
           text="Retrouvez vos invitations et votre badge QR."
           url={guestRsvpUrl(guestId)}
-          className="h-8 w-8 !bg-surface border-border"
+          className="!bg-surface border-border"
         />
       }
       contentClassName="space-y-6"

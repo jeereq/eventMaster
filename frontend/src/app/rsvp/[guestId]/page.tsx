@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from "@/lib/cn";
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -183,10 +183,11 @@ export default function RsvpPage() {
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [guestCommentContents, setGuestCommentContents] = useState<Record<string, string>>({});
   const [guestCommentSubmitting, setGuestCommentSubmitting] = useState<Record<string, boolean>>({});
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [expandedImages, setExpandedImages] = useState<string[]>([]);
   const [expandedImageIndex, setExpandedImageIndex] = useState<number>(0);
   const [expandedImagePrefix, setExpandedImagePrefix] = useState('media');
+  const lightboxCloseRef = useRef<HTMLButtonElement>(null);
+  const qrCloseRef = useRef<HTMLButtonElement>(null);
   const [guestbookSuccess, setGuestbookSuccess] = useState(false);
   const [guestbookShares, setGuestbookShares] = useState<any[]>([]);
   const [loadingGuestbook, setLoadingGuestbook] = useState(false);
@@ -403,6 +404,49 @@ export default function RsvpPage() {
     setExpandedImagePrefix(filenamePrefix);
   };
 
+  const closeGuestImageModal = useCallback(() => {
+    setExpandedImages([]);
+  }, []);
+
+  useEffect(() => {
+    const lightboxOpen = expandedImages.length > 0;
+    if (!lightboxOpen && !showFullScreenQr) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (lightboxOpen) {
+          closeGuestImageModal();
+          return;
+        }
+        setShowFullScreenQr(false);
+        return;
+      }
+      if (!lightboxOpen || expandedImages.length < 2) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setExpandedImageIndex((prev) => (prev - 1 + expandedImages.length) % expandedImages.length);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setExpandedImageIndex((prev) => (prev + 1) % expandedImages.length);
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    const focusTimer = window.setTimeout(() => {
+      if (lightboxOpen) lightboxCloseRef.current?.focus();
+      else qrCloseRef.current?.focus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [expandedImages.length, showFullScreenQr, closeGuestImageModal]);
+
   const handleSubmitRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rsvpLocked) {
@@ -577,7 +621,7 @@ export default function RsvpPage() {
               title={`${guest.event.title} · Invitation`}
               text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
               url={guestRsvpUrl(guestId)}
-              className="h-8 w-8 !bg-surface border-border"
+              className="!bg-surface border-border"
             />
           }
           contentClassName="space-y-5"
@@ -631,7 +675,7 @@ export default function RsvpPage() {
               title={`${guest.event.title} · Invitation`}
               text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
               url={guestRsvpUrl(guestId)}
-              className="h-8 w-8 !bg-surface border-border"
+              className="!bg-surface border-border"
             />
           }
           tabs={
@@ -916,13 +960,18 @@ export default function RsvpPage() {
                       <div className="grid grid-cols-3 gap-2">
                         {guestbookPhotos.map((photo, idx) => (
                           <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-surface-muted flex items-center justify-center">
-                            <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                            <img
+                              src={photo}
+                              alt={`Aperçu photo ${idx + 1} du livre d'or`}
+                              className="w-full h-full object-cover"
+                            />
                             <button
                               type="button"
                               onClick={() => handleRemoveGuestbookPhoto(idx)}
-                              className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow-sm"
+                              className="absolute top-1 right-1 p-1.5 min-h-8 min-w-8 inline-flex items-center justify-center bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow-sm"
+                              aria-label={`Retirer la photo ${idx + 1}`}
                             >
-                              <X className="w-3 h-3" />
+                              <X className="w-3 h-3" aria-hidden />
                             </button>
                           </div>
                         ))}
@@ -1023,7 +1072,7 @@ export default function RsvpPage() {
                                   <div key={pIdx} className="relative aspect-square overflow-hidden bg-surface group">
                                     <img 
                                       src={photo} 
-                                      alt="Guestbook" 
+                                      alt={`Photo ${pIdx + 1} du livre d'or`}
                                       onClick={() => openGuestImageModal(photosList, pIdx, `livre-dor-${guestSlug}`)}
                                       className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                     />
@@ -1036,8 +1085,9 @@ export default function RsvpPage() {
                                       )}
                                       className="absolute top-1.5 right-1.5 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10 touch-manipulation"
                                       title="Télécharger"
+                                      aria-label={`Télécharger la photo ${pIdx + 1} du livre d'or`}
                                     >
-                                      <Download className="w-3 h-3" />
+                                      <Download className="w-3 h-3" aria-hidden />
                                     </button>
                                   </div>
                                 ))}
@@ -1121,7 +1171,7 @@ export default function RsvpPage() {
                                   ) : (
                                     <img 
                                       src={media.url} 
-                                      alt={`Media ${idx + 1}`} 
+                                      alt={`Photo ${idx + 1} du fil d'actualité`}
                                       onClick={() => {
                                         const imagesOnly = mediaList.filter((m: any) => m.type === 'IMAGE').map((m: any) => m.url);
                                         const imgIdx = imagesOnly.indexOf(media.url);
@@ -1143,8 +1193,9 @@ export default function RsvpPage() {
                                     )}
                                     className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10 touch-manipulation"
                                     title="Télécharger"
+                                    aria-label={`Télécharger le média ${idx + 1}`}
                                   >
-                                    <Download className="w-3 h-3" />
+                                    <Download className="w-3 h-3" aria-hidden />
                                   </button>
                                 </div>
                               ))}
@@ -1228,19 +1279,31 @@ export default function RsvpPage() {
 
         {/* Expanded Image Modal with Carousel */}
         {expandedImages.length > 0 && (
-          <div 
+          <div
             className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center z-50 p-4"
-            onClick={() => setExpandedImages([])}
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              expandedImagePrefix.startsWith('livre')
+                ? `Visionneuse du livre d'or, photo ${expandedImageIndex + 1} sur ${expandedImages.length}`
+                : `Visionneuse, média ${expandedImageIndex + 1} sur ${expandedImages.length}`
+            }
+            onClick={closeGuestImageModal}
           >
-            <div className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-[var(--radius-card)] flex items-center justify-center">
-              <img 
-                src={expandedImages[expandedImageIndex]} 
-                alt="Expanded" 
-                className="max-h-[85vh] max-w-full object-contain" 
-                onClick={(e) => e.stopPropagation()}
+            <div
+              className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-[var(--radius-card)] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={expandedImages[expandedImageIndex]}
+                alt={
+                  expandedImagePrefix.startsWith('livre')
+                    ? `Photo du livre d'or ${expandedImageIndex + 1} sur ${expandedImages.length}`
+                    : `Média ${expandedImageIndex + 1} sur ${expandedImages.length}`
+                }
+                className="max-h-[85vh] max-w-full object-contain"
               />
-              
-              {/* Download Button */}
+
               <button
                 type="button"
                 onClick={(e) => {
@@ -1251,42 +1314,51 @@ export default function RsvpPage() {
                     `${expandedImagePrefix}-${expandedImageIndex + 1}${getMediaExtension(url, 'IMAGE')}`
                   );
                 }}
-                className="absolute top-4 left-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition z-10"
+                className="absolute top-4 left-4 p-2.5 min-h-11 min-w-11 inline-flex items-center justify-center bg-black/60 hover:bg-black text-white rounded-full transition z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                aria-label="Télécharger l'image"
                 title="Télécharger"
               >
-                <Download className="w-5 h-5" />
+                <Download className="w-5 h-5" aria-hidden />
               </button>
 
-              {/* Close Button */}
               <button
-                onClick={() => setExpandedImages([])}
-                className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition z-10"
+                ref={lightboxCloseRef}
+                type="button"
+                onClick={closeGuestImageModal}
+                className="absolute top-4 right-4 p-2.5 min-h-11 min-w-11 inline-flex items-center justify-center bg-black/60 hover:bg-black text-white rounded-full transition z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                aria-label="Fermer la visionneuse"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden />
               </button>
 
-              {/* Carousel Navigation */}
               {expandedImages.length > 1 && (
                 <>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setExpandedImageIndex((prev) => (prev - 1 + expandedImages.length) % expandedImages.length);
                     }}
-                    className="absolute left-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition"
+                    className="absolute left-4 p-3 min-h-11 min-w-11 inline-flex items-center justify-center bg-black/50 hover:bg-black text-white rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                    aria-label="Photo précédente"
                   >
-                    <ChevronLeft className="w-6 h-6" />
+                    <ChevronLeft className="w-6 h-6" aria-hidden />
                   </button>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setExpandedImageIndex((prev) => (prev + 1) % expandedImages.length);
                     }}
-                    className="absolute right-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition"
+                    className="absolute right-4 p-3 min-h-11 min-w-11 inline-flex items-center justify-center bg-black/50 hover:bg-black text-white rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                    aria-label="Photo suivante"
                   >
-                    <ChevronRight className="w-6 h-6" />
+                    <ChevronRight className="w-6 h-6" aria-hidden />
                   </button>
-                  <div className="absolute bottom-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-semibold">
+                  <div
+                    className="absolute bottom-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-semibold"
+                    aria-live="polite"
+                  >
                     {expandedImageIndex + 1} / {expandedImages.length}
                   </div>
                 </>
@@ -1325,15 +1397,19 @@ export default function RsvpPage() {
         {showFullScreenQr && (
           <div
             className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guest-pass-qr-title"
             onClick={() => setShowFullScreenQr(false)}
           >
             <button
+              ref={qrCloseRef}
               type="button"
               onClick={() => setShowFullScreenQr(false)}
-              className="absolute top-5 right-5 p-2.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer"
-              aria-label="Fermer"
+              className="absolute top-5 right-5 p-2.5 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              aria-label="Fermer le pass QR"
             >
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6" aria-hidden />
             </button>
 
             <div
@@ -1344,7 +1420,7 @@ export default function RsvpPage() {
                 <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-1 rounded-full">
                   Pass Invité Jour J
                 </span>
-                <h3 className="text-xl font-bold text-slate-900">
+                <h3 id="guest-pass-qr-title" className="text-xl font-bold text-slate-900">
                   {guest.firstName} {guest.lastName}
                 </h3>
               </div>
@@ -1362,7 +1438,7 @@ export default function RsvpPage() {
               <div className="p-4 bg-white border-2 border-slate-900 rounded-2xl inline-block shadow-inner">
                 <img
                   src={getGuestQrImageUrl(guest.id, 320)}
-                  alt="Pass QR"
+                  alt={`Pass QR de ${guest.firstName} ${guest.lastName}`}
                   className="w-56 h-56 sm:w-64 sm:h-64 object-contain"
                 />
               </div>
@@ -1699,7 +1775,7 @@ export default function RsvpPage() {
           title={`${guest.event.title} · Invitation`}
           text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
           url={guestRsvpUrl(guestId)}
-          className="h-8 w-8 !bg-surface border-border"
+          className="!bg-surface border-border"
         />
       }
       contentClassName="flex flex-col items-center gap-5 max-w-none"
