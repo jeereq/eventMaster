@@ -334,8 +334,7 @@ export default function GuestVenueGuide({
   return (
     <div className="space-y-3 animate-fade-in">
       <div className="px-1">
-        <p className="em-guest-section-label">Itinéraire</p>
-        <h3 className="font-display font-semibold text-foreground text-base mt-0.5">
+        <h3 className="font-display font-semibold text-foreground text-base">
           {eventTitle || 'Réception'}
         </h3>
         <p className="text-xs text-muted mt-1 leading-relaxed">{location}</p>

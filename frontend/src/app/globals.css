@@ -648,9 +648,15 @@ html[data-mood="celebrate"] .font-display {
 .em-guest-page {
   position: relative;
   min-height: 100dvh;
+  caret-color: var(--primary);
   background:
     radial-gradient(ellipse 120% 60% at 50% -10%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 55%),
     linear-gradient(180deg, var(--surface-muted) 0%, var(--background) 42%, var(--background) 100%);
+}
+
+.em-guest-page ::selection {
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
+  color: var(--foreground);
 }
 
 .em-guest-page::before {
@@ -684,7 +690,7 @@ html[data-mood="celebrate"] .font-display {
   background: linear-gradient(
     135deg,
     var(--primary) 0%,
-    color-mix(in srgb, var(--primary) 72%, #0f172a) 100%
+    color-mix(in srgb, var(--primary) 70%, var(--foreground)) 100%
   );
 }
 

@@ -56,7 +56,6 @@ export default function GuestGuidelinesView({
           <Info className="w-4 h-4" />
         </div>
         <div>
-          <p className="em-guest-section-label" style={{ color: accent }}>Pratique</p>
           <h3 className="text-sm font-semibold text-foreground">Infos pour le jour J</h3>
         </div>
       </div>

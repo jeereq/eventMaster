@@ -664,9 +664,6 @@ export default function RsvpPage() {
           contentClassName="space-y-5"
         >
           <GuestPortalCard className="text-center space-y-4 py-10">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-surface-muted border border-border text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
-              Réponse enregistrée
-            </span>
             <h2 className="text-xl font-display font-semibold text-foreground tracking-tight">
               {guest.firstName}, nous avons bien noté votre absence.
             </h2>
@@ -769,7 +766,7 @@ export default function RsvpPage() {
                     <button
                       type="button"
                       onClick={() => setShowFullScreenQr(true)}
-                      className="p-4 bg-white rounded-[1.25rem] border border-border shadow-[0_12px_40px_rgba(15,23,42,0.08)] hover:scale-105 active:scale-95 transition-all group relative cursor-pointer"
+                      className="p-4 bg-white rounded-[1.25rem] border border-border shadow-[0_12px_40px_rgba(15,23,42,0.08)] hover:scale-105 active:scale-95 transition-all group relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       title="Agrandir le pass QR"
                     >
                       <img
@@ -818,14 +815,13 @@ export default function RsvpPage() {
 
                 <GuestPortalCard className="space-y-4 !p-0 overflow-hidden">
                   <div className="px-5 pt-5 pb-3 border-b border-border/70 bg-gradient-to-r from-primary/5 to-transparent">
-                    <p className="em-guest-section-label">Détails</p>
-                    <h3 className="font-display font-semibold text-foreground text-base mt-1">
+                    <h3 className="font-display font-semibold text-foreground text-base">
                       {guest.event.title}
                     </h3>
                   </div>
                   <div className="px-5 pb-5 space-y-4">
                     {guest.event.description?.trim() ? (
-                      <p className="text-muted text-xs leading-relaxed whitespace-pre-line border-l-2 border-primary/30 pl-3">
+                      <p className="text-muted text-xs leading-relaxed whitespace-pre-line border-l border-primary/35 pl-3">
                         {guest.event.description}
                       </p>
                     ) : null}
@@ -913,8 +909,7 @@ export default function RsvpPage() {
             {activeGuestTab === 'table' && (
               <div className="space-y-4 animate-fade-in">
                 <div className="px-1">
-                  <p className="em-guest-section-label">Placement</p>
-                  <h2 className="text-lg font-display font-semibold leading-snug tracking-tight text-foreground mt-0.5">
+                  <h2 className="text-lg font-display font-semibold leading-snug tracking-tight text-foreground">
                     Votre table
                   </h2>
                   <p className="text-xs text-muted mt-1">
@@ -963,7 +958,6 @@ export default function RsvpPage() {
             {activeGuestTab === 'guestbook' && (
               <div className="space-y-4 animate-fade-in">
                 <div className="space-y-1 px-1">
-                  <p className="em-guest-section-label">Messages</p>
                   <h3 className="font-display font-semibold text-foreground text-base">Livre d&apos;or</h3>
                   <p className="text-muted text-xs leading-relaxed">
                     Adressez un mot ou des photos aux organisateurs. Visible par les autres invités.
@@ -1441,7 +1435,7 @@ export default function RsvpPage() {
           <button
             type="button"
             onClick={() => setShowFullScreenQr(true)}
-            className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-between gap-3 border border-primary/40 active:scale-[0.98] transition-all hover:bg-primary-hover cursor-pointer touch-manipulation"
+            className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-between gap-3 border border-primary/40 active:scale-[0.98] transition-all hover:bg-primary-hover cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 shrink-0 rounded-xl bg-white/15 text-white flex items-center justify-center font-bold text-xs ring-1 ring-white/25">
@@ -1741,9 +1735,6 @@ export default function RsvpPage() {
         )}
         <div className={isOutside ? 'relative z-10' : undefined}>
         {renderRsvpLockedBanner()}
-        <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">
-          Confirmez votre présence
-        </span>
         <div className={`font-semibold text-foreground ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
         
         {/* Yes/No Buttons */}
@@ -1752,7 +1743,7 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'ACCEPTED' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-muted text-muted'}`}
+            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${rsvpStatus === 'ACCEPTED' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
             <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-primary' : 'text-foreground/80'}`} />
             <span className="text-xs font-semibold">Oui, je serai présent</span>
@@ -1762,7 +1753,7 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200' : 'border-border hover:bg-surface-muted text-muted'}`}
+            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
             <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-foreground/80'}`} />
             <span className="text-xs font-semibold">Non, je ne pourrai pas</span>
@@ -2407,9 +2398,6 @@ export default function RsvpPage() {
           ) : (
             <div className="space-y-8">
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">
-                  Invitation privée
-                </div>
                 <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight leading-tight">
                   {guest.event.title}
                 </h1>

@@ -237,8 +237,7 @@ export default function GuestTablePlanView({
       <div className={opts.fill ? 'space-y-2 w-full h-full min-h-0 flex flex-col' : 'space-y-3 w-full'}>
         <div className="flex items-center justify-between gap-2 shrink-0 px-1">
           <div>
-            <p className="em-guest-section-label">Salle</p>
-            <h4 className="font-semibold text-foreground text-sm mt-0.5">Plan de la salle</h4>
+            <h4 className="font-semibold text-foreground text-sm">Plan de la salle</h4>
             <p className="text-[10px] text-muted mt-0.5">
               Thème : <span style={{ color: theme.accentColor }}>{theme.name}</span>
               {effectivePlanView === '3d' ? ' · vue 3D' : ''}
@@ -252,6 +251,7 @@ export default function GuestTablePlanView({
                   onClick={() => setPlanView('2d')}
                   className={cn(
                     'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     effectivePlanView === '2d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
                   )}
                 >
@@ -263,6 +263,7 @@ export default function GuestTablePlanView({
                   onClick={() => setPlanView('3d')}
                   className={cn(
                     'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     effectivePlanView === '3d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
                   )}
                 >
@@ -336,7 +337,6 @@ export default function GuestTablePlanView({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <p className="em-guest-section-label" style={{ color: theme.accentColor }}>Votre place</p>
             <h3 className="text-2xl font-display font-semibold text-foreground leading-none">{tableDetails.tableName}</h3>
             {tableDetails.seatIndex !== undefined && (
               <p className="text-sm font-bold mt-2" style={{ color: theme.accentColor }}>
@@ -385,8 +385,7 @@ export default function GuestTablePlanView({
       </div>
 
       <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-[0_10px_40px_rgba(15,23,42,0.05)]">
-        <p className="em-guest-section-label text-center mb-1">Disposition</p>
-        <p className="text-xs font-semibold text-foreground mb-4 text-center">
+        <p className="text-sm font-semibold text-foreground mb-4 text-center">
           Votre place à la table
         </p>
         <div className="relative flex items-center justify-center py-4" style={{ minHeight: Math.max(180, tableDetails.capacity * 28 + 80) }}>

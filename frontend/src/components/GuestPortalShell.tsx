@@ -89,8 +89,10 @@ export default function GuestPortalShell({
             </Link>
           ) : (
             <div className="min-w-0 flex-1 space-y-0.5">
-              <p className="em-guest-section-label !tracking-[0.14em] truncate">{eyebrow}</p>
               <h1 className="text-sm font-semibold text-foreground truncate tracking-tight">{title}</h1>
+              {eyebrow ? (
+                <p className="text-[11px] text-muted truncate leading-snug">{eyebrow}</p>
+              ) : null}
             </div>
           )}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
@@ -120,11 +122,13 @@ export default function GuestPortalShell({
         onTouchEnd={handleTouchEnd}
       >
         {showBrand && (
-          <div className="mb-5 space-y-1.5">
-            <p className="em-guest-section-label">{eyebrow}</p>
+          <div className="mb-5 space-y-1">
             <h1 className="text-xl sm:text-2xl font-display font-semibold text-foreground tracking-tight leading-tight">
               {title}
             </h1>
+            {eyebrow ? (
+              <p className="text-sm text-muted leading-snug">{eyebrow}</p>
+            ) : null}
           </div>
         )}
         {children}
@@ -168,6 +172,7 @@ export function GuestPortalTabBar({
               aria-label={tab.label}
               className={cn(
                 'flex flex-col items-center justify-center gap-0.5 min-h-12 sm:min-h-[3.25rem] px-0.5 sm:px-1 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold transition touch-manipulation',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-muted',
                 active
                   ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
                   : 'text-muted hover:text-foreground active:bg-surface/70',
