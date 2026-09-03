@@ -350,6 +350,231 @@ export function MarketplaceActivityFeedManager({
   );
 }
 
+/** Champ commentaire isolé : la frappe ne provoque aucun re-rendu de la liste */
+function VenueCommentBox({
+  postId,
+  onSubmit,
+  busy,
+  authorLabel,
+}: {
+  postId: string;
+  onSubmit: (postId: string, text: string) => Promise<boolean>;
+  busy?: boolean;
+  authorLabel: string;
+}) {
+  const [draft, setDraft] = useState('');
+
+  const handleSend = async () => {
+    const text = draft.trim();
+    if (!text || busy) return;
+    const ok = await onSubmit(postId, text);
+    if (ok) {
+      setDraft('');
+    }
+  };
+
+  return (
+    <div className="flex gap-2 items-center pt-1">
+      <div className="relative flex-1">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void handleSend();
+          }}
+          placeholder="Écrire un message ou poser une question…"
+          className="w-full min-h-11 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+          aria-label={`Commenter la publication de ${authorLabel}`}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => void handleSend()}
+        disabled={busy || !draft.trim()}
+        className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        aria-label="Publier le commentaire"
+      >
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+}
+
+/** Carte de publication mémoïsée */
+const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
+  post,
+  authorLabel,
+  isVenue,
+  user,
+  loginHref,
+  myLike,
+  isLikeBusy,
+  isCommentBusy,
+  isCopied,
+  onToggleLike,
+  onSubmitComment,
+  onShare,
+  onOpenLightbox,
+}: {
+  post: MarketplaceFeedPost;
+  authorLabel: string;
+  isVenue: boolean;
+  user: unknown;
+  loginHref: string;
+  myLike: string;
+  isLikeBusy?: boolean;
+  isCommentBusy?: boolean;
+  isCopied?: boolean;
+  onToggleLike: (postId: string) => void;
+  onSubmitComment: (postId: string, text: string) => Promise<boolean>;
+  onShare: (postId: string) => void;
+  onOpenLightbox: (urls: string[], index: number) => void;
+}) {
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const likes = Array.isArray(post.likes) ? post.likes : [];
+  const liked = Boolean(myLike && likes.includes(myLike));
+  const media = (post.mediaUrls || []) as MarketplaceFeedMedia[];
+  const images = media
+    .filter((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))
+    .map((m) => m.url);
+  const commentCount = post.comments?.length ?? 0;
+  const visibleComments = commentsExpanded ? post.comments ?? [] : (post.comments ?? []).slice(0, 2);
+
+  return (
+    <article
+      id={`post-${post.id}`}
+      className="group rounded-3xl border border-border/90 bg-surface p-5 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200 [content-visibility:auto] [contain-intrinsic-size:0_380px]"
+    >
+      {/* En-tête de la publication */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary shrink-0 flex items-center justify-center border border-primary/20 shadow-2xs">
+            {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-foreground truncate">{authorLabel}</p>
+            <p className="text-xs text-muted">{formatRelativeDate(post.createdAt)}</p>
+          </div>
+        </div>
+
+        {/* Bouton Partager */}
+        <button
+          type="button"
+          onClick={() => onShare(post.id)}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/80 bg-surface text-xs font-medium text-muted hover:text-foreground hover:bg-surface-muted transition"
+          title="Copier le lien"
+        >
+          {isCopied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-primary" />
+              <span className="text-primary text-[11px]">Copié !</span>
+            </>
+          ) : (
+            <>
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="text-[11px]">Partager</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Contenu */}
+      {post.content ? (
+        <p className="text-sm sm:text-[15px] text-foreground/90 whitespace-pre-line leading-relaxed font-normal break-words">
+          {post.content}
+        </p>
+      ) : null}
+
+      {/* Médias */}
+      <PostMediaGrid
+        media={media}
+        onOpenImage={(url) => {
+          const idx = images.indexOf(url);
+          if (idx >= 0) onOpenLightbox(images, idx);
+        }}
+      />
+
+      {/* Barre d'actions */}
+      <div className="flex items-center gap-2 pt-1 border-t border-border/50 text-xs text-muted">
+        <button
+          type="button"
+          onClick={() => onToggleLike(post.id)}
+          disabled={isLikeBusy}
+          className={cn(
+            'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
+            liked
+              ? 'text-rose-600 bg-rose-500/10 border border-rose-500/20'
+              : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
+          )}
+          aria-pressed={liked}
+        >
+          <Heart className={cn('w-4 h-4 transition-transform', liked && 'fill-current scale-110')} />
+          <span>{post.likeCount ?? likes.length}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCommentsExpanded((prev) => !prev)}
+          className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span>{commentCount}</span>
+        </button>
+      </div>
+
+      {/* Commentaires */}
+      {commentCount > 0 && (
+        <div className="space-y-2.5 pt-1">
+          <ul className="space-y-2 max-h-52 overflow-y-auto pr-1">
+            {visibleComments.map((c) => (
+              <li
+                key={c.id}
+                className="text-xs rounded-2xl border border-border/70 bg-surface-muted/40 p-3 space-y-1"
+              >
+                <div className="flex justify-between items-center gap-2">
+                  <span className="font-bold text-foreground">{c.authorName}</span>
+                  <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
+                </div>
+                <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
+              </li>
+            ))}
+          </ul>
+
+          {commentCount > 2 && (
+            <button
+              type="button"
+              onClick={() => setCommentsExpanded((prev) => !prev)}
+              className="w-full min-h-10 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
+            >
+              {commentsExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Saisie commentaire */}
+      {!user ? (
+        <div className="pt-2">
+          <Link
+            href={loginHref}
+            className="w-full inline-flex items-center justify-center min-h-11 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+          >
+            Connectez-vous pour laisser un commentaire
+          </Link>
+        </div>
+      ) : (
+        <VenueCommentBox
+          postId={post.id}
+          onSubmit={onSubmitComment}
+          busy={isCommentBusy}
+          authorLabel={authorLabel}
+        />
+      )}
+    </article>
+  );
+});
+
 /** Vue publique des publications d'une salle ou d'un prestataire. */
 export default function MarketplaceActivityFeed({
   scope,
@@ -369,10 +594,8 @@ export default function MarketplaceActivityFeed({
   const [error, setError] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentBusy, setCommentBusy] = useState<Record<string, boolean>>({});
   const [likeBusy, setLikeBusy] = useState<Record<string, boolean>>({});
-  const [commentsExpanded, setCommentsExpanded] = useState<Record<string, boolean>>({});
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
 
@@ -408,7 +631,7 @@ export default function MarketplaceActivityFeed({
     void load();
   }, [load]);
 
-  const toggleLike = async (postId: string) => {
+  const toggleLike = useCallback(async (postId: string) => {
     if (!user?.id) {
       router.push(loginHref);
       return;
@@ -422,15 +645,13 @@ export default function MarketplaceActivityFeed({
     } finally {
       setLikeBusy((b) => ({ ...b, [postId]: false }));
     }
-  };
+  }, [user?.id, router, loginHref]);
 
-  const submitComment = async (postId: string) => {
+  const submitComment = useCallback(async (postId: string, text: string): Promise<boolean> => {
     if (!user?.id) {
       router.push(loginHref);
-      return;
+      return false;
     }
-    const text = (commentDrafts[postId] || '').trim();
-    if (!text) return;
     setCommentBusy((b) => ({ ...b, [postId]: true }));
     try {
       const comment = await api.post(`/marketplace/feed/${postId}/comments`, { content: text });
@@ -439,16 +660,16 @@ export default function MarketplaceActivityFeed({
           p.id === postId ? { ...p, comments: [...(p.comments || []), comment] } : p,
         ),
       );
-      setCommentDrafts((d) => ({ ...d, [postId]: '' }));
-      setCommentsExpanded((prev) => ({ ...prev, [postId]: true }));
+      return true;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Commentaire impossible.');
+      return false;
     } finally {
       setCommentBusy((b) => ({ ...b, [postId]: false }));
     }
-  };
+  }, [user?.id, router, loginHref]);
 
-  const handleShare = async (postId: string) => {
+  const handleShare = useCallback(async (postId: string) => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#post-${postId}` : '';
     if (navigator.clipboard && url) {
       try {
@@ -459,7 +680,11 @@ export default function MarketplaceActivityFeed({
         // Fallback
       }
     }
-  };
+  }, []);
+
+  const openLightbox = useCallback((urls: string[], index: number) => {
+    setLightbox({ urls, index });
+  }, []);
 
   const myLike = likeKey(user?.id);
   const isVenue = scope.kind === 'venue';
@@ -504,178 +729,24 @@ export default function MarketplaceActivityFeed({
         </div>
       ) : (
         <div className="space-y-6">
-          {posts.map((post) => {
-            const likes = Array.isArray(post.likes) ? post.likes : [];
-            const liked = Boolean(myLike && likes.includes(myLike));
-            const media = (post.mediaUrls || []) as MarketplaceFeedMedia[];
-            const images = media
-              .filter((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))
-              .map((m) => m.url);
-            const commentCount = post.comments?.length ?? 0;
-            const isExpanded = Boolean(commentsExpanded[post.id]);
-            const visibleComments = isExpanded ? post.comments ?? [] : (post.comments ?? []).slice(0, 2);
-            const isCopied = copiedPostId === post.id;
-
-            return (
-              <article
-                key={post.id}
-                id={`post-${post.id}`}
-                className="group rounded-3xl border border-border/90 bg-surface p-5 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200"
-              >
-                {/* En-tête de la publication */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary shrink-0 flex items-center justify-center border border-primary/20 shadow-2xs">
-                      {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-foreground truncate">{authorLabel}</p>
-                      <p className="text-xs text-muted">{formatRelativeDate(post.createdAt)}</p>
-                    </div>
-                  </div>
-
-                  {/* Bouton Partager */}
-                  <button
-                    type="button"
-                    onClick={() => void handleShare(post.id)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/80 bg-surface text-xs font-medium text-muted hover:text-foreground hover:bg-surface-muted transition"
-                    title="Copier le lien"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-primary" />
-                        <span className="text-primary text-[11px]">Copié !</span>
-                      </>
-                    ) : (
-                      <>
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="text-[11px]">Partager</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Contenu */}
-                {post.content ? (
-                  <p className="text-sm sm:text-[15px] text-foreground/90 whitespace-pre-line leading-relaxed font-normal">
-                    {post.content}
-                  </p>
-                ) : null}
-
-                {/* Médias */}
-                <PostMediaGrid
-                  media={media}
-                  onOpenImage={(url) => {
-                    const idx = images.indexOf(url);
-                    if (idx >= 0) setLightbox({ urls: images, index: idx });
-                  }}
-                />
-
-                {/* Barre d'actions */}
-                <div className="flex items-center gap-2 pt-1 border-t border-border/50 text-xs text-muted">
-                  <button
-                    type="button"
-                    onClick={() => void toggleLike(post.id)}
-                    disabled={likeBusy[post.id]}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
-                      liked
-                        ? 'text-rose-600 bg-rose-500/10 border border-rose-500/20'
-                        : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
-                    )}
-                    aria-pressed={liked}
-                  >
-                    <Heart className={cn('w-4 h-4 transition-transform', liked && 'fill-current scale-110')} />
-                    <span>{post.likeCount ?? likes.length}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
-                    }
-                    className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>{commentCount}</span>
-                  </button>
-                </div>
-
-                {/* Commentaires */}
-                {commentCount > 0 && (
-                  <div className="space-y-2.5 pt-1">
-                    <ul className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                      {visibleComments.map((c) => (
-                        <li
-                          key={c.id}
-                          className="text-xs rounded-2xl border border-border/70 bg-surface-muted/40 p-3 space-y-1"
-                        >
-                          <div className="flex justify-between items-center gap-2">
-                            <span className="font-bold text-foreground">{c.authorName}</span>
-                            <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
-                          </div>
-                          <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {commentCount > 2 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
-                        }
-                        className="w-full min-h-10 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
-                      >
-                        {isExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Saisie commentaire */}
-                {!user ? (
-                  <div className="pt-2">
-                    <Link
-                      href={loginHref}
-                      className="w-full inline-flex items-center justify-center min-h-11 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
-                    >
-                      Connectez-vous pour laisser un commentaire
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="flex gap-2 items-center pt-1">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        value={commentDrafts[post.id] || ''}
-                        onChange={(e) => setCommentDrafts((d) => ({ ...d, [post.id]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') void submitComment(post.id);
-                        }}
-                        placeholder="Écrire un message ou poser une question…"
-                        className="w-full min-h-11 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
-                        aria-label="Commentaire"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void submitComment(post.id)}
-                      disabled={commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      aria-label="Publier le commentaire"
-                    >
-                      {commentBusy[post.id] ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+          {posts.map((post) => (
+            <VenueActivityPostCard
+              key={post.id}
+              post={post}
+              authorLabel={authorLabel}
+              isVenue={isVenue}
+              user={user}
+              loginHref={loginHref}
+              myLike={myLike}
+              isLikeBusy={likeBusy[post.id]}
+              isCommentBusy={commentBusy[post.id]}
+              isCopied={copiedPostId === post.id}
+              onToggleLike={toggleLike}
+              onSubmitComment={submitComment}
+              onShare={handleShare}
+              onOpenLightbox={openLightbox}
+            />
+          ))}
         </div>
       )}
 

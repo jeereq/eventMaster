@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -65,6 +65,352 @@ function authorHref(author: FeedAuthor | null, linkBase: 'public' | 'dashboard')
   return author.href;
 }
 
+/** Champ commentaire isolé : la frappe ne provoque aucun re-rendu du flux */
+function PostCommentBox({
+  postId,
+  onSubmit,
+  busy,
+  authorName,
+}: {
+  postId: string;
+  onSubmit: (postId: string, text: string) => Promise<boolean>;
+  busy?: boolean;
+  authorName?: string;
+}) {
+  const [draft, setDraft] = useState('');
+
+  const handleSend = async () => {
+    const text = draft.trim();
+    if (!text || busy) return;
+    const ok = await onSubmit(postId, text);
+    if (ok) {
+      setDraft('');
+    }
+  };
+
+  return (
+    <div className="flex gap-2 items-center pt-1">
+      <div className="relative flex-1">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void handleSend();
+          }}
+          placeholder="Écrire un message ou poser une question…"
+          className="w-full min-h-11 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+          aria-label={`Commenter la publication de ${authorName || 'ce partenaire'}`}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => void handleSend()}
+        disabled={busy || !draft.trim()}
+        className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        aria-label="Publier le commentaire"
+      >
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+}
+
+/** Carte de publication mémoïsée avec containment CSS pour scroll fluide */
+const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
+  post,
+  user,
+  loginHref,
+  myLike,
+  isLikeBusy,
+  isCommentBusy,
+  isCopied,
+  linkBase,
+  onToggleLike,
+  onSubmitComment,
+  onShare,
+  onOpenLightbox,
+}: {
+  post: GlobalFeedPost;
+  user: unknown;
+  loginHref: string;
+  myLike: string;
+  isLikeBusy?: boolean;
+  isCommentBusy?: boolean;
+  isCopied?: boolean;
+  linkBase: 'public' | 'dashboard';
+  onToggleLike: (postId: string) => void;
+  onSubmitComment: (postId: string, text: string) => Promise<boolean>;
+  onShare: (postId: string) => void;
+  onOpenLightbox: (urls: string[], index: number) => void;
+}) {
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const likes = Array.isArray(post.likes) ? post.likes : [];
+  const liked = Boolean(myLike && likes.includes(myLike));
+  const media = (post.mediaUrls || []) as MarketplaceFeedMedia[];
+  const images = media
+    .filter((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))
+    .map((m) => m.url);
+  const author = post.author;
+  const href = authorHref(author, linkBase);
+  const isVendor = author?.kind === 'vendor';
+  const commentCount = post.comments?.length ?? 0;
+  const visibleComments = commentsExpanded ? post.comments ?? [] : (post.comments ?? []).slice(0, 2);
+
+  return (
+    <article
+      id={`post-${post.id}`}
+      className="group rounded-3xl border border-border/90 bg-surface p-5 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200 [content-visibility:auto] [contain-intrinsic-size:0_380px]"
+    >
+      {/* En-tête de la publication */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3.5 min-w-0">
+          {/* Avatar Profil */}
+          <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-border/80 bg-surface-muted shrink-0 flex items-center justify-center shadow-xs">
+            {author?.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={sizedMediaUrl(author.coverUrl, 160)}
+                alt={author.name ? `Logo ou photo de ${author.name}` : 'Photo de profil'}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className={cn('w-full h-full flex items-center justify-center', isVendor ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary')}>
+                {isVendor ? <Sparkles className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
+              </div>
+            )}
+          </div>
+
+          {/* Détails Auteur */}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {href ? (
+                <Link
+                  href={href}
+                  className="text-sm sm:text-[15px] font-bold text-foreground hover:text-primary transition truncate"
+                >
+                  {author?.name || 'Partenaire EventMaster'}
+                </Link>
+              ) : (
+                <span className="text-sm sm:text-[15px] font-bold text-foreground truncate">
+                  {author?.name || 'Partenaire EventMaster'}
+                </span>
+              )}
+
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border',
+                  isVendor
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
+                    : 'bg-primary/10 text-primary border-primary/20',
+                )}
+              >
+                {isVendor ? <Sparkles className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
+                {isVendor ? 'Prestataire' : 'Salle'}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted mt-0.5">
+              {author?.city && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-muted/80" />
+                  {author.city}
+                </span>
+              )}
+              <span>·</span>
+              <span>{formatRelativeDate(post.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bouton Voir la fiche */}
+        {href && (
+          <Link
+            href={href}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-surface-muted/50 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition group-hover:border-primary/40 shadow-2xs"
+            title="Consulter la fiche détaillée"
+          >
+            <span className="hidden sm:inline">Voir la fiche</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
+      </div>
+
+      {/* Contenu textuel */}
+      {post.content ? (
+        <p className="text-sm sm:text-[15px] text-foreground/90 whitespace-pre-line leading-relaxed font-normal break-words">
+          {post.content}
+        </p>
+      ) : null}
+
+      {/* Galerie Médias moderne avec aspect-ratio fixe pour zéro CLS */}
+      {media.length > 0 && (
+        <div className="rounded-2xl overflow-hidden border border-border/60 bg-surface-muted/40">
+          <div
+            className={cn(
+              'grid gap-1.5',
+              media.length === 1 && 'grid-cols-1',
+              media.length === 2 && 'grid-cols-2 aspect-2/1 sm:aspect-16/9',
+              media.length === 3 && 'grid-cols-3 aspect-2/1 sm:aspect-16/9',
+              media.length >= 4 && 'grid-cols-2 sm:grid-cols-2 aspect-square sm:aspect-16/10',
+            )}
+          >
+            {media.slice(0, 4).map((m, i) => {
+              const video = m.type === 'VIDEO' || isVideoUrl(m.url);
+              const isFourthAndMore = i === 3 && media.length > 4;
+              const extraCount = media.length - 4;
+
+              return (
+                <div
+                  key={`${m.url}-${i}`}
+                  className={cn(
+                    'relative overflow-hidden group/media bg-surface-muted',
+                    media.length === 1 ? 'aspect-16/10 max-h-[460px]' : 'h-full w-full',
+                  )}
+                >
+                  {video ? (
+                    <video
+                      src={m.url}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-full h-full text-left relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      onClick={() => {
+                        const idx = images.indexOf(m.url);
+                        if (idx >= 0) onOpenLightbox(images, idx);
+                      }}
+                      aria-label={`Agrandir l’image ${i + 1} de ${author?.name || 'la publication'}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={sizedMediaUrl(m.url, 800)}
+                        alt={`Photo ${i + 1} publiée par ${author?.name || 'un professionnel'}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover/media:scale-105"
+                        loading="lazy"
+                      />
+
+                      {isFourthAndMore && (
+                        <div className="absolute inset-0 bg-black/65 backdrop-blur-2xs flex items-center justify-center text-white text-lg font-bold">
+                          +{extraCount + 1} photos
+                        </div>
+                      )}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Barre d'actions (Like, Commentaires, Partage) */}
+      <div className="flex items-center justify-between pt-1 border-t border-border/50 text-xs text-muted">
+        <div className="flex items-center gap-2">
+          {/* Like */}
+          <button
+            type="button"
+            onClick={() => onToggleLike(post.id)}
+            disabled={isLikeBusy}
+            className={cn(
+              'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
+              liked
+                ? 'text-rose-600 bg-rose-500/10 border border-rose-500/20'
+                : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
+            )}
+            aria-pressed={liked}
+          >
+            <Heart className={cn('w-4 h-4 transition-transform', liked && 'fill-current scale-110')} />
+            <span>{post.likeCount ?? likes.length}</span>
+          </button>
+
+          {/* Commentaires Toggle */}
+          <button
+            type="button"
+            onClick={() => setCommentsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition border border-transparent"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>{commentCount}</span>
+          </button>
+        </div>
+
+        {/* Partage */}
+        <button
+          type="button"
+          onClick={() => onShare(post.id)}
+          className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+          title="Copier le lien"
+        >
+          {isCopied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-primary" />
+              <span className="text-primary text-[11px]">Copié !</span>
+            </>
+          ) : (
+            <>
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[11px]">Partager</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Section Commentaires */}
+      {commentCount > 0 && (
+        <div className="space-y-2.5 pt-1">
+          <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {visibleComments.map((c) => (
+              <li
+                key={c.id}
+                className="text-xs rounded-2xl border border-border/70 bg-surface-muted/40 p-3 space-y-1"
+              >
+                <div className="flex justify-between items-center gap-2">
+                  <span className="font-bold text-foreground">{c.authorName}</span>
+                  <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
+                </div>
+                <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
+              </li>
+            ))}
+          </ul>
+
+          {commentCount > 2 && (
+            <button
+              type="button"
+              onClick={() => setCommentsExpanded((prev) => !prev)}
+              className="w-full min-h-10 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
+            >
+              {commentsExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Formulaire de commentaire */}
+      {!user ? (
+        <div className="pt-2">
+          <Link
+            href={loginHref}
+            className="w-full inline-flex items-center justify-center min-h-11 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+          >
+            Connectez-vous pour laisser un commentaire
+          </Link>
+        </div>
+      ) : (
+        <PostCommentBox
+          postId={post.id}
+          onSubmit={onSubmitComment}
+          busy={isCommentBusy}
+          authorName={author?.name}
+        />
+      )}
+    </article>
+  );
+});
+
 export default function MarketplaceGlobalActivityFeed({
   linkBase = 'public',
   className,
@@ -84,10 +430,8 @@ export default function MarketplaceGlobalActivityFeed({
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentBusy, setCommentBusy] = useState<Record<string, boolean>>({});
   const [likeBusy, setLikeBusy] = useState<Record<string, boolean>>({});
-  const [commentsExpanded, setCommentsExpanded] = useState<Record<string, boolean>>({});
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
 
@@ -146,7 +490,7 @@ export default function MarketplaceGlobalActivityFeed({
     }
   };
 
-  const toggleLike = async (postId: string) => {
+  const toggleLike = useCallback(async (postId: string) => {
     if (!user?.id) {
       router.push(loginHref);
       return;
@@ -160,15 +504,13 @@ export default function MarketplaceGlobalActivityFeed({
     } finally {
       setLikeBusy((b) => ({ ...b, [postId]: false }));
     }
-  };
+  }, [user?.id, router, loginHref]);
 
-  const submitComment = async (postId: string) => {
+  const submitComment = useCallback(async (postId: string, text: string): Promise<boolean> => {
     if (!user?.id) {
       router.push(loginHref);
-      return;
+      return false;
     }
-    const text = (commentDrafts[postId] || '').trim();
-    if (!text) return;
     setCommentBusy((b) => ({ ...b, [postId]: true }));
     try {
       const comment: MarketplaceFeedComment = await api.post(`/marketplace/feed/${postId}/comments`, {
@@ -179,16 +521,16 @@ export default function MarketplaceGlobalActivityFeed({
           p.id === postId ? { ...p, comments: [...(p.comments || []), comment] } : p,
         ),
       );
-      setCommentDrafts((d) => ({ ...d, [postId]: '' }));
-      setCommentsExpanded((prev) => ({ ...prev, [postId]: true }));
+      return true;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Commentaire impossible.');
+      return false;
     } finally {
       setCommentBusy((b) => ({ ...b, [postId]: false }));
     }
-  };
+  }, [user?.id, router, loginHref]);
 
-  const handleShare = async (postId: string) => {
+  const handleShare = useCallback(async (postId: string) => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/activite#post-${postId}` : '';
     if (navigator.clipboard && url) {
       try {
@@ -199,7 +541,11 @@ export default function MarketplaceGlobalActivityFeed({
         // Fallback
       }
     }
-  };
+  }, []);
+
+  const openLightbox = useCallback((urls: string[], index: number) => {
+    setLightbox({ urls, index });
+  }, []);
 
   const myLike = likeKey(user?.id);
 
@@ -331,300 +677,23 @@ export default function MarketplaceGlobalActivityFeed({
         </div>
       ) : (
         <div className="space-y-6">
-          {posts.map((post) => {
-            const likes = Array.isArray(post.likes) ? post.likes : [];
-            const liked = Boolean(myLike && likes.includes(myLike));
-            const media = (post.mediaUrls || []) as MarketplaceFeedMedia[];
-            const images = media
-              .filter((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))
-              .map((m) => m.url);
-            const author = post.author;
-            const href = authorHref(author, linkBase);
-            const isVendor = author?.kind === 'vendor';
-            const commentCount = post.comments?.length ?? 0;
-            const isExpanded = Boolean(commentsExpanded[post.id]);
-            const visibleComments = isExpanded ? post.comments ?? [] : (post.comments ?? []).slice(0, 2);
-            const isCopied = copiedPostId === post.id;
-
-            return (
-              <article
-                key={post.id}
-                id={`post-${post.id}`}
-                className="group rounded-3xl border border-border/90 bg-surface p-5 sm:p-6 space-y-4 shadow-sm hover:shadow-md transition-all duration-200"
-              >
-                {/* En-tête de la publication */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    {/* Avatar Profil */}
-                    <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-border/80 bg-surface-muted shrink-0 flex items-center justify-center shadow-xs">
-                      {author?.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={sizedMediaUrl(author.coverUrl, 160)}
-                          alt={author.name ? `Logo ou photo de ${author.name}` : 'Photo de profil'}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className={cn('w-full h-full flex items-center justify-center', isVendor ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary')}>
-                          {isVendor ? <Sparkles className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Détails Auteur */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {href ? (
-                          <Link
-                            href={href}
-                            className="text-sm sm:text-[15px] font-bold text-foreground hover:text-primary transition truncate"
-                          >
-                            {author?.name || 'Partenaire EventMaster'}
-                          </Link>
-                        ) : (
-                          <span className="text-sm sm:text-[15px] font-bold text-foreground truncate">
-                            {author?.name || 'Partenaire EventMaster'}
-                          </span>
-                        )}
-
-                        <span
-                          className={cn(
-                            'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border',
-                            isVendor
-                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
-                              : 'bg-primary/10 text-primary border-primary/20',
-                          )}
-                        >
-                          {isVendor ? <Sparkles className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
-                          {isVendor ? 'Prestataire' : 'Salle'}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted mt-0.5">
-                        {author?.city && (
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-muted/80" />
-                            {author.city}
-                          </span>
-                        )}
-                        <span>·</span>
-                        <span>{formatRelativeDate(post.createdAt)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bouton Voir la fiche */}
-                  {href && (
-                    <Link
-                      href={href}
-                      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/80 bg-surface-muted/50 text-xs font-semibold text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition group-hover:border-primary/40 shadow-2xs"
-                      title="Consulter la fiche détaillée"
-                    >
-                      <span className="hidden sm:inline">Voir la fiche</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </Link>
-                  )}
-                </div>
-
-                {/* Contenu textuel */}
-                {post.content ? (
-                  <p className="text-sm sm:text-[15px] text-foreground/90 whitespace-pre-line leading-relaxed font-normal">
-                    {post.content}
-                  </p>
-                ) : null}
-
-                {/* Galerie Médias moderne */}
-                {media.length > 0 && (
-                  <div className="rounded-2xl overflow-hidden border border-border/60 bg-surface-muted/40">
-                    <div
-                      className={cn(
-                        'grid gap-1.5',
-                        media.length === 1 && 'grid-cols-1',
-                        media.length === 2 && 'grid-cols-2 aspect-2/1 sm:aspect-16/9',
-                        media.length === 3 && 'grid-cols-3 aspect-2/1 sm:aspect-16/9',
-                        media.length >= 4 && 'grid-cols-2 sm:grid-cols-2 aspect-square sm:aspect-16/10',
-                      )}
-                    >
-                      {media.slice(0, 4).map((m, i) => {
-                        const video = m.type === 'VIDEO' || isVideoUrl(m.url);
-                        const isFourthAndMore = i === 3 && media.length > 4;
-                        const extraCount = media.length - 4;
-
-                        return (
-                          <div
-                            key={`${m.url}-${i}`}
-                            className={cn(
-                              'relative overflow-hidden group/media bg-surface-muted',
-                              media.length === 1 ? 'aspect-16/10 max-h-[460px]' : 'h-full w-full',
-                            )}
-                          >
-                            {video ? (
-                              <video
-                                src={m.url}
-                                controls
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <button
-                                type="button"
-                                className="w-full h-full text-left relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                                onClick={() => {
-                                  const idx = images.indexOf(m.url);
-                                  if (idx >= 0) setLightbox({ urls: images, index: idx });
-                                }}
-                                aria-label={`Agrandir l’image ${i + 1} de ${author?.name || 'la publication'}`}
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={sizedMediaUrl(m.url, 800)}
-                                  alt={`Photo ${i + 1} publiée par ${author?.name || 'un professionnel'}`}
-                                  className="w-full h-full object-cover transition-transform duration-300 group-hover/media:scale-105"
-                                  loading="lazy"
-                                />
-
-                                {isFourthAndMore && (
-                                  <div className="absolute inset-0 bg-black/65 backdrop-blur-2xs flex items-center justify-center text-white text-lg font-bold">
-                                    +{extraCount + 1} photos
-                                  </div>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Barre d'actions (Like, Commentaires, Partage) */}
-                <div className="flex items-center justify-between pt-1 border-t border-border/50 text-xs text-muted">
-                  <div className="flex items-center gap-2">
-                    {/* Like */}
-                    <button
-                      type="button"
-                      onClick={() => void toggleLike(post.id)}
-                      disabled={likeBusy[post.id]}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold transition active:scale-95 touch-manipulation',
-                        liked
-                          ? 'text-rose-600 bg-rose-500/10 border border-rose-500/20'
-                          : 'text-muted hover:text-foreground hover:bg-surface-muted border border-transparent',
-                      )}
-                      aria-pressed={liked}
-                    >
-                      <Heart className={cn('w-4 h-4 transition-transform', liked && 'fill-current scale-110')} />
-                      <span>{post.likeCount ?? likes.length}</span>
-                    </button>
-
-                    {/* Commentaires Toggle */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
-                      }
-                      className="inline-flex items-center gap-1.5 min-h-10 px-3.5 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition border border-transparent"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>{commentCount}</span>
-                    </button>
-                  </div>
-
-                  {/* Partage */}
-                  <button
-                    type="button"
-                    onClick={() => void handleShare(post.id)}
-                    className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
-                    title="Copier le lien"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-primary" />
-                        <span className="text-primary text-[11px]">Copié !</span>
-                      </>
-                    ) : (
-                      <>
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline text-[11px]">Partager</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Section Commentaires */}
-                {commentCount > 0 && (
-                  <div className="space-y-2.5 pt-1">
-                    <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                      {visibleComments.map((c) => (
-                        <li
-                          key={c.id}
-                          className="text-xs rounded-2xl border border-border/70 bg-surface-muted/40 p-3 space-y-1"
-                        >
-                          <div className="flex justify-between items-center gap-2">
-                            <span className="font-bold text-foreground">{c.authorName}</span>
-                            <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
-                          </div>
-                          <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {commentCount > 2 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
-                        }
-                        className="w-full min-h-10 rounded-lg text-xs font-semibold text-primary hover:underline transition text-left px-1 flex items-center"
-                      >
-                        {isExpanded ? 'Masquer les commentaires anciens' : `Afficher les ${commentCount - 2} autres commentaires`}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Formulaire de commentaire */}
-                {!user ? (
-                  <div className="pt-2">
-                    <Link
-                      href={loginHref}
-                      className="w-full inline-flex items-center justify-center min-h-11 px-4 rounded-xl border border-dashed border-border bg-surface-muted/30 text-xs font-semibold text-primary hover:bg-surface-muted transition"
-                    >
-                      Connectez-vous pour laisser un commentaire
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="flex gap-2 items-center pt-1">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        value={commentDrafts[post.id] || ''}
-                        onChange={(e) => setCommentDrafts((d) => ({ ...d, [post.id]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') void submitComment(post.id);
-                        }}
-                        placeholder="Écrire un message ou poser une question…"
-                        className="w-full min-h-11 pl-3.5 pr-10 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
-                        aria-label={`Commenter la publication de ${author?.name || 'ce partenaire'}`}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void submitComment(post.id)}
-                      disabled={commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
-                      className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      aria-label="Publier le commentaire"
-                    >
-                      {commentBusy[post.id] ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+          {posts.map((post) => (
+            <GlobalFeedPostCard
+              key={post.id}
+              post={post}
+              user={user}
+              loginHref={loginHref}
+              myLike={myLike}
+              isLikeBusy={likeBusy[post.id]}
+              isCommentBusy={commentBusy[post.id]}
+              isCopied={copiedPostId === post.id}
+              linkBase={linkBase}
+              onToggleLike={toggleLike}
+              onSubmitComment={submitComment}
+              onShare={handleShare}
+              onOpenLightbox={openLightbox}
+            />
+          ))}
         </div>
       )}
 
