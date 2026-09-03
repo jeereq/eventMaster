@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles } from 'lucide-react';
+import { Heart, Minimize2, Store, Wallet, Bookmark, Sparkles, Rss } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -24,6 +24,7 @@ import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { CatalogueFocusStage, CatalogueImmersiveStage } from '@/components/CatalogueSearchLayout';
 import CatalogueMobileExplore from '@/components/CatalogueMobileExplore';
+import MarketplaceGlobalActivityFeed from '@/components/marketplace/MarketplaceGlobalActivityFeed';
 import useIsMobile from '@/hooks/useIsMobile';
 import {
   EMPTY_CATALOGUE_GEO,
@@ -83,11 +84,11 @@ import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
 
-type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
+type HubTab = 'explore' | 'favorites' | 'publications' | 'plan' | 'packs';
 type PlanPrepView = 'manual' | 'ai' | 'final';
 type HubFilters = CatalogueGeoState & CatalogueEntityExtras;
 
-const HUB_TABS: HubTab[] = ['explore', 'favorites', 'plan', 'packs'];
+const HUB_TABS: HubTab[] = ['explore', 'favorites', 'publications', 'plan', 'packs'];
 
 function parseHubTab(params: URLSearchParams): HubTab {
   const raw = params.get('hub') || params.get('tab');
@@ -592,6 +593,8 @@ function ClientMarketplaceInner() {
             ? 'Choisissez comment simuler (par critères ou avec l’IA), puis retenez le pack utilisé pour les devis.'
             : tab === 'favorites'
               ? 'Salles, prestataires et matériel & équipements enregistrés. Filtrez et changez la vue grille ou liste.'
+              : tab === 'publications'
+                ? 'Fil d’actualité des salles et prestataires : nouveautés, réalisations et coulisses.'
               : tab === 'packs'
                 ? 'Packs et briefs sauvegardés, à reprendre ou à envoyer en devis.'
                 : searchParams.get('kind') === 'event'
@@ -602,7 +605,20 @@ function ClientMarketplaceInner() {
           <Breadcrumbs
             items={[
               { label: 'Marketplace', href: '/dashboard/catalogue' },
-              { label: tab === 'favorites' ? 'Favoris' : tab === 'plan' ? 'Préparer un événement' : tab === 'packs' ? 'Mes packs' : searchParams.get('kind') === 'event' ? 'Agenda' : 'Explorer' },
+              {
+                label:
+                  tab === 'favorites'
+                    ? 'Favoris'
+                    : tab === 'publications'
+                      ? 'Publications'
+                      : tab === 'plan'
+                        ? 'Préparer un événement'
+                        : tab === 'packs'
+                          ? 'Mes packs'
+                          : searchParams.get('kind') === 'event'
+                            ? 'Agenda'
+                            : 'Explorer',
+              },
             ]}
           />
         }
@@ -616,6 +632,7 @@ function ClientMarketplaceInner() {
         {[
           { id: 'explore' as const, label: 'Explorer', icon: Store },
           { id: 'favorites' as const, label: 'Favoris', icon: Heart },
+          { id: 'publications' as const, label: 'Publications', icon: Rss },
           { id: 'plan' as const, label: 'Préparer un événement', icon: Wallet },
           { id: 'packs' as const, label: 'Mes packs', icon: Bookmark },
         ].map((item) => (
@@ -745,6 +762,12 @@ function ClientMarketplaceInner() {
             />
           </div>
         )
+      ) : null}
+
+      {tab === 'publications' ? (
+        <div className="max-w-3xl">
+          <MarketplaceGlobalActivityFeed linkBase="dashboard" compactLoginHint />
+        </div>
       ) : null}
 
       {tab === 'plan' ? (
