@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -150,6 +150,9 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
 }) {
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [activeSnapIndex, setActiveSnapIndex] = useState(0);
+  const [textExpanded, setTextExpanded] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
   const likes = Array.isArray(post.likes) ? post.likes : [];
   const liked = Boolean(myLike && likes.includes(myLike));
   const media = (post.mediaUrls || []) as MarketplaceFeedMedia[];
@@ -166,14 +169,38 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
   const currentMedia = media[activeSnapIndex] || media[0];
   const isCurrentVideo = currentMedia ? currentMedia.type === 'VIDEO' || isVideoUrl(currentMedia.url) : false;
 
-  const handlePrevSnap = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePrevSnap = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setActiveSnapIndex((prev) => (prev > 0 ? prev - 1 : media.length - 1));
   };
 
-  const handleNextSnap = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleNextSnap = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setActiveSnapIndex((prev) => (prev < media.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) {
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || media.length <= 1) return;
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      if (deltaX < 0) {
+        handleNextSnap();
+      } else {
+        handlePrevSnap();
+      }
+    }
   };
 
   return (
@@ -183,7 +210,11 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
     >
       {/* ─── CAS 1 : Publication avec Médias (Carte Snapchat Spotlight) ─── */}
       {hasMedia ? (
-        <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-slate-950 select-none shadow-inner">
+        <div
+          className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* Barres de progression segmented façon Story Snapchat en cas de multi-snaps */}
           {media.length > 1 && (
             <div className="absolute top-2.5 inset-x-3.5 z-30 flex gap-1.5 pointer-events-none">
@@ -386,11 +417,11 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   const idx = images.indexOf(currentMedia.url);
                   onOpenLightbox(images, Math.max(0, idx));
                 }}
-                className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md touch-manipulation"
+                className="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md touch-manipulation"
                 aria-label="Ouvrir la story en plein écran"
                 title="Ouvrir la story en plein écran"
               >
-                <Maximize2 className="w-4 h-4" />
+                <Maximize2 className="w-4 h-4 sm:w-4 sm:h-4" />
               </button>
             )}
           </div>
@@ -403,15 +434,31 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10">
                   Snap {activeSnapIndex + 1} / {media.length}
                 </span>
-                <span className="text-[10px] text-white/60">Touchez les côtés pour défiler</span>
+                <span className="text-[10px] text-white/60">Touchez les côtés ou glissez</span>
               </div>
             )}
 
-            {/* Texte de la publication */}
+            {/* Texte de la publication avec bascule de lecture mobile/desktop */}
             {post.content ? (
-              <p className="text-xs sm:text-sm text-white/95 leading-relaxed font-normal whitespace-pre-line drop-shadow-xs pointer-events-auto line-clamp-3 hover:line-clamp-none transition-all">
-                {post.content}
-              </p>
+              <div className="pointer-events-auto flex flex-col items-start gap-0.5">
+                <p
+                  className={cn(
+                    'text-xs sm:text-sm text-white/95 leading-relaxed font-normal whitespace-pre-line drop-shadow-xs transition-all',
+                    !textExpanded && 'line-clamp-2 sm:line-clamp-3',
+                  )}
+                >
+                  {post.content}
+                </p>
+                {post.content.length > 90 && (
+                  <button
+                    type="button"
+                    onClick={() => setTextExpanded((prev) => !prev)}
+                    className="text-[11px] font-bold text-white/80 hover:text-white underline underline-offset-2 mt-0.5 focus-visible:outline-none"
+                  >
+                    {textExpanded ? 'Moins' : 'Lire la suite'}
+                  </button>
+                )}
+              </div>
             ) : null}
           </div>
         </div>
@@ -766,8 +813,8 @@ export default function MarketplaceGlobalActivityFeed({
           )}
         </div>
 
-        {/* Carousel horizontal de stories */}
-        <div className="flex items-center gap-3.5 sm:gap-4 overflow-x-auto no-scrollbar py-1 px-0.5">
+        {/* Carousel horizontal de stories avec défilement tactile fluide */}
+        <div className="flex items-center gap-3.5 sm:gap-4 overflow-x-auto no-scrollbar overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] select-none py-1 px-0.5">
           {/* Bulle 1 : Publier / Votre Story */}
           <Link
             href={user ? '/dashboard/publications?tab=create' : loginHref}

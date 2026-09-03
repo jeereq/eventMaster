@@ -72,7 +72,7 @@ export default function ListingActivityHighlights({
         )}
       </div>
 
-      <div className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory sm:grid sm:grid-cols-3 gap-3 pb-1 sm:pb-0">
+      <div className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] sm:grid sm:grid-cols-3 gap-3 pb-1 sm:pb-0">
         {items.map((post) => {
           const firstImage = post.mediaUrls?.find((m) => m.type !== 'VIDEO' && !isVideoUrl(m.url))?.url;
           const isVideo = !firstImage && Boolean(post.mediaUrls?.find((m) => m.type === 'VIDEO' || isVideoUrl(m.url)));
