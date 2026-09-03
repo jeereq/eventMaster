@@ -222,7 +222,7 @@ export default function LandingProfileGate({
                     {profile.label}
                   </h3>
 
-                  <p className="text-xs text-muted leading-relaxed line-clamp-3 mb-4">
+                  <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-4">
                     {profile.intro}
                   </p>
                 </div>

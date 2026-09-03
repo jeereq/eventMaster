@@ -52,21 +52,11 @@ function Cover({ item, className }: { item: CatalogueItem; className?: string })
 
 function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'md' }) {
   const displayKind = catalogueItemDisplayKind(item);
-  const accent = catalogueKindAccent(displayKind);
   const Icon = kindIcon(displayKind);
-  const box = size === 'sm' ? 'h-7 w-7 rounded-md' : 'h-8 w-8 rounded-lg';
-  const iconSize = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
   return (
-    <span className="inline-flex items-center gap-1.5 min-w-0">
-      <span className={cn('inline-flex items-center justify-center shrink-0 shadow-sm', box, accent.iconBox)}>
-        <Icon className={iconSize} strokeWidth={2.4} />
-      </span>
-      <span className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm',
-        accent.badge,
-      )}>
-        {catalogueKindLabel(displayKind)}
-      </span>
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold shadow-sm">
+      <Icon className="w-3 h-3 text-white" strokeWidth={2.4} />
+      <span>{catalogueKindLabel(displayKind)}</span>
     </span>
   );
 }
@@ -98,77 +88,74 @@ function GridCard({
   onToggleFavorite?: (item: CatalogueItem) => void;
   onNavigate?: (e: React.MouseEvent) => void;
 }) {
-  const displayKind = catalogueItemDisplayKind(item);
-  const accent = catalogueKindAccent(displayKind);
-  const isService = item.kind === 'service';
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={cn(
-        'group relative flex flex-col bg-surface border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200',
-        accent.border,
-      )}
+      className="group relative flex flex-col bg-surface border border-border/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300"
     >
-      <span className={cn('absolute inset-x-0 top-0 h-1 z-10', accent.bar)} aria-hidden />
+      {/* Photo avec mise en valeur maximale */}
       <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
-        <Cover item={item} className="w-full h-full" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+        <Cover item={item} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+
+        {/* Badge catégorie discret & moderne en verre dépoli */}
         <div className="absolute top-2.5 left-2.5 z-[1]">
-          <KindMark item={item} />
+          <KindMark item={item} size="sm" />
         </div>
+
+        {/* Favori ou distance en haut à droite */}
         {onToggleFavorite && item.kind !== 'event' ? (
           <div className="absolute top-2.5 right-2.5 z-10">
             <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
           </div>
         ) : formatDistanceKm(item.distanceKm) ? (
-          <span className="absolute top-2.5 right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-0.5 border border-white/10 shadow-xs">
             {formatDistanceKm(item.distanceKm)}
           </span>
         ) : null}
-        {onToggleFavorite && formatDistanceKm(item.distanceKm) ? (
-          <span className="absolute bottom-[3.4rem] right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
-            {formatDistanceKm(item.distanceKm)}
-          </span>
-        ) : null}
-        <div className="absolute left-3 right-3 bottom-2.5 text-white">
-          <p className="font-display font-semibold text-sm leading-snug line-clamp-2 drop-shadow">
-            {item.title}
-          </p>
-          <p className="text-[11px] text-white/85 mt-0.5">
-            {cataloguePriceCaption(item)}
-            <span className="text-white/70"> · {item.priceUnitLabel}</span>
-          </p>
-        </div>
       </div>
-      <div className="p-3 space-y-2 flex-1 flex flex-col">
-        <p className="text-xs text-muted truncate">{item.orgName}{item.categoryLabel ? ` · ${item.categoryLabel}` : ''}</p>
-        {item.location ? (
-          <p className="text-xs text-muted inline-flex items-center gap-1 min-w-0">
-            <MapPin className="w-3 h-3 shrink-0" />
-            <span className="truncate">{item.location}</span>
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-1.5 text-[11px] text-muted">
-          {item.capacity ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted border border-border px-2 py-0.5">
-              <Users className="w-3 h-3" /> {item.capacity} places
-            </span>
-          ) : null}
-          {formatQuotaLabel(item.quotaMin, item.quotaMax) ? (
-            <span className="rounded-full bg-surface-muted border border-border px-2 py-0.5">
-              {formatQuotaLabel(item.quotaMin, item.quotaMax)}
-            </span>
-          ) : null}
-          {isService ? (
-            <span className="rounded-full bg-surface-muted border border-border px-2 py-0.5">
-              {serviceMobilityLabel(Boolean(item.travels ?? (item.coverageRadiusKm && item.coverageRadiusKm > 0)), item.coverageRadiusKm)}
-            </span>
-          ) : null}
+
+      {/* Informations textuelles épurées & lisibles (Design photo-first aéré) */}
+      <div className="p-3.5 sm:p-4 space-y-2 flex-1 flex flex-col justify-between">
+        <div className="space-y-1">
+          <h3 className="font-bold text-sm sm:text-[15px] text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+            {item.title}
+          </h3>
+
+          {item.location ? (
+            <p className="text-xs text-muted inline-flex items-center gap-1 truncate w-full">
+              <MapPin className="w-3.5 h-3.5 text-muted/80 shrink-0" />
+              <span className="truncate">{item.location}</span>
+            </p>
+          ) : (
+            <p className="text-xs text-muted truncate">
+              {item.orgName || item.categoryLabel || 'Événementiel'}
+            </p>
+          )}
+
+          {/* Attribut clé unique & lisible sans accumulation de chips */}
+          <div className="text-[11px] text-muted pt-0.5 flex items-center gap-1.5">
+            {item.capacity ? (
+              <span className="inline-flex items-center gap-1 font-medium text-foreground/80">
+                <Users className="w-3 h-3 text-muted" /> Jusqu&apos;à {item.capacity} pers.
+              </span>
+            ) : item.categoryLabel ? (
+              <span className="font-medium text-foreground/80 truncate">{item.categoryLabel}</span>
+            ) : null}
+          </div>
         </div>
-        <span className="mt-auto pt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
-          Voir la fiche <ArrowRight className="w-3 h-3 transition group-hover:translate-x-0.5" />
-        </span>
+
+        {/* Prix mis en valeur simplement */}
+        <div className="pt-2 border-t border-border/50 flex items-baseline justify-between text-xs">
+          <div>
+            <span className="font-bold text-sm sm:text-[15px] text-foreground">
+              {cataloguePriceCaption(item)}
+            </span>
+            <span className="text-muted text-[11px] ml-1">
+              · {item.priceUnitLabel}
+            </span>
+          </div>
+        </div>
       </div>
     </Link>
   );

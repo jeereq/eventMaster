@@ -134,8 +134,8 @@ export default function LandingVisualBanner() {
             </span>
           </h2>
 
-          <p className="text-sm sm:text-base text-muted leading-relaxed">
-            Découvrez en images la diversité et la qualité des salles de fête, agencements décoratifs, prestations traiteur et équipements disponibles directement sur EventMaster.
+          <p className="text-sm sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
+            Découvrez en images les plus beaux espaces, décors et prestations en RDC.
           </p>
 
           {/* Filtres de catégories rapides */}

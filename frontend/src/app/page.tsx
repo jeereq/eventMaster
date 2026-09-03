@@ -198,8 +198,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── SIMULATION D'ÉVÉNEMENT PAR IA & PACKS BUDGET CLÉS EN MAIN (Positionnée en amont pour visibilité immédiate) ─── */}
-      <LandingAiSimulationShowcase />
+      {/* ─── GALERIE D'INSPIRATION & RÉALISATIONS EN IMAGES (Mise en avant visuelle immédiate) ─── */}
+      <LandingVisualBanner />
+
+      {/* ─── CATALOGUE & MARKETPLACE (Salles, Prestataires, Billetteries) ─── */}
+      <LandingVitrineSection />
 
       {/* ─── ÉDITEUR DE SALLE 2D / 3D (Agencement, Visite 3D, Placement, Scan QR) ─── */}
       <LandingRoomEditorShowcase />
@@ -211,11 +214,8 @@ export default function Home() {
         onPreview={setModalTemplate}
       />
 
-      {/* ─── GALERIE D'INSPIRATION & RÉALISATIONS EN IMAGES ─── */}
-      <LandingVisualBanner />
-
-      {/* ─── CATALOGUE & MARKETPLACE (Salles, Prestataires, Billetteries) ─── */}
-      <LandingVitrineSection />
+      {/* ─── SIMULATION D'ÉVÉNEMENT PAR IA & PACKS BUDGET CLÉS EN MAIN ─── */}
+      <LandingAiSimulationShowcase />
 
       {/* ─── TARIFICATION ET FORFAITS ─── */}
       <LandingPricingSection

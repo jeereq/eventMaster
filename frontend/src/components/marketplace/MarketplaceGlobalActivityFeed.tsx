@@ -919,21 +919,6 @@ export default function MarketplaceGlobalActivityFeed({
         </form>
       </div>
 
-      {!user && !compactLoginHint ? (
-        <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border border-primary/20 bg-primary/5 text-xs sm:text-sm text-foreground">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-primary shrink-0" />
-            <span>Rejoignez la communauté EventMaster pour aimer, commenter et échanger avec les professionnels.</span>
-          </div>
-          <Link
-            href={loginHref}
-            className="shrink-0 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-95 transition shadow-xs"
-          >
-            Se connecter
-          </Link>
-        </div>
-      ) : null}
-
       {error ? (
         <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-medium" role="alert">
           {error}
