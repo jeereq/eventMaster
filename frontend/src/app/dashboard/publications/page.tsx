@@ -253,7 +253,7 @@ function PublicationsGrid() {
                 key={post.id}
                 type="button"
                 onClick={() => setSelected(post)}
-                className="group relative aspect-square overflow-hidden rounded-2xl bg-surface-muted border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:shadow-md transition-all duration-200 text-left"
+                className="group relative aspect-square overflow-hidden rounded-xl bg-surface-muted border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:shadow-md transition-all duration-200 text-left"
                 aria-label={`Ouvrir la publication de ${post.author?.name || 'ce partenaire'}`}
               >
                 {media ? (
@@ -328,7 +328,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-auto border border-border shadow-2xl space-y-4 p-4 sm:p-6"
+        className="bg-surface rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-auto border border-border shadow-2xl space-y-4 p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">

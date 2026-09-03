@@ -213,7 +213,7 @@ export default function LandingAiSimulationShowcase() {
         </div>
 
         {viewMode === 'presets' && (
-          <div className="bg-surface/90 dark:bg-slate-900/90 border border-primary/25 rounded-3xl p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
+          <div className="bg-surface/90 dark:bg-slate-900/90 border border-primary/25 rounded-xl sm:rounded-2xl p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
               <p className="text-xs font-bold text-foreground">
                 Choisissez un projet type, puis générez de vrais packs catalogue.
@@ -330,7 +330,7 @@ export default function LandingAiSimulationShowcase() {
 
         <div
           className={cn(
-            'bg-surface/90 dark:bg-slate-900/90 border-2 border-primary/40 rounded-3xl p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-4 max-w-5xl mx-auto',
+            'bg-surface/90 dark:bg-slate-900/90 border-2 border-primary/40 rounded-xl sm:rounded-2xl p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-4 max-w-5xl mx-auto',
             viewMode === 'live' ? 'animate-fade-in' : 'hidden',
           )}
           hidden={viewMode !== 'live'}

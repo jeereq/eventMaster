@@ -24,8 +24,8 @@ export const FOOTER_PRODUCT = [
   { label: 'Éditeur 2D/3D', href: '/#editeur' },
   { label: 'Marketplace', href: '/marketplace' },
   { label: 'Publications', href: '/activite' },
-  { label: 'Modèles', href: '/#modeles' },
-  { label: 'Tarifs', href: '/#tarifs' },
+  { label: 'Modèles', href: '/modeles' },
+  { label: 'Tarifs', href: '/tarifs' },
   { label: 'FAQ', href: '/faq' },
 ] as const;
 

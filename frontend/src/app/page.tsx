@@ -3,21 +3,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
-import type { LandingTemplate } from '@/config/landingTemplates';
-import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import dynamic from 'next/dynamic';
-import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingProfileGate from '@/components/landing/LandingProfileGate';
 import LandingRoomEditorShowcase from '@/components/landing/LandingRoomEditorShowcase';
 import LandingMobileStickyBar from '@/components/landing/LandingMobileStickyBar';
 import FaqSection from '@/components/landing/FaqSection';
-import LandingModelsSection from '@/components/landing/LandingModelsSection';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
-import { Modal, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 // Chargement différé des sections lourdes sous la ligne de flottaison
@@ -56,19 +51,9 @@ import {
 } from '@/lib/landingProfiles';
 import { ArrowRight, LayoutDashboard, Smartphone, Sparkles } from 'lucide-react';
 
-function getCategoryLabel(category: string) {
-  if (category === 'private') return 'Célébrations';
-  if (category === 'corporate') return 'Professionnel';
-  return 'Soirées';
-}
-
 export default function Home() {
   const { user } = useAuth();
   const { site } = usePlatformSite();
-  const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
-  const [dbPlans, setDbPlans] = useState<any>(null);
-  const [publicTemplates, setPublicTemplates] = useState<LandingTemplate[]>([]);
-  const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
   const [profileId, setProfileId] = useState<LandingProfileId>('personal');
 
   const profile = getLandingProfile(profileId);
@@ -84,26 +69,6 @@ export default function Home() {
         scrollToLandingSection(next.sectionId);
       }
     }
-  }, []);
-
-  useEffect(() => {
-    async function fetchPlans() {
-      try {
-        const plansData = await api.get('/public/plans');
-        if (plansData) setDbPlans(plansData);
-      } catch {
-        /* offline — tarifs fallback du fichier landing */
-      }
-    }
-
-    async function loadPublicTemplates() {
-      const fromDb = await fetchPublicLandingTemplates();
-      setPublicTemplates(fromDb);
-      setLoadingPublicTemplates(false);
-    }
-
-    fetchPlans();
-    loadPublicTemplates();
   }, []);
 
   useEffect(() => {
@@ -207,26 +172,8 @@ export default function Home() {
       {/* ─── ÉDITEUR DE SALLE 2D / 3D (Agencement, Visite 3D, Placement, Scan QR) ─── */}
       <LandingRoomEditorShowcase />
 
-      {/* ─── MODÈLES D'INVITATION (Papeterie digitale) ─── */}
-      <LandingModelsSection
-        templates={publicTemplates}
-        loading={loadingPublicTemplates}
-        onPreview={setModalTemplate}
-      />
-
       {/* ─── SIMULATION D'ÉVÉNEMENT PAR IA & PACKS BUDGET CLÉS EN MAIN ─── */}
       <LandingAiSimulationShowcase />
-
-      {/* ─── TARIFICATION ET FORFAITS ─── */}
-      <LandingPricingSection
-        dbPlans={dbPlans}
-        defaultAudience={profile.pricingAudience}
-        lead={
-          profileId === 'seeker'
-            ? 'Le compte client (recherche) est 100% gratuit : listes de favoris, création de packs et demandes de devis. Les forfaits ci-dessous sont dédiés à ceux qui veulent la sérénité absolue pour gérer l\'organisation complète d’une fête (invitations, placement, scan le jour J).'
-            : undefined
-        }
-      />
 
       {/* ─── FAQ ─── */}
       <FaqSection itemIds={profile.faqIds} subtitle={faqSubtitle} />
@@ -269,40 +216,6 @@ export default function Home() {
       <LandingDashboardQuickAccess />
 
       <SiteFooter faqHref="/#faq" />
-
-      {/* Modale d'aperçu de modèle d'invitation */}
-      <Modal
-        open={Boolean(modalTemplate)}
-        onClose={() => setModalTemplate(null)}
-        title={modalTemplate?.name}
-        description={modalTemplate?.description}
-        size="md"
-        footer={
-          <div className="flex w-full gap-2 justify-end">
-            <Button type="button" variant="secondary" size="sm" onClick={() => setModalTemplate(null)}>
-              Fermer
-            </Button>
-            <Link
-              href={
-                modalTemplate
-                  ? `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(modalTemplate.id)}`
-                  : '/register?kind=ORGANIZER&intent=personal&action=template'
-              }
-            >
-              <Button size="sm">Utiliser ce modèle</Button>
-            </Link>
-          </div>
-        }
-      >
-        {modalTemplate && (
-          <div className="space-y-3">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-              {getCategoryLabel(modalTemplate.category)}
-            </span>
-            <LandingInvitationPreview template={modalTemplate} className="max-h-[min(420px,60vh)] overflow-hidden" />
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

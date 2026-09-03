@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { ChevronDown, Loader2, Sparkles, Wand2, Clock, PlusCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -86,6 +86,7 @@ export default function EventPrepAiSimulator({
   const isLoggedIn = Boolean(user);
   const canCreateEvents = Boolean(access?.canCreateEvents);
   const [open, setOpen] = useState(defaultOpen || embedded);
+  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
@@ -359,16 +360,97 @@ export default function EventPrepAiSimulator({
         onBuy={() => setPurchaseModalOpen(true)}
       />
 
-      <AiSimulationHistoryList
-        items={history}
-        activeId={activeHistoryId}
-        onOpen={(item) => {
-          applyCached(historyItemToCache(item), item.id, true);
-          setPackModalOpen(true);
-        }}
-      />
+      {/* ─── Barre d'onglets : Créer vs Historiques ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+        <div className="inline-flex p-1 rounded-xl bg-surface-muted border border-border/80 w-full sm:w-auto" role="tablist" aria-label="Modes du simulateur">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'create'}
+            onClick={() => setActiveTab('create')}
+            className={cn(
+              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              activeTab === 'create'
+                ? 'bg-surface text-foreground shadow-xs border border-border/70'
+                : 'text-muted hover:text-foreground hover:bg-surface/50',
+            )}
+          >
+            <Wand2 className="w-3.5 h-3.5 text-primary" />
+            <span>Créer un scénario</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'history'}
+            onClick={() => setActiveTab('history')}
+            className={cn(
+              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              activeTab === 'history'
+                ? 'bg-surface text-foreground shadow-xs border border-border/70'
+                : 'text-muted hover:text-foreground hover:bg-surface/50',
+            )}
+          >
+            <Clock className="w-3.5 h-3.5 text-primary" />
+            <span>Historiques</span>
+            {history.length > 0 && (
+              <span className={cn(
+                'ml-1 px-1.5 py-0.2 text-[10px] rounded-full font-bold tabular-nums',
+                activeTab === 'history' ? 'bg-primary/10 text-primary' : 'bg-surface border border-border text-muted',
+              )}>
+                {history.length}
+              </span>
+            )}
+          </button>
+        </div>
 
-      {open ? (
+        {activeTab === 'history' && history.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('create')}
+            className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-center"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>Nouvelle simulation</span>
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'history' ? (
+        <div className="space-y-3 pt-1">
+          {history.length > 0 ? (
+            <AiSimulationHistoryList
+              items={history}
+              activeId={activeHistoryId}
+              onOpen={(item) => {
+                applyCached(historyItemToCache(item), item.id, true);
+                setPackModalOpen(true);
+              }}
+            />
+          ) : (
+            <div className="py-10 px-4 text-center rounded-xl border border-dashed border-border bg-surface-muted/30 space-y-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-foreground">Aucun historique de simulation</h4>
+                <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
+                  Toutes vos simulations passées s’enregistreront automatiquement ici pour vous permettre de réexaminer les packs proposés.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setActiveTab('create')}
+                leftIcon={<Wand2 className="w-3.5 h-3.5" />}
+              >
+                Créer une première simulation
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {open ? (
         <div className="space-y-3">
           <label className="space-y-1 block">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Décrivez votre événement</span>
@@ -716,6 +798,8 @@ export default function EventPrepAiSimulator({
           </div>
         </div>
       ) : null}
+        </>
+      )}
 
       <AiSimulationPackModal
         open={packModalOpen}

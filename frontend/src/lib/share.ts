@@ -176,7 +176,7 @@ export function marketplaceSectionUrl(
           : section === 'events'
             ? '/marketplace/evenements'
             : section === 'templates'
-              ? '/#modeles'
+              ? '/modeles'
               : '/marketplace';
   const url = new URL(path, appOrigin() || 'http://localhost');
   const q = query?.trim();

@@ -492,12 +492,12 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className="group/card rounded-[28px] sm:rounded-[32px] border border-border/80 bg-surface shadow-sm hover:shadow-xl transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
+      className="group/card rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
     >
       {/* ─── CAS 1 : Publication avec Médias (Format Snap Spotlight) ─── */}
       {hasMedia ? (
         <div
-          className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y"
+          className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -722,7 +722,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
       ) : (
         /* ─── CAS 2 : Publication texte sans média (Story Texte Snapchat) ─── */
         <div className={cn(
-          'relative w-full rounded-[24px] sm:rounded-[28px] p-5 sm:p-7 flex flex-col justify-between min-h-[280px] sm:min-h-[320px] overflow-hidden shadow-inner text-white select-none',
+          'relative w-full rounded-lg sm:rounded-xl p-5 sm:p-7 flex flex-col justify-between min-h-[280px] sm:min-h-[320px] overflow-hidden shadow-inner text-white select-none',
           isVenue
             ? 'bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900'
             : 'bg-gradient-to-br from-amber-600 via-rose-600 to-purple-800',
@@ -1004,12 +1004,35 @@ export default function MarketplaceActivityFeed({
       ) : null}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-12 space-y-2">
-          <Loader2 className="w-7 h-7 text-primary animate-spin" aria-hidden />
-          <span className="text-xs text-muted">Chargement des publications…</span>
+        <div className="space-y-6" role="status" aria-label="Chargement des publications">
+          {[...Array(2)].map((_, i) => (
+            <article
+              key={i}
+              className="rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs p-2 sm:p-2.5 space-y-2.5 animate-pulse"
+            >
+              <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-900/90 dark:bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4">
+                <div className="flex items-center gap-2 p-1 pr-3 rounded-full bg-white/10 w-fit">
+                  <div className="w-8 h-8 rounded-full bg-white/20" />
+                  <div className="space-y-1">
+                    <div className="h-3 w-20 bg-white/25 rounded" />
+                    <div className="h-2 w-12 bg-white/15 rounded" />
+                  </div>
+                </div>
+                <div className="absolute right-3 bottom-14 sm:bottom-16 flex flex-col items-center gap-2.5">
+                  {[...Array(3)].map((_, j) => (
+                    <div key={j} className="w-11 h-11 rounded-full bg-white/15 backdrop-blur-sm" />
+                  ))}
+                </div>
+                <div className="space-y-1.5 max-w-[70%]">
+                  <div className="h-3.5 w-full bg-white/25 rounded" />
+                  <div className="h-3 w-3/4 bg-white/15 rounded" />
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-14 px-4 space-y-2 rounded-3xl border border-dashed border-border bg-surface/30">
+        <div className="text-center py-14 px-4 space-y-2 rounded-xl sm:rounded-2xl border border-dashed border-border bg-surface/30">
           <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
             {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
           </div>

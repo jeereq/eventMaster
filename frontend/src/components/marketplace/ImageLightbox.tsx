@@ -216,7 +216,7 @@ export default function ImageLightbox({
           key={displaySrc}
           src={displaySrc}
           alt={title ? `${title} — Photo ${currentIndex + 1} sur ${total}` : `Photo ${currentIndex + 1} sur ${total}`}
-          className="max-h-[78vh] sm:max-h-[84vh] max-w-full object-contain rounded-2xl sm:rounded-3xl shadow-2xl transition-all duration-200 pointer-events-none animate-fade-in"
+          className="max-h-[78vh] sm:max-h-[84vh] max-w-full object-contain rounded-xl sm:rounded-2xl shadow-2xl transition-all duration-200 pointer-events-none animate-fade-in"
           loading="eager"
           decoding="async"
         />

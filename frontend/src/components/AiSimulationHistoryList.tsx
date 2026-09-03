@@ -29,21 +29,28 @@ export default function AiSimulationHistoryList({
   items,
   onOpen,
   activeId,
+  className,
+  listClassName,
 }: {
   items: AiSimulationHistoryItem[];
   onOpen: (item: AiSimulationHistoryItem) => void;
   activeId?: string | null;
+  className?: string;
+  listClassName?: string;
 }) {
   if (!items.length) return null;
 
   return (
-    <div className="space-y-2">
+    <div className={cn('space-y-2', className)}>
       <p className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
         <Clock className="w-3.5 h-3.5 text-primary" />
         Simulations précédentes
         <span className="text-muted font-medium">({items.length})</span>
       </p>
-      <ul className="max-h-56 overflow-y-auto overscroll-contain divide-y divide-border border border-border rounded-[var(--radius-card)]">
+      <ul className={cn(
+        'max-h-80 sm:max-h-96 overflow-y-auto overscroll-contain divide-y divide-border border border-border rounded-xl bg-surface',
+        listClassName,
+      )}>
         {items.map((item) => {
           const active = activeId === item.id;
           const packs = item.result?.packages || [];

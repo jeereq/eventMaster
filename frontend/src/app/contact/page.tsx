@@ -171,7 +171,7 @@ export default function ContactPage() {
                     ))}
                   </ul>
                   <Link
-                    href="/#tarifs"
+                    href="/tarifs"
                     className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline pt-1"
                   >
                     Voir les forfaits
@@ -301,7 +301,7 @@ export default function ContactPage() {
           description="Ouvrez un espace organisation, ou comparez les forfaits avant de vous décider."
           primaryHref="/register"
           primaryLabel="Lancer mon premier événement"
-          secondaryHref="/#tarifs"
+          secondaryHref="/tarifs"
           secondaryLabel="Comparer les forfaits"
         />
       </main>

@@ -251,7 +251,7 @@ export default function LandingRoomEditorShowcase() {
                 Tous les plans Particuliers (B2C) bénéficient de l’éditeur <strong>Complet</strong> avec 3D et multi-étages.
               </p>
             </div>
-            <Link href="#tarifs" className="text-xs font-bold text-primary hover:underline shrink-0">
+            <Link href="/tarifs" className="text-xs font-bold text-primary hover:underline shrink-0">
               Voir le comparateur des forfaits →
             </Link>
           </div>

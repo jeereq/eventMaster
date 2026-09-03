@@ -25,8 +25,8 @@ const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/marketplace', label: 'Marketplace' },
   { href: '/activite', label: 'Publications' },
   { href: '/#editeur', label: 'Éditeur 2D/3D' },
-  { href: '/#modeles', label: 'Modèles' },
-  { href: '/#tarifs', label: 'Tarifs' },
+  { href: '/modeles', label: 'Modèles' },
+  { href: '/tarifs', label: 'Tarifs' },
   { href: '/contact', label: 'Contact' },
 ];
 

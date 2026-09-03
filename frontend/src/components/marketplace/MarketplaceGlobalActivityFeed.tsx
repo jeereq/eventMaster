@@ -206,12 +206,12 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className="group/card rounded-[28px] sm:rounded-[32px] border border-border/80 bg-surface shadow-sm hover:shadow-xl transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
+      className="group/card rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
     >
       {/* ─── CAS 1 : Publication avec Médias (Carte Snapchat Spotlight) ─── */}
       {hasMedia ? (
         <div
-          className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y"
+          className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -467,7 +467,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
       ) : (
         /* ─── CAS 2 : Publication texte sans média (Story Texte Snapchat) ─── */
         <div className={cn(
-          'relative w-full rounded-[24px] sm:rounded-[28px] p-5 sm:p-7 flex flex-col justify-between min-h-[280px] sm:min-h-[320px] overflow-hidden shadow-inner text-white select-none',
+          'relative w-full rounded-lg sm:rounded-xl p-5 sm:p-7 flex flex-col justify-between min-h-[280px] sm:min-h-[320px] overflow-hidden shadow-inner text-white select-none',
           isVendor
             ? 'bg-gradient-to-br from-amber-600 via-rose-600 to-purple-800'
             : 'bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900',
@@ -609,6 +609,63 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
     </article>
   );
 });
+
+export function GlobalFeedSkeleton() {
+  return (
+    <div className="space-y-6" role="status" aria-label="Chargement des publications">
+      {/* Skeleton de la barre de Stories */}
+      <div className="rounded-xl sm:rounded-2xl border border-border/70 bg-surface p-3 sm:p-4 space-y-2.5 shadow-2xs overflow-hidden animate-pulse">
+        <div className="flex items-center justify-between pb-1">
+          <div className="h-3 w-32 bg-surface-muted rounded-full" />
+          <div className="h-3 w-16 bg-surface-muted rounded-full" />
+        </div>
+        <div className="flex items-center gap-3.5 overflow-hidden py-1">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-1.5 shrink-0">
+              <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-surface-muted border-2 border-border/70" />
+              <div className="h-2.5 w-12 bg-surface-muted rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Skeletons des cartes de publication */}
+      {[...Array(2)].map((_, i) => (
+        <article
+          key={i}
+          className="rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs p-2 sm:p-2.5 space-y-2.5 animate-pulse"
+        >
+          <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-900/90 dark:bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4">
+            {/* Header flottant */}
+            <div className="flex items-center justify-between">
+              <div className="inline-flex items-center gap-2 p-1 pr-3 rounded-full bg-white/10 backdrop-blur-md">
+                <div className="w-8 h-8 rounded-full bg-white/20" />
+                <div className="space-y-1">
+                  <div className="h-3 w-24 bg-white/25 rounded" />
+                  <div className="h-2 w-16 bg-white/15 rounded" />
+                </div>
+              </div>
+              <div className="h-7 w-20 rounded-full bg-white/15" />
+            </div>
+
+            {/* Dock latéral droit */}
+            <div className="absolute right-3 bottom-14 sm:bottom-16 flex flex-col items-center gap-2.5">
+              {[...Array(3)].map((_, j) => (
+                <div key={j} className="w-11 h-11 rounded-full bg-white/15 backdrop-blur-sm" />
+              ))}
+            </div>
+
+            {/* Bas de carte */}
+            <div className="space-y-1.5 max-w-[70%]">
+              <div className="h-3.5 w-full bg-white/25 rounded" />
+              <div className="h-3 w-3/4 bg-white/15 rounded" />
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
 
 export default function MarketplaceGlobalActivityFeed({
   linkBase = 'public',
@@ -793,7 +850,7 @@ export default function MarketplaceGlobalActivityFeed({
   return (
     <div className={cn('space-y-6', className)}>
       {/* ─── Barre de Stories Snapchat ─── */}
-      <div className="rounded-[26px] sm:rounded-3xl border border-border/80 bg-surface p-3.5 sm:p-4.5 space-y-2.5 shadow-2xs overflow-hidden">
+      <div className="rounded-xl sm:rounded-2xl border border-border/80 bg-surface p-3 sm:p-4 space-y-2 shadow-2xs overflow-hidden">
         <div className="flex items-center justify-between px-0.5">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
@@ -1004,12 +1061,9 @@ export default function MarketplaceGlobalActivityFeed({
       ) : null}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden />
-          <p className="text-xs text-muted font-medium">Chargement des publications…</p>
-        </div>
+        <GlobalFeedSkeleton />
       ) : posts.length === 0 ? (
-        <div className="text-center py-20 px-4 rounded-3xl border border-dashed border-border bg-surface/40 space-y-3 max-w-lg mx-auto">
+        <div className="text-center py-16 px-4 rounded-xl sm:rounded-2xl border border-dashed border-border bg-surface/40 space-y-3 max-w-lg mx-auto">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-xs">
             <Rss className="w-6 h-6" aria-hidden />
           </div>
