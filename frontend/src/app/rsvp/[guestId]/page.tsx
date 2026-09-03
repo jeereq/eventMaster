@@ -1306,7 +1306,6 @@ export default function RsvpPage() {
                                 )}
                               </button>
                             </div>
-                            </div>
                           </div>
                         </div>
                       );
