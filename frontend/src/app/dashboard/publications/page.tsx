@@ -274,7 +274,7 @@ function PublicationsGrid() {
                     <p className="text-xs text-foreground line-clamp-4">{post.content}</p>
                   </div>
                 )}
-                <span className="absolute inset-0 bg-black/40 backdrop-blur-2xs transition opacity-0 group-hover:opacity-100 flex items-center justify-center gap-4 text-white text-xs font-bold">
+                <span className="absolute inset-0 bg-black/40 backdrop-blur-2xs transition opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 flex items-center justify-center gap-4 text-white text-xs font-bold tabular-nums">
                   <span className="inline-flex items-center gap-1.5">
                     <Heart className="w-4 h-4 fill-white" /> {post.likeCount ?? post.likes?.length ?? 0}
                   </span>
@@ -378,7 +378,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
             <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed font-normal">{post.content}</p>
           ) : null}
 
-          <div className="flex items-center gap-4 text-xs text-muted pt-2 border-t border-border/60">
+          <div className="flex items-center gap-4 text-xs text-muted pt-2 border-t border-border/60 tabular-nums">
             <span className="inline-flex items-center gap-1.5 font-semibold text-rose-600 dark:text-rose-400">
               <Heart className="w-4 h-4 fill-current" /> {post.likeCount ?? post.likes?.length ?? 0}
             </span>
@@ -388,7 +388,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
             {href ? (
               <Link
                 href={href}
-                className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:opacity-95 transition"
+                className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:opacity-95 active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <span>Voir la fiche</span>
                 <ArrowRight className="w-3.5 h-3.5" />

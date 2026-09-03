@@ -213,9 +213,10 @@ export default function ImageLightbox({
 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          key={displaySrc}
           src={displaySrc}
           alt={title ? `${title} — Photo ${currentIndex + 1} sur ${total}` : `Photo ${currentIndex + 1} sur ${total}`}
-          className="max-h-[78vh] sm:max-h-[84vh] max-w-full object-contain rounded-2xl sm:rounded-3xl shadow-2xl transition-all duration-200 pointer-events-none"
+          className="max-h-[78vh] sm:max-h-[84vh] max-w-full object-contain rounded-2xl sm:rounded-3xl shadow-2xl transition-all duration-200 pointer-events-none animate-fade-in"
           loading="eager"
           decoding="async"
         />

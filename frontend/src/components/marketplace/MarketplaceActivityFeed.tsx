@@ -560,9 +560,10 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
           {/* Affichage du média avec interactions Story (Zones gauche/droite pour multi-snaps) */}
           {isCurrentVideo ? (
             <video
+              key={currentMedia.url}
               src={currentMedia.url}
               controls
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover animate-fade-in"
             />
           ) : (
             <div
@@ -574,9 +575,10 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
+                key={currentMedia.url}
                 src={sizedMediaUrl(currentMedia.url, 1200)}
                 alt={`Snap publié par ${authorLabel}`}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover/image:scale-[1.02]"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover/image:scale-[1.02] animate-fade-in"
                 loading="lazy"
               />
 
