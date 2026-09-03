@@ -324,9 +324,34 @@ async function getPublicVenue(req, res) {
         if (!listing.isPublic && !canViewUnpublishedListing(req, listing.tenantId)) {
             return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
         }
+        const [relatedVenues, relatedOfferings] = await Promise.all([
+            db_1.prisma.venueListing.findMany({
+                where: {
+                    tenantId: listing.tenantId,
+                    id: { not: listing.id },
+                    isPublic: true,
+                    isBlockedByAdmin: false,
+                },
+                include: listingInclude,
+                orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+                take: 12,
+            }),
+            db_1.prisma.serviceOffering.findMany({
+                where: {
+                    tenantId: listing.tenantId,
+                    isPublic: true,
+                    isBlockedByAdmin: false,
+                },
+                include: offeringInclude,
+                orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+                take: 12,
+            }),
+        ]);
         return res.json({
             ...toPublicVenue(listing),
             isPublic: listing.isPublic,
+            relatedVenues: relatedVenues.map(toPublicVenue),
+            relatedServices: relatedOfferings.map(toPublicService),
             activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({ venueListingId: listing.id }),
         });
     }
@@ -672,9 +697,34 @@ async function getPublicService(req, res) {
         if (!offering.isPublic && !canViewUnpublishedListing(req, offering.tenantId)) {
             return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
         }
+        const [relatedOfferings, relatedVenues] = await Promise.all([
+            db_1.prisma.serviceOffering.findMany({
+                where: {
+                    tenantId: offering.tenantId,
+                    id: { not: offering.id },
+                    isPublic: true,
+                    isBlockedByAdmin: false,
+                },
+                include: offeringInclude,
+                orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+                take: 12,
+            }),
+            db_1.prisma.venueListing.findMany({
+                where: {
+                    tenantId: offering.tenantId,
+                    isPublic: true,
+                    isBlockedByAdmin: false,
+                },
+                include: listingInclude,
+                orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+                take: 12,
+            }),
+        ]);
         return res.json({
             ...toPublicService(offering),
             isPublic: offering.isPublic,
+            relatedServices: relatedOfferings.map(toPublicService),
+            relatedVenues: relatedVenues.map(toPublicVenue),
             activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({
                 OR: [
                     { serviceOfferingId: offering.id },
@@ -698,20 +748,36 @@ async function getPublicVendor(req, res) {
                 slug,
                 isBlockedByAdmin: false
             },
-            select: {
-                id: true,
-                slug: true,
-                displayName: true,
-                city: true,
-                bio: true,
+            include: {
+                offerings: {
+                    where: { isPublic: true, isBlockedByAdmin: false },
+                    include: offeringInclude,
+                    orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+                    take: 24,
+                },
+                tenant: {
+                    include: {
+                        venueListings: {
+                            where: { isPublic: true, isBlockedByAdmin: false },
+                            include: listingInclude,
+                            orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+                            take: 24,
+                        },
+                    },
+                },
             },
         });
         if (!profile)
             return res.status(404).json({ error: 'Prestataire introuvable.' });
-        const { id, ...publicFields } = profile;
         return res.json({
-            ...publicFields,
-            activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({ vendorProfileId: id }),
+            id: profile.id,
+            slug: profile.slug,
+            displayName: profile.displayName,
+            city: profile.city,
+            bio: profile.bio,
+            services: (profile.offerings || []).map(toPublicService),
+            venues: (profile.tenant?.venueListings || []).map(toPublicVenue),
+            activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({ vendorProfileId: profile.id }),
         });
     }
     catch (error) {

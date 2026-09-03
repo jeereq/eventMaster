@@ -161,6 +161,8 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       priceUnitLabel={venue?.priceUnitLabel || service?.priceUnitLabel}
       quotaLabel={quotaLabel}
       activityPreview={venue?.activityPreview || service?.activityPreview}
+      relatedServices={venue?.relatedServices || service?.relatedServices}
+      relatedVenues={venue?.relatedVenues || service?.relatedVenues}
       preview={!isClient}
       shareKind={shareKind}
       shareUrl={slug ? listingPublicUrl(shareKind, slug) : undefined}

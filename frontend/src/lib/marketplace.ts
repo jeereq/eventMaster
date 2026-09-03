@@ -79,6 +79,8 @@ export interface PublicVenue {
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
   activityPreview?: MarketplaceActivityPreviewItem[] | null;
+  relatedServices?: PublicService[];
+  relatedVenues?: PublicVenue[];
 }
 
 export interface VenueListingDraft {
@@ -403,6 +405,8 @@ export interface PublicService {
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
   activityPreview?: MarketplaceActivityPreviewItem[] | null;
+  relatedServices?: PublicService[];
+  relatedVenues?: PublicVenue[];
 }
 
 export interface MarketplaceInquiryItem {

@@ -81,7 +81,7 @@ export default function ListingActivityHighlights({
           return (
             <div
               key={post.id}
-              className="group/card rounded-xl sm:rounded-2xl border border-border/80 bg-slate-950 overflow-hidden relative shadow-xs hover:shadow-lg transition-all duration-300 snap-start w-[78%] sm:w-auto shrink-0 sm:shrink aspect-[3/4] flex flex-col justify-between"
+              className="group/card rounded-xl sm:rounded-2xl border border-border/80 bg-slate-950 overflow-hidden relative shadow-xs hover:shadow-lg transition-all duration-300 snap-start w-[80%] sm:w-auto shrink-0 sm:shrink aspect-[3/4] flex flex-col justify-between"
             >
               {/* Segmented bar façon story si multi-photos */}
               {mediaTotal > 1 && (

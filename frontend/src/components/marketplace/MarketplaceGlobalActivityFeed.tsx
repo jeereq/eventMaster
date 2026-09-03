@@ -206,7 +206,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className="group/card rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
+      className="group/card w-[82%] sm:w-full mx-auto rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
     >
       {/* ─── CAS 1 : Publication avec Médias (Carte Snapchat Spotlight) ─── */}
       {hasMedia ? (
@@ -633,7 +633,7 @@ export function GlobalFeedSkeleton() {
       {[...Array(2)].map((_, i) => (
         <article
           key={i}
-          className="rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs p-2 sm:p-2.5 space-y-2.5 animate-pulse"
+          className="w-[82%] sm:w-full mx-auto rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs p-2 sm:p-2.5 space-y-2.5 animate-pulse"
         >
           <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-900/90 dark:bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4">
             {/* Header flottant */}
@@ -959,8 +959,8 @@ export default function MarketplaceGlobalActivityFeed({
         </div>
       </div>
 
-      {/* Barre d'outils / Filtres & Recherche */}
-      <div className="flex flex-col md:flex-row gap-3 md:items-center justify-between bg-surface/90 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-border/80 shadow-xs">
+      {/* Barre d'outils / Filtres & Recherche (Toujours visible lors du défilement) */}
+      <div className="sticky top-14 z-30 flex flex-col md:flex-row gap-3 md:items-center justify-between bg-surface/95 dark:bg-slate-900/95 backdrop-blur-xl p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
         {/* Onglets Filtres */}
         <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted/80 border border-border/50 max-w-full overflow-x-auto [scrollbar-width:none]">
           {kindTabs.map((tab) => {

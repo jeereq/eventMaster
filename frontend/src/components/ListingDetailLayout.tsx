@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
-import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem } from '@/lib/marketplace';
+import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem, type PublicService, type PublicVenue } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { ArrowLeft, Play } from 'lucide-react';
+import { ArrowLeft, Play, Sparkles, Building2, ArrowRight, MapPin, Users } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 import ListingActivityHighlights from '@/components/marketplace/ListingActivityHighlights';
@@ -99,6 +100,8 @@ export default function ListingDetailLayout({
   shareUrl,
   shareSlug,
   shareKind = 'venue',
+  relatedServices,
+  relatedVenues,
   onRetry,
 }: {
   backHref: string;
@@ -122,6 +125,8 @@ export default function ListingDetailLayout({
   activity?: React.ReactNode;
   activityPreview?: MarketplaceActivityPreviewItem[] | null;
   activityCount?: number;
+  relatedServices?: PublicService[];
+  relatedVenues?: PublicVenue[];
   priceFromFc: number | null;
   priceUnitLabel?: string | null;
   quotaLabel?: string | null;
@@ -210,31 +215,344 @@ export default function ListingDetailLayout({
   const heroSrc = (photoIndex > 0 && photos[photoIndex]) || heroUrl || photos[0] || null;
   const viewTab = tab === 'medias' ? 'details' : tab;
   const showActivity = Boolean(activity);
-  const tabInclude: MarketplaceFormTab[] = showActivity
-    ? ['details', 'map', 'activity']
-    : ['details', 'map'];
+  const hasRelatedServices = Boolean(relatedServices && relatedServices.length > 0);
+  const hasRelatedVenues = Boolean(relatedVenues && relatedVenues.length > 0);
+
+  const tabInclude: MarketplaceFormTab[] = [
+    'details',
+    ...(hasRelatedServices ? ['services' as const] : []),
+    ...(hasRelatedVenues ? ['venues' as const] : []),
+    ...(showActivity ? ['activity' as const] : []),
+    'map',
+  ];
+
   const resolvedActivityCount = activityCount ?? (activityPreview ? activityPreview.length : undefined);
   const tabBadges: Partial<Record<MarketplaceFormTab, number | string>> = {
+    ...(hasRelatedServices ? { services: relatedServices!.length } : {}),
+    ...(hasRelatedVenues ? { venues: relatedVenues!.length } : {}),
     ...(resolvedActivityCount != null && resolvedActivityCount > 0 ? { activity: resolvedActivityCount } : {}),
   };
+
+  const isWideTab = viewTab === 'map' || viewTab === 'activity' || viewTab === 'services' || viewTab === 'venues';
+
+  const servicesPanel = (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-4">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            <span>Prestations & Métiers ({relatedServices?.length || 0})</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-muted">
+            Découvrez toutes les offres et spécialités proposées par {subtitle || title || 'ce prestataire'}.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {relatedServices?.map((srv) => {
+          const cover = srv.photos?.[0] || srv.coverUrl;
+          const href = srv.category?.startsWith('RENTAL_')
+            ? (embedded ? `/dashboard/catalogue/locations/${srv.slug}` : `/marketplace/locations/${srv.slug}`)
+            : (embedded ? `/dashboard/catalogue/prestataires/${srv.slug}` : `/marketplace/prestataires/${srv.slug}`);
+
+          return (
+            <article
+              key={srv.slug}
+              className="group rounded-xl border border-border/80 bg-surface shadow-xs hover:shadow-md hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col justify-between"
+            >
+              <div>
+                <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
+                  {cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={sizedMediaUrl(cover, 360)}
+                      alt={srv.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted">
+                      <Sparkles className="w-8 h-8 text-amber-500/50" />
+                    </div>
+                  )}
+                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-white border border-white/20">
+                    {srv.categoryLabel || 'Prestation'}
+                  </span>
+                </div>
+                <div className="p-3 sm:p-4 space-y-1.5">
+                  <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                    {srv.title}
+                  </h3>
+                  {srv.city && (
+                    <p className="text-xs text-muted flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                      <span className="truncate">{[srv.city, srv.commune].filter(Boolean).join(' · ')}</span>
+                    </p>
+                  )}
+                  {srv.description && (
+                    <p className="text-xs text-muted line-clamp-2 leading-relaxed">
+                      {srv.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 sm:p-4 pt-0 border-t border-border/60 mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-foreground tabular-nums">
+                  {srv.priceFromFc != null ? formatFc(srv.priceFromFc) : 'Sur devis'}
+                  {srv.priceUnitLabel ? <span className="text-[10px] font-normal text-muted"> {srv.priceUnitLabel}</span> : null}
+                </span>
+                <Link
+                  href={href}
+                  className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition inline-flex items-center gap-1 shadow-2xs"
+                >
+                  <span>Voir l'offre</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const venuesPanel = (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-4">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-emerald-500" />
+            <span>Salles & Espaces de réception ({relatedVenues?.length || 0})</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-muted">
+            Découvrez les salles d'événements et lieux gérés par {subtitle || title || 'cette organisation'}.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {relatedVenues?.map((vn) => {
+          const cover = vn.photos?.[0] || vn.coverUrl;
+          const href = embedded ? `/dashboard/catalogue/salles/${vn.slug}` : `/marketplace/salles/${vn.slug}`;
+
+          return (
+            <article
+              key={vn.slug}
+              className="group rounded-xl border border-border/80 bg-surface shadow-xs hover:shadow-md hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col justify-between"
+            >
+              <div>
+                <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
+                  {cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={sizedMediaUrl(cover, 360)}
+                      alt={vn.headline || vn.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted">
+                      <Building2 className="w-8 h-8 text-emerald-500/50" />
+                    </div>
+                  )}
+                  {vn.capacity ? (
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      <span>{vn.capacity} places</span>
+                    </span>
+                  ) : null}
+                </div>
+                <div className="p-3 sm:p-4 space-y-1.5">
+                  <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                    {vn.headline || vn.name}
+                  </h3>
+                  {vn.city && (
+                    <p className="text-xs text-muted flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                      <span className="truncate">{[vn.city, vn.commune].filter(Boolean).join(' · ')}</span>
+                    </p>
+                  )}
+                  {vn.description && (
+                    <p className="text-xs text-muted line-clamp-2 leading-relaxed">
+                      {vn.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 sm:p-4 pt-0 border-t border-border/60 mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-foreground tabular-nums">
+                  {vn.priceFromFc != null ? formatFc(vn.priceFromFc) : 'Sur devis'}
+                  {vn.priceUnitLabel ? <span className="text-[10px] font-normal text-muted"> {vn.priceUnitLabel}</span> : null}
+                </span>
+                <Link
+                  href={href}
+                  className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition inline-flex items-center gap-1 shadow-2xs"
+                >
+                  <span>Voir la salle</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   const mainPanel =
     viewTab === 'map'
       ? map
       : viewTab === 'activity' && activity
         ? activity
-        : (
-          <div className="flex flex-col gap-8">
-            {details}
-            {activityPreview && activityPreview.length > 0 ? (
-              <ListingActivityHighlights
-                activityPreview={activityPreview}
-                authorLabel={title || 'Cette salle'}
-                onViewAllActivity={showActivity ? () => onTab('activity') : undefined}
-              />
-            ) : null}
-          </div>
-        );
+        : viewTab === 'services' && hasRelatedServices
+          ? servicesPanel
+          : viewTab === 'venues' && hasRelatedVenues
+            ? venuesPanel
+            : (
+              <div className="flex flex-col gap-8">
+                {details}
+
+                {/* Bloc d'aperçu des autres prestations du prestataire */}
+                {hasRelatedServices && (
+                  <section className="space-y-3 pt-4 border-t border-border/70">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <span>Autres prestations proposées ({relatedServices!.length})</span>
+                        </h2>
+                        <p className="text-xs text-muted">
+                          Services complémentaires proposés par {subtitle || 'ce prestataire'}.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onTab('services')}
+                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 focus-visible:outline-none"
+                      >
+                        <span>Tout voir</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {relatedServices!.slice(0, 4).map((srv) => {
+                        const cover = srv.photos?.[0] || srv.coverUrl;
+                        const href = srv.category?.startsWith('RENTAL_')
+                          ? (embedded ? `/dashboard/catalogue/locations/${srv.slug}` : `/marketplace/locations/${srv.slug}`)
+                          : (embedded ? `/dashboard/catalogue/prestataires/${srv.slug}` : `/marketplace/prestataires/${srv.slug}`);
+
+                        return (
+                          <Link
+                            key={srv.slug}
+                            href={href}
+                            className="group p-2.5 rounded-xl border border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs transition flex gap-3 items-center"
+                          >
+                            <div className="w-14 h-14 rounded-lg bg-surface-muted overflow-hidden shrink-0 relative">
+                              {cover ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={sizedMediaUrl(cover, 160)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted">
+                                  <Sparkles className="w-5 h-5 text-amber-500/60" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block truncate">
+                                {srv.categoryLabel}
+                              </span>
+                              <h3 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                                {srv.title}
+                              </h3>
+                              <p className="text-[11px] font-semibold text-muted tabular-nums">
+                                {srv.priceFromFc != null ? formatFc(srv.priceFromFc) : 'Sur devis'}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* Bloc d'aperçu des salles selon les rôles de l'organisation */}
+                {hasRelatedVenues && (
+                  <section className="space-y-3 pt-4 border-t border-border/70">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                          <Building2 className="w-4 h-4 text-emerald-500" />
+                          <span>Salles & Lieux de réception ({relatedVenues!.length})</span>
+                        </h2>
+                        <p className="text-xs text-muted">
+                          Espaces et salles gérés par {subtitle || 'cet établissement'}.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onTab('venues')}
+                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 focus-visible:outline-none"
+                      >
+                        <span>Tout voir</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {relatedVenues!.slice(0, 4).map((vn) => {
+                        const cover = vn.photos?.[0] || vn.coverUrl;
+                        const href = embedded ? `/dashboard/catalogue/salles/${vn.slug}` : `/marketplace/salles/${vn.slug}`;
+
+                        return (
+                          <Link
+                            key={vn.slug}
+                            href={href}
+                            className="group p-2.5 rounded-xl border border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs transition flex gap-3 items-center"
+                          >
+                            <div className="w-14 h-14 rounded-lg bg-surface-muted overflow-hidden shrink-0 relative">
+                              {cover ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={sizedMediaUrl(cover, 160)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted">
+                                  <Building2 className="w-5 h-5 text-emerald-500/60" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              {vn.capacity && (
+                                <span className="text-[10px] font-bold text-muted uppercase tracking-wider block truncate">
+                                  {vn.capacity} places
+                                </span>
+                              )}
+                              <h3 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                                {vn.headline || vn.name}
+                              </h3>
+                              <p className="text-[11px] font-semibold text-muted tabular-nums">
+                                {vn.priceFromFc != null ? formatFc(vn.priceFromFc) : 'Sur devis'}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* Publications & Stories récentes */}
+                {activityPreview && activityPreview.length > 0 ? (
+                  <ListingActivityHighlights
+                    activityPreview={activityPreview}
+                    authorLabel={title || 'Cette salle'}
+                    onViewAllActivity={showActivity ? () => onTab('activity') : undefined}
+                  />
+                ) : null}
+              </div>
+            );
 
   return (
     <main
@@ -344,12 +662,12 @@ export default function ListingDetailLayout({
 
           <div className={cn(
             'grid grid-cols-1 items-start gap-8 lg:gap-12',
-            viewTab === 'map' || viewTab === 'activity' ? 'lg:grid-cols-1' : 'lg:grid-cols-5',
+            isWideTab ? 'lg:grid-cols-1' : 'lg:grid-cols-5',
           )}>
-            <div className={cn('flex flex-col gap-4 min-w-0', viewTab === 'map' || viewTab === 'activity' ? '' : 'lg:col-span-3')}>
+            <div className={cn('flex flex-col gap-4 min-w-0', isWideTab ? '' : 'lg:col-span-3')}>
               <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
                 <MarketplaceFormTabs
-                  value={viewTab === 'activity' ? 'activity' : viewTab === 'map' ? 'map' : 'details'}
+                  value={viewTab}
                   onChange={onTab}
                   include={tabInclude}
                   icons={false}
@@ -364,7 +682,7 @@ export default function ListingDetailLayout({
               {mainPanel}
             </div>
 
-            {viewTab === 'map' || viewTab === 'activity' ? null : (
+            {isWideTab ? null : (
             <aside
               id="listing-contact"
               className={cn(
