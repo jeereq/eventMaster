@@ -7,7 +7,7 @@ import {
   recordUserLegalAcceptance,
 } from '../services/legalService';
 import { prisma } from '../db';
-import { resolveBranding } from '../utils/brandingUtils';
+import { customTenantBranding } from '../utils/brandingUtils';
 
 function getRequestMeta(req: Request) {
   return {
@@ -36,7 +36,7 @@ export async function getGuestLegalStatusHandler(req: Request, res: Response) {
     return res.json({
       ...status,
       requiresAcceptance: !(status.termsAccepted && status.privacyAccepted),
-      branding: resolveBranding(guest?.event?.tenant?.branding),
+      branding: customTenantBranding(guest?.event?.tenant?.branding),
       organizationName: guest?.event?.tenant?.name || 'Organisation',
     });
   } catch (error) {
@@ -70,7 +70,7 @@ export async function acceptGuestLegalHandler(req: Request, res: Response) {
       message: 'Acceptation enregistrée avec succès.',
       ...status,
       requiresAcceptance: false,
-      branding: resolveBranding(guest?.event?.tenant?.branding),
+      branding: customTenantBranding(guest?.event?.tenant?.branding),
       organizationName: guest?.event?.tenant?.name || 'Organisation',
     });
   } catch (error: any) {

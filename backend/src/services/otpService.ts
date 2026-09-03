@@ -1,6 +1,9 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { wrapBrandedEmail } from '../utils/brandedMessaging';
+import { escapeHtml, getPlatformBrand, mixHexWithWhite } from '../utils/brandingUtils';
+import { getContactDestinations } from './platformSettingsService';
 
 export type VerificationMethod = 'EMAIL' | 'WHATSAPP';
 
@@ -87,20 +90,26 @@ export async function sendRegistrationOtp(params: {
     : invitedToTeam
       ? 'Invitation équipe EventMaster'
       : 'Validation de votre compte';
-  const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-      <h2 style="color: #4f46e5; text-align: center;">${htmlTitle}</h2>
-      <p>Bonjour <strong>${name}</strong>,</p>
-      <p>${intro}</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4f46e5; background: #eef2ff; padding: 16px 24px; border-radius: 12px; display: inline-block;">${code}</span>
+  const brand = getPlatformBrand();
+  const { platformName } = getContactDestinations();
+  const tint = mixHexWithWhite(brand.primary, 0.88);
+  const html = wrapBrandedEmail({
+    branding: brand,
+    orgName: platformName,
+    title: htmlTitle,
+    eyebrow: 'Sécurité',
+    headerEmoji: '🔐',
+    innerHtml: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${escapeHtml(name)}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#334155;">${escapeHtml(intro)}</p>
+      <div style="text-align:center;margin:8px 0 20px;">
+        <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:${brand.primary};background:${tint};padding:16px 24px;border-radius:14px;display:inline-block;">${escapeHtml(code)}</span>
       </div>
-      <p style="font-size: 0.875rem; color: #6b7280; text-align: center;">Ce code expire dans ${expiryMinutes} minutes.</p>
+      <p style="margin:0;font-size:13px;color:#64748b;text-align:center;">Ce code expire dans ${expiryMinutes} minutes.</p>
       ${postCodeHint}
-      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-      <p style="font-size: 0.875rem; color: #9ca3af; text-align: center;">Si vous n'attendiez pas ce message, ignorez-le.</p>
-    </div>
-  `;
+    `,
+    footerNote: 'Si vous n’attendiez pas ce message, ignorez-le.',
+  });
   await sendRealEmail(email, subject, text, html);
   return { sentVia: 'EMAIL' };
 }

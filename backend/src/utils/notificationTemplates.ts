@@ -1,4 +1,4 @@
-import { DEFAULT_TENANT_BRANDING, escapeHtml } from './brandingUtils';
+import { escapeHtml, getPlatformBrand } from './brandingUtils';
 import { wrapBrandedEmail, wrapBrandedWhatsApp } from './brandedMessaging';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -29,7 +29,7 @@ export function renderOperatorNotificationEmail(params: {
   const subject = `EventMaster — ${params.title}`.slice(0, 200);
   const text = [params.message, '', `Ouvrir : ${href}`, '', '— EventMaster'].join('\n');
   const html = wrapBrandedEmail({
-    branding: DEFAULT_TENANT_BRANDING,
+    branding: getPlatformBrand(),
     orgName: 'EventMaster',
     title: params.title,
     eyebrow: params.familyLabel || 'Notification',

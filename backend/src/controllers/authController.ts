@@ -21,8 +21,10 @@ import {
   maskPhone,
   VerificationMethod,
 } from '../services/otpService';
-import { loadPlatformSettings } from '../services/platformSettingsService';
+import { loadPlatformSettings, getContactDestinations } from '../services/platformSettingsService';
 import { resolvePhoneFields } from '../utils/phone';
+import { wrapBrandedEmail } from '../utils/brandedMessaging';
+import { escapeHtml, getPlatformBrand } from '../utils/brandingUtils';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 
@@ -608,19 +610,23 @@ export async function forgotPassword(req: Request, res: Response) {
       await sendRealWhatsApp(user.phone, whatsappBody);
     } else {
       const { sendRealEmail } = await import('../services/notificationService');
-      const emailSubject = 'Réinitialisation de votre mot de passe - EventMaster';
-      const emailText = `Bonjour ${user.name || 'Utilisateur'},\n\nVous avez demandé la réinitialisation de votre mot de passe sur EventMaster. Veuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n${resetLink}\n\nSi vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe EventMaster`;
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          <h2 style="color: #4f46e5; text-align: center;">Réinitialisation de mot de passe</h2>
-          <p>Bonjour <strong>${user.name || 'Utilisateur'}</strong>,</p>
-          <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte EventMaster.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Réinitialiser mon mot de passe</a>
-          </div>
-          <p style="font-size: 0.875rem; color: #6b7280;">Lien valable 1 heure.</p>
-        </div>
-      `;
+      const brand = getPlatformBrand();
+      const { platformName } = getContactDestinations();
+      const emailSubject = `Réinitialisation de votre mot de passe - ${platformName}`;
+      const emailText = `Bonjour ${user.name || 'Utilisateur'},\n\nVous avez demandé la réinitialisation de votre mot de passe sur ${platformName}. Veuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n${resetLink}\n\nSi vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe ${platformName}`;
+      const emailHtml = wrapBrandedEmail({
+        branding: brand,
+        orgName: platformName,
+        title: 'Réinitialisation de mot de passe',
+        eyebrow: 'Sécurité',
+        headerEmoji: '🔑',
+        innerHtml: `
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${escapeHtml(user.name || 'Utilisateur')}</strong>,</p>
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#334155;">Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte ${escapeHtml(platformName)}.</p>
+        `,
+        cta: { href: resetLink, label: 'Réinitialiser mon mot de passe' },
+        footerNote: 'Lien valable 1 heure. Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.',
+      });
       await sendRealEmail(user.email, emailSubject, emailText, emailHtml);
     }
 

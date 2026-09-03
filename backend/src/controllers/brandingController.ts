@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { formatTenantResponse } from '../utils/tenantAccess';
-import { parseBranding, normalizeBrandHex } from '../utils/brandingUtils';
+import { parseBranding, normalizeBrandHex, getPlatformBrand, customTenantBranding } from '../utils/brandingUtils';
 import { Prisma } from '@prisma/client';
 
 export async function getMyBranding(req: AuthenticatedRequest, res: Response) {
@@ -19,7 +19,7 @@ export async function getMyBranding(req: AuthenticatedRequest, res: Response) {
     }
 
     return res.json({
-      branding: parseBranding(tenant.branding) || { primary: '#4f46e5', accent: '#6366f1' },
+      branding: customTenantBranding(tenant.branding) || getPlatformBrand(),
       tenant: formatTenantResponse(tenant),
     });
   } catch (error) {
@@ -52,7 +52,7 @@ export async function updateMyBranding(req: AuthenticatedRequest, res: Response)
       });
       return res.json({
         message: 'Couleurs EventMaster restaurées.',
-        branding: { primary: '#4f46e5', accent: '#6366f1' },
+        branding: getPlatformBrand(),
         tenant: formatTenantResponse(tenant),
       });
     }

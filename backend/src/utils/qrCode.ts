@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
+import { DEFAULT_TENANT_BRANDING } from './brandingUtils';
 
-const DEFAULT_COLOR = '#4f46e5';
+const DEFAULT_COLOR = DEFAULT_TENANT_BRANDING.primary;
 const DEFAULT_BG = '#ffffff';
 
 /** Base URL publique de l’API (QR WhatsApp / e-mail doivent être joignables). */

@@ -6,7 +6,6 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
-import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard } from '@/components/GuestPortalShell';
 import Link from 'next/link';
 import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
@@ -17,7 +16,7 @@ import type { ChairType, RoomLayoutBlueprint, RoomOutlineShape } from '@/lib/roo
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
-  HelpCircle, Utensils, Loader2, Award,
+  Utensils, Loader2, Award,
   Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle,
   ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp, Download, Clock, Navigation,
   QrCode, Maximize2, Printer
@@ -1684,44 +1683,26 @@ export default function RsvpPage() {
       };
 
   return (
-    <div className="em-guest-page px-4 py-8 sm:py-12 flex flex-col items-center justify-center gap-5 relative">
+    <GuestPortalShell
+      title={guest.event.title}
+      eyebrow="Invitation"
+      guestId={guestId}
+      organizationName={guest.organizationName}
+      headerRight={
+        <ShareButton
+          title={`${guest.event.title} · Invitation`}
+          text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
+          url={guestRsvpUrl(guestId)}
+          className="h-8 w-8 !bg-surface border-border"
+        />
+      }
+      contentClassName="flex flex-col items-center gap-5 max-w-none"
+    >
       {/* Load Google Fonts stylesheet */}
       <link 
         href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap" 
         rel="stylesheet" 
       />
-
-      <div
-        className="w-full relative z-10 border border-border bg-surface rounded-[var(--radius-card)] shadow-[var(--shadow-soft)]"
-        style={{ maxWidth: canvasStyle.maxWidth }}
-      >
-        <div className="flex justify-between items-center px-3 py-2.5 gap-2">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-              {guest.organizationName || 'Votre invitation'}
-            </p>
-            <p className="text-xs font-semibold text-foreground truncate tracking-tight">
-              {guest.event.title}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <ShareButton
-              title={`${guest.event.title} · Invitation`}
-              text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
-              url={guestRsvpUrl(guestId)}
-              className="h-8 w-8 !bg-surface border-border"
-            />
-            <GuestPortalHomeLink guestId={guestId} variant="light" />
-            <Link
-              href="/guide/invite"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              Aide
-            </Link>
-          </div>
-        </div>
-      </div>
 
       <InvitationWrapper {...invitationWrapperProps}>
       <div
@@ -2507,6 +2488,6 @@ export default function RsvpPage() {
           )}
         </div>
       )}
-    </div>
+    </GuestPortalShell>
   );
 }

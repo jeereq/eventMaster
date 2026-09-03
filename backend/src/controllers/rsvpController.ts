@@ -21,7 +21,7 @@ import {
   wrapBrandedEmail,
   wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
-import { escapeHtml, resolveBranding } from '../utils/brandingUtils';
+import { customTenantBranding, escapeHtml } from '../utils/brandingUtils';
 import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
 
@@ -412,7 +412,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     return res.json({
       ...guestWithoutEvent,
       event: eventForClient,
-      branding: resolveBranding(tenant?.branding),
+      branding: customTenantBranding(tenant?.branding),
       organizationName: tenant?.name || 'Organisation',
       placementAccessible,
       seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
@@ -463,7 +463,7 @@ export async function getGuestAllInvitations(req: Request, res: Response) {
           rsvp: record.rsvp,
           event: record.event,
           organizationName: record.event.tenant?.name || 'Organisation',
-          branding: resolveBranding(record.event.tenant?.branding),
+          branding: customTenantBranding(record.event.tenant?.branding),
           eventPassed,
           rsvpLocked: eventPassed,
           isCurrent: record.id === guestId,
