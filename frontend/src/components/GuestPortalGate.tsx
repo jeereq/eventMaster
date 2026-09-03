@@ -47,7 +47,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
         setError('');
       } catch (err: any) {
         if (cancelled) return;
-        setError(err.message || 'Impossible de vérifier les conditions d\'utilisation.');
+        setError(err.message || 'Impossible de vérifier les conditions. Réessayez dans un instant.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -67,7 +67,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
       const data = await api.get(`/rsvp/${guestId}/legal-status`);
       setLegalStatus(data);
     } catch (err: any) {
-      setError(err.message || 'Impossible de vérifier les conditions d\'utilisation.');
+      setError(err.message || 'Impossible de vérifier les conditions. Réessayez dans un instant.');
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
         organizationName: data.organizationName || prev?.organizationName,
       }));
     } catch (err: any) {
-      setError(err.message || 'Impossible d\'enregistrer votre acceptation.');
+      setError(err.message || 'Impossible d’enregistrer votre acceptation. Réessayez.');
     } finally {
       setSubmitting(false);
     }
@@ -111,7 +111,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
       <div className="min-h-screen em-guest-page flex items-center justify-center px-6">
         <div className="max-w-sm w-full text-center space-y-4" role="alert">
           <p className="text-sm text-foreground leading-relaxed">
-            {error || 'Impossible de charger votre espace invité.'}
+            {error || 'Impossible de charger votre espace invité. Vérifiez votre connexion.'}
           </p>
           <button
             type="button"
@@ -136,8 +136,8 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
         title="Bienvenue dans votre espace invité"
         subtitle={
           legalStatus?.organizationName
-            ? `Avant d’accéder à vos invitations de ${legalStatus.organizationName}, veuillez accepter les conditions d’utilisation et la politique de confidentialité.`
-            : `Avant d’accéder à vos invitations sur ${site.platformName}, veuillez accepter les conditions d’utilisation et la politique de confidentialité.`
+            ? `Pour accéder aux invitations de ${legalStatus.organizationName}, acceptez les conditions d’utilisation et la politique de confidentialité.`
+            : `Pour accéder à vos invitations sur ${site.platformName}, acceptez les conditions d’utilisation et la politique de confidentialité.`
         }
         submitting={submitting}
         error={error}

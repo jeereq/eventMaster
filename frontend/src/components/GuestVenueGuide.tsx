@@ -383,12 +383,12 @@ export default function GuestVenueGuide({
               {starting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Préparation du guide…
+                  Préparation de l’itinéraire…
                 </>
               ) : (
                 <>
                   <Play className="w-4 h-4 fill-current" />
-                  Démarrer le guide
+                  Lancer l’itinéraire
                 </>
               )}
             </button>
@@ -399,12 +399,12 @@ export default function GuestVenueGuide({
               className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-foreground text-sm font-semibold hover:bg-surface transition"
             >
               <Square className="w-3.5 h-3.5" />
-              Arrêter le guide
+              Arrêter l’itinéraire
             </button>
           )}
 
           <p className="text-[10px] text-muted text-center">
-            Appuyez sur « Démarrer le guide » pour utiliser votre position et lancer l’itinéraire.
+            Nous utiliserons votre position pour afficher le trajet jusqu’au lieu.
           </p>
         </div>
       </div>

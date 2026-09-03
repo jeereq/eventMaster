@@ -179,7 +179,8 @@ export default function GuestHomePage() {
       <div className="em-guest-page flex items-center justify-center px-4">
         <GuestPortalCard className="max-w-md w-full text-center space-y-3">
           <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
-          <p className="text-sm text-muted">{error || 'Erreur de chargement.'}</p>
+          <p className="text-sm font-semibold text-foreground">Chargement impossible</p>
+          <p className="text-sm text-muted">{error || 'Vérifiez votre connexion, puis rechargez la page.'}</p>
         </GuestPortalCard>
       </div>
     );
@@ -206,7 +207,7 @@ export default function GuestHomePage() {
       contentClassName="space-y-6"
     >
       <p className="text-sm text-muted -mt-3">
-        Toutes vos invitations, regroupées par e-mail et téléphone.
+        Invitations liées à votre e-mail et téléphone, regroupées ici.
       </p>
 
       <div className="grid grid-cols-3 gap-2.5">
@@ -238,7 +239,7 @@ export default function GuestHomePage() {
       {past.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Passés</h2>
-          <p className="text-xs text-muted">Les réponses RSVP ne peuvent plus être modifiées.</p>
+          <p className="text-xs text-muted">Les réponses ne peuvent plus être modifiées après la date de l’événement.</p>
           <div className="grid gap-3">
             {past.map((item) => (
               <InvitationCard key={item.guestId} item={item} />
@@ -248,8 +249,11 @@ export default function GuestHomePage() {
       )}
 
       {data.invitations.length === 0 && (
-        <GuestPortalCard className="text-center py-10 text-sm text-muted">
-          Aucune invitation trouvée pour votre profil.
+        <GuestPortalCard className="text-center py-10 space-y-2">
+          <p className="text-sm font-semibold text-foreground">Aucune invitation pour ce profil</p>
+          <p className="text-sm text-muted">
+            Ouvrez le lien reçu par WhatsApp ou e-mail, ou demandez un nouvel envoi à l’organisateur.
+          </p>
         </GuestPortalCard>
       )}
     </GuestPortalShell>

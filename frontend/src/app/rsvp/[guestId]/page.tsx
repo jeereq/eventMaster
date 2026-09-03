@@ -204,6 +204,8 @@ export default function RsvpPage() {
   const lightboxCloseRef = useRef<HTMLButtonElement>(null);
   const qrCloseRef = useRef<HTMLButtonElement>(null);
   const [guestbookSuccess, setGuestbookSuccess] = useState(false);
+  const [guestbookError, setGuestbookError] = useState('');
+  const [feedActionError, setFeedActionError] = useState('');
   const [guestbookShares, setGuestbookShares] = useState<any[]>([]);
   const [loadingGuestbook, setLoadingGuestbook] = useState(false);
   const [rsvpLocked, setRsvpLocked] = useState(false);
@@ -352,6 +354,7 @@ export default function RsvpPage() {
     if (!guestbookMessage.trim() && guestbookPhotos.length === 0) return;
 
     setSubmittingGuestbook(true);
+    setGuestbookError('');
     try {
       await api.post(`/rsvp/${guestId}/share`, {
         message: guestbookMessage,
@@ -364,7 +367,9 @@ export default function RsvpPage() {
       setTimeout(() => setGuestbookSuccess(false), 5000);
     } catch (err) {
       console.error('Error submitting guestbook:', err);
-      alert('Erreur lors de l\'envoi de votre message.');
+      setGuestbookError(
+        'Impossible d’envoyer votre message pour le moment. Vérifiez votre connexion, puis réessayez.',
+      );
     } finally {
       setSubmittingGuestbook(false);
     }
@@ -395,6 +400,7 @@ export default function RsvpPage() {
     if (!content || !content.trim()) return;
 
     setGuestCommentSubmitting(prev => ({ ...prev, [postId]: true }));
+    setFeedActionError('');
     try {
       const newComment = await api.post(`/rsvp/feed/post/${postId}/comment`, {
         content,
@@ -414,7 +420,9 @@ export default function RsvpPage() {
       setGuestCommentContents(prev => ({ ...prev, [postId]: '' }));
     } catch (err) {
       console.error('Error creating comment:', err);
-      alert('Erreur lors de l\'ajout du commentaire.');
+      setFeedActionError(
+        'Impossible d’ajouter le commentaire. Vérifiez votre connexion, puis réessayez.',
+      );
     } finally {
       setGuestCommentSubmitting(prev => ({ ...prev, [postId]: false }));
     }
@@ -477,7 +485,7 @@ export default function RsvpPage() {
   const handleSubmitRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rsvpLocked) {
-      setError('La date de célébration est passée. Votre réponse RSVP ne peut plus être modifiée.');
+      setError('La date de l\'événement est passée. Vous ne pouvez plus modifier votre présence.');
       return;
     }
     setError('');
@@ -626,11 +634,13 @@ export default function RsvpPage() {
           <div className="bg-rose-50 text-rose-600 p-4 rounded-[var(--radius-card)] w-16 h-16 flex items-center justify-center mx-auto border border-rose-100">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground tracking-tight">Erreur d'Invitation</h2>
+          <h2 className="text-xl font-semibold text-foreground tracking-tight">Invitation introuvable</h2>
           <p className="text-muted leading-relaxed text-sm">
-            {error || 'Lien d\'invitation invalide.'}
+            {error || 'Ce lien d’invitation est invalide ou a expiré.'}
           </p>
-          <p className="text-xs text-muted">Veuillez contacter l'organisateur de l'événement.</p>
+          <p className="text-xs text-muted">
+            Demandez un nouveau lien à l’organisateur, ou ouvrez celui reçu par WhatsApp ou e-mail.
+          </p>
         </div>
       </div>
     );
@@ -661,8 +671,8 @@ export default function RsvpPage() {
               {guest.firstName}, nous avons bien noté votre absence.
             </h2>
             <p className="text-sm text-muted leading-relaxed max-w-sm mx-auto">
-              Merci d&apos;avoir pris le temps de répondre. Vous pourrez modifier votre choix
-              tant que l&apos;organisateur n&apos;a pas verrouillé les RSVP.
+              Merci d&apos;avoir répondu. Tant que l&apos;organisateur n&apos;a pas verrouillé les réponses,
+              vous pouvez encore changer d&apos;avis.
             </p>
             {!rsvpLocked && (
               <button
@@ -681,7 +691,7 @@ export default function RsvpPage() {
     // Portail invité confirmé — layout plateforme (simple / moderne)
     if (submitted && rsvpStatus === 'ACCEPTED') {
       const guestTabs = [
-        { id: 'badge', label: 'Badge', shortLabel: 'Badge', icon: <Award className="w-4 h-4" /> },
+        { id: 'badge', label: 'Pass', shortLabel: 'Pass', icon: <Award className="w-4 h-4" /> },
         { id: 'table', label: 'Ma table', shortLabel: 'Table', icon: <LayoutGrid className="w-4 h-4" /> },
         { id: 'route', label: 'Itinéraire', shortLabel: 'Lieu', icon: <Navigation className="w-4 h-4" /> },
         { id: 'guestbook', label: "Livre d'or", shortLabel: 'Livre', icon: <Heart className="w-4 h-4" /> },
@@ -760,23 +770,23 @@ export default function RsvpPage() {
                       type="button"
                       onClick={() => setShowFullScreenQr(true)}
                       className="p-4 bg-white rounded-[1.25rem] border border-border shadow-[0_12px_40px_rgba(15,23,42,0.08)] hover:scale-105 active:scale-95 transition-all group relative cursor-pointer"
-                      title="Toucher pour agrandir en plein écran"
+                      title="Agrandir le pass QR"
                     >
                       <img
                         src={getGuestQrImageUrl(guest.id, 200)}
-                        alt="QR Code Pass"
+                        alt={`Pass QR de ${guest.firstName} ${guest.lastName}`}
                         className="w-44 h-44 sm:w-48 sm:h-48"
                       />
                       <span className="absolute inset-0 rounded-[1.25rem] bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                         <span className="bg-primary/95 text-white text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-xs shadow-sm shadow-primary/30">
                           <Maximize2 className="w-3 h-3" />
-                          Plein écran
+                          Agrandir
                         </span>
                       </span>
                     </button>
                     <div className="text-center space-y-3">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Badge d&apos;entrée</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Pass d&apos;entrée</p>
                         <p className="text-[11px] font-mono text-muted tracking-widest">
                           {guest.id.split('-')[0]?.toUpperCase()}
                         </p>
@@ -801,7 +811,7 @@ export default function RsvpPage() {
                       onClick={() => setSubmitted(false)}
                       className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-border bg-surface text-foreground text-xs font-semibold hover:bg-surface-muted transition shadow-sm"
                     >
-                      Modifier mes informations RSVP
+                      Modifier ma réponse
                     </button>
                   </div>
                 )}
@@ -908,7 +918,7 @@ export default function RsvpPage() {
                     Votre table
                   </h2>
                   <p className="text-xs text-muted mt-1">
-                    Vue 3D de la salle, plan 2D et détails de votre siège.
+                    Plan de la salle, votre table et votre siège une fois le placement confirmé.
                   </p>
                 </div>
                   <GuestTablePlanView
@@ -956,23 +966,33 @@ export default function RsvpPage() {
                   <p className="em-guest-section-label">Messages</p>
                   <h3 className="font-display font-semibold text-foreground text-base">Livre d&apos;or</h3>
                   <p className="text-muted text-xs leading-relaxed">
-                    Laissez un mot ou des photos pour les organisateurs.
+                    Adressez un mot ou des photos aux organisateurs. Visible par les autres invités.
                   </p>
                 </div>
 
                 {guestbookSuccess && (
-                  <div className="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold flex items-center gap-2">
+                  <div className="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold flex items-center gap-2" role="status">
                     <CheckCircle2 className="w-4 h-4 text-primary" />
-                    Message et photos envoyés avec succès.
+                    Votre message a été ajouté au livre d&apos;or.
+                  </div>
+                )}
+
+                {guestbookError && (
+                  <div className="bg-rose-50 border border-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/50 px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold" role="alert">
+                    {guestbookError}
                   </div>
                 )}
 
                 <form onSubmit={handleSubmitGuestbook} className="space-y-4">
-                  <div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="guestbook-message" className="block text-xs font-semibold text-foreground">
+                      Votre message
+                    </label>
                     <textarea
+                      id="guestbook-message"
                       value={guestbookMessage}
                       onChange={(e) => setGuestbookMessage(e.target.value)}
-                      placeholder="Écrivez votre message de félicitations ou d'amitié ici..."
+                      placeholder="Ex. : Merci pour cette belle invitation…"
                       rows={4}
                       className="w-full min-h-[6.5rem] px-4 py-3 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none text-foreground placeholder:text-muted"
                     />
@@ -1058,11 +1078,12 @@ export default function RsvpPage() {
                   {loadingGuestbook && guestbookShares.length === 0 ? (
                     <div className="py-8 flex flex-col items-center justify-center gap-2">
                       <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                      <p className="text-[10px] text-muted">Chargement des messages...</p>
+                      <p className="text-[10px] text-muted">Chargement des messages…</p>
                     </div>
                   ) : guestbookShares.length === 0 ? (
-                    <div className="text-center py-8 bg-surface-muted/40 rounded-[var(--radius-card)] border border-border p-4">
-                      <p className="text-muted text-xs">Soyez le premier à laisser un message !</p>
+                    <div className="text-center py-8 bg-surface-muted/40 rounded-[var(--radius-card)] border border-border p-4 space-y-1">
+                      <p className="text-sm font-semibold text-foreground">Aucun message pour l’instant</p>
+                      <p className="text-muted text-xs">Écrivez le premier mot ci-dessus pour ouvrir le livre d&apos;or.</p>
                     </div>
                   ) : (
                     <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
@@ -1139,24 +1160,30 @@ export default function RsvpPage() {
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-1">
                   <h3 className="font-semibold text-foreground text-sm">Actualités</h3>
-                  <p className="text-muted text-xs">
-                    Publications de l&apos;organisateur : photos, annonces. Aimez et commentez. Le livre d&apos;or sert à vos messages et photos personnels.
+                  <p className="text-muted text-xs leading-relaxed">
+                    Annonces et photos de l&apos;organisateur. Pour un message personnel, utilisez le livre d&apos;or.
                   </p>
                 </div>
+
+                {feedActionError && (
+                  <div className="bg-rose-50 border border-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/50 px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold" role="alert">
+                    {feedActionError}
+                  </div>
+                )}
 
                 {loadingFeed ? (
                   <div className="py-16 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-xs font-medium text-muted">Chargement du fil d'actualité...</p>
+                    <p className="text-xs font-medium text-muted">Chargement des actualités…</p>
                   </div>
                 ) : feedPosts.length === 0 ? (
                   <div className="text-center py-16 space-y-3 max-w-xs mx-auto">
                     <div className="inline-flex items-center justify-center bg-primary/10 p-5 rounded-[var(--radius-card)] text-primary">
                       <MessageCircle className="w-8 h-8" />
                     </div>
-                    <h4 className="font-semibold text-foreground text-sm">Aucune publication</h4>
+                    <h4 className="font-semibold text-foreground text-sm">Pas encore de publication</h4>
                     <p className="text-muted text-xs">
-                      Les publications de l&apos;organisateur apparaîtront ici. Vous pourrez aimer et commenter.
+                      Les annonces de l&apos;organisateur apparaîtront ici dès qu&apos;elles seront publiées.
                     </p>
                   </div>
                 ) : (
@@ -1278,21 +1305,29 @@ export default function RsvpPage() {
                             )}
 
                             {/* Add Comment Form */}
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                placeholder="Écrire un commentaire..."
-                                value={guestCommentContents[post.id] || ''}
-                                onChange={(e) => setGuestCommentContents({ ...guestCommentContents, [post.id]: e.target.value })}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleCreateGuestComment(post.id);
-                                }}
-                                className="flex-1 min-h-11 px-3.5 py-2.5 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-xl text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
-                              />
+                            <div className="flex gap-2 items-stretch">
+                              <div className="space-y-1.5 flex-1 min-w-0">
+                                <label htmlFor={`feed-comment-${post.id}`} className="sr-only">
+                                  Commentaire sur cette publication
+                                </label>
+                                <input
+                                  id={`feed-comment-${post.id}`}
+                                  type="text"
+                                  placeholder="Ex. : Super photo !"
+                                  value={guestCommentContents[post.id] || ''}
+                                  onChange={(e) => setGuestCommentContents({ ...guestCommentContents, [post.id]: e.target.value })}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleCreateGuestComment(post.id);
+                                  }}
+                                  className="w-full min-h-11 px-3.5 py-2.5 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-xl text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
+                                />
+                              </div>
                               <button
+                                type="button"
                                 onClick={() => handleCreateGuestComment(post.id)}
                                 disabled={guestCommentSubmitting[post.id] || !guestCommentContents[post.id]?.trim()}
-                                className="p-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white rounded-xl transition shadow-sm"
+                                className="p-2.5 min-h-11 min-w-11 inline-flex items-center justify-center bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white rounded-xl transition shadow-sm"
+                                aria-label="Publier le commentaire"
                               >
                                 {guestCommentSubmitting[post.id] ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1300,6 +1335,7 @@ export default function RsvpPage() {
                                   <Send className="w-3.5 h-3.5" />
                                 )}
                               </button>
+                            </div>
                             </div>
                           </div>
                         </div>
@@ -1416,12 +1452,12 @@ export default function RsvpPage() {
                 <p className="text-xs text-white/80 truncate">
                   {guest.tableDetails?.tableName
                     ? `${guest.tableDetails.tableName}${guest.tableDetails.seatIndex != null ? ` • Place ${guest.tableDetails.seatIndex + 1}` : ''}`
-                    : 'Toucher pour afficher le pass'}
+                    : 'Ouvrir le pass pour l’accueil'}
                 </p>
               </div>
             </div>
             <span className="hidden min-[380px]:inline text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white shrink-0">
-              Plein écran
+              Ouvrir
             </span>
             <Maximize2 className="w-4 h-4 shrink-0 opacity-90 min-[380px]:hidden" aria-hidden />
           </button>
@@ -1684,7 +1720,7 @@ export default function RsvpPage() {
         <div>
           <p className="font-bold">Réponse verrouillée</p>
           <p className="text-xs mt-0.5 opacity-90">
-            La date de célébration est passée. Votre réponse RSVP ne peut plus être modifiée.
+            La date de l&apos;événement est passée. Vous ne pouvez plus modifier votre présence.
           </p>
         </div>
       </div>
@@ -1779,7 +1815,7 @@ export default function RsvpPage() {
               Envoi de la réponse...
             </>
           ) : (
-            'Envoyer ma Réponse'
+            'Envoyer ma réponse'
           )}
         </button>
         </div>
@@ -2512,7 +2548,7 @@ export default function RsvpPage() {
                       Envoi de la réponse...
                     </>
                   ) : (
-                    'Envoyer ma Réponse'
+                    'Envoyer ma réponse'
                   )}
                 </button>
               </form>
