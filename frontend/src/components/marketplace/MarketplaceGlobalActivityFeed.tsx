@@ -84,6 +84,7 @@ export default function MarketplaceGlobalActivityFeed({
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentBusy, setCommentBusy] = useState<Record<string, boolean>>({});
   const [likeBusy, setLikeBusy] = useState<Record<string, boolean>>({});
+  const [commentsExpanded, setCommentsExpanded] = useState<Record<string, boolean>>({});
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
 
   const loginHref =
@@ -250,6 +251,9 @@ export default function MarketplaceGlobalActivityFeed({
             const author = post.author;
             const href = authorHref(author, linkBase);
             const AuthorIcon = author?.kind === 'vendor' ? Sparkles : Building2;
+            const commentCount = post.comments?.length ?? 0;
+            const isExpanded = Boolean(commentsExpanded[post.id]);
+            const visibleComments = isExpanded ? post.comments ?? [] : (post.comments ?? []).slice(0, 2);
 
             return (
               <article
@@ -353,50 +357,75 @@ export default function MarketplaceGlobalActivityFeed({
                   ) : null}
                 </div>
 
-                {(post.comments?.length ?? 0) > 0 && (
-                  <ul className="space-y-2 max-h-48 overflow-y-auto">
-                    {post.comments.map((c) => (
-                      <li
-                        key={c.id}
-                        className="text-xs rounded-xl border border-border bg-surface-muted/50 px-3 py-2"
+                {commentCount > 0 && (
+                  <div className="space-y-2">
+                    <ul className="space-y-2 max-h-48 overflow-y-auto">
+                      {visibleComments.map((c) => (
+                        <li
+                          key={c.id}
+                          className="text-xs rounded-xl border border-border bg-surface-muted/50 px-3 py-2"
+                        >
+                          <div className="flex justify-between gap-2 mb-0.5">
+                            <span className="font-semibold text-foreground">{c.authorName}</span>
+                            <span className="text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
+                          </div>
+                          <p className="text-muted whitespace-pre-line">{c.content}</p>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {commentCount > 2 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCommentsExpanded((prev) => ({ ...prev, [post.id]: !Boolean(prev[post.id]) }))
+                        }
+                        className="w-full min-h-9 rounded-xl border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
                       >
-                        <div className="flex justify-between gap-2 mb-0.5">
-                          <span className="font-semibold text-foreground">{c.authorName}</span>
-                          <span className="text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
-                        </div>
-                        <p className="text-muted whitespace-pre-line">{c.content}</p>
-                      </li>
-                    ))}
-                  </ul>
+                        {isExpanded ? 'Réduire' : `Voir ${commentCount - 2} autres commentaires`}
+                      </button>
+                    )}
+                  </div>
                 )}
 
-                <div className="flex gap-2 items-stretch">
-                  <input
-                    type="text"
-                    value={commentDrafts[post.id] || ''}
-                    onChange={(e) => setCommentDrafts((d) => ({ ...d, [post.id]: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') void submitComment(post.id);
-                    }}
-                    placeholder={user ? 'Écrire un commentaire…' : 'Connectez-vous pour commenter'}
-                    disabled={!user}
-                    className="flex-1 min-h-11 px-3 rounded-xl border border-border bg-surface text-sm disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    aria-label="Commentaire"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void submitComment(post.id)}
-                    disabled={!user || commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
-                    className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-white disabled:opacity-50"
-                    aria-label="Publier le commentaire"
-                  >
-                    {commentBusy[post.id] ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
+                {!user ? (
+                  <div className="flex gap-2 items-stretch">
+                    <Link
+                      href={loginHref}
+                      className="flex-1 inline-flex items-center justify-center min-h-11 px-3 rounded-xl border border-border text-xs font-semibold text-primary hover:bg-surface-muted transition"
+                    >
+                      Connectez-vous pour commenter
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-stretch">
+                    <input
+                      type="text"
+                      value={commentDrafts[post.id] || ''}
+                      onChange={(e) => setCommentDrafts((d) => ({ ...d, [post.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void submitComment(post.id);
+                      }}
+                      placeholder="Écrire un commentaire…"
+                      disabled={!user}
+                      className="flex-1 min-h-11 px-3 rounded-xl border border-border bg-surface text-sm disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      aria-label="Commentaire"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void submitComment(post.id)}
+                      disabled={commentBusy[post.id] || !(commentDrafts[post.id] || '').trim()}
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-primary text-white disabled:opacity-50"
+                      aria-label="Publier le commentaire"
+                    >
+                      {commentBusy[post.id] ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                )}
               </article>
             );
           })}
