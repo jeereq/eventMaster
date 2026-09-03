@@ -23,6 +23,7 @@ import {
 } from '@/lib/marketplace';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Sparkles, KeyRound } from 'lucide-react';
+import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 
 export default function MarketplaceServiceDetailPage() {
   const params = useParams();
@@ -150,6 +151,13 @@ export default function MarketplaceServiceDetailPage() {
           ) : (
             <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette prestation.</p>
           )
+        ) : null}
+        activity={service?.orgSlug ? (
+          <MarketplaceActivityFeed
+            scope={{ kind: 'vendor', slug: service.orgSlug }}
+            authorLabel={service.orgName || 'Ce prestataire'}
+            className="max-w-2xl"
+          />
         ) : null}
         inquiry={service ? (
           <MarketplaceInquiryForm

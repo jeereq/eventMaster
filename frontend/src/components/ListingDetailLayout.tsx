@@ -78,6 +78,7 @@ export default function ListingDetailLayout({
   onTab,
   details,
   map,
+  activity,
   priceFromFc,
   priceUnitLabel,
   quotaLabel,
@@ -115,6 +116,7 @@ export default function ListingDetailLayout({
   onTab: (tab: MarketplaceFormTab) => void;
   details: React.ReactNode;
   map: React.ReactNode;
+  activity?: React.ReactNode;
   priceFromFc: number | null;
   priceUnitLabel?: string | null;
   quotaLabel?: string | null;
@@ -202,6 +204,16 @@ export default function ListingDetailLayout({
 
   const heroSrc = (photoIndex > 0 && photos[photoIndex]) || heroUrl || photos[0] || null;
   const viewTab = tab === 'medias' ? 'details' : tab;
+  const showActivity = Boolean(activity);
+  const tabInclude: MarketplaceFormTab[] = showActivity
+    ? ['details', 'map', 'activity']
+    : ['details', 'map'];
+  const mainPanel =
+    viewTab === 'map'
+      ? map
+      : viewTab === 'activity' && activity
+        ? activity
+        : details;
 
   return (
     <main
@@ -311,14 +323,14 @@ export default function ListingDetailLayout({
 
           <div className={cn(
             'grid grid-cols-1 items-start gap-8 lg:gap-12',
-            viewTab === 'map' ? 'lg:grid-cols-1' : 'lg:grid-cols-5',
+            viewTab === 'map' || viewTab === 'activity' ? 'lg:grid-cols-1' : 'lg:grid-cols-5',
           )}>
-            <div className={cn('flex flex-col gap-4 min-w-0', viewTab === 'map' ? '' : 'lg:col-span-3')}>
+            <div className={cn('flex flex-col gap-4 min-w-0', viewTab === 'map' || viewTab === 'activity' ? '' : 'lg:col-span-3')}>
               <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
                 <MarketplaceFormTabs
-                  value={viewTab}
+                  value={viewTab === 'activity' ? 'activity' : viewTab === 'map' ? 'map' : 'details'}
                   onChange={onTab}
-                  include={['details', 'map']}
+                  include={tabInclude}
                   icons={false}
                 />
               </div>
@@ -327,10 +339,10 @@ export default function ListingDetailLayout({
                 <div className="lg:hidden">{relationStatus}</div>
               ) : null}
 
-              {viewTab === 'map' ? map : details}
+              {mainPanel}
             </div>
 
-            {viewTab === 'map' ? null : (
+            {viewTab === 'map' || viewTab === 'activity' ? null : (
             <aside
               id="listing-contact"
               className={cn(

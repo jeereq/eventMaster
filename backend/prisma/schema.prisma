@@ -168,6 +168,7 @@ model Tenant {
   vendorBookings MarketplaceBooking[] @relation("BookingVendor")
   organizerBookings MarketplaceBooking[] @relation("BookingOrganizer")
   orgRoomAmbiences OrgRoomAmbience[]
+  marketplacePosts MarketplacePost[]
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -207,6 +208,7 @@ model User {
   referredTenants Tenant[] @relation("CommercialReferral")
   orgCommercialReferrals Tenant[] @relation("OrgCommercialReferral")
   comments       EventComment[]
+  marketplaceComments MarketplaceComment[]
   legalAcceptances LegalAcceptance[]
   eventStaff     EventStaff[]
   roomStaff      RoomStaff[]
@@ -670,6 +672,7 @@ model VendorProfile {
   updatedAt   DateTime @updatedAt
 
   offerings ServiceOffering[]
+  activityPosts MarketplacePost[]
 }
 
 model VenueListing {
@@ -702,10 +705,49 @@ model VenueListing {
 
   inquiries MarketplaceInquiry[]
   bookings  MarketplaceBooking[]
+  activityPosts MarketplacePost[]
 
   @@index([isPublic, city])
   @@index([isPublic, commune])
   @@index([tenantId])
+}
+
+/** Fil d’activité marketplace : salle (VenueListing) ou prestataire (VendorProfile). */
+model MarketplacePost {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  venueListingId  String?
+  venueListing    VenueListing? @relation(fields: [venueListingId], references: [id], onDelete: Cascade)
+  vendorProfileId String?
+  vendorProfile   VendorProfile? @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  content         String?
+  /** [{ url: string, type: 'IMAGE' | 'VIDEO' }] */
+  mediaUrls       Json?
+  /** Array of user_${id} who liked the post */
+  likes           Json?
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  comments MarketplaceComment[]
+
+  @@index([venueListingId, createdAt])
+  @@index([vendorProfileId, createdAt])
+  @@index([tenantId, createdAt])
+}
+
+model MarketplaceComment {
+  id         String         @id @default(uuid())
+  postId     String
+  post       MarketplacePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorName String
+  content    String
+  createdAt  DateTime       @default(now())
+
+  @@index([postId, createdAt])
+  @@index([userId])
 }
 
 model MarketplaceInquiry {

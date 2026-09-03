@@ -50,6 +50,7 @@ import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import { MarketplaceActivityFeedManager } from '@/components/marketplace/MarketplaceActivityFeed';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import { getQuotaLockMessage, getQuotaActionMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
@@ -1680,7 +1681,15 @@ export default function RoomsManagement() {
         {listingRoom && (
           <div className="space-y-4">
             {error && <Alert variant="error">{error}</Alert>}
-            <MarketplaceFormTabs value={listingTab} onChange={setListingTab} />
+            <MarketplaceFormTabs
+              value={listingTab}
+              onChange={setListingTab}
+              include={
+                listingRoom.venueListing?.id
+                  ? ['details', 'map', 'medias', 'activity']
+                  : ['details', 'map', 'medias']
+              }
+            />
             {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && listingTab === 'details' && (
               <p className="text-xs text-muted">
                 Fiche actuelle :{' '}
@@ -1776,6 +1785,17 @@ export default function RoomsManagement() {
                 onChange={(photos) => setListingDraft((d) => ({ ...d, photos }))}
               />
             )}
+            {listingTab === 'activity' && listingRoom.venueListing?.id ? (
+              <MarketplaceActivityFeedManager
+                scope={{ kind: 'venue', listingId: listingRoom.venueListing.id }}
+                authorLabel={listingDraft.headline || listingRoom.name}
+              />
+            ) : null}
+            {listingTab === 'activity' && !listingRoom.venueListing?.id ? (
+              <p className="text-sm text-muted py-6 text-center">
+                Enregistrez d’abord la fiche publique pour publier des activités.
+              </p>
+            ) : null}
           </div>
         )}
       </Modal>

@@ -33,6 +33,7 @@ import FavoriteHeart from '@/components/FavoriteHeart';
 import { listingPublicUrl } from '@/lib/share';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import { Building2, Sparkles } from 'lucide-react';
+import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
@@ -246,6 +247,21 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette fiche.</p>
         )
       ) : null}
+      activity={
+        venue ? (
+          <MarketplaceActivityFeed
+            scope={{ kind: 'venue', slug: venue.slug }}
+            authorLabel={venue.headline || venue.orgName || 'Cette salle'}
+            className="max-w-2xl"
+          />
+        ) : service?.orgSlug ? (
+          <MarketplaceActivityFeed
+            scope={{ kind: 'vendor', slug: service.orgSlug }}
+            authorLabel={service.orgName || 'Ce prestataire'}
+            className="max-w-2xl"
+          />
+        ) : null
+      }
       inquiry={canTransact && venue ? (
         <MarketplaceInquiryForm
           endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}

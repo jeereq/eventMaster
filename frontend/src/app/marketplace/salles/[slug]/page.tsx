@@ -23,6 +23,7 @@ import {
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Building2 } from 'lucide-react';
+import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
@@ -163,6 +164,13 @@ export default function MarketplaceVenueDetailPage() {
           ) : (
             <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette salle.</p>
           )
+        ) : null}
+        activity={venue ? (
+          <MarketplaceActivityFeed
+            scope={{ kind: 'venue', slug: venue.slug }}
+            authorLabel={venue.headline || venue.orgName || 'Cette salle'}
+            className="max-w-2xl"
+          />
         ) : null}
         inquiry={venue ? (
           <MarketplaceInquiryForm

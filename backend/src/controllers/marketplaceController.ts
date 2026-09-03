@@ -28,6 +28,7 @@ import {
   toDateKey,
 } from '../utils/marketplaceDates';
 import { parseListingDetails } from '../utils/listingDetails';
+import { fetchActivityPreview } from './marketplaceFeedController';
 import { Prisma, RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import { notifyTenantOperators } from '../services/platformNotificationService';
@@ -395,7 +396,11 @@ export async function getPublicVenue(req: Request, res: Response) {
       return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
     }
 
-    return res.json({ ...toPublicVenue(listing), isPublic: listing.isPublic });
+    return res.json({
+      ...toPublicVenue(listing),
+      isPublic: listing.isPublic,
+      activityPreview: await fetchActivityPreview({ venueListingId: listing.id }),
+    });
   } catch (error) {
     console.error('getPublicVenue:', error);
     return res.status(500).json({ error: 'Impossible de charger la salle.' });
@@ -803,7 +808,11 @@ export async function getPublicService(req: Request, res: Response) {
     if (!offering.isPublic && !canViewUnpublishedListing(req, offering.tenantId)) {
       return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
     }
-    return res.json({ ...toPublicService(offering), isPublic: offering.isPublic });
+    return res.json({
+      ...toPublicService(offering),
+      isPublic: offering.isPublic,
+      activityPreview: await fetchActivityPreview({ vendorProfileId: offering.vendorProfileId }),
+    });
   } catch (error) {
     console.error('getPublicService:', error);
     return res.status(500).json({ error: 'Impossible de charger la prestation.' });
@@ -820,6 +829,7 @@ export async function getPublicVendor(req: Request, res: Response) {
         isBlockedByAdmin: false
       },
       select: {
+        id: true,
         slug: true,
         displayName: true,
         city: true,
@@ -827,7 +837,11 @@ export async function getPublicVendor(req: Request, res: Response) {
       },
     });
     if (!profile) return res.status(404).json({ error: 'Prestataire introuvable.' });
-    return res.json(profile);
+    const { id, ...publicFields } = profile;
+    return res.json({
+      ...publicFields,
+      activityPreview: await fetchActivityPreview({ vendorProfileId: id }),
+    });
   } catch (error) {
     console.error('getPublicVendor:', error);
     return res.status(500).json({ error: 'Impossible de charger le prestataire.' });

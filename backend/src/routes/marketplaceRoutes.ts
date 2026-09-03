@@ -32,6 +32,15 @@ import {
   getListingRelation,
   listPublicAiSimulations,
 } from '../controllers/marketplaceClientController';
+import {
+  listVenueFeedOwner,
+  createVenueFeedPost,
+  listVendorFeedOwner,
+  createVendorFeedPost,
+  deleteMarketplaceFeedPost,
+  toggleMarketplaceFeedLike,
+  createMarketplaceFeedComment,
+} from '../controllers/marketplaceFeedController';
 
 const router = Router();
 
@@ -65,5 +74,13 @@ router.get('/event-briefs', listSavedBriefs);
 router.post('/event-briefs', createSavedBrief);
 router.delete('/event-briefs/:id', deleteSavedBrief);
 router.get('/my-tickets', listMyTickets);
+
+router.get('/venues/:listingId/feed', listVenueFeedOwner);
+router.post('/venues/:listingId/feed', createVenueFeedPost);
+router.get('/vendors/me/feed', listVendorFeedOwner);
+router.post('/vendors/me/feed', createVendorFeedPost);
+router.delete('/feed/:postId', deleteMarketplaceFeedPost);
+router.post('/feed/:postId/like', toggleMarketplaceFeedLike);
+router.post('/feed/:postId/comments', createMarketplaceFeedComment);
 
 export default router;

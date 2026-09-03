@@ -44,6 +44,7 @@ import {
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import { MarketplaceActivityFeedManager } from '@/components/marketplace/MarketplaceActivityFeed';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
@@ -74,7 +75,7 @@ interface ServiceItem {
   details?: unknown;
 }
 
-type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings';
+type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings' | 'activity';
 
 const fieldClass =
   'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
@@ -453,6 +454,16 @@ export default function MarketplaceDeskPage() {
         >
           Réservations{bookings.length > 0 ? ` (${bookings.length})` : ''}
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('activity')}
+          className={cn(
+            'px-3 py-1.5 rounded-full text-xs font-semibold border',
+            tab === 'activity' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+          )}
+        >
+          Activité
+        </button>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -534,6 +545,16 @@ export default function MarketplaceDeskPage() {
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="w-7 h-7 animate-spin text-primary" />
+        </div>
+      ) : tab === 'activity' ? (
+        <div className="max-w-2xl">
+          <p className="text-sm text-muted mb-4">
+            Publications visibles sur votre profil prestataire public. Les visiteurs connectés peuvent aimer et commenter.
+          </p>
+          <MarketplaceActivityFeedManager
+            scope={{ kind: 'vendor' }}
+            authorLabel={tenant?.name || site.platformName || 'Votre marque'}
+          />
         </div>
       ) : tab === 'bookings' ? (
         <MarketplaceBookingsPanel bookings={bookings} commissionDueFc={commissionDueFc} onChanged={load} />
@@ -703,7 +724,11 @@ export default function MarketplaceDeskPage() {
       >
         <div className="space-y-3">
           {error && <Alert variant="error">{error}</Alert>}
-          <MarketplaceFormTabs value={editorTab} onChange={setEditorTab} />
+          <MarketplaceFormTabs
+            value={editorTab}
+            onChange={setEditorTab}
+            include={['details', 'map', 'medias']}
+          />
           {editorTab === 'details' && (
             <>
           <Input label="Titre" value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />

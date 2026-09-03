@@ -20,6 +20,10 @@ import {
   createServiceInquiry,
 } from '../controllers/marketplaceController';
 import {
+  getPublicVenueFeed,
+  getPublicVendorFeed,
+} from '../controllers/marketplaceFeedController';
+import {
   listPublicEvents,
   getPublicEvent,
   checkoutPublicEvent,
@@ -106,11 +110,13 @@ router.get('/templates', async (_req: Request, res: Response) => {
 
 router.get('/venues', listPublicVenues);
 router.get('/venues/:slug', optionalAuth, getPublicVenue);
+router.get('/venues/:slug/feed', getPublicVenueFeed);
 router.post('/venues/:slug/inquire', requireAuth, createVenueInquiry);
 router.get('/services', listPublicServices);
 router.get('/services/:slug', optionalAuth, getPublicService);
 router.post('/services/:slug/inquire', requireAuth, createServiceInquiry);
 router.get('/vendors/:slug', getPublicVendor);
+router.get('/vendors/:slug/feed', getPublicVendorFeed);
 router.get('/events', listPublicEvents);
 router.get('/events/:slug', getPublicEvent);
 router.get('/events/:slug/seats', listPublicEventSeats);
