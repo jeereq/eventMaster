@@ -113,7 +113,7 @@ export default function MarketplaceGlobalActivityFeed({
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Impossible de charger l’activité.');
+          setError(err instanceof Error ? err.message : 'Impossible de charger les publications.');
           setPosts([]);
           setLoading(false);
         }
@@ -301,7 +301,7 @@ export default function MarketplaceGlobalActivityFeed({
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 space-y-3">
           <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden />
-          <p className="text-xs text-muted font-medium">Chargement des actualités…</p>
+          <p className="text-xs text-muted font-medium">Chargement des publications…</p>
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-20 px-4 rounded-3xl border border-dashed border-border bg-surface/40 space-y-3 max-w-lg mx-auto">
@@ -312,7 +312,7 @@ export default function MarketplaceGlobalActivityFeed({
           <p className="text-xs sm:text-sm text-muted leading-relaxed">
             {search.trim()
               ? 'Aucun résultat ne correspond à votre recherche. Essayez d’autres mots-clés.'
-              : 'Les salles et prestataires certifiés partageront ici leurs photos, vidéos et actualités.'}
+              : 'Les salles et prestataires certifiés partageront ici leurs photos, vidéos et publications.'}
           </p>
           {search.trim() && (
             <button

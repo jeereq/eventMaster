@@ -23,7 +23,7 @@ export const FOOTER_FEATURES = [
 export const FOOTER_PRODUCT = [
   { label: 'Éditeur 2D/3D', href: '/#editeur' },
   { label: 'Marketplace', href: '/marketplace' },
-  { label: 'Activité', href: '/activite' },
+  { label: 'Publications', href: '/activite' },
   { label: 'Modèles', href: '/#modeles' },
   { label: 'Tarifs', href: '/#tarifs' },
   { label: 'FAQ', href: '/faq' },

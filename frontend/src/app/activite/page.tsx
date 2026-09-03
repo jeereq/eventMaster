@@ -17,8 +17,8 @@ export default function ActivitePage() {
       {/* En-tête Héros */}
       <PublicPageHero
         chip="Fil de la communauté"
-        title="Activité & Réalisations en direct"
-        description="Découvrez les coulisses, nouveaux décors, événements récents et actualités partagés par les salles et prestataires en RDC."
+        title="Publications & réalisations en direct"
+        description="Découvrez les coulisses, nouveaux décors, événements récents et publications partagés par les salles et prestataires en RDC."
         compact
       >
         <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -56,7 +56,7 @@ export default function ActivitePage() {
       {/* Contenu avec mise en page 2 colonnes ergonomique */}
       <main className="page-container py-8 sm:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Colonne Principale : Flux d'activité */}
+          {/* Colonne principale : fil de publications */}
           <div className="lg:col-span-8 space-y-6">
             <MarketplaceGlobalActivityFeed linkBase="public" />
           </div>
@@ -71,7 +71,7 @@ export default function ActivitePage() {
               <div className="space-y-1.5">
                 <h3 className="text-base font-bold text-foreground">Vous êtes gestionnaire ou prestataire ?</h3>
                 <p className="text-xs text-muted leading-relaxed">
-                  Publiez vos photos, vidéos et actualités pour donner de la visibilité à vos salles et prestations auprès de milliers d’organisateurs.
+                  Publiez vos photos, vidéos et publications pour donner de la visibilité à vos salles et prestations auprès de milliers d’organisateurs.
                 </p>
               </div>
               <Link

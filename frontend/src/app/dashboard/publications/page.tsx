@@ -77,7 +77,7 @@ function DashboardPublicationsPageInner() {
     <div className="space-y-6 w-full max-w-5xl">
       <PageHeader
         title="Publications"
-        description="Fil d’actualité des salles et prestations — grille type réseau social, et création liée à vos fiches."
+        description="Fil de publications des salles et prestations — grille type réseau social, et création liée à vos fiches."
         breadcrumbs={
           <Breadcrumbs
             items={[

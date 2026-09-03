@@ -306,7 +306,7 @@ export function MarketplaceActivityFeedManager({
       ) : posts.length === 0 ? (
         <div className="text-center py-10 space-y-1.5 rounded-2xl border border-dashed border-border bg-surface/30">
           <p className="text-sm font-bold text-foreground">Aucune publication</p>
-          <p className="text-xs text-muted">Vos activités apparaîtront sur votre fiche et sur le fil public.</p>
+          <p className="text-xs text-muted">Vos publications apparaîtront sur votre fiche et sur le fil public.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -349,7 +349,7 @@ export function MarketplaceActivityFeedManager({
   );
 }
 
-/** Vue publique de l'activité d'une salle ou d'un prestataire. */
+/** Vue publique des publications d'une salle ou d'un prestataire. */
 export default function MarketplaceActivityFeed({
   scope,
   authorLabel,
@@ -396,7 +396,7 @@ export default function MarketplaceActivityFeed({
       setPosts((prev) => (cursor ? [...prev, ...page] : page));
       setNextCursor(data?.nextCursor || null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de charger l’activité.');
+      setError(err instanceof Error ? err.message : 'Impossible de charger les publications.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -489,14 +489,14 @@ export default function MarketplaceActivityFeed({
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12 space-y-2">
           <Loader2 className="w-7 h-7 text-primary animate-spin" aria-hidden />
-          <span className="text-xs text-muted">Chargement de l’activité…</span>
+          <span className="text-xs text-muted">Chargement des publications…</span>
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-14 px-4 space-y-2 rounded-3xl border border-dashed border-border bg-surface/30">
           <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
             {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
           </div>
-          <p className="text-sm font-bold text-foreground">Pas encore d’actualité publiée</p>
+          <p className="text-sm font-bold text-foreground">Pas encore de publication</p>
           <p className="text-xs text-muted max-w-sm mx-auto">
             Les photos, vidéos et annonces récentes de {authorLabel} apparaîtront directement ici.
           </p>
