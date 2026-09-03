@@ -1,15 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, Calendar, KeyRound, Sparkles, Store } from 'lucide-react';
+import { Building2, Calendar, KeyRound, Rss, Sparkles, Store } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+export type MarketplaceNavId = 'hub' | 'venues' | 'services' | 'rentals' | 'events' | 'activity';
 
 export default function MarketplacePublicNav({
   active,
   className,
   dense = false,
 }: {
-  active: 'hub' | 'venues' | 'services' | 'rentals' | 'events';
+  active: MarketplaceNavId;
   className?: string;
   /** Une ligne scrollable — carte / focus mobile. */
   dense?: boolean;
@@ -20,6 +22,7 @@ export default function MarketplacePublicNav({
     { id: 'services' as const, href: '/marketplace/prestataires', label: 'Prestataires', short: 'Prestataires', icon: Sparkles },
     { id: 'rentals' as const, href: '/marketplace/locations', label: 'Matériel & Équipements', short: 'Matériel', icon: KeyRound },
     { id: 'events' as const, href: '/marketplace/evenements', label: 'Événements', short: 'Agenda', icon: Calendar },
+    { id: 'activity' as const, href: '/marketplace/activite', label: 'Activité', short: 'Activité', icon: Rss },
   ];
   return (
     <div

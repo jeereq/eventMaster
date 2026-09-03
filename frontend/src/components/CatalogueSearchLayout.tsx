@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Minimize2, SlidersHorizontal } from 'lucide-react';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import MarketplacePublicNav from '@/components/MarketplacePublicNav';
+import MarketplacePublicNav, { type MarketplaceNavId } from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap, { type MarketplaceMapMarker } from '@/components/MarketplaceLocationsMap';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import CatalogueMobileExplore from '@/components/CatalogueMobileExplore';
@@ -165,7 +165,7 @@ export default function CatalogueSearchLayout({
   showKindLegend = false,
   gridCols = 4,
 }: {
-  activeNav: 'hub' | 'venues' | 'services' | 'rentals' | 'events';
+  activeNav: MarketplaceNavId;
   heroTitle: string;
   heroDescription: string;
   cta: {

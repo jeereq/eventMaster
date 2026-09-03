@@ -85,6 +85,41 @@ const postInclude = {
   },
 };
 
+const publicFeedInclude = {
+  ...postInclude,
+  venueListing: {
+    select: {
+      slug: true,
+      headline: true,
+      city: true,
+      photos: true,
+      isPublic: true,
+      isBlockedByAdmin: true,
+      room: { select: { name: true } },
+    },
+  },
+  vendorProfile: {
+    select: {
+      slug: true,
+      displayName: true,
+      city: true,
+      isBlockedByAdmin: true,
+      offerings: {
+        where: { isPublic: true, isBlockedByAdmin: false },
+        select: { slug: true, photos: true, title: true },
+        orderBy: { publishedAt: 'desc' as const },
+        take: 1,
+      },
+    },
+  },
+};
+
+function coverFromPhotos(photos: unknown): string | null {
+  if (!Array.isArray(photos)) return null;
+  const first = photos.find((p) => typeof p === 'string' && p.trim());
+  return typeof first === 'string' ? first : null;
+}
+
 async function assertVenueOwner(userId: string, tenantId: string, listingId: string) {
   const access = await resolveOrgAccess(userId, tenantId);
   if (!access.canManageRooms) return null;
@@ -98,6 +133,143 @@ async function assertVendorOwner(userId: string, tenantId: string) {
   const access = await resolveOrgAccess(userId, tenantId);
   if (!access.canManageRooms) return null;
   return prisma.vendorProfile.findUnique({ where: { tenantId } });
+}
+
+function serializePublicFeedPost(post: {
+  id: string;
+  content: string | null;
+  mediaUrls: unknown;
+  likes: unknown;
+  isPublished: boolean;
+  createdAt: Date;
+  venueListingId: string | null;
+  vendorProfileId: string | null;
+  comments?: Array<{
+    id: string;
+    authorName: string;
+    content: string;
+    createdAt: Date;
+    userId: string;
+  }>;
+  venueListing?: {
+    slug: string;
+    headline: string | null;
+    city: string | null;
+    photos: unknown;
+    isPublic: boolean;
+    isBlockedByAdmin: boolean;
+    room: { name: string };
+  } | null;
+  vendorProfile?: {
+    slug: string;
+    displayName: string;
+    city: string | null;
+    isBlockedByAdmin: boolean;
+    offerings: Array<{ slug: string; photos: unknown; title: string }>;
+  } | null;
+}) {
+  const base = serializePost(post);
+  if (post.venueListingId && post.venueListing) {
+    const listing = post.venueListing;
+    return {
+      ...base,
+      author: {
+        kind: 'venue' as const,
+        name: listing.headline || listing.room.name,
+        slug: listing.slug,
+        city: listing.city,
+        coverUrl: coverFromPhotos(listing.photos),
+        href: `/marketplace/salles/${listing.slug}`,
+      },
+    };
+  }
+  if (post.vendorProfileId && post.vendorProfile) {
+    const vendor = post.vendorProfile;
+    const offering = vendor.offerings[0];
+    return {
+      ...base,
+      author: {
+        kind: 'vendor' as const,
+        name: vendor.displayName,
+        slug: vendor.slug,
+        city: vendor.city,
+        coverUrl: coverFromPhotos(offering?.photos),
+        href: offering ? `/marketplace/prestataires/${offering.slug}` : null,
+      },
+    };
+  }
+  return { ...base, author: null };
+}
+
+/** Fil global marketplace (salles + prestataires). */
+export async function getPublicMarketplaceFeed(req: Request, res: Response) {
+  try {
+    const kindRaw = String(req.query.kind || 'all').trim().toLowerCase();
+    const kind = kindRaw === 'venue' || kindRaw === 'vendor' ? kindRaw : 'all';
+    const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 80) : '';
+
+    const where: Record<string, unknown> = {
+      isPublished: true,
+      OR: [
+        {
+          venueListingId: { not: null },
+          venueListing: { isPublic: true, isBlockedByAdmin: false },
+        },
+        {
+          vendorProfileId: { not: null },
+          vendorProfile: { isBlockedByAdmin: false },
+        },
+      ],
+    };
+
+    if (kind === 'venue') {
+      where.OR = [
+        {
+          venueListingId: { not: null },
+          venueListing: { isPublic: true, isBlockedByAdmin: false },
+        },
+      ];
+    } else if (kind === 'vendor') {
+      where.OR = [
+        {
+          vendorProfileId: { not: null },
+          vendorProfile: { isBlockedByAdmin: false },
+        },
+      ];
+    }
+
+    if (q) {
+      where.AND = [
+        {
+          OR: [
+            { content: { contains: q, mode: 'insensitive' } },
+            { venueListing: { headline: { contains: q, mode: 'insensitive' } } },
+            { venueListing: { room: { name: { contains: q, mode: 'insensitive' } } } },
+            { vendorProfile: { displayName: { contains: q, mode: 'insensitive' } } },
+          ],
+        },
+      ];
+    }
+
+    const posts = await prisma.marketplacePost.findMany({
+      where: where as any,
+      include: publicFeedInclude,
+      orderBy: { createdAt: 'desc' },
+      take: FEED_PAGE_SIZE + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+
+    const hasMore = posts.length > FEED_PAGE_SIZE;
+    const page = hasMore ? posts.slice(0, FEED_PAGE_SIZE) : posts;
+    return res.json({
+      posts: page.map(serializePublicFeedPost),
+      nextCursor: hasMore ? page[page.length - 1]?.id : null,
+    });
+  } catch (error) {
+    console.error('getPublicMarketplaceFeed:', error);
+    return res.status(500).json({ error: 'Impossible de charger le fil d’activité.' });
+  }
 }
 
 export async function getPublicVenueFeed(req: Request, res: Response) {

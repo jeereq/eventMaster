@@ -22,6 +22,7 @@ import {
 import {
   getPublicVenueFeed,
   getPublicVendorFeed,
+  getPublicMarketplaceFeed,
 } from '../controllers/marketplaceFeedController';
 import {
   listPublicEvents,
@@ -117,6 +118,7 @@ router.get('/services/:slug', optionalAuth, getPublicService);
 router.post('/services/:slug/inquire', requireAuth, createServiceInquiry);
 router.get('/vendors/:slug', getPublicVendor);
 router.get('/vendors/:slug/feed', getPublicVendorFeed);
+router.get('/activity', getPublicMarketplaceFeed);
 router.get('/events', listPublicEvents);
 router.get('/events/:slug', getPublicEvent);
 router.get('/events/:slug/seats', listPublicEventSeats);
