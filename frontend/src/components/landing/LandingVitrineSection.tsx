@@ -305,7 +305,7 @@ export default function LandingVitrineSection() {
             </div>
             <div>
               <p className="text-xs font-bold text-foreground">Besoin d’un pack complet selon votre budget ?</p>
-              <p className="text-[11px] text-muted">
+              <p className="text-[11px] text-muted hidden sm:block">
                 Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.
               </p>
             </div>

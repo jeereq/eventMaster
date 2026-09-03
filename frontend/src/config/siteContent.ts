@@ -21,7 +21,7 @@ export const FOOTER_FEATURES = [
 ] as const;
 
 export const FOOTER_PRODUCT = [
-  { label: 'Éditeur 2D/3D', href: '/#editeur' },
+  { label: 'Plans & Modèles 2D/3D', href: '/plans-3d' },
   { label: 'Marketplace', href: '/marketplace' },
   { label: 'Publications', href: '/activite' },
   { label: 'Modèles', href: '/modeles' },

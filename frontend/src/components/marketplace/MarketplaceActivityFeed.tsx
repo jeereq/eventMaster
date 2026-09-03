@@ -492,7 +492,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className="group/card w-[82%] sm:w-full mx-auto rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
+      className="group/card w-full rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
     >
       {/* ─── CAS 1 : Publication avec Médias (Format Snap Spotlight) ─── */}
       {hasMedia ? (
@@ -691,7 +691,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10 tabular-nums">
                   Snap {activeSnapIndex + 1} / {media.length}
                 </span>
-                <span className="text-[11px] text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
+                <span className="hidden sm:inline text-[11px] text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
               </div>
             )}
 
@@ -1008,7 +1008,7 @@ export default function MarketplaceActivityFeed({
           {[...Array(2)].map((_, i) => (
             <article
               key={i}
-              className="w-[82%] sm:w-full mx-auto rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs p-2 sm:p-2.5 space-y-2.5 animate-pulse"
+              className="w-full rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs p-2 sm:p-2.5 space-y-2.5 animate-pulse"
             >
               <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-900/90 dark:bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4">
                 <div className="flex items-center gap-2 p-1 pr-3 rounded-full bg-white/10 w-fit">

@@ -49,20 +49,20 @@ export function PublicPageHero({
     <section className="relative em-landing-hero">
       <div className={cn(
         'page-container relative z-10',
-        compact ? 'py-8 sm:py-10 lg:py-12' : 'py-12 sm:py-16 lg:py-[4.5rem]',
+        compact ? 'py-5 sm:py-8 lg:py-10' : 'py-7 sm:py-12 lg:py-14',
       )}>
-        <div className="max-w-3xl space-y-4">
-          {chip ? <span className="em-festive-chip">{chip}</span> : null}
+        <div className="max-w-3xl space-y-2.5 sm:space-y-3.5">
+          {chip ? <span className="em-festive-chip text-[11px] sm:text-xs">{chip}</span> : null}
           <h1 className={cn(
-            'font-display font-semibold tracking-tight text-foreground leading-[1.12]',
+            'font-display font-semibold tracking-tight text-foreground leading-[1.14]',
             compact
-              ? 'text-[1.85rem] sm:text-3xl lg:text-4xl'
-              : 'text-[2.15rem] sm:text-4xl lg:text-[2.75rem]',
+              ? 'text-xl sm:text-3xl lg:text-4xl'
+              : 'text-2xl sm:text-4xl lg:text-[2.75rem]',
           )}>
             {title}
           </h1>
           {description ? (
-            <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
+            <p className="text-xs sm:text-base text-muted leading-relaxed max-w-2xl line-clamp-2 sm:line-clamp-none">
               {description}
             </p>
           ) : null}

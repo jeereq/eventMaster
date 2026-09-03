@@ -215,7 +215,7 @@ export default function LandingVisualBanner() {
                       <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                       <span className="truncate">{item.location}</span>
                     </div>
-                    <p className="text-xs text-muted leading-relaxed line-clamp-2">
+                    <p className="text-xs text-muted leading-relaxed hidden sm:block line-clamp-2">
                       {item.description}
                     </p>
                   </div>

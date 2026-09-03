@@ -175,9 +175,14 @@ export default function LandingAiSimulationShowcase() {
             dans votre budget
           </h2>
 
-          <p className="text-sm sm:text-base text-muted leading-relaxed">
-            Indiquez votre budget en Francs Congolais, votre ville et vos envies : l’assistant EventMaster compose{' '}
-            <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples ci-dessous préremplissent votre projet — une simulation n’est lancée qu’au clic « Générer ».
+          <p className="text-xs sm:text-base text-muted leading-relaxed">
+            <span className="hidden sm:inline">
+              Indiquez votre budget en Francs Congolais, votre ville et vos envies : l’assistant EventMaster compose{' '}
+              <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples ci-dessous préremplissent votre projet — une simulation n’est lancée qu’au clic « Générer ».
+            </span>
+            <span className="inline sm:hidden">
+              Indiquez votre budget et votre ville : l'assistant compose instantanément 3 formules adaptées à votre enveloppe.
+            </span>
           </p>
 
           <div className="inline-flex items-center p-1 rounded-2xl bg-surface border border-border shadow-xs mt-2">

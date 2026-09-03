@@ -37,9 +37,9 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
   },
   {
     id: 'editor',
-    label: 'Éditeur 2D/3D',
-    shortLabel: 'Éditeur',
-    href: '/#editeur',
+    label: 'Plans 2D/3D',
+    shortLabel: 'Plans 3D',
+    href: '/plans-3d',
     icon: LayoutGrid,
   },
   {
@@ -60,8 +60,8 @@ function isItemActive(itemHref: string, pathname: string, currentHash: string): 
   if (itemHref === '/') {
     return pathname === '/' && (!currentHash || currentHash === '#' || currentHash === '');
   }
-  if (itemHref === '/#editeur') {
-    return pathname === '/' && currentHash === '#editeur';
+  if (itemHref === '/plans-3d') {
+    return pathname === '/plans-3d' || pathname === '/editeur' || pathname.startsWith('/plans-3d/');
   }
   if (itemHref === '/marketplace') {
     return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
@@ -108,18 +108,6 @@ export default function SiteMobileBottomBar({
         }
       }
       return;
-    }
-
-    if (item.href === '/#editeur') {
-      if (pathname === '/') {
-        e.preventDefault();
-        const elem = document.getElementById('editeur');
-        if (elem) {
-          elem.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          window.history.replaceState(null, '', '/#editeur');
-          setCurrentHash('#editeur');
-        }
-      }
     }
   };
 
