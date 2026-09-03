@@ -16,6 +16,7 @@ import {
   seedGuestGuidelines,
 } from './seed/helpers';
 import { seedMarketplaceCatalog } from './seed/marketplaceCatalog';
+import { seedMarketplaceActivity } from './seed/marketplaceActivity';
 import { seedAccountsMatrix } from './seed/accountsMatrix';
 import { seedEventsVolume } from './seed/eventsVolume';
 import { seedRoomBlueprint } from './seed/roomBlueprints';
@@ -56,11 +57,20 @@ const prisma = new PrismaClient({ adapter });
 
 async function clearDatabase() {
   console.log('Nettoyage des données existantes...');
+  await prisma.notificationDelivery.deleteMany({});
   await prisma.platformNotification.deleteMany({});
+  await prisma.notificationPreference.deleteMany({});
   await prisma.pushDeviceToken.deleteMany({});
   await prisma.listingFavorite.deleteMany({});
   await prisma.savedEventPack.deleteMany({});
   await prisma.savedEventBrief.deleteMany({});
+  await prisma.savedRoomAmbience.deleteMany({});
+  await prisma.orgRoomAmbience.deleteMany({});
+  await prisma.aiSimulationRun.deleteMany({});
+  await prisma.aiTokenOrder.deleteMany({});
+  await prisma.aiSimulationWallet.deleteMany({});
+  await prisma.paymentTrace.deleteMany({});
+  await prisma.commercialPayoutTransfer.deleteMany({});
   await prisma.commercialCommission.deleteMany({});
   await prisma.platformInvoice.deleteMany({});
   await prisma.subscriptionRequest.deleteMany({});
@@ -78,6 +88,8 @@ async function clearDatabase() {
   await prisma.ticketOrder.deleteMany({});
   await prisma.event.deleteMany({});
   await prisma.adminAuditLog.deleteMany({});
+  await prisma.marketplaceComment.deleteMany({});
+  await prisma.marketplacePost.deleteMany({});
   await prisma.marketplaceBooking.deleteMany({});
   await prisma.marketplaceInquiry.deleteMany({});
   await prisma.serviceOffering.deleteMany({});
@@ -890,6 +902,8 @@ async function main() {
     existingEventCount: await prisma.event.count(),
   });
 
+  await seedMarketplaceActivity(prisma);
+
   // ─── Résumé ───────────────────────────────────────────────────────
   const counts = {
     users: await prisma.user.count(),
@@ -918,6 +932,8 @@ async function main() {
         category: { in: ['RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD', 'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT'] },
       },
     }),
+    marketplacePosts: await prisma.marketplacePost.count(),
+    marketplaceComments: await prisma.marketplaceComment.count(),
     ticketOrders: await prisma.ticketOrder.count({ where: { status: 'PAID' } }),
     publicEvents: await prisma.event.count({ where: { isPublic: true } }),
     eventsByZonePricing: await prisma.event.count({ where: { ticketPricingMode: 'by_zone' } }),
@@ -941,6 +957,7 @@ async function main() {
   console.log('  Salles L’shi    : salles.lshi1@eventmaster.cd … salles.lshi20@');
   console.log('  Métiers 1–10    : prestas1@eventmaster.cd … prestas10@  (savoir-faire, l’équipe se déplace)');
   console.log('  Locations 1–10  : locations1@eventmaster.cd … locations10@  (biens à louer, caution / restitution)');
+  console.log('  Publications    : /dashboard/publications · /marketplace/activite');
   console.log('  Protocoles      : protocole.salles.kin1@…5@ · protocole.prestas1@…5@ · protocole.locations1@…5@');
   console.log('  Commerciaux org : commercial.salles.kin1@…5@ · commercial.prestas1@…5@');
   console.log('  Forfaits / rôles :');
