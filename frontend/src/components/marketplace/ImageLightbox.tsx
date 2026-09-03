@@ -234,7 +234,7 @@ export default function ImageLightbox({
             <button
               type="button"
               onClick={handleNext}
-              className="absolute right-2 sm:-right-12 p-3 min-h-11 min-w-11 inline-flex items-center justify-center text-white rounded-full bg-black/60 hover:bg-black/90 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-white transition shadow-lg touch-manipulation z-20"
+              className="absolute right-2 sm:-right-12 p-3 min-h-11 min-w-11 inline-flex items-center justify-center text-white rounded-full bg-black/60 hover:bg-black/90 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition shadow-lg touch-manipulation z-20"
               aria-label="Photo suivante (Glisser vers la gauche)"
             >
               <ChevronRight className="w-6 h-6" aria-hidden />

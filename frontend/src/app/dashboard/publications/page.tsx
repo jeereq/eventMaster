@@ -586,7 +586,12 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
               placeholder="Décrivez votre actualité, une nouveauté, un nouveau décor ou une réalisation…"
               className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-3 text-base sm:text-sm resize-y min-h-[6.5rem] focus:outline-none focus:ring-2 focus:ring-primary/40"
               aria-label="Description de la publication"
+              aria-describedby="publication-desc-hint"
             />
+            <div className="flex justify-between items-center text-[11px] text-muted">
+              <span id="publication-desc-hint">Partagez vos nouveautés ou réalisations.</span>
+              <span className={cn(content.length > 3800 && 'text-amber-600 font-semibold')}>{content.length} / 4000</span>
+            </div>
           </div>
 
           {media.length > 0 && (
@@ -602,8 +607,8 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
                   <button
                     type="button"
                     onClick={() => setMedia((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white"
-                    aria-label="Retirer"
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+                    aria-label="Retirer ce média"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -619,6 +624,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
               accept="image/*,video/*"
               multiple
               className="hidden"
+              aria-label="Sélectionner des fichiers médias (images ou vidéos)"
               onChange={(e) => void onPickFiles(e.target.files)}
             />
             <button

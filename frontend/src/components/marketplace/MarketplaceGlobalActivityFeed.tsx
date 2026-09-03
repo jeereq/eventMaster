@@ -36,8 +36,10 @@ type GlobalFeedPost = MarketplaceFeedPost & {
 
 function formatRelativeDate(dateStr: string) {
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'Récemment';
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
+  if (diffMs < 0) return "À l'instant";
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
@@ -94,12 +96,14 @@ function PostCommentBox({
         <input
           type="text"
           value={draft}
+          maxLength={600}
+          disabled={busy}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void handleSend();
           }}
           placeholder="Envoyer un message ou commenter…"
-          className="w-full min-h-11 pl-4 pr-10 rounded-full border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition shadow-2xs"
+          className="w-full min-h-11 pl-4 pr-10 rounded-full border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed transition shadow-2xs"
           aria-label={`Commenter la publication de ${authorName || 'ce partenaire'}`}
         />
       </div>
@@ -297,13 +301,13 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                     type="button"
                     onClick={handlePrevSnap}
                     className="absolute left-0 inset-y-0 w-1/4 z-10 cursor-w-resize focus-visible:outline-none"
-                    aria-label="Snap précédent"
+                    aria-label="Snap précédent (cliquer ou glisser vers la droite)"
                   />
                   <button
                     type="button"
                     onClick={handleNextSnap}
                     className="absolute right-0 inset-y-0 w-1/4 z-10 cursor-e-resize focus-visible:outline-none"
-                    aria-label="Snap suivant"
+                    aria-label="Snap suivant (cliquer ou glisser vers la gauche)"
                   />
                 </>
               )}
@@ -322,6 +326,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 liked && 'border-rose-500/40 bg-black/60 shadow-rose-500/20',
               )}
               aria-pressed={liked}
+              aria-label={liked ? "Je n'aime plus cette publication" : `Aimer cette publication (${post.likeCount ?? likes.length} mentions j'aime)`}
               title="J'aime"
             >
               <Heart className={cn(
@@ -341,6 +346,9 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 commentsExpanded && 'border-primary/60 bg-black/70',
               )}
+              aria-expanded={commentsExpanded}
+              aria-controls={`post-comments-${post.id}`}
+              aria-label={commentsExpanded ? "Masquer les commentaires" : `Afficher les commentaires (${commentCount})`}
               title="Commentaires"
             >
               <MessageCircle className="w-5 h-5 text-white" />
@@ -357,6 +365,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 isCopied && 'border-emerald-400/60 bg-emerald-950/60 text-emerald-300',
               )}
+              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette publication ou copier le lien"}
               title="Partager"
             >
               {isCopied ? (
@@ -364,7 +373,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               ) : (
                 <Share2 className="w-5 h-5 text-white" />
               )}
-              <span className="text-[9px] font-bold drop-shadow-xs -mt-0.5">
+              <span className="text-[9px] font-bold drop-shadow-xs -mt-0.5" aria-live="polite">
                 {isCopied ? 'OK' : 'Partager'}
               </span>
             </button>
@@ -377,7 +386,8 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   const idx = images.indexOf(currentMedia.url);
                   onOpenLightbox(images, Math.max(0, idx));
                 }}
-                className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md"
+                className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white/90 hover:text-white hover:bg-black/60 hover:scale-105 active:scale-90 transition shadow-md touch-manipulation"
+                aria-label="Ouvrir la story en plein écran"
                 title="Ouvrir la story en plein écran"
               >
                 <Maximize2 className="w-4 h-4" />
@@ -464,6 +474,8 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold',
                   liked && 'bg-rose-500/80 text-white',
                 )}
+                aria-pressed={liked}
+                aria-label={liked ? "Je n'aime plus cette publication" : `Aimer cette publication (${post.likeCount ?? likes.length} mentions j'aime)`}
               >
                 <Heart className={cn('w-4 h-4', liked && 'fill-current')} />
                 <span>{post.likeCount ?? likes.length}</span>
@@ -472,6 +484,9 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 type="button"
                 onClick={() => setCommentsExpanded((prev) => !prev)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+                aria-expanded={commentsExpanded}
+                aria-controls={`post-comments-${post.id}`}
+                aria-label={commentsExpanded ? "Masquer les commentaires" : `Afficher les commentaires (${commentCount})`}
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>{commentCount}</span>
@@ -481,6 +496,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               type="button"
               onClick={() => onShare(post.id)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
+              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette publication ou copier le lien"}
             >
               {isCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
               <span>{isCopied ? 'Copié !' : 'Partager'}</span>
@@ -491,7 +507,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
 
       {/* ─── Section Commentaires (dépliable sous la carte) ─── */}
       {commentsExpanded && (
-        <div className="px-3 pb-3 pt-2 space-y-3 animate-fade-in border-t border-border/50">
+        <div id={`post-comments-${post.id}`} className="px-3 pb-3 pt-2 space-y-3 animate-fade-in border-t border-border/50" aria-live="polite">
           {commentCount > 0 && (
             <div className="space-y-2">
               <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
@@ -501,10 +517,10 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                     className="text-xs rounded-2xl border border-border/80 bg-surface-muted/50 p-3 space-y-1 hover:border-border transition"
                   >
                     <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold text-foreground">{c.authorName}</span>
+                      <span className="font-bold text-foreground break-words">{c.authorName}</span>
                       <span className="text-[11px] text-muted shrink-0">{formatRelativeDate(c.createdAt)}</span>
                     </div>
-                    <p className="text-foreground/90 whitespace-pre-line leading-relaxed">{c.content}</p>
+                    <p className="text-foreground/90 whitespace-pre-line leading-relaxed break-words">{c.content}</p>
                   </li>
                 ))}
               </ul>
@@ -789,6 +805,8 @@ export default function MarketplaceGlobalActivityFeed({
                   }
                 }}
                 className="shrink-0 flex flex-col items-center gap-1.5 group/story focus-visible:outline-none"
+                aria-pressed={isSelected}
+                aria-label={`Filtrer par les stories de ${author.name}`}
                 title={`Filtrer les stories de ${author.name}`}
               >
                 <div className={cn(
@@ -902,7 +920,7 @@ export default function MarketplaceGlobalActivityFeed({
                   setQ('');
                   setSearch('');
                 }}
-                className="absolute right-12 min-h-8 min-w-8 p-1.5 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="absolute right-12 min-h-9 min-w-9 p-1.5 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 title="Effacer la recherche"
                 aria-label="Effacer la recherche"
               >
@@ -911,7 +929,8 @@ export default function MarketplaceGlobalActivityFeed({
             )}
             <button
               type="submit"
-              className="absolute right-1.5 min-h-8 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="absolute right-1.5 min-h-9 px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              aria-label="Lancer la recherche"
             >
               Go
             </button>
@@ -920,8 +939,18 @@ export default function MarketplaceGlobalActivityFeed({
       </div>
 
       {error ? (
-        <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-medium" role="alert">
-          {error}
+        <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-medium flex items-center justify-between gap-3" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setError('');
+              setSearch((prev) => (prev ? `${prev} ` : ''));
+            }}
+            className="shrink-0 px-3 py-1 rounded-lg bg-rose-500 text-white text-xs font-semibold hover:bg-rose-600 transition"
+          >
+            Réessayer
+          </button>
         </div>
       ) : null}
 
