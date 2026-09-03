@@ -100,13 +100,15 @@ export function CatalogueFocusStage({
   );
 }
 
+const emptySubscribe = () => () => {};
+
 /** Plein écran dans le dashboard : sidebar, header mobile et bottom bar restent visibles. */
 export function CatalogueImmersiveStage({ children }: { children: React.ReactNode }) {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setTarget(document.getElementById('em-dashboard-stage') || document.body);
-  }, []);
+  const isClient = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     const main = document.getElementById('main-content');
@@ -118,7 +120,8 @@ export function CatalogueImmersiveStage({ children }: { children: React.ReactNod
     };
   }, []);
 
-  if (!target) return null;
+  if (!isClient) return null;
+  const target = document.getElementById('em-dashboard-stage') || document.body;
 
   return createPortal(
     <div

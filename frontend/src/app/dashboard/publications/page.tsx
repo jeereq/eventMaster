@@ -14,7 +14,7 @@ import {
 import MarketplaceGlobalActivityFeed from '@/components/marketplace/MarketplaceGlobalActivityFeed';
 import {
   Building2, Heart, Loader2, MessageCircle, Plus, Rss, Send, Sparkles,
-  Trash2, X, Image as ImageIcon,
+  Trash2, X, Image as ImageIcon, ArrowRight,
 } from 'lucide-react';
 
 type DeskTab = 'grid' | 'create';
@@ -141,6 +141,7 @@ function PublicationsGrid() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [selected, setSelected] = useState<MyPost | null>(null);
   const [kind, setKind] = useState<'all' | 'venue' | 'vendor'>('all');
+  const [displayMode, setDisplayMode] = useState<'tiles' | 'feed'>('tiles');
 
   const load = useCallback(async (cursor?: string | null) => {
     if (!cursor) setLoading(true);
@@ -173,45 +174,75 @@ function PublicationsGrid() {
   );
 
   return (
-    <div className="space-y-4">
-      <div className="inline-flex gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted">
-        {(
-          [
-            ['all', 'Tout'],
-            ['venue', 'Salles'],
-            ['vendor', 'Prestations'],
-          ] as const
-        ).map(([id, label]) => (
+    <div className="space-y-6">
+      {/* Barre d'outils de filtrage & mode d'affichage */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-surface border border-border/80 shadow-2xs">
+        {/* Filtre par type */}
+        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60">
+          {(
+            [
+              ['all', 'Tout'],
+              ['venue', 'Salles'],
+              ['vendor', 'Prestations'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setKind(id)}
+              className={cn(
+                'min-h-9 px-3.5 rounded-lg text-xs font-semibold transition',
+                kind === id ? 'bg-surface text-primary shadow-xs font-bold' : 'text-muted hover:text-foreground',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Toggle Mode Grille / Fil */}
+        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60">
           <button
-            key={id}
             type="button"
-            onClick={() => setKind(id)}
+            onClick={() => setDisplayMode('tiles')}
             className={cn(
-              'min-h-11 px-3.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
-              kind === id ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+              'min-h-9 px-3 rounded-lg text-xs font-semibold transition',
+              displayMode === 'tiles' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
             )}
           >
-            {label}
+            Grille photos
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setDisplayMode('feed')}
+            className={cn(
+              'min-h-9 px-3 rounded-lg text-xs font-semibold transition',
+              displayMode === 'feed' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
+            )}
+          >
+            Fil détaillé
+          </button>
+        </div>
       </div>
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="aspect-square rounded-lg bg-surface-muted animate-pulse" />
+      {displayMode === 'feed' ? (
+        <MarketplaceGlobalActivityFeed linkBase="dashboard" compactLoginHint={Boolean(user)} />
+      ) : loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="aspect-square rounded-2xl bg-surface-muted animate-pulse" />
           ))}
         </div>
       ) : tiles.length === 0 ? (
         <EmptyState
           icon={<Rss className="w-5 h-5" />}
           title="Aucune publication"
-          description="Dès que des salles ou prestations partagent une actualité, elle apparaîtra ici en grille."
+          description="Dès que des salles ou prestations partagent une actualité, elle apparaîtra ici."
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {tiles.map((post) => {
             const media = post.mediaUrls?.[0];
             const video = media && (media.type === 'VIDEO' || isVideoUrl(media.url));
@@ -220,25 +251,26 @@ function PublicationsGrid() {
                 key={post.id}
                 type="button"
                 onClick={() => setSelected(post)}
-                className="group relative aspect-square overflow-hidden rounded-lg bg-surface-muted border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="group relative aspect-square overflow-hidden rounded-2xl bg-surface-muted border border-border/80 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:shadow-md transition-all duration-200 text-left"
               >
                 {media ? (
                   video ? (
                     <video src={media.url} muted className="h-full w-full object-cover" />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={media.url} alt="" className="h-full w-full object-cover transition group-hover:scale-105" />
+                    <img src={media.url} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                   )
                 ) : (
-                  <div className="h-full w-full p-3 flex items-end bg-gradient-to-br from-primary/15 to-surface-muted">
-                    <p className="text-xs text-foreground line-clamp-4 text-left">{post.content}</p>
+                  <div className="h-full w-full p-4 flex flex-col justify-between bg-gradient-to-br from-primary/10 via-surface to-surface-muted">
+                    <p className="text-xs font-semibold text-primary">{post.author?.name || 'Publication'}</p>
+                    <p className="text-xs text-foreground line-clamp-4">{post.content}</p>
                   </div>
                 )}
-                <span className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 text-white text-xs font-semibold">
-                  <span className="inline-flex items-center gap-1">
+                <span className="absolute inset-0 bg-black/40 backdrop-blur-2xs transition opacity-0 group-hover:opacity-100 flex items-center justify-center gap-4 text-white text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5">
                     <Heart className="w-4 h-4 fill-white" /> {post.likeCount ?? post.likes?.length ?? 0}
                   </span>
-                  <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1.5">
                     <MessageCircle className="w-4 h-4" /> {post.comments?.length ?? 0}
                   </span>
                 </span>
@@ -248,25 +280,15 @@ function PublicationsGrid() {
         </div>
       )}
 
-      {nextCursor ? (
+      {displayMode === 'tiles' && nextCursor ? (
         <button
           type="button"
           onClick={() => void load(nextCursor)}
-          className="w-full min-h-11 rounded-xl border border-border text-sm font-semibold text-muted hover:text-foreground hover:bg-surface-muted"
+          className="w-full min-h-11 rounded-2xl border border-border/80 bg-surface text-xs sm:text-sm font-semibold text-foreground hover:bg-surface-muted transition shadow-2xs"
         >
-          Voir plus
+          Voir plus de publications
         </button>
       ) : null}
-
-      {/* Liste détaillée sous la grille pour interactions complètes */}
-      <details className="rounded-xl border border-border bg-surface">
-        <summary className="cursor-pointer min-h-11 px-4 py-3 text-sm font-semibold text-foreground">
-          Fil détaillé (likes & commentaires)
-        </summary>
-        <div className="px-4 pb-4">
-          <MarketplaceGlobalActivityFeed linkBase="dashboard" compactLoginHint={Boolean(user)} />
-        </div>
-      </details>
 
       {selected ? (
         <PostDetailModal post={selected} onClose={() => setSelected(null)} />
@@ -291,51 +313,63 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xs flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Publication"
+      aria-label="Détail de la publication"
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-auto border border-border"
+        className="bg-surface rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-auto border border-border shadow-2xl space-y-4 p-5 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 p-4 border-b border-border">
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{post.author?.name || 'Publication'}</p>
-            <p className="text-[11px] text-muted">
-              {post.author?.kind === 'venue' ? 'Salle' : 'Prestation'}
+            <h3 className="text-sm sm:text-base font-bold text-foreground truncate">{post.author?.name || 'Publication'}</h3>
+            <p className="text-xs text-muted">
+              {post.author?.kind === 'venue' ? 'Salle & Espace' : 'Prestataire certifié'}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg text-muted hover:bg-surface-muted" aria-label="Fermer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition"
+            aria-label="Fermer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
+
         {media[0] ? (
-          <div className="bg-black aspect-square sm:aspect-video max-h-[50vh]">
+          <div className="rounded-2xl overflow-hidden border border-border/60 bg-black aspect-16/10 max-h-[420px]">
             {media[0].type === 'VIDEO' || isVideoUrl(media[0].url) ? (
-              <video src={media[0].url} controls className="w-full h-full object-contain" />
+              <video src={media[0].url} controls className="w-full h-full object-cover" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={media[0].url} alt="" className="w-full h-full object-contain" />
+              <img src={media[0].url} alt="" className="w-full h-full object-cover" />
             )}
           </div>
         ) : null}
-        <div className="p-4 space-y-3">
+
+        <div className="space-y-4">
           {post.content ? (
-            <p className="text-sm text-foreground whitespace-pre-line">{post.content}</p>
+            <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed font-normal">{post.content}</p>
           ) : null}
-          <div className="flex items-center gap-4 text-xs text-muted">
-            <span className="inline-flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5" /> {post.likeCount ?? post.likes?.length ?? 0}
+
+          <div className="flex items-center gap-4 text-xs text-muted pt-2 border-t border-border/60">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-rose-600 dark:text-rose-400">
+              <Heart className="w-4 h-4 fill-current" /> {post.likeCount ?? post.likes?.length ?? 0}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <MessageCircle className="w-3.5 h-3.5" /> {post.comments?.length ?? 0}
+            <span className="inline-flex items-center gap-1.5 font-semibold">
+              <MessageCircle className="w-4 h-4" /> {post.comments?.length ?? 0}
             </span>
             {href ? (
-              <Link href={href} className="ml-auto font-semibold text-primary hover:underline">
-                Voir la fiche
+              <Link
+                href={href}
+                className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:opacity-95 transition"
+              >
+                <span>Voir la fiche</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             ) : null}
           </div>
