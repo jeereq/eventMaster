@@ -42,6 +42,7 @@ function serializePost(post: {
   createdAt: Date;
   venueListingId: string | null;
   vendorProfileId: string | null;
+  serviceOfferingId?: string | null;
   comments?: Array<{
     id: string;
     authorName: string;
@@ -61,6 +62,7 @@ function serializePost(post: {
     createdAt: post.createdAt,
     venueListingId: post.venueListingId,
     vendorProfileId: post.vendorProfileId,
+    serviceOfferingId: post.serviceOfferingId ?? null,
     comments: (post.comments || []).map((c) => ({
       id: c.id,
       authorName: c.authorName,
@@ -112,6 +114,17 @@ const publicFeedInclude = {
       },
     },
   },
+  serviceOffering: {
+    select: {
+      slug: true,
+      title: true,
+      city: true,
+      photos: true,
+      category: true,
+      isPublic: true,
+      isBlockedByAdmin: true,
+    },
+  },
 };
 
 function coverFromPhotos(photos: unknown): string | null {
@@ -144,6 +157,7 @@ function serializePublicFeedPost(post: {
   createdAt: Date;
   venueListingId: string | null;
   vendorProfileId: string | null;
+  serviceOfferingId?: string | null;
   comments?: Array<{
     id: string;
     authorName: string;
@@ -167,6 +181,15 @@ function serializePublicFeedPost(post: {
     isBlockedByAdmin: boolean;
     offerings: Array<{ slug: string; photos: unknown; title: string }>;
   } | null;
+  serviceOffering?: {
+    slug: string;
+    title: string;
+    city: string | null;
+    photos: unknown;
+    category: string;
+    isPublic: boolean;
+    isBlockedByAdmin: boolean;
+  } | null;
 }) {
   const base = serializePost(post);
   if (post.venueListingId && post.venueListing) {
@@ -180,6 +203,23 @@ function serializePublicFeedPost(post: {
         city: listing.city,
         coverUrl: coverFromPhotos(listing.photos),
         href: `/marketplace/salles/${listing.slug}`,
+      },
+    };
+  }
+  if (post.serviceOfferingId && post.serviceOffering) {
+    const offering = post.serviceOffering;
+    const isRental = String(offering.category || '').startsWith('RENTAL_');
+    return {
+      ...base,
+      author: {
+        kind: 'service' as const,
+        name: offering.title,
+        slug: offering.slug,
+        city: offering.city,
+        coverUrl: coverFromPhotos(offering.photos),
+        href: isRental
+          ? `/marketplace/locations/${offering.slug}`
+          : `/marketplace/prestataires/${offering.slug}`,
       },
     };
   }
@@ -217,6 +257,10 @@ export async function getPublicMarketplaceFeed(req: Request, res: Response) {
           venueListing: { isPublic: true, isBlockedByAdmin: false },
         },
         {
+          serviceOfferingId: { not: null },
+          serviceOffering: { isPublic: true, isBlockedByAdmin: false },
+        },
+        {
           vendorProfileId: { not: null },
           vendorProfile: { isBlockedByAdmin: false },
         },
@@ -233,6 +277,10 @@ export async function getPublicMarketplaceFeed(req: Request, res: Response) {
     } else if (kind === 'vendor') {
       where.OR = [
         {
+          serviceOfferingId: { not: null },
+          serviceOffering: { isPublic: true, isBlockedByAdmin: false },
+        },
+        {
           vendorProfileId: { not: null },
           vendorProfile: { isBlockedByAdmin: false },
         },
@@ -246,6 +294,7 @@ export async function getPublicMarketplaceFeed(req: Request, res: Response) {
             { content: { contains: q, mode: 'insensitive' } },
             { venueListing: { headline: { contains: q, mode: 'insensitive' } } },
             { venueListing: { room: { name: { contains: q, mode: 'insensitive' } } } },
+            { serviceOffering: { title: { contains: q, mode: 'insensitive' } } },
             { vendorProfile: { displayName: { contains: q, mode: 'insensitive' } } },
           ],
         },
@@ -498,12 +547,18 @@ export async function toggleMarketplaceFeedLike(req: AuthenticatedRequest, res: 
       include: {
         venueListing: { select: { isPublic: true, isBlockedByAdmin: true } },
         vendorProfile: { select: { isBlockedByAdmin: true } },
+        serviceOffering: { select: { isPublic: true, isBlockedByAdmin: true } },
       },
     });
     if (!post) return res.status(404).json({ error: 'Publication introuvable.' });
 
     if (post.venueListingId) {
       if (!post.venueListing?.isPublic || post.venueListing.isBlockedByAdmin) {
+        return res.status(404).json({ error: 'Publication introuvable.' });
+      }
+    }
+    if (post.serviceOfferingId) {
+      if (!post.serviceOffering?.isPublic || post.serviceOffering.isBlockedByAdmin) {
         return res.status(404).json({ error: 'Publication introuvable.' });
       }
     }
@@ -541,11 +596,17 @@ export async function createMarketplaceFeedComment(req: AuthenticatedRequest, re
       include: {
         venueListing: { select: { isPublic: true, isBlockedByAdmin: true } },
         vendorProfile: { select: { isBlockedByAdmin: true } },
+        serviceOffering: { select: { isPublic: true, isBlockedByAdmin: true } },
       },
     });
     if (!post) return res.status(404).json({ error: 'Publication introuvable.' });
     if (post.venueListingId) {
       if (!post.venueListing?.isPublic || post.venueListing.isBlockedByAdmin) {
+        return res.status(404).json({ error: 'Publication introuvable.' });
+      }
+    }
+    if (post.serviceOfferingId) {
+      if (!post.serviceOffering?.isPublic || post.serviceOffering.isBlockedByAdmin) {
         return res.status(404).json({ error: 'Publication introuvable.' });
       }
     }
@@ -581,10 +642,179 @@ export async function createMarketplaceFeedComment(req: AuthenticatedRequest, re
   }
 }
 
+/** Cibles disponibles pour créer une publication (salles + prestations du tenant). */
+export async function listFeedTargets(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Tenant non identifié.' });
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageRooms) return res.status(403).json({ error: 'Accès refusé.' });
+
+    const [venues, services] = await Promise.all([
+      prisma.venueListing.findMany({
+        where: { tenantId, isBlockedByAdmin: false },
+        select: {
+          id: true,
+          slug: true,
+          headline: true,
+          isPublic: true,
+          photos: true,
+          city: true,
+          room: { select: { name: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      prisma.serviceOffering.findMany({
+        where: { tenantId, isBlockedByAdmin: false },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          category: true,
+          isPublic: true,
+          photos: true,
+          city: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+    ]);
+
+    return res.json({
+      venues: venues.map((v) => ({
+        id: v.id,
+        kind: 'venue' as const,
+        label: v.headline || v.room.name,
+        slug: v.slug,
+        city: v.city,
+        isPublic: v.isPublic,
+        coverUrl: coverFromPhotos(v.photos),
+      })),
+      services: services.map((s) => ({
+        id: s.id,
+        kind: 'service' as const,
+        label: s.title,
+        slug: s.slug,
+        city: s.city,
+        isPublic: s.isPublic,
+        category: s.category,
+        coverUrl: coverFromPhotos(s.photos),
+      })),
+    });
+  } catch (error) {
+    console.error('listFeedTargets:', error);
+    return res.status(500).json({ error: 'Impossible de charger les cibles.' });
+  }
+}
+
+/** Création unifiée liée à une salle ou une prestation. */
+export async function createLinkedFeedPost(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Tenant non identifié.' });
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageRooms) return res.status(403).json({ error: 'Accès refusé.' });
+
+    const targetKind = String(req.body?.targetKind || '').trim();
+    const targetId = String(req.body?.targetId || '').trim();
+    const content = String(req.body?.content || '').trim().slice(0, MAX_CONTENT);
+    const mediaUrls = normalizeMediaUrls(req.body?.mediaUrls);
+
+    if (!content && mediaUrls.length === 0) {
+      return res.status(400).json({ error: 'Ajoutez un texte ou au moins un média.' });
+    }
+    if (!targetId || (targetKind !== 'venue' && targetKind !== 'service')) {
+      return res.status(400).json({ error: 'Choisissez une salle ou une prestation.' });
+    }
+
+    if (targetKind === 'venue') {
+      const listing = await prisma.venueListing.findFirst({
+        where: { id: targetId, tenantId },
+      });
+      if (!listing) return res.status(404).json({ error: 'Salle introuvable.' });
+      if (listing.isBlockedByAdmin) {
+        return res.status(403).json({ error: 'Cette fiche est bloquée par l’administration.' });
+      }
+      if (!listing.isPublic) {
+        return res.status(400).json({
+          error: 'Publiez d’abord la fiche salle sur le marketplace.',
+        });
+      }
+      const post = await prisma.marketplacePost.create({
+        data: {
+          tenantId,
+          venueListingId: listing.id,
+          content: content || null,
+          mediaUrls: mediaUrls.length ? mediaUrls : undefined,
+          likes: [],
+          isPublished: true,
+        },
+        include: publicFeedInclude,
+      });
+      return res.status(201).json(serializePublicFeedPost(post));
+    }
+
+    const offering = await prisma.serviceOffering.findFirst({
+      where: { id: targetId, tenantId },
+    });
+    if (!offering) return res.status(404).json({ error: 'Prestation introuvable.' });
+    if (offering.isBlockedByAdmin) {
+      return res.status(403).json({ error: 'Cette fiche est bloquée par l’administration.' });
+    }
+    if (!offering.isPublic) {
+      return res.status(400).json({
+        error: 'Publiez d’abord la fiche prestation sur le marketplace.',
+      });
+    }
+    const post = await prisma.marketplacePost.create({
+      data: {
+        tenantId,
+        serviceOfferingId: offering.id,
+        vendorProfileId: offering.vendorProfileId,
+        content: content || null,
+        mediaUrls: mediaUrls.length ? mediaUrls : undefined,
+        likes: [],
+        isPublished: true,
+      },
+      include: publicFeedInclude,
+    });
+    return res.status(201).json(serializePublicFeedPost(post));
+  } catch (error) {
+    console.error('createLinkedFeedPost:', error);
+    return res.status(500).json({ error: 'Impossible de publier.' });
+  }
+}
+
+export async function listMyFeedPosts(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Tenant non identifié.' });
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageRooms) return res.status(403).json({ error: 'Accès refusé.' });
+
+    const posts = await prisma.marketplacePost.findMany({
+      where: { tenantId },
+      include: publicFeedInclude,
+      orderBy: { createdAt: 'desc' },
+      take: 60,
+    });
+    return res.json(posts.map(serializePublicFeedPost));
+  } catch (error) {
+    console.error('listMyFeedPosts:', error);
+    return res.status(500).json({ error: 'Impossible de charger vos publications.' });
+  }
+}
+
 /** Aperçu pour enrichir getPublicVenue / getPublicVendor. */
 export async function fetchActivityPreview(where: {
   venueListingId?: string;
   vendorProfileId?: string;
+  serviceOfferingId?: string;
 }) {
   const posts = await prisma.marketplacePost.findMany({
     where: { ...where, isPublished: true },

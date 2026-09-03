@@ -40,6 +40,9 @@ import {
   deleteMarketplaceFeedPost,
   toggleMarketplaceFeedLike,
   createMarketplaceFeedComment,
+  listFeedTargets,
+  createLinkedFeedPost,
+  listMyFeedPosts,
 } from '../controllers/marketplaceFeedController';
 
 const router = Router();
@@ -79,6 +82,9 @@ router.get('/venues/:listingId/feed', listVenueFeedOwner);
 router.post('/venues/:listingId/feed', createVenueFeedPost);
 router.get('/vendors/me/feed', listVendorFeedOwner);
 router.post('/vendors/me/feed', createVendorFeedPost);
+router.get('/feed/targets', listFeedTargets);
+router.get('/feed/mine', listMyFeedPosts);
+router.post('/feed', createLinkedFeedPost);
 router.delete('/feed/:postId', deleteMarketplaceFeedPost);
 router.post('/feed/:postId/like', toggleMarketplaceFeedLike);
 router.post('/feed/:postId/comments', createMarketplaceFeedComment);

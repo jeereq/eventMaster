@@ -50,7 +50,6 @@ import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { MarketplaceActivityFeedManager } from '@/components/marketplace/MarketplaceActivityFeed';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import { getQuotaLockMessage, getQuotaActionMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
@@ -1785,17 +1784,19 @@ export default function RoomsManagement() {
                 onChange={(photos) => setListingDraft((d) => ({ ...d, photos }))}
               />
             )}
-            {listingTab === 'activity' && listingRoom.venueListing?.id ? (
-              <MarketplaceActivityFeedManager
-                scope={{ kind: 'venue', listingId: listingRoom.venueListing.id }}
-                authorLabel={listingDraft.headline || listingRoom.name}
-              />
-            ) : null}
-            {listingTab === 'activity' && !listingRoom.venueListing?.id ? (
-              <p className="text-sm text-muted py-6 text-center">
-                Enregistrez d’abord la fiche publique pour publier des activités.
-              </p>
-            ) : null}
+            {listingTab === 'activity' && (
+              <div className="text-center py-8 space-y-3">
+                <p className="text-sm text-muted">
+                  Les publications liées à cette salle se gèrent dans l’espace Publications.
+                </p>
+                <Link
+                  href="/dashboard/publications?tab=create"
+                  className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover"
+                >
+                  Ouvrir Publications
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </Modal>

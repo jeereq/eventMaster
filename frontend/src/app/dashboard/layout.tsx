@@ -11,7 +11,7 @@ import {
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
- Inbox, Sparkles, Bookmark, Heart,
+ Inbox, Sparkles, Bookmark, Heart, Rss,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -255,6 +255,7 @@ function buildDashboardNav(opts: {
    ]),
    navSection('Mes activités', [
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
+    { name: 'Publications', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Fil d’actualité des salles et prestations' },
     { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
     { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
     { name: 'Mes favoris', href: '/dashboard/catalogue?tab=favorites', tourId: 'nav-favorites', icon: Heart, description: 'Salles et prestataires mis de côté' },
@@ -283,6 +284,7 @@ function buildDashboardNav(opts: {
    ? [
       { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, matériel & équipements (comme le client)' },
       { name: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
+      { name: 'Publications', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Grille d’actualité et création de posts liés aux salles / prestations' },
      ]
    : []),
   ...(workspace.showEvents || workspace.showBrowseCatalogue
@@ -521,7 +523,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
  if (loading || !token || !user || !isClientAccount) return;
- const allowed = ['/dashboard', '/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue', '/dashboard/tickets'].some(
+ const allowed = ['/dashboard', '/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue', '/dashboard/tickets', '/dashboard/publications'].some(
  (p) => pathname === p || (p !== '/dashboard' && pathname.startsWith(`${p}/`)),
  );
  if (pathname.startsWith('/dashboard') && !allowed) {
