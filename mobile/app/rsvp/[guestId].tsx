@@ -155,17 +155,18 @@ export default function RsvpGuestScreen() {
             <View style={styles.pdfCard}>
               <Text style={styles.pdfTitle}>Plan de table & PDF</Text>
               <Text style={styles.pdfText}>
-                Votre présence est confirmée. Le plan de table, l&apos;invitation PDF et la
-                localisation GPS vous seront envoyés dès qu&apos;un siège vous sera assigné (selon
-                forfait).
+                Votre présence est confirmée. Le plan de table et l&apos;invitation PDF
+                suivent dès qu&apos;un siège vous sera assigné. L&apos;itinéraire est déjà
+                dans votre espace invité.
               </Text>
             </View>
           ) : guest.rsvp === 'PENDING' ? (
             <View style={styles.pdfCard}>
               <Text style={styles.pdfTitle}>Après votre réponse</Text>
               <Text style={styles.pdfText}>
-                Une fois votre présence confirmée, vous recevrez un badge QR. Le placement détaillé
-                (PDF, plan, GPS) partira aussi à ce moment, selon le forfait de l&apos;organisateur.
+                Une fois votre présence confirmée, vous recevrez un badge QR et l&apos;itinéraire
+                dans votre espace invité. Le plan de table et le PDF suivent dès qu&apos;une place
+                vous est assignée.
               </Text>
             </View>
           ) : null}

@@ -12,6 +12,7 @@ import {
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
+import { rewriteStaleGuestMessageCopy } from '../utils/guestMessageCopy';
 import { processTaskDueReminders } from './taskDueReminderService';
 import fs from 'fs';
 import path from 'path';
@@ -193,9 +194,11 @@ export async function processReminders() {
           ),
           event.guestGuidelines,
         );
-        let reminderWa = (await renderGuestMessage('REMINDER_WHATSAPP', templateVars)).body;
+        let reminderWa = rewriteStaleGuestMessageCopy(
+          (await renderGuestMessage('REMINDER_WHATSAPP', templateVars)).body,
+        );
         if (waCustom.trim()) {
-          reminderWa = `${reminderWa}\n\n---\n\n${waCustom}`;
+          reminderWa = `${reminderWa}\n\n---\n\n${rewriteStaleGuestMessageCopy(waCustom)}`;
         }
         const alreadyGreets = messageAlreadyGreets(emailCustom || reminderWa);
         const whatsappPayload = wrapBrandedWhatsApp(reminderWa, orgBrand.orgName, {
@@ -207,7 +210,7 @@ export async function processReminders() {
 
         for (const chan of channelsToSend) {
           if (chan === 'EMAIL') {
-            const emailSource = emailCustom.trim() || reminderWa;
+            const emailSource = rewriteStaleGuestMessageCopy(emailCustom.trim() || reminderWa);
             const plainBody = escapeHtml(emailSource.replace(rsvpLink, '')).replace(/\n/g, '<br />');
             const htmlBody = wrapBrandedEmail({
               branding: orgBrand.branding,

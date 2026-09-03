@@ -13,6 +13,12 @@ export function applyTemplateVariables(text: string, vars: Record<string, string
 }
 
 export async function ensureDefaultGuestMessageTemplates(): Promise<void> {
+  const syncBodies = new Set([
+    'INVITATION_WHATSAPP',
+    'REMINDER_WHATSAPP',
+    'RSVP_CONFIRMATION_WHATSAPP',
+  ]);
+
   for (const template of DEFAULT_GUEST_MESSAGE_TEMPLATES) {
     await prisma.guestMessageTemplate.upsert({
       where: { type: template.type },
@@ -25,7 +31,16 @@ export async function ensureDefaultGuestMessageTemplates(): Promise<void> {
         body: template.body,
         isActive: true,
       },
-      update: {},
+      update: syncBodies.has(template.type)
+        ? {
+            name: template.name,
+            description: template.description,
+            channel: template.channel,
+            subject: template.subject || null,
+            body: template.body,
+            isActive: true,
+          }
+        : {},
     });
   }
 }

@@ -741,7 +741,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'confirm-rsvp',
         title: 'Confirmer votre présence',
         content:
-          '1. Ouvrez le lien reçu (invitation ou billet).\n2. Acceptez les conditions si demandé — le thème de l’organisateur s’applique ensuite.\n3. Consultez l’invitation : date, lieu, tenue, notes pratiques.\n4. Choisissez Accepter ou Décliner et remplissez les champs demandés (menu, accompagnant…).\n5. Après un « oui », le badge QR, le plan et l’itinéraire deviennent disponibles.',
+          '1. Ouvrez le lien reçu (invitation ou billet).\n2. Acceptez les conditions si demandé — le thème de l’organisateur s’applique ensuite.\n3. Consultez l’invitation : date, lieu, tenue, notes pratiques.\n4. Choisissez Accepter ou Décliner et remplissez les champs demandés (menu, accompagnant…).\n5. Après un « oui », le badge QR et l’itinéraire sont disponibles. Le plan de table et le PDF suivent dès qu’une place vous est assignée.',
       },
       {
         id: 'all-invites',
@@ -753,7 +753,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'view-seating',
         title: 'Badge, placement et itinéraire',
         content:
-          '1. Onglet Badge : QR à présenter à l’accueil (plein écran possible) et lien Imprimer l’invitation.\n2. Onglet Ma table : votre table, vos voisins et le plan de salle dès que l’organisateur vous a assis ; PDF téléchargeable.\n3. Onglet Itinéraire : carte et consignes d’accès si l’organisateur a renseigné le lieu.\n4. Un PDF peut aussi partir par e-mail ou WhatsApp selon le forfait.',
+          '1. Onglet Badge : QR à présenter à l’accueil (plein écran possible) et lien Imprimer l’invitation.\n2. Onglet Ma table : votre table, vos voisins et le plan de salle dès que l’organisateur vous a assis ; PDF téléchargeable.\n3. Onglet Itinéraire : carte et consignes d’accès si l’organisateur a renseigné le lieu.\n4. Un PDF peut aussi partir par e-mail ou WhatsApp une fois la place assignée.',
       },
       {
         id: 'event-feed',

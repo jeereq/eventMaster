@@ -99,6 +99,13 @@ async function bootstrap() {
     );
   }
 
+  try {
+    const { ensureDefaultGuestMessageTemplates } = await import('./services/messageTemplateService');
+    await ensureDefaultGuestMessageTemplates();
+  } catch (error) {
+    console.warn('[EventMaster Server] Impossible de synchroniser les modèles de messages invités.', error);
+  }
+
   app.listen(PORT, () => {
     console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
 

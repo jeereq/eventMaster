@@ -16,6 +16,7 @@ import {
 import { escapeHtml } from '../utils/brandingUtils';
 import { extractGuestEmail } from '../utils/guestIdentity';
 import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
+import { GUEST_COPY, rewriteStaleGuestMessageCopy } from '../utils/guestMessageCopy';
 
 function applyInvitePlaceholders(
   text: string,
@@ -164,6 +165,19 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
       return res.status(404).json({ error: 'Invitation non trouvée' });
     }
 
+    const syncedBody = rewriteStaleGuestMessageCopy(invitation.body || '');
+    const syncedWhatsapp = invitation.whatsappBody
+      ? rewriteStaleGuestMessageCopy(invitation.whatsappBody)
+      : invitation.whatsappBody;
+    if (syncedBody !== invitation.body || syncedWhatsapp !== invitation.whatsappBody) {
+      await prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { body: syncedBody, whatsappBody: syncedWhatsapp },
+      });
+      invitation.body = syncedBody;
+      invitation.whatsappBody = syncedWhatsapp;
+    }
+
     // Retrieve guests for this event (either specific ones or all)
     let guests;
     if (guestIds && Array.isArray(guestIds) && guestIds.length > 0) {
@@ -214,11 +228,16 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
       let subject = applyInvitePlaceholders(invitation.subject || '', vars);
       let body = applyInvitePlaceholders(invitation.body || '', vars);
       subject = applyInvitationGuidelineVariables(subject, event.guestGuidelines);
-      body = withOrgSignoff(applyInvitationGuidelineVariables(body, event.guestGuidelines), orgBrand.orgName);
+      body = withOrgSignoff(
+        rewriteStaleGuestMessageCopy(applyInvitationGuidelineVariables(body, event.guestGuidelines)),
+        orgBrand.orgName,
+      );
 
       const waSource = resolveWhatsAppInvitationBody(invitation.body || '', invitation.whatsappBody);
       let whatsappText = applyInvitePlaceholders(waSource, vars);
-      whatsappText = applyInvitationGuidelineVariables(whatsappText, event.guestGuidelines);
+      whatsappText = rewriteStaleGuestMessageCopy(
+        applyInvitationGuidelineVariables(whatsappText, event.guestGuidelines),
+      );
 
       const guidelinesText = guestGuidelinesInvitationText(event.guestGuidelines);
       const brandedWhatsApp = wrapBrandedWhatsApp(whatsappText, orgBrand.orgName, {
@@ -269,7 +288,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
               }
             `,
             cta: { href: rsvpLink, label: 'Confirmer ma présence (RSVP)' },
-            footerNote: 'Merci de répondre avant la date de l’événement. Dès confirmation, votre plan de table, invitation PDF et localisation GPS vous sont envoyés si votre place est déjà assignée.',
+            footerNote: GUEST_COPY.inviteEmailFooter,
           });
           sendResult = await sendRealEmail(
             destEmail,

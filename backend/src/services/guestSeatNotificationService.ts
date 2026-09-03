@@ -16,6 +16,7 @@ import {
   wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
+import { GUEST_COPY } from '../utils/guestMessageCopy';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -163,7 +164,7 @@ export async function notifyGuestTableAssignment(params: {
         '',
         `Consultez les détails sur votre portail : ${rsvpUrl}`,
         '',
-        'Votre invitation PDF et la localisation GPS vous seront envoyées à votre arrivée à l\'événement.',
+        GUEST_COPY.tableAnnouncement,
       ]
         .filter(Boolean)
         .join('\n')
@@ -250,7 +251,7 @@ export async function notifyGuestTableAssignment(params: {
       label: isAnnouncement ? 'Voir mon portail RSVP' : 'Voir mon invitation',
     },
     footerNote: isAnnouncement
-      ? 'Votre invitation PDF et la localisation GPS vous seront envoyées à votre arrivée.'
+      ? GUEST_COPY.tableAnnouncement
       : `Votre invitation PDF est jointe à cet e-mail${storedPdfUrl ? ' et disponible en ligne.' : '.'}`,
   });
 
@@ -270,7 +271,7 @@ export async function notifyGuestTableAssignment(params: {
           '',
           `🔗 Portail RSVP : ${rsvpUrl}`,
           '',
-          '_Votre PDF et la localisation GPS vous seront envoyés à votre arrivée._',
+          `_${GUEST_COPY.tableAnnouncement}_`,
           '',
           `— ${orgBrand.orgName}`,
         ]

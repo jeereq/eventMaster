@@ -61,9 +61,9 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     id: 'placement-delivery',
-    question: 'Quand l\'invité reçoit-il son plan de table, PDF et localisation GPS ?',
+    question: 'Quand l’invité reçoit-il son plan de table, son PDF et l’itinéraire ?',
     answer:
-      'Le premier message (e-mail ou WhatsApp) contient seulement le lien pour répondre. Le PDF, le plan de table et le pin GPS partent dès que l’invité dit oui ET qu’une place lui est attribuée — pas avant. Inclus sur tous les forfaits particuliers et organisations.',
+      'Le premier message contient le lien pour répondre. Dès le « oui », le badge QR et l’itinéraire sont dans l’espace invité. Le plan de table et le PDF partent dès qu’une place lui est attribuée — pas avant.',
   },
   {
     id: 'public-events',

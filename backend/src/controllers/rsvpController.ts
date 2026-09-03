@@ -22,6 +22,7 @@ import {
   wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { customTenantBranding, escapeHtml } from '../utils/brandingUtils';
+import { GUEST_COPY } from '../utils/guestMessageCopy';
 import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
 
@@ -552,7 +553,7 @@ export async function submitRsvp(req: Request, res: Response) {
       const orgBrand = orgBrandFromTenant(guest.event.tenant);
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
-      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nVotre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée et selon le forfait de l'organisateur).\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
+      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\n${GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
       const htmlBody = wrapBrandedEmail({
         branding: orgBrand.branding,
         orgName: orgBrand.orgName,
@@ -571,7 +572,7 @@ export async function submitRsvp(req: Request, res: Response) {
             { label: 'Lieu', value: guest.event.location || 'Non défini' },
           ])}
         `,
-        footerNote: 'Votre plan de table, invitation PDF et localisation GPS sont débloqués dès cette confirmation, dès que votre place est assignée.',
+        footerNote: GUEST_COPY.rsvpEmailFooter,
       });
 
       const whatsappRendered = await renderGuestMessage('RSVP_CONFIRMATION_WHATSAPP', {
@@ -699,7 +700,7 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
 
     if (!canGuestAccessPlacement(guest)) {
       return res.status(403).json({
-        error: 'Votre plan de table, invitation PDF et localisation GPS seront disponibles dès que vous aurez accepté l\'invitation (RSVP).',
+        error: GUEST_COPY.pdfRequiresRsvp,
       });
     }
 

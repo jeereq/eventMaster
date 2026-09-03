@@ -3,6 +3,9 @@ import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { sendRealEmail } from './notificationService';
 import { notifyTicketPayment } from './paymentTraceService';
 import { assignSeatInTablePlan, assignMultipleSeatsInTablePlan } from './seatSelectionService';
+import { brandedEventDetailsHtml, orgBrandFromTenant, wrapBrandedEmail } from '../utils/brandedMessaging';
+import { escapeHtml } from '../utils/brandingUtils';
+import { GUEST_COPY } from '../utils/guestMessageCopy';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -33,7 +36,7 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
   const order = await prisma.ticketOrder.findUnique({
     where: { id: orderId },
     include: {
-      event: { include: { tenant: { select: { id: true, plan: true, accountKind: true, name: true } } } },
+      event: { include: { tenant: { select: { id: true, plan: true, accountKind: true, name: true, branding: true } } } },
       guests: { select: { id: true, email: true, firstName: true, lastName: true } },
     },
   });
@@ -171,9 +174,24 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
         parsedSeats.map((s, idx) => ` - Place ${idx + 1} : table ${s.tableId} · siège ${s.seatIndex + 1}`).join('\n') +
         '\n';
     }
+    const orgBrand = orgBrandFromTenant(event.tenant);
     const subject = `Votre billet — ${event.title}`;
-    const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR) :\n${rsvpUrl}\n\nOrganisé par ${event.tenant.name}.\n`;
-    void sendRealEmail(order.buyerEmail, subject, text).catch(() => undefined);
+    const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR et itinéraire) :\n${rsvpUrl}\n\n${GUEST_COPY.ticket}\n\nOrganisé par ${event.tenant.name}.\n`;
+    const html = wrapBrandedEmail({
+      branding: orgBrand.branding,
+      orgName: orgBrand.orgName,
+      title: 'Billet confirmé',
+      eyebrow: event.title,
+      innerHtml: `
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${escapeHtml(order.buyerName)}</strong>,</p>
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Votre inscription à <strong>${escapeHtml(event.title)}</strong> est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).</p>
+        ${seatLine ? `<p style="margin:0 0 16px;font-size:14px;color:#475569;white-space:pre-line;">${escapeHtml(seatLine.trim())}</p>` : ''}
+        ${brandedEventDetailsHtml(orgBrand.branding, [{ label: 'Lieu', value: event.location || '' }])}
+      `,
+      cta: { href: rsvpUrl, label: 'Ouvrir mon espace invité' },
+      footerNote: GUEST_COPY.ticket,
+    });
+    void sendRealEmail(order.buyerEmail, subject, text, html).catch(() => undefined);
   }
 
   return paid;
