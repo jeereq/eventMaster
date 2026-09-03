@@ -23,6 +23,7 @@ interface SiteHeaderProps {
 
 const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/marketplace', label: 'Marketplace' },
+  { href: '/activite', label: 'Activité' },
   { href: '/#editeur', label: 'Éditeur 2D/3D' },
   { href: '/#modeles', label: 'Modèles' },
   { href: '/#tarifs', label: 'Tarifs' },
@@ -56,6 +57,9 @@ export default function SiteHeader({
   const isLinkActive = (href: string) => {
     if (href === '/marketplace') {
       return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
+    }
+    if (href === '/activite') {
+      return pathname === '/activite' || pathname.startsWith('/activite/');
     }
     if (href === '/contact') {
       return pathname === '/contact' || pathname === '/faq';

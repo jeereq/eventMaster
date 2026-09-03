@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { Minimize2, SlidersHorizontal } from 'lucide-react';
+import { Minimize2, Rss, SlidersHorizontal } from 'lucide-react';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav, { type MarketplaceNavId } from '@/components/MarketplacePublicNav';
@@ -273,7 +274,16 @@ export default function CatalogueSearchLayout({
   return (
     <PublicPageShell faqHref="/faq">
       <PublicPageHero compact chip="Marketplace" title={heroTitle} description={heroDescription}>
-        <MarketplacePublicNav active={activeNav} />
+        <div className="flex flex-wrap items-center gap-2">
+          <MarketplacePublicNav active={activeNav} />
+          <Link
+            href="/activite"
+            className="inline-flex items-center gap-1.5 min-h-9 px-3 rounded-[var(--radius-button)] border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+          >
+            <Rss className="w-3.5 h-3.5 text-primary" aria-hidden />
+            Fil d’activité
+          </Link>
+        </div>
       </PublicPageHero>
 
       <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">

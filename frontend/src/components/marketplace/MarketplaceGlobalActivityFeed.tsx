@@ -89,7 +89,7 @@ export default function MarketplaceGlobalActivityFeed({
   const loginHref =
     typeof window !== 'undefined'
       ? clientLoginHref(`${window.location.pathname}${window.location.search}`)
-      : clientLoginHref('/marketplace/activite');
+      : clientLoginHref('/activite');
 
   const load = useCallback(async (opts?: { cursor?: string | null; kind?: GlobalFeedKind; q?: string }) => {
     const cursor = opts?.cursor;
