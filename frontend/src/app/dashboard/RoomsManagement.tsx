@@ -215,9 +215,57 @@ function buildWizardBlueprint(
 }
 
 const fieldClass =
-  'w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+  'w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
 
-const labelClass = 'block text-xs font-medium text-muted mb-1.5';
+const labelClass = 'block text-xs font-semibold text-foreground mb-1.5';
+
+function ParamSelect({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className={labelClass}>{label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={fieldClass}>
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function ParamNumber({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <Input
+      type="number"
+      inputMode="numeric"
+      label={label}
+      min={min}
+      max={max}
+      value={Number.isFinite(value) ? value : ''}
+      onChange={(e) => onChange(parseInt(e.target.value, 10))}
+      className="text-base sm:text-sm min-h-11"
+    />
+  );
+}
 
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
@@ -610,52 +658,52 @@ export default function RoomsManagement() {
 
   const renderCanvasDims = (widthKey: 'canvasWidthM' | 'tentWidthM' = 'canvasWidthM', heightKey: 'canvasHeightM' | 'tentLengthM' = 'canvasHeightM') => (
     <div className="grid grid-cols-2 gap-3">
-      <label>
-        <span className={labelClass}>Largeur (m)</span>
-        <input
-          type="number"
-          min={5}
-          max={80}
-          value={layoutParams[widthKey] ?? (widthKey === 'tentWidthM' ? 15 : 20)}
-          onChange={(e) => updateParam(widthKey, parseInt(e.target.value, 10))}
-          className={fieldClass}
-        />
-      </label>
-      <label>
-        <span className={labelClass}>Longueur (m)</span>
-        <input
-          type="number"
-          min={5}
-          max={80}
-          value={layoutParams[heightKey] ?? (heightKey === 'tentLengthM' ? 20 : 15)}
-          onChange={(e) => updateParam(heightKey, parseInt(e.target.value, 10))}
-          className={fieldClass}
-        />
-      </label>
+      <Input
+        type="number"
+        inputMode="numeric"
+        label="Largeur (m)"
+        min={5}
+        max={80}
+        value={layoutParams[widthKey] ?? (widthKey === 'tentWidthM' ? 15 : 20)}
+        onChange={(e) => updateParam(widthKey, parseInt(e.target.value, 10))}
+        className="text-base sm:text-sm min-h-11"
+      />
+      <Input
+        type="number"
+        inputMode="numeric"
+        label="Longueur (m)"
+        min={5}
+        max={80}
+        value={layoutParams[heightKey] ?? (heightKey === 'tentLengthM' ? 20 : 15)}
+        onChange={(e) => updateParam(heightKey, parseInt(e.target.value, 10))}
+        className="text-base sm:text-sm min-h-11"
+      />
     </div>
   );
 
   const renderChairAndShape = (chairDefault: ChairType, withShape = true) => (
     <>
       {withShape && (
-        <label>
-          <span className={labelClass}>Forme des tables</span>
-          <select value={layoutParams.tableShape ?? 'round'} onChange={(e) => updateParam('tableShape', e.target.value as LayoutParams['tableShape'])} className={fieldClass}>
-            <option value="round">Ronde</option>
-            <option value="rectangular">Rectangulaire</option>
-            <option value="square">Carrée</option>
-            <option value="oval">Ovale</option>
-          </select>
-        </label>
+        <ParamSelect
+          label="Forme des tables"
+          value={layoutParams.tableShape ?? 'round'}
+          onChange={(v) => updateParam('tableShape', v as LayoutParams['tableShape'])}
+        >
+          <option value="round">Ronde</option>
+          <option value="rectangular">Rectangulaire</option>
+          <option value="square">Carrée</option>
+          <option value="oval">Ovale</option>
+        </ParamSelect>
       )}
-      <label>
-        <span className={labelClass}>Type de chaise</span>
-        <select value={layoutParams.chairType ?? chairDefault} onChange={(e) => updateParam('chairType', e.target.value as ChairType)} className={fieldClass}>
-          {Object.entries(chairTypeLabels).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-      </label>
+      <ParamSelect
+        label="Type de chaise"
+        value={layoutParams.chairType ?? chairDefault}
+        onChange={(v) => updateParam('chairType', v as ChairType)}
+      >
+        {Object.entries(chairTypeLabels).map(([k, v]) => (
+          <option key={k} value={k}>{v}</option>
+        ))}
+      </ParamSelect>
     </>
   );
 
@@ -663,151 +711,162 @@ export default function RoomsManagement() {
     switch (roomType) {
       case 'BANQUET':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {renderCanvasDims()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label>
-                <span className={labelClass}>Places au total</span>
-                <input
-                  type="number"
-                  min={2}
-                  max={400}
-                  value={layoutParams.totalSeats ?? (layoutParams.tableCount ?? 8) * (layoutParams.seatsPerTable ?? 8)}
-                  onChange={(e) => {
-                    const totalSeats = parseInt(e.target.value, 10) || 8;
-                    const per = layoutParams.seatsPerTable ?? 8;
-                    setLayoutParams((prev) => ({
-                      ...prev,
-                      totalSeats,
-                      tableCount: Math.max(1, Math.ceil(totalSeats / per)),
-                    }));
-                  }}
-                  className={fieldClass}
-                />
-              </label>
-              <label>
-                <span className={labelClass}>Nombre de tables</span>
-                <input type="number" min={1} max={80} value={layoutParams.tableCount ?? 8} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
-              <label>
-                <span className={labelClass}>Places / table</span>
-                <input type="number" min={2} max={24} value={layoutParams.seatsPerTable ?? 8} onChange={(e) => updateParam('seatsPerTable', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
+              <ParamNumber
+                label="Places au total"
+                min={2}
+                max={400}
+                value={layoutParams.totalSeats ?? (layoutParams.tableCount ?? 8) * (layoutParams.seatsPerTable ?? 8)}
+                onChange={(totalSeats) => {
+                  const seats = Number.isFinite(totalSeats) ? totalSeats : 8;
+                  const per = layoutParams.seatsPerTable ?? 8;
+                  setLayoutParams((prev) => ({
+                    ...prev,
+                    totalSeats: seats,
+                    tableCount: Math.max(1, Math.ceil(seats / per)),
+                  }));
+                }}
+              />
+              <ParamNumber
+                label="Nombre de tables"
+                min={1}
+                max={80}
+                value={layoutParams.tableCount ?? 8}
+                onChange={(n) => updateParam('tableCount', n)}
+              />
+              <ParamNumber
+                label="Places / table"
+                min={2}
+                max={24}
+                value={layoutParams.seatsPerTable ?? 8}
+                onChange={(n) => updateParam('seatsPerTable', n)}
+              />
               {renderChairAndShape('BANQUET')}
             </div>
           </div>
         );
       case 'CONFERENCE':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {renderCanvasDims()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label>
-                <span className={labelClass}>Places au total</span>
-                <input
-                  type="number"
-                  min={2}
-                  max={400}
-                  value={layoutParams.totalSeats ?? (layoutParams.rowCount ?? 6) * (layoutParams.seatsPerRow ?? 10)}
-                  onChange={(e) => {
-                    const totalSeats = parseInt(e.target.value, 10) || 10;
-                    const per = layoutParams.seatsPerRow ?? 10;
-                    setLayoutParams((prev) => ({
-                      ...prev,
-                      totalSeats,
-                      rowCount: Math.max(1, Math.ceil(totalSeats / per)),
-                    }));
-                  }}
-                  className={fieldClass}
-                />
-              </label>
-              <label>
-                <span className={labelClass}>Nombre de rangées</span>
-                <input type="number" min={1} max={30} value={layoutParams.rowCount ?? 6} onChange={(e) => updateParam('rowCount', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
-              <label>
-                <span className={labelClass}>Places / rangée</span>
-                <input type="number" min={2} max={40} value={layoutParams.seatsPerRow ?? 10} onChange={(e) => updateParam('seatsPerRow', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
+              <ParamNumber
+                label="Places au total"
+                min={2}
+                max={400}
+                value={layoutParams.totalSeats ?? (layoutParams.rowCount ?? 6) * (layoutParams.seatsPerRow ?? 10)}
+                onChange={(totalSeats) => {
+                  const seats = Number.isFinite(totalSeats) ? totalSeats : 10;
+                  const per = layoutParams.seatsPerRow ?? 10;
+                  setLayoutParams((prev) => ({
+                    ...prev,
+                    totalSeats: seats,
+                    rowCount: Math.max(1, Math.ceil(seats / per)),
+                  }));
+                }}
+              />
+              <ParamNumber
+                label="Nombre de rangées"
+                min={1}
+                max={30}
+                value={layoutParams.rowCount ?? 6}
+                onChange={(n) => updateParam('rowCount', n)}
+              />
+              <ParamNumber
+                label="Places / rangée"
+                min={2}
+                max={40}
+                value={layoutParams.seatsPerRow ?? 10}
+                onChange={(n) => updateParam('seatsPerRow', n)}
+              />
               {renderChairAndShape('THEATER', false)}
             </div>
           </div>
         );
       case 'AMPHITHEATER':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {renderCanvasDims()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label>
-                <span className={labelClass}>Places au total</span>
-                <input
-                  type="number"
-                  min={2}
-                  max={400}
-                  value={layoutParams.totalSeats ?? (layoutParams.tierCount ?? 3) * (layoutParams.rowsPerTier ?? 2) * (layoutParams.seatsPerRow ?? 12)}
-                  onChange={(e) => {
-                    const totalSeats = parseInt(e.target.value, 10) || 12;
-                    const seatsPerRow = layoutParams.seatsPerRow ?? 12;
-                    const rows = Math.max(1, Math.ceil(totalSeats / seatsPerRow));
-                    const tierCount = Math.min(6, Math.max(2, Math.ceil(Math.sqrt(rows))));
-                    setLayoutParams((prev) => ({
-                      ...prev,
-                      totalSeats,
-                      tierCount,
-                      rowsPerTier: Math.max(1, Math.ceil(rows / tierCount)),
-                    }));
-                  }}
-                  className={fieldClass}
-                />
-              </label>
-              <label>
-                <span className={labelClass}>Gradins</span>
-                <input type="number" min={1} max={10} value={layoutParams.tierCount ?? 3} onChange={(e) => updateParam('tierCount', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
-              <label>
-                <span className={labelClass}>Rangées / gradin</span>
-                <input type="number" min={1} max={10} value={layoutParams.rowsPerTier ?? 2} onChange={(e) => updateParam('rowsPerTier', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
-              <label>
-                <span className={labelClass}>Places / rangée</span>
-                <input type="number" min={2} max={40} value={layoutParams.seatsPerRow ?? 12} onChange={(e) => updateParam('seatsPerRow', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
+              <ParamNumber
+                label="Places au total"
+                min={2}
+                max={400}
+                value={layoutParams.totalSeats ?? (layoutParams.tierCount ?? 3) * (layoutParams.rowsPerTier ?? 2) * (layoutParams.seatsPerRow ?? 12)}
+                onChange={(totalSeats) => {
+                  const seats = Number.isFinite(totalSeats) ? totalSeats : 12;
+                  const seatsPerRow = layoutParams.seatsPerRow ?? 12;
+                  const rows = Math.max(1, Math.ceil(seats / seatsPerRow));
+                  const tierCount = Math.min(6, Math.max(2, Math.ceil(Math.sqrt(rows))));
+                  setLayoutParams((prev) => ({
+                    ...prev,
+                    totalSeats: seats,
+                    tierCount,
+                    rowsPerTier: Math.max(1, Math.ceil(rows / tierCount)),
+                  }));
+                }}
+              />
+              <ParamNumber
+                label="Gradins"
+                min={1}
+                max={10}
+                value={layoutParams.tierCount ?? 3}
+                onChange={(n) => updateParam('tierCount', n)}
+              />
+              <ParamNumber
+                label="Rangées / gradin"
+                min={1}
+                max={10}
+                value={layoutParams.rowsPerTier ?? 2}
+                onChange={(n) => updateParam('rowsPerTier', n)}
+              />
+              <ParamNumber
+                label="Places / rangée"
+                min={2}
+                max={40}
+                value={layoutParams.seatsPerRow ?? 12}
+                onChange={(n) => updateParam('seatsPerRow', n)}
+              />
               {renderChairAndShape('THEATER', false)}
             </div>
           </div>
         );
       case 'TENT':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {renderCanvasDims('tentWidthM', 'tentLengthM')}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label>
-                <span className={labelClass}>Places au total</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={400}
-                  value={layoutParams.totalSeats ?? (layoutParams.tableCount ?? 0) * (layoutParams.seatsPerTable ?? 8)}
-                  onChange={(e) => {
-                    const totalSeats = parseInt(e.target.value, 10) || 0;
-                    const per = layoutParams.seatsPerTable ?? 8;
-                    setLayoutParams((prev) => ({
-                      ...prev,
-                      totalSeats: totalSeats || undefined,
-                      tableCount: totalSeats > 0 ? Math.max(1, Math.ceil(totalSeats / per)) : 0,
-                    }));
-                  }}
-                  className={fieldClass}
-                />
-              </label>
-              <label>
-                <span className={labelClass}>Tables intérieures</span>
-                <input type="number" min={0} max={40} value={layoutParams.tableCount ?? 0} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
-              <label>
-                <span className={labelClass}>Places / table</span>
-                <input type="number" min={2} max={24} value={layoutParams.seatsPerTable ?? 8} onChange={(e) => updateParam('seatsPerTable', parseInt(e.target.value, 10))} className={fieldClass} />
-              </label>
+              <ParamNumber
+                label="Places au total"
+                min={0}
+                max={400}
+                value={layoutParams.totalSeats ?? (layoutParams.tableCount ?? 0) * (layoutParams.seatsPerTable ?? 8)}
+                onChange={(totalSeats) => {
+                  const seats = Number.isFinite(totalSeats) ? totalSeats : 0;
+                  const per = layoutParams.seatsPerTable ?? 8;
+                  setLayoutParams((prev) => ({
+                    ...prev,
+                    totalSeats: seats || undefined,
+                    tableCount: seats > 0 ? Math.max(1, Math.ceil(seats / per)) : 0,
+                  }));
+                }}
+              />
+              <ParamNumber
+                label="Tables intérieures"
+                min={0}
+                max={40}
+                value={layoutParams.tableCount ?? 0}
+                onChange={(n) => updateParam('tableCount', n)}
+              />
+              <ParamNumber
+                label="Places / table"
+                min={2}
+                max={24}
+                value={layoutParams.seatsPerTable ?? 8}
+                onChange={(n) => updateParam('seatsPerTable', n)}
+              />
               {renderChairAndShape('BANQUET')}
             </div>
           </div>
@@ -1065,11 +1124,9 @@ export default function RoomsManagement() {
 
         {wizardStep === 1 && (
           <div className="space-y-5">
-            <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Identité</h3>
-                <p className="text-xs text-muted mt-1">Nom et localisation visibles pour l’équipe et le catalogue.</p>
-              </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Identité</h3>
+              <p className="text-xs text-muted mt-1 mb-3">Nom et localisation visibles pour l’équipe et le catalogue.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Nom de la salle"
@@ -1077,15 +1134,28 @@ export default function RoomsManagement() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex. Grand salon"
+                  className="text-base sm:text-sm min-h-11"
                   data-modal-initial-focus
                 />
-                <Input label="Étage / Aile" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Ex. RDC, 1er étage" />
+                <Input
+                  label="Étage / Aile"
+                  value={floor}
+                  onChange={(e) => setFloor(e.target.value)}
+                  placeholder="Ex. RDC, 1er étage"
+                  className="text-base sm:text-sm min-h-11"
+                />
                 <div className="sm:col-span-2">
-                  <Input label="Emplacement" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ex. Bâtiment A, jardin" />
+                  <Input
+                    label="Emplacement"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Ex. Bâtiment A, jardin"
+                    className="text-base sm:text-sm min-h-11"
+                  />
                 </div>
               </div>
-            </section>
-            <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-2">
+            </div>
+            <div className="space-y-2">
               <label htmlFor={notesFieldId} className="block text-sm font-semibold text-foreground">
                 Notes
               </label>
@@ -1101,18 +1171,16 @@ export default function RoomsManagement() {
               <p id={`${notesFieldId}-hint`} className="text-xs text-muted">
                 À l’étape Plan, vous pourrez ajouter étages, fondation, couloirs et une ambiance visuelle.
               </p>
-            </section>
+            </div>
           </div>
         )}
 
         {wizardStep === 2 && (
           <div className="space-y-5">
-            <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-4 py-3">
-              <p className="text-xs text-muted">
-                Choisissez le type selon l’usage. Disponibles selon votre forfait
-                {planFeatures?.roomEditorLevel ? ` (éditeur ${planFeatures.roomEditorLevel})` : ''}.
-              </p>
-            </div>
+            <p className="text-sm text-muted">
+              Choisissez le type selon l’usage. Disponibles selon votre forfait
+              {planFeatures?.roomEditorLevel ? ` (éditeur ${planFeatures.roomEditorLevel})` : ''}.
+            </p>
             <div role="radiogroup" aria-label="Type de salle" className="space-y-5">
             {ROOM_TYPE_THEME_GROUPS.map((group) => (
               <section key={group.id} className="space-y-2">
@@ -1171,8 +1239,11 @@ export default function RoomsManagement() {
             ))}
             </div>
             {planFeatures && allowedRoomTypes.length < selectableRoomTypes.length && (
-              <p className="text-xs text-muted">
-                <Link href="/dashboard/billing" className="font-semibold text-primary hover:underline">
+              <p className="text-sm text-muted">
+                <Link
+                  href="/dashboard/billing"
+                  className="inline-flex items-center min-h-11 font-semibold text-primary underline-offset-2 hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
                   Changer de forfait
                 </Link>
                 {' '}pour débloquer d’autres types de salle.
@@ -1228,7 +1299,7 @@ export default function RoomsManagement() {
                       tabIndex={selected ? 0 : -1}
                       onClick={() => setWizardPlanTab(tab.id)}
                       className={cn(
-                        'shrink-0 min-h-11 px-4 rounded-full text-xs font-bold border transition',
+                        'shrink-0 min-h-11 px-4 rounded-full text-sm font-medium border transition-colors',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                         selected
                           ? 'bg-primary text-primary-foreground border-primary'
@@ -1247,7 +1318,7 @@ export default function RoomsManagement() {
                 aria-labelledby="wizard-tab-structure"
                 hidden={wizardPlanTab !== 'structure'}
               >
-                <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+                <section className="space-y-3">
                   <div>
                     <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-primary" aria-hidden />
@@ -1312,17 +1383,17 @@ export default function RoomsManagement() {
                 aria-labelledby="wizard-tab-capacite"
                 hidden={wizardPlanTab !== 'capacite'}
               >
-                <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-4 space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Ruler className="w-4 h-4 text-primary" aria-hidden />
                       Capacité — {roomTypeLabels[roomType]}
                     </h3>
-                    <p className="text-xs font-medium text-foreground tabular-nums">
+                    <p className="text-sm font-medium text-foreground tabular-nums">
                       {blueprintDraft.metadata.totalSeats} places · {blueprintDraft.canvas.widthM}×{blueprintDraft.canvas.heightM} m
                     </p>
                   </div>
-                  <div className="pt-1">{renderTypeParams()}</div>
+                  <div>{renderTypeParams()}</div>
                   {roomType !== 'SIMPLE' && roomType !== 'CUSTOM' && (
                     <div className="pt-1 space-y-2">
                       <Button type="button" size="sm" variant="secondary" onClick={regenerateBlueprint}>
@@ -1343,7 +1414,7 @@ export default function RoomsManagement() {
                   aria-labelledby="wizard-tab-ambiance"
                   hidden={wizardPlanTab !== 'ambiance'}
                 >
-                  <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+                  <section className="space-y-3">
                     <div>
                       <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-primary" aria-hidden />
@@ -1373,7 +1444,7 @@ export default function RoomsManagement() {
                                     setBlueprintDraft(applyRoomTheme(blueprintDraft, theme.id as RoomThemeId, { keepFloor: false }));
                                   }}
                                   className={cn(
-                                    'text-left min-h-11 py-2.5 px-2.5 rounded-[var(--radius-button)] border text-xs font-bold transition overflow-hidden',
+                                    'text-left min-h-11 py-2.5 px-2.5 rounded-[var(--radius-button)] border text-sm font-medium transition-colors overflow-hidden',
                                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                                     active
                                       ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
@@ -1799,22 +1870,25 @@ export default function RoomsManagement() {
             {error && editingRoom && (
               <Alert variant="error">{error}</Alert>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-[var(--radius-card)] border border-border bg-surface-muted/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Nom de la salle"
                 value={editMeta.name}
                 onChange={(e) => setEditMeta((m) => ({ ...m, name: e.target.value }))}
+                className="text-base sm:text-sm min-h-11"
               />
               <Input
                 label="Étage / Aile"
                 value={editMeta.floor}
                 onChange={(e) => setEditMeta((m) => ({ ...m, floor: e.target.value }))}
+                className="text-base sm:text-sm min-h-11"
               />
               <div className="sm:col-span-2">
                 <Input
                   label="Emplacement"
                   value={editMeta.location}
                   onChange={(e) => setEditMeta((m) => ({ ...m, location: e.target.value }))}
+                  className="text-base sm:text-sm min-h-11"
                 />
               </div>
               <div className="sm:col-span-2 space-y-1.5">
@@ -1825,39 +1899,34 @@ export default function RoomsManagement() {
                   id={editNotesFieldId}
                   value={editMeta.description}
                   onChange={(e) => setEditMeta((m) => ({ ...m, description: e.target.value }))}
-                  rows={2}
+                  rows={3}
                   className={fieldClass}
                 />
               </div>
             </div>
             {rooms.filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint).length > 0 ? (
-              <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
-                <span className="font-semibold text-muted shrink-0">Copier le style depuis</span>
-                <select
-                  defaultValue=""
-                  onChange={(e) => {
-                    const roomId = e.target.value;
-                    e.target.value = '';
-                    if (!roomId || !editBlueprint) return;
-                    const source = rooms.find((room) => room.id === roomId);
-                    if (!source?.layoutBlueprint) return;
-                    const preset = captureRoomAmbienceFromBlueprint(
-                      source.layoutBlueprint as RoomLayoutBlueprint,
-                      `copy-${source.id}`,
-                      source.name,
-                    );
-                    setEditBlueprint(applyRoomAmbiencePreset(editBlueprint, preset));
-                  }}
-                  className="px-2 py-1.5 rounded-[var(--radius-button)] border text-xs max-w-md"
-                >
-                  <option value="">Choisir une salle…</option>
-                  {rooms
-                    .filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint)
-                    .map((room) => (
-                      <option key={room.id} value={room.id}>{room.name}</option>
-                    ))}
-                </select>
-              </label>
+              <ParamSelect
+                label="Copier le style depuis une autre salle"
+                value=""
+                onChange={(roomId) => {
+                  if (!roomId || !editBlueprint) return;
+                  const source = rooms.find((room) => room.id === roomId);
+                  if (!source?.layoutBlueprint) return;
+                  const preset = captureRoomAmbienceFromBlueprint(
+                    source.layoutBlueprint as RoomLayoutBlueprint,
+                    `copy-${source.id}`,
+                    source.name,
+                  );
+                  setEditBlueprint(applyRoomAmbiencePreset(editBlueprint, preset));
+                }}
+              >
+                <option value="">Choisir une salle…</option>
+                {rooms
+                  .filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint)
+                  .map((room) => (
+                    <option key={room.id} value={room.id}>{room.name}</option>
+                  ))}
+              </ParamSelect>
             ) : null}
             <RoomLayoutEditor
               blueprint={editBlueprint}
