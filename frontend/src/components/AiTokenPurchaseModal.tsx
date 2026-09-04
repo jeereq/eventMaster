@@ -198,8 +198,8 @@ export default function AiTokenPurchaseModal({
     <Modal
       open={open}
       onClose={handleModalClose}
-      title="Recharger des simulations IA"
-      description={`Pack découverte : ${AI_TOKEN_PACK_SIZE} simulations IA pour ${formatFc(AI_TOKEN_PACK_PRICE_FC)}`}
+      title="Recharger des jetons IA"
+      description={`Pack ${AI_TOKEN_PACK_SIZE} jetons · ${formatFc(AI_TOKEN_PACK_PRICE_FC)} — modèles d’invitation IA ou simulation budget`}
       size="sm"
     >
       {/* ─── ÉTAPE 3 : SUCCÈS ─── */}
@@ -212,7 +212,7 @@ export default function AiTokenPurchaseModal({
             Paiement validé avec succès !
           </h4>
           <p className="text-xs text-muted">
-            <strong>+{AI_TOKEN_PACK_SIZE} simulations IA</strong> ont été créditées sur votre compte.
+            <strong>+{AI_TOKEN_PACK_SIZE} jetons IA</strong> crédités — utilisables pour les modèles d’invitation ou la simulation budget.
           </p>
         </div>
       )}
@@ -281,8 +281,8 @@ export default function AiTokenPurchaseModal({
                 <Coins className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">Pack {AI_TOKEN_PACK_SIZE} Simulations IA</p>
-                <p className="text-[11px] text-muted">3 packs budget calculés par simulation</p>
+                <p className="text-xs font-bold text-foreground">Pack {AI_TOKEN_PACK_SIZE} jetons IA</p>
+                <p className="text-[11px] text-muted">1 jeton = 1 modèle invitation ou 1 simulation</p>
               </div>
             </div>
             <div className="text-right">

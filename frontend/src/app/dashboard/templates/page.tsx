@@ -859,6 +859,19 @@ export default function TemplatesPage() {
  }
  };
 
+ /** Depuis la liste : ouvre le studio puis l’assistant IA. */
+ const startAiComposeFromList = async () => {
+ if (!canUseCustomTemplates) return;
+ if (templatesAtLimit) {
+ setError(getQuotaActionMessage('templates', planQuota, tenant?.plan));
+ return;
+ }
+ if (!editorOpen) {
+ handleCreateTemplateClick('studio');
+ }
+ await openAiComposeModal();
+ };
+
  const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
  const list = Array.from(e.target.files || []);
  e.target.value = '';
@@ -1966,9 +1979,39 @@ export default function TemplatesPage() {
 
  {studioRail === 'content' ? (
  <>
+ {canUseCustomTemplates && (
+ <div className="rounded-2xl border border-primary/25 bg-primary/8 p-3 space-y-2 shadow-sm shadow-primary/5">
+ <div className="flex items-start gap-2">
+ <span className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+ <Wand2 className="w-4 h-4" />
+ </span>
+ <div className="min-w-0">
+ <h3 className="text-xs font-bold text-foreground tracking-tight">
+ Créer avec l’IA
+ </h3>
+ <p className="text-[10px] text-muted leading-relaxed mt-0.5">
+ Analysez vos images, décrivez le style : l’IA crée une nouvelle invitation éditable (1 jeton).
+ </p>
+ </div>
+ </div>
+ <button
+ type="button"
+ disabled={mockupImporting || imageUploading || aiComposeBusy}
+ onClick={openAiComposeModal}
+ className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ >
+ {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+ {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
+ </button>
+ <p className="text-[9px] text-muted text-center">
+ Jetons partagés avec la simulation budget
+ </p>
+ </div>
+ )}
+
  {canUseMockupImport && (
  <div className="space-y-2">
- <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+ <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
  <Sparkles className="w-3.5 h-3.5" />
  Importer une image
  </h3>
@@ -1990,7 +2033,7 @@ export default function TemplatesPage() {
  type="button"
  disabled={mockupImporting || imageUploading || aiComposeBusy}
  onClick={() => mockupEditorInputRef.current?.click()}
- className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ className="w-full flex items-center justify-center gap-2 p-3 border border-dashed border-border rounded-2xl hover:border-primary/40 hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  {mockupImporting ? (
  <Loader2 className="w-4 h-4 animate-spin" />
@@ -1998,27 +2041,6 @@ export default function TemplatesPage() {
  <Upload className="w-4 h-4" />
  )}
  {mockupImporting ? 'Analyse en cours…' : 'Choisir une image'}
- </button>
- </div>
- )}
-
- {canUseCustomTemplates && (
- <div className="space-y-2">
- <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
- <Wand2 className="w-3.5 h-3.5" />
- Créer avec l’IA
- </h3>
- <p className="text-[10px] text-muted leading-relaxed">
- Analyse vos images + brief → nouvelle image et structure éditable (1 jeton).
- </p>
- <button
- type="button"
- disabled={mockupImporting || imageUploading || aiComposeBusy}
- onClick={openAiComposeModal}
- className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
- {aiComposeBusy ? 'Génération…' : 'Ouvrir l’assistant IA'}
  </button>
  </div>
  )}
@@ -4003,7 +4025,7 @@ export default function TemplatesPage() {
  description={
  user?.role === 'SUPER_ADMIN'
  ? 'Atelier de création visuelle. Pour le catalogue plateforme, les filtres et la vitrine landing, utilisez la console Super Admin.'
- : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."
+ : 'Créez des invitations interactives — à la main, depuis une maquette, ou avec l’IA (images + brief).'
  }
  breadcrumbs={
  <Breadcrumbs
@@ -4032,6 +4054,14 @@ export default function TemplatesPage() {
  Catalogue Super Admin
  </Link>
  )}
+ <Button
+ onClick={startAiComposeFromList}
+ disabled={templatesAtLimit || aiComposeBusy}
+ title={templatesQuotaMsg || 'Créer une invitation à partir d’images et d’un brief (1 jeton IA)'}
+ leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+ >
+ Créer avec l’IA
+ </Button>
  {canUseMockupImport && (
  <>
  <input
@@ -4053,6 +4083,7 @@ export default function TemplatesPage() {
  </>
  )}
  <Button
+ variant="secondary"
  onClick={() => handleCreateTemplateClick('studio')}
  disabled={templatesAtLimit}
  title={templatesQuotaMsg || undefined}
@@ -4068,6 +4099,30 @@ export default function TemplatesPage() {
  )
  }
  />
+
+ {canUseCustomTemplates && !templatesAtLimit && (
+ <div className="rounded-[var(--radius-card)] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-4 py-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+ <div className="flex items-start gap-3 min-w-0 flex-1">
+ <span className="w-11 h-11 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md shadow-primary/25">
+ <Wand2 className="w-5 h-5" />
+ </span>
+ <div className="min-w-0">
+ <p className="text-sm font-bold text-foreground">Édition d’invitation par IA</p>
+ <p className="text-xs text-muted leading-relaxed mt-1">
+ Déposez 1 à 4 images d’inspiration, décrivez le style : l’IA analyse, crée une nouvelle image de fond et une structure entièrement éditable. Même portefeuille de jetons que la simulation budget.
+ </p>
+ </div>
+ </div>
+ <Button
+ onClick={startAiComposeFromList}
+ disabled={aiComposeBusy}
+ leftIcon={<Wand2 className="w-4 h-4" />}
+ className="shrink-0"
+ >
+ Essayer maintenant
+ </Button>
+ </div>
+ )}
 
  {templatesAtLimit && user?.role === 'USER' && (
  <PlanLimitCallout kind="templates" planQuota={planQuota} planName={tenant?.plan} />
@@ -4161,12 +4216,22 @@ export default function TemplatesPage() {
  user?.role === 'SUPER_ADMIN'
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
  : canUseCustomTemplates
- ? "Aucun modèle personnel. Dupliquez un modèle de la bibliothèque ou créez le vôtre."
+ ? "Aucun modèle personnel. Créez-en un avec l’IA, importez une maquette, ou partez de la bibliothèque."
  : "Aucun modèle dans votre organisation. Utilisez la bibliothèque ci-dessus pour commencer."
  }
  emptyAction={
  canUseCustomTemplates ? (
  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+ <button
+ type="button"
+ onClick={startAiComposeFromList}
+ disabled={templatesAtLimit || aiComposeBusy}
+ title={templatesQuotaMsg || undefined}
+ className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+ >
+ {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+ Créer avec l’IA
+ </button>
  {canUseMockupImport && (
  <button
  type="button"
@@ -4183,10 +4248,10 @@ export default function TemplatesPage() {
  onClick={() => handleCreateTemplateClick('studio')}
  disabled={templatesAtLimit}
  title={templatesQuotaMsg || undefined}
- className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+ className="inline-flex items-center gap-2 px-5 py-2.5 border border-border text-foreground font-semibold rounded-xl text-sm transition hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed"
  >
  <PlusCircle className="w-4 h-4" />
- Créer mon premier modèle
+ Éditeur manuel
  </button>
  </div>
  ) : catalogTemplates.length > 0 ? (
