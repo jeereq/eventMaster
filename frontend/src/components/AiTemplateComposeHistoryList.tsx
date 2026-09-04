@@ -46,7 +46,7 @@ export default function AiTemplateComposeHistoryList({
   return (
     <div className={cn('space-y-2', className)}>
       <p className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
-        <Clock className="w-3.5 h-3.5 text-primary" />
+        <Clock className="w-3.5 h-3.5 text-primary" aria-hidden />
         {title}
         <span className="text-muted font-medium">({items.length})</span>
       </p>
@@ -59,33 +59,38 @@ export default function AiTemplateComposeHistoryList({
         {items.map((item) => {
           const active = activeId === item.id;
           const refs = item.referenceUrls?.length || 0;
+          const label = `Rouvrir : ${composeTitle(item)} · ${relativeTime(item.createdAt)}`;
           return (
             <li key={item.id}>
               <button
                 type="button"
                 onClick={() => onOpen(item)}
+                aria-label={label}
+                aria-current={active ? 'true' : undefined}
                 className={cn(
-                  'w-full text-left px-3 py-2.5 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50',
+                  'w-full text-left px-3 py-2.5 min-h-14 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50',
                   active ? 'bg-primary/10' : 'hover:bg-surface-muted/70',
                 )}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 min-w-0">
                   <div className="relative w-12 h-14 shrink-0 rounded-md overflow-hidden border border-border bg-surface-muted">
                     {item.previewImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={item.previewImageUrl}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="absolute inset-0 flex items-center justify-center text-muted">
+                      <span className="absolute inset-0 flex items-center justify-center text-muted" aria-hidden>
                         <ImageIcon className="w-4 h-4" />
                       </span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
+                    <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2 break-words">
                       {composeTitle(item)}
                     </p>
                     <p className="text-[11px] text-muted">
@@ -98,7 +103,7 @@ export default function AiTemplateComposeHistoryList({
                         .join(' · ')}
                     </p>
                   </div>
-                  <span className="text-[11px] font-semibold text-primary shrink-0 pt-0.5">
+                  <span className="text-[11px] font-semibold text-primary shrink-0 pt-0.5" aria-hidden>
                     Rouvrir
                   </span>
                 </div>

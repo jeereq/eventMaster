@@ -37,7 +37,7 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import type { LandingTemplate } from '@/config/landingTemplates';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 const BRIEF_PRESETS = [
@@ -220,6 +220,10 @@ export default function LandingInvitationAiGenerator({
       setError('Décrivez le style souhaité (quelques mots minimum).');
       return;
     }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setError('Vous semblez hors ligne. Vérifiez votre connexion puis réessayez.');
+      return;
+    }
     if (!allowance.canSimulate) {
       setTokenModalOpen(true);
       return;
@@ -258,10 +262,16 @@ export default function LandingInvitationAiGenerator({
       if (e?.status === 402) {
         setTokenModalOpen(true);
         setError(e.message || 'Plus de jetons IA. Rechargez pour continuer.');
+      } else if (e?.status === 429) {
+        setError(e.message || 'Trop de demandes. Attendez une minute puis réessayez.');
+      } else if (e?.status === 503) {
+        setError(e.message || 'Le service IA est temporairement indisponible. Réessayez plus tard.');
+      } else if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setError('Connexion interrompue. Vérifiez le réseau puis réessayez.');
       } else {
-        setError(e?.message || 'Impossible de générer le modèle.');
+        setError(e?.message || 'Impossible de générer le modèle. Réessayez dans un instant.');
       }
-      setActiveStep(files.length ? 0 : 0);
+      setActiveStep(0);
       setStage(null);
     } finally {
       window.clearTimeout(tick);
@@ -315,6 +325,8 @@ export default function LandingInvitationAiGenerator({
   return (
     <section
       id={id}
+      aria-busy={busy}
+      aria-labelledby={`${id}-title`}
       className={cn(
         'rounded-[1.25rem] border border-border bg-surface shadow-sm overflow-hidden scroll-mt-20',
         className,
@@ -322,12 +334,15 @@ export default function LandingInvitationAiGenerator({
     >
       <div className="px-5 sm:px-7 pt-6 sm:pt-7 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div className="space-y-2 max-w-2xl">
-            <h2 className="text-base sm:text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
+          <div className="space-y-2 max-w-2xl min-w-0">
+            <h2
+              id={`${id}-title`}
+              className="text-base sm:text-xl font-bold text-foreground tracking-tight flex items-center gap-2"
+            >
               <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary text-primary-foreground inline-flex items-center justify-center shadow-md shadow-primary/25 shrink-0">
                 <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </span>
-              <span className="min-w-0 leading-tight">Studio IA</span>
+              <span className="min-w-0 leading-tight break-words">Studio IA</span>
             </h2>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
               Images + brief → aperçu éditable. Le brief guide le style ; les visages présents sont
@@ -349,16 +364,21 @@ export default function LandingInvitationAiGenerator({
 
         <ol className="mt-5 flex flex-wrap gap-2" aria-label="Étapes du studio">
           {STAGE_STEPS.map((step, index) => {
-            const done = activeStep > index || (result && index <= 3);
-            const current = busy ? activeStep === index : result ? index === 3 : index === 0 && !files.length;
+            const done = Boolean(result ? index <= 3 : activeStep > index);
+            const isCurrent = busy
+              ? activeStep === index
+              : result
+                ? index === 3
+                : activeStep === index;
             return (
               <li
                 key={step.id}
+                aria-current={isCurrent ? 'step' : undefined}
                 className={cn(
                   'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition',
-                  done
+                  done && !isCurrent
                     ? 'bg-primary/15 border-primary/30 text-primary'
-                    : current
+                    : isCurrent
                       ? 'bg-surface border-primary text-foreground'
                       : 'bg-surface-muted/60 border-border text-muted',
                 )}
@@ -366,10 +386,10 @@ export default function LandingInvitationAiGenerator({
                 <span
                   className={cn(
                     'w-4 h-4 rounded-full inline-flex items-center justify-center text-[9px]',
-                    done ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
+                    done || isCurrent ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
                   )}
                 >
-                  {done ? <Check className="w-2.5 h-2.5" /> : index + 1}
+                  {done && !isCurrent ? <Check className="w-2.5 h-2.5" /> : index + 1}
                 </span>
                 {step.label}
               </li>
@@ -392,7 +412,14 @@ export default function LandingInvitationAiGenerator({
 
           <div
             role="button"
-            tabIndex={0}
+            tabIndex={busy || files.length >= 4 ? -1 : 0}
+            aria-label={
+              files.length >= 4
+                ? 'Maximum de 4 images atteint'
+                : 'Ajouter 1 à 4 images de référence (JPEG, PNG ou WebP)'
+            }
+            aria-disabled={busy || files.length >= 4}
+            aria-controls={previews.length ? `${id}-refs` : undefined}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -404,13 +431,13 @@ export default function LandingInvitationAiGenerator({
             }}
             onDragOver={(e) => {
               e.preventDefault();
-              setDragOver(true);
+              if (!busy && files.length < 4) setDragOver(true);
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              if (busy) return;
+              if (busy || files.length >= 4) return;
               addFiles(Array.from(e.dataTransfer.files || []));
             }}
             className={cn(
@@ -418,16 +445,16 @@ export default function LandingInvitationAiGenerator({
               dragOver
                 ? 'border-primary bg-primary/10'
                 : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
-              (busy || files.length >= 4) && 'opacity-70 cursor-default',
+              (busy || files.length >= 4) && 'opacity-70 cursor-not-allowed',
             )}
           >
-            <Upload className="w-6 h-6 text-primary mx-auto mb-2" />
+            <Upload className="w-6 h-6 text-primary mx-auto mb-2" aria-hidden />
             <p className="text-sm font-bold text-foreground">Déposez 1 à 4 images</p>
             <p className="text-xs text-muted mt-1">JPEG, PNG ou WebP — ou cliquez pour choisir</p>
           </div>
 
           {previews.length > 0 && (
-            <div className="flex flex-wrap gap-2.5">
+            <div id={`${id}-refs`} className="flex flex-wrap gap-2.5">
               {previews.map((url, i) => (
                 <div
                   key={url}
@@ -442,10 +469,10 @@ export default function LandingInvitationAiGenerator({
                       e.stopPropagation();
                       removeFile(i);
                     }}
-                    className="absolute top-1 right-1 bg-black/65 text-white rounded-full p-0.5 opacity-90 hover:opacity-100 disabled:opacity-40"
+                    className="absolute top-1 right-1 min-w-9 min-h-9 inline-flex items-center justify-center bg-black/65 text-white rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation"
                     aria-label={`Retirer l’image ${i + 1}`}
                   >
-                    <XCircle className="w-3.5 h-3.5" />
+                    <XCircle className="w-4 h-4" aria-hidden />
                   </button>
                 </div>
               ))}
@@ -476,7 +503,7 @@ export default function LandingInvitationAiGenerator({
                   type="button"
                   disabled={busy}
                   onClick={() => setPrompt(preset)}
-                  className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-border bg-surface-muted/70 text-muted hover:text-foreground hover:border-primary/40 transition disabled:opacity-50"
+                  className="text-[11px] font-semibold px-3 py-2 min-h-10 rounded-full border border-border bg-surface-muted/70 text-muted hover:text-foreground hover:border-primary/40 transition disabled:opacity-50 touch-manipulation break-words max-w-full text-left"
                 >
                   {preset}
                 </button>
@@ -485,16 +512,39 @@ export default function LandingInvitationAiGenerator({
           </div>
 
           {error ? (
-            <p role="alert" className="text-xs text-rose-800 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5">
-              {error}
-            </p>
+            <Alert variant="error" title="Génération interrompue" className="!p-3 text-xs">
+              <p className="break-words">{error}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setError('');
+                    void handleGenerate();
+                  }}
+                >
+                  Réessayer
+                </Button>
+                {error.toLowerCase().includes('jeton') ? (
+                  <Button type="button" size="sm" onClick={() => setTokenModalOpen(true)}>
+                    Recharger
+                  </Button>
+                ) : null}
+              </div>
+            </Alert>
           ) : null}
 
           {busy ? (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
-              <div>
-                <p className="text-xs font-bold text-foreground">{stage || 'Génération en cours…'}</p>
+            <div
+              className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 flex items-center gap-3"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0 motion-reduce:animate-none" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-foreground break-words">{stage || 'Génération en cours…'}</p>
                 <p className="text-[11px] text-muted mt-0.5">Environ 20–40 s selon les images.</p>
               </div>
             </div>
@@ -540,9 +590,9 @@ export default function LandingInvitationAiGenerator({
               <button
                 type="button"
                 onClick={() => setPreviewOpen(true)}
-                className="text-[11px] font-bold text-primary inline-flex items-center gap-1 hover:underline"
+                className="text-xs font-bold text-primary inline-flex items-center gap-1.5 min-h-10 px-2 touch-manipulation hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-lg"
               >
-                <Maximize2 className="w-3.5 h-3.5" />
+                <Maximize2 className="w-3.5 h-3.5" aria-hidden />
                 Agrandir
               </button>
             ) : null}
