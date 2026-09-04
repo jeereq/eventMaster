@@ -69,7 +69,6 @@ export default function ContactPage() {
   return (
     <PublicPageShell faqHref="/contact#faq">
       <PublicPageHero
-        chip="Contact"
         title="Parlons de votre événement"
         description={`Démonstration, forfaits ou support — réponse sous 24–48 h (${site.supportHours}).`}
       />

@@ -275,7 +275,7 @@ export default function CatalogueSearchLayout({
 
   return (
     <PublicPageShell faqHref="/faq">
-      <PublicPageHero compact chip="Marketplace" title={heroTitle} description={heroDescription}>
+      <PublicPageHero compact title={heroTitle} description={heroDescription}>
         <div className="flex flex-wrap items-center gap-2">
           <MarketplacePublicNav active={activeNav} />
         </div>

@@ -108,7 +108,6 @@ export default function Plans3DPage() {
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       {/* ─── Hero épuré ─── */}
       <PublicPageHero
-        chip="Modélisation Spatiale & Plans 2D / 3D"
         title="Modèles de salles 2D & 3D interactifs"
         description="Mariages, banquets de gala, conférences ou cocktails. Explorez nos agencements types, visualisez l'immersion 3D et placez vos invités avec précision."
         compact
@@ -331,10 +330,6 @@ export default function Plans3DPage() {
         {/* ─── Piliers technologiques de l’éditeur ─── */}
         <section className="rounded-2xl sm:rounded-3xl border border-border/80 bg-surface/70 p-6 sm:p-8 space-y-6">
           <div className="max-w-2xl space-y-1.5">
-            <span className="em-festive-chip">
-              <Sparkles className="w-3 h-3" />
-              Conception Spatiale Pro
-            </span>
             <h2 className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">
               Tout ce dont vous avez besoin pour agencer votre salle
             </h2>

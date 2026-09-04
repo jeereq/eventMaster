@@ -74,7 +74,6 @@ export default function ModelesPage() {
       mobileFooterPad
     >
       <PublicPageHero
-        chip="Papeterie Digitale & RSVP"
         title="Modèles d'invitations prêts à l'emploi"
         description="Mariages, anniversaires, réceptions d'entreprise ou galas. Choisissez un design élégant, personnalisez vos informations et partagez le lien WhatsApp en 1 clic."
         compact

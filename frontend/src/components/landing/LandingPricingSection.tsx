@@ -215,15 +215,6 @@ export default function LandingPricingSection({
  >
  <div className="page-container relative z-10">
         <div className="max-w-2xl mb-10 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <span className="em-festive-chip">
-              <Sparkles className="w-3 h-3" />
-              Tarification Transparente
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Sans frais cachés
-            </span>
-          </div>
           <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
             {audience === 'B2C'
               ? 'Forfaits Particuliers'

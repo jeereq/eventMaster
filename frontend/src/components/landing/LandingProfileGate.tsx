@@ -10,7 +10,7 @@ import {
 } from '@/lib/landingProfiles';
 import { Button, Modal } from '@/components/ui';
 import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
-import { ArrowRight, Check, Sparkles, ShieldCheck, Layers } from 'lucide-react';
+import { ArrowRight, Check, ShieldCheck, Layers } from 'lucide-react';
 
 export default function LandingProfileGate({
   selectedId,
@@ -68,15 +68,6 @@ export default function LandingProfileGate({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 px-1">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="em-festive-chip">
-              <Sparkles className="w-3 h-3" />
-              Solutions & Produits
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Orientation Immédiate
-            </span>
-          </div>
           <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
             Quel est votre projet ?
           </h2>

@@ -30,7 +30,6 @@ interface AuthSplitLayoutProps {
 }
 
 export function AuthSplitLayout({
-  badge,
   title,
   description,
   features = [],
@@ -73,11 +72,6 @@ export function AuthSplitLayout({
 
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
-            {badge && (
-              <span className="inline-flex text-[10px] bg-white/10 border border-white/15 text-white/90 font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
-                {badge}
-              </span>
-            )}
             <h1 className="text-3xl xl:text-4xl font-display font-semibold tracking-tight leading-tight">{title}</h1>
             <p className="text-white/70 text-sm leading-relaxed">{description}</p>
           </div>

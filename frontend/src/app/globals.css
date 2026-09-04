@@ -680,21 +680,6 @@ html[data-mood="celebrate"] .font-display {
   transform: rotate(0deg);
 }
 
-.em-festive-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--festive-accent) 35%, var(--border));
-  background: var(--festive-accent-soft);
-  color: color-mix(in srgb, var(--festive-accent) 75%, var(--foreground));
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 /* ─── Nouveaux utilitaires HUD & Dark Luxe (Inspiration JumpBot & Cinematic) ─── */
 .em-glow-text {
   color: var(--primary);

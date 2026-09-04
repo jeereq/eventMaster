@@ -94,7 +94,6 @@ function SuccessInner() {
   return (
     <PublicPageShell>
       <PublicPageHero
-        chip="Billetterie"
         title={paid ? 'C’est confirmé' : showPending ? 'Paiement en cours' : 'Confirmation'}
         description={
           paid

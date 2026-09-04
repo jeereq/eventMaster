@@ -136,16 +136,6 @@ export default function LandingRoomEditorShowcase() {
         {/* En-tête de section avec CTAs directs */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
           <div className="max-w-2xl space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="em-festive-chip">
-                <Sparkles className="w-3 h-3" />
-                Éditeur Visuel 2D / 3D
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Outil Professionnel Intégré
-              </span>
-            </div>
-
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight leading-tight">
               Modélisez vos espaces et placez vos invités
             </h2>

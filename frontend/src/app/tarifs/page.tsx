@@ -37,7 +37,6 @@ export default function TarifsPage() {
       mobileFooterPad
     >
       <PublicPageHero
-        chip="Tarification Transparente"
         title="Des forfaits clairs et adaptés à votre événement"
         description="Sans engagement, sans frais cachés. Paiement simplifié par Mobile Money (M-Pesa, Orange Money, Airtel Money) ou carte bancaire en Francs Congolais (FC)."
         compact

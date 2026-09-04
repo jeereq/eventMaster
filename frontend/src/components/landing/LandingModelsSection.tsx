@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles, Eye } from 'lucide-react';
+import { ArrowRight, Eye } from 'lucide-react';
 import { Button, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import type { LandingTemplate } from '@/config/landingTemplates';
@@ -41,15 +41,6 @@ export default function LandingModelsSection({
       <div className="page-container relative z-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
-            <div className="flex items-center gap-2">
-              <span className="em-festive-chip">
-                <Sparkles className="w-3 h-3" />
-                Papeterie Digitale
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Faire-part & RSVP
-              </span>
-            </div>
             <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
               Modèles d’invitation prêts à l’emploi
             </h2>

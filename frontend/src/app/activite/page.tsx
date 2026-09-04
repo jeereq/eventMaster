@@ -13,7 +13,6 @@ export default function ActivitePage() {
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       {/* En-tête Héros épuré & visuel */}
       <PublicPageHero
-        chip="Réalisations & Stories"
         title="L'actualité visuelle des réceptions"
         description="Photos, décors et coulisses partagés en direct par les salles et prestataires en RDC."
         compact

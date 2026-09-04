@@ -8,7 +8,6 @@ export default function FaqPageClient() {
   return (
     <PublicPageShell faqHref="/faq">
       <PublicPageHero
-        chip="FAQ"
         title="Questions fréquentes"
         description="Forfaits (annuel −10 % y compris Particulier), protocole QR web, marketplace et facturation."
       />

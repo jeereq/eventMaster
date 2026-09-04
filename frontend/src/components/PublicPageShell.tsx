@@ -38,13 +38,11 @@ export default function PublicPageShell({
 }
 
 export function PublicPageHero({
-  chip,
   title,
   description,
   children,
   compact = false,
 }: {
-  chip?: string;
   title: string;
   description?: string;
   children?: React.ReactNode;
@@ -57,7 +55,6 @@ export function PublicPageHero({
         compact ? 'py-3 md:py-8 lg:py-10' : 'py-4 md:py-12 lg:py-14',
       )}>
         <div className="max-w-3xl space-y-1.5 md:space-y-3.5">
-          {chip ? <span className="hidden md:inline-flex em-festive-chip text-[11px] sm:text-xs">{chip}</span> : null}
           <h1 className={cn(
             'font-semibold md:font-display tracking-tight text-foreground leading-tight',
             compact
