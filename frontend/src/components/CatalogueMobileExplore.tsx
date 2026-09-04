@@ -10,7 +10,7 @@ import MarketplaceLocationsMap, {
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
-import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, formatDistanceKm, type CatalogueItem } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, formatDistanceKm, listingSrcSet, sizedMediaUrl, type CatalogueItem } from '@/lib/marketplace';
 
 type SheetSnap = 'peek' | 'mid' | 'full';
 
@@ -66,7 +66,11 @@ function StoryCard({
           {item.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={item.coverUrl}
+              src={sizedMediaUrl(item.coverUrl, 480)}
+              srcSet={listingSrcSet(item.coverUrl, [320, 480, 640])}
+              sizes="50vw"
+              width={480}
+              height={192}
               alt={item.title || "Visuel de l'établissement"}
               loading="lazy"
               decoding="async"
@@ -146,7 +150,11 @@ function SheetRow({
         {item.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={item.coverUrl}
+            src={sizedMediaUrl(item.coverUrl, 224)}
+            srcSet={listingSrcSet(item.coverUrl, [160, 224, 320])}
+            sizes="72px"
+            width={224}
+            height={140}
             alt={item.title || "Visuel de l'établissement"}
             loading="lazy"
             decoding="async"

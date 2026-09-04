@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, serviceMobilityLabel, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 import { rememberCurrentCatalogueList } from '@/lib/catalogueQuery';
 import useIsMobile from '@/hooks/useIsMobile';
 
@@ -28,17 +28,41 @@ function kindIcon(kind: CatalogueDisplayKind) {
   return Building2;
 }
 
-function Cover({ item, className }: { item: CatalogueItem; className?: string }) {
+const GRID_COVER_WIDTHS = [360, 480, 640, 800, 960] as const;
+const COMPACT_COVER_WIDTHS = [320, 480, 640, 800] as const;
+const LIST_COVER_WIDTHS = [160, 224, 320] as const;
+
+function Cover({
+  item,
+  className,
+  sizes,
+  widths,
+  fallbackWidth,
+  eager = false,
+}: {
+  item: CatalogueItem;
+  className?: string;
+  sizes: string;
+  widths: readonly number[];
+  fallbackWidth: number;
+  eager?: boolean;
+}) {
   const displayKind = catalogueItemDisplayKind(item);
   const accent = catalogueKindAccent(displayKind);
   const Icon = kindIcon(displayKind);
   if (item.coverUrl) {
+    const srcSet = listingSrcSet(item.coverUrl, [...widths]);
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+      // eslint-disable-next-line @next/next/no-img-element -- Cloudinary/Unsplash srcset, pas de hop next/image
       <img
-        src={item.coverUrl}
+        src={sizedMediaUrl(item.coverUrl, fallbackWidth)}
+        srcSet={srcSet}
+        sizes={sizes}
         alt={item.title || "Visuel de l'établissement"}
-        loading="lazy"
+        width={fallbackWidth}
+        height={Math.round(fallbackWidth * 0.75)}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : 'auto'}
         decoding="async"
         className={cn('object-cover transition duration-500 group-hover:scale-110', className)}
       />
@@ -82,12 +106,14 @@ function GridCard({
   favorited,
   onToggleFavorite,
   onNavigate,
+  eager,
 }: {
   item: CatalogueItem;
   compact?: boolean;
   favorited?: boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
   onNavigate?: (e: React.MouseEvent) => void;
+  eager?: boolean;
 }) {
   return (
     <Link
@@ -97,7 +123,16 @@ function GridCard({
     >
       {/* Photo avec mise en valeur maximale */}
       <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
-        <Cover item={item} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <Cover
+          item={item}
+          eager={eager}
+          fallbackWidth={compact ? 480 : 640}
+          widths={compact ? COMPACT_COVER_WIDTHS : GRID_COVER_WIDTHS}
+          sizes={compact
+            ? '(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw'
+            : '(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw'}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
 
         {/* Badge catégorie discret & moderne en verre dépoli */}
         <div className="absolute top-2.5 left-2.5 z-[1]">
@@ -186,7 +221,13 @@ function ListRow({
       )}
     >
       <div className="relative w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
-        <Cover item={item} className="w-full h-full" />
+        <Cover
+          item={item}
+          fallbackWidth={224}
+          widths={LIST_COVER_WIDTHS}
+          sizes="112px"
+          className="w-full h-full"
+        />
         <span className={cn(
           'absolute bottom-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-md shadow-sm',
           accent.iconBox,
@@ -295,15 +336,16 @@ export default function CatalogueResults({
 
     return (
       <div className="space-y-6">
-        {groups.map((group) => (
+        {groups.map((group, groupIndex) => (
           <section key={group.kind} className="space-y-3">
             {showHeadings ? <GroupHeading kind={group.kind} count={group.items.length} /> : null}
             <div className={GRID_CLASS[cols]}>
-              {group.items.map((item) => (
+              {group.items.map((item, index) => (
                 <GridCard
                   key={item.id}
                   item={item}
                   compact={cols >= 5}
+                  eager={groupIndex === 0 && index < 2}
                   favorited={isFavorite?.(item)}
                   onToggleFavorite={onToggleFavorite}
                   onNavigate={rememberListOnNavigate}
@@ -335,11 +377,12 @@ export default function CatalogueResults({
 
   return (
     <div className={GRID_CLASS[cols]}>
-      {items.map((item) => (
+      {items.map((item, index) => (
         <GridCard
           key={item.id}
           item={item}
           compact={cols >= 5}
+          eager={index < 2}
           favorited={isFavorite?.(item)}
           onToggleFavorite={onToggleFavorite}
           onNavigate={rememberListOnNavigate}

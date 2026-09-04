@@ -465,9 +465,27 @@ export function mediaPosterUrl(url: string): string {
 
 const CLOUDINARY_OWN_IMAGE_TF = /\/image\/upload\/(?:f_auto,q_auto,c_limit,w_\d+\/)?/;
 
-/** Redimensionne une URL Cloudinary. Laisse les autres hôtes inchangés. */
+function sizedUnsplashUrl(url: string, width: number): string {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set('w', String(width));
+    parsed.searchParams.set('auto', 'format');
+    parsed.searchParams.set('fit', 'crop');
+    parsed.searchParams.set('q', '80');
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+function canResizeMediaUrl(url: string): boolean {
+  return url.includes('res.cloudinary.com/') || url.includes('images.unsplash.com');
+}
+
+/** Redimensionne Cloudinary et Unsplash. Laisse les autres hôtes inchangés. */
 export function sizedMediaUrl(url: string, width: number): string {
   const poster = mediaPosterUrl(url);
+  if (poster.includes('images.unsplash.com')) return sizedUnsplashUrl(poster, width);
   if (!poster.includes('res.cloudinary.com/')) return poster;
   if (/\/image\/upload\//.test(poster)) {
     return poster.replace(CLOUDINARY_OWN_IMAGE_TF, `/image/upload/f_auto,q_auto,c_limit,w_${width}/`);
@@ -480,7 +498,7 @@ export function sizedMediaUrl(url: string, width: number): string {
 
 export function listingSrcSet(url: string, widths: number[]): string | undefined {
   const poster = mediaPosterUrl(url);
-  if (!poster.includes('res.cloudinary.com/')) return undefined;
+  if (!canResizeMediaUrl(poster)) return undefined;
   return widths.map((width) => `${sizedMediaUrl(url, width)} ${width}w`).join(', ');
 }
 
