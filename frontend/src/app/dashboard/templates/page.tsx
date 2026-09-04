@@ -1412,78 +1412,51 @@ export default function TemplatesPage() {
  return (
  <>
  {renderMockupImportModal()}
- <div className="space-y-6">
- {/* Editor Header */}
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
- <div className="flex items-center gap-3">
- <button 
+ <div className="flex flex-col gap-4">
+ {/* Editor Header — identity left, primary actions right, admin meta secondary */}
+ <header className="shrink-0 space-y-3 border-b border-border pb-4">
+ <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+ <div className="flex items-start gap-3 min-w-0">
+ <button
+ type="button"
  onClick={() => closeEditor()}
- className="p-2 hover:bg-surface-muted rounded-xl transition text-muted"
+ className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted"
  title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
  >
  <ArrowLeft className="w-5 h-5" />
  </button>
- <div>
- <input 
- type="text" 
+ <div className="min-w-0 flex-1 pt-1">
+ <input
+ type="text"
  value={templateName}
  onChange={(e) => setTemplateName(e.target.value)}
- className="text-xl font-extrabold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none px-1 transition"
+ className="w-full max-w-md text-xl font-extrabold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none px-0.5 transition"
  placeholder="Nom du modèle"
  />
- <div className="flex flex-wrap items-center gap-2 mt-0.5">
+ <div className="mt-1">
  {fromAdminConsole ? (
  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
  <Globe className="w-3 h-3" />
  Console Super Admin
  </span>
  ) : (
- <p className="text-xs text-muted font-semibold uppercase tracking-wider">
- {user?.role === 'SUPER_ADMIN' ? 'Concepteur plateforme' : 'Éditeur Visuel d\'Invitation'}
+ <p className="text-xs text-muted font-semibold">
+ {user?.role === 'SUPER_ADMIN' ? 'Concepteur plateforme' : 'Éditeur d\'invitation'}
  </p>
  )}
  {fromAdminConsole && (
- <p className="text-xs text-muted">
- Après enregistrement → retour au catalogue (filtres, vitrine landing).
+ <p className="text-xs text-muted mt-0.5">
+ Après enregistrement → retour au catalogue.
  </p>
  )}
- {user?.role === 'SUPER_ADMIN' && (
- <>
- <span className="text-muted text-xs">•</span>
- <span className="text-xs font-bold text-muted uppercase tracking-wider">Portée :</span>
- <select
- value={selectedTenantId}
- onChange={(e) => setSelectedTenantId(e.target.value)}
- className="text-[11px] font-bold text-foreground bg-surface-muted border border-border rounded-lg px-2 py-0.5 focus:outline-none focus:border-primary"
- >
- <option value="">Global (catalogue + landing)</option>
- {tenants.map((t) => (
- <option key={t.id} value={t.id}>
- Privé · {t.name}
- </option>
- ))}
- </select>
- {!selectedTenantId && (
- <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 cursor-pointer">
- <input
- type="checkbox"
- checked={showOnLanding}
- onChange={(e) => setShowOnLanding(e.target.checked)}
- className="rounded text-emerald-600 focus:ring-emerald-500"
- />
- Landing
- </label>
- )}
- </>
- )}
  </div>
  </div>
  </div>
- <div className="flex flex-wrap items-center gap-2">
+ <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0 pl-14 sm:pl-0">
  <button
  type="button"
  onClick={() => setShowGuestPreview((v) => !v)}
- className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 border font-bold rounded-xl text-sm transition ${
+ className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border font-bold rounded-[var(--radius-button)] text-sm transition ${
  showGuestPreview
  ? 'border-primary bg-primary/10 text-primary'
  : 'border-border text-muted hover:border-primary hover:text-primary'
@@ -1492,10 +1465,11 @@ export default function TemplatesPage() {
  <Eye className="w-4 h-4" />
  Aperçu invité
  </button>
- <button 
+ <button
+ type="button"
  onClick={handleSaveTemplate}
  disabled={saving}
- className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition shadow-md shadow-primary/20 disabled:opacity-50"
+ className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-[var(--radius-button)] text-sm transition shadow-md shadow-primary/20 disabled:opacity-50"
  >
  {saving ? (
  <>
@@ -1505,12 +1479,41 @@ export default function TemplatesPage() {
  ) : (
  <>
  <Save className="w-4.5 h-4.5" />
- Sauvegarder le modèle
+ Sauvegarder
  </>
  )}
  </button>
  </div>
  </div>
+ {user?.role === 'SUPER_ADMIN' && (
+ <div className="flex flex-wrap items-center gap-2 pl-14">
+ <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Portée</span>
+ <select
+ value={selectedTenantId}
+ onChange={(e) => setSelectedTenantId(e.target.value)}
+ className="text-[11px] font-bold text-foreground bg-surface-muted border border-border rounded-lg px-2 py-1.5 min-h-9 focus:outline-none focus:border-primary"
+ >
+ <option value="">Global (catalogue + landing)</option>
+ {tenants.map((t) => (
+ <option key={t.id} value={t.id}>
+ Privé · {t.name}
+ </option>
+ ))}
+ </select>
+ {!selectedTenantId && (
+ <label className="inline-flex min-h-9 items-center gap-1.5 text-[11px] font-bold text-emerald-700 cursor-pointer px-2 rounded-lg hover:bg-emerald-50">
+ <input
+ type="checkbox"
+ checked={showOnLanding}
+ onChange={(e) => setShowOnLanding(e.target.checked)}
+ className="rounded text-emerald-600 focus:ring-emerald-500"
+ />
+ Landing
+ </label>
+ )}
+ </div>
+ )}
+ </header>
 
  {draftSavedAt && (
  <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3">
@@ -1539,10 +1542,10 @@ export default function TemplatesPage() {
  </div>
  )}
 
- {/* Editor Workspace */}
- <div className="grid lg:grid-cols-4 gap-8 items-start">
+ {/* Editor Workspace — canvas leads; denser sticky rails support */}
+ <div className="grid grid-cols-1 lg:grid-cols-[minmax(14rem,16rem)_minmax(0,1fr)_minmax(15rem,18rem)] gap-4 lg:gap-5 items-start">
  {/* Left Toolbox — Contenu | Style */}
- <div className="bg-white border border-border rounded-3xl p-5 space-y-5 shadow-sm">
+ <aside className="order-2 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
  <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border">
  <button
  type="button"
@@ -1889,23 +1892,18 @@ export default function TemplatesPage() {
  </p>
  </>
  )}
- </div>
+ </aside>
 
  {/* Center Canvas Preview */}
- <div className="lg:col-span-2 space-y-4">
- <div className="text-center space-y-1">
- <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-muted border border-border text-muted text-[10px] font-bold uppercase tracking-wider">
- <Eye className="w-3.5 h-3.5" /> Aperçu
- </span>
- <p className="text-[10px] text-muted font-semibold">
+ <div className="order-1 lg:order-2 min-w-0 space-y-3">
+ <p className="text-center text-[10px] text-muted font-semibold tabular-nums">
  {canvasWidth} × {canvasHeight} px
  {canvasSizePreset !== 'custom' ? ` · ${CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset}` : ' · Personnalisé'}
- {showGuestPreview ? ' · Variables invité (ex. Amina Kabongo)' : ''}
- {layoutMode === 'free' ? ' · Mode libre (glisser-déposer)' : ''}
+ {showGuestPreview ? ' · Variables invité' : ''}
+ {layoutMode === 'free' ? ' · Mode libre' : ''}
  </p>
- </div>
- 
- <div className="flex justify-center">
+
+ <div className="flex flex-col items-center w-full gap-4">
  {/* Main Canvas Card */}
  <div 
  style={{
@@ -2225,7 +2223,7 @@ export default function TemplatesPage() {
  <div className="w-full text-center py-24 text-muted">
  <Sparkles className="w-10 h-10 mx-auto mb-3 text-muted animate-pulse" />
  <p className="text-sm font-medium">Votre canevas est vide.</p>
- <p className="text-xs mt-1">Ajoutez des composants à partir de la boîte à outils à gauche.</p>
+ <p className="text-xs mt-1">Ajoutez des composants depuis Contenu.</p>
  </div>
  ) : (
  canvasElements
@@ -2568,12 +2566,11 @@ export default function TemplatesPage() {
  )}
  </div>
  </div>
- </div>
 
  {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
- <div className="mt-4 space-y-3">
+ <div className="w-full space-y-3" style={{ maxWidth: `${canvasWidth}px` }}>
  <p className="text-center text-[10px] font-bold uppercase tracking-wider text-primary">
- Formulaire RSVP — zone externe (sous l&apos;invitation)
+ Formulaire RSVP — zone externe
  </p>
  {canvasElements
  .filter((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside')
@@ -2586,7 +2583,7 @@ export default function TemplatesPage() {
  ? 'border-primary bg-primary/10 shadow-md'
  : 'border-primary/30 bg-white hover:border-primary/50'
  }`}
- style={{ maxWidth: `${canvasWidth}px`, width: '100%' }}
+ style={{ width: '100%' }}
  >
  <div className="text-xs font-bold text-primary text-center mb-3">{el.text || 'Confirmer votre présence'}</div>
  <div className="grid grid-cols-2 gap-2 mb-3">
@@ -2603,9 +2600,10 @@ export default function TemplatesPage() {
  </div>
  )}
  </div>
+ </div>
 
  {/* Right Properties Panel */}
- <div className="bg-white border border-border rounded-3xl p-5 space-y-5 shadow-sm">
+ <aside className="order-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
  {selectedElementId ? (
  // Element Properties Panel
  <div className="space-y-4">
@@ -3394,7 +3392,7 @@ export default function TemplatesPage() {
  )}
  </div>
  )}
- </div>
+ </aside>
  </div>
 
  {/* Image Cropper Modal */}
