@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useMemo, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { Suspense, useMemo, useRef, useCallback, useEffect, forwardRef, useImperativeHandle, memo } from 'react';
 import { Canvas, ThreeEvent, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows, Environment, Sky, Stars } from '@react-three/drei';
 import * as THREE from 'three';
@@ -2235,7 +2235,7 @@ function SceneContent({
   );
 }
 
-export default forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function RoomWebGLViewer({
+const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function RoomWebGLViewer({
   blueprint,
   selected,
   onSelect,
@@ -2362,6 +2362,8 @@ export default forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function Ro
     </div>
   );
 });
+
+export default memo(RoomWebGLViewer);
 
 function renderQualityLabelsSafe(q: RenderQuality) {
   if (q === 'draft') return 'Brouillon';

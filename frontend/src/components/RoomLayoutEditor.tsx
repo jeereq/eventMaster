@@ -1,13 +1,25 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
-import RoomWebGLViewer, { type RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
+import type { RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
+
+const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="flex-1 min-h-24 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted"
+      role="status"
+      aria-label="Chargement de la vue 3D"
+    />
+  ),
+});
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import { ChairTypePicker, SeatMaterialPicker, RoomAmbienceCard, TableSurfacePicker, ZoneMaterialPicker } from '@/components/room/RoomMaterialPreviews';
 import RoomAmbiencePreviewModal from '@/components/room/RoomAmbiencePreviewModal';
@@ -419,6 +431,16 @@ export default function RoomLayoutEditor({
   const selectedFixture = selected?.kind === 'fixture'
     ? blueprint.fixtures.find((f) => f.id === selected.id)
     : null;
+
+  const handleWalkthroughProgress = useCallback((label: string) => {
+    setWalkthroughLabel(label);
+  }, []);
+
+  const handleWalkthroughComplete = useCallback(() => {
+    setWalkthroughActive(false);
+    setWalkthroughLabel('');
+    log('Visite guidée terminée', 'info');
+  }, [log]);
 
   const handleCanvasSelect = useCallback((sel: LayoutSelectionItem | null, opts?: { additive?: boolean }) => {
     if (!sel) {
@@ -1385,12 +1407,8 @@ export default function RoomLayoutEditor({
       lightingPreset={lightingPreset}
       presentationMode={blueprint.metadata.presentationMode === true}
       walkthroughActive={walkthroughActive}
-      onWalkthroughProgress={(label) => setWalkthroughLabel(label)}
-      onWalkthroughComplete={() => {
-        setWalkthroughActive(false);
-        setWalkthroughLabel('');
-        log('Visite guidée terminée', 'info');
-      }}
+      onWalkthroughProgress={handleWalkthroughProgress}
+      onWalkthroughComplete={handleWalkthroughComplete}
       className={className}
     />
   );
@@ -2202,7 +2220,7 @@ export default function RoomLayoutEditor({
                         ['showCurtains', 'Rideaux'],
                         ['showDecorPlants', 'Plantes d’angle'],
                       ] as const).map(([key, label]) => (
-                        <label key={key} className="flex items-center gap-2 text-[11px] text-foreground cursor-pointer">
+                        <label key={key} className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                           <input
                             type="checkbox"
                             checked={blueprint.metadata[key] === true}
@@ -2210,7 +2228,7 @@ export default function RoomLayoutEditor({
                               ...blueprint,
                               metadata: { ...blueprint.metadata, [key]: e.target.checked },
                             }, { message: e.target.checked ? `${label} activés` : `${label} masqués`, kind: 'settings' })}
-                            className="rounded border-border"
+                            className="rounded border-border size-4"
                           />
                           {label}
                         </label>
@@ -2224,7 +2242,7 @@ export default function RoomLayoutEditor({
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Importer un plan de salle (image)
                       </span>
-                      <p className="text-[10px] text-muted font-normal leading-relaxed">
+                      <p className={EDITOR_HINT}>
                         Photo ou scan du plan : affiché en entier sous le mobilier (repère pour placer tables &amp; allées).
                       </p>
                       <input
@@ -2630,19 +2648,20 @@ export default function RoomLayoutEditor({
               ))}
             </div>
             <div className="space-y-1.5 pt-1">
-              <label className="flex items-center justify-between gap-2 text-[10px] font-bold text-muted">
-                <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Perspective 3D</span>
-                <span className="tabular-nums">{depthAmount}%</span>
-              </label>
+              <div className="flex items-center justify-between gap-2 min-h-11 text-sm font-semibold text-foreground">
+                <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" aria-hidden /> Perspective 3D</span>
+                <span className="tabular-nums text-muted">{depthAmount}%</span>
+              </div>
               <input
                 type="range"
                 min={0}
                 max={100}
                 value={depthAmount}
                 onChange={(e) => setDepthAmount(Number(e.target.value))}
+                aria-label="Perspective 3D"
                 className="w-full accent-primary"
               />
-              <p className="text-[10px] text-muted leading-relaxed">
+              <p className={EDITOR_HINT}>
                 0 = vue du dessus · 100 = vue 3D en perspective immersive.
               </p>
             </div>
@@ -3255,7 +3274,8 @@ export default function RoomLayoutEditor({
                     type="color"
                     value={selectedFixture.color ?? '#d6d3d1'}
                     onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })}
-                    className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer"
+                    aria-label="Couleur dalle du balcon"
+                    className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                   />
                 </label>
               </div>
@@ -3811,7 +3831,8 @@ export default function RoomLayoutEditor({
                 type="color"
                 value={selectedFurniture.color ?? '#312e81'}
                 onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value }, 'Couleur de zone')}
-                className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer"
+                aria-label="Teinte de la zone"
+                className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
               />
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -5004,7 +5025,7 @@ export default function RoomLayoutEditor({
                 {storyBar}
                 {renderCanvas('flex-1 min-h-0 h-full')}
               </div>
-              <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3">
+              <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint">
                 {renderCanvasInventory()}
                 {renderEditPanel()}
               </div>
@@ -5039,7 +5060,7 @@ export default function RoomLayoutEditor({
             {storyBar}
             {renderCanvas('em-plan-stage lg:aspect-[16/10] lg:h-auto lg:min-h-[320px]')}
           </div>
-          <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto space-y-3">
+          <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint">
             {renderCanvasInventory()}
             {renderEditPanel()}
           </div>
