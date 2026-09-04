@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -18,7 +18,7 @@ import {
  Spline, Triangle, Plus, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
-import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize } from '@/components/ui';
+import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
 import { getFeatureLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
@@ -233,6 +233,7 @@ export default function TemplatesPage() {
  const [layoutMode, setLayoutMode] = useState<'flow' | 'free'>('flow');
  const [showGuestPreview, setShowGuestPreview] = useState(false);
  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+ const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
  const [freeDragId, setFreeDragId] = useState<string | null>(null);
  const freeCanvasRef = useRef<HTMLDivElement>(null);
  const [importedWithOcr, setImportedWithOcr] = useState(false);
@@ -298,7 +299,9 @@ export default function TemplatesPage() {
  }, [editorOpen, canUseCustomTemplates]);
 
  const closeEditor = (opts?: { keepSuccess?: boolean }) => {
+ setExitConfirmOpen(false);
  setEditorOpen(false);
+ setDraftSavedAt(null);
  if (!opts?.keepSuccess) {
  /* leave success banner for studio list if any */
  }
@@ -1136,6 +1139,43 @@ export default function TemplatesPage() {
 
  const draftKey = `em-template-draft-${editingTemplateId || 'new'}-${tenant?.id || 'global'}`;
 
+ const requestCloseEditor = () => {
+ if (draftSavedAt) {
+ setExitConfirmOpen(true);
+ return;
+ }
+ closeEditor();
+ };
+
+ const discardAndCloseEditor = () => {
+ try {
+ localStorage.removeItem(draftKey);
+ } catch {
+ /* ignore */
+ }
+ setDraftSavedAt(null);
+ closeEditor();
+ };
+
+ const rsvpReportingIssues = useMemo(() => {
+ const issues: string[] = [];
+ for (const block of canvasElements) {
+ if (block.type !== 'rsvp-block') continue;
+ issues.push(...validateRsvpFieldsForReporting(block.rsvpFields || []));
+ }
+ return issues;
+ }, [canvasElements]);
+
+ useEffect(() => {
+ if (!editorOpen || !draftSavedAt) return;
+ const onBeforeUnload = (e: BeforeUnloadEvent) => {
+ e.preventDefault();
+ e.returnValue = '';
+ };
+ window.addEventListener('beforeunload', onBeforeUnload);
+ return () => window.removeEventListener('beforeunload', onBeforeUnload);
+ }, [editorOpen, draftSavedAt]);
+
  useEffect(() => {
  if (!editorOpen) return;
  const timer = window.setTimeout(() => {
@@ -1199,8 +1239,11 @@ export default function TemplatesPage() {
  for (const block of rsvpBlocks) {
  const reportingIssues = validateRsvpFieldsForReporting(block.rsvpFields || []);
  if (reportingIssues.length > 0) {
+ setSelectedElementId(block.id);
+ setStudioRail('content');
+ setPropsAdvanced(false);
  setError(
- `Formulaire RSVP incomplet pour le reporting : ${reportingIssues[0]} Renseignez une clé analytique unique sur chaque champ.`,
+ `Formulaire RSVP incomplet pour le reporting : ${reportingIssues[0]} Corrigez les champs dans le panneau de droite.`,
  );
  return;
  }
@@ -1253,6 +1296,7 @@ export default function TemplatesPage() {
  /* ignore */
  }
  setDraftSavedAt(null);
+ setExitConfirmOpen(false);
  if (studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN') {
  setEditorOpen(false);
  router.push(`${ADMIN_TEMPLATES_HREF}&saved=1`);
@@ -1260,8 +1304,9 @@ export default function TemplatesPage() {
  setEditorOpen(false);
  loadTemplates();
  }
- } catch (err: any) {
- setError(err.message || 'Erreur lors de la sauvegarde du modèle.');
+ } catch (err: unknown) {
+ const message = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde du modèle.';
+ setError(message);
  } finally {
  setSaving(false);
  }
@@ -1412,6 +1457,37 @@ export default function TemplatesPage() {
  return (
  <>
  {renderMockupImportModal()}
+ <Modal
+ open={exitConfirmOpen}
+ onClose={() => setExitConfirmOpen(false)}
+ title="Quitter sans enregistrer ?"
+ description="Un brouillon local est conservé sur cet appareil. Quitter maintenant laisse le modèle non publié."
+ size="sm"
+ footer={
+ <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end w-full">
+ <Button type="button" variant="ghost" onClick={() => setExitConfirmOpen(false)}>
+ Continuer l&apos;édition
+ </Button>
+ <Button type="button" variant="secondary" onClick={discardAndCloseEditor}>
+ Quitter
+ </Button>
+ <Button
+ type="button"
+ onClick={() => {
+ setExitConfirmOpen(false);
+ void handleSaveTemplate();
+ }}
+ disabled={saving}
+ >
+ {saving ? 'Sauvegarde…' : 'Enregistrer et quitter'}
+ </Button>
+ </div>
+ }
+ >
+ <p className="text-sm text-muted leading-relaxed">
+ Brouillon sauvegardé à {draftSavedAt}. Les modifications non publiées ne seront pas visibles pour les invités.
+ </p>
+ </Modal>
  <div className="flex flex-col gap-4">
  {/* Editor Header — identity left, primary actions right, admin meta secondary */}
  <header className="shrink-0 space-y-3 border-b border-border pb-4">
@@ -1419,20 +1495,32 @@ export default function TemplatesPage() {
  <div className="flex items-start gap-3 min-w-0">
  <button
  type="button"
- onClick={() => closeEditor()}
+ onClick={() => requestCloseEditor()}
  className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted"
  title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
  >
  <ArrowLeft className="w-5 h-5" />
  </button>
  <div className="min-w-0 flex-1 pt-1">
+ <div className="flex items-center gap-2 min-w-0">
  <input
  type="text"
  value={templateName}
  onChange={(e) => setTemplateName(e.target.value)}
- className="w-full max-w-md text-xl font-extrabold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none px-0.5 transition"
+ maxLength={120}
+ className="w-full max-w-md min-w-0 text-xl font-extrabold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none px-0.5 transition"
  placeholder="Nom du modèle"
+ aria-label="Nom du modèle"
  />
+ {draftSavedAt && (
+ <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap">
+ Non enregistré
+ </span>
+ )}
+ </div>
+ {templateName.length >= 100 && (
+ <p className="text-[10px] text-muted mt-0.5">{templateName.length}/120</p>
+ )}
  <div className="mt-1">
  {fromAdminConsole ? (
  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
@@ -1453,6 +1541,19 @@ export default function TemplatesPage() {
  </div>
  </div>
  <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0 pl-14 sm:pl-0">
+ {rsvpReportingIssues.length > 0 ? (
+ <p
+ role="status"
+ className="w-full sm:w-auto text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 max-w-xs sm:text-right"
+ title={rsvpReportingIssues[0]}
+ >
+ RSVP reporting à corriger
+ </p>
+ ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
+ <p role="status" className="w-full sm:w-auto text-[10px] font-semibold text-emerald-700 sm:text-right">
+ RSVP prêt
+ </p>
+ ) : null}
  <button
  type="button"
  onClick={() => setShowGuestPreview((v) => !v)}
@@ -1469,6 +1570,7 @@ export default function TemplatesPage() {
  type="button"
  onClick={handleSaveTemplate}
  disabled={saving}
+ title={rsvpReportingIssues.length > 0 ? rsvpReportingIssues[0] : undefined}
  className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-[var(--radius-button)] text-sm transition shadow-md shadow-primary/20 disabled:opacity-50"
  >
  {saving ? (
@@ -1536,9 +1638,20 @@ export default function TemplatesPage() {
  )}
 
  {error && (
- <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
+ <div
+ role="alert"
+ aria-live="assertive"
+ className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex flex-wrap items-center gap-3 text-sm"
+ >
  <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
- <span>{error}</span>
+ <span className="flex-1 min-w-0 break-words">{error}</span>
+ <button
+ type="button"
+ onClick={() => setError('')}
+ className="text-xs font-bold text-rose-700 hover:underline shrink-0"
+ >
+ Fermer
+ </button>
  </div>
  )}
 
@@ -2869,7 +2982,7 @@ export default function TemplatesPage() {
  </div>
  </div>
  {validateRsvpFieldsForReporting(elRsvpFields).length > 0 && (
- <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2">
+ <p role="status" className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2 break-words">
  {validateRsvpFieldsForReporting(elRsvpFields)[0]}
  </p>
  )}
