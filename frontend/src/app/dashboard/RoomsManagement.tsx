@@ -1,18 +1,30 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { enabledMarketplaceCities } from '@/lib/platformCities';
 import {
-  Building2, Plus, Trash2, Users, UserPlus, CheckCircle2,
+  Building2, Plus, Trash2, Users, UserPlus, Check, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
   Globe, GlobeLock, Lock, Eye,
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
-import RoomLayoutEditor from '@/components/RoomLayoutEditor';
+
+const RoomLayoutEditor = dynamic(() => import('@/components/RoomLayoutEditor'), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-4 py-10 text-center text-sm text-muted"
+      role="status"
+    >
+      Chargement de l’éditeur 3D…
+    </div>
+  ),
+});
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
   Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems, usePageSize,
@@ -162,13 +174,39 @@ const defaultParams: Record<RoomType, LayoutParams> = {
 };
 
 const WIZARD_STEPS = [
-  { id: 1, label: 'Identité' },
-  { id: 2, label: 'Type' },
-  { id: 3, label: 'Structure & plan' },
+  { id: 1, label: 'Identité', shortLabel: 'Identité' },
+  { id: 2, label: 'Type', shortLabel: 'Type' },
+  { id: 3, label: 'Structure & plan', shortLabel: 'Plan' },
 ] as const;
 
+type WizardPlanTab = 'structure' | 'capacite' | 'ambiance' | 'editeur';
+
+const CANVAS_PARAM_KEYS = new Set<keyof LayoutParams>([
+  'canvasWidthM',
+  'canvasHeightM',
+  'tentWidthM',
+  'tentLengthM',
+]);
+
+function buildWizardBlueprint(
+  type: RoomType,
+  params: LayoutParams,
+  prev: RoomLayoutBlueprint | null,
+  fallbackPreset: string | null = 'duplex',
+): RoomLayoutBlueprint {
+  let next = refreshBlueprintMetadata(generateRoomBlueprint(type, params));
+  const presetId = resolveBuildingPresetId(prev) ?? fallbackPreset;
+  if (presetId) {
+    next = applyBuildingStoryPreset(next, presetId);
+  }
+  if (prev?.metadata.roomThemeId) {
+    next = applyRoomTheme(next, prev.metadata.roomThemeId as RoomThemeId, { keepFloor: false });
+  }
+  return next;
+}
+
 const fieldClass =
-  'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+  'w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
 
 const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 
@@ -201,7 +239,10 @@ export default function RoomsManagement() {
   const [roomType, setRoomType] = useState<RoomType>('BANQUET');
   const [layoutParams, setLayoutParams] = useState<LayoutParams>(defaultParams.BANQUET);
   const [blueprintDraft, setBlueprintDraft] = useState<RoomLayoutBlueprint | null>(null);
-  const [wizardPlanTab, setWizardPlanTab] = useState<'structure' | 'capacite' | 'ambiance' | 'editeur'>('structure');
+  const [wizardPlanTab, setWizardPlanTab] = useState<WizardPlanTab>('structure');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const notesFieldId = useId();
+  const editNotesFieldId = useId();
   const [editingRoom, setEditingRoom] = useState<RoomItem | null>(null);
   const [viewingRoom, setViewingRoom] = useState<RoomItem | null>(null);
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
@@ -279,11 +320,7 @@ export default function RoomsManagement() {
   }, [roomQuery, filterRoomType, filterVisibility, filterCity, roomsPageSize]);
 
   const regenerateBlueprint = () => {
-    const bp =
-      roomType === 'SIMPLE'
-        ? generateRoomBlueprint('SIMPLE')
-        : generateRoomBlueprint(roomType, layoutParams);
-    setBlueprintDraft(refreshBlueprintMetadata(bp));
+    setBlueprintDraft((prev) => buildWizardBlueprint(roomType, layoutParams, prev));
   };
 
   const resetWizard = () => {
@@ -292,15 +329,30 @@ export default function RoomsManagement() {
     setDescription('');
     setFloor('');
     setLocation('');
-    setRoomType(allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE');
-    setLayoutParams(defaultParams.BANQUET);
+    const initialType = allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE';
+    setRoomType(initialType);
+    setLayoutParams(defaultParams[initialType]);
     setBlueprintDraft(null);
     setWizardPlanTab('structure');
+    setConfirmDiscard(false);
   };
 
   const closeWizard = () => {
     setShowWizard(false);
     resetWizard();
+  };
+
+  const wizardIsDirty = Boolean(
+    name.trim() || description.trim() || floor.trim() || location.trim() || wizardStep > 1,
+  );
+
+  const requestCloseWizard = () => {
+    if (saving) return;
+    if (wizardIsDirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    closeWizard();
   };
 
   const openWizard = () => {
@@ -309,6 +361,8 @@ export default function RoomsManagement() {
       return;
     }
     resetWizard();
+    const initialType = allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE';
+    setBlueprintDraft(buildWizardBlueprint(initialType, defaultParams[initialType], null));
     setError('');
     setShowWizard(true);
   };
@@ -338,23 +392,16 @@ export default function RoomsManagement() {
     load();
   }, []);
 
-  useEffect(() => {
-    if (!showWizard) return;
-    setBlueprintDraft((prev) => {
-      let next = refreshBlueprintMetadata(generateRoomBlueprint(roomType, layoutParams));
-      const presetId = resolveBuildingPresetId(prev ?? null) ?? (!prev ? 'duplex' : null);
-      if (presetId) {
-        next = applyBuildingStoryPreset(next, presetId);
-      }
-      if (prev?.metadata.roomThemeId) {
-        next = applyRoomTheme(next, prev.metadata.roomThemeId as RoomThemeId, { keepFloor: false });
-      }
-      return next;
-    });
-  }, [showWizard, roomType, layoutParams]);
-
   const updateParam = <K extends keyof LayoutParams>(key: K, value: LayoutParams[K]) => {
     setLayoutParams((prev) => ({ ...prev, [key]: value }));
+    if (CANVAS_PARAM_KEYS.has(key) && typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      setBlueprintDraft((draft) => {
+        if (!draft) return draft;
+        const widthM = key === 'canvasWidthM' || key === 'tentWidthM' ? value : draft.canvas.widthM;
+        const heightM = key === 'canvasHeightM' || key === 'tentLengthM' ? value : draft.canvas.heightM;
+        return { ...draft, canvas: { widthM, heightM } };
+      });
+    }
   };
 
   const handleCreate = async () => {
@@ -806,8 +853,12 @@ export default function RoomsManagement() {
         </div>
       </div>
 
-      {error && <Alert variant="error">{error}</Alert>}
-      {success && <Alert variant="success">{success}</Alert>}
+      {error && !showWizard && !viewingRoom && !editingRoom && !listingRoom && (
+        <Alert variant="error">{error}</Alert>
+      )}
+      {success && !showWizard && !viewingRoom && !editingRoom && !listingRoom && (
+        <Alert variant="success">{success}</Alert>
+      )}
 
       {roomsAtLimit && (
         <PlanLimitCallout kind="rooms" planQuota={planQuota} planName={tenant?.plan} />
@@ -880,12 +931,12 @@ export default function RoomsManagement() {
 
       <Modal
         open={showWizard && canManage}
-        onClose={closeWizard}
+        onClose={requestCloseWizard}
         title="Nouvelle salle"
         description={
           wizardStep === 3
-            ? 'Choisissez la structure (étages), puis peaufinez le plan.'
-            : 'Infos, type d’espace, puis structure & plan — personnalisable ensuite.'
+            ? 'Un onglet à la fois : structure, capacité, puis le plan.'
+            : 'Nommez la salle, choisissez le type, puis le plan — modifiable ensuite.'
         }
         size={wizardStep === 3 ? 'full' : 'lg'}
         className={wizardStep === 3 ? 'h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl' : undefined}
@@ -927,53 +978,79 @@ export default function RoomsManagement() {
           </div>
         }
       >
-        {/* Stepper */}
-        <div className="flex items-center gap-1 sm:gap-2 mb-5">
-          {WIZARD_STEPS.map((step, idx) => {
-            const active = wizardStep === step.id;
-            const done = wizardStep > step.id;
-            return (
-              <React.Fragment key={step.id}>
-                {idx > 0 && (
-                  <div className={cn('h-px flex-1 min-w-2', done ? 'bg-primary' : 'bg-border')} />
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (step.id < wizardStep || (step.id === wizardStep + 1 && (wizardStep > 1 || name.trim()))) {
-                      goToStep(step.id);
-                    }
-                  }}
-                  className={cn(
-                    'inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors shrink-0',
-                    active && 'bg-primary/10 text-primary',
-                    done && !active && 'text-primary',
-                    !active && !done && 'text-muted',
+        {error && showWizard && (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
+        {confirmDiscard && (
+          <Alert variant="warning" title="Fermer sans créer ?" className="mb-4">
+            <p>Le nom, le type et le plan de cette salle ne seront pas enregistrés.</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Button type="button" size="sm" variant="secondary" onClick={() => setConfirmDiscard(false)}>
+                Continuer l’édition
+              </Button>
+              <Button type="button" size="sm" variant="danger" onClick={closeWizard}>
+                Fermer sans créer
+              </Button>
+            </div>
+          </Alert>
+        )}
+
+        <nav aria-label="Étapes de création" className="mb-5 overflow-x-auto">
+          <ol className="flex items-center gap-1 sm:gap-2 m-0 p-0 list-none">
+            {WIZARD_STEPS.map((step, idx) => {
+              const active = wizardStep === step.id;
+              const done = wizardStep > step.id;
+              const canReach =
+                step.id <= wizardStep
+                || (step.id === wizardStep + 1 && (wizardStep > 1 || Boolean(name.trim())));
+              return (
+                <li key={step.id} className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 last:flex-none">
+                  {idx > 0 && (
+                    <div className={cn('h-px flex-1 min-w-2', done ? 'bg-primary' : 'bg-border')} aria-hidden />
                   )}
-                >
-                  <span
+                  <button
+                    type="button"
+                    aria-current={active ? 'step' : undefined}
+                    aria-disabled={!canReach}
+                    disabled={!canReach}
+                    onClick={() => goToStep(step.id)}
                     className={cn(
-                      'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold border',
-                      active && 'bg-primary text-white border-primary',
-                      done && !active && 'bg-primary/15 text-primary border-primary/30',
-                      !active && !done && 'border-border bg-surface',
+                      'inline-flex items-center gap-2 min-h-11 px-2.5 sm:px-3 rounded-[var(--radius-button)] text-xs font-medium transition-colors shrink-0',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      active && 'bg-primary/10 text-primary',
+                      done && !active && 'text-primary',
+                      !active && !done && 'text-muted',
+                      !canReach && 'opacity-50 cursor-not-allowed',
                     )}
                   >
-                    {done && !active ? '✓' : step.id}
-                  </span>
-                  <span className="hidden sm:inline">{step.label}</span>
-                </button>
-              </React.Fragment>
-            );
-          })}
-        </div>
+                    <span
+                      className={cn(
+                        'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold border',
+                        active && 'bg-primary text-primary-foreground border-primary',
+                        done && !active && 'bg-primary/15 text-primary border-primary/30',
+                        !active && !done && 'border-border bg-surface',
+                      )}
+                      aria-hidden
+                    >
+                      {done && !active ? <Check className="w-3.5 h-3.5" /> : step.id}
+                    </span>
+                    <span className="sm:hidden">{step.shortLabel}</span>
+                    <span className="hidden sm:inline">{step.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
         {wizardStep === 1 && (
           <div className="space-y-5">
             <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-muted">Identité</p>
-                <p className="text-[11px] text-muted mt-0.5">Nom et localisation visibles pour l’équipe et le catalogue.</p>
+                <h3 className="text-sm font-semibold text-foreground">Identité</h3>
+                <p className="text-xs text-muted mt-1">Nom et localisation visibles pour l’équipe et le catalogue.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Nom de la salle" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Grand salon" />
@@ -984,15 +1061,19 @@ export default function RoomsManagement() {
               </div>
             </section>
             <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-muted">Notes</p>
+              <label htmlFor={notesFieldId} className="block text-sm font-semibold text-foreground">
+                Notes
+              </label>
               <textarea
+                id={notesFieldId}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Ambiance, contraintes, notes protocole…"
                 className={fieldClass}
+                aria-describedby={`${notesFieldId}-hint`}
               />
-              <p className="text-[10px] text-muted">
+              <p id={`${notesFieldId}-hint`} className="text-xs text-muted">
                 À l’étape Plan, vous pourrez ajouter étages, fondation, couloirs et une ambiance visuelle.
               </p>
             </section>
@@ -1010,44 +1091,53 @@ export default function RoomsManagement() {
             {ROOM_TYPE_THEME_GROUPS.map((group) => (
               <section key={group.id} className="space-y-2">
                 <div className="flex items-baseline justify-between gap-2 px-0.5">
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">{group.label}</h3>
-                  <span className="text-[10px] text-muted">{group.hint}</span>
+                  <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
+                  <span className="text-xs text-muted">{group.hint}</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div
+                  role="radiogroup"
+                  aria-label={group.label}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+                >
                   {group.types.map((type) => {
                     const locked = Boolean(planFeatures) && !allowedRoomTypes.includes(type);
                     const minLevel = ROOM_TYPE_MIN_LEVEL[type];
+                    const selected = !locked && roomType === type;
                     return (
                       <button
                         key={type}
                         type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        aria-disabled={locked || undefined}
                         disabled={locked}
                         onClick={() => {
                           if (locked) return;
                           setRoomType(type);
                           setLayoutParams(defaultParams[type]);
-                          setBlueprintDraft(null);
+                          setBlueprintDraft(buildWizardBlueprint(type, defaultParams[type], null));
                         }}
                         className={cn(
-                          'text-left p-3.5 rounded-[var(--radius-card)] border transition-colors',
+                          'text-left p-3.5 min-h-11 rounded-[var(--radius-card)] border transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                           locked && 'opacity-55 cursor-not-allowed bg-surface-muted',
-                          !locked && roomType === type
+                          selected
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                             : !locked
                               ? 'border-border bg-surface hover:bg-surface-muted'
                               : 'border-border',
                         )}
                       >
-                        <div className={cn('mb-2 flex items-center justify-between', roomType === type && !locked ? 'text-primary' : 'text-muted')}>
-                          {roomTypeIcons[type]}
-                          {locked ? <Lock className="w-3.5 h-3.5" /> : roomType === type ? (
-                            <span className="text-[10px] font-bold text-primary">Sélectionné</span>
+                        <div className={cn('mb-2 flex items-center justify-between', selected ? 'text-primary' : 'text-muted')}>
+                          <span aria-hidden>{roomTypeIcons[type]}</span>
+                          {locked ? <Lock className="w-3.5 h-3.5" aria-hidden /> : selected ? (
+                            <span className="text-xs font-bold text-primary">Sélectionné</span>
                           ) : null}
                         </div>
                         <p className="font-semibold text-sm text-foreground">{roomTypeLabels[type]}</p>
-                        <p className="text-[11px] text-muted mt-1 leading-relaxed">{roomTypeDescriptions[type]}</p>
+                        <p className="text-xs text-muted mt-1 leading-relaxed">{roomTypeDescriptions[type]}</p>
                         {locked && (
-                          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mt-2">
+                          <p className="text-xs font-semibold text-foreground mt-2">
                             {minLevel === 'standard' ? 'Business+' : minLevel === 'advanced' ? 'Premium+' : 'Enterprise 1+'}
                           </p>
                         )}
@@ -1058,7 +1148,7 @@ export default function RoomsManagement() {
               </section>
             ))}
             {planFeatures && allowedRoomTypes.length < selectableRoomTypes.length && (
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 <Link href="/dashboard/billing" className="font-semibold text-primary hover:underline">
                   Changer de forfait
                 </Link>
@@ -1068,174 +1158,245 @@ export default function RoomsManagement() {
           </div>
         )}
 
-        {wizardStep === 3 && blueprintDraft && (
-          <div className="space-y-3 sm:space-y-4">
-            {/* Onglets (filtrant surtout sur mobile) */}
-            <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 sm:pb-0">
-              {(
-                [
-                  { id: 'structure' as const, label: 'Structure' },
-                  { id: 'capacite' as const, label: 'Capacité' },
-                  ...(planFeatures?.roomThemesFixtures === true
-                    ? [{ id: 'ambiance' as const, label: 'Ambiance' }]
-                    : []),
-                  { id: 'editeur' as const, label: 'Plan 3D' },
-                ]
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setWizardPlanTab(tab.id)}
-                  className={cn(
-                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition',
-                    wizardPlanTab === tab.id
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-surface border-border text-muted hover:bg-surface-muted',
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className={cn(wizardPlanTab !== 'structure' && 'hidden sm:block')}>
-              <section className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-primary" />
-                    Modèle d’étages
-                  </h3>
-                  <p className="text-[11px] text-muted mt-0.5">
-                    Un clic crée les niveaux, l’escalier et éventuellement les balcons.
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                  {BUILDING_STORY_PRESETS.map((preset) => {
-                    const active = resolveBuildingPresetId(blueprintDraft) === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => {
-                          setBlueprintDraft(applyBuildingStoryPreset(blueprintDraft, preset.id));
-                          setWizardPlanTab('editeur');
-                        }}
-                        className={cn(
-                          'text-left p-3 rounded-[var(--radius-card)] border transition min-h-[88px]',
-                          active
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary/25'
-                            : 'border-border bg-surface-muted/40 hover:bg-surface-muted',
-                        )}
-                      >
-                        <p className={cn('text-sm font-bold', active ? 'text-primary' : 'text-foreground')}>
-                          {preset.label}
-                        </p>
-                        <p className="text-[10px] text-muted mt-1 leading-snug">{preset.hint}</p>
-                        {active ? (
-                          <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wide text-primary">
-                            Sélectionné
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => setWizardPlanTab('editeur')}
-                    rightIcon={<ChevronRight className="w-4 h-4" />}
-                  >
-                    Continuer vers le plan
-                  </Button>
-                  <p className="text-[10px] text-muted">
-                    Astuce : en vue empilée, tournez la caméra pour voir tous les étages.
-                  </p>
-                </div>
-              </section>
-            </div>
-
-            <div className={cn(wizardPlanTab !== 'capacite' && 'hidden sm:block')}>
-              <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-3 sm:p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Ruler className="w-4 h-4 text-primary" />
-                    Capacité — {roomTypeLabels[roomType]}
-                  </h3>
-                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    {blueprintDraft.metadata.totalSeats} places · {blueprintDraft.canvas.widthM}×{blueprintDraft.canvas.heightM} m
-                  </p>
-                </div>
-                <div className="pt-1">{renderTypeParams()}</div>
+        {wizardStep === 3 && blueprintDraft && (() => {
+          const wizardPlanTabs: Array<{ id: WizardPlanTab; label: string }> = [
+            { id: 'structure', label: 'Structure' },
+            { id: 'capacite', label: 'Capacité' },
+            ...(planFeatures?.roomThemesFixtures === true
+              ? [{ id: 'ambiance' as const, label: 'Ambiance' }]
+              : []),
+            { id: 'editeur', label: 'Plan 3D' },
+          ];
+          const movePlanTab = (dir: 1 | -1) => {
+            const i = wizardPlanTabs.findIndex((tab) => tab.id === wizardPlanTab);
+            const next = wizardPlanTabs[(i + dir + wizardPlanTabs.length) % wizardPlanTabs.length];
+            if (!next) return;
+            setWizardPlanTab(next.id);
+            window.requestAnimationFrame(() => {
+              document.getElementById(`wizard-tab-${next.id}`)?.focus();
+            });
+          };
+          return (
+            <div className="space-y-4">
+              <div
+                role="tablist"
+                aria-label="Structure et plan"
+                className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    movePlanTab(1);
+                  } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    movePlanTab(-1);
+                  }
+                }}
+              >
+                {wizardPlanTabs.map((tab) => {
+                  const selected = wizardPlanTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      id={`wizard-tab-${tab.id}`}
+                      aria-selected={selected}
+                      aria-controls={`wizard-panel-${tab.id}`}
+                      tabIndex={selected ? 0 : -1}
+                      onClick={() => setWizardPlanTab(tab.id)}
+                      className={cn(
+                        'shrink-0 min-h-11 px-4 rounded-full text-xs font-bold border transition',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        selected
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-surface border-border text-muted hover:bg-surface-muted',
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
 
-            {planFeatures?.roomThemesFixtures === true ? (
-              <div className={cn(wizardPlanTab !== 'ambiance' && 'hidden lg:block')}>
-                <section className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3">
+              <div
+                role="tabpanel"
+                id="wizard-panel-structure"
+                aria-labelledby="wizard-tab-structure"
+                hidden={wizardPlanTab !== 'structure'}
+              >
+                <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
                   <div>
                     <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      Ambiance visuelle
+                      <Building2 className="w-4 h-4 text-primary" aria-hidden />
+                      Modèle d’étages
                     </h3>
-                    <p className="text-[11px] text-muted mt-0.5">
-                      Thèmes groupés — sol, couleurs, atmosphère.
+                    <p className="text-xs text-muted mt-1">
+                      Un clic crée les niveaux, l’escalier et éventuellement les balcons.
                     </p>
                   </div>
-                  <div className="space-y-3 max-h-[200px] sm:max-h-[240px] overflow-y-auto pr-1">
-                    {groupThemesByCategory(listAvailableThemes(blueprintDraft)).map(({ category, label, themes }) => (
-                      <div key={category} className="space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
-                          {label || roomThemeCategoryLabels[category]}
-                        </p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                          {themes.map((theme) => {
-                            const active =
-                              blueprintDraft.metadata.roomThemeId === theme.id
-                              || (!blueprintDraft.metadata.roomThemeId && theme.id === 'classic');
-                            return (
-                              <button
-                                key={theme.id}
-                                type="button"
-                                onClick={() => {
-                                  setBlueprintDraft(applyRoomTheme(blueprintDraft, theme.id as RoomThemeId, { keepFloor: false }));
-                                }}
-                                className={cn(
-                                  'text-left py-2 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold transition overflow-hidden',
-                                  active
-                                    ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
-                                    : 'border-border text-muted hover:bg-surface-muted',
-                                )}
-                              >
-                                <span
-                                  className="block h-8 rounded-[var(--radius-button)] mb-1.5 border border-black/5"
-                                  style={{
-                                    background: `${theme.canvasPattern ? `${theme.canvasPattern}, ` : ''}${theme.canvasBackground}`,
-                                  }}
-                                />
-                                {theme.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {BUILDING_STORY_PRESETS.map((preset) => {
+                      const active = resolveBuildingPresetId(blueprintDraft) === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => {
+                            setBlueprintDraft(applyBuildingStoryPreset(blueprintDraft, preset.id));
+                            setWizardPlanTab('editeur');
+                          }}
+                          className={cn(
+                            'text-left p-3 rounded-[var(--radius-card)] border transition min-h-11',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                            active
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary/25'
+                              : 'border-border bg-surface-muted/40 hover:bg-surface-muted',
+                          )}
+                        >
+                          <p className={cn('text-sm font-bold', active ? 'text-primary' : 'text-foreground')}>
+                            {preset.label}
+                          </p>
+                          <p className="text-xs text-muted mt-1 leading-snug">{preset.hint}</p>
+                          {active ? (
+                            <span className="inline-block mt-2 text-xs font-bold text-primary">
+                              Sélectionné
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setWizardPlanTab('editeur')}
+                      rightIcon={<ChevronRight className="w-4 h-4" />}
+                    >
+                      Continuer vers le plan
+                    </Button>
+                    <p className="text-xs text-muted">
+                      En vue empilée, tournez la caméra pour voir tous les étages.
+                    </p>
                   </div>
                 </section>
               </div>
-            ) : null}
 
-            <div className={cn(wizardPlanTab !== 'editeur' && 'hidden sm:block')}>
-              <RoomLayoutEditor
-                blueprint={blueprintDraft}
-                onChange={setBlueprintDraft}
-                onRegenerate={regenerateBlueprint}
-                allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
-                editorLevel={planFeatures?.roomEditorLevel}
-              />
+              <div
+                role="tabpanel"
+                id="wizard-panel-capacite"
+                aria-labelledby="wizard-tab-capacite"
+                hidden={wizardPlanTab !== 'capacite'}
+              >
+                <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Ruler className="w-4 h-4 text-primary" aria-hidden />
+                      Capacité — {roomTypeLabels[roomType]}
+                    </h3>
+                    <p className="text-xs font-medium text-foreground tabular-nums">
+                      {blueprintDraft.metadata.totalSeats} places · {blueprintDraft.canvas.widthM}×{blueprintDraft.canvas.heightM} m
+                    </p>
+                  </div>
+                  <div className="pt-1">{renderTypeParams()}</div>
+                  {roomType !== 'SIMPLE' && roomType !== 'CUSTOM' && (
+                    <div className="pt-1 space-y-2">
+                      <Button type="button" size="sm" variant="secondary" onClick={regenerateBlueprint}>
+                        Recalculer les tables et rangées
+                      </Button>
+                      <p className="text-xs text-muted">
+                        Remplace le mobilier du plan. Les dimensions du canvas s’appliquent tout de suite ; le thème d’étages est conservé.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {planFeatures?.roomThemesFixtures === true ? (
+                <div
+                  role="tabpanel"
+                  id="wizard-panel-ambiance"
+                  aria-labelledby="wizard-tab-ambiance"
+                  hidden={wizardPlanTab !== 'ambiance'}
+                >
+                  <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" aria-hidden />
+                        Ambiance visuelle
+                      </h3>
+                      <p className="text-xs text-muted mt-1">
+                        Thèmes groupés — sol, couleurs, atmosphère.
+                      </p>
+                    </div>
+                    <div className="space-y-3 max-h-[min(52vh,28rem)] overflow-y-auto pr-1">
+                      {groupThemesByCategory(listAvailableThemes(blueprintDraft)).map(({ category, label, themes }) => (
+                        <div key={category} className="space-y-2">
+                          <p className="text-xs font-semibold text-muted">
+                            {label || roomThemeCategoryLabels[category]}
+                          </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                            {themes.map((theme) => {
+                              const active =
+                                blueprintDraft.metadata.roomThemeId === theme.id
+                                || (!blueprintDraft.metadata.roomThemeId && theme.id === 'classic');
+                              return (
+                                <button
+                                  key={theme.id}
+                                  type="button"
+                                  aria-pressed={active}
+                                  onClick={() => {
+                                    setBlueprintDraft(applyRoomTheme(blueprintDraft, theme.id as RoomThemeId, { keepFloor: false }));
+                                  }}
+                                  className={cn(
+                                    'text-left min-h-11 py-2.5 px-2.5 rounded-[var(--radius-button)] border text-xs font-bold transition overflow-hidden',
+                                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                                    active
+                                      ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
+                                      : 'border-border text-muted hover:bg-surface-muted',
+                                  )}
+                                >
+                                  <span
+                                    className="block h-9 rounded-[var(--radius-button)] mb-1.5 border border-border"
+                                    aria-hidden
+                                    style={{
+                                      background: `${theme.canvasPattern ? `${theme.canvasPattern}, ` : ''}${theme.canvasBackground}`,
+                                    }}
+                                  />
+                                  {theme.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              ) : null}
+
+              <div
+                role="tabpanel"
+                id="wizard-panel-editeur"
+                aria-labelledby="wizard-tab-editeur"
+                hidden={wizardPlanTab !== 'editeur'}
+              >
+                {wizardPlanTab === 'editeur' ? (
+                  <RoomLayoutEditor
+                    blueprint={blueprintDraft}
+                    onChange={setBlueprintDraft}
+                    onRegenerate={regenerateBlueprint}
+                    allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
+                    editorLevel={planFeatures?.roomEditorLevel}
+                  />
+                ) : null}
+              </div>
             </div>
-          </div>
+          );
+        })()}
+        {wizardStep === 3 && !blueprintDraft && (
+          <p role="status" className="text-sm text-muted">Préparation du plan…</p>
         )}
       </Modal>
 
@@ -1572,6 +1733,9 @@ export default function RoomsManagement() {
       >
         {editBlueprint && (
           <div className="space-y-4">
+            {error && editingRoom && (
+              <Alert variant="error">{error}</Alert>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-[var(--radius-card)] border border-border bg-surface-muted/50">
               <Input
                 label="Nom de la salle"
@@ -1590,15 +1754,18 @@ export default function RoomsManagement() {
                   onChange={(e) => setEditMeta((m) => ({ ...m, location: e.target.value }))}
                 />
               </div>
-              <label className="sm:col-span-2">
-                <span className={labelClass}>Description</span>
+              <div className="sm:col-span-2 space-y-1.5">
+                <label htmlFor={editNotesFieldId} className={labelClass}>
+                  Description
+                </label>
                 <textarea
+                  id={editNotesFieldId}
                   value={editMeta.description}
                   onChange={(e) => setEditMeta((m) => ({ ...m, description: e.target.value }))}
                   rows={2}
                   className={fieldClass}
                 />
-              </label>
+              </div>
             </div>
             {rooms.filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint).length > 0 ? (
               <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
