@@ -58,6 +58,8 @@ export interface PlatformSettings {
   commercialRenewalCommissionRate: number;
   /** Taux de change 1 USD en CDF/FC (ex: 2800 = 1$ pour 2800 FC). Configurable par le SuperAdmin. */
   usdExchangeRateCdf: number;
+  /** Villes visibles / actives sur le site public. */
+  enabledCities: string[];
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -90,6 +92,8 @@ export interface PublicSiteConfig {
   commercialRenewalCommissionPercent: number;
   /** Taux de change 1 USD en CDF/FC (ex: 2800). */
   usdExchangeRateCdf: number;
+  /** Villes visibles / actives sur le site public. */
+  enabledCities: string[];
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -130,7 +134,21 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   commercialFirstCommissionRate: 0.3,
   commercialRenewalCommissionRate: 0.2,
   usdExchangeRateCdf: 2800,
+  enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
 };
+
+export const PLATFORM_CITY_CATALOG = ['Kinshasa', 'Lubumbashi', 'Goma'] as const;
+
+export function sanitizeEnabledCities(value: unknown): string[] {
+  const allowed = new Set<string>(PLATFORM_CITY_CATALOG);
+  const raw = Array.isArray(value) ? value : DEFAULT_PLATFORM_SETTINGS.enabledCities;
+  const picked = raw.map((item) => String(item || '').trim()).filter((item) => allowed.has(item));
+  const ordered = PLATFORM_CITY_CATALOG.filter((city) => picked.includes(city));
+  if (!ordered.includes('Kinshasa') && !ordered.includes('Lubumbashi')) {
+    return ['Kinshasa', ...ordered];
+  }
+  return ordered.length > 0 ? [...ordered] : ['Kinshasa'];
+}
 
 function ensureSettingsDir() {
   const dir = path.dirname(settingsFilePath);
@@ -196,12 +214,15 @@ export function loadPlatformSettings(): PlatformSettings {
 }
 
 function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
+  const parsedUsdRate = Number(settings.usdExchangeRateCdf);
   return {
     ...settings,
     marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
     marketplaceDepositRate: parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
     commercialFirstCommissionRate: parseRateInput(settings.commercialFirstCommissionRate, 0.3, 0, 1),
     commercialRenewalCommissionRate: parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
+    usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
+    enabledCities: sanitizeEnabledCities(settings.enabledCities),
   };
 }
 
@@ -225,6 +246,7 @@ function buildNextSettings(
   next.commercialRenewalCommissionRate = parseRateInput(next.commercialRenewalCommissionRate, 0.2, 0, 1);
   const parsedUsdRate = Number(next.usdExchangeRateCdf);
   next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
+  next.enabledCities = sanitizeEnabledCities(next.enabledCities);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -326,6 +348,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
       parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
     ),
     usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
+    enabledCities: sanitizeEnabledCities(settings.enabledCities),
   };
 }
 

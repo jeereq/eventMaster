@@ -3132,8 +3132,55 @@ function DashboardPageContent() {
                                   </div>
                                 </div>
                                 <p className="text-[11px] text-muted">
-                                  Ce taux permet de convertir automatiquement les montants en Dollars ($) en Francs Congolais (FC) pour le simulateur IA.
+                                  Ce taux permet de convertir automatiquement les montants en Dollars ($) en Francs Congolais (FC) pour le simulateur IA. Il s’affiche aussi sur la page d’accueil.
                                 </p>
+                              </div>
+
+                              <div className="space-y-2 sm:col-span-2 pt-2 border-t border-border">
+                                <label className="text-xs font-bold text-foreground">
+                                  Villes actives sur le site
+                                </label>
+                                <p className="text-[11px] text-muted">
+                                  Seules les villes cochées apparaissent sur l’accueil. Kinshasa et Lubumbashi ouvrent aussi le catalogue et le simulateur budget IA.
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {(['Kinshasa', 'Lubumbashi', 'Goma'] as const).map((cityName) => {
+                                    const selected = (Array.isArray(adminSettings.enabledCities)
+                                      ? adminSettings.enabledCities
+                                      : ['Kinshasa', 'Lubumbashi', 'Goma']).includes(cityName);
+                                    return (
+                                      <label
+                                        key={cityName}
+                                        className={cn(
+                                          'inline-flex items-center gap-2 min-h-11 px-3 rounded-xl border text-sm font-semibold cursor-pointer touch-manipulation',
+                                          selected
+                                            ? 'bg-primary-solid text-primary-foreground border-primary-solid'
+                                            : 'bg-surface text-muted border-border hover:text-foreground',
+                                        )}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          className="sr-only"
+                                          checked={selected}
+                                          onChange={() => {
+                                            const current = Array.isArray(adminSettings.enabledCities)
+                                              ? adminSettings.enabledCities
+                                              : ['Kinshasa', 'Lubumbashi', 'Goma'];
+                                            const next = selected
+                                              ? current.filter((item: string) => item !== cityName)
+                                              : [...current, cityName];
+                                            setAdminSettings({
+                                              ...adminSettings,
+                                              enabledCities: next.length > 0 ? next : [cityName],
+                                            });
+                                          }}
+                                        />
+                                        <MapPin className="w-3.5 h-3.5" />
+                                        {cityName}
+                                      </label>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
                           </div>

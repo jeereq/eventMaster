@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
+import { enabledMarketplaceCities, resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import LandingMedia from '@/components/landing/LandingMedia';
 import type { ListingEventTypeId } from '@/lib/listingDetails';
 import {
@@ -102,7 +103,8 @@ export default function LandingAiSimulationShowcase() {
   const isLoggedIn = Boolean(user);
 
   const { site } = usePlatformSite();
-  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+  const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
+  const marketplaceCities = enabledMarketplaceCities(site);
 
   const [viewMode, setViewMode] = useState<'presets' | 'live'>('presets');
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
@@ -111,7 +113,17 @@ export default function LandingAiSimulationShowcase() {
   const [liveDefaults, setLiveDefaults] = useState<EventPrepAiDefaults | undefined>();
   const [preferDefaults, setPreferDefaults] = useState(false);
 
-  const activeScenario = SCENARIOS.find((item) => item.id === selectedScenarioId) || SCENARIOS[0];
+  const visibleScenarios = useMemo(() => {
+    const filtered = SCENARIOS.filter((item) => marketplaceCities.includes(item.city as 'Kinshasa' | 'Lubumbashi'));
+    return filtered.length > 0 ? filtered : SCENARIOS;
+  }, [marketplaceCities]);
+
+  useEffect(() => {
+    if (!visibleScenarios.some((item) => item.id === selectedScenarioId)) {
+      setSelectedScenarioId(visibleScenarios[0].id);
+    }
+  }, [visibleScenarios, selectedScenarioId]);
+  const activeScenario = visibleScenarios.find((item) => item.id === selectedScenarioId) || visibleScenarios[0] || SCENARIOS[0];
   const activeScenarioUsd = Math.round(activeScenario.budgetTargetFc / exchangeRate);
   const simulatorUrl = isLoggedIn
     ? '/dashboard/catalogue?tab=plan&planView=ai'
@@ -175,13 +187,17 @@ export default function LandingAiSimulationShowcase() {
             dans votre budget
           </h2>
 
+          <p className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-foreground tabular-nums">
+            Taux actuel : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
+          </p>
+
           <p className="text-xs sm:text-base text-muted leading-relaxed">
             <span className="hidden sm:inline">
-              Indiquez votre budget en Dollars ($) calculé automatiquement en Francs Congolais (1 $ = {exchangeRate.toLocaleString('fr-FR')} FC), votre ville et vos envies : l’assistant EventMaster compose{' '}
-              <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples ci-dessous préremplissent votre projet — une simulation n’est lancée qu’au clic « Générer ».
+              Indiquez votre budget en dollars : il est converti en francs au taux ci-dessus. Choisissez votre ville et vos envies — l’assistant compose{' '}
+              <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples préremplissent le projet ; la simulation budget IA ne part qu’au clic « Générer ».
             </span>
             <span className="inline sm:hidden">
-              Indiquez votre budget en dollars ($) et votre ville : l'assistant calcule en francs et compose 3 formules sur-mesure.
+              Indiquez votre budget en dollars : il est converti au taux affiché, puis l’IA compose 3 formules dans votre enveloppe.
             </span>
           </p>
 
@@ -212,7 +228,7 @@ export default function LandingAiSimulationShowcase() {
               <span>Tester mon événement en direct</span>
               {isAiSimulationThresholdReached(allowance) ? (
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold tabular-nums">
-                  {allowance.totalRemaining} sim{allowance.totalRemaining > 1 ? 's' : ''}
+                  {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} budget IA
                 </span>
               ) : null}
             </button>
@@ -226,7 +242,7 @@ export default function LandingAiSimulationShowcase() {
                 Choisissez un projet type, puis générez de vrais packs catalogue.
               </p>
               <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1">
-                {SCENARIOS.map((scenario) => {
+                {visibleScenarios.map((scenario) => {
                   const isSelected = scenario.id === selectedScenarioId;
                   return (
                     <button

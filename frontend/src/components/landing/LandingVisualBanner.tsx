@@ -217,10 +217,10 @@ export default function LandingVisualBanner() {
                     <Link
                       href="/#simulateur-ia"
                       className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold inline-flex items-center gap-1 transition"
-                      title="Intégrer dans un pack IA"
+                      title="Estimer un budget avec 3 formules IA"
                     >
                       <Wand2 className="w-3 h-3" />
-                      Simuler en pack
+                      Estimer mon budget IA
                     </Link>
                   </div>
                 </div>

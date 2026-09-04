@@ -39,6 +39,20 @@ import {
   normalizeAllowedCommune,
   pointInCityBounds,
 } from '../utils/rdcCities';
+import { loadPlatformSettings, sanitizeEnabledCities } from '../services/platformSettingsService';
+
+function enabledMarketplaceCityNames(): string[] {
+  return sanitizeEnabledCities(loadPlatformSettings().enabledCities).filter(
+    (city) => city === 'Kinshasa' || city === 'Lubumbashi',
+  );
+}
+
+function cityNotEnabledError(cityName: string): string | null {
+  const enabled = enabledMarketplaceCityNames();
+  if (enabled.includes(cityName)) return null;
+  const list = enabled.join(' ou ') || 'une ville active';
+  return `${cityName} n’est pas une ville active. Choisissez ${list}.`;
+}
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -224,7 +238,9 @@ function publishLocationError(
 ): string | null {
   const cityName = normalizeAllowedCity(city);
   if (cityName === null) return 'La ville doit être Kinshasa ou Lubumbashi.';
-  if (!cityName) return 'Choisissez Kinshasa ou Lubumbashi pour publier.';
+  if (!cityName) return 'Choisissez une ville active pour publier.';
+  const blocked = cityNotEnabledError(cityName);
+  if (blocked) return blocked;
   const communeName = normalizeAllowedCommune(cityName, commune);
   if (communeName === null) return `La commune doit appartenir à ${cityName}.`;
   if (!communeName) return 'La commune est requise pour publier.';
@@ -248,6 +264,10 @@ function normalizeListingPlace(
   const cityName = normalizeAllowedCity(city);
   if (cityName === null) {
     return { error: 'La ville doit être Kinshasa ou Lubumbashi.' };
+  }
+  if (cityName) {
+    const blocked = cityNotEnabledError(cityName);
+    if (blocked) return { error: blocked };
   }
   const communeName = cityName
     ? normalizeAllowedCommune(cityName, commune)

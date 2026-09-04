@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { SITE_CONTACT } from '@/config/siteContent';
 import { applyBrandToDocument } from '@/lib/brandTheme';
+import { resolveUsdExchangeRateCdf, sanitizeEnabledCities } from '@/lib/platformCities';
 
 export interface PublicSiteConfig {
   platformName: string;
@@ -32,6 +33,7 @@ export interface PublicSiteConfig {
   commercialFirstCommissionPercent: number;
   commercialRenewalCommissionPercent: number;
   usdExchangeRateCdf: number;
+  enabledCities: string[];
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -63,6 +65,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   commercialFirstCommissionPercent: 30,
   commercialRenewalCommissionPercent: 20,
   usdExchangeRateCdf: 2800,
+  enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
 };
 
 interface PlatformSiteContextValue {
@@ -86,7 +89,12 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
       const res = await fetch(`${apiBase()}/public/site`, { cache: 'no-store' });
       if (!res.ok) throw new Error('site fetch failed');
       const data = (await res.json()) as Partial<PublicSiteConfig>;
-      const next: PublicSiteConfig = { ...DEFAULT_PUBLIC_SITE, ...data };
+      const next: PublicSiteConfig = {
+        ...DEFAULT_PUBLIC_SITE,
+        ...data,
+        usdExchangeRateCdf: resolveUsdExchangeRateCdf(data.usdExchangeRateCdf, DEFAULT_PUBLIC_SITE.usdExchangeRateCdf),
+        enabledCities: sanitizeEnabledCities(data.enabledCities),
+      };
       setSite(next);
 
       if (next.brandPrimary || next.brandAccent) {
@@ -116,8 +124,15 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     void refresh();
     const onUpdated = () => void refresh();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
     window.addEventListener('em-platform-settings-updated', onUpdated);
-    return () => window.removeEventListener('em-platform-settings-updated', onUpdated);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('em-platform-settings-updated', onUpdated);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   const value = useMemo(() => ({ site, ready, refresh }), [site, ready]);

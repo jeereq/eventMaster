@@ -4,6 +4,7 @@ import React from 'react';
 import { Clock, Users } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import { cn } from '@/lib/cn';
 import { eventTypeLabel } from '@/lib/listingDetails';
 import type { AiSimulationHistoryItem } from '@/lib/aiSimulationHistory';
@@ -40,7 +41,7 @@ export default function AiSimulationHistoryList({
   listClassName?: string;
 }) {
   const { site } = usePlatformSite();
-  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+  const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
 
   if (!items.length) return null;
 

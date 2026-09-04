@@ -9,6 +9,7 @@ import { formatFc } from '@/config/landingPricing';
 import { LISTING_EVENT_TYPES, VENUE_AMENITIES, type ListingAmenityId, type ListingEventTypeId } from '@/lib/listingDetails';
 import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
 import { communesForCity } from '@/lib/rdcCities';
+import { enabledMarketplaceCities, resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 import { snapshotPlanItems } from '@/lib/eventPlan';
 import {
@@ -93,7 +94,8 @@ export default function EventPrepAiSimulator({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const { site } = usePlatformSite();
-  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+  const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
+  const marketplaceCities = enabledMarketplaceCities(site);
 
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
   const [city, setCity] = useState(defaults?.city || '');
@@ -107,6 +109,14 @@ export default function EventPrepAiSimulator({
     return '';
   });
   const [eventDate, setEventDate] = useState(defaults?.eventDate?.slice(0, 10) || '');
+
+  useEffect(() => {
+    if (city && !marketplaceCities.includes(city as (typeof marketplaceCities)[number])) {
+      setCity('');
+      setCommune('');
+    }
+  }, [city, marketplaceCities]);
+
   const [prompt, setPrompt] = useState(initialPrompt(defaults));
   const [ambiance, setAmbiance] = useState<AiAmbianceId | ''>('');
   const [moment, setMoment] = useState<AiMomentId | ''>('');
@@ -522,9 +532,10 @@ export default function EventPrepAiSimulator({
                 }}
                 className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
               >
-                <option value="">Kinshasa & Lubumbashi</option>
-                <option value="Kinshasa">Kinshasa</option>
-                <option value="Lubumbashi">Lubumbashi</option>
+                <option value="">{marketplaceCities.join(' & ') || 'Ville'}</option>
+                {marketplaceCities.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
               </select>
             </label>
             <label className="space-y-1">

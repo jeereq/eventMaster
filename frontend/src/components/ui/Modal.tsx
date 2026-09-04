@@ -28,9 +28,11 @@ const sizeMap = {
   full: 'max-w-[100vw] sm:max-w-[min(98vw,90rem)]',
 };
 
+let openModalCount = 0;
+
 /** Classes partagées pour overlays ad-hoc (même look que Modal). */
 export const modalBackdropClass =
-  'absolute inset-0 bg-black/60 animate-fade-in';
+  'absolute inset-0 bg-black/40 animate-fade-in';
 
 export const modalPanelClass =
   'relative w-full bg-surface border border-border shadow-2xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col animate-slide-up sm:animate-fade-in';
@@ -49,6 +51,7 @@ export default function Modal({
   hideHeader = false,
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [stackDepth, setStackDepth] = useState(1);
   const openedAtRef = useRef(0);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -69,6 +72,8 @@ export default function Modal({
 
   useEffect(() => {
     if (!open || !mounted) return;
+    openModalCount += 1;
+    setStackDepth(openModalCount);
     openedAtRef.current = Date.now();
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -84,6 +89,7 @@ export default function Modal({
       (closeBtn || panelRef.current)?.focus();
     }, 0);
     return () => {
+      openModalCount = Math.max(0, openModalCount - 1);
       window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
@@ -96,16 +102,16 @@ export default function Modal({
   const showHeader = !hideHeader && (title || description || dismissible);
 
   return createPortal(
-    <div className={cn('fixed inset-0 z-[11000]', containerClassName)}>
+    <div className={cn('fixed inset-0', containerClassName)} style={{ zIndex: 11000 + stackDepth }}>
       {dismissible ? (
         <button
           type="button"
           aria-label="Fermer"
-          className={cn(modalBackdropClass, 'z-0')}
+          className={cn(modalBackdropClass, 'z-0', stackDepth > 1 && 'bg-black/15')}
           onClick={requestClose}
         />
       ) : (
-        <div className={cn(modalBackdropClass, 'z-0')} aria-hidden />
+        <div className={cn(modalBackdropClass, 'z-0', stackDepth > 1 && 'bg-black/15')} aria-hidden />
       )}
       <div className="absolute inset-0 z-10 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
         <div

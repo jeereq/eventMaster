@@ -79,7 +79,7 @@ export default function AiSimulationCounter({
           </div>
           <div className="min-w-0 space-y-0.5">
             <p className="text-xs sm:text-sm font-bold text-foreground leading-snug">
-              {remaining} simulation{remaining > 1 ? 's' : ''} restante{remaining > 1 ? 's' : ''}
+              {remaining} simulation{remaining > 1 ? 's' : ''} budget IA restante{remaining > 1 ? 's' : ''}
             </p>
             <p className="text-[11px] text-muted">
               {allowance.freeRemaining}/{max} essais gratuits
@@ -125,7 +125,7 @@ export default function AiSimulationCounter({
           className="inline-flex items-center justify-center gap-1.5 min-h-11 sm:min-h-9 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation"
         >
           <Coins className="w-3.5 h-3.5 text-amber-500" />
-          <span>Acheter {AI_TOKEN_PACK_SIZE} sims ({formatFc(AI_TOKEN_PACK_PRICE_FC)})</span>
+          <span>Recharger {AI_TOKEN_PACK_SIZE} simulations budget IA ({formatFc(AI_TOKEN_PACK_PRICE_FC)})</span>
         </button>
       </div>
 

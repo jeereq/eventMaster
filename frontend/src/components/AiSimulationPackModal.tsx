@@ -9,6 +9,7 @@ import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 import type { EventPlanAiItem, EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 import { AI_TOKEN_PACK_SIZE } from '@/lib/aiTokens';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
 
 export default function AiSimulationPackModal({
@@ -51,7 +52,7 @@ export default function AiSimulationPackModal({
   onOpenListing?: (target: EventPrepPreviewTarget) => void;
 }) {
   const { site } = usePlatformSite();
-  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+  const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
 
   const [listing, setListing] = useState<EventPrepPreviewTarget | null>(null);
   const packages = result?.packages || [];
@@ -156,7 +157,7 @@ export default function AiSimulationPackModal({
                   </Button>
                   {onBuyTokens ? (
                     <Button size="sm" variant="secondary" onClick={onBuyTokens}>
-                      Acheter {AI_TOKEN_PACK_SIZE} sims
+                      Recharger {AI_TOKEN_PACK_SIZE} simulations budget IA
                     </Button>
                   ) : null}
                 </div>

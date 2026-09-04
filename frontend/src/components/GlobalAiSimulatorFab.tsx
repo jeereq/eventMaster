@@ -46,12 +46,12 @@ export default function GlobalAiSimulatorFab() {
         type="button"
         onClick={() => setOpen(true)}
         className="fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6 inline-flex items-center gap-2 min-h-12 pl-3 pr-3.5 sm:pr-4 rounded-full bg-primary-solid text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary-solid-hover transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary-solid"
-        aria-label="Lancer une simulation IA"
+        aria-label="Estimer mon budget avec l’IA"
       >
         <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">
           <Wand2 className="w-4 h-4" />
         </span>
-        <span className="text-xs font-bold">Simuler</span>
+        <span className="text-xs font-bold">Budget IA</span>
         {showCounter ? (
           <span className="text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-full bg-white/20">
             {allowance.totalRemaining}

@@ -20,9 +20,13 @@ import {
 } from '@/lib/landingProfiles';
 import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
 import LandingMedia from '@/components/landing/LandingMedia';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledPublicCities, formatCityList } from '@/lib/platformCities';
 
 export default function LandingHeroStreamlined() {
   const { user } = useAuth();
+  const { site } = usePlatformSite();
+  const cityLabel = formatCityList(enabledPublicCities(site));
   const isLoggedIn = Boolean(user);
   const [selectedId, setSelectedId] = useState<LandingProfileId>('personal');
   const profile = getLandingProfile(selectedId);
@@ -95,7 +99,7 @@ export default function LandingHeroStreamlined() {
           <div className="pt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span>Kinshasa · Lubumbashi · Goma</span>
+              <span>{cityLabel}</span>
             </span>
             <span className="hidden min-[480px]:inline text-border">·</span>
             <span className="inline-flex items-center gap-1">

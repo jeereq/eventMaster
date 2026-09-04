@@ -9,6 +9,8 @@ import {
   type RdcCityName,
 } from '@/lib/rdcCities';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledMarketplaceCities, formatCityList } from '@/lib/platformCities';
 
 const SELECT_CLASS =
   'w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
@@ -28,6 +30,8 @@ export default function CityLocationFields({
   required?: boolean;
   className?: string;
 }) {
+  const { site } = usePlatformSite();
+  const marketplaceCities = enabledMarketplaceCities(site);
   const cityName = normalizeRdcCity(city);
   const communes = communesForCity(cityName);
   const quartiers = neighborhoodsFor(cityName, commune);
@@ -47,8 +51,8 @@ export default function CityLocationFields({
           }}
           className={SELECT_CLASS}
         >
-          <option value="">Choisir Kinshasa ou Lubumbashi</option>
-          {(['Kinshasa', 'Lubumbashi'] as const).map((name) => (
+          <option value="">Choisir une ville</option>
+          {marketplaceCities.map((name) => (
             <option key={name} value={name}>{name}</option>
           ))}
         </select>
@@ -88,7 +92,7 @@ export default function CityLocationFields({
         </select>
       </label>
       <p className="sm:col-span-2 text-[11px] text-muted -mt-1">
-        Marketplace limité à {findRdcCity(cityName)?.name || 'Kinshasa et Lubumbashi'}. La carte se cadre sur la ville et la commune choisies.
+        Marketplace limité à {findRdcCity(cityName)?.name || formatCityList(marketplaceCities) || 'les villes actives'}. La carte se cadre sur la ville et la commune choisies.
       </p>
     </div>
   );

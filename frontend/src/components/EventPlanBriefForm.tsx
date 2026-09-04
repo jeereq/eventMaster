@@ -6,6 +6,8 @@ import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledMarketplaceCities } from '@/lib/platformCities';
 import { LISTING_EVENT_TYPES, VENUE_AMENITIES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
 import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
 import {
@@ -88,6 +90,8 @@ export default function EventPlanBriefForm({
   onLoadBrief: (item: SavedEventBrief) => void;
   onDeleteBrief: (id: string) => Promise<void>;
 }) {
+  const { site } = usePlatformSite();
+  const marketplaceCities = enabledMarketplaceCities(site);
   const [advanced, setAdvanced] = useState(false);
   const [showUseCase, setShowUseCase] = useState(false);
   const [showAllTrades, setShowAllTrades] = useState(false);
@@ -220,9 +224,10 @@ export default function EventPlanBriefForm({
           value={brief.city}
           onChange={(value) => patch({ city: normalizeRdcCity(value) || '', commune: '' })}
         >
-          <option value="">Toute la RDC</option>
-          <option value="Kinshasa">Kinshasa</option>
-          <option value="Lubumbashi">Lubumbashi</option>
+          <option value="">Toutes les villes actives</option>
+          {marketplaceCities.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
         </FieldSelect>
         <FieldSelect
           label="Commune"
