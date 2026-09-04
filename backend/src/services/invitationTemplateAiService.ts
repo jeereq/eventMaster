@@ -38,20 +38,21 @@ function requireOpenAiKey(): string {
 const STRUCTURE_SYSTEM = `Tu es un designer d'invitations EventMaster (RDC / Afrique centrale).
 Tu ANALYSES les images de référence fournies, puis tu produis UNIQUEMENT un JSON valide (response_format json_object).
 
-Principe de fidélité (non négociable) :
-- DÉTECTE uniquement ce qui est VISIBLE dans les images. Ne déduis pas, n’invente pas, n’idéalise pas.
+Principe de fidélité et de vérité visuelle (non négociable) :
+- DÉTECTE uniquement ce qui est RÉELLEMENT VISIBLE dans les images. Ne déduis pas, n’invente pas, n’idéalise pas, ne blanchis pas.
 - Interdit : inventer des traits, une ethnie, un âge, une coiffure, une tenue, une teinte de peau, ou des personnes absentes.
+- Carnation & morphologie : analyse avec exactitude le teint de peau (teinte mélanée, sous-tons dorés/chauds/acajou/ébène, échelle Fitzpatrick IV/V/VI), les formes faciales (arête nasale, arc des lèvres, pommettes, mâchoire) et les textures capillaires (crépus naturels 4A/4B/4C, dégradé fondu / taper fade soigné, tresses, locks, chignons, perruques soignées).
 - Si un détail est flou / hors cadre / indiscernable : écris "unclear" — ne comble PAS le vide.
 
-Priorité :
-1) Les images = vérité visuelle pour personnes (visages, teinte de peau, cheveux, habits, pose).
-2) Le BRIEF UTILISATEUR = besoins expressément demandés (ambiance, décor, couleurs, ce qu’il faut changer).
+Priorité absolue :
+1) Les images de référence = VÉRITÉ VISUELLE pour les personnes (visages, teintes de peau exactes, textures de cheveux, habits, posture).
+2) Le BRIEF UTILISATEUR = besoins expressément demandés (ambiance, décor d'invitation, couleurs florales, ce qu’il faut changer dans l'environnement).
 3) Ne change habits / cheveux / peau / visages QUE si le brief le demande EXPLICITEMENT. Sinon, REPRODUIS à l’identique.
 
 Mission :
-1) Détecte : visages, teintes de peau, styles de cheveux, styles d’habits, couleurs, motifs, composition.
+1) Détecte : visages précis, points de repère anatomiques (faceLandmarks), teintes de peau réelles, styles de cheveux, styles d’habits, couleurs, motifs, composition.
 2) Parse le brief : besoins exprimés (mustKeep / mustChange) — seulement ce qui est écrit, rien d’implicite inventé.
-3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation fidèle aux refs + au brief.
+3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation d'un luxe exceptionnel, fidèle aux refs + au brief.
 
 Schéma exact :
 {
@@ -62,11 +63,11 @@ Schéma exact :
     "composition": "layout / cadrage observé",
     "hasPeople": true | false,
     "peopleCount": 0,
-    "peopleFaces": "none | per person: age range if visible, face shape, eyes, brows, nose, lips, jaw, distinctive marks — OBSERVED only",
-    "faceLandmarks": "none | detailed likeness notes: bone structure, eye spacing, smile/expression, facial hair, glasses, scars/moles — enough to lock identity",
-    "skinTones": "none | precise observed skin tone(s) per person (e.g. deep brown, medium olive) — no guessing",
-    "hairStyles": "none | hair length, texture, color, style, hairline OBSERVED per person",
-    "clothingStyles": "none | garment types, fabrics, colors, cuts, accessories OBSERVED — reproduce these",
+    "peopleFaces": "none | per person: age range if visible, precise face shape, eye shape & color, brows, nose contour, lips fullness & cupid bow, jawline, distinctive marks — OBSERVED only",
+    "faceLandmarks": "none | detailed likeness landmarks: bone structure, eye spacing & slant, cheekbones, smile/expression, facial hair lines, scars/moles — sufficient to guarantee 100% identity lock",
+    "skinTones": "none | precise observed skin tone(s) per person (e.g. rich warm mahogany Fitzpatrick VI, golden warm caramel, deep ebony) — STRICT FIDELITY, NEVER lighten or shift tone",
+    "hairStyles": "none | hair length, texture (4C curls, precise taper fade, braids bun, dreadlocks), hairline OBSERVED per person",
+    "clothingStyles": "none | garment cuts, fabrics (wax pagne, tailored tux, royal satin, embroidery), colors, accessories OBSERVED — preserve faithfully",
     "briefNeeds": ["besoin explicite 1 du brief", "..."],
     "briefInterpretation": "comment chaque besoin du brief s’applique aux refs, point par point",
     "briefMustKeep": ["à conserver : refs (visages/peau/cheveux/habits) + éléments du brief"],
@@ -105,15 +106,15 @@ Schéma exact :
 }
 
 Règles brief :
-- S’il y a des personnes : backgroundPrompt DOIT commencer par "IDENTITY LOCK:" (anglais) — les refs sont la seule source d’identité faciale ; puis "FACE INVENTORY:" (traits observés) ; puis "USER BRIEF:" (décor/ambiance seulement).
-- S’il n’y a PAS de personnes : commence par "USER BRIEF:" puis décor.
+- S’il y a des personnes : backgroundPrompt DOIT commencer par "IDENTITY LOCK:" (anglais) — les photos de référence sont l'unique source de vérité pour l'identité faciale ; puis "FACE INVENTORY:" (traits anatomiques observés, carnation, coiffure) ; puis "USER BRIEF:" (décor/ambiance d'invitation seulement).
+- S’il n’y a PAS de personnes : commence par "USER BRIEF:" puis décor somptueux sans présence humaine.
 - Applique chaque besoin du brief pour le décor (ambiance, couleurs, fioritures, sobriété, luxe, floral).
-- Si le brief et les refs divergent : brief = décor ; refs = visages / peau / cheveux / habits (sauf demande EXPLICITE contraire sur habits/cheveux).
+- Si le brief et les refs divergent : brief = décor & ambiance ; refs = visages / peau / cheveux / habits (sauf demande EXPLICITE contraire sur habits/cheveux).
 
 Règles personnes (non négociables) :
-- Si hasPeople=true : LOCK d’identité — même personne(s) que sur les photos, ressemblance photographique stricte.
-- Interdit : stock models, « couple générique », embellissement IA, lissage excessif, changement d’âge/ethnie/traits, morphing, autre visage « proche ».
-- peopleFaces + faceLandmarks doivent être assez détaillés pour verrouiller la ressemblance.
+- Si hasPeople=true : LOCK d’identité absolu — même personne(s) que sur les photos, ressemblance photographique stricte à 100%.
+- Interdit : stock models, « couple générique », embellissement IA, lissage excessif, blanchiment de peau, changement d’âge/ethnie/traits, morphing, autre visage « proche ».
+- peopleFaces + faceLandmarks doivent être assez détaillés pour verrouiller la géométrie du visage.
 - Si hasPeople=false : aucune personne, aucun visage, aucune silhouette. Décor uniquement.
 
 Règles layout :
@@ -272,7 +273,7 @@ const FACE_POLICY_NO_PEOPLE =
   'FACE POLICY: No people, no faces, no human silhouettes, no invented couples or stock models. Decorative invitation artwork only.';
 
 const FACE_POLICY_KEEP_PEOPLE =
-  'IDENTITY LOCK (HIGHEST PRIORITY): The attached reference photo(s) are the ONLY ground truth for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, skin tone, age appearance, expression. Photoreal likeness required. FORBIDDEN: different face, generic stock model, beautify/airbrush, face swap, age change, ethnicity change, gender change, lighter/darker skin "correction", anime/illustration face, or "similar looking" substitute. Hair and clothing stay as in refs unless the brief EXPLICITLY changes them. Only décor/background/invitation frame may follow the brief.';
+  'IDENTITY LOCK (HIGHEST PRIORITY): The attached reference photo(s) are the ABSOLUTE GROUND TRUTH for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, natural skin tone (rich melanin / bronze / undertones intact — NEVER lighten, bleach, or change ethnicity), age appearance, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire. Photoreal likeness required. STRICTLY FORBIDDEN: different face, generic stock model, beautify/airbrush plastic filter, face swap, age alteration, ethnicity shift, skin tone correction, anime/illustration face, or "lookalike" substitute. Only the luxury background, invitation card border, lighting ambiance, and florals may follow the user brief.';
 
 function buildImagePrompt(
   userPrompt: string,
@@ -282,13 +283,13 @@ function buildImagePrompt(
   const brief = userPrompt.trim().slice(0, 800);
   const hasPeople = Boolean(analysis?.hasPeople);
   const parts: string[] = [
-    'Create ONE vertical print-ready invitation card artwork (portrait orientation).',
+    'Create ONE luxury vertical print-ready invitation card artwork (portrait orientation 1024x1536).',
   ];
 
   if (hasPeople) {
     parts.push(
-      '=== IDENTITY LOCK (overrides décor instructions) ===',
-      'Use the REFERENCE IMAGE(S) as identity ground truth. The output faces MUST be recognizably the same people — pixel-faithful likeness, not an approximation.',
+      '=== STRICT IDENTITY LOCK (ABSOLUTE PRIORITY OVER DÉCOR) ===',
+      'The reference image(s) show REAL PEOPLE whose faces MUST be reproduced with 100% photographic likeness and zero alteration.',
       FACE_POLICY_KEEP_PEOPLE,
     );
     if (analysis) {
@@ -300,17 +301,17 @@ function buildImagePrompt(
         parts.push(`Likeness landmarks (match exactly): ${analysis.faceLandmarks}`);
       }
       if (analysis.skinTones && analysis.skinTones !== 'none') {
-        parts.push(`Skin tones (exact, no correction): ${analysis.skinTones}`);
+        parts.push(`Skin tones (exact, NEVER lighten): ${analysis.skinTones}`);
       }
       if (analysis.hairStyles && analysis.hairStyles !== 'none') {
-        parts.push(`Hair (exact unless brief overrides): ${analysis.hairStyles}`);
+        parts.push(`Hair (exact texture & styling): ${analysis.hairStyles}`);
       }
       if (analysis.clothingStyles && analysis.clothingStyles !== 'none') {
-        parts.push(`Clothing (exact unless brief overrides): ${analysis.clothingStyles}`);
+        parts.push(`Clothing (exact styling & fabrics): ${analysis.clothingStyles}`);
       }
     }
     parts.push(
-      '=== DÉCOR / BRIEF (secondary — never alter faces to satisfy décor) ===',
+      '=== DÉCOR & AMBIANCE (secondary — build luxury invitation setting around the subjects) ===',
       brief,
     );
   } else {
@@ -563,7 +564,11 @@ async function generateImageWithGpt56Luna(
 
   // Refs d’abord quand il y a des personnes : ancre mieux l’identité faciale.
   const identityPreamble = hasPeople
-    ? `The following reference image(s) show the EXACT people who must appear. Preserve facial identity with photographic likeness.\n\n${imagePrompt}`
+    ? `CRITICAL MANDATE: The following reference image(s) show REAL PEOPLE. When you invoke the image_generation tool:
+1. You MUST maintain 100% photographic facial likeness and exact facial identity of each subject.
+2. NEVER replace the subject(s) with generic models, different faces, altered ethnicities, smoothed/airbrushed faces, or changed skin tones.
+3. Keep their exact eye shape, nose shape, lip shape, bone structure, natural melanin skin tone, expression, and hairstyle.
+4. Seamlessly integrate the original subject(s) into the luxury vertical invitation card artwork requested in the brief.\n\n${imagePrompt}`
     : imagePrompt;
 
   const content: Array<Record<string, unknown>> = hasPeople
@@ -838,6 +843,20 @@ async function createNewInvitationImage(
       '[invitationTemplateAi] gpt-5.6-luna image failed, falling back:',
       (lunaErr as Error)?.message,
     );
+  }
+
+  // Si des personnes sont présentes dans les références, le repli DOIT conserver l'image
+  // via l'API d'édition d'image plutôt que d'inventer une personne à partir du texte seul.
+  if (options?.hasPeople && imageUrls.length > 0) {
+    try {
+      const url = await generateBackgroundFromReference(key, imageUrls[0], imagePrompt, tenantId);
+      return { url, mode: 'edit' };
+    } catch (editErr) {
+      console.warn(
+        '[invitationTemplateAi] image edit fallback failed, falling back to text generation:',
+        (editErr as Error)?.message,
+      );
+    }
   }
 
   try {

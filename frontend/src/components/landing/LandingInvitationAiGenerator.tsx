@@ -41,9 +41,10 @@ import { Button, Modal, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 const BRIEF_PRESETS = [
-  'Mariage élégant, ivoire et or, floraux discrets',
-  'Baptême doux, pastels et dentelle',
-  'Soirée gala, noir et champagne, luxe minimal',
+  'Mariage élégant à Kinshasa, ivoire, or et pagne chic',
+  'Dot traditionnelle & moderne, wax royal et touches dorées',
+  'Soirée gala prestige Gombe, noir et champagne, luxe minimal',
+  'Anniversaire festif, ambiance cocktail et musique raffinée',
 ];
 
 function contentToLandingTemplate(

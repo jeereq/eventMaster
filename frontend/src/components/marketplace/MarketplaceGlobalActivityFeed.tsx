@@ -1045,13 +1045,13 @@ export default function MarketplaceGlobalActivityFeed({
           </div>
         ) : null}
 
-        <form
+          <form
           className="relative flex-1 md:max-w-xs"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setSearch(q.trim());
-          }}
-        >
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearch(q.trim());
+            }}
+          >
           <div className="relative flex items-center">
             <Search className="w-4 h-4 text-muted absolute left-3.5 pointer-events-none" />
             <input
@@ -1085,7 +1085,7 @@ export default function MarketplaceGlobalActivityFeed({
             </button>
           </div>
         </form>
-      </div>
+                  </div>
 
       {error ? (
         <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-medium flex items-center justify-between gap-3" role="alert">
@@ -1101,7 +1101,7 @@ export default function MarketplaceGlobalActivityFeed({
             Réessayer
           </button>
         </div>
-      ) : null}
+        ) : null}
 
       {loading ? (
         <GlobalFeedSkeleton />
@@ -1109,7 +1109,7 @@ export default function MarketplaceGlobalActivityFeed({
         <div className="text-center py-16 px-4 rounded-xl sm:rounded-2xl border border-dashed border-border bg-surface/40 space-y-3 max-w-lg mx-auto">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-xs">
             <Rss className="w-6 h-6" aria-hidden />
-          </div>
+      </div>
           <h3 className="text-base font-bold text-foreground">Aucune réalisation pour le moment</h3>
           <p className="text-xs sm:text-sm text-muted leading-relaxed">
             {search.trim()
@@ -1127,8 +1127,8 @@ export default function MarketplaceGlobalActivityFeed({
             >
               Réinitialiser la recherche
             </button>
-          )}
-        </div>
+            )}
+          </div>
       ) : (
         <div className="space-y-6">
           {visiblePosts.map((post) => (

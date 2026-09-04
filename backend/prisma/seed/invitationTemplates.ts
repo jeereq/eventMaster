@@ -21,7 +21,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
   {
     name: 'Mariage Kuba — Rouge & Or',
     showOnLanding: true,
-    global: { bgColor: '#1c0a0a', bgType: 'color', floralColor: '#d4a017', landingCategory: 'wedding', landingDescription: 'Inspiration textile kuba, rouge profond.' },
+    global: { bgColor: '#1c0a0a', bgType: 'image', bgImageUrl: 'https://images.unsplash.com/photo-1648328414427-fc902f51808c?auto=format&fit=crop&w=900&q=80', floralColor: '#d4a017', landingCategory: 'wedding', landingDescription: 'Inspiration textile kuba, rouge profond & or avec couple traditionnel royal.' },
     elements: [
       { id: 'g1', type: 'text', text: 'LOANGO YA LIBALA', color: '#d4a017', fontSize: '11px', align: 'center', letterSpacing: '0.18em' },
       { id: 'g2', type: 'text', text: 'Notre mariage', color: '#fef3c7', fontSize: '32px', align: 'center' },
@@ -88,7 +88,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
   {
     name: 'Dot & fiançailles — Ocre',
     showOnLanding: true,
-    global: { bgColor: '#fff7ed', floralColor: '#c2410c', landingCategory: 'wedding', landingDescription: 'Cérémonie de dot et fiançailles.' },
+    global: { bgColor: '#fff7ed', bgType: 'image', bgImageUrl: 'https://images.unsplash.com/photo-1664645534653-b4b8b6473cb2?auto=format&fit=crop&w=900&q=80', floralColor: '#c2410c', landingCategory: 'wedding', landingDescription: 'Cérémonie de dot et fiançailles deux familles avec couple élégant.' },
     elements: [
       { id: 'g1', type: 'text', text: 'CÉRÉMONIE DE DOT', color: '#c2410c', fontSize: '11px', align: 'center', letterSpacing: '0.16em' },
       { id: 'g2', type: 'text', text: 'Deux familles, une union', color: '#7c2d12', fontSize: '28px', align: 'center' },
@@ -110,7 +110,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
   {
     name: 'Gala Prestige — Champagne',
     showOnLanding: true,
-    global: { bgColor: '#1a1208', bgType: 'color', floralColor: '#eab308', landingCategory: 'gala', landingDescription: 'Black tie, dîner de charité.' },
+    global: { bgColor: '#1a1208', bgType: 'image', bgImageUrl: 'https://images.unsplash.com/photo-1768508951126-f90917cc510e?auto=format&fit=crop&w=900&q=80', floralColor: '#eab308', landingCategory: 'gala', landingDescription: 'Black tie, dîner d’exception et smoking.' },
     elements: [
       { id: 'g1', type: 'text', text: 'BLACK TIE', color: '#eab308', fontSize: '11px', align: 'center', letterSpacing: '0.28em' },
       { id: 'g2', type: 'text', text: 'Gala de charité', color: '#fefce8', fontSize: '30px', align: 'center' },

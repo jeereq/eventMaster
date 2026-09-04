@@ -85,7 +85,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: ScanLine, label: 'Pass QR & Émargement' },
     ],
     icon: Heart,
-    imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1664645534653-b4b8b6473cb2?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'B2C',
     faqIds: ['what-is-eventmaster', 'event-packs', 'mobile-app', 'placement-delivery', 'free-trial', 'b2c-annual'],
     steps: [
@@ -141,7 +141,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: Users, label: 'Comptes pour l’équipe d’accueil' },
     ],
     icon: Sparkles,
-    imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1768508948462-58962b3ab650?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'B2B',
     faqIds: ['what-is-eventmaster', 'event-packs', 'public-events', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
     steps: [
@@ -197,7 +197,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: MessageSquare, label: 'Devis en direct sans frais' },
     ],
     icon: Store,
-    imageUrl: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1768508950243-16fd93e88d7f?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'B2C',
     faqIds: ['marketplace-venues', 'client-account', 'event-packs', 'marketplace-booking'],
     steps: [
@@ -252,7 +252,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: CalendarCheck, label: 'Planning de réservation' },
     ],
     icon: Building2,
-    imageUrl: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'VENDOR',
     faqIds: ['marketplace-venues', 'venue-subscription', 'service-subscription', 'plans-quotas', 'room-editor-plans'],
     steps: [

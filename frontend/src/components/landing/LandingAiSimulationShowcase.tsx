@@ -56,7 +56,7 @@ const SCENARIOS: ScenarioBrief[] = [
     commune: 'Gombe',
     guests: 150,
     budgetTargetFc: 8_500_000,
-    imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1648139199227-843496256ed4?auto=format&fit=crop&w=1000&q=80',
     prompt: 'Mariage élégant pour 150 convives à Gombe, Kinshasa. Ambiance chic, besoin salle, traiteur, photographe, DJ et décoration dans un budget de 8 500 000 FC.',
   },
   {
@@ -68,7 +68,7 @@ const SCENARIOS: ScenarioBrief[] = [
     commune: '',
     guests: 80,
     budgetTargetFc: 3_800_000,
-    imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1000&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1758272133542-b3107b947fc2?auto=format&fit=crop&w=1000&q=80',
     prompt: 'Anniversaire / soirée pour 80 personnes à Lubumbashi. Ambiance festive, cocktail, DJ et photo, budget 3 800 000 FC.',
   },
   {
@@ -80,7 +80,7 @@ const SCENARIOS: ScenarioBrief[] = [
     commune: '',
     guests: 250,
     budgetTargetFc: 16_000_000,
-    imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1000&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1768508951126-f90917cc510e?auto=format&fit=crop&w=1000&q=80',
     prompt: 'Gala d’entreprise pour 250 invités à Kinshasa. Dîner assis, maître de cérémonie, photo/vidéo et scénographie, budget 16 000 000 FC.',
   },
 ];
