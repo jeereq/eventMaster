@@ -14,6 +14,7 @@ import {
 import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
 import { resolvePhoneFields } from '../utils/phone';
+import { assertAuthOtpMethodAllowed, resolveAuthOtpMethod } from '../services/platformSettingsService';
 
 const userSelect = {
   id: true,
@@ -113,7 +114,11 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       return res.status(400).json({ error: 'Le nom, l\'e-mail et le mot de passe sont requis.' });
     }
 
-    const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    const methodCheck = assertAuthOtpMethodAllowed(verificationMethod);
+    if (!methodCheck.ok) {
+      return res.status(400).json({ error: methodCheck.error });
+    }
+    const method = methodCheck.method as VerificationMethod;
     const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
     if (method === 'WHATSAPP' && !phoneFields.phone) {
       return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
@@ -454,7 +459,7 @@ export async function resendTeamMemberVerification(req: AuthenticatedRequest, re
       return res.status(400).json({ error: 'Ce compte est déjà validé.' });
     }
 
-    const method = (member.verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    const method = resolveAuthOtpMethod(member.verificationMethod) as VerificationMethod;
     if (method === 'WHATSAPP' && !member.phone) {
       return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
     }

@@ -9,6 +9,12 @@ import {
 import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  allowsAuthOtpChoice,
+  defaultAuthOtpMethod,
+  type AuthOtpMethod,
+} from '@/lib/authOtpChannels';
 
  interface CommercialDashboard {
  referralCode: string;
@@ -46,6 +52,9 @@ import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
 export default function CommercialDashboardPage() {
  const { user } = useAuth();
+ const { site } = usePlatformSite();
+ const authChannels = site.authOtpChannels;
+ const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
  const [data, setData] = useState<CommercialDashboard | null>(null);
  const [loading, setLoading] = useState(true);
  const [showForm, setShowForm] = useState(false);
@@ -63,10 +72,14 @@ export default function CommercialDashboardPage() {
  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
  const [phoneNational, setPhoneNational] = useState('');
  const [submitting, setSubmitting] = useState(false);
- const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+ const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
  const [error, setError] = useState('');
  const [success, setSuccess] = useState('');
  const [resendingManagerId, setResendingManagerId] = useState<string | null>(null);
+
+ useEffect(() => {
+   setVerificationMethod(defaultAuthOtpMethod(authChannels));
+ }, [authChannels]);
 
  useEffect(() => {
  if (user?.role !== 'COMMERCIAL') return;
@@ -236,6 +249,7 @@ export default function CommercialDashboardPage() {
  </div>
  <div>
  <label className="block text-xs font-bold text-muted uppercase mb-2">Validation du compte manager (OTP)</label>
+ {canChooseOtpChannel ? (
  <div className="grid grid-cols-2 gap-3 max-w-md">
  <button type="button" onClick={() => setVerificationMethod('EMAIL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'EMAIL' ? 'bg-primary/10 border-primary/40 text-primary' : 'border-border text-muted'}`}>
  <Mail className="w-4 h-4" /> OTP par e-mail
@@ -244,6 +258,11 @@ export default function CommercialDashboardPage() {
  <MessageSquare className="w-4 h-4" /> OTP WhatsApp
  </button>
  </div>
+ ) : (
+ <p className="text-xs text-muted">
+ Code envoyé {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'} (réglage plateforme).
+ </p>
+ )}
  </div>
  <div className="flex gap-2">
  <Button type="submit" disabled={submitting}>{submitting ? 'Création…' : 'Créer l\'organisation'}</Button>

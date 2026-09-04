@@ -10,6 +10,7 @@ import {
 import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
 import { resolvePhoneFields } from '../utils/phone';
+import { assertAuthOtpMethodAllowed, resolveAuthOtpMethod } from '../services/platformSettingsService';
 
 export async function getCommercialDashboard(req: AuthenticatedRequest, res: Response) {
   try {
@@ -103,7 +104,11 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
       });
     }
 
-    const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    const methodCheck = assertAuthOtpMethodAllowed(verificationMethod);
+    if (!methodCheck.ok) {
+      return res.status(400).json({ error: methodCheck.error });
+    }
+    const method = methodCheck.method as VerificationMethod;
     if (method === 'WHATSAPP' && !phoneFields.phone) {
       return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
     }
@@ -210,7 +215,7 @@ export async function resendCommercialManagerVerification(req: AuthenticatedRequ
       return res.status(400).json({ error: 'Ce compte manager est déjà validé.' });
     }
 
-    const method = (manager.verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    const method = resolveAuthOtpMethod(manager.verificationMethod) as VerificationMethod;
     if (method === 'WHATSAPP' && !manager.phone) {
       return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
     }

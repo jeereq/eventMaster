@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { SITE_CONTACT } from '@/config/siteContent';
 import { applyBrandToDocument } from '@/lib/brandTheme';
 import { resolveUsdExchangeRateCdf, sanitizeEnabledCities } from '@/lib/platformCities';
+import { sanitizeAuthOtpChannels, type AuthOtpChannels } from '@/lib/authOtpChannels';
 
 export interface PublicSiteConfig {
   platformName: string;
@@ -34,6 +35,7 @@ export interface PublicSiteConfig {
   commercialRenewalCommissionPercent: number;
   usdExchangeRateCdf: number;
   enabledCities: string[];
+  authOtpChannels: AuthOtpChannels;
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -66,6 +68,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   commercialRenewalCommissionPercent: 20,
   usdExchangeRateCdf: 2800,
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
+  authOtpChannels: 'BOTH',
 };
 
 interface PlatformSiteContextValue {
@@ -94,6 +97,7 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
         ...data,
         usdExchangeRateCdf: resolveUsdExchangeRateCdf(data.usdExchangeRateCdf, DEFAULT_PUBLIC_SITE.usdExchangeRateCdf),
         enabledCities: sanitizeEnabledCities(data.enabledCities),
+        authOtpChannels: sanitizeAuthOtpChannels(data.authOtpChannels),
       };
       setSite(next);
 

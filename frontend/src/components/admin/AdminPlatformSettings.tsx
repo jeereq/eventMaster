@@ -30,6 +30,7 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   commercialRenewalCommissionRate?: number;
   usdExchangeRateCdf?: number;
   enabledCities?: string[];
+  authOtpChannels?: 'EMAIL' | 'WHATSAPP' | 'BOTH';
   supportEmail?: string;
   supportWhatsApp?: string;
   supportPhone?: string;
@@ -265,6 +266,39 @@ export default function AdminPlatformSettings({
                 />
               </div>
             )}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <label className={labelClass}>Authentification OTP</label>
+              <p className="text-[11px] text-muted">
+                Canal pour les codes d’inscription, validation de compte et réinitialisation de mot de passe.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {(
+                  [
+                    { id: 'EMAIL' as const, label: 'E-mail', hint: 'SendGrid uniquement' },
+                    { id: 'WHATSAPP' as const, label: 'WhatsApp', hint: 'UltraMsg uniquement' },
+                    { id: 'BOTH' as const, label: 'Les deux', hint: 'L’utilisateur choisit' },
+                  ] as const
+                ).map((opt) => {
+                  const active = (value.authOtpChannels || 'BOTH') === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => patch({ authOtpChannels: opt.id })}
+                      className={cn(
+                        'min-h-11 px-3 py-2.5 rounded-xl border text-left transition',
+                        active
+                          ? 'bg-primary/10 border-primary/40 text-foreground'
+                          : 'bg-white dark:bg-background border-border text-muted hover:text-foreground',
+                      )}
+                    >
+                      <span className="block text-sm font-semibold">{opt.label}</span>
+                      <span className="block text-[11px] mt-0.5 opacity-80">{opt.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 

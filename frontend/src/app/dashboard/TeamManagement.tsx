@@ -17,6 +17,12 @@ import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { getQuotaActionMessage } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  allowsAuthOtpChoice,
+  defaultAuthOtpMethod,
+  type AuthOtpMethod,
+} from '@/lib/authOtpChannels';
 
 interface TeamMember {
   id: string;
@@ -65,6 +71,9 @@ const ROLE_OPTIONS = [
 
 export default function TeamManagement() {
   const { user, tenant, planQuota, planFeatures, access } = useAuth();
+  const { site } = usePlatformSite();
+  const authChannels = site.authOtpChannels;
+  const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
   const {
     mode: teamViewMode,
     setViewMode: setTeamViewMode,
@@ -91,11 +100,15 @@ export default function TeamManagement() {
   const [orgRole, setOrgRole] = useState<'MANAGER' | 'PROTOCOL' | 'COMMERCIAL'>('MANAGER');
   const [commissionRate, setCommissionRate] = useState('30');
   const [renewalCommissionRate, setRenewalCommissionRate] = useState('20');
-  const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+  const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
   const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
   const [editCommissionValue, setEditCommissionValue] = useState('');
   const [editRenewalCommissionValue, setEditRenewalCommissionValue] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setVerificationMethod(defaultAuthOtpMethod(authChannels));
+  }, [authChannels]);
 
   const hasCommercialNetwork = planFeatures?.commercialNetwork === true;
 
@@ -401,32 +414,38 @@ export default function TeamManagement() {
 
           <div>
             <p className="text-xs font-medium text-muted mb-2">Validation du compte (OTP)</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setVerificationMethod('EMAIL')}
-                className={cn(
-                  'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
-                  verificationMethod === 'EMAIL'
-                    ? 'bg-primary/10 border-primary/30 text-primary'
-                    : 'border-border text-muted hover:bg-surface-muted',
-                )}
-              >
-                <Mail className="w-4 h-4" /> E-mail
-              </button>
-              <button
-                type="button"
-                onClick={() => setVerificationMethod('WHATSAPP')}
-                className={cn(
-                  'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
-                  verificationMethod === 'WHATSAPP'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
-                    : 'border-border text-muted hover:bg-surface-muted',
-                )}
-              >
-                <MessageSquare className="w-4 h-4" /> WhatsApp
-              </button>
-            </div>
+            {canChooseOtpChannel ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVerificationMethod('EMAIL')}
+                  className={cn(
+                    'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
+                    verificationMethod === 'EMAIL'
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'border-border text-muted hover:bg-surface-muted',
+                  )}
+                >
+                  <Mail className="w-4 h-4" /> E-mail
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerificationMethod('WHATSAPP')}
+                  className={cn(
+                    'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
+                    verificationMethod === 'WHATSAPP'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
+                      : 'border-border text-muted hover:bg-surface-muted',
+                  )}
+                >
+                  <MessageSquare className="w-4 h-4" /> WhatsApp
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted">
+                Code envoyé {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'} (réglage plateforme).
+              </p>
+            )}
           </div>
 
           <div>

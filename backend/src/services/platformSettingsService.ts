@@ -10,6 +10,9 @@ const PLATFORM_CONFIG_ID = 'default';
 /** Cache processus : source de vérité après hydratation BD (le fichier est un secours local). */
 let memoryCache: PlatformSettings | null = null;
 
+export type AuthOtpChannels = 'EMAIL' | 'WHATSAPP' | 'BOTH';
+export type AuthOtpMethod = 'EMAIL' | 'WHATSAPP';
+
 export interface PlatformSettings {
   platformName: string;
   platformTagline: string;
@@ -60,6 +63,13 @@ export interface PlatformSettings {
   usdExchangeRateCdf: number;
   /** Villes visibles / actives sur le site public. */
   enabledCities: string[];
+  /**
+   * Canaux OTP d’authentification autorisés :
+   * - EMAIL : e-mail uniquement
+   * - WHATSAPP : WhatsApp uniquement
+   * - BOTH : l’utilisateur choisit
+   */
+  authOtpChannels: AuthOtpChannels;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -94,6 +104,8 @@ export interface PublicSiteConfig {
   usdExchangeRateCdf: number;
   /** Villes visibles / actives sur le site public. */
   enabledCities: string[];
+  /** Canaux OTP autorisés pour inscription / validation / reset. */
+  authOtpChannels: AuthOtpChannels;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -135,6 +147,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   commercialRenewalCommissionRate: 0.2,
   usdExchangeRateCdf: 2800,
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
+  authOtpChannels: 'BOTH',
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -156,6 +169,58 @@ export function sanitizeEnabledCities(value: unknown): string[] {
     return ['Kinshasa', ...ordered];
   }
   return ordered.length > 0 ? [...ordered] : ['Kinshasa'];
+}
+
+export function sanitizeAuthOtpChannels(value: unknown): AuthOtpChannels {
+  const raw = String(value || '').trim().toUpperCase();
+  if (raw === 'EMAIL' || raw === 'WHATSAPP' || raw === 'BOTH') return raw;
+  return 'BOTH';
+}
+
+export function getAuthOtpChannels(settings = loadPlatformSettings()): AuthOtpChannels {
+  return sanitizeAuthOtpChannels(settings.authOtpChannels);
+}
+
+export function defaultAuthOtpMethod(settings = loadPlatformSettings()): AuthOtpMethod {
+  return getAuthOtpChannels(settings) === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
+}
+
+/**
+ * Résout une méthode OTP demandée selon la config plateforme.
+ * Si un seul canal est autorisé, force ce canal (même si la demande diffère).
+ */
+export function resolveAuthOtpMethod(
+  requested: unknown,
+  settings = loadPlatformSettings(),
+): AuthOtpMethod {
+  const channels = getAuthOtpChannels(settings);
+  if (channels === 'EMAIL') return 'EMAIL';
+  if (channels === 'WHATSAPP') return 'WHATSAPP';
+  return String(requested || '').trim().toUpperCase() === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
+}
+
+export function assertAuthOtpMethodAllowed(
+  requested: unknown,
+  settings = loadPlatformSettings(),
+): { ok: true; method: AuthOtpMethod } | { ok: false; error: string } {
+  const channels = getAuthOtpChannels(settings);
+  const raw = String(requested || '').trim().toUpperCase();
+  if (!raw) {
+    return { ok: true, method: defaultAuthOtpMethod(settings) };
+  }
+  if (raw !== 'EMAIL' && raw !== 'WHATSAPP') {
+    return { ok: false, error: 'Méthode de validation invalide.' };
+  }
+  if (channels === 'BOTH' || channels === raw) {
+    return { ok: true, method: raw };
+  }
+  return {
+    ok: false,
+    error:
+      channels === 'EMAIL'
+        ? 'Seule la validation par e-mail est activée sur la plateforme.'
+        : 'Seule la validation par WhatsApp est activée sur la plateforme.',
+  };
 }
 
 function ensureSettingsDir() {
@@ -231,6 +296,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     commercialRenewalCommissionRate: parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
     usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
     enabledCities: sanitizeEnabledCities(settings.enabledCities),
+    authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
   };
 }
 
@@ -255,6 +321,7 @@ function buildNextSettings(
   const parsedUsdRate = Number(next.usdExchangeRateCdf);
   next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
   next.enabledCities = sanitizeEnabledCities(next.enabledCities);
+  next.authOtpChannels = sanitizeAuthOtpChannels(next.authOtpChannels);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -357,6 +424,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     ),
     usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
     enabledCities: sanitizeEnabledCities(settings.enabledCities),
+    authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
   };
 }
 

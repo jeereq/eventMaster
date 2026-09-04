@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import {
@@ -10,6 +10,12 @@ import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  allowsAuthOtpChoice,
+  defaultAuthOtpMethod,
+  type AuthOtpMethod,
+} from '@/lib/authOtpChannels';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -19,14 +25,21 @@ const FEATURES = [
 ];
 
 export default function AskResetPasswordPage() {
+  const { site } = usePlatformSite();
+  const authChannels = site.authOtpChannels;
+  const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
   const [mode, setMode] = useState<IdentifierMode>('email');
   const [email, setEmail] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [phoneNational, setPhoneNational] = useState('');
-  const [method, setMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+  const [method, setMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setMethod(defaultAuthOtpMethod(authChannels));
+  }, [authChannels]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,15 +100,21 @@ export default function AskResetPasswordPage() {
               onNationalChange={setPhoneNational}
             />
 
-            <MethodToggle
-              label="Recevoir le lien par"
-              value={method}
-              onChange={setMethod}
-              options={[
-                { value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-4 h-4" /> },
-                { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-4 h-4" /> },
-              ]}
-            />
+            {canChooseOtpChannel ? (
+              <MethodToggle
+                label="Recevoir le lien par"
+                value={method}
+                onChange={setMethod}
+                options={[
+                  { value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-4 h-4" /> },
+                  { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-4 h-4" /> },
+                ]}
+              />
+            ) : (
+              <p className="text-xs text-muted">
+                Lien envoyé {method === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'} (réglage plateforme).
+              </p>
+            )}
 
             <Button type="submit" fullWidth size="lg" loading={loading}>
               Envoyer le lien de réinitialisation

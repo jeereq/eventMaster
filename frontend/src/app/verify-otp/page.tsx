@@ -7,23 +7,36 @@ import { useAuth } from '@/context/AuthContext';
 import { Loader2, Mail, MessageSquare, RefreshCw } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  allowsAuthOtpChoice,
+  resolveAuthOtpMethodFromSite,
+  type AuthOtpMethod,
+} from '@/lib/authOtpChannels';
 
 function VerifyOtpForm() {
  const searchParams = useSearchParams();
  const { verifyOtp, resendOtp } = useAuth();
+ const { site } = usePlatformSite();
+ const authChannels = site.authOtpChannels;
+ const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
 
  const initialEmail = searchParams.get('email') || '';
- const initialMethod = (searchParams.get('method') as 'EMAIL' | 'WHATSAPP') || 'EMAIL';
+ const initialMethod = resolveAuthOtpMethodFromSite(searchParams.get('method'), authChannels);
  const fromLogin = searchParams.get('from') === 'login';
 
  const [email] = useState(initialEmail);
- const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>(initialMethod);
+ const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(initialMethod);
  const [digits, setDigits] = useState(['', '', '', '', '', '']);
  const [error, setError] = useState('');
  const [success, setSuccess] = useState('');
  const [loading, setLoading] = useState(false);
  const [resending, setResending] = useState(false);
  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+ useEffect(() => {
+   setVerificationMethod((prev) => resolveAuthOtpMethodFromSite(prev, authChannels));
+ }, [authChannels]);
 
  useEffect(() => {
  if (email) inputRefs.current[0]?.focus();
@@ -162,6 +175,7 @@ function VerifyOtpForm() {
 
  <div className="mt-6 pt-5 border-t border-border-subtle dark:border-border space-y-4">
  <p className="text-xs text-muted text-center">Code expiré ou non reçu ?</p>
+ {canChooseOtpChannel ? (
  <MethodToggle
  value={verificationMethod}
  onChange={setVerificationMethod}
@@ -170,6 +184,11 @@ function VerifyOtpForm() {
  { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
  ]}
  />
+ ) : (
+ <p className="text-xs text-muted text-center">
+ Renvoi {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}.
+ </p>
+ )}
  <div className="text-center">
  <Button variant="ghost" size="sm" onClick={handleResend} loading={resending} leftIcon={!resending ? <RefreshCw className="w-3.5 h-3.5" /> : undefined}>
  Renvoyer le code

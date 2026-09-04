@@ -39,6 +39,11 @@ import LegalTermsPreviewModal from '@/components/LegalTermsPreviewModal';
 import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  allowsAuthOtpChoice,
+  defaultAuthOtpMethod,
+  type AuthOtpMethod,
+} from '@/lib/authOtpChannels';
 import { interpolateRates } from '@/lib/platformRates';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
@@ -521,6 +526,8 @@ export default function RegisterPage() {
 function RegisterPageContent() {
   const { register } = useAuth();
   const { site, ready } = usePlatformSite();
+  const authChannels = site.authOtpChannels;
+  const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -537,7 +544,7 @@ function RegisterPageContent() {
   const [tenantName, setTenantName] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [phoneNational, setPhoneNational] = useState('');
-  const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+  const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [referralCode, setReferralCode] = useState('');
@@ -550,6 +557,10 @@ function RegisterPageContent() {
   const [showAllAccountKinds, setShowAllAccountKinds] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy'>('summary');
+
+  useEffect(() => {
+    setVerificationMethod(defaultAuthOtpMethod(authChannels));
+  }, [authChannels]);
 
   const hasExplicitAction = Boolean(actionParam || intentParam || planParam || searchParams.get('kind'));
   const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
@@ -940,15 +951,23 @@ function RegisterPageContent() {
               </div>
 
               {/* ─── CHOIX DE MÉTHODE DE VALIDATION OTP ─── */}
-              <MethodToggle
-                label="Réception du code de confirmation"
-                value={verificationMethod}
-                onChange={setVerificationMethod}
-                options={[
-                  { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" /> },
-                  { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
-                ]}
-              />
+              {canChooseOtpChannel ? (
+                <MethodToggle
+                  label="Réception du code de confirmation"
+                  value={verificationMethod}
+                  onChange={setVerificationMethod}
+                  options={[
+                    { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" /> },
+                    { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
+                  ]}
+                />
+              ) : (
+                <p className="text-xs text-muted">
+                  Code de confirmation envoyé{' '}
+                  {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}
+                  {' '}(réglage plateforme).
+                </p>
+              )}
 
               {/* ─── CONDITIONS LÉGALES & PRÉVISUALISATION COMPACTES ─── */}
               <div className="space-y-1.5 pt-0.5">
