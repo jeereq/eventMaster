@@ -78,6 +78,7 @@ export interface PublicVenue {
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
+  isBlockedByAdmin?: boolean;
   activityPreview?: MarketplaceActivityPreviewItem[] | null;
   relatedServices?: PublicService[];
   relatedVenues?: PublicVenue[];
@@ -404,6 +405,7 @@ export interface PublicService {
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
   isPublic?: boolean;
+  isBlockedByAdmin?: boolean;
   activityPreview?: MarketplaceActivityPreviewItem[] | null;
   relatedServices?: PublicService[];
   relatedVenues?: PublicVenue[];

@@ -125,6 +125,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       ? formatQuotaLabel(service.quotaMin, service.quotaMax)
       : null;
   const isPublic = venue?.isPublic ?? service?.isPublic ?? true;
+  const isBlockedByAdmin = Boolean(venue?.isBlockedByAdmin || service?.isBlockedByAdmin);
   const shareKind = kind === 'venue' ? 'venue' : isRental ? 'rental' : 'service';
   const lat = venue?.latitude ?? service?.latitude ?? null;
   const lng = venue?.longitude ?? service?.longitude ?? null;
@@ -151,7 +152,10 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           : (service?.categoryLabel || '')
       }
       title={venue?.headline || service?.title || ''}
-      subtitle={[venue?.orgName || service?.orgName, isPublic ? null : 'Brouillon'].filter(Boolean).join(' · ')}
+      subtitle={[
+        venue?.orgName || service?.orgName,
+        isBlockedByAdmin ? 'Bloqué' : !isPublic ? 'Brouillon' : null,
+      ].filter(Boolean).join(' · ')}
       photos={venue?.photos || service?.photos || []}
       photoIndex={photoIndex}
       onPhotoIndex={setPhotoIndex}
@@ -176,7 +180,10 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       details={item ? (
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-3 max-w-prose">
-          {!isPublic && (
+          {isBlockedByAdmin && (
+            <Badge variant="danger">Bloqué — masqué du marketplace public</Badge>
+          )}
+          {!isPublic && !isBlockedByAdmin && (
             <Badge variant="default">Brouillon — non visible sur le marketplace public</Badge>
           )}
           <p className="text-sm text-muted leading-relaxed">

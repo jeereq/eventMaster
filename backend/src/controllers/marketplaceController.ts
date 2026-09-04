@@ -397,22 +397,28 @@ function canViewUnpublishedListing(req: Request, tenantId: string): boolean {
   return user.role === 'SUPER_ADMIN' || user.tenantId === tenantId;
 }
 
+/** SuperAdmin (et org propriétaire) : voir fiches non publiques ou bloquées pour modération. */
+function canViewRestrictedListing(req: Request, tenantId: string): boolean {
+  return canViewUnpublishedListing(req, tenantId);
+}
+
 export async function getPublicVenue(req: Request, res: Response) {
   try {
     const slug = String(req.params.slug || '').trim();
     if (!slug) return res.status(400).json({ error: 'Slug requis.' });
 
     const listing = await prisma.venueListing.findFirst({
-      where: { 
-        slug,
-        isBlockedByAdmin: false
-      },
+      where: { slug },
       include: listingInclude,
     });
     if (!listing) {
       return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
     }
-    if (!listing.isPublic && !canViewUnpublishedListing(req, listing.tenantId)) {
+    const canStaffView = canViewRestrictedListing(req, listing.tenantId);
+    if (listing.isBlockedByAdmin && !canStaffView) {
+      return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
+    }
+    if (!listing.isPublic && !canStaffView) {
       return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
     }
 
@@ -443,6 +449,7 @@ export async function getPublicVenue(req: Request, res: Response) {
     return res.json({
       ...toPublicVenue(listing),
       isPublic: listing.isPublic,
+      isBlockedByAdmin: listing.isBlockedByAdmin,
       relatedVenues: relatedVenues.map(toPublicVenue),
       relatedServices: relatedOfferings.map(toPublicService),
       activityPreview: await fetchActivityPreview({ venueListingId: listing.id }),
@@ -744,7 +751,7 @@ function toPublicService(offering: {
 }
 
 const offeringInclude = {
-  vendorProfile: { select: { displayName: true, city: true, slug: true } },
+  vendorProfile: { select: { displayName: true, city: true, slug: true, isBlockedByAdmin: true } },
   tenant: { select: { name: true } },
   bookings: {
     where: { status: { in: HOLD_BOOKING_STATUSES } },
@@ -841,17 +848,16 @@ export async function getPublicService(req: Request, res: Response) {
     const slug = String(req.params.slug || '').trim();
     if (!slug) return res.status(400).json({ error: 'Slug requis.' });
     const offering = await prisma.serviceOffering.findFirst({
-      where: { 
-        slug,
-        isBlockedByAdmin: false,
-        vendorProfile: {
-          isBlockedByAdmin: false
-        }
-      },
+      where: { slug },
       include: offeringInclude,
     });
     if (!offering) return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
-    if (!offering.isPublic && !canViewUnpublishedListing(req, offering.tenantId)) {
+    const canStaffView = canViewRestrictedListing(req, offering.tenantId);
+    const vendorBlocked = Boolean(offering.vendorProfile?.isBlockedByAdmin);
+    if ((offering.isBlockedByAdmin || vendorBlocked) && !canStaffView) {
+      return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
+    }
+    if (!offering.isPublic && !canStaffView) {
       return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
     }
     const [relatedOfferings, relatedVenues] = await Promise.all([
@@ -881,6 +887,7 @@ export async function getPublicService(req: Request, res: Response) {
     return res.json({
       ...toPublicService(offering),
       isPublic: offering.isPublic,
+      isBlockedByAdmin: offering.isBlockedByAdmin || Boolean(offering.vendorProfile?.isBlockedByAdmin),
       relatedServices: relatedOfferings.map(toPublicService),
       relatedVenues: relatedVenues.map(toPublicVenue),
       activityPreview: await fetchActivityPreview({

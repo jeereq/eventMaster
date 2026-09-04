@@ -70,6 +70,7 @@ interface VenueRow {
   id: string;
   slug: string;
   isPublic: boolean;
+  isBlockedByAdmin?: boolean;
   headline: string;
   roomName: string;
   roomType?: string;
@@ -96,6 +97,7 @@ interface OfferingRow {
   id: string;
   slug: string;
   isPublic: boolean;
+  isBlockedByAdmin?: boolean;
   title: string;
   category: string;
   categoryLabel: string;
@@ -757,7 +759,7 @@ export default function AdminCataloguePage() {
             {catalogItems.length > 0 && (
               <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
                 {(tab === 'venues' ? venues?.items : offerings?.items)?.map((row) => {
-                  const isBlocked = (row as any).isBlockedByAdmin;
+                  const isBlocked = Boolean(row.isBlockedByAdmin);
                   return (
                   <li key={`mod-${row.id}`} className="px-4 py-2.5 flex flex-wrap items-center gap-2 text-xs">
                     <Badge variant={isBlocked ? 'danger' : row.isPublic ? 'success' : 'default'}>
@@ -769,6 +771,9 @@ export default function AdminCataloguePage() {
                     <button type="button" className="text-primary hover:underline" onClick={() => void openFiche(row.tenantId)}>
                       {row.tenantName}
                     </button>
+                    <Link href={row.href} className="text-primary hover:underline">
+                      Voir
+                    </Link>
                     
                     <div className="ml-auto flex items-center gap-2">
                       {!isBlocked ? (
