@@ -15,6 +15,9 @@ import {
   ArrowRight,
   Check,
   Type,
+  Eye,
+  Palette,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -158,6 +161,16 @@ export default function LandingInvitationAiGenerator({
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [previewTab, setPreviewTab] = useState<'card' | 'artwork' | 'details'>('card');
+  const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
+
+  const handleCopyColor = (color: string, key: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(color);
+      setCopiedColorKey(key);
+      setTimeout(() => setCopiedColorKey(null), 1800);
+    }
+  };
 
   useEffect(() => {
     void syncDeviceAiTokensWithBackend(api).then(setAllowance).catch(() => {
@@ -631,51 +644,150 @@ export default function LandingInvitationAiGenerator({
 
           {previewTemplate ? (
             <div className="flex-1 flex flex-col gap-3 min-h-0 animate-fade-in">
-              <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden">
-                <LandingInvitationPreview
-                  template={previewTemplate}
-                  className="!min-h-[280px] !max-h-[min(480px,58vh)] !p-4 sm:!p-5"
-                />
+              {/* Commutateur de vue à 3 modes */}
+              <div
+                className="flex items-center gap-1 p-1 rounded-xl bg-surface border border-border shadow-2xs"
+                role="tablist"
+                aria-label="Modes d'aperçu de l'invitation"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={previewTab === 'card'}
+                  onClick={() => setPreviewTab('card')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    previewTab === 'card'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+                  )}
+                >
+                  <Eye className="w-3.5 h-3.5" aria-hidden />
+                  <span>Carte</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={previewTab === 'artwork'}
+                  onClick={() => setPreviewTab('artwork')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    previewTab === 'artwork'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+                  )}
+                >
+                  <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                  <span>Illustration</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={previewTab === 'details'}
+                  onClick={() => setPreviewTab('details')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    previewTab === 'details'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+                  )}
+                >
+                  <Palette className="w-3.5 h-3.5" aria-hidden />
+                  <span>Détails</span>
+                </button>
               </div>
 
-              {palette ? (
-                <div className="flex flex-wrap items-center gap-2" aria-label="Palette détectée">
-                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Palette</span>
-                  {palette.map((swatch) => (
-                    <span
-                      key={swatch.key}
-                      title={`${swatch.key}: ${swatch.color}`}
-                      className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted"
-                    >
-                      <span
-                        className="w-4 h-4 rounded-md border border-border shadow-2xs"
-                        style={{ backgroundColor: swatch.color }}
-                      />
-                      {swatch.key}
-                    </span>
-                  ))}
+              {/* Vue 1 : Carte d'invitation complète */}
+              {previewTab === 'card' && (
+                <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center">
+                  <LandingInvitationPreview
+                    template={previewTemplate}
+                    showOnlyBackground={false}
+                    className="!min-h-[300px] !max-h-[min(480px,58vh)]"
+                  />
                 </div>
-              ) : null}
+              )}
 
-              {elements.length > 0 ? (
-                <ul className="space-y-1.5 max-h-28 overflow-y-auto overscroll-contain pr-1">
-                  {elements.map((el, i) => (
-                    <li
-                      key={`${el.type}-${i}`}
-                      className="flex items-start gap-2 text-[11px] text-muted"
-                    >
-                      <Type className="w-3 h-3 mt-0.5 text-primary shrink-0" aria-hidden />
-                      <span className="min-w-0">
-                        <span className="font-bold text-foreground capitalize">{el.type}</span>
-                        {el.text ? (
-                          <span className="line-clamp-1 break-words"> — {el.text}</span>
-                        ) : null}
+              {/* Vue 2 : Illustration IA pure (sans texte, pour apprécier le photoréalisme) */}
+              {previewTab === 'artwork' && (
+                <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center space-y-2">
+                  <LandingInvitationPreview
+                    template={previewTemplate}
+                    showOnlyBackground={true}
+                    className="!min-h-[300px] !max-h-[min(480px,58vh)]"
+                  />
+                  <div className="px-2 py-1 text-center">
+                    <p className="text-[11px] text-muted">
+                      Illustration HD d'origine sans superposition : découvrez la fidélité des visages, le grain 35mm et les dorures.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Vue 3 : Détails, Palette & Structure */}
+              {previewTab === 'details' && (
+                <div className="space-y-3 p-3 rounded-2xl border border-border bg-surface shadow-xs">
+                  {palette && palette.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                          Palette harmonique détectée
+                        </span>
+                        <span className="text-[10px] text-muted">Cliquez pour copier</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {palette.map((swatch) => {
+                          const isCopied = copiedColorKey === swatch.key;
+                          return (
+                            <button
+                              key={swatch.key}
+                              type="button"
+                              onClick={() => handleCopyColor(swatch.color, swatch.key)}
+                              className="group inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border bg-surface-muted/70 hover:bg-surface-muted hover:border-primary/40 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 text-xs font-semibold text-foreground cursor-pointer"
+                              aria-label={`Copier la couleur ${swatch.key} ${swatch.color}`}
+                            >
+                              <span
+                                className="w-3.5 h-3.5 rounded-md border border-black/10 dark:border-white/10 shadow-2xs shrink-0"
+                                style={{ backgroundColor: swatch.color }}
+                              />
+                              <span className="capitalize text-[11px]">{swatch.key}</span>
+                              <span className="text-[10px] font-mono text-muted group-hover:text-foreground">
+                                {isCopied ? '✓ Copié' : swatch.color}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {elements.length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t border-border/60">
+                      <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                        Éléments d’invitation générés ({elements.length})
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+                      <ul className="space-y-1 max-h-32 overflow-y-auto overscroll-contain pr-1">
+                        {elements.map((el, i) => (
+                          <li
+                            key={`${el.type}-${i}`}
+                            className="flex items-start gap-2 text-[11px] text-muted"
+                          >
+                            <Type className="w-3 h-3 mt-0.5 text-primary shrink-0" aria-hidden />
+                            <span className="min-w-0">
+                              <span className="font-bold text-foreground capitalize">{el.type}</span>
+                              {el.text ? (
+                                <span className="line-clamp-1 break-words"> — {el.text}</span>
+                              ) : null}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
 
+              {/* État de la préparation */}
               <p className="text-[11px] text-muted leading-relaxed">
                 {lastStageMeta?.backgroundReady
                   ? 'Fond généré + structure texte / RSVP prêts à éditer.'
@@ -734,11 +846,38 @@ export default function LandingInvitationAiGenerator({
         }
       >
         {previewTemplate ? (
-          <div className="rounded-2xl border border-border overflow-hidden bg-surface-muted/40">
-            <LandingInvitationPreview
-              template={previewTemplate}
-              className="!max-h-[min(70vh,640px)]"
-            />
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-center gap-1.5 p-1 rounded-xl bg-surface-muted/60 border border-border max-w-xs mx-auto w-full">
+              <button
+                type="button"
+                onClick={() => setPreviewTab('card')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer',
+                  previewTab === 'card' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                )}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Carte complète</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewTab('artwork')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer',
+                  previewTab === 'artwork' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Illustration seule</span>
+              </button>
+            </div>
+            <div className="rounded-2xl border border-border overflow-hidden bg-surface-muted/30 p-2 sm:p-4 flex justify-center">
+              <LandingInvitationPreview
+                template={previewTemplate}
+                showOnlyBackground={previewTab === 'artwork'}
+                className="!max-h-[min(70vh,640px)] !max-w-[420px]"
+              />
+            </div>
           </div>
         ) : null}
       </Modal>
