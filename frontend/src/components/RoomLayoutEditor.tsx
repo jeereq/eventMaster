@@ -2922,13 +2922,13 @@ export default function RoomLayoutEditor({
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded bg-surface border border-border">
-                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                <div className="flex items-center justify-between gap-2 p-2 rounded bg-surface border border-border">
+                  <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedFixture.hasMat !== false}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasMat: e.target.checked }, e.target.checked ? 'Paillasson ajouté' : 'Paillasson masqué')}
-                      className="rounded border-border text-primary"
+                      className="rounded border-border size-4"
                     />
                     <span>Paillasson d’accueil VIP</span>
                   </label>
@@ -2937,8 +2937,9 @@ export default function RoomLayoutEditor({
                       type="color"
                       value={selectedFixture.matColor ?? '#451a03'}
                       onChange={(e) => updateFixture(selectedFixture.id, { matColor: e.target.value })}
+                      aria-label="Couleur paillasson"
                       title="Couleur paillasson"
-                      className="w-6 h-6 rounded border cursor-pointer"
+                      className="min-h-11 min-w-11 shrink-0 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   )}
                 </div>
@@ -2969,31 +2970,31 @@ export default function RoomLayoutEditor({
                   )}
                 </label>
 
-                <div className="space-y-1.5 p-2 rounded bg-surface border border-border">
-                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                <div className="space-y-1 p-2 rounded bg-surface border border-border">
+                  <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedFixture.hasGoldBorder !== false}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasGoldBorder: e.target.checked }, 'Bordure dorée')}
-                      className="rounded border-border text-primary"
+                      className="rounded border-border size-4"
                     />
                     <span>Ganse / liseré doré sur les bords</span>
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedFixture.hasSideLanterns !== false}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasSideLanterns: e.target.checked }, 'Lanternes latérales')}
-                      className="rounded border-border text-primary"
+                      className="rounded border-border size-4"
                     />
                     <span>Lanternes & bougies latérales</span>
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedFixture.hasPetals !== false}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasPetals: e.target.checked }, 'Pétales de fleurs')}
-                      className="rounded border-border text-primary"
+                      className="rounded border-border size-4"
                     />
                     <span>Pétales de roses parsemés</span>
                   </label>
@@ -3220,7 +3221,7 @@ export default function RoomLayoutEditor({
                     </label>
                     <label className="block space-y-1">
                       <span className="font-semibold text-muted">Couleur</span>
-                      <input type="color" value={selectedFixture.color ?? '#a8a29e'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer" />
+                      <input type="color" value={selectedFixture.color ?? '#a8a29e'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} aria-label="Couleur de l’escalier" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
                     </label>
                   </div>
                 </details>
@@ -3287,19 +3288,19 @@ export default function RoomLayoutEditor({
                 </label>
                 <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Couleur</span>
-                  <input type="color" value={selectedFixture.color ?? '#b45309'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer" />
+                  <input type="color" value={selectedFixture.color ?? '#b45309'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} aria-label="Couleur de l’élément" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
                 </label>
               </>
             )}
 
             {isBuffet && (
               <>
-                <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedFixture.hasCouverts !== false}
                     onChange={(e) => updateFixture(selectedFixture.id, { hasCouverts: e.target.checked }, e.target.checked ? 'Couverts affichés' : 'Couverts masqués')}
-                    className="rounded border-border"
+                    className="rounded border-border size-4"
                   />
                   Afficher assiettes & couverts
                 </label>
@@ -3334,7 +3335,7 @@ export default function RoomLayoutEditor({
                 </label>
                 <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Couleur des fleurs</span>
-                  <input type="color" value={selectedFixture.flowerColor ?? '#e11d48'} onChange={(e) => updateFixture(selectedFixture.id, { flowerColor: e.target.value }, 'Couleur florale modifiée')} className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer" />
+                  <input type="color" value={selectedFixture.flowerColor ?? '#e11d48'} onChange={(e) => updateFixture(selectedFixture.id, { flowerColor: e.target.value }, 'Couleur florale modifiée')} aria-label="Couleur des fleurs" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
                 </label>
               </>
             )}
@@ -3350,32 +3351,32 @@ export default function RoomLayoutEditor({
                 </label>
                 <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Couleur (sans image)</span>
-                  <input type="color" value={selectedFixture.color ?? '#78716c'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer" />
+                  <input type="color" value={selectedFixture.color ?? '#78716c'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} aria-label="Couleur de la colonne" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
                 </label>
                 <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Rotation (°)</span>
                   <input type="number" min={0} max={360} value={selectedFixture.rotation ?? 0} onChange={(e) => updateFixture(selectedFixture.id, { rotation: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
                 </label>
                 <div className="space-y-1.5">
-                  <p className="text-xs font-semibold text-muted">Position</p>
+                  <p className={EDITOR_HEADING}>Position</p>
                   <div className="flex justify-center">
                     <button
                       type="button"
                       onClick={() => updateFixture(selectedFixture.id, { y: Math.max(1, selectedFixture.y - 2) }, 'Colonne déplacée ↑')}
-                      className="p-2 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted"
-                      title="Haut"
+                      className={EDITOR_TOOL_ICON}
+                      aria-label="Déplacer la colonne vers le haut"
                     >
-                      <ArrowUp className="w-4 h-4" />
+                      <ArrowUp className="w-4 h-4" aria-hidden />
                     </button>
                   </div>
                   <div className="flex items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => updateFixture(selectedFixture.id, { x: Math.max(1, selectedFixture.x - 2) }, 'Colonne déplacée ←')}
-                      className="p-2 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted"
-                      title="Gauche"
+                      className={EDITOR_TOOL_ICON}
+                      aria-label="Déplacer la colonne vers la gauche"
                     >
-                      <ArrowLeft className="w-4 h-4" />
+                      <ArrowLeft className="w-4 h-4" aria-hidden />
                     </button>
                     <button
                       type="button"
@@ -3383,30 +3384,31 @@ export default function RoomLayoutEditor({
                         x: Math.max(1, Math.min(99 - selectedFixture.w, 50 - selectedFixture.w / 2)),
                         y: Math.max(1, Math.min(99 - selectedFixture.h, 50 - selectedFixture.h / 2)),
                       }, 'Colonne centrée')}
-                      className="px-3 py-2 rounded-[var(--radius-button)] border border-border text-[10px] font-bold hover:bg-surface-muted"
+                      className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+                      aria-label="Centrer la colonne"
                     >
-                      <Home className="w-3.5 h-3.5 inline" /> Centre
+                      <Home className="w-3.5 h-3.5" aria-hidden /> Centre
                     </button>
                     <button
                       type="button"
                       onClick={() => updateFixture(selectedFixture.id, { x: Math.min(99 - selectedFixture.w, selectedFixture.x + 2) }, 'Colonne déplacée →')}
-                      className="p-2 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted"
-                      title="Droite"
+                      className={EDITOR_TOOL_ICON}
+                      aria-label="Déplacer la colonne vers la droite"
                     >
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight className="w-4 h-4" aria-hidden />
                     </button>
                   </div>
                   <div className="flex justify-center">
                     <button
                       type="button"
                       onClick={() => updateFixture(selectedFixture.id, { y: Math.min(99 - selectedFixture.h, selectedFixture.y + 2) }, 'Colonne déplacée ↓')}
-                      className="p-2 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted"
-                      title="Bas"
+                      className={EDITOR_TOOL_ICON}
+                      aria-label="Déplacer la colonne vers le bas"
                     >
-                      <ArrowDown className="w-4 h-4" />
+                      <ArrowDown className="w-4 h-4" aria-hidden />
                     </button>
                   </div>
-                  <p className="text-[10px] text-muted text-center">Ou glissez la colonne dans la vue 3D</p>
+                  <p className={cn(EDITOR_HINT, 'text-center')}>Ou glissez la colonne dans la vue 3D</p>
                 </div>
               </>
             )}
@@ -3464,19 +3466,20 @@ export default function RoomLayoutEditor({
                 <input type="number" min={2} max={24} value={selectedFurniture.capacity} onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })} className={EDITOR_FIELD} />
               </label>
             </div>
-            <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted flex items-center gap-1"><Palette className="w-3 h-3" /> Couleur de cette table</span>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1"><Palette className="w-3 h-3" /> Couleur de cette table</span>
               <div className="flex gap-2 items-center">
                 <input
                   type="color"
                   value={selectedFurniture.tableColor ?? blueprint.metadata.defaultTableColor ?? '#ffffff'}
                   onChange={(e) => updateFurniture(selectedFurniture.id, { tableColor: e.target.value }, 'Couleur de table modifiée')}
-                  className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer"
+                  aria-label="Couleur de cette table"
+                  className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                 />
                 <button
                   type="button"
                   onClick={() => updateFurniture(selectedFurniture.id, { tableColor: undefined }, 'Couleur table réinitialisée')}
-                  className="shrink-0 px-2 py-1 text-[10px] font-bold text-muted border rounded-[var(--radius-button)]"
+                  className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED, 'shrink-0')}
                 >
                   Défaut
                 </button>
@@ -3489,12 +3492,12 @@ export default function RoomLayoutEditor({
                 onChange={(tableSurface) => updateFurniture(selectedFurniture.id, { tableSurface }, 'Finition de table')}
               />
             </div>
-            <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
+            <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
               <input
                 type="checkbox"
                 checked={selectedFurniture.hasCouverts === true}
                 onChange={(e) => updateFurniture(selectedFurniture.id, { hasCouverts: e.target.checked }, e.target.checked ? 'Couverts affichés' : 'Couverts masqués')}
-                className="rounded border-border"
+                className="rounded border-border size-4"
               />
               Afficher assiettes & couverts
             </label>
@@ -3502,7 +3505,7 @@ export default function RoomLayoutEditor({
               const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
               if (!surface) {
                 return (
-                  <p className="text-[10px] text-muted leading-snug">
+                  <p className={EDITOR_HINT}>
                     Glissez la table sur une moquette, piste ou podium : elle se pose automatiquement dessus (caméra bloquée recommandée).
                   </p>
                 );
@@ -3823,48 +3826,48 @@ export default function RoomLayoutEditor({
             </div>
             <div className="space-y-2 pt-1 border-t border-border">
               <p className={EDITOR_HEADING}>Direction / placement</p>
-              <div className="flex flex-col items-center gap-1">
+              <div className="flex flex-col items-center gap-1.5">
                 <button
                   type="button"
-                  title="Déplacer vers le haut"
+                  aria-label="Déplacer la zone vers le haut"
                   onClick={() => updateFurniture(selectedFurniture.id, { y: Math.max(2, selectedFurniture.y - 3) }, 'Zone déplacée ↑')}
-                  className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
+                  className={EDITOR_TOOL_ICON}
                 >
-                  <ArrowUp className="w-4 h-4" />
+                  <ArrowUp className="w-4 h-4" aria-hidden />
                 </button>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    title="Déplacer à gauche"
+                    aria-label="Déplacer la zone vers la gauche"
                     onClick={() => updateFurniture(selectedFurniture.id, { x: Math.max(2, selectedFurniture.x - 3) }, 'Zone déplacée ←')}
-                    className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
+                    className={EDITOR_TOOL_ICON}
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4" aria-hidden />
                   </button>
                   <button
                     type="button"
-                    title="Centrer"
+                    aria-label="Centrer la zone"
                     onClick={() => updateFurniture(selectedFurniture.id, { x: 50 - selectedFurniture.w / 2, y: 50 - selectedFurniture.h / 2 }, 'Zone centrée')}
-                    className="p-2 rounded-[var(--radius-button)] border bg-primary/10 text-primary"
+                    className={cn(EDITOR_TOOL_ICON, 'bg-primary/10 border-primary/40 text-primary')}
                   >
-                    <Home className="w-4 h-4" />
+                    <Home className="w-4 h-4" aria-hidden />
                   </button>
                   <button
                     type="button"
-                    title="Déplacer à droite"
+                    aria-label="Déplacer la zone vers la droite"
                     onClick={() => updateFurniture(selectedFurniture.id, { x: Math.min(98 - selectedFurniture.w, selectedFurniture.x + 3) }, 'Zone déplacée →')}
-                    className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
+                    className={EDITOR_TOOL_ICON}
                   >
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" aria-hidden />
                   </button>
                 </div>
                 <button
                   type="button"
-                  title="Déplacer vers le bas"
+                  aria-label="Déplacer la zone vers le bas"
                   onClick={() => updateFurniture(selectedFurniture.id, { y: Math.min(98 - selectedFurniture.h, selectedFurniture.y + 3) }, 'Zone déplacée ↓')}
-                  className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
+                  className={EDITOR_TOOL_ICON}
                 >
-                  <ArrowDown className="w-4 h-4" />
+                  <ArrowDown className="w-4 h-4" aria-hidden />
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-1">
@@ -3889,9 +3892,9 @@ export default function RoomLayoutEditor({
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-muted">La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
+              <p className={EDITOR_HINT}>La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
             </div>
-            <p className="text-[10px] text-muted">Glissez aussi la zone dans la vue 3D.</p>
+            <p className={EDITOR_HINT}>Glissez aussi la zone dans la vue 3D.</p>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
