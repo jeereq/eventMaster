@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
@@ -9,6 +9,8 @@ import {
   consumeAiSimulationCredit,
   requireAiSimulationCredit,
 } from '../services/aiSimulationWalletService';
+import { uploadDataUrl } from '../services/cloudinaryService';
+import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 
 function isCustomTemplateContent(content: unknown): boolean {
   if (!content || typeof content !== 'object') return false;
@@ -406,10 +408,8 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer un jeton IA.' });
     }
     const prompt = typeof body.prompt === 'string' ? body.prompt : '';
-    const imageUrls = Array.isArray(body.imageUrls)
-      ? body.imageUrls.filter((u): u is string => typeof u === 'string')
-      : [];
     const generateBackground = body.generateBackground !== false;
+    const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
 
     await requireAiSimulationCredit(deviceId, req.user.id);
     const result = await composeInvitationTemplateAi({
@@ -438,4 +438,78 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     console.error('composeTemplateWithAi:', error);
     return res.status(500).json({ error: 'Impossible de générer le modèle avec l’IA.' });
   }
+}
+
+/**
+ * POST /public/templates/ai/compose — même pipeline, accessible landing /modeles
+ * (jetons device, sans exiger customTemplates ; l’édition en studio reste gated).
+ */
+export async function publicComposeTemplateWithAi(req: Request, res: Response) {
+  try {
+    const user = (req as AuthenticatedRequest).user;
+    const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
+    const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
+    if (!deviceId) {
+      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer un jeton IA.' });
+    }
+    const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+    const generateBackground = body.generateBackground !== false;
+    const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
+    const rateKey = user?.id || req.ip || deviceId;
+
+    await requireAiSimulationCredit(deviceId, user?.id || null);
+    const result = await composeInvitationTemplateAi({
+      userId: rateKey,
+      tenantId: user?.tenantId || null,
+      prompt,
+      imageUrls,
+      generateBackground,
+    });
+    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null);
+
+    return res.json({
+      content: result.content,
+      stage: result.stage,
+      remaining: allowance.totalRemaining,
+      allowance,
+    });
+  } catch (error: unknown) {
+    const err = error as { status?: number; message?: string };
+    if (err?.status) {
+      return res.status(err.status).json({ error: err.message || 'Erreur IA' });
+    }
+    console.error('publicComposeTemplateWithAi:', error);
+    return res.status(500).json({ error: 'Impossible de générer le modèle avec l’IA.' });
+  }
+}
+
+async function resolveComposeImageUrls(
+  body: Record<string, unknown>,
+  tenantId: string | null,
+): Promise<string[]> {
+  const urls = Array.isArray(body.imageUrls)
+    ? body.imageUrls.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+    : [];
+  const dataUrls = Array.isArray(body.imageDataUrls)
+    ? body.imageDataUrls.filter(
+        (u): u is string => typeof u === 'string' && u.startsWith('data:image/'),
+      )
+    : [];
+
+  const resolved: string[] = [];
+  for (const url of urls.slice(0, 4)) {
+    const trimmed = url.trim();
+    if (/^https?:\/\//i.test(trimmed)) {
+      resolved.push(trimmed);
+    } else if (trimmed.startsWith('data:image/')) {
+      const uploaded = await uploadDataUrl(trimmed, getTemplateUploadFolder(tenantId));
+      resolved.push(uploaded.url);
+    }
+  }
+  for (const dataUrl of dataUrls) {
+    if (resolved.length >= 4) break;
+    const uploaded = await uploadDataUrl(dataUrl, getTemplateUploadFolder(tenantId));
+    resolved.push(uploaded.url);
+  }
+  return resolved.slice(0, 4);
 }

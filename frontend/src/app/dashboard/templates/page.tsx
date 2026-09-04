@@ -11,7 +11,7 @@ import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buil
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
-import { composeTemplateWithAi, applyAiComposeToEditor } from '@/lib/templateAiCompose';
+import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft } from '@/lib/templateAiCompose';
 import {
  getAiSimulationAllowance,
  syncDeviceAiTokensWithBackend,
@@ -453,6 +453,44 @@ export default function TemplatesPage() {
  handleCreateTemplateClick(fromAdmin ? 'admin' : 'studio');
  window.history.replaceState({}, document.title, window.location.pathname);
  // eslint-disable-next-line react-hooks/exhaustive-deps -- ouverture unique via ?new=1
+ }, [canUseCustomTemplates]);
+
+ useEffect(() => {
+ if (typeof window === 'undefined' || !canUseCustomTemplates) return;
+ const params = new URLSearchParams(window.location.search);
+ if (params.get('aiDraft') !== '1') return;
+ const draft = loadAiTemplateDraft();
+ if (!draft?.content) {
+ window.history.replaceState({}, document.title, window.location.pathname);
+ return;
+ }
+ handleCreateTemplateClick('studio');
+ applyAiComposeToEditor(draft.content, {
+ setCanvasElements,
+ setBgType,
+ setBgColor,
+ setBgImageUrl,
+ setBgPattern,
+ setFrameType,
+ setFontTheme,
+ setFloralColor,
+ setFloralType,
+ setFloralDensity,
+ setImportedPalette,
+ setColorThemeId,
+ setLayoutMode,
+ setCanvasSizePreset,
+ setCanvasWidth,
+ setCanvasHeight,
+ setSelectedElementId,
+ });
+ setGeneratedByAi(true);
+ setImportedWithOcr(false);
+ setTemplateName('Invitation IA');
+ setSuccess('Modèle IA importé depuis la page Modèles. Ajustez puis enregistrez.');
+ clearAiTemplateDraft();
+ window.history.replaceState({}, document.title, window.location.pathname);
+ // eslint-disable-next-line react-hooks/exhaustive-deps -- import unique via ?aiDraft=1
  }, [canUseCustomTemplates]);
 
  const handleAddElement = (type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider') => {

@@ -8,9 +8,10 @@ import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import { Button, Modal, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2, Wand2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/cn';
+import LandingInvitationAiGenerator from '@/components/landing/LandingInvitationAiGenerator';
 
 function categoryLabel(category: string) {
   if (category === 'private') return 'Célébrations & Mariages';
@@ -75,13 +76,20 @@ export default function ModelesPage() {
     >
       <PublicPageHero
         title="Modèles d'invitations prêts à l'emploi"
-        description="Mariages, anniversaires, réceptions d'entreprise ou galas. Choisissez un design élégant, personnalisez vos informations et partagez le lien WhatsApp en 1 clic."
+        description="Mariages, anniversaires, réceptions d'entreprise ou galas. Choisissez un design élégant, personnalisez vos informations — ou créez le vôtre avec l’IA."
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
+          <a
+            href="#generateur-ia"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <Wand2 className="w-3.5 h-3.5" />
+            <span>Créer avec l’IA</span>
+          </a>
           <Link
             href={user ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=template'}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>{user ? 'Créer un événement' : 'Créer mon invitation'}</span>
@@ -97,6 +105,7 @@ export default function ModelesPage() {
       </PublicPageHero>
 
       <div className="page-container py-8 sm:py-12 space-y-8 max-w-7xl mx-auto">
+        <LandingInvitationAiGenerator />
         {/* Filtres et recherche */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/70">
           <div className="flex gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">

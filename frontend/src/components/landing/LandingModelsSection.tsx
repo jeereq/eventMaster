@@ -49,9 +49,14 @@ export default function LandingModelsSection({
             </p>
           </div>
 
-          <Button href="/register?kind=ORGANIZER&intent=personal&action=template" rightIcon={<ArrowRight className="w-4 h-4" />}>
-            Créer mon invitation
-          </Button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button href="/modeles#generateur-ia" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Créer avec l’IA
+            </Button>
+            <Button href="/register?kind=ORGANIZER&intent=personal&action=template" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Créer mon invitation
+            </Button>
+          </div>
         </div>
 
         {loading ? (

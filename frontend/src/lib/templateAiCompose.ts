@@ -11,6 +11,8 @@ import {
 } from '@/lib/rsvpFormFields';
 import type { TemplatePalette } from '@/lib/imagePalette';
 
+export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
+
 export type TemplateAiComposeContent = {
   global?: Record<string, unknown>;
   elements?: unknown[];
@@ -27,6 +29,22 @@ export type TemplateAiComposeResult = {
   allowance?: Partial<AiAllowance>;
 };
 
+export type AiTemplateDraft = {
+  content: TemplateAiComposeContent;
+  prompt?: string;
+  savedAt: string;
+};
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Impossible de lire l’image.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Studio authentifié (feature customTemplates). */
 export async function composeTemplateWithAi(input: {
   prompt: string;
   imageUrls: string[];
@@ -43,6 +61,68 @@ export async function composeTemplateWithAi(input: {
     applyServerAllowance(data.allowance);
   }
   return data as TemplateAiComposeResult;
+}
+
+/**
+ * Landing /modeles — route publique (jetons device).
+ * Envoie des data URLs pour éviter l’upload authentifié.
+ */
+export async function composeTemplateWithAiPublic(input: {
+  prompt: string;
+  files: File[];
+  generateBackground?: boolean;
+}): Promise<TemplateAiComposeResult> {
+  const deviceId = getOrCreateDeviceId();
+  const imageDataUrls: string[] = [];
+  for (const file of input.files.slice(0, 4)) {
+    imageDataUrls.push(await fileToDataUrl(file));
+  }
+  const data = await api.post('/public/templates/ai/compose', {
+    deviceId,
+    prompt: input.prompt,
+    imageDataUrls,
+    generateBackground: input.generateBackground !== false,
+  });
+  if (data?.allowance) {
+    applyServerAllowance(data.allowance);
+  }
+  return data as TemplateAiComposeResult;
+}
+
+export function saveAiTemplateDraft(content: TemplateAiComposeContent, prompt?: string) {
+  if (typeof window === 'undefined') return;
+  const draft: AiTemplateDraft = {
+    content,
+    prompt,
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    sessionStorage.setItem(AI_TEMPLATE_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function loadAiTemplateDraft(): AiTemplateDraft | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(AI_TEMPLATE_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AiTemplateDraft;
+    if (!parsed?.content) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearAiTemplateDraft() {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(AI_TEMPLATE_DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 export type AiComposeEditorSetters = {

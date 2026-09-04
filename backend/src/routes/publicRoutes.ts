@@ -39,6 +39,7 @@ import {
   listPublicAiSimulations,
   claimPublicAiSimulations,
 } from '../controllers/marketplaceClientController';
+import { publicComposeTemplateWithAi } from '../controllers/templateController';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -125,6 +126,7 @@ router.get('/events/:slug/seats', listPublicEventSeats);
 router.post('/events/:slug/checkout', requireAuth, checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
 router.post('/event-plan-ai', optionalAuth, publicPlanEventAi);
+router.post('/templates/ai/compose', optionalAuth, publicComposeTemplateWithAi);
 router.get('/ai-simulations', optionalAuth, listPublicAiSimulations);
 router.post('/ai-simulations/claim', requireAuth, claimPublicAiSimulations);
 router.post('/ai-tokens/checkout', optionalAuth, checkoutAiTokens);
