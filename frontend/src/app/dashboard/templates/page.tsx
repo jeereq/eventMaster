@@ -1498,8 +1498,9 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => requestCloseEditor()}
- className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted"
+ className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
+ aria-label={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
  >
  <ArrowLeft className="w-5 h-5" />
  </button>
@@ -1510,12 +1511,12 @@ export default function TemplatesPage() {
  value={templateName}
  onChange={(e) => setTemplateName(e.target.value)}
  maxLength={120}
- className="w-full max-w-md min-w-0 text-xl font-extrabold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none px-0.5 transition"
+ className="w-full max-w-md min-w-0 text-xl font-extrabold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none focus-visible:border-primary px-0.5 transition underline-offset-4"
  placeholder="Nom du modèle"
  aria-label="Nom du modèle"
  />
  {draftSavedAt && (
- <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap">
+ <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap" title="Modifications locales non encore enregistrées">
  Brouillon
  </span>
  )}
@@ -1552,14 +1553,15 @@ export default function TemplatesPage() {
  Formulaire RSVP à finaliser
  </p>
  ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
- <p role="status" className="w-full sm:w-auto text-[10px] font-semibold text-emerald-700 sm:text-right">
+ <p role="status" className="w-full sm:w-auto text-[10px] font-semibold text-primary sm:text-right">
  Formulaire RSVP prêt
  </p>
  ) : null}
  <button
  type="button"
  onClick={() => setShowGuestPreview((v) => !v)}
- className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border font-bold rounded-[var(--radius-button)] text-sm transition ${
+ aria-pressed={showGuestPreview}
+ className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border font-bold rounded-[var(--radius-button)] text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  showGuestPreview
  ? 'border-primary bg-primary/10 text-primary'
  : 'border-border text-muted hover:border-primary hover:text-primary'
@@ -1573,7 +1575,7 @@ export default function TemplatesPage() {
  onClick={handleSaveTemplate}
  disabled={saving}
  title={rsvpReportingIssues.length > 0 ? rsvpReportingIssues[0] : undefined}
- className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-[var(--radius-button)] text-sm transition shadow-md shadow-primary/20 disabled:opacity-50"
+ className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-[var(--radius-button)] text-sm transition shadow-md shadow-primary/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
  >
  {saving ? (
  <>
@@ -1609,12 +1611,12 @@ export default function TemplatesPage() {
  ))}
  </select>
  {!selectedTenantId && (
- <label className="inline-flex min-h-9 items-center gap-1.5 text-[11px] font-bold text-emerald-700 cursor-pointer px-2 rounded-lg hover:bg-emerald-50">
+ <label className="inline-flex min-h-9 items-center gap-1.5 text-[11px] font-bold text-primary cursor-pointer px-2 rounded-lg hover:bg-primary/5 focus-within:ring-2 focus-within:ring-primary/40">
  <input
  type="checkbox"
  checked={showOnLanding}
  onChange={(e) => setShowOnLanding(e.target.checked)}
- className="rounded text-emerald-600 focus:ring-emerald-500"
+ className="rounded text-primary focus:ring-primary"
  />
  Afficher sur la page d&apos;accueil
  </label>
@@ -1624,11 +1626,11 @@ export default function TemplatesPage() {
  </header>
 
  {draftSavedAt && (
- <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3">
+ <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3" role="status">
  <span>Brouillon local à {draftSavedAt} — pas encore enregistré</span>
  <button
  type="button"
- className="text-amber-700 hover:underline"
+ className="text-amber-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 rounded-md px-1"
  onClick={() => {
  try {
  localStorage.removeItem(draftKey);
@@ -1664,14 +1666,16 @@ export default function TemplatesPage() {
  {/* Editor Workspace — canvas leads; denser sticky rails support */}
  <div className="grid grid-cols-1 lg:grid-cols-[minmax(14rem,16rem)_minmax(0,1fr)_minmax(15rem,18rem)] gap-4 lg:gap-5 items-start">
  {/* Left Toolbox — Contenu | Style */}
- <aside className="order-2 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
- <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border">
+ <aside className="order-2 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
+ <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Outils du studio">
  <button
  type="button"
+ role="tab"
+ aria-selected={studioRail === 'content'}
  onClick={() => setStudioRail('content')}
- className={`py-2 rounded-lg text-[11px] font-bold transition ${
+ className={`py-2 rounded-lg text-[11px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  studioRail === 'content'
- ? 'bg-white text-foreground shadow-sm'
+ ? 'bg-surface text-foreground shadow-sm'
  : 'text-muted hover:text-foreground'
  }`}
  >
@@ -1679,13 +1683,15 @@ export default function TemplatesPage() {
  </button>
  <button
  type="button"
+ role="tab"
+ aria-selected={studioRail === 'style'}
  onClick={() => {
  setStudioRail('style');
  setSelectedElementId(null);
  }}
- className={`py-2 rounded-lg text-[11px] font-bold transition ${
+ className={`py-2 rounded-lg text-[11px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  studioRail === 'style'
- ? 'bg-white text-foreground shadow-sm'
+ ? 'bg-surface text-foreground shadow-sm'
  : 'text-muted hover:text-foreground'
  }`}
  >
@@ -1703,7 +1709,7 @@ export default function TemplatesPage() {
  </h3>
  <p className="text-[10px] text-muted leading-relaxed">
  Crée une palette à partir de votre maquette
- {canUseMockupOcr ? '. La détection de texte (OCR) est disponible en Premium 2+.' : '.'}
+ {canUseMockupOcr ? '. La détection de texte est disponible en Premium 2+.' : '.'}
  </p>
  {ocrProgress !== null && (
  <p className="text-[10px] text-primary font-bold">Détection du texte… {ocrProgress}%</p>
@@ -1719,7 +1725,7 @@ export default function TemplatesPage() {
  type="button"
  disabled={mockupImporting || imageUploading}
  onClick={() => mockupEditorInputRef.current?.click()}
- className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+ className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  {mockupImporting ? (
  <Loader2 className="w-4 h-4 animate-spin" />
@@ -1828,7 +1834,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleAddElement('text')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Type className="w-5 h-5" />
  <span>Texte</span>
@@ -1836,7 +1842,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleAddElement('button')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Columns className="w-5 h-5" />
  <span>Bouton</span>
@@ -1844,7 +1850,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleAddElement('image')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Image className="w-5 h-5" />
  <span>Image</span>
@@ -1852,7 +1858,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleAddElement('divider')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Palette className="w-5 h-5" />
  <span>Séparateur</span>
@@ -1860,7 +1866,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleAddElement('rsvp-block')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition col-span-2"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <CheckSquare className="w-5 h-5" />
  <span>Formulaire RSVP</span>
@@ -1869,7 +1875,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setShowDecorTools((v) => !v)}
- className="w-full text-[10px] font-bold text-muted hover:text-primary py-1.5 transition"
+ className="w-full text-[10px] font-bold text-muted hover:text-primary py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
  >
  {showDecorTools ? 'Masquer les formes décoratives' : 'Ajouter une courbe ou un triangle'}
  </button>
@@ -1878,7 +1884,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleAddElement('curve')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Spline className="w-5 h-5" />
  <span>Courbe</span>
@@ -1886,7 +1892,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleAddElement('triangle')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Triangle className="w-5 h-5" />
  <span>Triangle</span>
@@ -1947,7 +1953,7 @@ export default function TemplatesPage() {
  ];
  setCanvasElements((prev) => [...prev, ...presets]);
  }}
- className="w-full flex items-center justify-center gap-2 p-2.5 border border-dashed border-primary/30 rounded-xl hover:bg-primary/5 text-primary font-bold text-xs transition"
+ className="w-full flex items-center justify-center gap-2 p-2.5 border border-dashed border-primary/30 rounded-xl hover:bg-primary/5 text-primary font-bold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Sparkles className="w-4 h-4" />
  Preset titre · date · bouton
@@ -2351,7 +2357,7 @@ export default function TemplatesPage() {
  >
  {canvasElements.length === 0 ? (
  <div className="w-full text-center py-24 text-muted">
- <Sparkles className="w-10 h-10 mx-auto mb-3 text-muted animate-pulse" />
+ <Sparkles className="w-10 h-10 mx-auto mb-3 text-muted" />
  <p className="text-sm font-medium">La carte est vide.</p>
  <p className="text-xs mt-1">Ajoutez du texte, une image ou un formulaire RSVP depuis Contenu.</p>
  </div>
@@ -2733,7 +2739,7 @@ export default function TemplatesPage() {
  </div>
 
  {/* Right Properties Panel */}
- <aside className="order-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
+ <aside className="order-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
  {selectedElementId ? (
  // Element Properties Panel
  <div className="space-y-4">
@@ -2745,27 +2751,31 @@ export default function TemplatesPage() {
  setSelectedElementId(null);
  setStudioRail('style');
  }}
- className="text-[10px] font-bold text-primary hover:text-primary bg-primary/10 px-2 py-1 rounded-lg transition"
+ className="text-[10px] font-bold text-primary hover:text-primary bg-primary/10 px-2 py-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  Style de la carte
  </button>
  </div>
 
- <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border">
+ <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Profondeur des propriétés">
  <button
  type="button"
+ role="tab"
+ aria-selected={!propsAdvanced}
  onClick={() => setPropsAdvanced(false)}
- className={`py-1.5 rounded-lg text-[10px] font-bold transition ${
- !propsAdvanced ? 'bg-white text-foreground shadow-sm' : 'text-muted'
+ className={`py-1.5 rounded-lg text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ !propsAdvanced ? 'bg-surface text-foreground shadow-sm' : 'text-muted'
  }`}
  >
  Essentiel
  </button>
  <button
  type="button"
+ role="tab"
+ aria-selected={propsAdvanced}
  onClick={() => setPropsAdvanced(true)}
- className={`py-1.5 rounded-lg text-[10px] font-bold transition ${
- propsAdvanced ? 'bg-white text-foreground shadow-sm' : 'text-muted'
+ className={`py-1.5 rounded-lg text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ propsAdvanced ? 'bg-surface text-foreground shadow-sm' : 'text-muted'
  }`}
  >
  Options avancées
@@ -3218,8 +3228,8 @@ export default function TemplatesPage() {
  </div>
 
  {user?.role === 'SUPER_ADMIN' && !selectedTenantId && (
- <div className="space-y-3 p-3 rounded-2xl border border-emerald-100 bg-emerald-50/40">
- <h4 className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+ <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/5">
+ <h4 className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
  <Globe className="w-3.5 h-3.5" />
  Page d&apos;accueil publique
  </h4>
@@ -3229,8 +3239,9 @@ export default function TemplatesPage() {
  type="button"
  role="switch"
  aria-checked={showOnLanding}
+ aria-label="Afficher sur la page d'accueil du site"
  onClick={() => setShowOnLanding((v) => !v)}
- className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${showOnLanding ? 'bg-emerald-600' : 'bg-surface-muted'}`}
+ className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${showOnLanding ? 'bg-primary' : 'bg-surface-muted'}`}
  >
  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${showOnLanding ? 'translate-x-5' : 'translate-x-0'}`} />
  </button>
