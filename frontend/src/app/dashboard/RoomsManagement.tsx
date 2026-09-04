@@ -2020,12 +2020,9 @@ export default function RoomsManagement() {
                 <p className="text-sm text-muted">
                   Les réalisations liées à cette salle se gèrent dans l’espace Réalisations.
                 </p>
-                <Link
-                  href="/dashboard/publications?tab=create"
-                  className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover"
-                >
+                <Button href="/dashboard/publications?tab=create" size="sm">
                   Ouvrir Réalisations
-                </Link>
+                </Button>
               </div>
             )}
           </div>

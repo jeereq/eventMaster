@@ -188,6 +188,13 @@ import {
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
 
+const EDITOR_TOOL =
+  'inline-flex items-center justify-center gap-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40 disabled:cursor-not-allowed';
+const EDITOR_TOOL_IDLE = 'bg-surface border-border text-foreground hover:bg-surface-muted';
+const EDITOR_TOOL_MUTED = 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground';
+const EDITOR_TOOL_ON = 'bg-primary/10 border-primary/40 text-primary';
+const EDITOR_TOOL_PRIMARY = 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover';
+
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
 
 interface RoomLayoutEditorProps {
@@ -4017,35 +4024,30 @@ export default function RoomLayoutEditor({
         onClick={undo}
         disabled={!canUndo}
         title="Annuler (Ctrl+Z)"
-        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold disabled:opacity-40"
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
       >
-        <Undo2 className="w-3.5 h-3.5" /> Annuler
+        <Undo2 className="w-3.5 h-3.5" aria-hidden /> Annuler
       </button>
       <button
         type="button"
         onClick={redo}
         disabled={!canRedo}
         title="Rétablir (Ctrl+Y)"
-        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold disabled:opacity-40"
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
       >
-        <Redo2 className="w-3.5 h-3.5" /> Rétablir
+        <Redo2 className="w-3.5 h-3.5" aria-hidden /> Rétablir
       </button>
       <button
         type="button"
         onClick={() => setLockOrbit((v) => !v)}
         title="Verrouiller / déverrouiller la caméra (Ctrl+L)"
-        className={cn(
-          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-          lockOrbit
-            ? 'bg-amber-50 border-amber-300 text-amber-900'
-            : 'bg-white border-border text-muted',
-        )}
+        className={cn(EDITOR_TOOL, lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
       >
-        {lockOrbit ? <VideoOff className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
+        {lockOrbit ? <VideoOff className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
         {lockOrbit ? 'Caméra bloquée' : 'Caméra libre'}
       </button>
-      <label className="inline-flex items-center gap-1 px-2 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-bold text-muted">
-        <Aperture className="w-3.5 h-3.5" />
+      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
+        <Aperture className="w-3.5 h-3.5" aria-hidden />
         <select
           value={renderQuality}
           onChange={(e) => setRenderQuality(e.target.value as RenderQuality)}
@@ -4059,8 +4061,8 @@ export default function RoomLayoutEditor({
           ))}
         </select>
       </label>
-      <label className="inline-flex items-center gap-1 px-2 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-bold text-muted">
-        <Sun className="w-3.5 h-3.5" />
+      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
+        <Sun className="w-3.5 h-3.5" aria-hidden />
         <select
           value={lightingPreset}
           onChange={(e) => setLightingPreset(e.target.value as LightingPreset)}
@@ -4080,26 +4082,16 @@ export default function RoomLayoutEditor({
         type="button"
         onClick={() => setLightingPreset('day')}
         title="Soleil de midi — lumière zénithale, ombres franches"
-        className={cn(
-          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-          lightingPreset === 'day'
-            ? 'bg-amber-100 border-amber-400 text-amber-950'
-            : 'bg-white border-border text-muted hover:bg-amber-50',
-        )}
+        className={cn(EDITOR_TOOL, lightingPreset === 'day' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
       >
-        <Sun className="w-3.5 h-3.5" />
+        <Sun className="w-3.5 h-3.5" aria-hidden />
         Midi
       </button>
       <button
         type="button"
         onClick={() => setLightingPreset('dusk')}
         title="Crépuscule — ciel orange / rose / violet, lumière latérale douce"
-        className={cn(
-          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-          lightingPreset === 'dusk'
-            ? 'bg-orange-100 border-orange-400 text-orange-950'
-            : 'bg-white border-border text-muted hover:bg-orange-50',
-        )}
+        className={cn(EDITOR_TOOL, lightingPreset === 'dusk' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
       >
         Crépuscule
       </button>
@@ -4107,14 +4099,9 @@ export default function RoomLayoutEditor({
         type="button"
         onClick={() => setLightingPreset('night')}
         title="Nuit — ciel étoilé + réglette LED sur le haut du plan"
-        className={cn(
-          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-          lightingPreset === 'night'
-            ? 'bg-indigo-100 border-indigo-400 text-indigo-950'
-            : 'bg-white border-border text-muted hover:bg-indigo-50',
-        )}
+        className={cn(EDITOR_TOOL, lightingPreset === 'night' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
       >
-        <Moon className="w-3.5 h-3.5" />
+        <Moon className="w-3.5 h-3.5" aria-hidden />
         Nuit LED
       </button>
       {caps.canShowcaseRender ? (
@@ -4140,14 +4127,9 @@ export default function RoomLayoutEditor({
           }
         }}
         title="Orbit automatique, ambiance, sans labels"
-        className={cn(
-          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-          blueprint.metadata.presentationMode
-            ? 'bg-violet-50 border-violet-300 text-violet-900'
-            : 'bg-white border-border text-muted',
-        )}
+        className={cn(EDITOR_TOOL, blueprint.metadata.presentationMode ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
       >
-        <Presentation className="w-3.5 h-3.5" />
+        <Presentation className="w-3.5 h-3.5" aria-hidden />
         {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
       </button>
       ) : null}
@@ -4171,29 +4153,24 @@ export default function RoomLayoutEditor({
           log('Visite guidée démarrée', 'info');
         }}
         title="Entre par la porte et visite la salle en 3D"
-        className={cn(
-          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-          walkthroughActive
-            ? 'bg-amber-50 border-amber-300 text-amber-950'
-            : 'bg-white border-border text-muted',
-        )}
+        className={cn(EDITOR_TOOL, walkthroughActive ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
       >
-        <DoorOpen className="w-3.5 h-3.5" />
+        <DoorOpen className="w-3.5 h-3.5" aria-hidden />
         {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
       </button>
       <button
         type="button"
         onClick={exportShowcasePng}
-        className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[var(--radius-button)] text-xs font-bold"
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
         title="Exporter une capture PNG haute définition"
       >
-        <Download className="w-3.5 h-3.5" /> Export PNG
+        <Download className="w-3.5 h-3.5" aria-hidden /> Export PNG
       </button>
-      <button type="button" onClick={addTable} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold shadow-sm">
-        <Plus className="w-3.5 h-3.5" /> Table
+      <button type="button" onClick={addTable} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+        <Plus className="w-3.5 h-3.5" aria-hidden /> Table
       </button>
       {caps.canCustomImages ? (
-        <label className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-900 rounded-[var(--radius-button)] text-xs font-bold cursor-pointer">
+        <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
           <ImagePlus className="w-3.5 h-3.5" />
           Importer plan
           <input
@@ -4210,31 +4187,21 @@ export default function RoomLayoutEditor({
       ) : null}
       {caps.canAddRows ? (
         <>
-          <button type="button" onClick={addRow} className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold">
-            <Plus className="w-3.5 h-3.5" /> Rangée
+          <button type="button" onClick={addRow} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+            <Plus className="w-3.5 h-3.5" aria-hidden /> Rangée
           </button>
           <button
             type="button"
             onClick={() => setQuickCreate(quickCreate === 'amphitheater' ? null : 'amphitheater')}
-            className={cn(
-              'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border shadow-xs',
-              quickCreate === 'amphitheater'
-                ? 'bg-amber-500 text-white border-amber-600'
-                : 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100',
-            )}
+            className={cn(EDITOR_TOOL, quickCreate === 'amphitheater' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
             title="Générateur d’amphithéâtre et gradins en arc (Pinterest)"
           >
-            <Sparkles className="w-3.5 h-3.5" /> Amphithéâtre…
+            <Sparkles className="w-3.5 h-3.5" aria-hidden /> Amphithéâtre…
           </button>
           <button
             type="button"
             onClick={() => setQuickCreate(quickCreate === 'chairs' ? null : 'chairs')}
-            className={cn(
-              'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-              quickCreate === 'chairs'
-                ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
-                : 'bg-white border-border text-foreground',
-            )}
+            className={cn(EDITOR_TOOL, quickCreate === 'chairs' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
             title="Créer plusieurs groupes de chaises en une fois"
           >
             Groupes chaises
@@ -4243,128 +4210,103 @@ export default function RoomLayoutEditor({
       ) : null}
       {caps.canZones ? (
         <>
-          <button type="button" onClick={() => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' })} className="px-3 py-1.5 bg-violet-50 border border-violet-200 text-violet-800 rounded-[var(--radius-button)] text-xs font-bold">Piste</button>
-          <button type="button" onClick={() => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' })} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-[var(--radius-button)] text-xs font-bold">VIP</button>
-          <button type="button" onClick={() => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' })} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-[var(--radius-button)] text-xs font-bold">Zone buffet</button>
-          <button type="button" onClick={addCarpet} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-[var(--radius-button)] text-xs font-bold">Moquette</button>
+          <button type="button" onClick={() => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Piste</button>
+          <button type="button" onClick={() => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>VIP</button>
+          <button type="button" onClick={() => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Zone buffet</button>
+          <button type="button" onClick={addCarpet} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Moquette</button>
         </>
       ) : null}
-      <button type="button" onClick={addFreeChair} className="px-3 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold">Fauteuil</button>
-      <button type="button" onClick={clearWalls} className="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-[var(--radius-button)] text-xs font-bold">Sans murs</button>
+      <button type="button" onClick={addFreeChair} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Fauteuil</button>
+      <button type="button" onClick={clearWalls} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Sans murs</button>
       {caps.fixtureKinds.includes('stage') ? (
-        <button type="button" onClick={() => addFixture('stage')} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-[var(--radius-button)] text-xs font-bold">Scène</button>
+        <button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button>
       ) : null}
       {caps.fixtureKinds.includes('podium') ? (
-        <button type="button" onClick={() => addFixture('podium')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-[var(--radius-button)] text-xs font-bold">Podium</button>
+        <button type="button" onClick={() => addFixture('podium')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Podium</button>
       ) : null}
       {caps.fixtureKinds.includes('door') ? (
         <button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'doors' ? null : 'doors')}
-          className={cn(
-            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-            quickCreate === 'doors'
-              ? 'bg-amber-200 border-amber-400 text-amber-950'
-              : 'bg-amber-50/80 border-amber-200 text-amber-900',
-          )}
+          className={cn(EDITOR_TOOL, quickCreate === 'doors' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Ajouter une porte ouvrante ou grand portail"
         >
-          <DoorOpen className="w-3.5 h-3.5" /> Portes…
+          <DoorOpen className="w-3.5 h-3.5" aria-hidden /> Portes…
         </button>
       ) : null}
       {caps.fixtureKinds.includes('chandelier') ? (
         <button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'chandeliers' ? null : 'chandeliers')}
-          className={cn(
-            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-            quickCreate === 'chandeliers'
-              ? 'bg-amber-300 border-amber-500 text-amber-950 shadow-xs'
-              : 'bg-amber-100/60 border-amber-300 text-amber-900',
-          )}
+          className={cn(EDITOR_TOOL, quickCreate === 'chandeliers' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Lustres de cristal, halos dorés, suspensions pampa"
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Lustres…
+          <Sparkles className="w-3.5 h-3.5" aria-hidden /> Lustres…
         </button>
       ) : null}
       {caps.fixtureKinds.includes('aisle') ? (
         <button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
-          className={cn(
-            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-            quickCreate === 'aisles'
-              ? 'bg-rose-100 border-rose-300 text-rose-950'
-              : 'bg-rose-50 border-rose-200 text-rose-900',
-          )}
+          className={cn(EDITOR_TOOL, quickCreate === 'aisles' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Tapis rouge royal, allée miroir blanc, lin & pétales"
         >
-          <Sparkles className="w-3.5 h-3.5 text-rose-500" /> Allées VIP…
+          <Sparkles className="w-3.5 h-3.5" aria-hidden /> Allées VIP…
         </button>
       ) : null}
       {caps.fixtureKinds.includes('stairs') ? (
         <button
           type="button"
           onClick={openStairsQuickCreate}
-          className={cn(
-            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-            quickCreate === 'stairs'
-              ? 'bg-stone-200 border-stone-500 text-stone-900'
-              : 'bg-stone-100 border-stone-300 text-stone-800',
-          )}
+          className={cn(EDITOR_TOOL, quickCreate === 'stairs' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Escalier vers un autre étage"
         >
-          <StepForward className="w-3.5 h-3.5" /> Escalier vers…
+          <StepForward className="w-3.5 h-3.5" aria-hidden /> Escalier vers…
         </button>
       ) : null}
       {caps.fixtureKinds.includes('balcony') ? (
         <button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'balconies' ? null : 'balconies')}
-          className={cn(
-            'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
-            quickCreate === 'balconies'
-              ? 'bg-sky-200 border-sky-400 text-sky-950'
-              : 'bg-sky-50 border-sky-200 text-sky-900',
-          )}
+          className={cn(EDITOR_TOOL, quickCreate === 'balconies' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
         >
           Balcons…
         </button>
       ) : null}
       {caps.fixtureKinds.includes('buffet') ? (
-        <button type="button" onClick={() => addFixture('buffet')} className="px-3 py-1.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-[var(--radius-button)] text-xs font-bold">Buffet + couverts</button>
+        <button type="button" onClick={() => addFixture('buffet')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Buffet + couverts</button>
       ) : null}
       {caps.fixtureKinds.includes('column') ? (
-        <button type="button" onClick={() => addFixture('column')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-700 rounded-[var(--radius-button)] text-xs font-bold">
-          <Columns3 className="w-3.5 h-3.5" /> Colonne
+        <button type="button" onClick={() => addFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          <Columns3 className="w-3.5 h-3.5" aria-hidden /> Colonne
         </button>
       ) : null}
       {caps.fixtureKinds.includes('flower') ? (
-        <button type="button" onClick={() => addFixture('flower')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-[var(--radius-button)] text-xs font-bold">
-          <Flower2 className="w-3.5 h-3.5" /> Fleurs
+        <button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          <Flower2 className="w-3.5 h-3.5" aria-hidden /> Fleurs
         </button>
       ) : null}
       {caps.fixtureKinds.includes('corridor') ? (
         <button
           type="button"
           onClick={addCorridor}
-          className="px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-800 rounded-[var(--radius-button)] text-xs font-bold"
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Couloir structurant (circulation entre pièces)"
         >
           Couloir
         </button>
       ) : null}
       {caps.fixtureKinds.includes('perimeter') ? (
-        <button type="button" onClick={() => addFixture('perimeter')} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-[var(--radius-button)] text-xs font-bold">Périmètre</button>
+        <button type="button" onClick={() => addFixture('perimeter')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Périmètre</button>
       ) : null}
       {selection.length > 0 && (
-        <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-[var(--radius-button)] text-xs font-bold ml-auto">
-          <Trash2 className="w-3.5 h-3.5" /> Supprimer{selection.length > 1 ? ` (${selection.length})` : ''}
+        <button type="button" onClick={deleteSelected} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'ml-auto')}>
+          <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer{selection.length > 1 ? ` (${selection.length})` : ''}
         </button>
       )}
       {onRegenerate && (
-        <button type="button" onClick={() => { onRegenerate(); log('Plan régénéré depuis les paramètres', 'template'); }} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 border border-primary/30 text-primary rounded-[var(--radius-button)] text-xs font-bold">
-          <RefreshCw className="w-3.5 h-3.5" /> Régénérer
+        <button type="button" onClick={() => { onRegenerate(); log('Plan régénéré depuis les paramètres', 'template'); }} className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}>
+          <RefreshCw className="w-3.5 h-3.5" aria-hidden /> Régénérer
         </button>
       )}
     </div>
