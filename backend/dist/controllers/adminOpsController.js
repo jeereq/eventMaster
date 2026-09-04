@@ -39,8 +39,16 @@ async function getOpsOverview(req, res) {
             licenseActive: true,
             licenseExpiresAt: { gte: now, lte: in7Days },
         };
-        const [pendingRequestsCount, licensesExpiringCount, licensesExpiring, unpaidInvoices, unpaidCount, recentOrgs, recentOrgsCount, recentAudit, saasPayoutsDue,] = await Promise.all([
+        const [pendingRequestsCount, pendingRequests, licensesExpiringCount, licensesExpiring, unpaidInvoices, unpaidCount, recentOrgs, recentOrgsCount, recentAudit, saasPayoutsDue,] = await Promise.all([
             db_1.prisma.subscriptionRequest.count({ where: { status: 'PENDING' } }),
+            db_1.prisma.subscriptionRequest.findMany({
+                where: { status: 'PENDING' },
+                include: {
+                    tenant: { select: { id: true, name: true } },
+                },
+                orderBy: { createdAt: 'asc' },
+                take: 20,
+            }),
             db_1.prisma.tenant.count({ where: licenseExpiringWhere }),
             db_1.prisma.tenant.findMany({
                 where: licenseExpiringWhere,
@@ -81,6 +89,16 @@ async function getOpsOverview(req, res) {
                 saasPayoutsDue: saasPayoutsDue.count,
             },
             saasPayoutsDue,
+            pendingRequests: pendingRequests.map((req) => ({
+                id: req.id,
+                requestedPlan: req.requestedPlan,
+                durationDays: req.durationDays,
+                proofOfPayment: req.proofOfPayment,
+                baseAmount: req.baseAmount,
+                paymentProvider: req.paymentProvider,
+                createdAt: req.createdAt,
+                tenant: req.tenant,
+            })),
             licensesExpiring: licensesExpiring.map((t) => tenantSummary(t)),
             unpaidInvoices: unpaidInvoices.map((inv) => (0, invoiceService_1.formatInvoiceForApi)(inv)),
             recentOrgs: recentOrgs.map((t) => tenantSummary(t)),
@@ -326,6 +344,8 @@ async function getTenantOps(req, res) {
                     status: true,
                     createdAt: true,
                     durationDays: true,
+                    proofOfPayment: true,
+                    baseAmount: true,
                 },
             }),
             db_1.prisma.platformInvoice.findMany({

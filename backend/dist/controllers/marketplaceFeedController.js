@@ -466,20 +466,20 @@ async function deleteMarketplaceFeedPost(req, res) {
             where: { id: postId, tenantId },
         });
         if (!post)
-            return res.status(404).json({ error: 'Publication introuvable.' });
+            return res.status(404).json({ error: 'Réalisation introuvable.' });
         await db_1.prisma.marketplacePost.delete({ where: { id: post.id } });
         return res.json({ success: true });
     }
     catch (error) {
         console.error('deleteMarketplaceFeedPost:', error);
-        return res.status(500).json({ error: 'Impossible de supprimer la publication.' });
+        return res.status(500).json({ error: 'Impossible de supprimer la réalisation.' });
     }
 }
 async function toggleMarketplaceFeedLike(req, res) {
     try {
         const userId = req.user?.id;
         if (!userId)
-            return res.status(401).json({ error: 'Connectez-vous pour aimer cette publication.' });
+            return res.status(401).json({ error: 'Connectez-vous pour aimer cette réalisation.' });
         const postId = String(req.params.postId || '').trim();
         const post = await db_1.prisma.marketplacePost.findFirst({
             where: { id: postId, isPublished: true },
@@ -490,19 +490,19 @@ async function toggleMarketplaceFeedLike(req, res) {
             },
         });
         if (!post)
-            return res.status(404).json({ error: 'Publication introuvable.' });
+            return res.status(404).json({ error: 'Réalisation introuvable.' });
         if (post.venueListingId) {
             if (!post.venueListing?.isPublic || post.venueListing.isBlockedByAdmin) {
-                return res.status(404).json({ error: 'Publication introuvable.' });
+                return res.status(404).json({ error: 'Réalisation introuvable.' });
             }
         }
         if (post.serviceOfferingId) {
             if (!post.serviceOffering?.isPublic || post.serviceOffering.isBlockedByAdmin) {
-                return res.status(404).json({ error: 'Publication introuvable.' });
+                return res.status(404).json({ error: 'Réalisation introuvable.' });
             }
         }
         if (post.vendorProfileId && post.vendorProfile?.isBlockedByAdmin) {
-            return res.status(404).json({ error: 'Publication introuvable.' });
+            return res.status(404).json({ error: 'Réalisation introuvable.' });
         }
         const key = likeKey(userId);
         const likes = parseLikes(post.likes);
@@ -537,19 +537,19 @@ async function createMarketplaceFeedComment(req, res) {
             },
         });
         if (!post)
-            return res.status(404).json({ error: 'Publication introuvable.' });
+            return res.status(404).json({ error: 'Réalisation introuvable.' });
         if (post.venueListingId) {
             if (!post.venueListing?.isPublic || post.venueListing.isBlockedByAdmin) {
-                return res.status(404).json({ error: 'Publication introuvable.' });
+                return res.status(404).json({ error: 'Réalisation introuvable.' });
             }
         }
         if (post.serviceOfferingId) {
             if (!post.serviceOffering?.isPublic || post.serviceOffering.isBlockedByAdmin) {
-                return res.status(404).json({ error: 'Publication introuvable.' });
+                return res.status(404).json({ error: 'Réalisation introuvable.' });
             }
         }
         if (post.vendorProfileId && post.vendorProfile?.isBlockedByAdmin) {
-            return res.status(404).json({ error: 'Publication introuvable.' });
+            return res.status(404).json({ error: 'Réalisation introuvable.' });
         }
         const user = await db_1.prisma.user.findUnique({
             where: { id: userId },
@@ -740,7 +740,7 @@ async function listMyFeedPosts(req, res) {
     }
     catch (error) {
         console.error('listMyFeedPosts:', error);
-        return res.status(500).json({ error: 'Impossible de charger vos publications.' });
+        return res.status(500).json({ error: 'Impossible de charger vos réalisations.' });
     }
 }
 /** Aperçu pour enrichir getPublicVenue / getPublicVendor / getPublicService. */

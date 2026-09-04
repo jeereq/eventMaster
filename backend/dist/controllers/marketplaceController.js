@@ -28,6 +28,17 @@ const planFeaturesService_1 = require("../services/planFeaturesService");
 const platformNotificationService_1 = require("../services/platformNotificationService");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 const rdcCities_1 = require("../utils/rdcCities");
+const platformSettingsService_1 = require("../services/platformSettingsService");
+function enabledMarketplaceCityNames() {
+    return (0, platformSettingsService_1.sanitizeEnabledCities)((0, platformSettingsService_1.loadPlatformSettings)().enabledCities).filter((city) => city === 'Kinshasa' || city === 'Lubumbashi');
+}
+function cityNotEnabledError(cityName) {
+    const enabled = enabledMarketplaceCityNames();
+    if (enabled.includes(cityName))
+        return null;
+    const list = enabled.join(' ou ') || 'une ville active';
+    return `${cityName} n’est pas une ville active. Choisissez ${list}.`;
+}
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 async function resolveInquirer(req) {
     if (!req.user?.id)
@@ -162,7 +173,10 @@ function publishLocationError(city, commune, neighborhood, latitude, longitude) 
     if (cityName === null)
         return 'La ville doit être Kinshasa ou Lubumbashi.';
     if (!cityName)
-        return 'Choisissez Kinshasa ou Lubumbashi pour publier.';
+        return 'Choisissez une ville active pour publier.';
+    const blocked = cityNotEnabledError(cityName);
+    if (blocked)
+        return blocked;
     const communeName = (0, rdcCities_1.normalizeAllowedCommune)(cityName, commune);
     if (communeName === null)
         return `La commune doit appartenir à ${cityName}.`;
@@ -184,6 +198,11 @@ function normalizeListingPlace(city, commune, neighborhood) {
     const cityName = (0, rdcCities_1.normalizeAllowedCity)(city);
     if (cityName === null) {
         return { error: 'La ville doit être Kinshasa ou Lubumbashi.' };
+    }
+    if (cityName) {
+        const blocked = cityNotEnabledError(cityName);
+        if (blocked)
+            return { error: blocked };
     }
     const communeName = cityName
         ? (0, rdcCities_1.normalizeAllowedCommune)(cityName, commune)
@@ -306,22 +325,27 @@ function canViewUnpublishedListing(req, tenantId) {
         return false;
     return user.role === 'SUPER_ADMIN' || user.tenantId === tenantId;
 }
+/** SuperAdmin (et org propriétaire) : voir fiches non publiques ou bloquées pour modération. */
+function canViewRestrictedListing(req, tenantId) {
+    return canViewUnpublishedListing(req, tenantId);
+}
 async function getPublicVenue(req, res) {
     try {
         const slug = String(req.params.slug || '').trim();
         if (!slug)
             return res.status(400).json({ error: 'Slug requis.' });
         const listing = await db_1.prisma.venueListing.findFirst({
-            where: {
-                slug,
-                isBlockedByAdmin: false
-            },
+            where: { slug },
             include: listingInclude,
         });
         if (!listing) {
             return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
         }
-        if (!listing.isPublic && !canViewUnpublishedListing(req, listing.tenantId)) {
+        const canStaffView = canViewRestrictedListing(req, listing.tenantId);
+        if (listing.isBlockedByAdmin && !canStaffView) {
+            return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
+        }
+        if (!listing.isPublic && !canStaffView) {
             return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
         }
         const [relatedVenues, relatedOfferings] = await Promise.all([
@@ -350,6 +374,7 @@ async function getPublicVenue(req, res) {
         return res.json({
             ...toPublicVenue(listing),
             isPublic: listing.isPublic,
+            isBlockedByAdmin: listing.isBlockedByAdmin,
             relatedVenues: relatedVenues.map(toPublicVenue),
             relatedServices: relatedOfferings.map(toPublicService),
             activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({ venueListingId: listing.id }),
@@ -591,7 +616,7 @@ function toPublicService(offering) {
     };
 }
 const offeringInclude = {
-    vendorProfile: { select: { displayName: true, city: true, slug: true } },
+    vendorProfile: { select: { displayName: true, city: true, slug: true, isBlockedByAdmin: true } },
     tenant: { select: { name: true } },
     bookings: {
         where: { status: { in: HOLD_BOOKING_STATUSES } },
@@ -683,18 +708,17 @@ async function getPublicService(req, res) {
         if (!slug)
             return res.status(400).json({ error: 'Slug requis.' });
         const offering = await db_1.prisma.serviceOffering.findFirst({
-            where: {
-                slug,
-                isBlockedByAdmin: false,
-                vendorProfile: {
-                    isBlockedByAdmin: false
-                }
-            },
+            where: { slug },
             include: offeringInclude,
         });
         if (!offering)
             return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
-        if (!offering.isPublic && !canViewUnpublishedListing(req, offering.tenantId)) {
+        const canStaffView = canViewRestrictedListing(req, offering.tenantId);
+        const vendorBlocked = Boolean(offering.vendorProfile?.isBlockedByAdmin);
+        if ((offering.isBlockedByAdmin || vendorBlocked) && !canStaffView) {
+            return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
+        }
+        if (!offering.isPublic && !canStaffView) {
             return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
         }
         const [relatedOfferings, relatedVenues] = await Promise.all([
@@ -723,6 +747,7 @@ async function getPublicService(req, res) {
         return res.json({
             ...toPublicService(offering),
             isPublic: offering.isPublic,
+            isBlockedByAdmin: offering.isBlockedByAdmin || Boolean(offering.vendorProfile?.isBlockedByAdmin),
             relatedServices: relatedOfferings.map(toPublicService),
             relatedVenues: relatedVenues.map(toPublicVenue),
             activityPreview: await (0, marketplaceFeedController_1.fetchActivityPreview)({

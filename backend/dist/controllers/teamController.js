@@ -17,6 +17,7 @@ const planFeaturesService_1 = require("../services/planFeaturesService");
 const commercialService_1 = require("../services/commercialService");
 const authController_1 = require("./authController");
 const phone_1 = require("../utils/phone");
+const platformSettingsService_1 = require("../services/platformSettingsService");
 const userSelect = {
     id: true,
     name: true,
@@ -100,7 +101,11 @@ async function createTeamMember(req, res) {
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Le nom, l\'e-mail et le mot de passe sont requis.' });
         }
-        const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
+        const methodCheck = (0, platformSettingsService_1.assertAuthOtpMethodAllowed)(verificationMethod);
+        if (!methodCheck.ok) {
+            return res.status(400).json({ error: methodCheck.error });
+        }
+        const method = methodCheck.method;
         const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
         if (method === 'WHATSAPP' && !phoneFields.phone) {
             return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
@@ -388,7 +393,7 @@ async function resendTeamMemberVerification(req, res) {
         if (member.isEmailVerified) {
             return res.status(400).json({ error: 'Ce compte est déjà validé.' });
         }
-        const method = (member.verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
+        const method = (0, platformSettingsService_1.resolveAuthOtpMethod)(member.verificationMethod);
         if (method === 'WHATSAPP' && !member.phone) {
             return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
         }

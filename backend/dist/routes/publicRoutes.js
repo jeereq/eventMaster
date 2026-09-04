@@ -12,6 +12,7 @@ const marketplaceController_1 = require("../controllers/marketplaceController");
 const marketplaceFeedController_1 = require("../controllers/marketplaceFeedController");
 const publicEventController_1 = require("../controllers/publicEventController");
 const marketplaceClientController_1 = require("../controllers/marketplaceClientController");
+const templateController_1 = require("../controllers/templateController");
 const flexPayController_1 = require("../controllers/flexPayController");
 const router = (0, express_1.Router)();
 /** GET /api/public/site — identité & contact (sans secrets) */
@@ -87,6 +88,10 @@ router.get('/events/:slug/seats', publicEventController_1.listPublicEventSeats);
 router.post('/events/:slug/checkout', auth_1.requireAuth, publicEventController_1.checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', publicEventController_1.getTicketOrderBySession);
 router.post('/event-plan-ai', auth_1.optionalAuth, marketplaceClientController_1.publicPlanEventAi);
+router.post('/templates/ai/compose', auth_1.optionalAuth, templateController_1.publicComposeTemplateWithAi);
+router.get('/templates/ai/history', auth_1.optionalAuth, templateController_1.listPublicAiTemplateComposes);
+router.get('/templates/ai/history/:id', auth_1.optionalAuth, templateController_1.getPublicAiTemplateCompose);
+router.post('/templates/ai/history/claim', auth_1.requireAuth, templateController_1.claimPublicAiTemplateComposes);
 router.get('/ai-simulations', auth_1.optionalAuth, marketplaceClientController_1.listPublicAiSimulations);
 router.post('/ai-simulations/claim', auth_1.requireAuth, marketplaceClientController_1.claimPublicAiSimulations);
 router.post('/ai-tokens/checkout', auth_1.optionalAuth, marketplaceClientController_1.checkoutAiTokens);

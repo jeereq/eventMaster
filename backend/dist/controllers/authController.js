@@ -127,7 +127,11 @@ async function register(req, res) {
         if (!acceptTerms || !acceptPrivacy) {
             return res.status(400).json({ error: 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité.' });
         }
-        const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
+        const methodCheck = (0, platformSettingsService_1.assertAuthOtpMethodAllowed)(verificationMethod, platform);
+        if (!methodCheck.ok) {
+            return res.status(400).json({ error: methodCheck.error });
+        }
+        const method = methodCheck.method;
         const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
         if (method === 'WHATSAPP' && !phoneFields.phone) {
             return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire pour la validation par WhatsApp.' });
@@ -283,7 +287,7 @@ async function resendOtp(req, res) {
         if (!(0, otpService_1.canResendOtp)(user.updatedAt, user.otpExpiresAt)) {
             return res.status(429).json({ error: 'Veuillez patienter une minute avant de redemander un code.' });
         }
-        const method = (verificationMethod || user.verificationMethod || 'EMAIL');
+        const method = (0, platformSettingsService_1.resolveAuthOtpMethod)(verificationMethod || user.verificationMethod || (0, platformSettingsService_1.defaultAuthOtpMethod)());
         if (method === 'WHATSAPP' && !user.phone) {
             return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
         }
@@ -340,7 +344,7 @@ async function login(req, res) {
                 error: 'Votre compte n\'est pas encore validé. Saisissez le code OTP reçu par e-mail ou WhatsApp.',
                 notVerified: true,
                 email: user.email,
-                verificationMethod: user.verificationMethod || 'EMAIL',
+                verificationMethod: (0, platformSettingsService_1.resolveAuthOtpMethod)(user.verificationMethod || (0, platformSettingsService_1.defaultAuthOtpMethod)()),
             });
         }
         const token = buildAuthToken(user);
@@ -523,9 +527,19 @@ async function forgotPassword(req, res) {
         if (!user) {
             return res.json({ message: 'Si le compte existe, un lien de réinitialisation a été envoyé.' });
         }
+        const methodCheck = (0, platformSettingsService_1.assertAuthOtpMethodAllowed)(method);
+        if (!methodCheck.ok) {
+            return res.status(400).json({ error: methodCheck.error });
+        }
+        const resolvedMethod = methodCheck.method;
         const resetToken = jsonwebtoken_1.default.sign({ userId: user.id, purpose: 'password-reset' }, JWT_SECRET, { expiresIn: '1h' });
         const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
-        if (method === 'WHATSAPP' && user.phone) {
+        if (resolvedMethod === 'WHATSAPP') {
+            if (!user.phone) {
+                return res.status(400).json({
+                    error: 'Aucun numéro WhatsApp associé à ce compte. Utilisez l’e-mail ou mettez à jour votre profil.',
+                });
+            }
             const { sendRealWhatsApp } = await Promise.resolve().then(() => __importStar(require('../services/notificationService')));
             const whatsappBody = `Bonjour *${user.name || 'Utilisateur'}*,\n\nVous avez demandé la réinitialisation de votre mot de passe sur *EventMaster*.\n\nVeuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n👉 ${resetLink}\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message.\n\nL'équipe EventMaster ✨`;
             await sendRealWhatsApp(user.phone, whatsappBody);

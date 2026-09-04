@@ -3,7 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.DEFAULT_PLATFORM_SETTINGS = void 0;
+exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = void 0;
+exports.sanitizeEnabledCities = sanitizeEnabledCities;
+exports.sanitizeAuthOtpChannels = sanitizeAuthOtpChannels;
+exports.getAuthOtpChannels = getAuthOtpChannels;
+exports.defaultAuthOtpMethod = defaultAuthOtpMethod;
+exports.resolveAuthOtpMethod = resolveAuthOtpMethod;
+exports.assertAuthOtpMethodAllowed = assertAuthOtpMethodAllowed;
 exports.isOnlinePaymentsEnabled = isOnlinePaymentsEnabled;
 exports.getTicketPaymentProvider = getTicketPaymentProvider;
 exports.getSaasPaymentMode = getSaasPaymentMode;
@@ -62,7 +68,71 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     commercialFirstCommissionRate: 0.3,
     commercialRenewalCommissionRate: 0.2,
     usdExchangeRateCdf: 2800,
+    enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
+    authOtpChannels: 'BOTH',
 };
+exports.PLATFORM_CITY_CATALOG = [
+    'Kinshasa',
+    'Lubumbashi',
+    'Goma',
+    'Kisangani',
+    'Bukavu',
+    'Matadi',
+    'Kolwezi',
+];
+function sanitizeEnabledCities(value) {
+    const allowed = new Set(exports.PLATFORM_CITY_CATALOG);
+    const raw = Array.isArray(value) ? value : exports.DEFAULT_PLATFORM_SETTINGS.enabledCities;
+    const picked = raw.map((item) => String(item || '').trim()).filter((item) => allowed.has(item));
+    const ordered = exports.PLATFORM_CITY_CATALOG.filter((city) => picked.includes(city));
+    if (!ordered.includes('Kinshasa') && !ordered.includes('Lubumbashi')) {
+        return ['Kinshasa', ...ordered];
+    }
+    return ordered.length > 0 ? [...ordered] : ['Kinshasa'];
+}
+function sanitizeAuthOtpChannels(value) {
+    const raw = String(value || '').trim().toUpperCase();
+    if (raw === 'EMAIL' || raw === 'WHATSAPP' || raw === 'BOTH')
+        return raw;
+    return 'BOTH';
+}
+function getAuthOtpChannels(settings = loadPlatformSettings()) {
+    return sanitizeAuthOtpChannels(settings.authOtpChannels);
+}
+function defaultAuthOtpMethod(settings = loadPlatformSettings()) {
+    return getAuthOtpChannels(settings) === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
+}
+/**
+ * Résout une méthode OTP demandée selon la config plateforme.
+ * Si un seul canal est autorisé, force ce canal (même si la demande diffère).
+ */
+function resolveAuthOtpMethod(requested, settings = loadPlatformSettings()) {
+    const channels = getAuthOtpChannels(settings);
+    if (channels === 'EMAIL')
+        return 'EMAIL';
+    if (channels === 'WHATSAPP')
+        return 'WHATSAPP';
+    return String(requested || '').trim().toUpperCase() === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
+}
+function assertAuthOtpMethodAllowed(requested, settings = loadPlatformSettings()) {
+    const channels = getAuthOtpChannels(settings);
+    const raw = String(requested || '').trim().toUpperCase();
+    if (!raw) {
+        return { ok: true, method: defaultAuthOtpMethod(settings) };
+    }
+    if (raw !== 'EMAIL' && raw !== 'WHATSAPP') {
+        return { ok: false, error: 'Méthode de validation invalide.' };
+    }
+    if (channels === 'BOTH' || channels === raw) {
+        return { ok: true, method: raw };
+    }
+    return {
+        ok: false,
+        error: channels === 'EMAIL'
+            ? 'Seule la validation par e-mail est activée sur la plateforme.'
+            : 'Seule la validation par WhatsApp est activée sur la plateforme.',
+    };
+}
 function ensureSettingsDir() {
     const dir = path_1.default.dirname(settingsFilePath);
     if (!fs_1.default.existsSync(dir)) {
@@ -115,12 +185,16 @@ function loadPlatformSettings() {
     return memoryCache;
 }
 function normalizeStoredRates(settings) {
+    const parsedUsdRate = Number(settings.usdExchangeRateCdf);
     return {
         ...settings,
         marketplaceCommissionRate: (0, ratePercent_1.parseRateInput)(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
         marketplaceDepositRate: (0, ratePercent_1.parseRateInput)(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
         commercialFirstCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialFirstCommissionRate, 0.3, 0, 1),
         commercialRenewalCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
+        usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
+        enabledCities: sanitizeEnabledCities(settings.enabledCities),
+        authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
     };
 }
 function buildNextSettings(partial) {
@@ -139,6 +213,8 @@ function buildNextSettings(partial) {
     next.commercialRenewalCommissionRate = (0, ratePercent_1.parseRateInput)(next.commercialRenewalCommissionRate, 0.2, 0, 1);
     const parsedUsdRate = Number(next.usdExchangeRateCdf);
     next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
+    next.enabledCities = sanitizeEnabledCities(next.enabledCities);
+    next.authOtpChannels = sanitizeAuthOtpChannels(next.authOtpChannels);
     next.ticketPaymentProvider = 'flexpay_card';
     next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
     next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -225,6 +301,8 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         commercialFirstCommissionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.commercialFirstCommissionRate, 0.3, 0, 1)),
         commercialRenewalCommissionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.commercialRenewalCommissionRate, 0.2, 0, 1)),
         usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
+        enabledCities: sanitizeEnabledCities(settings.enabledCities),
+        authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
     };
 }
 function getContactDestinations(settings = loadPlatformSettings()) {

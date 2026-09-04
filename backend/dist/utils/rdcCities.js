@@ -3,7 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizeAllowedCity = normalizeAllowedCity;
 exports.normalizeAllowedCommune = normalizeAllowedCommune;
 exports.pointInCityBounds = pointInCityBounds;
+exports.enabledMarketplaceCities = enabledMarketplaceCities;
 exports.allowedCityPrismaFilter = allowedCityPrismaFilter;
+const platformSettingsService_1 = require("../services/platformSettingsService");
 const COMMUNES = {
     Kinshasa: [
         'Bandalungwa', 'Barumbu', 'Bumbu', 'Gombe', 'Kalamu', 'Kasa-Vubu', 'Kimbanseke',
@@ -43,18 +45,25 @@ function pointInCityBounds(lat, lng, city) {
     const bounds = BOUNDS[city];
     return lat >= bounds.south && lat <= bounds.north && lng >= bounds.west && lng <= bounds.east;
 }
+function enabledMarketplaceCities() {
+    return (0, platformSettingsService_1.sanitizeEnabledCities)((0, platformSettingsService_1.loadPlatformSettings)().enabledCities).filter((city) => city === 'Kinshasa' || city === 'Lubumbashi');
+}
 function allowedCityPrismaFilter(cityQuery) {
+    const enabled = enabledMarketplaceCities();
     const normalized = normalizeAllowedCity(cityQuery);
-    if (cityQuery && normalized === null) {
+    if (cityQuery && (normalized === null || (normalized && !enabled.includes(normalized)))) {
         return { city: { in: [] } };
     }
-    if (normalized) {
+    if (normalized && enabled.includes(normalized)) {
         return { city: { equals: normalized, mode: 'insensitive' } };
     }
+    if (enabled.length === 1) {
+        return { city: { equals: enabled[0], mode: 'insensitive' } };
+    }
+    if (enabled.length === 0) {
+        return { city: { in: [] } };
+    }
     return {
-        OR: [
-            { city: { equals: 'Kinshasa', mode: 'insensitive' } },
-            { city: { equals: 'Lubumbashi', mode: 'insensitive' } },
-        ],
+        OR: enabled.map((name) => ({ city: { equals: name, mode: 'insensitive' } })),
     };
 }

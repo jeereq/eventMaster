@@ -14,6 +14,7 @@ const commercialService_1 = require("../services/commercialService");
 Object.defineProperty(exports, "recordCommercialCommission", { enumerable: true, get: function () { return commercialService_1.recordCommercialCommission; } });
 const authController_1 = require("./authController");
 const phone_1 = require("../utils/phone");
+const platformSettingsService_1 = require("../services/platformSettingsService");
 async function getCommercialDashboard(req, res) {
     try {
         if (req.user?.role !== 'COMMERCIAL' || req.user.tenantId) {
@@ -98,7 +99,11 @@ async function createCommercialOrganization(req, res) {
                 error: 'Nom de l\'organisation, nom, e-mail et mot de passe du manager sont requis.',
             });
         }
-        const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
+        const methodCheck = (0, platformSettingsService_1.assertAuthOtpMethodAllowed)(verificationMethod);
+        if (!methodCheck.ok) {
+            return res.status(400).json({ error: methodCheck.error });
+        }
+        const method = methodCheck.method;
         if (method === 'WHATSAPP' && !phoneFields.phone) {
             return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
         }
@@ -189,7 +194,7 @@ async function resendCommercialManagerVerification(req, res) {
         if (manager.isEmailVerified) {
             return res.status(400).json({ error: 'Ce compte manager est déjà validé.' });
         }
-        const method = (manager.verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
+        const method = (0, platformSettingsService_1.resolveAuthOtpMethod)(manager.verificationMethod);
         if (method === 'WHATSAPP' && !manager.phone) {
             return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
         }

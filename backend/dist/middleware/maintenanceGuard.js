@@ -17,6 +17,7 @@ const ALLOWED_PREFIXES = [
     '/api/public/services',
     '/api/public/event-plan-ai',
     '/api/public/ai-simulations',
+    '/api/public/ai-tokens',
     '/api/auth/login',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',

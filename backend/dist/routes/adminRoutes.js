@@ -10,6 +10,7 @@ const saasPayoutController_1 = require("../controllers/saasPayoutController");
 const invoiceController_1 = require("../controllers/invoiceController");
 const adminOpsController_1 = require("../controllers/adminOpsController");
 const adminCatalogController_1 = require("../controllers/adminCatalogController");
+const adminPaymentsController_1 = require("../controllers/adminPaymentsController");
 const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
 // Personnel plateforme (Super Admin + Commercial sans organisation)
@@ -54,6 +55,8 @@ router.patch('/catalog/venues/:id/visibility', adminCatalogController_1.setVenue
 router.patch('/catalog/offerings/:id/visibility', adminCatalogController_1.setServiceOfferingVisibility);
 router.patch('/catalog/venues/:id/unpublish', adminCatalogController_1.unpublishVenueListing);
 router.patch('/catalog/offerings/:id/unpublish', adminCatalogController_1.unpublishServiceOffering);
+router.get('/payments/overview', adminPaymentsController_1.getAdminPaymentsOverview);
+router.get('/payments/attempts', adminPaymentsController_1.listAdminPaymentAttempts);
 router.put('/tenants/:id', adminController_1.updateTenantPlanOrLicense);
 router.delete('/tenants/:id', adminController_1.deleteTenant);
 router.get('/users', adminController_1.getAllUsers);

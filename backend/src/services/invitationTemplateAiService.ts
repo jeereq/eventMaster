@@ -824,10 +824,210 @@ async function generateBackgroundFromReference(
   }
 }
 
+function getNanoBananaApiKey(): string | null {
+  const key =
+    process.env.NANO_BANANA_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.GOOGLE_AI_API_KEY ||
+    '';
+  return key.trim() || null;
+}
+
+function getNanoBananaModel(): string {
+  return (
+    process.env.NANO_BANANA_MODEL ||
+    process.env.GEMINI_IMAGE_MODEL ||
+    'gemini-3.1-flash-image'
+  );
+}
+
 /**
- * 1) GPT-5.6 Luna (Responses + image_generation)
- * 2) Images API générate
+ * Génération et composition d'invitation avec Nano Banana (Google Gemini Image : gemini-3.1-flash-image).
+ * Prend en charge la préservation native de l'identité et cohérence de personnage (character consistency)
+ * avec jusqu'à 4 photos de référence et un ratio portrait vertical 9:16 pour carte de prestige.
+ */
+async function generateImageWithNanoBanana(
+  apiKey: string,
+  imagePrompt: string,
+  referenceUrls: string[],
+  tenantId: string | null | undefined,
+  options?: { hasPeople?: boolean },
+): Promise<{ url: string; mode: 'edit' | 'generate' }> {
+  const model = getNanoBananaModel();
+  const hasRefs = referenceUrls.length > 0;
+  const hasPeople = Boolean(options?.hasPeople);
+
+  // Téléchargement et encodage base64 des photos de référence
+  const refImages: Array<{ mimeType: string; base64: string }> = [];
+  for (const ref of referenceUrls.slice(0, 4)) {
+    try {
+      const buffer = await downloadImageAsPngBuffer(ref);
+      const lower = ref.toLowerCase();
+      const mimeType = lower.includes('.jpg') || lower.includes('.jpeg')
+        ? 'image/jpeg'
+        : lower.includes('.webp')
+          ? 'image/webp'
+          : 'image/png';
+      refImages.push({
+        mimeType,
+        base64: buffer.toString('base64'),
+      });
+    } catch (err) {
+      console.warn('[invitationTemplateAi] Nano Banana skip ref download:', (err as Error)?.message);
+    }
+  }
+
+  const promptText = hasPeople
+    ? `CRITICAL MANDATE - NANO BANANA CHARACTER CONSISTENCY:
+The attached reference photo(s) depict REAL PEOPLE who must appear on this luxury vertical invitation card.
+1. ABSOLUTE FACIAL & CHARACTER FIDELITY: Maintain 100% photographic facial likeness and identity of each person.
+2. PRESERVE EVERY TRAIT: Keep their exact eye shape, brows, nose, lips, jawline, natural skin tone and melanin undertones intact (NEVER lighten, bleach, or change ethnicity), age, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire.
+3. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, lookalikes, or altered bone structure.
+4. COMPOSITION: Seamlessly integrate the original subject(s) into a lavish, high-end vertical 9:16 luxury event invitation card artwork as requested in the brief.
+
+${imagePrompt}`
+    : `CRITICAL MANDATE - NANO BANANA LUXURY INVITATION ARTWORK:
+Generate a breathtaking, ultra-high-definition vertical 9:16 luxury invitation background artwork according to the following brief:
+${imagePrompt}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120_000);
+
+  try {
+    let b64: string | null = null;
+
+    // Tentative 1 : Google Interactions API (API native de Nano Banana avec support format portrait 9:16)
+    const interactionInput: Array<{ type: string; text?: string; data?: string; mime_type?: string }> = [
+      { type: 'text', text: promptText },
+    ];
+    for (const img of refImages) {
+      interactionInput.push({
+        type: 'image',
+        data: img.base64,
+        mime_type: img.mimeType,
+      });
+    }
+
+    const interactionPayload = {
+      model,
+      input: interactionInput,
+      response_format: {
+        type: 'image',
+        aspect_ratio: '9:16',
+        image_size: '2K',
+      },
+    };
+
+    const interactionsRes = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'x-goog-api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(interactionPayload),
+    });
+
+    if (interactionsRes.ok) {
+      const data = (await interactionsRes.json().catch(() => ({}))) as {
+        output_image?: { data?: string };
+        steps?: Array<{
+          type?: string;
+          content?: Array<{ type?: string; data?: string }>;
+        }>;
+      };
+      if (typeof data.output_image?.data === 'string' && data.output_image.data) {
+        b64 = data.output_image.data;
+      } else if (Array.isArray(data.steps)) {
+        for (const step of data.steps) {
+          const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string');
+          if (imgBlock?.data) {
+            b64 = imgBlock.data;
+            break;
+          }
+        }
+      }
+    } else {
+      const errText = await interactionsRes.text().catch(() => '');
+      console.warn('[invitationTemplateAi] Nano Banana interactions API non-200:', errText.slice(0, 300));
+    }
+
+    // Tentative 2 : Standard generateContent API avec responseModalities IMAGE si Interactions n'a pas renvoyé de b64
+    if (!b64) {
+      const generateParts: Array<Record<string, unknown>> = [
+        { text: promptText },
+      ];
+      for (const img of refImages) {
+        generateParts.push({
+          inline_data: {
+            mime_type: img.mimeType,
+            data: img.base64,
+          },
+        });
+      }
+
+      const generateRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{ parts: generateParts }],
+            generationConfig: {
+              responseModalities: ['IMAGE'],
+            },
+          }),
+        },
+      );
+
+      if (generateRes.ok) {
+        const genData = (await generateRes.json().catch(() => ({}))) as {
+          candidates?: Array<{
+            content?: {
+              parts?: Array<{
+                inlineData?: { data?: string };
+                inline_data?: { data?: string };
+              }>;
+            };
+          }>;
+        };
+        const parts = genData.candidates?.[0]?.content?.parts || [];
+        for (const p of parts) {
+          const found = p.inlineData?.data || p.inline_data?.data;
+          if (typeof found === 'string' && found) {
+            b64 = found;
+            break;
+          }
+        }
+      } else {
+        const genErr = await generateRes.text().catch(() => '');
+        console.warn('[invitationTemplateAi] Nano Banana generateContent API non-200:', genErr.slice(0, 300));
+      }
+    }
+
+    if (!b64) {
+      fail(502, `Nano Banana (${model}) n'a pas renvoyé d'image valide.`);
+    }
+
+    const url = await uploadGeneratedB64(b64, tenantId);
+    return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate' };
+  } catch (error) {
+    if ((error as HttpError)?.status) throw error;
+    fail(502, (error as Error)?.message || `Erreur lors de la génération avec Nano Banana (${model}).`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * 1) Nano Banana (Google Gemini Image 3.1 Flash Image) si GEMINI_API_KEY / NANO_BANANA_API_KEY configurée
+ * 2) GPT-5.6 Luna (Responses + image_generation)
  * 3) Images API edits sur la 1re référence
+ * 4) Images API generate classique
  */
 async function createNewInvitationImage(
   key: string,
@@ -836,6 +1036,21 @@ async function createNewInvitationImage(
   tenantId: string | null | undefined,
   options?: { hasPeople?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
+  // 1) Priorité demandée : Nano Banana (Gemini 3.1 Flash Image)
+  const nanoKey = getNanoBananaApiKey();
+  if (nanoKey) {
+    try {
+      console.log(`[invitationTemplateAi] Generating with Nano Banana (${getNanoBananaModel()})...`);
+      return await generateImageWithNanoBanana(nanoKey, imagePrompt, imageUrls, tenantId, options);
+    } catch (nanoErr) {
+      console.warn(
+        '[invitationTemplateAi] Nano Banana generation failed, falling back to Luna/OpenAI:',
+        (nanoErr as Error)?.message,
+      );
+    }
+  }
+
+  // 2) GPT-5.6 Luna (Responses + image_generation)
   try {
     return await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
   } catch (lunaErr) {
@@ -871,7 +1086,7 @@ async function createNewInvitationImage(
 
   const primary = imageUrls[0];
   if (!primary) {
-    fail(502, 'Impossible de créer la nouvelle image (Luna + Images API).');
+    fail(502, 'Impossible de créer la nouvelle image (Nano Banana + Luna + Images API).');
   }
   const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);
   return { url, mode: 'edit' };

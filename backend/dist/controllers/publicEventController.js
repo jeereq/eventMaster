@@ -81,7 +81,9 @@ function serializePublicEvent(event) {
 async function listPublicEvents(req, res) {
     try {
         const q = String(req.query.q || '').trim();
-        const city = (0, rdcCities_1.normalizeAllowedCity)(req.query.city) || '';
+        const enabledCities = (0, rdcCities_1.enabledMarketplaceCities)();
+        const requestedCity = (0, rdcCities_1.normalizeAllowedCity)(req.query.city) || '';
+        const city = requestedCity && enabledCities.includes(requestedCity) ? requestedCity : '';
         const commune = String(req.query.commune || '').trim();
         const neighborhood = String(req.query.neighborhood || '').trim();
         const street = String(req.query.street || '').trim();
@@ -143,6 +145,17 @@ async function listPublicEvents(req, res) {
         const filtered = events.filter((event) => {
             if (city && event.latitude != null && event.longitude != null && !(0, rdcCities_1.pointInCityBounds)(event.latitude, event.longitude, city)) {
                 return false;
+            }
+            if (!city && enabledCities.length) {
+                const loc = String(event.location || '').toLowerCase();
+                const inEnabled = enabledCities.some((name) => {
+                    if (event.latitude != null && event.longitude != null) {
+                        return (0, rdcCities_1.pointInCityBounds)(event.latitude, event.longitude, name);
+                    }
+                    return loc.includes(name.toLowerCase());
+                });
+                if (!inEnabled && (event.latitude != null || loc))
+                    return false;
             }
             if (hasGeo) {
                 if (event.latitude == null || event.longitude == null)
