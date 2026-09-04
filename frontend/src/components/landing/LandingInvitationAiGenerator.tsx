@@ -291,7 +291,15 @@ export default function LandingInvitationAiGenerator({
   const openHistoryItem = (item: AiTemplateComposeHistoryItem) => {
     if (busy) return;
     setResult(item.content);
-    setLastStageMeta(item.stage || null);
+    setLastStageMeta(
+      item.stage
+        ? {
+            structureReady: Boolean(item.stage.structureReady),
+            backgroundReady: Boolean(item.stage.backgroundReady),
+            imageMode: item.stage.imageMode ?? null,
+          }
+        : null,
+    );
     setActiveHistoryId(item.id);
     if (item.prompt) setPrompt(item.prompt);
     saveAiTemplateDraft(item.content, item.prompt || undefined);
