@@ -196,7 +196,7 @@ export default function LandingHeroPreview({
         {/* En-tête de la console d'actions directes */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-border/80 pb-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none shrink-0" />
             <h3 className="text-sm font-bold text-foreground">
               Actions directes disponibles
             </h3>

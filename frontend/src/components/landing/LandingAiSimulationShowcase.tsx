@@ -167,7 +167,7 @@ export default function LandingAiSimulationShowcase() {
       id="simulateur-ia"
       className="em-reveal em-landing-defer py-14 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
     >
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] sm:w-[600px] sm:h-[600px] bg-primary/10 rounded-full blur-2xl sm:blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[260px] sm:w-[480px] sm:h-[480px] bg-primary/10 rounded-full blur-xl sm:blur-2xl pointer-events-none -z-10" />
 
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
         <div className="text-center max-w-3xl mx-auto space-y-2.5">
@@ -201,12 +201,14 @@ export default function LandingAiSimulationShowcase() {
             </span>
           </p>
 
-          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2">
+          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2" role="tablist" aria-label="Mode de vue simulateur">
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === 'presets'}
               onClick={() => setViewMode('presets')}
               className={cn(
-                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition cursor-pointer touch-manipulation',
+                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 viewMode === 'presets'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',
@@ -216,9 +218,11 @@ export default function LandingAiSimulationShowcase() {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === 'live'}
               onClick={() => setViewMode('live')}
               className={cn(
-                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation',
+                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 viewMode === 'live'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',
@@ -241,16 +245,18 @@ export default function LandingAiSimulationShowcase() {
               <p className="text-xs font-bold text-foreground">
                 Choisissez un projet type, puis générez de vrais packs catalogue.
               </p>
-              <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1" role="tablist" aria-label="Projets types">
                 {visibleScenarios.map((scenario) => {
                   const isSelected = scenario.id === selectedScenarioId;
                   return (
                     <button
                       key={scenario.id}
                       type="button"
+                      role="tab"
+                      aria-selected={isSelected}
                       onClick={() => setSelectedScenarioId(scenario.id)}
                       className={cn(
-                        'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink',
+                        'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                         isSelected
                           ? 'bg-primary-solid text-primary-foreground shadow-xs shadow-primary/30 ring-2 ring-primary/20'
                           : 'bg-surface-muted border border-border text-muted hover:text-foreground hover:bg-surface',

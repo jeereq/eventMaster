@@ -22,7 +22,7 @@ export default function PublicCtaBand({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="hidden md:block em-landing-defer relative overflow-hidden py-16 sm:py-20 em-stage border-t border-primary/25">
+    <section className="em-landing-defer relative overflow-hidden py-10 sm:py-16 lg:py-20 em-stage border-t border-primary/25">
       <div
         className="absolute inset-0 bg-radial-[at_50%_20%] from-primary/35 via-transparent to-transparent pointer-events-none"
         aria-hidden
@@ -32,16 +32,16 @@ export default function PublicCtaBand({
         aria-hidden
       />
 
-      <div className="page-container relative z-10 text-center space-y-5">
-        <h2 className="em-landing-heading text-2xl sm:text-3xl lg:text-4xl text-stage-foreground max-w-xl mx-auto">
+      <div className="page-container relative z-10 text-center space-y-4 sm:space-y-5">
+        <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground max-w-xl mx-auto">
           {title}
         </h2>
 
-        <p className="text-sm sm:text-base text-stage-foreground/70 max-w-md mx-auto leading-relaxed">
+        <p className="text-xs sm:text-base text-stage-foreground/75 max-w-md mx-auto leading-relaxed">
           {description}
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3 w-full max-w-sm mx-auto sm:max-w-none [&>*]:w-full sm:[&>*]:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 justify-center pt-2 sm:pt-3 w-full max-w-sm mx-auto sm:max-w-none [&>*]:w-full sm:[&>*]:w-auto">
           {actions || (
             <>
               {primaryHref && primaryLabel ? (

@@ -480,7 +480,7 @@ export default function LandingInvitationAiGenerator({
                       e.stopPropagation();
                       removeFile(i);
                     }}
-                    className="absolute top-1 right-1 min-w-9 min-h-9 inline-flex items-center justify-center bg-foreground/75 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    className="absolute top-0.5 right-0.5 min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-95 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-sm"
                     aria-label={`Retirer l’image ${i + 1}`}
                   >
                     <XCircle className="w-4 h-4" aria-hidden />

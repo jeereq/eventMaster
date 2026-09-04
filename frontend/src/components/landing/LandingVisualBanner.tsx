@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 import LandingMedia from '@/components/landing/LandingMedia';
+import { cn } from '@/lib/cn';
 
 interface GalleryItem {
   id: string;
@@ -126,15 +127,18 @@ export default function LandingVisualBanner() {
           </p>
 
           {/* Filtres de catégories rapides */}
-          <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 pt-2">
+          <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 pt-2" role="tablist" aria-label="Filtrer par catégorie">
             <button
               type="button"
+              role="tab"
+              aria-selected={activeCategory === 'all'}
               onClick={() => setActiveCategory('all')}
-              className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+              className={cn(
+                'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0 inline-flex items-center justify-center',
                 activeCategory === 'all'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                  : 'bg-surface-muted border border-border text-muted hover:text-foreground'
-              }`}
+                  : 'bg-surface-muted border border-border text-muted hover:text-foreground',
+              )}
             >
               Toutes les inspirations
             </button>
@@ -142,12 +146,15 @@ export default function LandingVisualBanner() {
               <button
                 key={item.id}
                 type="button"
+                role="tab"
+                aria-selected={activeCategory === item.id}
                 onClick={() => setActiveCategory(item.id)}
-                className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                className={cn(
+                  'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0 inline-flex items-center justify-center',
                   activeCategory === item.id
                     ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                    : 'bg-surface-muted border border-border text-muted hover:text-foreground'
-                }`}
+                    : 'bg-surface-muted border border-border text-muted hover:text-foreground',
+                )}
               >
                 {item.title.split('&')[0].trim()}
               </button>
@@ -205,10 +212,10 @@ export default function LandingVisualBanner() {
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-border flex items-center justify-between">
+                  <div className="pt-2.5 border-t border-border flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
                     <Link
                       href={item.href}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-hover group/link transition"
+                      className="min-h-11 inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-hover group/link transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <span>Explorer ces offres</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
@@ -216,11 +223,11 @@ export default function LandingVisualBanner() {
 
                     <Link
                       href="/#simulateur-ia"
-                      className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold inline-flex items-center gap-1 transition"
+                      className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold inline-flex items-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       title="Estimer un budget avec 3 formules IA"
                     >
-                      <Wand2 className="w-3 h-3" />
-                      Estimer mon budget IA
+                      <Wand2 className="w-3.5 h-3.5" />
+                      <span>Estimer mon budget IA</span>
                     </Link>
                   </div>
                 </div>

@@ -248,12 +248,14 @@ export default function LandingPricingSection({
 
  <div className="flex flex-col items-start gap-3 mb-10">
  <div className="flex flex-wrap items-center gap-3">
- <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border">
+ <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border" role="tablist" aria-label="Type de compte">
  <button
  type="button"
+ role="tab"
+ aria-selected={audience === 'B2B'}
  onClick={() => setAudience('B2B')}
  className={cn(
-   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
    audience === 'B2B'
      ? 'bg-primary text-primary-foreground shadow-xs'
      : 'text-muted hover:text-foreground',
@@ -263,9 +265,11 @@ export default function LandingPricingSection({
  </button>
  <button
  type="button"
+ role="tab"
+ aria-selected={audience === 'B2C'}
  onClick={() => setAudience('B2C')}
  className={cn(
-   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
    audience === 'B2C'
      ? 'bg-primary text-primary-foreground shadow-xs'
      : 'text-muted hover:text-foreground',
@@ -275,9 +279,11 @@ export default function LandingPricingSection({
  </button>
  <button
  type="button"
+ role="tab"
+ aria-selected={audience === 'VENDOR'}
  onClick={() => setAudience('VENDOR')}
  className={cn(
-   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
    audience === 'VENDOR'
      ? 'bg-primary text-primary-foreground shadow-xs'
      : 'text-muted hover:text-foreground',
@@ -287,12 +293,14 @@ export default function LandingPricingSection({
  </button>
  </div>
 
- <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border">
+ <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border" role="tablist" aria-label="Période de facturation">
  <button
  type="button"
+ role="tab"
+ aria-selected={billing === 'monthly'}
  onClick={() => setBilling('monthly')}
  className={cn(
-   'px-4 py-1.5 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
    billing === 'monthly'
      ? 'bg-surface text-foreground shadow-xs border border-border/80'
      : 'text-muted hover:text-foreground',
@@ -302,9 +310,11 @@ export default function LandingPricingSection({
  </button>
  <button
  type="button"
+ role="tab"
+ aria-selected={billing === 'annual'}
  onClick={() => setBilling('annual')}
  className={cn(
-   'px-4 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition flex items-center justify-center gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary touch-manipulation',
    billing === 'annual'
      ? 'bg-surface text-foreground shadow-xs border border-border/80'
      : 'text-muted hover:text-foreground',
@@ -486,7 +496,7 @@ export default function LandingPricingSection({
  </div>
  ))}
 
- <div className="border border-border dark:border-border rounded-2xl overflow-hidden bg-white dark:bg-background/80 shadow-sm">
+ <div className="border border-border rounded-2xl overflow-hidden bg-surface shadow-sm">
  <button
  type="button"
  onClick={() => setShowComparison(!showComparison)}
@@ -555,7 +565,7 @@ export default function LandingPricingSection({
  </tr>
  )}
  <tr className="border-b border-border-subtle dark:border-border/80 hover:bg-surface-muted/50 dark:hover:bg-surface-muted/20">
- <td className="py-2.5 px-4 text-xs text-foreground dark:text-foreground sticky left-0 bg-white dark:bg-background/30">
+ <td className="py-2.5 px-4 text-xs text-foreground sticky left-0 bg-surface">
  {row.label}
  </td>
  {comparisonIds.map((id) => (

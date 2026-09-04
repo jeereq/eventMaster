@@ -352,14 +352,16 @@ export default function LandingVitrineSection() {
           </div>
         ) : null}
 
-        <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 md:justify-start">
+        <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 md:justify-start" role="tablist" aria-label="Catégories du catalogue">
           {tabs.map(({ id, label, icon: Icon, hash }) => (
             <button
               key={id}
               type="button"
+              role="tab"
+              aria-selected={tab === id}
               onClick={() => selectTab(id, hash)}
               className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                'min-h-11 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0',
                 tab === id
                   ? 'bg-primary-solid text-primary-foreground border border-primary/30 shadow-xs'
                   : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60',
@@ -372,7 +374,7 @@ export default function LandingVitrineSection() {
         </div>
 
         {tab === 'venues' && (
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -399,7 +401,7 @@ export default function LandingVitrineSection() {
         )}
 
         {tab === 'services' && (
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -426,7 +428,7 @@ export default function LandingVitrineSection() {
         )}
 
         {tab === 'rentals' && (
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -453,7 +455,7 @@ export default function LandingVitrineSection() {
         )}
 
         {tab === 'events' && (
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
