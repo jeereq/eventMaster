@@ -131,7 +131,7 @@ export default function Plans3DPage() {
         </div>
       </PublicPageHero>
 
-      <main className="page-container py-6 sm:py-10 space-y-12">
+      <div className="page-container py-6 sm:py-10 space-y-12">
         {/* ─── Studio Interactif 2D/3D ─── */}
         <section className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface/80 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border/80 shadow-xs">
@@ -409,7 +409,7 @@ export default function Plans3DPage() {
             </div>
           }
         />
-      </main>
+      </div>
     </PublicPageShell>
   );
 }

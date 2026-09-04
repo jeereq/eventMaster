@@ -74,7 +74,7 @@ export default function ContactPage() {
         description={`Démonstration, forfaits ou support — réponse sous 24–48 h (${site.supportHours}).`}
       />
 
-      <main className="flex-1">
+      <div className="flex-1">
         <section className="py-12 sm:py-16">
           <div className="page-container">
             <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-8 lg:gap-12 items-start">
@@ -304,7 +304,7 @@ export default function ContactPage() {
           secondaryHref="/tarifs"
           secondaryLabel="Comparer les forfaits"
         />
-      </main>
+      </div>
     </PublicPageShell>
   );
 }

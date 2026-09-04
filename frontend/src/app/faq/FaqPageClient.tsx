@@ -13,7 +13,7 @@ export default function FaqPageClient() {
         description="Forfaits (annuel −10 % y compris Particulier), protocole QR web, marketplace et facturation."
       />
 
-      <main className="flex-1">
+      <div className="flex-1">
         <FaqSection
           id="faq"
           className="border-t-0"
@@ -29,7 +29,7 @@ export default function FaqPageClient() {
           secondaryHref="/register"
           secondaryLabel="Lancer mon premier événement"
         />
-      </main>
+      </div>
     </PublicPageShell>
   );
 }

@@ -56,7 +56,7 @@ export default function TarifsPage() {
         </div>
       </PublicPageHero>
 
-      <main className="space-y-12">
+      <div className="space-y-12">
         <LandingPricingSection
           dbPlans={dbPlans}
           defaultAudience="B2C"
@@ -94,7 +94,7 @@ export default function TarifsPage() {
             </div>
           }
         />
-      </main>
+      </div>
     </PublicPageShell>
   );
 }

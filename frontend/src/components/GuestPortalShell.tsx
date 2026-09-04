@@ -114,6 +114,7 @@ export default function GuestPortalShell({
       </header>
 
       <main
+        id="main-content"
         className={cn(
           'page-container mx-auto w-full flex-1 max-w-xl py-4 sm:py-6 relative z-[1]',
           'pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]',

@@ -51,6 +51,15 @@ export default function SiteHeader({
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileMenuOpen]);
+
   const links = variant === 'minimal' ? [] : PUBLIC_LINKS;
   const iconBtn =
     'p-2.5 sm:p-2 min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer';
@@ -97,7 +106,7 @@ export default function SiteHeader({
         <div className="page-container h-14 flex items-center justify-between gap-4 sm:gap-6">
         {/* Logo & Nom de la plateforme */}
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition shrink-0 group">
-          <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm shadow-primary/30 group-hover:scale-105 transition-transform">
+          <div className="bg-primary-solid text-primary-foreground p-1.5 rounded-lg shadow-sm shadow-primary/30 group-hover:scale-105 transition-transform">
             <PartyPopper className="w-4 h-4" />
           </div>
           <span className="text-[15px] font-bold tracking-tight text-foreground">{site.platformName}</span>
@@ -154,14 +163,24 @@ export default function SiteHeader({
           </button>
 
           {user ? (
-            <Link href="/dashboard" className="flex items-center ml-1">
-              <Button size="sm" className="hidden sm:inline-flex shadow-sm shadow-primary/20" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+            <>
+              <Button
+                href="/dashboard"
+                size="sm"
+                className="hidden sm:inline-flex ml-1 shadow-sm shadow-primary/20"
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              >
                 Tableau de bord
               </Button>
-              <Button size="sm" className="sm:hidden text-xs px-2.5 py-1.5 h-8 font-semibold shadow-xs" rightIcon={<LayoutDashboard className="w-3 h-3" />}>
+              <Button
+                href="/dashboard"
+                size="sm"
+                className="sm:hidden ml-1 text-xs px-2.5 font-semibold shadow-xs"
+                rightIcon={<LayoutDashboard className="w-3 h-3" />}
+              >
                 Dashboard
               </Button>
-            </Link>
+            </>
           ) : (
             <div className="hidden md:flex items-center gap-2 ml-1">
               <Link
@@ -171,22 +190,20 @@ export default function SiteHeader({
                 Connexion
               </Link>
               {site.allowRegistration ? (
-                <Link href="/register">
-                  <Button size="sm" rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
-                    Démarrer
-                  </Button>
-                </Link>
+                <Button href="/register" size="sm" rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
+                  Démarrer
+                </Button>
               ) : null}
             </div>
           )}
 
-          {/* Bouton burger mobile */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className={cn(iconBtn, 'md:hidden')}
-            aria-label="Menu"
+            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={mobileMenuOpen}
+            aria-controls="site-mobile-nav"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -194,9 +211,12 @@ export default function SiteHeader({
       </div>
 
       {/* Tiroir de navigation mobile HUD */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-xl animate-fade-in shadow-xl">
-          <div className="page-container py-4 space-y-3">
+      <div
+        id="site-mobile-nav"
+        hidden={!mobileMenuOpen}
+        className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-xl shadow-xl"
+      >
+        <div className="page-container py-4 space-y-3">
             <div className="space-y-1">
               {links.map((item) => {
                 const active = isLinkActive(item.href);
@@ -242,11 +262,14 @@ export default function SiteHeader({
             {/* Connexion / Inscription en mobile */}
             {user ? (
               <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
-                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" fullWidth>
-                    Tableau de bord
-                  </Button>
-                </Link>
+                <Button
+                  href="/dashboard"
+                  size="sm"
+                  fullWidth
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Tableau de bord
+                </Button>
                 <Button
                   type="button"
                   size="sm"
@@ -263,22 +286,29 @@ export default function SiteHeader({
             ) : (
               <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
                 {site.allowRegistration ? (
-                  <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                    <Button size="sm" fullWidth rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
-                      Créer un compte gratuit
-                    </Button>
-                  </Link>
-                ) : null}
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" variant="secondary" fullWidth>
-                    Connexion
+                  <Button
+                    href="/register"
+                    size="sm"
+                    fullWidth
+                    rightIcon={<Sparkles className="w-3.5 h-3.5" />}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Créer un compte gratuit
                   </Button>
-                </Link>
+                ) : null}
+                <Button
+                  href="/login"
+                  size="sm"
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Connexion
+                </Button>
               </div>
             )}
           </div>
-        </div>
-      )}
+      </div>
     </header>
 
     {variant !== 'minimal' && <SiteMobileBottomBar />}

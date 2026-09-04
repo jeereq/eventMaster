@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
@@ -200,7 +199,7 @@ export default function LandingAiSimulationShowcase() {
               className={cn(
                 'px-4 py-2 rounded-[var(--radius-button)] text-xs font-bold transition cursor-pointer touch-manipulation',
                 viewMode === 'presets'
-                  ? 'bg-primary text-white shadow-xs'
+                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',
               )}
             >
@@ -212,7 +211,7 @@ export default function LandingAiSimulationShowcase() {
               className={cn(
                 'px-4 py-2 rounded-[var(--radius-button)] text-xs font-bold transition flex items-center gap-1.5 cursor-pointer touch-manipulation',
                 viewMode === 'live'
-                  ? 'bg-primary text-white shadow-xs'
+                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',
               )}
             >
@@ -244,7 +243,7 @@ export default function LandingAiSimulationShowcase() {
                       className={cn(
                         'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink',
                         isSelected
-                          ? 'bg-primary text-white shadow-xs shadow-primary/30 ring-2 ring-primary/20'
+                          ? 'bg-primary-solid text-primary-foreground shadow-xs shadow-primary/30 ring-2 ring-primary/20'
                           : 'bg-surface-muted border border-border text-muted hover:text-foreground hover:bg-surface',
                       )}
                     >
@@ -268,7 +267,7 @@ export default function LandingAiSimulationShowcase() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
                 <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
                   <div>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary text-white inline-block mb-1">
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground inline-block mb-1">
                       Projet type
                     </span>
                     <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
@@ -335,11 +334,9 @@ export default function LandingAiSimulationShowcase() {
                 >
                   Préremplir et simuler ce projet
                 </Button>
-                <Link href={simulatorUrl} className="flex-1 sm:flex-none">
-                  <Button variant="secondary" size="md" fullWidth>
-                    Ouvrir le simulateur complet
-                  </Button>
-                </Link>
+                <Button href={simulatorUrl} variant="secondary" size="md" className="flex-1 sm:flex-none">
+                  Ouvrir le simulateur complet
+                </Button>
               </div>
             </div>
           </div>

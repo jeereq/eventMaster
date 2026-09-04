@@ -24,7 +24,12 @@ export default function PublicPageShell({
       hideFooter && 'h-dvh overflow-hidden',
     )}>
       {hideHeader ? null : <SiteHeader />}
-      {children}
+      <main
+        id="main-content"
+        className={cn('flex-1 flex flex-col min-w-0', hideFooter && 'min-h-0 overflow-hidden')}
+      >
+        {children}
+      </main>
       {hideFooter ? null : (
         <SiteFooter faqHref={faqHref} className={mobileFooterPad ? 'pb-24 lg:pb-0' : undefined} />
       )}

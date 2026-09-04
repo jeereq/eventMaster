@@ -21,7 +21,6 @@ import {
   ExternalLink,
   Wand2,
 } from 'lucide-react';
-import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { LandingProfileId } from '@/lib/landingProfiles';
 
@@ -249,9 +248,9 @@ export default function LandingHeroPreview({
                       <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg em-glow-icon-box shrink-0 flex items-center justify-center">
                         <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
-                      <h4 className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                      <span className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">
                         {act.title}
-                      </h4>
+                      </span>
                     </div>
                     <span className="text-[9px] sm:text-[10px] font-semibold text-muted px-1.5 sm:px-2 py-0.5 rounded bg-surface border border-border shrink-0">
                       {act.badge}
@@ -268,7 +267,7 @@ export default function LandingHeroPreview({
                     className={cn(
                       'w-full py-1.5 sm:py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold flex items-center justify-between transition-all duration-200',
                       act.highlight
-                        ? 'bg-primary text-white shadow-sm shadow-primary/30 group-hover:bg-primary-hover'
+                        ? 'bg-primary-solid text-primary-foreground shadow-sm shadow-primary/30 group-hover:bg-primary-solid-hover'
                         : 'bg-surface-muted text-foreground border border-border group-hover:border-primary/40 group-hover:text-primary',
                     )}
                   >

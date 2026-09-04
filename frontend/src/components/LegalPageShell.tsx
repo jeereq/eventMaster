@@ -33,7 +33,7 @@ export function LegalPageShell({
         </div>
       </header>
 
-      <main className="page-container py-12 space-y-8">
+      <main id="main-content" className="page-container py-12 space-y-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
           <p className="text-muted text-sm">{subtitle}</p>

@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Box, Sparkles, ArrowRight, LayoutGrid, Eye, Users, ScanLine } from 'lucide-react';
+import { Box, ArrowRight, LayoutGrid, Eye, Users, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 
@@ -63,25 +62,23 @@ export default function Landing3DTeaserBand() {
 
             {/* Actions directes vers la page dédiée */}
             <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0 sm:w-auto w-full">
-              <Link href="/plans-3d" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="primary"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                  className="w-full justify-center shadow-md font-semibold text-xs sm:text-sm"
-                >
-                  Découvrir les modèles 3D
-                </Button>
-              </Link>
-              <Link href={editorUrl} className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="w-full justify-center bg-white/10 text-white hover:bg-white/20 border-white/20 text-xs sm:text-sm font-semibold"
-                >
-                  Ouvrir l’éditeur
-                </Button>
-              </Link>
+              <Button
+                href="/plans-3d"
+                size="lg"
+                variant="primary"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                className="w-full justify-center shadow-md font-semibold text-xs sm:text-sm"
+              >
+                Découvrir les modèles 3D
+              </Button>
+              <Button
+                href={editorUrl}
+                size="lg"
+                variant="secondary"
+                className="w-full justify-center bg-white/10 text-white hover:bg-white/20 border-white/20 text-xs sm:text-sm font-semibold"
+              >
+                Ouvrir l’éditeur
+              </Button>
             </div>
           </div>
         </div>

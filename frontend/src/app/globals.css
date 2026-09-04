@@ -12,6 +12,10 @@
   --border-subtle: #f0f0f1;
   --primary: #059669;
   --primary-hover: #047857;
+  /** Fond de bouton / pastille : blanc AA (≥ 4.5:1). Ne pas réutiliser --primary (trop clair en dark). */
+  --primary-solid: #047857;
+  --primary-solid-hover: #065f46;
+  --primary-foreground: #ffffff;
   --brand-accent: #10b981;
   --muted: #6d6e6f;
   --sidebar: #f0f1f3;
@@ -67,6 +71,9 @@ html[data-mood="celebrate"].dark,
   --border-subtle: #48494b;
   --primary: #10b981;
   --primary-hover: #34d399;
+  --primary-solid: #047857;
+  --primary-solid-hover: #065f46;
+  --primary-foreground: #ffffff;
   --brand-accent: #6ee7b7;
   --muted: #a2a0a2;
   --sidebar: #191a1c;
@@ -83,6 +90,9 @@ html[data-mood="celebrate"].dark,
   --color-border-subtle: var(--border-subtle);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-solid: var(--primary-solid);
+  --color-primary-solid-hover: var(--primary-solid-hover);
+  --color-primary-foreground: var(--primary-foreground);
   --color-brand-accent: var(--brand-accent, #10b981);
   --color-muted: var(--muted);
   --color-sidebar: var(--sidebar);

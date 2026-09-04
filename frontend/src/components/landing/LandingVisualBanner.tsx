@@ -145,7 +145,7 @@ export default function LandingVisualBanner() {
               onClick={() => setActiveCategory('all')}
               className={`px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation ${
                 activeCategory === 'all'
-                  ? 'bg-primary text-white shadow-xs'
+                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'bg-surface-muted border border-border text-muted hover:text-foreground'
               }`}
             >
@@ -158,7 +158,7 @@ export default function LandingVisualBanner() {
                 onClick={() => setActiveCategory(item.id)}
                 className={`px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation ${
                   activeCategory === item.id
-                    ? 'bg-primary text-white shadow-xs'
+                    ? 'bg-primary-solid text-primary-foreground shadow-xs'
                     : 'bg-surface-muted border border-border text-muted hover:text-foreground'
                 }`}
               >
@@ -229,15 +229,13 @@ export default function LandingVisualBanner() {
                       <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
                     </Link>
 
-                    <Link href="/#simulateur-ia">
-                      <button
-                        type="button"
-                        className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold inline-flex items-center gap-1 transition cursor-pointer"
-                        title="Intégrer dans un pack IA"
-                      >
-                        <Wand2 className="w-3 h-3" />
-                        Simuler en pack
-                      </button>
+                    <Link
+                      href="/#simulateur-ia"
+                      className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold inline-flex items-center gap-1 transition"
+                      title="Intégrer dans un pack IA"
+                    >
+                      <Wand2 className="w-3 h-3" />
+                      Simuler en pack
                     </Link>
                   </div>
                 </div>
@@ -263,11 +261,15 @@ export default function LandingVisualBanner() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-            <Link href="/marketplace" className="flex-1 sm:flex-none">
-              <Button size="md" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Explorer tout le catalogue
-              </Button>
-            </Link>
+            <Button
+              href="/marketplace"
+              size="md"
+              variant="primary"
+              className="w-full sm:w-auto"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              Explorer tout le catalogue
+            </Button>
           </div>
         </div>
       </div>

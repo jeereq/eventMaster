@@ -210,9 +210,9 @@ export default function MarketplaceEventDetailPage() {
     <Suspense
       fallback={
         <PublicPageShell faqHref="/faq" mobileFooterPad>
-          <main className="page-container pt-4 pb-24 sm:pt-8 lg:py-10">
+          <div className="page-container pt-4 pb-24 sm:pt-8 lg:py-10">
             <SkeletonListingDetail />
-          </main>
+          </div>
         </PublicPageShell>
       }
     >

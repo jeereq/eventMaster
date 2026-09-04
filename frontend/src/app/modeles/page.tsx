@@ -97,7 +97,7 @@ export default function ModelesPage() {
         </div>
       </PublicPageHero>
 
-      <main className="page-container py-8 sm:py-12 space-y-8 max-w-7xl mx-auto">
+      <div className="page-container py-8 sm:py-12 space-y-8 max-w-7xl mx-auto">
         {/* Filtres et recherche */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/70">
           <div className="flex gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
@@ -307,7 +307,7 @@ export default function ModelesPage() {
             </div>
           }
         />
-      </main>
+      </div>
 
       {/* Modale d'aperçu de modèle d'invitation */}
       <Modal

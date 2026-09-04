@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Sparkles, UserPlus } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
@@ -133,20 +132,28 @@ export default function AiSimulationPackModal({
                     </Button>
                   ) : null}
                   {canCreateEvents ? (
-                    <Link href="/dashboard/events?create=1" className="w-full sm:w-auto">
-                      <Button size="sm" variant="secondary" fullWidth leftIcon={<CalendarPlus className="w-3.5 h-3.5" />}>
-                        Créer l’événement
-                      </Button>
-                    </Link>
+                    <Button
+                      href="/dashboard/events?create=1"
+                      size="sm"
+                      variant="secondary"
+                      className="w-full sm:w-auto"
+                      leftIcon={<CalendarPlus className="w-3.5 h-3.5" />}
+                    >
+                      Créer l’événement
+                    </Button>
                   ) : null}
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Link href="/register?kind=CLIENT&intent=seeker&action=ai_simulator" className="w-full sm:w-auto">
-                    <Button size="sm" variant="primary" fullWidth leftIcon={<UserPlus className="w-3.5 h-3.5" />}>
-                      Créer un compte
-                    </Button>
-                  </Link>
+                  <Button
+                    href="/register?kind=CLIENT&intent=seeker&action=ai_simulator"
+                    size="sm"
+                    variant="primary"
+                    className="w-full sm:w-auto"
+                    leftIcon={<UserPlus className="w-3.5 h-3.5" />}
+                  >
+                    Créer un compte
+                  </Button>
                   {onBuyTokens ? (
                     <Button size="sm" variant="secondary" onClick={onBuyTokens}>
                       Acheter {AI_TOKEN_PACK_SIZE} sims

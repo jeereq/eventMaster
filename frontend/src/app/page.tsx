@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 import LandingHeroStreamlined from '@/components/landing/LandingHeroStreamlined';
@@ -45,62 +44,50 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased pb-16 md:pb-0">
       <SiteHeader variant="landing" />
 
-      {/* ─── HERO : ORIENTATION PAR PROJET, AVEC IMAGES ─── */}
-      <LandingHeroStreamlined />
-
-      {/* ─── GALERIE D'INSPIRATION & RÉALISATIONS EN IMAGES ─── */}
-      <LandingVisualBanner />
-
-      {/* ─── CATALOGUE & MARKETPLACE (Salles, Prestataires, Billetteries) ─── */}
-      <LandingVitrineSection />
-
-      {/* ─── BANDEAU PLANS DE SALLE & MODÈLES 3D (Invitation vers /plans-3d) ─── */}
-      <Landing3DTeaserBand />
-
-      {/* ─── SIMULATION D'ÉVÉNEMENT PAR IA & PACKS BUDGET CLÉS EN MAIN ─── */}
-      <LandingAiSimulationShowcase />
-
-      {/* ─── FAQ CONCISE ─── */}
-      <FaqSection
-        subtitle="Tout ce que vous devez savoir pour organiser votre événement en toute sérénité."
-      />
-
-      {/* ─── BANDEAU D'APPEL À L'ACTION FINAL ─── */}
-      <PublicCtaBand
-        title="Prêt à lancer votre événement ?"
-        description="Créez votre compte gratuit en 1 minute. Sans carte bancaire."
-        actions={
-          user ? (
-            <Link href="/dashboard">
-              <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+      <main id="main-content" className="flex-1 flex flex-col">
+        <LandingHeroStreamlined />
+        <LandingVisualBanner />
+        <LandingVitrineSection />
+        <Landing3DTeaserBand />
+        <LandingAiSimulationShowcase />
+        <FaqSection
+          subtitle="Tout ce que vous devez savoir pour organiser votre événement en toute sérénité."
+        />
+        <PublicCtaBand
+          title="Prêt à lancer votre événement ?"
+          description="Créez votre compte gratuit en 1 minute. Sans carte bancaire."
+          actions={
+            user ? (
+              <Button href="/dashboard" size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
                 Ouvrir mon espace
               </Button>
-            </Link>
-          ) : (
-            <>
-              {site.allowRegistration && (
-                <Link href="/register?kind=ORGANIZER&intent=personal&action=event">
-                  <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+            ) : (
+              <>
+                {site.allowRegistration && (
+                  <Button
+                    href="/register?kind=ORGANIZER&intent=personal&action=event"
+                    size="lg"
+                    variant="primary"
+                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                  >
                     Créer mon événement
                   </Button>
-                </Link>
-              )}
-              <Link href="/marketplace">
+                )}
                 <Button
+                  href="/marketplace"
                   size="lg"
                   variant="secondary"
                   className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
                 >
                   Explorer le marketplace
                 </Button>
-              </Link>
-            </>
-          )
-        }
-      />
+              </>
+            )
+          }
+        />
+      </main>
 
       <LandingDashboardQuickAccess />
-
       <SiteFooter faqHref="/#faq" />
     </div>
   );

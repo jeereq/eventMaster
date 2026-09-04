@@ -80,11 +80,13 @@ export default function FaqSection({
               >
                 <button
                   type="button"
+                  id={`faq-trigger-${item.id}`}
                   onClick={() => setOpenId(isOpen ? null : item.id)}
                   className="w-full flex items-center justify-between gap-4 px-4 sm:px-5 py-4 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
                   aria-expanded={isOpen}
+                  aria-controls={`faq-panel-${item.id}`}
                 >
-                  <span className={cn('text-sm font-semibold transition-colors', isOpen ? 'text-primary' : 'text-foreground')}>
+                  <span className={cn('min-w-0 text-sm font-semibold transition-colors', isOpen ? 'text-primary' : 'text-foreground')}>
                     {item.question}
                   </span>
                   <ChevronDown
@@ -94,11 +96,15 @@ export default function FaqSection({
                     )}
                   />
                 </button>
-                {isOpen && (
-                  <div className="px-4 sm:px-5 pb-4 text-xs sm:text-sm text-muted leading-relaxed border-t border-border/80 pt-3.5 whitespace-pre-line animate-fade-in">
-                    {item.answer}
-                  </div>
-                )}
+                <div
+                  id={`faq-panel-${item.id}`}
+                  role="region"
+                  aria-labelledby={`faq-trigger-${item.id}`}
+                  hidden={!isOpen}
+                  className="px-4 sm:px-5 pb-4 text-xs sm:text-sm text-muted leading-relaxed border-t border-border/80 pt-3.5 whitespace-pre-line break-words"
+                >
+                  {item.answer}
+                </div>
               </div>
             );
           })}

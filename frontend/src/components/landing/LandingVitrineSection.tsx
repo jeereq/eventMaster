@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button, Pagination, paginateItems, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -33,7 +32,7 @@ import {
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
-import { ArrowRight, Building2, Calendar, KeyRound, Sparkles, Store } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Store } from 'lucide-react';
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -49,7 +48,7 @@ export default function LandingVitrineSection() {
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
   const [events, setEvents] = useState<PublicEventCard[]>([]);
-  const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
   const [query, setQuery] = useState('');
   const [applied, setApplied] = useState<EntityFilters>(emptyFilters);
   const [draft, setDraft] = useState<EntityFilters>(emptyFilters);
@@ -63,6 +62,7 @@ export default function LandingVitrineSection() {
 
   const load = useCallback(async (filters: EntityFilters, search: string) => {
     setLoadingCatalog(true);
+    setCatalogError('');
     try {
       const venueParams = new URLSearchParams();
       const serviceParams = new URLSearchParams();
@@ -78,14 +78,20 @@ export default function LandingVitrineSection() {
       appendCatalogueEntityParams(venueParams, { ...filters, kind: 'venue' }, 'venue');
       appendCatalogueEntityParams(serviceParams, filters, 'service');
       appendCatalogueEntityParams(eventParams, { ...filters, kind: 'event' }, 'event');
-      const [venuesData, servicesData, eventsData] = await Promise.all([
-        api.get(`/public/venues?${venueParams.toString()}`).catch(() => ({ venues: [] })),
+      const [venuesRes, servicesRes, eventsRes] = await Promise.allSettled([
+        api.get(`/public/venues?${venueParams.toString()}`),
         fetchPublicServicesForCatalogue(serviceParams, 'all'),
-        api.get(`/public/events?${eventParams.toString()}`).catch(() => ({ events: [] })),
+        api.get(`/public/events?${eventParams.toString()}`),
       ]);
-      setVenues(venuesData.venues || []);
-      setServices(servicesData);
-      setEvents(eventsData.events || []);
+      setVenues(venuesRes.status === 'fulfilled' ? venuesRes.value.venues || [] : []);
+      setServices(servicesRes.status === 'fulfilled' ? servicesRes.value : []);
+      setEvents(eventsRes.status === 'fulfilled' ? eventsRes.value.events || [] : []);
+      const failed = [venuesRes, eventsRes].filter((result) => result.status === 'rejected').length;
+      if (failed === 2) {
+        setCatalogError('Impossible de charger le catalogue. Vérifiez votre connexion, puis réessayez.');
+      } else if (failed === 1) {
+        setCatalogError('Une partie du catalogue n’a pas pu être chargée. Réessayez.');
+      }
     } finally {
       setLoadingCatalog(false);
     }
@@ -290,11 +296,9 @@ export default function LandingVitrineSection() {
               Explorez les espaces vérifiés avec visite 3D et contactez les professionnels en direct.
             </p>
           </div>
-          <Link href="/marketplace">
-            <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Tout le marketplace
-            </Button>
-          </Link>
+          <Button href="/marketplace" rightIcon={<ArrowRight className="w-4 h-4" />}>
+            Tout le marketplace
+          </Button>
         </div>
 
         {/* Bannière d'appel au simulateur de pack IA */}
@@ -312,12 +316,31 @@ export default function LandingVitrineSection() {
           </div>
           <a
             href="#simulateur-ia"
-            className="shrink-0 px-3.5 py-2 rounded-[var(--radius-button)] bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs flex items-center gap-1.5 w-full sm:w-auto justify-center"
+            className="shrink-0 px-3.5 py-2 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs flex items-center gap-1.5 w-full sm:w-auto justify-center"
           >
             <span>Tester la simulation IA</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </a>
         </div>
+
+        {catalogError ? (
+          <div
+            role="alert"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-[var(--radius-card)] border border-rose-500/30 bg-rose-500/10"
+          >
+            <p className="text-xs sm:text-sm text-foreground leading-relaxed">{catalogError}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="shrink-0"
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              onClick={() => void load(applied, query)}
+            >
+              Réessayer
+            </Button>
+          </div>
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           {tabs.map(({ id, label, icon: Icon, hash }) => (
@@ -328,7 +351,7 @@ export default function LandingVitrineSection() {
               className={cn(
                 'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                 tab === id
-                  ? 'bg-primary text-primary-foreground border border-primary/30 shadow-xs'
+                  ? 'bg-primary-solid text-primary-foreground border border-primary/30 shadow-xs'
                   : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60',
               )}
             >

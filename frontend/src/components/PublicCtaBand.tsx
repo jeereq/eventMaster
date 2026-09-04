@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
@@ -48,27 +47,25 @@ export default function PublicCtaBand({
           {actions || (
             <>
               {primaryHref && primaryLabel ? (
-                <Link href={primaryHref}>
-                  <Button
-                    size="lg"
-                    variant="primary"
-                    rightIcon={<ArrowRight className="w-4 h-4" />}
-                    className="shadow-lg shadow-primary/40 text-sm font-bold"
-                  >
-                    {primaryLabel}
-                  </Button>
-                </Link>
+                <Button
+                  href={primaryHref}
+                  size="lg"
+                  variant="primary"
+                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                  className="shadow-lg shadow-primary/40 text-sm font-bold"
+                >
+                  {primaryLabel}
+                </Button>
               ) : null}
               {secondaryHref && secondaryLabel ? (
-                <Link href={secondaryHref}>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
-                  >
-                    {secondaryLabel}
-                  </Button>
-                </Link>
+                <Button
+                  href={secondaryHref}
+                  size="lg"
+                  variant="secondary"
+                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
+                >
+                  {secondaryLabel}
+                </Button>
               ) : null}
             </>
           )}

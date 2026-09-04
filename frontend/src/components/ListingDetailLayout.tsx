@@ -555,7 +555,7 @@ export default function ListingDetailLayout({
             );
 
   return (
-    <main
+    <div
       className={cn(
         'flex-1',
         embedded
@@ -854,6 +854,6 @@ export default function ListingDetailLayout({
           </div>
         </Modal>
       )}
-    </main>
+    </div>
   );
 }

@@ -77,14 +77,16 @@ export default function LandingHeroStreamlined() {
           </p>
 
           {user ? (
-            <div className="pt-1">
+            <div className="pt-1 flex justify-center">
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-xs text-primary font-semibold hover:bg-primary/15 transition"
+                className="inline-flex items-center gap-2 max-w-full px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-xs text-primary font-semibold hover:bg-primary/15 transition"
               >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Connecté · {user.name || user.email}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+                <span className="min-w-0 truncate">
+                  Connecté · {user.name || user.email}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 shrink-0" />
               </Link>
             </div>
           ) : null}
@@ -130,10 +132,11 @@ export default function LandingHeroStreamlined() {
                   <button
                     type="button"
                     aria-pressed={selected}
+                    aria-controls="landing-profile-panel"
                     aria-label={`Choisir : ${item.label}`}
                     onClick={() => setSelectedId(item.id)}
                     className={cn(
-                      'group relative w-full text-left overflow-hidden rounded-[var(--radius-card)] border aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] flex flex-col justify-between p-2.5 sm:p-3.5 text-white transition-all duration-300 cursor-pointer touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                      'group relative w-full min-w-0 text-left overflow-hidden rounded-[var(--radius-card)] border aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] flex flex-col justify-between p-2.5 sm:p-3.5 text-white transition-all duration-300 cursor-pointer touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                       selected
                         ? 'border-primary ring-2 ring-primary/40 shadow-xl shadow-primary/20'
                         : 'border-border/80 hover:border-primary/50 hover:shadow-lg',
@@ -162,7 +165,7 @@ export default function LandingHeroStreamlined() {
                         className={cn(
                           'w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition-colors',
                           selected
-                            ? 'bg-primary border-primary text-white'
+                            ? 'bg-primary-solid border-primary-solid text-primary-foreground'
                             : 'bg-white/15 border-white/25 text-white/70',
                         )}
                       >
@@ -170,15 +173,15 @@ export default function LandingHeroStreamlined() {
                       </span>
                     </div>
 
-                    <div className="relative z-10 space-y-0.5 sm:space-y-1">
-                      <h3
+                    <div className="relative z-10 min-w-0 space-y-0.5 sm:space-y-1">
+                      <span
                         className={cn(
-                          'text-xs sm:text-base font-bold tracking-tight leading-snug line-clamp-2',
+                          'block text-xs sm:text-base font-bold tracking-tight leading-snug line-clamp-2',
                           selected ? 'text-amber-200' : 'text-white',
                         )}
                       >
                         {item.label}
-                      </h3>
+                      </span>
                       <p className="hidden sm:block text-[11px] sm:text-xs text-white/80 leading-relaxed line-clamp-2">
                         {item.intro}
                       </p>
@@ -191,30 +194,33 @@ export default function LandingHeroStreamlined() {
         </div>
 
         <div
+          id="landing-profile-panel"
           key={profile.id}
+          role="region"
+          aria-live="polite"
+          aria-labelledby="landing-profile-title"
           className="rounded-[var(--radius-card)] border border-primary/25 bg-surface/90 dark:bg-slate-900/90 p-4 sm:p-6 shadow-xl shadow-primary/5 space-y-5 animate-fade-in"
         >
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <p className="text-[11px] font-semibold text-primary">{profile.targetAudience}</p>
-              <h3 className="text-base sm:text-lg font-bold text-foreground leading-snug">
+              <h3 id="landing-profile-title" className="text-base sm:text-lg font-bold text-foreground leading-snug">
                 {profile.title}
               </h3>
               <p className="text-xs sm:text-sm text-muted leading-relaxed max-w-2xl">
                 {profile.intro}
               </p>
             </div>
-            <Link href={ctaHref} className="w-full sm:w-auto shrink-0">
-              <Button
-                size="md"
-                variant="primary"
-                fullWidth
-                className="shadow-sm font-bold text-xs justify-center min-h-11 sm:min-w-[14rem]"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                {ctaLabel}
-              </Button>
-            </Link>
+            <Button
+              href={ctaHref}
+              size="md"
+              variant="primary"
+              fullWidth
+              className="shadow-sm font-bold text-xs justify-center min-h-11 sm:w-auto sm:min-w-[14rem]"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              {ctaLabel}
+            </Button>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-muted">
