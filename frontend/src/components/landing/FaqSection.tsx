@@ -52,16 +52,11 @@ export default function FaqSection({
     <section id={id} className={cn('py-16 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
       <div className="page-container relative z-10">
         <div className="max-w-2xl mb-8 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <span className="em-festive-chip">
-              <Sparkles className="w-3 h-3" />
-              FAQ & Aide
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Réponses Claires
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">{title}</h2>
+          <span className="em-festive-chip">
+            <Sparkles className="w-3 h-3" />
+            FAQ & Aide
+          </span>
+          <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">{title}</h2>
           <p className="text-sm text-muted leading-relaxed">{subtitle}</p>
         </div>
 

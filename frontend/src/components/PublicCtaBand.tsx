@@ -38,7 +38,7 @@ export default function PublicCtaBand({
           Rejoignez EventMaster
         </div>
 
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-stage-foreground max-w-xl mx-auto leading-tight">
+        <h2 className="em-landing-heading text-2xl sm:text-3xl lg:text-4xl text-stage-foreground max-w-xl mx-auto">
           {title}
         </h2>
 

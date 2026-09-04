@@ -5,20 +5,14 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutGrid,
-  Mail,
   ScanLine,
   Sparkles,
-  Users,
   Building2,
   Store,
   Wallet,
   ArrowRight,
   Heart,
-  CalendarCheck,
-  Layers,
   ShieldCheck,
-  CheckCircle2,
-  ExternalLink,
   Wand2,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -283,7 +277,7 @@ export default function LandingHeroPreview({
         {/* Note de réassurance sous la grille */}
         <div className="pt-2 border-t border-border/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>Zéro installation requise · Fonctionne à 100% dans votre navigateur</span>
           </div>
           <span className="font-semibold text-primary">

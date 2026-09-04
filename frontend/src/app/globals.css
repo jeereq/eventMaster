@@ -126,6 +126,23 @@ html {
   scroll-behavior: smooth;
   font-size: 15px;
   background-color: var(--background);
+  caret-color: var(--primary);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 32%, transparent);
+  color: var(--foreground);
+}
+
+a {
+  text-underline-offset: 0.18em;
+}
+
+.em-landing-heading {
+  font-family: var(--font-fraunces), var(--font-inter), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.14;
 }
 
 html[data-density="compact"] .em-dashboard-content {
@@ -1980,11 +1997,11 @@ html[data-mood="celebrate"] .font-display {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #c8c9cc;
+    background: var(--border);
     border-radius: 9999px;
   }
   .dark ::-webkit-scrollbar-thumb {
-    background: #48494b;
+    background: var(--border);
   }
 }
 

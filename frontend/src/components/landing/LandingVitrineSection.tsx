@@ -280,16 +280,11 @@ export default function LandingVitrineSection() {
       <div className="page-container relative z-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
-            <div className="flex items-center gap-2">
-              <span className="em-festive-chip">
-                <Store className="w-3 h-3" />
-                Catalogue & Marketplace
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Espaces & Talents
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+            <span className="em-festive-chip">
+              <Store className="w-3 h-3" />
+              Catalogue & Marketplace
+            </span>
+            <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">
               Lieux, prestataires et billetteries
             </h2>
             <p className="text-sm text-muted leading-relaxed">

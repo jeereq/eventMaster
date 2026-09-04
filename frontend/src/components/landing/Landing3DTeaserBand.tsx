@@ -23,7 +23,7 @@ export default function Landing3DTeaserBand() {
                 <span>Plans de salle 2D & Immersion 3D</span>
               </div>
 
-              <h2 className="font-display text-xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-stage-foreground leading-snug">
+              <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground">
                 Modélisez vos réceptions au millimètre et placez vos invités
               </h2>
 

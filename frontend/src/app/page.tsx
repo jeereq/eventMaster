@@ -10,30 +10,42 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
-import { Button } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { ArrowRight } from 'lucide-react';
 
 // Chargement différé des sections sous la ligne de flottaison
+function LandingSectionFallback({ label }: { label: string }) {
+  return (
+    <div className="page-container py-14 sm:py-20" role="status" aria-live="polite">
+      <span className="sr-only">{label}</span>
+      <div className="max-w-xl mx-auto space-y-3">
+        <Skeleton className="h-5 w-36 mx-auto rounded-full" />
+        <Skeleton className="h-8 w-4/5 mx-auto" />
+        <Skeleton className="h-4 w-full max-w-md mx-auto" />
+      </div>
+      <div className="mt-10 grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <Skeleton className="aspect-[16/10] rounded-[var(--radius-card)]" />
+        <Skeleton className="aspect-[16/10] rounded-[var(--radius-card)]" />
+        <Skeleton className="hidden lg:block aspect-[16/10] rounded-[var(--radius-card)]" />
+      </div>
+    </div>
+  );
+}
+
 const LandingAiSimulationShowcase = dynamic(
   () => import('@/components/landing/LandingAiSimulationShowcase'),
-  {
-    loading: () => <div className="py-12 text-center text-xs text-muted">Chargement du simulateur IA…</div>,
-  },
+  { loading: () => <LandingSectionFallback label="Chargement du simulateur IA…" /> },
 );
 
 const LandingVitrineSection = dynamic(
   () => import('@/components/landing/LandingVitrineSection'),
-  {
-    loading: () => <div className="py-12 text-center text-xs text-muted">Chargement de la vitrine…</div>,
-  },
+  { loading: () => <LandingSectionFallback label="Chargement de la vitrine…" /> },
 );
 
 const LandingVisualBanner = dynamic(
   () => import('@/components/landing/LandingVisualBanner'),
-  {
-    loading: () => <div className="py-12 text-center text-xs text-muted">Chargement des inspirations…</div>,
-  },
+  { loading: () => <LandingSectionFallback label="Chargement des inspirations…" /> },
 );
 
 export default function Home() {

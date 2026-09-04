@@ -174,11 +174,9 @@ export default function LandingAiSimulationShowcase() {
             </div>
           ) : null}
 
-          <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
+          <h2 className="em-landing-heading text-2xl sm:text-4xl text-foreground">
             Préparez votre événement par IA :{' '}
-            <span className="text-primary underline decoration-primary/30 underline-offset-4">
-              3 packs clés en main
-            </span>{' '}
+            <span className="text-primary">3 packs clés en main</span>{' '}
             dans votre budget
           </h2>
 
@@ -260,6 +258,8 @@ export default function LandingAiSimulationShowcase() {
                 <img
                   src={activeScenario.imageUrl}
                   alt={activeScenario.name}
+                  width={1200}
+                  height={400}
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-cover object-center"
@@ -320,7 +320,7 @@ export default function LandingAiSimulationShowcase() {
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/80">
               <div className="flex items-center gap-2 text-xs text-muted">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
                 <span>Aucun jeton n’est débité tant que vous n’avez pas cliqué sur Générer.</span>
               </div>
               <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">

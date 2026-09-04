@@ -11,7 +11,6 @@ import {
   Palette,
   KeyRound,
   ArrowRight,
-  Eye,
   MapPin,
   CheckCircle2,
   Wand2,
@@ -117,21 +116,14 @@ export default function LandingVisualBanner() {
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
         {/* En-tête de section */}
         <div className="text-center max-w-3xl mx-auto space-y-3.5">
-          <div className="inline-flex items-center gap-2">
-            <span className="em-festive-chip">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              Inspiration & Réalisations
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-              Le meilleur de l'événementiel en RDC
-            </span>
-          </div>
+          <span className="em-festive-chip">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            Inspiration & Réalisations
+          </span>
 
-          <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
+          <h2 className="em-landing-heading text-2xl sm:text-4xl text-foreground">
             Des réceptions d’exception,{' '}
-            <span className="text-primary underline decoration-primary/30 underline-offset-4">
-              conçues pour marquer les esprits
-            </span>
+            <span className="text-primary">conçues pour marquer les esprits</span>
           </h2>
 
           <p className="text-sm sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
@@ -183,6 +175,8 @@ export default function LandingVisualBanner() {
                   <img
                     src={item.imageUrl}
                     alt={item.title}
+                    width={900}
+                    height={563}
                     loading="lazy"
                     decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -192,14 +186,14 @@ export default function LandingVisualBanner() {
                   {/* Badge flottant en haut */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
                     <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-sm">
-                      <Icon className="w-3.5 h-3.5 text-primary-light" />
+                      <Icon className="w-3.5 h-3.5 text-festive-on-stage" />
                       {item.badge}
                     </span>
                   </div>
 
                   {/* Titre et localisation incrustés en bas de l'image */}
                   <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary-light block">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-festive-on-stage block">
                       {item.category}
                     </span>
                     <h3 className="text-base font-bold text-white drop-shadow-sm line-clamp-1">

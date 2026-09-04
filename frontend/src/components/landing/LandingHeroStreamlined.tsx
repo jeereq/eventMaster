@@ -61,13 +61,13 @@ export default function LandingHeroStreamlined() {
     <section className="relative em-landing-hero overflow-hidden pt-6 pb-10 sm:pt-10 sm:pb-16 lg:pt-14 lg:pb-20">
       <div className="page-container relative z-10 space-y-7 sm:space-y-10">
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
-          <h1 className="font-display text-2xl min-[400px]:text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-foreground leading-[1.12]">
+          <h1 className="em-landing-heading text-2xl min-[400px]:text-3xl sm:text-5xl lg:text-[3.25rem] font-bold text-foreground">
             Votre événement d’exception,{' '}
             <br className="hidden sm:inline" />
             <span className="em-glow-text">parfaitement orchestré.</span>
           </h1>
 
-          <p className="text-xs sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
+          <p className="text-sm sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
             <span className="hidden sm:inline">
               Salles prestigieuses, prestataires d’exception, plans de table 3D et invitations WhatsApp — choisissez d’abord votre projet.
             </span>
@@ -93,12 +93,12 @@ export default function LandingHeroStreamlined() {
 
           <div className="pt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
             <span className="inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>Kinshasa · Lubumbashi · Goma</span>
             </span>
             <span className="hidden min-[480px]:inline text-border">·</span>
             <span className="inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>Mobile Money & Cartes</span>
             </span>
             <span className="hidden sm:inline text-border">·</span>
@@ -111,7 +111,7 @@ export default function LandingHeroStreamlined() {
 
         <div id="profils" className="space-y-4 sm:space-y-5">
           <div className="text-center sm:text-left max-w-2xl mx-auto sm:mx-0 space-y-1">
-            <h2 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+            <h2 className="em-landing-heading text-xl sm:text-2xl text-foreground">
               Quel est votre projet ?
             </h2>
             <p className="text-xs sm:text-sm text-muted">
@@ -136,7 +136,7 @@ export default function LandingHeroStreamlined() {
                     aria-label={`Choisir : ${item.label}`}
                     onClick={() => setSelectedId(item.id)}
                     className={cn(
-                      'group relative w-full min-w-0 text-left overflow-hidden rounded-[var(--radius-card)] border aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] flex flex-col justify-between p-2.5 sm:p-3.5 text-white transition-all duration-300 cursor-pointer touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                      'group relative w-full min-w-0 text-left overflow-hidden rounded-[var(--radius-card)] border aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] flex flex-col justify-between p-2.5 sm:p-3.5 text-white transition-all duration-300 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                       selected
                         ? 'border-primary ring-2 ring-primary/40 shadow-xl shadow-primary/20'
                         : 'border-border/80 hover:border-primary/50 hover:shadow-lg',
@@ -146,7 +146,10 @@ export default function LandingHeroStreamlined() {
                     <img
                       src={item.imageUrl}
                       alt=""
+                      width={900}
+                      height={1125}
                       loading="eager"
+                      decoding="async"
                       className={cn(
                         'absolute inset-0 w-full h-full object-cover transition-all duration-500',
                         selected
@@ -157,7 +160,7 @@ export default function LandingHeroStreamlined() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-black/20 pointer-events-none" />
 
                     <div className="relative z-10 flex items-start justify-between gap-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wide uppercase bg-black/55 backdrop-blur-md border border-white/20 text-white">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-black/55 backdrop-blur-md border border-white/20 text-white">
                         <Icon className="w-3 h-3 text-primary" />
                         <span className="truncate max-w-[9rem]">{item.eyebrow}</span>
                       </span>
@@ -204,7 +207,7 @@ export default function LandingHeroStreamlined() {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <p className="text-[11px] font-semibold text-primary">{profile.targetAudience}</p>
-              <h3 id="landing-profile-title" className="text-base sm:text-lg font-bold text-foreground leading-snug">
+              <h3 id="landing-profile-title" className="em-landing-heading text-base sm:text-lg text-foreground">
                 {profile.title}
               </h3>
               <p className="text-xs sm:text-sm text-muted leading-relaxed max-w-2xl">
@@ -224,7 +227,7 @@ export default function LandingHeroStreamlined() {
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-muted">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>{profile.registerHint}</span>
           </div>
 
