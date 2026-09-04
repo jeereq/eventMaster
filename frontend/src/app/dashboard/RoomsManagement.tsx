@@ -1732,24 +1732,32 @@ export default function RoomsManagement() {
                 {canManage && (
                   assignRoomId === room.id ? (
                     <div className="flex flex-wrap gap-2 items-end p-3 border border-border rounded-[var(--radius-card)] bg-surface-muted">
-                      <select
-                        value={assignUserId}
-                        onChange={(e) => setAssignUserId(e.target.value)}
-                        className={cn(fieldClass, 'flex-1 min-w-[140px]')}
-                      >
+                      <label className="flex-1 min-w-[140px]">
+                        <span className="sr-only">Membre à assigner</span>
+                        <select
+                          value={assignUserId}
+                          onChange={(e) => setAssignUserId(e.target.value)}
+                          className={fieldClass}
+                          aria-label="Membre à assigner"
+                        >
                         <option value="">Choisir un utilisateur</option>
                         {teamMembers.map((m) => (
                           <option key={m.id} value={m.id}>{m.name || m.email}</option>
                         ))}
-                      </select>
-                      <select
-                        value={assignRole}
-                        onChange={(e) => setAssignRole(e.target.value as 'MANAGER' | 'PROTOCOL')}
-                        className={fieldClass}
-                      >
+                        </select>
+                      </label>
+                      <label>
+                        <span className="sr-only">Rôle dans la salle</span>
+                        <select
+                          value={assignRole}
+                          onChange={(e) => setAssignRole(e.target.value as 'MANAGER' | 'PROTOCOL')}
+                          className={fieldClass}
+                          aria-label="Rôle dans la salle"
+                        >
                         <option value="MANAGER">Manager</option>
                         <option value="PROTOCOL">Protocole</option>
-                      </select>
+                        </select>
+                      </label>
                       <Button type="button" size="sm" onClick={() => handleAssignStaff(room.id)}>
                         Assigner
                       </Button>
@@ -1761,7 +1769,7 @@ export default function RoomsManagement() {
                     <button
                       type="button"
                       onClick={() => setAssignRoomId(room.id)}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline px-1"
+                      className="inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-primary underline-offset-2 hover:underline px-1 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
                       <UserPlus className="w-3.5 h-3.5" /> Assigner un staff
                     </button>

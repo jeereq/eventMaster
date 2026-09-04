@@ -2667,24 +2667,24 @@ export default function RoomLayoutEditor({
             </button>
             {accordion === 'murs' && (
               <div className="p-4 bg-surface space-y-3 border-t border-border">
-                <p className="text-[10px] text-muted leading-relaxed">
+                <p className={EDITOR_HINT}>
                   Configurez la hauteur, l&apos;épaisseur, la texture des murs et le style des ouvertures. Cliquez un mur dans la vue 3D pour le sélectionner.
                 </p>
-                <label className="flex items-center gap-2 text-[10px] text-muted cursor-pointer">
+                <label className="flex items-center gap-2 min-h-11 text-sm text-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={wallEditMode}
                     onChange={(e) => setWallEditMode(e.target.checked)}
-                    className="rounded border-border"
+                    className="rounded border-border size-4"
                   />
                   Mode édition murs (orbit désactivé)
                 </label>
-                <label className="flex items-center gap-2 text-[10px] text-muted cursor-pointer">
+                <label className="flex items-center gap-2 min-h-11 text-sm text-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={lockOrbit}
                     onChange={(e) => setLockOrbit(e.target.checked)}
-                    className="rounded border-border"
+                    className="rounded border-border size-4"
                   />
                   Bloquer la perspective pour déplacer (Ctrl+L)
                 </label>
@@ -3650,41 +3650,44 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
-            <p className="text-xs font-bold uppercase text-muted flex items-center justify-between">
-              <span>Rangée / Gradin</span>
+            <p className="flex items-center justify-between gap-2">
+              <span className={EDITOR_HEADING}>Rangée / Gradin</span>
               {selectedFurniture.elevationM ? (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-bold">
-                  +{selectedFurniture.elevationM}m
+                <span className="text-xs font-semibold tabular-nums text-primary px-2 py-1 rounded-[var(--radius-button)] bg-primary/10">
+                  +{selectedFurniture.elevationM} m
                 </span>
               ) : null}
             </p>
 
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block text-xs space-y-1">
-                <span className="font-semibold text-muted">Libellé</span>
-                <input value={selectedFurniture.label} onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })} className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border text-sm" />
-              </label>
-              <label className="block text-xs space-y-1">
-                <span className="font-semibold text-muted">Nom de rang</span>
-                <input
-                  value={selectedFurniture.rowName ?? ''}
-                  placeholder="ex: Rang A"
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { rowName: e.target.value })}
-                  className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                />
-              </label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Libellé"
+                value={selectedFurniture.label}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })}
+              />
+              <Input
+                label="Nom de rang"
+                value={selectedFurniture.rowName ?? ''}
+                placeholder="ex: Rang A"
+                onChange={(e) => updateFurniture(selectedFurniture.id, { rowName: e.target.value })}
+              />
             </div>
 
-            <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted">Nombre de sièges</span>
-              <input type="number" min={2} max={60} value={selectedFurniture.seatCount} onChange={(e) => updateFurniture(selectedFurniture.id, { seatCount: parseInt(e.target.value, 10) })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
-            </label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              label="Nombre de sièges"
+              min={2}
+              max={60}
+              value={selectedFurniture.seatCount}
+              onChange={(e) => updateFurniture(selectedFurniture.id, { seatCount: parseInt(e.target.value, 10) })}
+            />
 
             {/* Courbure & Gradin (Amphithéâtre Pinterest) */}
             <div className="space-y-2 p-2.5 rounded bg-surface border border-border">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-sm">
                 <span className="font-semibold text-foreground">Courbure de rangée</span>
-                <span className="text-[10px] font-mono text-muted">{selectedFurniture.curve ?? 0}%</span>
+                <span className="text-xs font-medium tabular-nums text-muted">{selectedFurniture.curve ?? 0}%</span>
               </div>
               <input
                 type="range"
@@ -3696,42 +3699,40 @@ export default function RoomLayoutEditor({
               />
 
               <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedFurniture.aisleSplit === true}
                     onChange={(e) => updateFurniture(selectedFurniture.id, { aisleSplit: e.target.checked }, 'Allée de passage')}
-                    className="rounded border-border text-primary"
+                    className="rounded border-border size-4"
                   />
                   <span>Allée centrale de passage</span>
                 </label>
                 {selectedFurniture.aisleSplit && (
-                  <span className="text-[10px] text-muted">Largeur 14%</span>
+                  <span className="text-xs text-muted">Largeur 14%</span>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
-                <label className="block text-xs space-y-0.5">
-                  <span className="text-[10px] font-semibold text-muted">Élévation gradin (m)</span>
-                  <input
-                    type="number"
-                    step={0.05}
-                    min={0}
-                    max={4}
-                    value={selectedFurniture.elevationM ?? 0}
-                    onChange={(e) => updateFurniture(selectedFurniture.id, { elevationM: parseFloat(e.target.value) || 0 }, 'Élévation gradin')}
-                    className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
-                  />
-                </label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  label="Élévation gradin (m)"
+                  step={0.05}
+                  min={0}
+                  max={4}
+                  value={selectedFurniture.elevationM ?? 0}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { elevationM: parseFloat(e.target.value) || 0 }, 'Élévation gradin')}
+                />
 
-                <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer pt-3">
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedFurniture.showSeatNumbers !== false}
                     onChange={(e) => updateFurniture(selectedFurniture.id, { showSeatNumbers: e.target.checked }, 'Numéros sièges')}
-                    className="rounded border-border text-primary"
+                    className="rounded border-border size-4"
                   />
-                  <span className="text-[10px]">Numéros de siège</span>
+                  <span>Numéros de siège</span>
                 </label>
               </div>
             </div>
