@@ -85,7 +85,7 @@ export default function ModelesPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <Wand2 className="w-3.5 h-3.5" />
-            <span>Créer avec l’IA</span>
+            <span>Studio IA</span>
           </a>
           <Link
             href={user ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=template'}
