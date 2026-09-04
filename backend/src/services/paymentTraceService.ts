@@ -171,14 +171,14 @@ export async function notifyAiTokenPayment(order: {
   return recordPaymentSuccess({
     kind: 'ai_tokens',
     reference: order.id,
-    amountFc: Number(order.amountFc) || 2000,
+    amountFc: Number(order.amountFc) || 2500,
     payerUserId: order.userId,
     payerEmail,
     payerPhone,
     deviceId: order.deviceId,
-    summary: `Recharge ${order.tokensCount || 15} simulations IA (${order.paymentMethod === 'card' ? 'carte' : 'Mobile Money'})`,
+    summary: `Recharge ${order.tokensCount || 6} jetons IA (${order.paymentMethod === 'card' ? 'carte' : 'Mobile Money'})`,
     metadata: {
-      tokensCount: order.tokensCount || 15,
+      tokensCount: order.tokensCount || 6,
       paymentMethod: order.paymentMethod || null,
       orderId: order.id,
     },

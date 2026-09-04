@@ -15,7 +15,6 @@ import { snapshotPlanItems } from '@/lib/eventPlan';
 import {
   applyServerAllowance,
   AI_ALLOWANCE_CHANGED,
-  AI_TOKEN_PACK_SIZE,
   consumeAiSimulation,
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
@@ -275,7 +274,7 @@ export default function EventPrepAiSimulator({
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
-      setError(`Plus de simulations disponibles. Rechargez ${AI_TOKEN_PACK_SIZE} simulations pour continuer.`);
+      setError('Plus de simulations disponibles. Rechargez dès 2 500 FC (6 jetons de recherche) pour continuer.');
       publishAllowance(current);
       return;
     }

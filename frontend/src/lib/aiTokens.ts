@@ -1,6 +1,31 @@
 export const MAX_FREE_TRIALS = 4;
+/** Référence tarifaire : 2 500 FC = 6 jetons de recherche. */
+export const AI_TOKEN_BASE_COUNT = 6;
+export const AI_TOKEN_BASE_PRICE_FC = 2500;
+export const AI_TOKEN_MIN_AMOUNT_FC = 2500;
+export const AI_TOKEN_MIN_COUNT = 6;
 export const AI_TOKEN_PACK_SIZE = 6;
 export const AI_TOKEN_PACK_PRICE_FC = 2500;
+
+/**
+ * Nombre de jetons crédités pour un montant payé (2 500 FC / 6 jetons).
+ * En dessous du minimum, on reste sur 6 jetons (le paiement sera refusé).
+ */
+export function calculateTokensForAmount(amountFc: number): number {
+  if (!Number.isFinite(amountFc) || amountFc < AI_TOKEN_MIN_AMOUNT_FC) {
+    return AI_TOKEN_MIN_COUNT;
+  }
+  return Math.floor((amountFc * AI_TOKEN_BASE_COUNT) / AI_TOKEN_BASE_PRICE_FC);
+}
+
+/**
+ * Montant à payer pour un nombre de jetons souhaité.
+ * Minimum : 6 jetons = 2 500 FC.
+ */
+export function calculateAmountForTokens(tokensCount: number): number {
+  const count = Math.max(AI_TOKEN_MIN_COUNT, Math.round(tokensCount || AI_TOKEN_MIN_COUNT));
+  return Math.ceil((count * AI_TOKEN_BASE_PRICE_FC) / AI_TOKEN_BASE_COUNT);
+}
 
 export const STORAGE_KEY_AI_DEVICE_ID = 'em_ai_device_id';
 export const STORAGE_KEY_AI_TRIALS = 'em_ai_free_trials_count';

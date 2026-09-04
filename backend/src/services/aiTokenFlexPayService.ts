@@ -14,8 +14,33 @@ import {
   type FlexPayMetadataUpdate,
 } from './flexPayCardService';
 
+export const AI_TOKEN_BASE_COUNT = 6;
+export const AI_TOKEN_BASE_PRICE_CDF = 2500;
+export const AI_TOKEN_MIN_AMOUNT_CDF = 2500;
+export const AI_TOKEN_MIN_COUNT = 6;
 export const AI_TOKEN_PACK_COUNT = 6;
 export const AI_TOKEN_PACK_PRICE_CDF = 2500;
+
+/**
+ * Calcule le nombre de jetons proportionnel à un montant en CDF/FC.
+ * Règle : 2 500 FC = 6 jetons (soit ~416,67 FC par jeton).
+ * Montant minimum : 2 500 FC.
+ */
+export function calculateTokensForAmount(amountFc: number): number {
+  if (!Number.isFinite(amountFc) || amountFc < AI_TOKEN_MIN_AMOUNT_CDF) {
+    return AI_TOKEN_MIN_COUNT;
+  }
+  return Math.floor((amountFc * AI_TOKEN_BASE_COUNT) / AI_TOKEN_BASE_PRICE_CDF);
+}
+
+/**
+ * Calcule le montant en CDF/FC proportionnel à un nombre de jetons souhaité.
+ * Minimum : 6 jetons = 2 500 FC.
+ */
+export function calculateAmountForTokens(tokensCount: number): number {
+  const count = Math.max(AI_TOKEN_MIN_COUNT, Math.round(tokensCount || AI_TOKEN_MIN_COUNT));
+  return Math.ceil((count * AI_TOKEN_BASE_PRICE_CDF) / AI_TOKEN_BASE_COUNT);
+}
 
 export type AiTokenPaymentMethod = 'mobile' | 'card';
 
@@ -47,14 +72,32 @@ const memoryOrders = new Map<string, any>();
 
 /**
  * Crée une commande et lance le paiement réel FlexPay (Mobile Money ou Carte).
+ * Applique une tarification proportionnelle (2 500 FC / 6 jetons) avec un minimum payable de 2 500 FC.
  */
 export async function initiateAiTokenPayment(
   input: InitiateAiTokenPaymentInput,
 ): Promise<InitiateAiTokenPaymentResult> {
   const paymentMethod: AiTokenPaymentMethod =
     input.paymentMethod === 'card' ? 'card' : 'mobile';
-  const tokensCount = input.tokensCount && input.tokensCount > 0 ? input.tokensCount : AI_TOKEN_PACK_COUNT;
-  const amountFc = input.amountFc && input.amountFc > 0 ? input.amountFc : AI_TOKEN_PACK_PRICE_CDF;
+
+  let amountFc: number;
+  let tokensCount: number;
+
+  if (input.amountFc && input.amountFc > 0) {
+    if (input.amountFc < AI_TOKEN_MIN_AMOUNT_CDF) {
+      throw new Error(
+        `Le montant minimum de recharge est de ${AI_TOKEN_MIN_AMOUNT_CDF.toLocaleString('fr-FR')} FC (soit 6 jetons).`,
+      );
+    }
+    amountFc = Math.round(input.amountFc);
+    tokensCount = calculateTokensForAmount(amountFc);
+  } else if (input.tokensCount && input.tokensCount > 0) {
+    tokensCount = Math.max(AI_TOKEN_MIN_COUNT, Math.round(input.tokensCount));
+    amountFc = calculateAmountForTokens(tokensCount);
+  } else {
+    amountFc = AI_TOKEN_MIN_AMOUNT_CDF;
+    tokensCount = AI_TOKEN_MIN_COUNT;
+  }
 
   let normalizedPhone: string | null = null;
   if (paymentMethod === 'mobile') {

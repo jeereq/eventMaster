@@ -7,7 +7,6 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 import type { EventPlanAiItem, EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
-import { AI_TOKEN_PACK_SIZE } from '@/lib/aiTokens';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
@@ -157,7 +156,7 @@ export default function AiSimulationPackModal({
                   </Button>
                   {onBuyTokens ? (
                     <Button size="sm" variant="secondary" onClick={onBuyTokens}>
-                      Recharger {AI_TOKEN_PACK_SIZE} simulations budget IA
+                      Recharger dès 2 500 FC
                     </Button>
                   ) : null}
                 </div>

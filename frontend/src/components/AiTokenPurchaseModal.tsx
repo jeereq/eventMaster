@@ -17,8 +17,11 @@ import {
 import { Modal, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import {
+  AI_TOKEN_MIN_AMOUNT_FC,
+  AI_TOKEN_MIN_COUNT,
   AI_TOKEN_PACK_SIZE,
   AI_TOKEN_PACK_PRICE_FC,
+  calculateTokensForAmount,
   addPurchasedAiTokens,
   getOrCreateDeviceId,
   syncDeviceAiTokensWithBackend,
@@ -33,6 +36,8 @@ interface AiTokenPurchaseModalProps {
 
 type CheckoutStep = 'form' | 'waiting_mobile' | 'success';
 
+const AMOUNT_PRESETS_FC = [2500, 5000, 7500, 10000] as const;
+
 export default function AiTokenPurchaseModal({
   open,
   onClose,
@@ -42,11 +47,18 @@ export default function AiTokenPurchaseModal({
   const [paymentMethod, setPaymentMethod] = useState<'mobile' | 'card'>('mobile');
   const [operator, setOperator] = useState<'orange' | 'mpesa' | 'airtel'>('orange');
   const [phone, setPhone] = useState('');
+  const [amountInput, setAmountInput] = useState(String(AI_TOKEN_MIN_AMOUNT_FC));
+  const [checkoutAmountFc, setCheckoutAmountFc] = useState(AI_TOKEN_PACK_PRICE_FC);
+  const [checkoutTokens, setCheckoutTokens] = useState(AI_TOKEN_PACK_SIZE);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
+
+  const parsedAmount = parseInt(amountInput.replace(/\s+/g, ''), 10);
+  const isValidAmount = Number.isFinite(parsedAmount) && parsedAmount >= AI_TOKEN_MIN_AMOUNT_FC;
+  const previewTokens = isValidAmount ? calculateTokensForAmount(parsedAmount) : 0;
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -61,14 +73,22 @@ export default function AiTokenPurchaseModal({
     return () => clearTimer();
   }, []);
 
+  useEffect(() => {
+    if (open && step === 'form') {
+      setAmountInput((current) => current || String(AI_TOKEN_MIN_AMOUNT_FC));
+    }
+  }, [open, step]);
+
   const handleSuccess = useCallback(
-    (tokensCount = AI_TOKEN_PACK_SIZE, orderId?: string | null) => {
+    (tokensCount = checkoutTokens, orderId?: string | null) => {
+      const credited = Math.max(AI_TOKEN_MIN_COUNT, tokensCount);
       clearTimer();
-      addPurchasedAiTokens(tokensCount, orderId || activeOrderId);
+      addPurchasedAiTokens(credited, orderId || activeOrderId);
       void syncDeviceAiTokensWithBackend(api);
+      setCheckoutTokens(credited);
       setStep('success');
       if (onSuccess) {
-        onSuccess(tokensCount);
+        onSuccess(credited);
       }
       setTimeout(() => {
         onClose();
@@ -76,7 +96,7 @@ export default function AiTokenPurchaseModal({
         setActiveOrderId(null);
       }, 2000);
     },
-    [activeOrderId, onClose, onSuccess],
+    [activeOrderId, checkoutTokens, onClose, onSuccess],
   );
 
   const checkPaymentStatus = useCallback(
@@ -91,7 +111,7 @@ export default function AiTokenPurchaseModal({
         };
 
         if (res?.paid || res?.status === 'PAID') {
-          handleSuccess(res.tokensCount || AI_TOKEN_PACK_SIZE, orderId);
+          handleSuccess(res.tokensCount || checkoutTokens, orderId);
         } else if (res?.status === 'FAILED') {
           clearTimer();
           setError('Le paiement a échoué ou a été refusé par l’opérateur Mobile Money.');
@@ -103,7 +123,7 @@ export default function AiTokenPurchaseModal({
         setVerifying(false);
       }
     },
-    [handleSuccess],
+    [handleSuccess, checkoutTokens],
   );
 
   // Polling automatique lorsque le paiement Mobile Money est en attente
@@ -136,6 +156,15 @@ export default function AiTokenPurchaseModal({
       setError('Veuillez renseigner votre numéro Mobile Money (ex: 24389XXXXXXX).');
       return;
     }
+    if (!isValidAmount) {
+      setError(`Le montant minimum payable est de ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)} (soit ${AI_TOKEN_MIN_COUNT} jetons).`);
+      return;
+    }
+
+    const amountFc = Math.round(parsedAmount);
+    const tokensCount = calculateTokensForAmount(amountFc);
+    setCheckoutAmountFc(amountFc);
+    setCheckoutTokens(tokensCount);
 
     setLoading(true);
     try {
@@ -144,8 +173,7 @@ export default function AiTokenPurchaseModal({
         paymentMethod,
         phone: cleanPhone || undefined,
         operator: paymentMethod === 'mobile' ? operator : undefined,
-        tokensCount: AI_TOKEN_PACK_SIZE,
-        amountFc: AI_TOKEN_PACK_PRICE_FC,
+        amountFc,
         deviceId,
       })) as {
         success?: boolean;
@@ -154,12 +182,20 @@ export default function AiTokenPurchaseModal({
         redirectUrl?: string | null;
         paymentMethod?: 'mobile' | 'card';
         status?: string;
+        tokensCount?: number;
+        amountFc?: number;
         message?: string;
       };
 
       if (!res?.success) {
         throw new Error(res?.message || 'Impossible d’initialiser le paiement.');
       }
+
+      const credited = res.tokensCount && res.tokensCount > 0 ? res.tokensCount : tokensCount;
+      if (typeof res.amountFc === 'number' && res.amountFc > 0) {
+        setCheckoutAmountFc(res.amountFc);
+      }
+      setCheckoutTokens(credited);
 
       // 1) Si paiement Carte Bancaire : redirection vers FlexPay
       if (paymentMethod === 'card') {
@@ -168,7 +204,7 @@ export default function AiTokenPurchaseModal({
           return;
         }
         // Fallback validation directe si sandbox local
-        handleSuccess(AI_TOKEN_PACK_SIZE, res.orderId);
+        handleSuccess(credited, res.orderId);
         return;
       }
 
@@ -177,7 +213,7 @@ export default function AiTokenPurchaseModal({
         setActiveOrderId(res.orderId);
         setStep('waiting_mobile');
       } else {
-        handleSuccess(AI_TOKEN_PACK_SIZE, res.orderId);
+        handleSuccess(credited, res.orderId);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de lancer le paiement.');
@@ -199,8 +235,8 @@ export default function AiTokenPurchaseModal({
       open={open}
       onClose={handleModalClose}
       title="Recharger des jetons IA"
-      description={`Pack ${AI_TOKEN_PACK_SIZE} jetons · ${formatFc(AI_TOKEN_PACK_PRICE_FC)} — modèles d’invitation IA ou simulation budget`}
-      size="sm"
+      description={`1 jeton de recherche = ${formatFc(AI_TOKEN_PACK_PRICE_FC)} / ${AI_TOKEN_PACK_SIZE} · payez le montant que vous voulez (minimum ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)})`}
+      size="md"
     >
       {/* ─── ÉTAPE 3 : SUCCÈS ─── */}
       {step === 'success' && (
@@ -212,7 +248,7 @@ export default function AiTokenPurchaseModal({
             Paiement validé avec succès !
           </h4>
           <p className="text-xs text-muted">
-            <strong>+{AI_TOKEN_PACK_SIZE} jetons IA</strong> crédités — utilisables pour les modèles d’invitation ou la simulation budget.
+            <strong>+{checkoutTokens} jeton{checkoutTokens === 1 ? '' : 's'} IA</strong> crédités — utilisables pour les modèles d’invitation ou la simulation budget.
           </p>
         </div>
       )}
@@ -229,7 +265,7 @@ export default function AiTokenPurchaseModal({
               Validation requise sur votre téléphone
             </h4>
             <p className="text-xs text-muted leading-relaxed">
-              Une demande de paiement de <strong>{formatFc(AI_TOKEN_PACK_PRICE_FC)}</strong> a été envoyée au <strong>{phone}</strong>.
+              Une demande de paiement de <strong>{formatFc(checkoutAmountFc)}</strong> ({checkoutTokens} jeton{checkoutTokens === 1 ? '' : 's'}) a été envoyée au <strong>{phone}</strong>.
             </p>
             <p className="text-[11px] text-primary font-medium">
               Veuillez taper votre code secret PIN Mobile Money sur votre mobile pour approuver.
@@ -274,22 +310,69 @@ export default function AiTokenPurchaseModal({
       {/* ─── ÉTAPE 1 : FORMULAIRE DE PAIEMENT RÉEL ─── */}
       {step === 'form' && (
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-          {/* Carte d'offre Pack 15 Jetons */}
-          <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
-                <Coins className="w-4 h-4" />
+          <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/25 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-xs shrink-0">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground">Recharge proportionnelle</p>
+                  <p className="text-[11px] text-muted">
+                    {formatFc(AI_TOKEN_PACK_PRICE_FC)} = {AI_TOKEN_PACK_SIZE} jetons · 1 jeton = 1 recherche / invitation
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-foreground">Pack {AI_TOKEN_PACK_SIZE} jetons IA</p>
-                <p className="text-[11px] text-muted">1 jeton = 1 modèle invitation ou 1 simulation</p>
+              <div className="text-right shrink-0">
+                <span className="text-sm font-black text-primary block tabular-nums">
+                  {isValidAmount ? `${previewTokens} jeton${previewTokens === 1 ? '' : 's'}` : '—'}
+                </span>
+                <span className="text-[10px] text-muted">crédités</span>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-sm font-black text-primary block">
-                {formatFc(AI_TOKEN_PACK_PRICE_FC)}
-              </span>
-              <span className="text-[10px] text-muted">TTC (CDF)</span>
+
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold text-foreground">Montant à payer (FC)</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {AMOUNT_PRESETS_FC.map((preset) => {
+                  const selected = parsedAmount === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setAmountInput(String(preset));
+                        setError('');
+                      }}
+                      className={`px-1.5 py-2 rounded-lg text-[11px] font-bold border transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                        selected
+                          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                          : 'border-border bg-surface text-muted hover:text-foreground hover:border-primary/40'
+                      }`}
+                    >
+                      {formatFc(preset)}
+                    </button>
+                  );
+                })}
+              </div>
+              <Input
+                label="Montant libre"
+                type="number"
+                min={AI_TOKEN_MIN_AMOUNT_FC}
+                step={100}
+                inputMode="numeric"
+                value={amountInput}
+                onChange={(e) => {
+                  setAmountInput(e.target.value);
+                  setError('');
+                }}
+                hint={`Minimum ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)} — vous pouvez payer davantage, les jetons suivent au prorata.`}
+                error={
+                  amountInput !== '' && !isValidAmount
+                    ? `Montant minimum : ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)}`
+                    : undefined
+                }
+              />
             </div>
           </div>
 
@@ -386,6 +469,7 @@ export default function AiTokenPurchaseModal({
               variant="primary"
               size="md"
               fullWidth
+              disabled={!isValidAmount}
               loading={loading}
               leftIcon={
                 loading ? (
@@ -399,8 +483,8 @@ export default function AiTokenPurchaseModal({
               className="font-bold shadow-sm shadow-primary/30"
             >
               {paymentMethod === 'card'
-                ? `Payer ${formatFc(AI_TOKEN_PACK_PRICE_FC)} par Carte`
-                : `Payer ${formatFc(AI_TOKEN_PACK_PRICE_FC)} par Mobile Money`}
+                ? `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(AI_TOKEN_MIN_AMOUNT_FC)} par Carte`
+                : `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(AI_TOKEN_MIN_AMOUNT_FC)} par Mobile Money`}
             </Button>
 
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center pt-1">

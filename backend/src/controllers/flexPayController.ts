@@ -337,16 +337,20 @@ export async function flexPayCardReturn(req: Request, res: Response) {
         return res.redirect(`${FRONTEND_URL}/#simulateur-ia?ai_tokens_status=canceled`);
       }
 
+      let tokensCount = 6;
       if (orderId) {
         try {
-          await verifyAndFinalizeAiTokenOrder(orderId);
+          const verified = await verifyAndFinalizeAiTokenOrder(orderId);
+          if (verified?.tokensCount && verified.tokensCount > 0) {
+            tokensCount = verified.tokensCount;
+          }
         } catch (err) {
           console.warn('[FlexPay] verify ai_tokens on return:', err);
         }
       }
 
       return res.redirect(
-        `${FRONTEND_URL}/#simulateur-ia?ai_tokens_status=success&tokens=20&orderId=${encodeURIComponent(orderId)}`,
+        `${FRONTEND_URL}/#simulateur-ia?ai_tokens_status=success&tokens=${tokensCount}&orderId=${encodeURIComponent(orderId)}`,
       );
     }
 

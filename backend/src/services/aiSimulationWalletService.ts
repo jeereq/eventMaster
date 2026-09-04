@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { calculateTokensForAmount, AI_TOKEN_MIN_COUNT } from './aiTokenFlexPayService';
 
 export const AI_FREE_TRIALS_MAX = 4;
 
@@ -198,7 +199,7 @@ export async function requireAiSimulationCredit(deviceId: string, userId?: strin
   if (!allowance.canSimulate) {
     fail(
       402,
-      'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.',
+      'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).',
     );
   }
   return allowance;
@@ -211,7 +212,7 @@ export async function consumeAiSimulationCredit(
   const { wallet, paid } = await ensureAiSimulationWallet(deviceId, userId);
   const remaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed) + Math.max(0, wallet.bonusTokens);
   if (remaining <= 0) {
-    fail(402, 'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
+    fail(402, 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).');
   }
 
   if (wallet.bonusTokens > 0) {
@@ -220,7 +221,7 @@ export async function consumeAiSimulationCredit(
       data: { bonusTokens: { decrement: 1 } },
     });
     if (!result.count) {
-      fail(402, 'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
+      fail(402, 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).');
     }
   } else {
     const result = await prisma.aiSimulationWallet.updateMany({
@@ -228,7 +229,7 @@ export async function consumeAiSimulationCredit(
       data: { freeTrialsUsed: { increment: 1 } },
     });
     if (!result.count) {
-      fail(402, 'Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
+      fail(402, 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).');
     }
   }
 
@@ -242,6 +243,7 @@ export async function creditPaidAiTokenOrder(order: {
   deviceId?: string | null;
   userId?: string | null;
   tokensCount?: number | null;
+  amountFc?: number | null;
 }) {
   const deviceId = order.deviceId?.trim();
   if (!deviceId) return;
@@ -249,15 +251,22 @@ export async function creditPaidAiTokenOrder(order: {
   const credited = parseCredited(wallet.creditedOrderIds);
   if (credited.includes(order.id)) return serialize(wallet, paid);
 
+  const tokensToAdd =
+    order.tokensCount && order.tokensCount > 0
+      ? order.tokensCount
+      : order.amountFc
+        ? calculateTokensForAmount(order.amountFc)
+        : AI_TOKEN_MIN_COUNT;
+
   const updated = await prisma.aiSimulationWallet.update({
     where: { id: wallet.id },
     data: {
-      bonusTokens: wallet.bonusTokens + Math.max(1, order.tokensCount || 15),
+      bonusTokens: wallet.bonusTokens + Math.max(1, tokensToAdd),
       creditedOrderIds: [...credited, order.id],
     },
   });
   return serialize(updated, {
-    totalPaidTokens: paid.totalPaidTokens + Math.max(1, order.tokensCount || 15),
+    totalPaidTokens: paid.totalPaidTokens + Math.max(1, tokensToAdd),
     paidOrdersCount: paid.paidOrdersCount + 1,
   });
 }
