@@ -59,6 +59,7 @@ Priorité absolue :
 1) Les images de référence = VÉRITÉ VISUELLE pour les personnes (visages, teintes de peau exactes, textures de cheveux, habits, posture) ET pour la carte à cloner (mise en page, ornements, palette).
 2) Le BRIEF UTILISATEUR = besoins expressément demandés (ambiance, décor d'invitation, couleurs florales, ce qu’il faut changer dans l'environnement).
 3) Ne change habits / cheveux / peau / visages QUE si le brief le demande EXPLICITEMENT. Sinon, REPRODUIS à l’identique.
+4) EventMaster / RDC : SANS photo de référence, toute personne générée = homme et/ou femme noirs africains (carnation mélanée naturelle). Interdit : couple blanc inventé, visages caucasiens « luxe générique ».
 
 Mission :
 1) Détecte : visages précis, points de repère anatomiques (faceLandmarks), teintes de peau réelles, styles de cheveux, styles d’habits, couleurs, motifs, composition, et si une carte d'invitation est présente à cloner.
@@ -297,8 +298,11 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
   };
 }
 
+const FACE_POLICY_DEFAULT_BLACK_AFRICAN =
+  'REPRESENTATION DEFAULT (EventMaster / RDC — MANDATORY): Any person depicted MUST be a Black African man and/or woman from Central Africa — rich natural melanin (bronze, caramel, mahogany, deep ebony), authentic facial features, natural hair textures (4A–4C, braids, locs, fade, afro, bun). STRICTLY FORBIDDEN: Caucasian / European / white stock-model faces, pale default skin, invented white wedding couples, East Asian substitute faces, or mixed-white “generic luxury” models. If the brief is a wedding, birthday or gala without a reference photo, show Black African hosts (man and/or woman) — never a white couple.';
+
 const FACE_POLICY_NO_PEOPLE =
-  'FACE POLICY: No people, no faces, no human silhouettes, no invented couples or stock models. Decorative invitation artwork only.';
+  'FACE POLICY: Prefer decorative artwork. If any person still appears, they MUST follow the RDC representation default: Black African men and/or women only — never Caucasian stock models.';
 
 const FACE_POLICY_KEEP_PEOPLE =
   'IDENTITY LOCK & ULTRA-REALISM (HIGHEST PRIORITY): The attached reference photo(s) are the ABSOLUTE GROUND TRUTH for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, natural skin tone (rich melanin / bronze / caramel / mahogany / deep ebony undertones intact with natural skin pores, realistic subsurface scattering — NEVER lighten, bleach, or change ethnicity), age appearance, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire. Authentic 35mm photograph aesthetic with natural depth of field and warm ambient celebration lighting. MICRO-FEATURES (DO NOT BEAUTIFY): EYES — exact iris color, eyelid crease, lash density, sclera, catchlight position and gaze; never enlarge or doll-eye. SMILE / MOUTH — copy the exact smile (closed, half, teeth, dimples, lip asymmetry, cupid\'s bow); do not widen, straighten, or invent a grin. CHEEKS — preserve natural cheek volume, apple of the cheek, nasolabial softness and any plumpness; do not slim, contour, or flatten. STRICTLY FORBIDDEN: plastic AI skin smoothing, airbrushing, beauty filter, CGI/3D render look, doll-like faces, symmetrized "pretty" face, face swap, age alteration, ethnicity shift, skin tone correction, anime/illustration face, or "lookalike" substitute. Only the luxury background, invitation card border, lighting ambiance, and florals may follow the user brief.';
@@ -360,7 +364,8 @@ function buildImagePrompt(
     );
   } else {
     parts.push(
-      'FIDELITY RULE: No people. Detect only what is visible. Do not invent faces.',
+      'FIDELITY RULE: No reference faces. If the brief implies hosts, a couple or guests, depict Black African men and/or women only.',
+      FACE_POLICY_DEFAULT_BLACK_AFRICAN,
       'USER BRIEF:',
       brief,
       FACE_POLICY_NO_PEOPLE,
@@ -970,6 +975,7 @@ Generate a breathtaking, ultra-high-definition vertical 9:16 luxury invitation a
 - REALISTIC TEXTURES: Fine luxury paper grain, metallic gold foil embossing, soft dimensional depth, natural floral arrangements.
 - INVITATION CLONING: If reference images contain an existing invitation card, faithfully reproduce its framing, ornaments, color scheme, and aesthetic composition.
 - NO OVER-REDESIGN: Clean, refined, high-end photographic print aesthetic without cheap digital artifacts or gaudy fake 3D overlays. Maintain balanced proportional sizes.
+- REPRESENTATION: If any people appear, they MUST be Black African men and/or women (natural melanin). Never invent Caucasian / white stock-model faces.
 ${options?.embedText ? '- EMBEDDED TEXT: Render sharp invitation typography from the brief (names, date, venue) as part of the artwork.' : ''}
 
 ${imagePrompt}`;

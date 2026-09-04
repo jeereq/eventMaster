@@ -141,7 +141,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: Users, label: 'Comptes pour l’équipe d’accueil' },
     ],
     icon: Sparkles,
-    imageUrl: 'https://images.unsplash.com/photo-1768508948462-58962b3ab650?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1573164574511-73c773193279?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'B2B',
     faqIds: ['what-is-eventmaster', 'event-packs', 'public-events', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
     steps: [
@@ -197,7 +197,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: MessageSquare, label: 'Devis en direct sans frais' },
     ],
     icon: Store,
-    imageUrl: 'https://images.unsplash.com/photo-1768508950243-16fd93e88d7f?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1655720362142-e1be7205382c?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'B2C',
     faqIds: ['marketplace-venues', 'client-account', 'event-packs', 'marketplace-booking'],
     steps: [
@@ -252,7 +252,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: CalendarCheck, label: 'Planning de réservation' },
     ],
     icon: Building2,
-    imageUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1495603889488-42d1d66e5523?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'VENDOR',
     faqIds: ['marketplace-venues', 'venue-subscription', 'service-subscription', 'plans-quotas', 'room-editor-plans'],
     steps: [

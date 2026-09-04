@@ -76,7 +76,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Romantique',
     summary: 'Lumière naturelle dorée, arche de roses blanches et eucalyptus, reflets dorés délicats.',
     prompt:
-      'Mariage romantique féerique : douce lumière naturelle de fin d’après-midi, arche de roses blanches et d’eucalyptus, reflets dorés délicats, rendu photo pur sans lissage artificiel.',
+      'Mariage romantique féerique : couple noir africain (homme et femme, carnation mélanée naturelle), douce lumière de fin d’après-midi, arche de roses blanches et d’eucalyptus, reflets dorés délicats, rendu photo pur sans lissage artificiel.',
   },
 
   // --- Catégorie : Galas & Entreprises ---
@@ -87,7 +87,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Business VIP',
     summary: 'Noir satiné profond, typographie serif élégante, accents champagne pétillant, minimaliste.',
     prompt:
-      'Soirée gala prestige à Gombe : fond noir satiné profond, typographie serif élégante, accents champagne pétillant, design minimaliste et luxueux digne d’un grand événement corporate.',
+      'Soirée gala prestige à Gombe : hôtes et invités noirs africains en tenue de soirée, fond noir satiné profond, typographie serif élégante, accents champagne pétillant, design minimaliste et luxueux.',
   },
   {
     id: 'gala-diplomatic',
@@ -107,7 +107,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Festif VIP',
     summary: 'Portrait photo éclatant et réaliste de l’hôte, ambiance cocktail avec lumières bokeh scintillantes.',
     prompt:
-      'Anniversaire VIP chic : portrait photo éclatant et ultra-réaliste de l’hôte, ambiance cocktail champagne avec lumières bokeh scintillantes, teintes or rose et noir profond.',
+      'Anniversaire VIP chic : portrait photo éclatant et ultra-réaliste d’un hôte ou d’une hôtesse noire africaine (carnation mélanée naturelle), ambiance cocktail champagne avec lumières bokeh scintillantes, teintes or rose et noir profond.',
   },
   {
     id: 'birthday-royal-jubilee',
