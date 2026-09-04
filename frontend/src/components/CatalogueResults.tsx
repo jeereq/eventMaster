@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Building2, Calendar, KeyRound, MapPin, Sparkles, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { listStackClass } from '@/components/ui';
+import { listStackClass, StatusPill } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
@@ -75,6 +75,13 @@ function Cover({
   );
 }
 
+function VisibilityMark({ item }: { item: CatalogueItem }) {
+  if (item.isBlockedByAdmin) return <StatusPill tone="rose">Bloqué</StatusPill>;
+  if (item.isPublic === true) return <StatusPill tone="emerald">Public</StatusPill>;
+  if (item.isPublic === false) return <StatusPill tone="slate">Masqué</StatusPill>;
+  return null;
+}
+
 function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'md' }) {
   const displayKind = catalogueItemDisplayKind(item);
   const Icon = kindIcon(displayKind);
@@ -107,6 +114,7 @@ function GridCard({
   onToggleFavorite,
   onNavigate,
   eager,
+  actions,
 }: {
   item: CatalogueItem;
   compact?: boolean;
@@ -114,86 +122,89 @@ function GridCard({
   onToggleFavorite?: (item: CatalogueItem) => void;
   onNavigate?: (e: React.MouseEvent) => void;
   eager?: boolean;
+  actions?: React.ReactNode;
 }) {
+  const distance = formatDistanceKm(item.distanceKm);
   return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      className="group relative flex flex-col bg-surface border border-border/80 rounded-[var(--radius-card)] overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300"
-    >
-      {/* Photo avec mise en valeur maximale */}
-      <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
-        <Cover
-          item={item}
-          eager={eager}
-          fallbackWidth={compact ? 480 : 640}
-          widths={compact ? COMPACT_COVER_WIDTHS : GRID_COVER_WIDTHS}
-          sizes={compact
-            ? '(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw'
-            : '(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw'}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+    <article className="group relative flex flex-col bg-surface border border-border/80 rounded-[var(--radius-card)] overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300">
+      {onToggleFavorite && item.kind !== 'event' ? (
+        <div className="absolute top-2.5 right-2.5 z-10">
+          <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
+        </div>
+      ) : distance ? (
+        <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-stage text-stage-foreground text-[10px] font-semibold px-2.5 py-0.5 border border-stage-foreground/20 shadow-xs">
+          {distance}
+        </span>
+      ) : null}
 
-        {/* Badge catégorie discret & moderne en verre dépoli */}
-        <div className="absolute top-2.5 left-2.5 z-[1]">
-          <KindMark item={item} size="sm" />
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        className="flex min-w-0 flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
+      >
+        <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
+          <Cover
+            item={item}
+            eager={eager}
+            fallbackWidth={compact ? 480 : 640}
+            widths={compact ? COMPACT_COVER_WIDTHS : GRID_COVER_WIDTHS}
+            sizes={compact
+              ? '(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw'
+              : '(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw'}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute top-2.5 left-2.5 z-[1] flex flex-col items-start gap-1">
+            <KindMark item={item} size="sm" />
+            <VisibilityMark item={item} />
+          </div>
         </div>
 
-        {/* Favori ou distance en haut à droite */}
-        {onToggleFavorite && item.kind !== 'event' ? (
-          <div className="absolute top-2.5 right-2.5 z-10">
-            <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
+        <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2 flex-1 flex flex-col justify-between">
+          <div className="space-y-1">
+            <h3 className="font-bold text-xs sm:text-[15px] text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+              {item.title}
+            </h3>
+
+            {item.location ? (
+              <p className="text-xs text-muted inline-flex items-center gap-1 truncate w-full">
+                <MapPin className="w-3.5 h-3.5 text-muted/80 shrink-0" />
+                <span className="truncate">{item.location}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted truncate">
+                {item.orgName || item.categoryLabel || 'Événementiel'}
+              </p>
+            )}
+
+            <div className="text-[11px] text-muted pt-0.5 flex items-center gap-1.5">
+              {item.capacity ? (
+                <span className="inline-flex items-center gap-1 font-medium text-foreground/80">
+                  <Users className="w-3 h-3 text-muted" /> Jusqu&apos;à {item.capacity} pers.
+                </span>
+              ) : item.categoryLabel ? (
+                <span className="font-medium text-foreground/80 truncate">{item.categoryLabel}</span>
+              ) : null}
+            </div>
           </div>
-        ) : formatDistanceKm(item.distanceKm) ? (
-          <span className="absolute top-2.5 right-2.5 rounded-full bg-black/50 backdrop-blur-md text-white text-[10px] font-semibold px-2.5 py-0.5 border border-white/10 shadow-xs">
-            {formatDistanceKm(item.distanceKm)}
-          </span>
-        ) : null}
-      </div>
 
-      {/* Informations textuelles épurées & lisibles (Design photo-first aéré) */}
-      <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2 flex-1 flex flex-col justify-between">
-        <div className="space-y-1">
-          <h3 className="font-bold text-xs sm:text-[15px] text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
-            {item.title}
-          </h3>
-
-          {item.location ? (
-            <p className="text-xs text-muted inline-flex items-center gap-1 truncate w-full">
-              <MapPin className="w-3.5 h-3.5 text-muted/80 shrink-0" />
-              <span className="truncate">{item.location}</span>
-            </p>
-          ) : (
-            <p className="text-xs text-muted truncate">
-              {item.orgName || item.categoryLabel || 'Événementiel'}
-            </p>
-          )}
-
-          {/* Attribut clé unique & lisible sans accumulation de chips */}
-          <div className="text-[11px] text-muted pt-0.5 flex items-center gap-1.5">
-            {item.capacity ? (
-              <span className="inline-flex items-center gap-1 font-medium text-foreground/80">
-                <Users className="w-3 h-3 text-muted" /> Jusqu&apos;à {item.capacity} pers.
+          <div className="pt-2 border-t border-border/50 flex items-baseline justify-between text-xs">
+            <div>
+              <span className="font-bold text-sm sm:text-[15px] text-foreground">
+                {cataloguePriceCaption(item)}
               </span>
-            ) : item.categoryLabel ? (
-              <span className="font-medium text-foreground/80 truncate">{item.categoryLabel}</span>
-            ) : null}
+              <span className="text-muted text-[11px] ml-1">
+                · {item.priceUnitLabel}
+              </span>
+            </div>
           </div>
         </div>
-
-        {/* Prix mis en valeur simplement */}
-        <div className="pt-2 border-t border-border/50 flex items-baseline justify-between text-xs">
-          <div>
-            <span className="font-bold text-sm sm:text-[15px] text-foreground">
-              {cataloguePriceCaption(item)}
-            </span>
-            <span className="text-muted text-[11px] ml-1">
-              · {item.priceUnitLabel}
-            </span>
-          </div>
+      </Link>
+      {actions ? (
+        <div className="flex flex-wrap gap-1.5 border-t border-border/50 px-2.5 py-2.5 sm:px-4">
+          {actions}
         </div>
-      </div>
-    </Link>
+      ) : null}
+    </article>
   );
 }
 
@@ -202,70 +213,84 @@ function ListRow({
   favorited,
   onToggleFavorite,
   onNavigate,
+  actions,
 }: {
   item: CatalogueItem;
   favorited?: boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
   onNavigate?: (e: React.MouseEvent) => void;
+  actions?: React.ReactNode;
 }) {
   const displayKind = catalogueItemDisplayKind(item);
   const accent = catalogueKindAccent(displayKind);
   const Icon = kindIcon(displayKind);
   return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
+    <article
       className={cn(
-        'group flex items-center gap-3 sm:gap-4 bg-surface border rounded-[var(--radius-card)] p-2.5 sm:p-3 hover:shadow-[var(--shadow-soft)] transition',
+        'group bg-surface border rounded-[var(--radius-card)] p-2.5 sm:p-3 hover:shadow-[var(--shadow-soft)] transition',
         accent.border,
       )}
     >
-      <div className="relative w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
-        <Cover
-          item={item}
-          fallbackWidth={224}
-          widths={LIST_COVER_WIDTHS}
-          sizes="112px"
-          className="w-full h-full"
-        />
-        <span className={cn(
-          'absolute bottom-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-md shadow-sm',
-          accent.iconBox,
-        )}>
-          <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
-        </span>
-      </div>
-      <div className="min-w-0 flex-1 space-y-1">
-        <KindMark item={item} size="sm" />
-        <h2 className="font-semibold text-sm text-foreground group-hover:text-primary transition truncate">
-          {item.title}
-        </h2>
-        <p className="text-xs text-muted truncate">
-          {[
-            item.orgName,
-            item.categoryLabel,
-            item.location,
-            item.kind === 'service'
-              ? serviceMobilityLabel(Boolean(item.travels ?? (item.coverageRadiusKm && item.coverageRadiusKm > 0)), item.coverageRadiusKm)
-              : null,
-          ].filter(Boolean).join(' · ')}
-        </p>
-        {formatDistanceKm(item.distanceKm) ? (
-          <p className="text-[11px] font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</p>
-        ) : null}
-      </div>
-      <div className="shrink-0 flex items-center gap-2">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Link
+          href={item.href}
+          onClick={onNavigate}
+          className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]"
+        >
+          <div className="relative w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
+            <Cover
+              item={item}
+              fallbackWidth={224}
+              widths={LIST_COVER_WIDTHS}
+              sizes="112px"
+              className="w-full h-full"
+            />
+            <span className={cn(
+              'absolute bottom-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-md shadow-sm',
+              accent.iconBox,
+            )}>
+              <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
+            </span>
+          </div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <KindMark item={item} size="sm" />
+              <VisibilityMark item={item} />
+            </div>
+            <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition truncate">
+              {item.title}
+            </h3>
+            <p className="text-xs text-muted truncate">
+              {[
+                item.orgName,
+                item.categoryLabel,
+                item.location,
+                item.kind === 'service'
+                  ? serviceMobilityLabel(Boolean(item.travels ?? (item.coverageRadiusKm && item.coverageRadiusKm > 0)), item.coverageRadiusKm)
+                  : null,
+              ].filter(Boolean).join(' · ')}
+            </p>
+            {formatDistanceKm(item.distanceKm) ? (
+              <p className="text-[11px] font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</p>
+            ) : null}
+          </div>
+          <div className="shrink-0 text-right">
+            <span className="text-sm font-semibold text-foreground">
+              {cataloguePriceCaption(item)}
+            </span>
+            <span className="block text-[11px] text-muted">{item.priceUnitLabel}</span>
+          </div>
+        </Link>
         {onToggleFavorite && item.kind !== 'event' ? (
           <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
         ) : null}
-        <div className="text-right">
-          <span className="text-sm font-semibold text-foreground">
-            {cataloguePriceCaption(item)}
-          </span>
-          <span className="block text-[11px] text-muted">{item.priceUnitLabel}</span>
-        </div>
       </div>
-    </Link>
+      {actions ? (
+        <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-border/50 pt-2.5">
+          {actions}
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -278,6 +303,7 @@ export default function CatalogueResults({
   groupByKind = false,
   isFavorite,
   onToggleFavorite,
+  renderActions,
 }: {
   items: CatalogueItem[];
   mode: Exclude<CatalogueViewMode, 'map' | 'focus'>;
@@ -287,6 +313,7 @@ export default function CatalogueResults({
   groupByKind?: boolean;
   isFavorite?: (item: CatalogueItem) => boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
+  renderActions?: (item: CatalogueItem) => React.ReactNode;
 }) {
   const isMobile = useIsMobile();
   const resolvedMode = isMobile ? 'grid' : mode;
@@ -325,6 +352,7 @@ export default function CatalogueResults({
                     favorited={isFavorite?.(item)}
                     onToggleFavorite={onToggleFavorite}
                     onNavigate={rememberListOnNavigate}
+                    actions={renderActions?.(item)}
                   />
                 ))}
               </div>
@@ -349,6 +377,7 @@ export default function CatalogueResults({
                   favorited={isFavorite?.(item)}
                   onToggleFavorite={onToggleFavorite}
                   onNavigate={rememberListOnNavigate}
+                  actions={renderActions?.(item)}
                 />
               ))}
             </div>
@@ -369,6 +398,7 @@ export default function CatalogueResults({
             favorited={isFavorite?.(item)}
             onToggleFavorite={onToggleFavorite}
             onNavigate={rememberListOnNavigate}
+            actions={renderActions?.(item)}
           />
         ))}
       </div>
@@ -386,6 +416,7 @@ export default function CatalogueResults({
           favorited={isFavorite?.(item)}
           onToggleFavorite={onToggleFavorite}
           onNavigate={rememberListOnNavigate}
+          actions={renderActions?.(item)}
         />
       ))}
     </div>

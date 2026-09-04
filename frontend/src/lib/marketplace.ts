@@ -1212,6 +1212,10 @@ export interface CatalogueItem {
   priceUnit?: VenuePriceUnit;
   activityPreview?: MarketplaceActivityPreviewItem[] | null;
   activityCount?: number;
+  isPublic?: boolean;
+  isBlockedByAdmin?: boolean;
+  listingId?: string;
+  tenantId?: string;
 }
 
 /** Agenda client : événements publics dans le marketplace du tableau de bord. */

@@ -250,6 +250,10 @@ function venueToItem(row: VenueRow): CatalogueItem {
     roomType: row.roomType as CatalogueItem['roomType'],
     capacity: row.capacity ?? null,
     priceUnit: row.priceUnit as CatalogueItem['priceUnit'],
+    isPublic: row.isPublic,
+    isBlockedByAdmin: row.isBlockedByAdmin,
+    listingId: row.id,
+    tenantId: row.tenantId,
   };
 }
 
@@ -272,6 +276,10 @@ function offeringToItem(row: OfferingRow): CatalogueItem {
     category: row.category as CatalogueItem['category'],
     priceUnit: row.priceUnit as CatalogueItem['priceUnit'],
     travels: row.travels,
+    isPublic: row.isPublic,
+    isBlockedByAdmin: row.isBlockedByAdmin,
+    listingId: row.id,
+    tenantId: row.tenantId,
   };
 }
 
@@ -292,7 +300,7 @@ export default function AdminCataloguePage() {
   const [inquiryStatus, setInquiryStatus] = useState('');
   const [bookingStatus, setBookingStatus] = useState('');
   const [settlement, setSettlement] = useState<'due' | 'paid' | 'all'>('due');
-  const { mode: view, setView, gridCols, setGridCols } = useCatalogueView('list');
+  const { mode: view, setView, gridCols, setGridCols } = useCatalogueView('grid', 'em-admin-catalogue-view');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('admin-catalogue', 20);
   const [loading, setLoading] = useState(true);
@@ -517,6 +525,64 @@ export default function AdminCataloguePage() {
     .map(catalogueItemToMapMarker);
   const mapMode = (tab === 'venues' || tab === 'offerings' || tab === 'rentals') && isCatalogueMapView(view);
 
+  const listingKind = tab === 'venues' ? 'venues' as const : 'offerings' as const;
+  const renderListingActions = (item: CatalogueItem) => {
+    if (!item.listingId) return null;
+    const isBlocked = Boolean(item.isBlockedByAdmin);
+    return (
+      <>
+        {item.tenantId ? (
+          <Button type="button" size="sm" variant="secondary" onClick={() => void openFiche(item.tenantId!)}>
+            {item.orgName}
+          </Button>
+        ) : null}
+        {!isBlocked ? (
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            loading={busyId === item.listingId}
+            onClick={() => openModeration(listingKind, item.listingId!, item.title, false, true)}
+          >
+            Bloquer
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={busyId === item.listingId}
+            onClick={() => openModeration(listingKind, item.listingId!, item.title, true, true)}
+          >
+            Débloquer
+          </Button>
+        )}
+        {!isBlocked && item.isPublic ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={busyId === item.listingId}
+            onClick={() => openModeration(listingKind, item.listingId!, item.title, false)}
+          >
+            Dépublier
+          </Button>
+        ) : null}
+        {!isBlocked && item.isPublic === false ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={busyId === item.listingId}
+            onClick={() => openModeration(listingKind, item.listingId!, item.title, true)}
+          >
+            Republier
+          </Button>
+        ) : null}
+      </>
+    );
+  };
+
   const listingTab = tab === 'venues' || tab === 'offerings' || tab === 'rentals';
   const listingExtras: CatalogueEntityExtras = {
     ...extras,
@@ -573,11 +639,30 @@ export default function AdminCataloguePage() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Sections du catalogue">
         {tabs.map((item) => (
           <button
             key={item.id}
             type="button"
+            role="tab"
+            id={`catalog-tab-${item.id}`}
+            aria-selected={tab === item.id}
+            aria-controls={`catalog-panel-${item.id}`}
+            tabIndex={tab === item.id ? 0 : -1}
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+              e.preventDefault();
+              const i = tabs.findIndex((t) => t.id === tab);
+              const next = tabs[e.key === 'ArrowRight'
+                ? (i + 1) % tabs.length
+                : (i - 1 + tabs.length) % tabs.length];
+              setTab(next.id);
+              setPage(1);
+              if (next.id === 'venues' || next.id === 'offerings' || next.id === 'rentals') {
+                setExtras({ ...EMPTY_CATALOGUE_EXTRAS });
+              }
+              requestAnimationFrame(() => document.getElementById(`catalog-tab-${next.id}`)?.focus());
+            }}
             onClick={() => {
               setTab(item.id);
               setPage(1);
@@ -586,7 +671,7 @@ export default function AdminCataloguePage() {
               }
             }}
             className={cn(
-              'px-3 py-1.5 rounded-md text-xs font-medium border transition',
+              'min-h-11 px-3.5 rounded-md text-sm font-medium border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               tab === item.id
                 ? 'bg-surface text-foreground border-border shadow-[var(--shadow-soft)]'
                 : 'text-muted border-transparent hover:text-foreground',
@@ -722,11 +807,16 @@ export default function AdminCataloguePage() {
         </div>
       )}
 
+      <div
+        role="tabpanel"
+        id={`catalog-panel-${tab}`}
+        aria-labelledby={`catalog-tab-${tab}`}
+      >
       {loading ? (
         (tab === 'venues' || tab === 'offerings' || tab === 'rentals') ? (
           <CatalogueResultsSkeleton mode={mapMode ? 'map' : view === 'list' ? 'list' : 'grid'} count={8} gridCols={gridCols} />
         ) : (
-          <div className="flex justify-center py-16">
+          <div className="flex justify-center py-16" role="status" aria-live="polite" aria-label="Chargement">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         )
@@ -744,107 +834,18 @@ export default function AdminCataloguePage() {
             />
           )
         ) : (
-          <div className="space-y-3">
-            <CatalogueResults
-              items={catalogItems}
-              mode={view === 'list' ? 'list' : 'grid'}
-              gridCols={gridCols}
-              emptyTitle={tab === 'venues' ? 'Aucune salle' : tab === 'rentals' ? 'Aucun matériel / équipement' : 'Aucun prestataire'}
-              emptyDescription={tab === 'venues'
-                ? 'Les fiches salles apparaîtront ici.'
-                : tab === 'rentals'
-                  ? 'Le matériel et les équipements publiés apparaîtront ici.'
-                  : 'Les prestations publiées apparaîtront ici.'}
-            />
-            {catalogItems.length > 0 && (
-              <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
-                {(tab === 'venues' ? venues?.items : offerings?.items)?.map((row) => {
-                  const isBlocked = Boolean(row.isBlockedByAdmin);
-                  return (
-                  <li key={`mod-${row.id}`} className="px-4 py-2.5 flex flex-wrap items-center gap-2 text-xs">
-                    <Badge variant={isBlocked ? 'danger' : row.isPublic ? 'success' : 'default'}>
-                      {isBlocked ? 'Bloqué' : row.isPublic ? 'Public' : 'Masqué'}
-                    </Badge>
-                    <span className="font-medium text-foreground truncate">
-                      {'headline' in row ? row.headline : row.title}
-                    </span>
-                    <button type="button" className="text-primary hover:underline" onClick={() => void openFiche(row.tenantId)}>
-                      {row.tenantName}
-                    </button>
-                    <Link href={row.href} className="text-primary hover:underline">
-                      Voir
-                    </Link>
-                    
-                    <div className="ml-auto flex items-center gap-2">
-                      {!isBlocked ? (
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          loading={busyId === row.id}
-                          onClick={() => openModeration(
-                            tab === 'venues' ? 'venues' : 'offerings',
-                            row.id,
-                            'headline' in row ? row.headline : row.title,
-                            false,
-                            true
-                          )}
-                        >
-                          Bloquer
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          loading={busyId === row.id}
-                          onClick={() => openModeration(
-                            tab === 'venues' ? 'venues' : 'offerings',
-                            row.id,
-                            'headline' in row ? row.headline : row.title,
-                            true,
-                            true
-                          )}
-                        >
-                          Débloquer
-                        </Button>
-                      )}
-                      
-                      {!isBlocked && row.isPublic && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          loading={busyId === row.id}
-                          onClick={() => openModeration(
-                            tab === 'venues' ? 'venues' : 'offerings',
-                            row.id,
-                            'headline' in row ? row.headline : row.title,
-                            false,
-                          )}
-                        >
-                          Dépublier
-                        </Button>
-                      )}
-                      {!isBlocked && !row.isPublic && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          loading={busyId === row.id}
-                          onClick={() => openModeration(
-                            tab === 'venues' ? 'venues' : 'offerings',
-                            row.id,
-                            'headline' in row ? row.headline : row.title,
-                            true,
-                          )}
-                        >
-                          Republier
-                        </Button>
-                      )}
-                    </div>
-                  </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          <CatalogueResults
+            items={catalogItems}
+            mode={view === 'list' ? 'list' : 'grid'}
+            gridCols={gridCols}
+            renderActions={renderListingActions}
+            emptyTitle={tab === 'venues' ? 'Aucune salle' : tab === 'rentals' ? 'Aucun matériel / équipement' : 'Aucun prestataire'}
+            emptyDescription={tab === 'venues'
+              ? 'Les fiches salles apparaîtront ici.'
+              : tab === 'rentals'
+                ? 'Le matériel et les équipements publiés apparaîtront ici.'
+                : 'Les prestations publiées apparaîtront ici.'}
+          />
         )
       ) : tab === 'inquiries' && !inquiries?.items.length ? (
         <EmptyState icon={<FileText className="w-5 h-5" />} title="Aucune demande" description="Les devis marketplace apparaîtront ici." />
@@ -966,6 +967,7 @@ export default function AdminCataloguePage() {
           itemLabel="éléments"
         />
       )}
+      </div>
 
       <Modal
         open={ficheOpen}

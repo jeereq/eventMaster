@@ -41,7 +41,10 @@ export function useCatalogueGridCols(defaultCols: CatalogueGridCols = 4) {
   return { gridCols, setGridCols };
 }
 
-export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
+export function useCatalogueView(
+  defaultMode: CatalogueViewMode = 'grid',
+  storageKey: string = STORAGE_KEY,
+) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -54,26 +57,26 @@ export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
     if (urlView) {
       setMode(urlView);
       try {
-        localStorage.setItem(STORAGE_KEY, urlView);
+        localStorage.setItem(storageKey, urlView);
       } catch {
         /* ignore */
       }
       return;
     }
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(storageKey);
       if (stored === 'grid' || stored === 'list' || stored === 'map' || stored === 'focus') {
         setMode(stored);
       }
     } catch {
       /* ignore */
     }
-  }, [urlView]);
+  }, [urlView, storageKey]);
 
   const setView = (next: CatalogueViewMode) => {
     setMode(next);
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(storageKey, next);
     } catch {
       /* ignore */
     }
@@ -118,7 +121,7 @@ export function CatalogueGridColsToggle({
           aria-pressed={value === cols}
           title={`${cols} colonnes`}
           className={cn(
-            'min-w-8 px-2 py-1.5 rounded-[var(--radius-button)] text-[11px] font-semibold transition',
+            'min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] text-[11px] font-semibold transition',
             value === cols
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',
