@@ -1038,7 +1038,7 @@ export default function TemplatesPage() {
  Créer avec l’IA
  </h2>
  <p className="text-[11px] text-muted mt-1 leading-relaxed">
- L’IA analyse vos images, suit votre brief, puis crée une nouvelle image (1 jeton).
+ L’IA applique votre brief, analyse vos images, puis crée une nouvelle image (1 jeton). Les visages présents sont conservés — aucun visage inventé.
  </p>
  </div>
  <button

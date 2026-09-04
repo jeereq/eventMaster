@@ -38,10 +38,15 @@ function requireOpenAiKey(): string {
 const STRUCTURE_SYSTEM = `Tu es un designer d'invitations EventMaster (RDC / Afrique centrale).
 Tu ANALYSES les images de référence fournies, puis tu produis UNIQUEMENT un JSON valide (response_format json_object).
 
-Mission image :
-1) Observe couleurs, textures, motifs, composition, ambiance des images.
-2) Lis le brief utilisateur et applique-le (style, ton, éléments à garder / à changer).
-3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation (fond print) fidèle aux refs + au brief.
+Priorité absolue :
+1) Le BRIEF UTILISATEUR dicte le style, le ton, les éléments à garder / changer, les couleurs souhaitées.
+2) Les images de référence fournissent la vérité visuelle (palette réelle, motifs, composition, personnes).
+3) Tu ne dois NI inventer des visages/personnes absents des refs, NI supprimer / remplacer / flouter des visages déjà présents.
+
+Mission :
+1) Observe couleurs, textures, motifs, composition, ambiance ET présence de personnes/visages.
+2) Interprète chaque consigne du brief et dis comment elle s’applique aux refs.
+3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation fidèle au brief + aux refs, avec règles visages strictes.
 
 Schéma exact :
 {
@@ -50,7 +55,11 @@ Schéma exact :
     "style": "description courte du style vu dans les images",
     "motifs": "motifs / textures / décor observés",
     "composition": "layout / cadrage observé",
-    "briefInterpretation": "comment le brief utilisateur doit transformer ou respecter les refs"
+    "hasPeople": true | false,
+    "peopleFaces": "none | describe count/roles/pose WITHOUT inventing identities; empty string if none",
+    "briefInterpretation": "comment le brief doit transformer ou respecter les refs, point par point",
+    "briefMustKeep": ["éléments du brief / des refs à conserver"],
+    "briefMustChange": ["éléments que le brief demande de modifier"]
   },
   "global": {
     "bgType": "color" | "pattern",
@@ -81,15 +90,25 @@ Schéma exact :
       "imageUrl": "https://..."
     }
   ],
-  "backgroundPrompt": "English image-generation prompt, 2-4 sentences, must recreate a NEW invitation artwork inspired by the reference photos AND the user brief"
+  "backgroundPrompt": "English image-generation prompt: apply the USER BRIEF first, then refs; include explicit FACE POLICY sentence"
 }
 
-Règles :
-- Palette et style des éléments = couleurs réelles extraites des images.
+Règles brief :
+- Le backgroundPrompt DOIT commencer par "USER BRIEF:" suivi d’une paraphrase fidèle du brief (anglais).
+- Applique chaque intention du brief (ambiance, couleurs, fioritures, sobriété, luxe, floral, etc.).
+- Si le brief et les refs divergent, le brief gagne pour le style ; les refs gagnent pour les personnes/visages réellement présents.
+
+Règles visages (non négociables) :
+- Si hasPeople=true : conserver les mêmes personnes/visages des refs (même identité visuelle, pose raisonnable). Interdit d’effacer, remplacer, anonymiser, inventer d’autres visages, ou morpher vers quelqu’un d’autre.
+- Si hasPeople=false : aucune personne, aucun visage, aucune silhouette humaine. Décor / papier / floraux / motifs uniquement.
+- N’ajoute jamais de « couple inventé », mannequins, stock faces, ni enfants fictifs.
+
+Règles layout :
+- Palette et style des éléments = couleurs réelles extraites des images + brief.
 - 6 à 12 éléments max, disposition empilée (flow), centrée.
 - Variables {{title}}, {{date}}, {{location}}, {{firstName}} dans les textes quand pertinent.
 - Exactement un élément "rsvp-block" avec rsvpPlacement "outside" et text "Confirmer votre présence".
-- backgroundPrompt OBLIGATOIRE : nouvelle image verticale d'invitation, print-ready, NO readable text, no names, no dates, no logos, no watermarks. Inclure couleurs/motifs des refs + instructions du brief.
+- Image print-ready verticale, SANS texte lisible, noms, dates, logos, watermarks (l’éditeur ajoute le texte).
 - Ne mets pas de markdown. JSON uniquement.`;
 
 function asHex(value: unknown, fallback: string): string {
@@ -160,7 +179,11 @@ type VisualAnalysis = {
   style: string;
   motifs: string;
   composition: string;
+  hasPeople: boolean;
+  peopleFaces: string;
   briefInterpretation: string;
+  briefMustKeep: string[];
+  briefMustChange: string[];
 };
 
 type VisionResult = {
@@ -170,45 +193,89 @@ type VisionResult = {
   visualAnalysis: VisualAnalysis | null;
 };
 
+function parseStringList(raw: unknown, max = 8): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((item) => item.trim().slice(0, 160))
+    .slice(0, max);
+}
+
 function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const v = raw as Record<string, unknown>;
   const colors = Array.isArray(v.colors)
     ? v.colors.filter((c): c is string => typeof c === 'string').slice(0, 8)
     : [];
+  const peopleFaces =
+    typeof v.peopleFaces === 'string' ? v.peopleFaces.slice(0, 400) : '';
+  const hasPeople =
+    v.hasPeople === true ||
+    (typeof peopleFaces === 'string' &&
+      peopleFaces.length > 0 &&
+      !/^none$/i.test(peopleFaces.trim()));
   return {
     colors,
     style: typeof v.style === 'string' ? v.style.slice(0, 300) : '',
     motifs: typeof v.motifs === 'string' ? v.motifs.slice(0, 300) : '',
     composition: typeof v.composition === 'string' ? v.composition.slice(0, 300) : '',
+    hasPeople,
+    peopleFaces: hasPeople ? peopleFaces : 'none',
     briefInterpretation:
-      typeof v.briefInterpretation === 'string' ? v.briefInterpretation.slice(0, 400) : '',
+      typeof v.briefInterpretation === 'string' ? v.briefInterpretation.slice(0, 500) : '',
+    briefMustKeep: parseStringList(v.briefMustKeep),
+    briefMustChange: parseStringList(v.briefMustChange),
   };
 }
+
+const FACE_POLICY_NO_PEOPLE =
+  'FACE POLICY: No people, no faces, no human silhouettes, no invented couples or stock models. Decorative invitation artwork only.';
+
+const FACE_POLICY_KEEP_PEOPLE =
+  'FACE POLICY: Real people appear in the reference photos. Preserve the same faces and identities — do NOT remove, replace, blur, anonymize, or invent different faces. Keep likeness faithful; only restyle clothing/background/décor per the brief.';
 
 function buildImagePrompt(
   userPrompt: string,
   backgroundPrompt: string,
   analysis: VisualAnalysis | null,
 ): string {
+  const brief = userPrompt.trim().slice(0, 900);
+  const hasPeople = Boolean(analysis?.hasPeople);
   const parts = [
-    'Create a NEW vertical print-ready invitation card artwork (portrait).',
-    'Follow the user brief exactly for mood, style changes, and decorative intent.',
-    `User brief: ${userPrompt.slice(0, 600)}`,
-    `Design prompt: ${backgroundPrompt.slice(0, 900)}`,
+    'Create ONE vertical print-ready invitation card artwork (portrait orientation).',
+    'PRIMARY DIRECTIVE — USER BRIEF (follow faithfully, do not ignore):',
+    brief,
+    'Apply every stylistic request in the brief (mood, colors, florals, luxury level, layout feel).',
   ];
+
+  if (analysis?.briefInterpretation) {
+    parts.push(`Brief interpretation: ${analysis.briefInterpretation}`);
+  }
+  if (analysis?.briefMustKeep?.length) {
+    parts.push(`Must keep: ${analysis.briefMustKeep.join('; ')}`);
+  }
+  if (analysis?.briefMustChange?.length) {
+    parts.push(`Must change per brief: ${analysis.briefMustChange.join('; ')}`);
+  }
+
+  parts.push(`Design execution notes: ${backgroundPrompt.slice(0, 1000)}`);
+
   if (analysis) {
     if (analysis.style) parts.push(`Reference style: ${analysis.style}`);
     if (analysis.motifs) parts.push(`Reference motifs/textures: ${analysis.motifs}`);
     if (analysis.composition) parts.push(`Reference composition: ${analysis.composition}`);
-    if (analysis.colors.length) parts.push(`Keep a palette close to: ${analysis.colors.join(', ')}`);
-    if (analysis.briefInterpretation) parts.push(`Brief vs refs: ${analysis.briefInterpretation}`);
+    if (analysis.colors.length) parts.push(`Palette close to: ${analysis.colors.join(', ')}`);
+    if (hasPeople && analysis.peopleFaces && analysis.peopleFaces !== 'none') {
+      parts.push(`People in references (preserve): ${analysis.peopleFaces}`);
+    }
   }
+
+  parts.push(hasPeople ? FACE_POLICY_KEEP_PEOPLE : FACE_POLICY_NO_PEOPLE);
   parts.push(
-    'Inspired by the reference photo(s), not a copy. Soft paper / luxury print look.',
-    'CRITICAL: no readable text, no letters, no names, no dates, no logos, no watermarks.',
+    'When brief and references conflict on décor/style, prefer the brief; when they conflict on people/faces, prefer the references.',
+    'No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).',
   );
-  return parts.join(' ').slice(0, 3800);
+  return parts.join('\n').slice(0, 4000);
 }
 
 async function visionStructure(
@@ -221,7 +288,17 @@ async function visionStructure(
   const userContent: Array<Record<string, unknown>> = [
     {
       type: 'text',
-      text: `Brief utilisateur (français) — à respecter pour la nouvelle image et le layout :\n${prompt.slice(0, 1500)}\n\n1) Analyse les images.\n2) Interprète le brief par rapport aux images.\n3) Produis le JSON (structure éditeur + backgroundPrompt pour créer une NOUVELLE image).`,
+      text: `BRIEF UTILISATEUR (priorité #1 — à appliquer fidèlement) :
+"""
+${prompt.slice(0, 1500)}
+"""
+
+Tâches :
+1) Analyse les images (style, couleurs, motifs, composition, présence de personnes/visages).
+2) Décompose le brief : ce qu’il demande de garder vs changer.
+3) Renseigne hasPeople / peopleFaces avec précision (ne invente rien).
+4) Produis le JSON (structure éditeur + backgroundPrompt).
+5) Dans backgroundPrompt : commence par "USER BRIEF:" + paraphrase anglaise du brief, puis FACE POLICY explicite.`,
     },
     ...imageUrls.slice(0, 4).map((url) => ({
       type: 'image_url',
@@ -259,10 +336,13 @@ async function visionStructure(
     const raw = payload.choices?.[0]?.message?.content || '{}';
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const visualAnalysis = parseVisualAnalysis(parsed.visualAnalysis);
+    const faceClause = visualAnalysis?.hasPeople
+      ? FACE_POLICY_KEEP_PEOPLE
+      : FACE_POLICY_NO_PEOPLE;
     const backgroundPrompt =
       typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()
-        ? parsed.backgroundPrompt.trim().slice(0, 1200)
-        : `Elegant luxury invitation background inspired by the reference photos, following this brief: ${prompt.slice(0, 280)}. Soft paper texture, no text.`;
+        ? parsed.backgroundPrompt.trim().slice(0, 1400)
+        : `USER BRIEF: ${prompt.slice(0, 400)}. Elegant invitation artwork inspired by the reference photos. ${faceClause} Soft print look, no readable text.`;
     return {
       global: parsed.global,
       elements: parsed.elements,
@@ -380,9 +460,11 @@ async function generateImageWithGpt56Luna(
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
+  options?: { hasPeople?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   const model = responsesModel();
   const hasRefs = referenceUrls.length > 0;
+  const hasPeople = Boolean(options?.hasPeople);
 
   // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
   const refDataUrls: string[] = [];
@@ -394,12 +476,23 @@ async function generateImageWithGpt56Luna(
     }
   }
 
+  const faceBlock = hasPeople ? FACE_POLICY_KEEP_PEOPLE : FACE_POLICY_NO_PEOPLE;
+  // Édition prioritaire si des personnes sont présentes (préserve mieux les visages).
+  const imageAction = refDataUrls.length
+    ? hasPeople
+      ? 'edit'
+      : 'auto'
+    : 'generate';
+
   const content: Array<Record<string, unknown>> = [
     {
       type: 'input_text',
       text: `${imagePrompt}
 
-Create ONE new vertical invitation artwork. Follow the brief and the reference photos. No readable text, names, dates, logos or watermarks.`,
+OUTPUT RULES:
+- Produce ONE vertical invitation artwork that applies the USER BRIEF above as the primary creative driver.
+- ${faceBlock}
+- Do not add readable text, names, dates, logos or watermarks.`,
     },
     ...refDataUrls.map((image_url) => ({
       type: 'input_image',
@@ -414,7 +507,7 @@ Create ONE new vertical invitation artwork. Follow the brief and the reference p
     tools: [
       {
         type: 'image_generation',
-        action: refDataUrls.length ? 'auto' : 'generate',
+        action: imageAction,
         size: '1024x1536',
         quality: process.env.OPENAI_IMAGE_QUALITY || 'medium',
       },
@@ -439,12 +532,37 @@ Create ONE new vertical invitation artwork. Follow the brief and the reference p
       output?: Array<{ type?: string; result?: string | null }>;
     };
 
-    // Si la taille portrait n’est pas supportée, réessayer en auto.
+    // Si la taille portrait n’est pas supportée, réessayer en auto size.
     if (!response.ok && /size/i.test(String(payload.error?.message || ''))) {
       const retryTools = [
         {
           type: 'image_generation',
-          action: refDataUrls.length ? 'auto' : 'generate',
+          action: imageAction,
+          size: 'auto',
+          quality: process.env.OPENAI_IMAGE_QUALITY || 'medium',
+        },
+      ];
+      response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...body, tools: retryTools }),
+      });
+      payload = (await response.json().catch(() => ({}))) as typeof payload;
+    }
+
+    // Si action=edit est refusée, retenter en auto (en gardant la FACE POLICY dans le prompt).
+    if (!response.ok && imageAction === 'edit') {
+      console.warn(
+        '[invitationTemplateAi] edit action rejected, retrying auto:',
+        payload.error?.message,
+      );
+      const retryTools = [
+        {
+          type: 'image_generation',
+          action: 'auto',
           size: 'auto',
           quality: process.env.OPENAI_IMAGE_QUALITY || 'medium',
         },
@@ -469,7 +587,7 @@ Create ONE new vertical invitation artwork. Follow the brief and the reference p
       fail(502, `${model} n’a renvoyé aucune image (outil image_generation).`);
     }
     const url = await uploadGeneratedB64(b64, tenantId);
-    return { url, mode: hasRefs ? 'edit' : 'generate' };
+    return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate' };
   } catch (error) {
     if ((error as HttpError)?.status) throw error;
     fail(502, (error as Error)?.message || `Impossible de générer l’image avec ${model}.`);
@@ -611,9 +729,10 @@ async function createNewInvitationImage(
   imageUrls: string[],
   imagePrompt: string,
   tenantId: string | null | undefined,
+  options?: { hasPeople?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   try {
-    return await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId);
+    return await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
   } catch (lunaErr) {
     console.warn(
       '[invitationTemplateAi] gpt-5.6-luna image failed, falling back:',
@@ -684,7 +803,13 @@ export async function composeInvitationTemplateAi(input: {
   const wantBg = input.generateBackground !== false;
   if (wantBg) {
     try {
-      const created = await createNewInvitationImage(key, imageUrls, imagePrompt, input.tenantId);
+      const created = await createNewInvitationImage(
+        key,
+        imageUrls,
+        imagePrompt,
+        input.tenantId,
+        { hasPeople: Boolean(structured.visualAnalysis?.hasPeople) },
+      );
       bgImageUrl = created.url;
       imageMode = created.mode;
     } catch (err) {

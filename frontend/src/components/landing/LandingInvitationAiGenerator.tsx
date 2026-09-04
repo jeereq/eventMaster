@@ -161,8 +161,8 @@ export default function LandingInvitationAiGenerator({
             Créez votre modèle d’invitation avec l’IA
           </h2>
           <p className="text-xs sm:text-sm text-muted leading-relaxed">
-            Déposez 1 à 4 images d’inspiration, décrivez le style : l’IA analyse et crée une nouvelle
-            invitation éditable. 1 jeton (même crédit que la simulation budget).
+            Déposez 1 à 4 images, décrivez le style : le brief guide la génération. Les visages déjà
+            présents sont conservés ; aucun visage n’est inventé. 1 jeton IA.
           </p>
         </div>
         <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted shrink-0 px-2.5 py-1.5 rounded-full bg-surface border border-border">
