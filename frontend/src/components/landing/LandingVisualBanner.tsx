@@ -143,7 +143,7 @@ export default function LandingVisualBanner() {
             <button
               type="button"
               onClick={() => setActiveCategory('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer touch-manipulation ${
+              className={`px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation ${
                 activeCategory === 'all'
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-surface-muted border border-border text-muted hover:text-foreground'
@@ -156,7 +156,7 @@ export default function LandingVisualBanner() {
                 key={item.id}
                 type="button"
                 onClick={() => setActiveCategory(item.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer touch-manipulation ${
+                className={`px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation ${
                   activeCategory === item.id
                     ? 'bg-primary text-white shadow-xs'
                     : 'bg-surface-muted border border-border text-muted hover:text-foreground'
@@ -175,7 +175,7 @@ export default function LandingVisualBanner() {
             return (
               <article
                 key={item.id}
-                className="group relative rounded-3xl border border-border bg-surface-muted/60 overflow-hidden shadow-md hover:shadow-xl hover:border-primary/50 transition-all duration-300 flex flex-col justify-between"
+                className="group relative rounded-[var(--radius-card)] border border-border bg-surface-muted/60 overflow-hidden shadow-md hover:shadow-xl hover:border-primary/50 transition-all duration-300 flex flex-col justify-between"
               >
                 {/* Photo avec ratio cinématique et overlay subtil */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
@@ -247,9 +247,9 @@ export default function LandingVisualBanner() {
         </div>
 
         {/* Bandeau de réassurance visuelle */}
-        <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-primary/15 via-surface to-primary/10 border border-primary/25 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/15 via-surface to-primary/10 border border-primary/25 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-[var(--radius-button)] bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>

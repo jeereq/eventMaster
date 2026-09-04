@@ -15,7 +15,7 @@ export default function Landing3DTeaserBand() {
   return (
     <section className="py-10 sm:py-14 border-t border-border bg-gradient-to-b from-surface/90 to-surface-muted/50">
       <div className="page-container relative z-10">
-        <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-slate-950 text-white p-6 sm:p-10 relative overflow-hidden shadow-xl">
+        <div className="rounded-[var(--radius-card)] border border-primary/25 bg-slate-950 text-white p-6 sm:p-10 relative overflow-hidden shadow-xl">
           {/* Éléments de fond décoratifs */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />

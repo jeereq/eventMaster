@@ -92,7 +92,7 @@ function GridCard({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className="group relative flex flex-col bg-surface border border-border/80 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300"
+      className="group relative flex flex-col bg-surface border border-border/80 rounded-[var(--radius-card)] overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300"
     >
       {/* Photo avec mise en valeur maximale */}
       <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>

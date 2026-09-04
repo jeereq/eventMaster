@@ -379,7 +379,7 @@ export default function CatalogueFilterBar({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)] overflow-hidden">
+    <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)] overflow-hidden">
       {topSlot ? (
         <div className="pb-2 border-b border-border/70">
           {topSlot}

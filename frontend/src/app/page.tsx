@@ -45,7 +45,7 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased pb-16 md:pb-0">
       <SiteHeader variant="landing" />
 
-      {/* ─── HERO IMMERSIF & PERCUTANT SANS ENCOMBREMENT ─── */}
+      {/* ─── HERO : ORIENTATION PAR PROJET, AVEC IMAGES ─── */}
       <LandingHeroStreamlined />
 
       {/* ─── GALERIE D'INSPIRATION & RÉALISATIONS EN IMAGES ─── */}

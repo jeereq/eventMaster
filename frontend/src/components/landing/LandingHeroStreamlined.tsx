@@ -1,161 +1,95 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Sparkles,
   ArrowRight,
-  Box,
-  Building2,
-  FileText,
-  Rss,
+  Check,
+  CheckCircle2,
   LayoutDashboard,
   ShieldCheck,
   Smartphone,
-  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
-interface QuickCard {
-  id: string;
-  badge: string;
-  title: string;
-  subtitle: string;
-  mobileSubtitle: string;
-  imageUrl: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const QUICK_CARDS: QuickCard[] = [
-  {
-    id: 'salles-3d',
-    badge: 'Immersion 3D',
-    title: 'Salles & Espaces',
-    subtitle: 'Visite 3D et agencement au millimètre',
-    mobileSubtitle: 'Plans & visite 3D',
-    imageUrl: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=700&q=80',
-    href: '/plans-3d',
-    icon: Box,
-  },
-  {
-    id: 'prestataires',
-    badge: 'Pros vérifiés',
-    title: 'Prestataires',
-    subtitle: 'Traiteurs, DJ, photographes et déco',
-    mobileSubtitle: 'Traiteurs, déco, DJ',
-    imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=700&q=80',
-    href: '/marketplace/prestataires',
-    icon: Sparkles,
-  },
-  {
-    id: 'modeles',
-    badge: 'WhatsApp & QR',
-    title: 'Faire-part & RSVP',
-    subtitle: 'Modèles chics et suivi en direct',
-    mobileSubtitle: 'Modèles & scan QR',
-    imageUrl: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=700&q=80',
-    href: '/modeles',
-    icon: FileText,
-  },
-  {
-    id: 'publications',
-    badge: 'En direct',
-    title: 'Publications',
-    subtitle: 'Réalisations et coulisses récentes',
-    mobileSubtitle: 'Photos & stories',
-    imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=700&q=80',
-    href: '/activite',
-    icon: Rss,
-  },
-];
+import {
+  LANDING_PROFILES,
+  getLandingProfile,
+  type LandingProfileId,
+} from '@/lib/landingProfiles';
+import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
 
 export default function LandingHeroStreamlined() {
   const { user } = useAuth();
+  const isLoggedIn = Boolean(user);
+  const [selectedId, setSelectedId] = useState<LandingProfileId>('personal');
+  const profile = getLandingProfile(selectedId);
+
+  const ctaHref = (() => {
+    if (!isLoggedIn) return profile.cta.href;
+    switch (profile.id) {
+      case 'personal':
+      case 'pro':
+        return '/dashboard/events';
+      case 'seeker':
+        return '/marketplace';
+      case 'vendor':
+        return '/dashboard/catalogue';
+      default:
+        return '/dashboard';
+    }
+  })();
+
+  const ctaLabel = (() => {
+    if (!isLoggedIn) return profile.cta.label;
+    switch (profile.id) {
+      case 'personal':
+        return 'Accéder à mes événements';
+      case 'pro':
+        return 'Gérer ma billetterie';
+      case 'seeker':
+        return 'Explorer le catalogue';
+      case 'vendor':
+        return 'Ouvrir mon catalogue';
+      default:
+        return 'Ouvrir mon espace';
+    }
+  })();
 
   return (
     <section className="relative em-landing-hero overflow-hidden pt-6 pb-10 sm:pt-10 sm:pb-16 lg:pt-14 lg:pb-20">
-      <div className="page-container relative z-10 space-y-6 sm:space-y-10">
-        {/* ─── En-tête Hero compact et percutant ─── */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 animate-slide-up">
-          {/* Badge festif minimaliste */}
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] sm:text-xs font-semibold backdrop-blur-sm shadow-2xs">
-            <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span>EventMaster RDC</span>
-            <span className="text-primary/40">·</span>
-            <span className="text-foreground/90 font-medium">L'art de célébrer</span>
-          </div>
-
-          {/* Titre qui marque sans écraser */}
+      <div className="page-container relative z-10 space-y-7 sm:space-y-10">
+        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
           <h1 className="font-display text-2xl min-[400px]:text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-foreground leading-[1.12]">
             Votre événement d’exception,{' '}
             <br className="hidden sm:inline" />
             <span className="em-glow-text">parfaitement orchestré.</span>
           </h1>
 
-          {/* Description : ultra-courte sur mobile, aérée sur desktop */}
           <p className="text-xs sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
             <span className="hidden sm:inline">
-              Salles prestigieuses, prestataires d’exception, plans de table 3D et invitations WhatsApp réunis au même endroit.
+              Salles prestigieuses, prestataires d’exception, plans de table 3D et invitations WhatsApp — choisissez d’abord votre projet.
             </span>
             <span className="inline sm:hidden">
-              Salles, prestataires, plans 3D et invitations WhatsApp réunis dans votre navigateur.
+              Choisissez votre projet : salles, prestataires, plans 3D et invitations WhatsApp.
             </span>
           </p>
 
-          {/* Boutons d'action rapides */}
-          <div className="pt-1 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5">
-            {user ? (
-              <Link href="/dashboard">
-                <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Ouvrir mon tableau de bord
-                </Button>
-              </Link>
-            ) : (
-              <Link href="/marketplace">
-                <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Explorer le marketplace
-                </Button>
-              </Link>
-            )}
-
-            <Link href="/plans-3d">
-              <Button
-                size="lg"
-                variant="secondary"
-                leftIcon={<Box className="w-4 h-4 text-primary" />}
-                className="bg-surface/80 hover:bg-surface border-border shadow-xs"
-              >
-                <span>Plans 2D / 3D</span>
-              </Button>
-            </Link>
-
-            <Link href="/modeles" className="hidden sm:inline-flex">
-              <Button
-                size="lg"
-                variant="ghost"
-                leftIcon={<FileText className="w-4 h-4 text-muted" />}
-                className="text-muted hover:text-foreground"
-              >
-                <span>Faire-part & RSVP</span>
-              </Button>
-            </Link>
-          </div>
-
-          {/* Raccourci utilisateur connecté si présent */}
-          {user && (
+          {user ? (
             <div className="pt-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-xs text-primary font-semibold">
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-xs text-primary font-semibold hover:bg-primary/15 transition"
+              >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Connecté en tant que {user.name || user.email}</span>
-              </div>
+                <span>Connecté · {user.name || user.email}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          )}
+          ) : null}
 
-          {/* Réassurance discrète en 1 ligne */}
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
+          <div className="pt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span>Kinshasa · Lubumbashi · Goma</span>
@@ -173,53 +107,122 @@ export default function LandingHeroStreamlined() {
           </div>
         </div>
 
-        {/* ─── Vitrine Visuelle des 4 Univers (Showcase qui marque sans texte lourd) ─── */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-1 sm:pt-3">
-          {QUICK_CARDS.map((card) => {
-            const Icon = card.icon;
+        <div id="profils" className="space-y-4 sm:space-y-5">
+          <div className="text-center sm:text-left max-w-2xl mx-auto sm:mx-0 space-y-1">
+            <h2 className="font-display text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+              Quel est votre projet ?
+            </h2>
+            <p className="text-xs sm:text-sm text-muted">
+              Sélectionnez votre besoin : les outils et actions s’adaptent immédiatement.
+            </p>
+          </div>
 
-            return (
-              <Link
-                key={card.id}
-                href={card.href}
-                className="group relative rounded-xl sm:rounded-2xl overflow-hidden border border-border/80 bg-slate-950 aspect-[4/3] sm:aspect-[4/3] shadow-sm hover:shadow-xl hover:border-primary/50 transition-all duration-300 flex flex-col justify-between p-2.5 sm:p-4 text-white"
+          <ul
+            className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4"
+            role="list"
+          >
+            {LANDING_PROFILES.map((item) => {
+              const Icon = item.icon;
+              const selected = selectedId === item.id;
+
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={`Choisir : ${item.label}`}
+                    onClick={() => setSelectedId(item.id)}
+                    className={cn(
+                      'group relative w-full text-left overflow-hidden rounded-[var(--radius-card)] border aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] flex flex-col justify-between p-2.5 sm:p-3.5 text-white transition-all duration-300 cursor-pointer touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                      selected
+                        ? 'border-primary ring-2 ring-primary/40 shadow-xl shadow-primary/20'
+                        : 'border-border/80 hover:border-primary/50 hover:shadow-lg',
+                    )}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      loading="eager"
+                      className={cn(
+                        'absolute inset-0 w-full h-full object-cover transition-all duration-500',
+                        selected
+                          ? 'opacity-80 scale-105'
+                          : 'opacity-55 group-hover:opacity-75 group-hover:scale-105',
+                      )}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-black/20 pointer-events-none" />
+
+                    <div className="relative z-10 flex items-start justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wide uppercase bg-black/55 backdrop-blur-md border border-white/20 text-white">
+                        <Icon className="w-3 h-3 text-primary" />
+                        <span className="truncate max-w-[9rem]">{item.eyebrow}</span>
+                      </span>
+                      <span
+                        className={cn(
+                          'w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition-colors',
+                          selected
+                            ? 'bg-primary border-primary text-white'
+                            : 'bg-white/15 border-white/25 text-white/70',
+                        )}
+                      >
+                        {selected ? <Check className="w-3 h-3 stroke-[3]" /> : null}
+                      </span>
+                    </div>
+
+                    <div className="relative z-10 space-y-0.5 sm:space-y-1">
+                      <h3
+                        className={cn(
+                          'text-xs sm:text-base font-bold tracking-tight leading-snug line-clamp-2',
+                          selected ? 'text-amber-200' : 'text-white',
+                        )}
+                      >
+                        {item.label}
+                      </h3>
+                      <p className="hidden sm:block text-[11px] sm:text-xs text-white/80 leading-relaxed line-clamp-2">
+                        {item.intro}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div
+          key={profile.id}
+          className="rounded-[var(--radius-card)] border border-primary/25 bg-surface/90 dark:bg-slate-900/90 p-4 sm:p-6 shadow-xl shadow-primary/5 space-y-5 animate-fade-in"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <p className="text-[11px] font-semibold text-primary">{profile.targetAudience}</p>
+              <h3 className="text-base sm:text-lg font-bold text-foreground leading-snug">
+                {profile.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-muted leading-relaxed max-w-2xl">
+                {profile.intro}
+              </p>
+            </div>
+            <Link href={ctaHref} className="w-full sm:w-auto shrink-0">
+              <Button
+                size="md"
+                variant="primary"
+                fullWidth
+                className="shadow-sm font-bold text-xs justify-center min-h-11 sm:min-w-[14rem]"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
               >
-                {/* Image de fond de haute qualité avec zoom fluide */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={card.imageUrl}
-                  alt={card.title}
-                  loading="eager"
-                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-75 group-hover:scale-105 transition-all duration-500"
-                />
+                {ctaLabel}
+              </Button>
+            </Link>
+          </div>
 
-                {/* Voile sombre pour lisibilité sans faille */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20 pointer-events-none" />
+          <div className="flex items-center gap-1.5 text-[11px] text-muted">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span>{profile.registerHint}</span>
+          </div>
 
-                {/* Badge supérieur */}
-                <div className="relative z-10 flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wide uppercase bg-black/55 backdrop-blur-md border border-white/20 text-white shadow-xs">
-                    <Icon className="w-3 h-3 text-primary" />
-                    <span>{card.badge}</span>
-                  </span>
-                  <div className="w-6 h-6 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center text-white/80 group-hover:text-white group-hover:bg-primary transition-colors">
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-
-                {/* Bas de carte : Titre et sous-titre allégé pour mobile */}
-                <div className="relative z-10 space-y-0.5">
-                  <h2 className="text-xs sm:text-base font-bold tracking-tight text-white group-hover:text-amber-300 transition-colors line-clamp-1">
-                    {card.title}
-                  </h2>
-                  <p className="text-[10px] sm:text-xs text-white/75 line-clamp-1">
-                    <span className="hidden sm:inline">{card.subtitle}</span>
-                    <span className="inline sm:hidden">{card.mobileSubtitle}</span>
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
+          <LandingHeroPreview profileId={profile.id} embedded />
         </div>
       </div>
     </section>

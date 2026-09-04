@@ -298,9 +298,9 @@ export default function LandingVitrineSection() {
         </div>
 
         {/* Bannière d'appel au simulateur de pack IA */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-surface to-primary/5 border border-primary/25 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-surface to-primary/5 border border-primary/25 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/15 text-primary flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -312,7 +312,7 @@ export default function LandingVitrineSection() {
           </div>
           <a
             href="#simulateur-ia"
-            className="shrink-0 px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs flex items-center gap-1.5 w-full sm:w-auto justify-center"
+            className="shrink-0 px-3.5 py-2 rounded-[var(--radius-button)] bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs flex items-center gap-1.5 w-full sm:w-auto justify-center"
           >
             <span>Tester la simulation IA</span>
             <ArrowRight className="w-3.5 h-3.5" />

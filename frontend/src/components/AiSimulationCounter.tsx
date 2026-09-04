@@ -61,7 +61,7 @@ export default function AiSimulationCounter({
   return (
     <div
       className={cn(
-        'rounded-2xl border p-3 sm:p-3.5 animate-fade-in',
+        'rounded-[var(--radius-card)] border p-3 sm:p-3.5 animate-fade-in',
         empty
           ? 'border-amber-500/30 bg-amber-500/8'
           : 'border-primary/25 bg-primary/8',

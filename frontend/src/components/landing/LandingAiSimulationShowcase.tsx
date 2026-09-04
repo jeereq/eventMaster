@@ -193,12 +193,12 @@ export default function LandingAiSimulationShowcase() {
             </span>
           </p>
 
-          <div className="inline-flex items-center p-1 rounded-2xl bg-surface border border-border shadow-xs mt-2">
+          <div className="inline-flex items-center p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2">
             <button
               type="button"
               onClick={() => setViewMode('presets')}
               className={cn(
-                'px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer touch-manipulation',
+                'px-4 py-2 rounded-[var(--radius-button)] text-xs font-bold transition cursor-pointer touch-manipulation',
                 viewMode === 'presets'
                   ? 'bg-primary text-white shadow-xs'
                   : 'text-muted hover:text-foreground',
@@ -210,7 +210,7 @@ export default function LandingAiSimulationShowcase() {
               type="button"
               onClick={() => setViewMode('live')}
               className={cn(
-                'px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer touch-manipulation',
+                'px-4 py-2 rounded-[var(--radius-button)] text-xs font-bold transition flex items-center gap-1.5 cursor-pointer touch-manipulation',
                 viewMode === 'live'
                   ? 'bg-primary text-white shadow-xs'
                   : 'text-muted hover:text-foreground',
@@ -228,7 +228,7 @@ export default function LandingAiSimulationShowcase() {
         </div>
 
         {viewMode === 'presets' && (
-          <div className="bg-surface/90 dark:bg-slate-900/90 border border-primary/25 rounded-xl sm:rounded-2xl p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
+          <div className="bg-surface/90 dark:bg-slate-900/90 border border-primary/25 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
               <p className="text-xs font-bold text-foreground">
                 Choisissez un projet type, puis générez de vrais packs catalogue.
@@ -242,7 +242,7 @@ export default function LandingAiSimulationShowcase() {
                       type="button"
                       onClick={() => setSelectedScenarioId(scenario.id)}
                       className={cn(
-                        'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink',
+                        'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink',
                         isSelected
                           ? 'bg-primary text-white shadow-xs shadow-primary/30 ring-2 ring-primary/20'
                           : 'bg-surface-muted border border-border text-muted hover:text-foreground hover:bg-surface',
@@ -255,7 +255,7 @@ export default function LandingAiSimulationShowcase() {
               </div>
             </div>
 
-            <div className="relative rounded-2xl overflow-hidden border border-border shadow-sm">
+            <div className="relative rounded-[var(--radius-card)] overflow-hidden border border-border shadow-sm">
               <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-slate-900">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -315,7 +315,7 @@ export default function LandingAiSimulationShowcase() {
               </div>
             </div>
 
-            <p className="text-xs text-muted leading-relaxed bg-surface-muted/60 border border-border rounded-2xl p-3.5">
+            <p className="text-xs text-muted leading-relaxed bg-surface-muted/60 border border-border rounded-[var(--radius-card)] p-3.5">
               {activeScenario.prompt}
             </p>
 
@@ -347,7 +347,7 @@ export default function LandingAiSimulationShowcase() {
 
         <div
           className={cn(
-            'bg-surface/90 dark:bg-slate-900/90 border-2 border-primary/40 rounded-xl sm:rounded-2xl p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-4 max-w-5xl mx-auto',
+            'bg-surface/90 dark:bg-slate-900/90 border-2 border-primary/40 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-4 max-w-5xl mx-auto',
             viewMode === 'live' ? 'animate-fade-in' : 'hidden',
           )}
           hidden={viewMode !== 'live'}
@@ -363,8 +363,8 @@ export default function LandingAiSimulationShowcase() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto pt-4">
-          <div className="p-5 rounded-2xl border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+          <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
+            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center">
               <Heart className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Pour les Particuliers & Mariés</h3>
@@ -373,8 +373,8 @@ export default function LandingAiSimulationShowcase() {
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+          <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
+            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <Briefcase className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Pour les Organisateurs & Entreprises</h3>
@@ -383,8 +383,8 @@ export default function LandingAiSimulationShowcase() {
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+          <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
+            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
               <Building2 className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Pour les Prestataires & Salles</h3>

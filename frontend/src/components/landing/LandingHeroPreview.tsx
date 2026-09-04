@@ -110,7 +110,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     {
       title: 'Simulateur IA & Formules Budget',
       badge: '4 simulations',
-      description: 'Indiquez votre budget en Francs Congolais : l’IA compose 3 packs complets avec salle et prestataires certifiés (10 essais gratuits sans compte).',
+      description: 'Indiquez votre budget : l’IA compose 3 packs complets avec salle et prestataires certifiés (4 simulations gratuites sans compte).',
       icon: Wand2,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
       ctaLabel: 'Lancer le simulateur IA',
