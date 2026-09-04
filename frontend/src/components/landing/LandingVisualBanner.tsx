@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
+import LandingMedia from '@/components/landing/LandingMedia';
 
 interface GalleryItem {
   id: string;
@@ -111,7 +112,7 @@ export default function LandingVisualBanner() {
     <section
       ref={revealRef}
       id="galerie-inspiration"
-      className="em-reveal py-14 sm:py-20 border-t border-border bg-surface relative overflow-hidden em-landing-section-glow"
+      className="em-reveal em-landing-defer py-14 sm:py-20 border-t border-border bg-surface relative overflow-hidden em-landing-section-glow"
     >
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
         {/* En-tête de section */}
@@ -171,15 +172,11 @@ export default function LandingVisualBanner() {
               >
                 {/* Photo avec ratio cinématique et overlay subtil */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-stage">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <LandingMedia
                     src={item.imageUrl}
                     alt={item.title}
-                    width={900}
-                    height={563}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 

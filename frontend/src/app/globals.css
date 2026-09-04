@@ -365,6 +365,11 @@ html[data-mood="celebrate"] .font-display {
   overflow: hidden;
 }
 
+.em-landing-defer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 720px;
+}
+
 .em-landing-section-glow::before,
 .em-landing-section-glow::after,
 .em-landing-section-glow-alt::before,

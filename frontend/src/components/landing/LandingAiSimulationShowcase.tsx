@@ -19,6 +19,7 @@ import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
+import LandingMedia from '@/components/landing/LandingMedia';
 import type { ListingEventTypeId } from '@/lib/listingDetails';
 import {
   AI_TOKEN_PACK_SIZE,
@@ -152,7 +153,7 @@ export default function LandingAiSimulationShowcase() {
     <section
       ref={revealRef}
       id="simulateur-ia"
-      className="em-reveal py-14 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
+      className="em-reveal em-landing-defer py-14 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
     >
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] sm:w-[600px] sm:h-[600px] bg-primary/10 rounded-full blur-2xl sm:blur-3xl pointer-events-none -z-10" />
 
@@ -254,15 +255,11 @@ export default function LandingAiSimulationShowcase() {
 
             <div className="relative rounded-[var(--radius-card)] overflow-hidden border border-border shadow-sm">
               <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-stage">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <LandingMedia
                   src={activeScenario.imageUrl}
                   alt={activeScenario.name}
-                  width={1200}
-                  height={400}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover object-center"
+                  sizes="(max-width: 768px) 100vw, 64rem"
+                  className="object-center"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
                 <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">

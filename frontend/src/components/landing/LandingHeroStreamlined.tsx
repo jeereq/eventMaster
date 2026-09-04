@@ -19,6 +19,7 @@ import {
   type LandingProfileId,
 } from '@/lib/landingProfiles';
 import LandingHeroPreview from '@/components/landing/LandingHeroPreview';
+import LandingMedia from '@/components/landing/LandingMedia';
 
 export default function LandingHeroStreamlined() {
   const { user } = useAuth();
@@ -123,7 +124,7 @@ export default function LandingHeroStreamlined() {
             className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4"
             role="list"
           >
-            {LANDING_PROFILES.map((item) => {
+            {LANDING_PROFILES.map((item, index) => {
               const Icon = item.icon;
               const selected = selectedId === item.id;
 
@@ -142,16 +143,13 @@ export default function LandingHeroStreamlined() {
                         : 'border-border/80 hover:border-primary/50 hover:shadow-lg',
                     )}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <LandingMedia
                       src={item.imageUrl}
                       alt=""
-                      width={900}
-                      height={1125}
-                      loading="eager"
-                      decoding="async"
+                      priority={index === 0}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
                       className={cn(
-                        'absolute inset-0 w-full h-full object-cover transition-all duration-500',
+                        'transition-all duration-500',
                         selected
                           ? 'opacity-80 scale-105'
                           : 'opacity-55 group-hover:opacity-75 group-hover:scale-105',

@@ -271,7 +271,7 @@ export default function LandingVitrineSection() {
   );
 
   return (
-    <section ref={revealRef} className="em-reveal py-14 sm:py-16 border-t border-border bg-surface/80 dark:bg-background/80 em-landing-section-glow">
+    <section ref={revealRef} className="em-reveal em-landing-defer py-14 sm:py-16 border-t border-border bg-surface/80 dark:bg-background/80 em-landing-section-glow">
       <div id="catalogue" className="scroll-mt-16" />
       <div id="salles" className="scroll-mt-16" />
       <div id="prestataires" className="scroll-mt-16" />

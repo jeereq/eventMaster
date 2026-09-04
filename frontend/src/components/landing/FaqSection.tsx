@@ -49,7 +49,7 @@ export default function FaqSection({
   }));
 
   return (
-    <section id={id} className={cn('py-16 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
+    <section id={id} className={cn('em-landing-defer py-16 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
       <div className="page-container relative z-10">
         <div className="max-w-2xl mb-8 space-y-2.5">
           <span className="em-festive-chip">

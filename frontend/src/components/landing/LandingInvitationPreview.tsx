@@ -3,6 +3,7 @@
 import React from 'react';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { getTemplateBackgroundStyle } from '@/lib/templateBackgroundStyle';
+import { useHeadStylesheet } from '@/lib/headStylesheet';
 
 const LANDING_PREVIEW_FONTS =
  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&display=swap';
@@ -235,6 +236,7 @@ export default function LandingInvitationPreview({
  variant,
  className = '',
 }: LandingInvitationPreviewProps) {
+ useHeadStylesheet(LANDING_PREVIEW_FONTS, 'em-landing-preview-fonts');
  const mode = variant || (compact ? 'compact' : 'default');
  const isCompact = mode === 'compact' || mode === 'hero';
  const isHero = mode === 'hero';

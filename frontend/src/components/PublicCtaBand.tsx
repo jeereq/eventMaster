@@ -22,7 +22,7 @@ export default function PublicCtaBand({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden py-16 sm:py-20 em-stage border-t border-primary/25">
+    <section className="em-landing-defer relative overflow-hidden py-16 sm:py-20 em-stage border-t border-primary/25">
       <div
         className="absolute inset-0 bg-radial-[at_50%_20%] from-primary/35 via-transparent to-transparent pointer-events-none"
         aria-hidden
