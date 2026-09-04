@@ -137,7 +137,15 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
 };
 
-export const PLATFORM_CITY_CATALOG = ['Kinshasa', 'Lubumbashi', 'Goma'] as const;
+export const PLATFORM_CITY_CATALOG = [
+  'Kinshasa',
+  'Lubumbashi',
+  'Goma',
+  'Kisangani',
+  'Bukavu',
+  'Matadi',
+  'Kolwezi',
+] as const;
 
 export function sanitizeEnabledCities(value: unknown): string[] {
   const allowed = new Set<string>(PLATFORM_CITY_CATALOG);

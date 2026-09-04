@@ -51,6 +51,7 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
 
     const [
       pendingRequestsCount,
+      pendingRequests,
       licensesExpiringCount,
       licensesExpiring,
       unpaidInvoices,
@@ -61,6 +62,14 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
       saasPayoutsDue,
     ] = await Promise.all([
       prisma.subscriptionRequest.count({ where: { status: 'PENDING' } }),
+      prisma.subscriptionRequest.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          tenant: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 20,
+      }),
       prisma.tenant.count({ where: licenseExpiringWhere }),
       prisma.tenant.findMany({
         where: licenseExpiringWhere,
@@ -102,6 +111,16 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
         saasPayoutsDue: saasPayoutsDue.count,
       },
       saasPayoutsDue,
+      pendingRequests: pendingRequests.map((req) => ({
+        id: req.id,
+        requestedPlan: req.requestedPlan,
+        durationDays: req.durationDays,
+        proofOfPayment: req.proofOfPayment,
+        baseAmount: req.baseAmount,
+        paymentProvider: req.paymentProvider,
+        createdAt: req.createdAt,
+        tenant: req.tenant,
+      })),
       licensesExpiring: licensesExpiring.map((t) => tenantSummary(t)),
       unpaidInvoices: unpaidInvoices.map((inv) => formatInvoiceForApi(inv)),
       recentOrgs: recentOrgs.map((t) => tenantSummary(t)),
@@ -382,6 +401,8 @@ export async function getTenantOps(req: AuthenticatedRequest, res: Response) {
           status: true,
           createdAt: true,
           durationDays: true,
+          proofOfPayment: true,
+          baseAmount: true,
         },
       }),
       prisma.platformInvoice.findMany({

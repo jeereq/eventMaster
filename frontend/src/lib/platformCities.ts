@@ -1,10 +1,25 @@
 import { RDC_CITIES, type RdcCityName } from '@/lib/rdcCities';
 
-/** Villes que le SuperAdmin peut activer (affichage public). */
-export const PLATFORM_CITY_CATALOG = ['Kinshasa', 'Lubumbashi', 'Goma'] as const;
+/**
+ * Villes affichables sur le site public (mentions, hero, contact).
+ * Le catalogue géo / simulateur reste limité aux villes de rdcCities.
+ */
+export const PLATFORM_CITY_CATALOG = [
+  'Kinshasa',
+  'Lubumbashi',
+  'Goma',
+  'Kisangani',
+  'Bukavu',
+  'Matadi',
+  'Kolwezi',
+] as const;
+
 export type PlatformCityName = (typeof PLATFORM_CITY_CATALOG)[number];
 
 export const DEFAULT_ENABLED_CITIES: PlatformCityName[] = ['Kinshasa', 'Lubumbashi', 'Goma'];
+
+/** Villes pour lesquelles on a des données GPS / communes. */
+export const MARKETPLACE_GPS_CITIES: readonly RdcCityName[] = RDC_CITIES.map((city) => city.name);
 
 export function sanitizeEnabledCities(value: unknown): PlatformCityName[] {
   const allowed = new Set<string>(PLATFORM_CITY_CATALOG);
@@ -25,7 +40,7 @@ export function enabledPublicCities(site?: { enabledCities?: string[] } | null):
 /** Villes utilisables dans le catalogue et le simulateur (données géo). */
 export function enabledMarketplaceCities(site?: { enabledCities?: string[] } | null): RdcCityName[] {
   const enabled = new Set(enabledPublicCities(site));
-  return RDC_CITIES.map((city) => city.name).filter((name) => enabled.has(name));
+  return MARKETPLACE_GPS_CITIES.filter((name) => enabled.has(name));
 }
 
 export function formatCityList(cities: string[]): string {
