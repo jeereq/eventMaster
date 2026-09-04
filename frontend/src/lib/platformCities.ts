@@ -29,7 +29,19 @@ export function enabledMarketplaceCities(site?: { enabledCities?: string[] } | n
 }
 
 export function formatCityList(cities: string[]): string {
+  if (cities.length === 0) return 'une ville active';
+  if (cities.length === 1) return cities[0];
+  if (cities.length === 2) return `${cities[0]} ou ${cities[1]}`;
   return cities.join(' · ');
+}
+
+export function isEnabledMarketplaceCity(
+  value: string | null | undefined,
+  site?: { enabledCities?: string[] } | null,
+): boolean {
+  const name = String(value || '').trim().toLowerCase();
+  if (!name) return false;
+  return enabledMarketplaceCities(site).some((city) => name.includes(city.toLowerCase()));
 }
 
 export function resolveUsdExchangeRateCdf(value: unknown, fallback = 2800): number {

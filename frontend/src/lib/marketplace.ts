@@ -945,7 +945,7 @@ export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<C
     const { cityForPoint, normalizeRdcCity } = await import('@/lib/rdcCities');
     const here = cityForPoint(pos.lat, pos.lng);
     if (!here) {
-      throw new Error('Votre GPS est hors Kinshasa et Lubumbashi. Choisissez une ville, puis « Près d’un lieu ».');
+      throw new Error('Votre GPS est hors des villes actives. Choisissez une ville, puis « Près d’un lieu ».');
     }
     const selected = normalizeRdcCity(filters.city);
     if (selected && selected !== here.name) {
@@ -957,7 +957,7 @@ export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<C
     const { findRdcCity, findRdcCommune, neighborhoodsFor } = await import('@/lib/rdcCities');
     const cityMeta = findRdcCity(filters.city);
     if (!cityMeta) {
-      throw new Error('Choisissez Kinshasa ou Lubumbashi pour chercher près d’un lieu.');
+      throw new Error('Choisissez une ville active pour chercher près d’un lieu.');
     }
     const commune = findRdcCommune(cityMeta.name, filters.commune);
     if (!commune) {
@@ -1289,6 +1289,17 @@ export function withCatalogueDistance(
 ): CatalogueItem {
   if (lat == null || lng == null || item.latitude == null || item.longitude == null) return item;
   return { ...item, distanceKm: haversineKm(lat, lng, item.latitude, item.longitude) };
+}
+
+export function catalogueItemMatchesEnabledCities(item: CatalogueItem, enabledCities: string[]): boolean {
+  if (!enabledCities.length) return true;
+  const loc = `${item.location || ''} ${item.address || ''}`.toLowerCase();
+  return enabledCities.some((name) => {
+    if (item.latitude != null && item.longitude != null) {
+      return pointInRdcCity(item.latitude, item.longitude, name);
+    }
+    return loc.includes(name.toLowerCase());
+  });
 }
 
 export function catalogueItemMatchesGeo(item: CatalogueItem, filters: CatalogueGeoState): boolean {

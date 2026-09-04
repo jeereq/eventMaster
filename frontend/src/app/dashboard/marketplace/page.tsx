@@ -242,7 +242,7 @@ export default function MarketplaceDeskPage() {
       const missing = missingPublishLocation(draft);
       if (missing === 'city') {
         setEditorTab('details');
-        setError('Choisissez Kinshasa ou Lubumbashi, puis la commune et le quartier.');
+        setError('Choisissez une ville active, puis la commune et le quartier.');
         return;
       }
       if (missing === 'map') {

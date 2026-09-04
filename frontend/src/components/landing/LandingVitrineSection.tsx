@@ -10,6 +10,7 @@ import {
   EMPTY_CATALOGUE_GEO,
   appendCatalogueGeoParams,
   catalogueGeoChips,
+  catalogueItemMatchesEnabledCities,
   catalogueItemMatchesGeo,
   clearCatalogueGeoChip,
   eventToCatalogueItem,
@@ -36,6 +37,8 @@ import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles } from '
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledMarketplaceCities } from '@/lib/platformCities';
 
 type VitrineTab = 'venues' | 'services' | 'rentals' | 'events';
 type EntityFilters = CatalogueGeoState & CatalogueEntityExtras;
@@ -44,6 +47,8 @@ const emptyFilters: EntityFilters = { ...EMPTY_CATALOGUE_GEO, ...EMPTY_CATALOGUE
 
 export default function LandingVitrineSection() {
   const revealRef = useLandingReveal<HTMLElement>();
+  const { site } = usePlatformSite();
+  const marketplaceCities = enabledMarketplaceCities(site);
   const [tab, setTab] = useState<VitrineTab>('venues');
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
@@ -137,23 +142,32 @@ export default function LandingVitrineSection() {
   const venueItems = useMemo(
     () =>
       filterCatalogueItems(venues.map(venueToCatalogueItem), query).filter(
-        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'venue' }),
+        (item) =>
+          catalogueItemMatchesEnabledCities(item, marketplaceCities)
+          && catalogueItemMatchesGeo(item, applied)
+          && catalogueItemMatchesExtras(item, { ...applied, kind: 'venue' }),
       ),
-    [venues, query, applied],
+    [venues, query, applied, marketplaceCities],
   );
   const serviceItems = useMemo(
     () =>
       filterCatalogueItems(services.map(serviceToCatalogueItem), query).filter(
-        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'service' }),
+        (item) =>
+          catalogueItemMatchesEnabledCities(item, marketplaceCities)
+          && catalogueItemMatchesGeo(item, applied)
+          && catalogueItemMatchesExtras(item, { ...applied, kind: 'service' }),
       ),
-    [services, query, applied],
+    [services, query, applied, marketplaceCities],
   );
   const rentalItems = useMemo(
     () =>
       filterCatalogueItems(services.map(serviceToCatalogueItem), query).filter(
-        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'rental' }),
+        (item) =>
+          catalogueItemMatchesEnabledCities(item, marketplaceCities)
+          && catalogueItemMatchesGeo(item, applied)
+          && catalogueItemMatchesExtras(item, { ...applied, kind: 'rental' }),
       ),
-    [services, query, applied],
+    [services, query, applied, marketplaceCities],
   );
   const eventItems = useMemo(
     () =>
@@ -163,9 +177,12 @@ export default function LandingVitrineSection() {
           .filter((item): item is NonNullable<typeof item> => Boolean(item)),
         query,
       ).filter(
-        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'event' }),
+        (item) =>
+          catalogueItemMatchesEnabledCities(item, marketplaceCities)
+          && catalogueItemMatchesGeo(item, applied)
+          && catalogueItemMatchesExtras(item, { ...applied, kind: 'event' }),
       ),
-    [events, query, applied],
+    [events, query, applied, marketplaceCities],
   );
 
   const tabs: Array<{ id: VitrineTab; label: string; icon: typeof Building2; hash: string }> = [

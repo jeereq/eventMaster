@@ -16,7 +16,7 @@ import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 import { haversineKm, toDateKey } from '../utils/marketplaceDates';
-import { normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
+import { enabledMarketplaceCities, normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
 import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
 import { toPrismaJson } from '../utils/prismaJson';
 import {
@@ -129,7 +129,9 @@ function serializePublicEvent(event: {
 export async function listPublicEvents(req: Request, res: Response) {
   try {
     const q = String(req.query.q || '').trim();
-    const city = normalizeAllowedCity(req.query.city) || '';
+    const enabledCities = enabledMarketplaceCities();
+    const requestedCity = normalizeAllowedCity(req.query.city) || '';
+    const city = requestedCity && enabledCities.includes(requestedCity) ? requestedCity : '';
     const commune = String(req.query.commune || '').trim();
     const neighborhood = String(req.query.neighborhood || '').trim();
     const street = String(req.query.street || '').trim();
@@ -192,6 +194,16 @@ export async function listPublicEvents(req: Request, res: Response) {
     const filtered = events.filter((event) => {
       if (city && event.latitude != null && event.longitude != null && !pointInCityBounds(event.latitude, event.longitude, city)) {
         return false;
+      }
+      if (!city && enabledCities.length) {
+        const loc = String(event.location || '').toLowerCase();
+        const inEnabled = enabledCities.some((name) => {
+          if (event.latitude != null && event.longitude != null) {
+            return pointInCityBounds(event.latitude, event.longitude, name);
+          }
+          return loc.includes(name.toLowerCase());
+        });
+        if (!inEnabled && (event.latitude != null || loc)) return false;
       }
       if (hasGeo) {
         if (event.latitude == null || event.longitude == null) return false;

@@ -28,7 +28,7 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
     'text-sm text-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm';
 
   return (
-    <footer className={cn('mt-auto border-t border-border bg-surface text-foreground', className)}>
+    <footer className={cn('hidden md:block mt-auto border-t border-border bg-surface text-foreground', className)}>
       <div className="page-container py-14 sm:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           <div className="sm:col-span-2 lg:col-span-4 space-y-4">

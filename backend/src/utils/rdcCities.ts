@@ -1,3 +1,5 @@
+import { loadPlatformSettings, sanitizeEnabledCities } from '../services/platformSettingsService';
+
 export type AllowedRdcCity = 'Kinshasa' | 'Lubumbashi';
 
 export type RdcBounds = {
@@ -46,18 +48,28 @@ export function pointInCityBounds(lat: number, lng: number, city: AllowedRdcCity
   return lat >= bounds.south && lat <= bounds.north && lng >= bounds.west && lng <= bounds.east;
 }
 
+export function enabledMarketplaceCities(): AllowedRdcCity[] {
+  return sanitizeEnabledCities(loadPlatformSettings().enabledCities).filter(
+    (city): city is AllowedRdcCity => city === 'Kinshasa' || city === 'Lubumbashi',
+  );
+}
+
 export function allowedCityPrismaFilter(cityQuery?: string) {
+  const enabled = enabledMarketplaceCities();
   const normalized = normalizeAllowedCity(cityQuery);
-  if (cityQuery && normalized === null) {
+  if (cityQuery && (normalized === null || (normalized && !enabled.includes(normalized)))) {
     return { city: { in: [] as string[] } };
   }
-  if (normalized) {
+  if (normalized && enabled.includes(normalized)) {
     return { city: { equals: normalized, mode: 'insensitive' as const } };
   }
+  if (enabled.length === 1) {
+    return { city: { equals: enabled[0], mode: 'insensitive' as const } };
+  }
+  if (enabled.length === 0) {
+    return { city: { in: [] as string[] } };
+  }
   return {
-    OR: [
-      { city: { equals: 'Kinshasa', mode: 'insensitive' as const } },
-      { city: { equals: 'Lubumbashi', mode: 'insensitive' as const } },
-    ],
+    OR: enabled.map((name) => ({ city: { equals: name, mode: 'insensitive' as const } })),
   };
 }

@@ -30,6 +30,8 @@ import {
   type CatalogueKind,
 } from '@/lib/catalogueEntityFilters';
 import { communesForCity, neighborhoodsFor, normalizeRdcCity } from '@/lib/rdcCities';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledMarketplaceCities, formatCityList } from '@/lib/platformCities';
 import CatalogueViewToggle, { CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 
 export type CatalogueFilterChip = {
@@ -221,7 +223,7 @@ export default function CatalogueFilterBar({
   const chipsRow = (count > 0 || resultLabel) ? (
     <div className={cn(
       'flex flex-wrap items-center gap-1.5 min-w-0 max-w-full',
-      variant === 'float' ? 'overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]' : 'flex-wrap',
+      'overflow-x-auto flex-nowrap md:flex-wrap pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]',
     )}>
       {chips.map((chip, index) => (
         <span
@@ -317,7 +319,7 @@ export default function CatalogueFilterBar({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full min-h-11 h-11 sm:h-10 sm:min-h-10 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full h-9 sm:h-10 min-h-9 sm:min-h-10 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
           </div>
           {hasFilters && (
@@ -325,7 +327,7 @@ export default function CatalogueFilterBar({
               type="button"
               onClick={openModal}
               className={cn(
-                'relative min-h-11 sm:min-h-10 sm:h-10 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation',
+                'relative min-h-9 sm:min-h-10 sm:h-10 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation',
                 count
                   ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                   : 'bg-surface/95 text-foreground border-white/25 dark:border-white/10',
@@ -379,22 +381,23 @@ export default function CatalogueFilterBar({
   }
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)] overflow-hidden">
+    <div className="rounded-[var(--radius-card)] border border-border bg-surface p-1.5 sm:p-4 space-y-1.5 sm:space-y-3 shadow-[var(--shadow-soft)] overflow-hidden">
       {topSlot ? (
-        <div className="pb-2 border-b border-border/70">
+        <div className="pb-1.5 sm:pb-2 border-b border-border/70">
           {topSlot}
         </div>
       ) : null}
-      <div className="flex flex-col gap-2 min-w-0 sm:flex-row sm:items-center">
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
         <div className="flex-1 min-w-0">
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            leftIcon={<Search className="w-4 h-4" />}
+            leftIcon={<Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            className="!py-1.5 sm:!py-2.5 text-sm h-9 sm:h-auto"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
           {hasFilters && (
             <Button
               type="button"
@@ -402,11 +405,11 @@ export default function CatalogueFilterBar({
               size="sm"
               onClick={openModal}
               leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
-              className="shrink-0"
+              className="shrink-0 !min-h-9 sm:!min-h-11 px-2.5 sm:px-3"
             >
-              Filtres
+              <span className="hidden min-[380px]:inline">Filtres</span>
               {count > 0 ? (
-                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-semibold">
+                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-semibold tabular-nums">
                   {count}
                 </span>
               ) : null}
@@ -419,7 +422,7 @@ export default function CatalogueFilterBar({
             text="Salles, prestataires, matériel & équipements et événements filtrés sur EventMaster."
             label="Partager"
             url={shareUrl}
-            className="shrink-0 px-2.5 sm:px-3"
+            className="hidden sm:inline-flex shrink-0 px-2.5 sm:px-3"
           />
           ) : null}
           {actions}
@@ -427,9 +430,9 @@ export default function CatalogueFilterBar({
             <CatalogueViewToggle
               value={view}
               onChange={onViewChange}
-              compact={compactToggle}
+              compact
               hideMap={hideMap}
-              className="min-w-0 basis-full flex-1 justify-between overflow-hidden sm:basis-auto sm:flex-none sm:justify-start"
+              className="shrink-0"
             />
           ) : null}
           {view === 'grid' && gridCols && onGridColsChange ? (
@@ -466,16 +469,29 @@ export function CatalogueGeoFields({
   availabilityHint?: string;
   capacityHint?: string;
 }) {
+  const { site } = usePlatformSite();
+  const marketplaceCities = enabledMarketplaceCities(site);
+  const cityList = formatCityList(marketplaceCities);
   const set = (patch: Partial<CatalogueGeoState>) => onChange({ ...value, ...patch });
+
+  useEffect(() => {
+    const current = normalizeRdcCity(value.city);
+    if (current && !marketplaceCities.includes(current)) {
+      onChange({
+        ...value,
+        city: marketplaceCities.length === 1 ? marketplaceCities[0] : '',
+        commune: '',
+        neighborhood: '',
+        nearPlace: '',
+      });
+    }
+  }, [marketplaceCities.join('|')]);
 
   return (
     <>
-      <CatalogueFilterField label="Ville" hint="Marketplace limité à Kinshasa et Lubumbashi.">
+      <CatalogueFilterField label="Ville" hint={`Marketplace limité à ${cityList}.`}>
         <CatalogueChoicePills
-          options={[
-            { id: 'Kinshasa', label: 'Kinshasa' },
-            { id: 'Lubumbashi', label: 'Lubumbashi' },
-          ]}
+          options={marketplaceCities.map((name) => ({ id: name, label: name }))}
           value={normalizeRdcCity(value.city) || ''}
           onChange={(id) => set({ city: id, commune: '', neighborhood: '', nearPlace: '' })}
         />
@@ -489,7 +505,7 @@ export function CatalogueGeoFields({
               onChange={(id) => set({ commune: id, neighborhood: '', nearPlace: '' })}
             />
             {!normalizeRdcCity(value.city) ? (
-              <p className="text-[11px] text-muted mt-1">Choisissez d’abord Kinshasa ou Lubumbashi.</p>
+              <p className="text-[11px] text-muted mt-1">Choisissez d’abord {cityList}.</p>
             ) : null}
           </CatalogueFilterField>
           <CatalogueFilterField label="Quartier">
@@ -573,7 +589,7 @@ export function CatalogueGeoFields({
       {showProximity ? (
       <CatalogueFilterField
         label="Proximité"
-        hint="Autour de vous, ou autour d’une commune / un quartier de Kinshasa ou Lubumbashi."
+        hint={`Autour de vous, ou autour d’une commune / un quartier de ${cityList}.`}
       >
         <CatalogueChoicePills
           options={[
@@ -591,7 +607,7 @@ export function CatalogueGeoFields({
         />
         {value.proximity === 'around' ? (
           <p className="text-[11px] text-muted mt-2">
-            Nous lirons votre GPS (Kinshasa ou Lubumbashi uniquement), puis filtrerons à la distance choisie.
+            Nous lirons votre GPS ({cityList} uniquement), puis filtrerons à la distance choisie.
           </p>
         ) : null}
         {value.proximity === 'near' ? (
@@ -600,7 +616,7 @@ export function CatalogueGeoFields({
               Choisissez uniquement une commune, puis un quartier, dans la liste. Le rayon part du centre de la commune.
             </p>
             {!normalizeRdcCity(value.city) ? (
-              <p className="text-xs text-rose-600 font-medium">Choisissez d’abord Kinshasa ou Lubumbashi en haut.</p>
+              <p className="text-xs text-rose-600 font-medium">Choisissez d’abord {cityList} en haut.</p>
             ) : (
               <>
                 <div>

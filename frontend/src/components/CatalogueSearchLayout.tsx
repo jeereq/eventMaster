@@ -282,7 +282,7 @@ export default function CatalogueSearchLayout({
       </PublicPageHero>
 
       <div className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
-        <div className="sticky top-14 z-20 -mx-1 px-1 py-1 bg-background/90 backdrop-blur-md">
+        <div className="sticky top-14 z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90 backdrop-blur-md">
           {renderFilters('card')}
         </div>
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}

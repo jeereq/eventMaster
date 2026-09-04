@@ -8,11 +8,15 @@ import FaqSection from '@/components/landing/FaqSection';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledPublicCities, formatCityList } from '@/lib/platformCities';
 import { ArrowRight, Sparkles, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 export default function TarifsPage() {
   const { user } = useAuth();
+  const { site } = usePlatformSite();
+  const cityLabel = formatCityList(enabledPublicCities(site));
   const [dbPlans, setDbPlans] = useState<any>(null);
 
   useEffect(() => {
@@ -74,7 +78,7 @@ export default function TarifsPage() {
 
         <PublicCtaBand
           title="Une question avant de choisir votre forfait ?"
-          description="Notre équipe à Kinshasa et Lubumbashi est disponible pour vous conseiller et vous guider."
+          description={`Notre équipe à ${cityLabel} est disponible pour vous conseiller et vous guider.`}
           actions={
             <div className="flex flex-wrap items-center gap-3">
               <Link href="/contact">

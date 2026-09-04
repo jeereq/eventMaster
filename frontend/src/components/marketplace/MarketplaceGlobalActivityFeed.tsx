@@ -12,6 +12,8 @@ import {
 } from '@/components/marketplace/MarketplaceActivityFeed';
 import { clientLoginHref } from '@/lib/safeAppPath';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledMarketplaceCities, enabledPublicCities, isEnabledMarketplaceCity } from '@/lib/platformCities';
 import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
 import ImageLightbox from '@/components/marketplace/ImageLightbox';
 import {
@@ -678,7 +680,11 @@ export default function MarketplaceGlobalActivityFeed({
 }) {
   const { user } = useAuth();
   const router = useRouter();
+  const { site } = usePlatformSite();
+  const marketplaceCities = enabledMarketplaceCities(site);
+  const displayCities = enabledPublicCities(site);
   const [kind, setKind] = useState<GlobalFeedKind>('all');
+  const [city, setCity] = useState('');
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
   const [posts, setPosts] = useState<GlobalFeedPost[]>([]);
@@ -820,9 +826,23 @@ export default function MarketplaceGlobalActivityFeed({
 
   const myLike = likeKey(user?.id);
 
+  const visiblePosts = useMemo(() => {
+    return posts.filter((post) => {
+      const raw = post.author?.city;
+      if (city) {
+        return String(raw || '').toLowerCase().includes(city.toLowerCase());
+      }
+      if (!raw) return true;
+      return (
+        isEnabledMarketplaceCity(raw, site)
+        || displayCities.some((name) => String(raw).toLowerCase().includes(name.toLowerCase()))
+      );
+    });
+  }, [posts, city, site, displayCities]);
+
   const storyAuthors = useMemo(() => {
     const map = new Map<string, { author: FeedAuthor; postCount: number }>();
-    for (const p of posts) {
+    for (const p of visiblePosts) {
       if (p.author && !map.has(p.author.name)) {
         map.set(p.author.name, {
           author: p.author,
@@ -834,7 +854,7 @@ export default function MarketplaceGlobalActivityFeed({
       }
     }
     return Array.from(map.values());
-  }, [posts]);
+  }, [visiblePosts]);
 
   const kindTabs: Array<{
     id: GlobalFeedKind;
@@ -960,9 +980,8 @@ export default function MarketplaceGlobalActivityFeed({
       </div>
 
       {/* Barre d'outils / Filtres & Recherche (Toujours visible lors du défilement) */}
-      <div className="sticky top-14 z-30 flex flex-col md:flex-row gap-3 md:items-center justify-between bg-surface/95 dark:bg-slate-900/95 backdrop-blur-xl p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
-        {/* Onglets Filtres */}
-        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted/80 border border-border/50 max-w-full overflow-x-auto [scrollbar-width:none]">
+      <div className="sticky top-14 z-30 flex flex-col md:flex-row gap-1.5 md:gap-3 md:items-center justify-between bg-surface/95 dark:bg-slate-900/95 backdrop-blur-xl p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
+        <div className="inline-flex gap-1 p-0.5 sm:p-1 rounded-lg sm:rounded-xl bg-surface-muted/80 border border-border/50 max-w-full overflow-x-auto [scrollbar-width:none]">
           {kindTabs.map((tab) => {
             const Icon = tab.icon;
             const active = kind === tab.id;
@@ -972,7 +991,7 @@ export default function MarketplaceGlobalActivityFeed({
                 type="button"
                 onClick={() => setKind(tab.id)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 sm:gap-2 min-h-10 px-3 sm:px-3.5 rounded-lg text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  'inline-flex items-center gap-1 sm:gap-2 min-h-8 sm:min-h-10 px-2 sm:px-3.5 rounded-lg text-[11px] sm:text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   active
                     ? tab.id === 'vendor'
                       ? 'bg-surface text-amber-700 dark:text-amber-300 shadow-xs border border-amber-500/30 font-bold'
@@ -1002,6 +1021,30 @@ export default function MarketplaceGlobalActivityFeed({
         </div>
 
         {/* Formulaire Recherche */}
+        {marketplaceCities.length > 1 ? (
+          <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] md:contents">
+            {marketplaceCities.map((name) => {
+              const active = city === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setCity(active ? '' : name)}
+                  className={cn(
+                    'inline-flex items-center gap-1 min-h-8 px-2.5 rounded-lg text-[11px] font-semibold shrink-0 border transition',
+                    active
+                      ? 'bg-primary-solid text-primary-foreground border-primary-solid'
+                      : 'bg-surface text-muted border-border hover:text-foreground',
+                  )}
+                >
+                  <MapPin className="w-3 h-3" />
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         <form
           className="relative flex-1 md:max-w-xs"
           onSubmit={(e) => {
@@ -1016,7 +1059,7 @@ export default function MarketplaceGlobalActivityFeed({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Rechercher un pro, ville…"
-              className="w-full min-h-11 pl-9 pr-16 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+              className="w-full min-h-9 sm:min-h-11 pl-9 pr-16 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
               aria-label="Rechercher dans les publications"
             />
             {q.trim() && (
@@ -1062,7 +1105,7 @@ export default function MarketplaceGlobalActivityFeed({
 
       {loading ? (
         <GlobalFeedSkeleton />
-      ) : posts.length === 0 ? (
+      ) : visiblePosts.length === 0 ? (
         <div className="text-center py-16 px-4 rounded-xl sm:rounded-2xl border border-dashed border-border bg-surface/40 space-y-3 max-w-lg mx-auto">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-xs">
             <Rss className="w-6 h-6" aria-hidden />
@@ -1088,7 +1131,7 @@ export default function MarketplaceGlobalActivityFeed({
         </div>
       ) : (
         <div className="space-y-6">
-          {posts.map((post) => (
+          {visiblePosts.map((post) => (
             <GlobalFeedPostCard
               key={post.id}
               post={post}

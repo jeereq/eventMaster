@@ -11,6 +11,8 @@ import {
   pointInBounds,
 } from '@/lib/rdcCities';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledMarketplaceCities, formatCityList } from '@/lib/platformCities';
 
 export default function LocationPickerMap({
   latitude,
@@ -51,6 +53,8 @@ export default function LocationPickerMap({
   const [hint, setHint] = useState('');
   const [mapTheme, setMapTheme] = useState<'light' | 'dark'>(documentMapTheme);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { site } = usePlatformSite();
+  const cityList = formatCityList(enabledMarketplaceCities(site));
 
   const applyBasemap = (L: any, map: any, nextTheme: 'light' | 'dark') => {
     const spec = leafletBasemap(nextTheme);
@@ -73,7 +77,7 @@ export default function LocationPickerMap({
   const acceptPoint = (point: { lat: number; lng: number }) => {
     const meta = cityMetaRef.current;
     if (!meta) {
-      setHint('Choisissez d’abord Kinshasa ou Lubumbashi.');
+      setHint(`Choisissez d’abord ${cityList}.`);
       return false;
     }
     if (!pointInBounds(point.lat, point.lng, meta.bounds)) {
@@ -250,7 +254,7 @@ export default function LocationPickerMap({
   const cityLabel = cityMeta?.name;
   const placeholder = cityLabel
     ? `Rechercher un lieu à ${cityLabel}${commune ? `, ${commune}` : ''}…`
-    : 'Choisissez d’abord Kinshasa ou Lubumbashi';
+    : `Choisissez d’abord ${cityList}`;
 
   return (
     <div className="space-y-2">
@@ -302,7 +306,7 @@ export default function LocationPickerMap({
         {!cityMeta ? (
           <div className="absolute inset-0 flex items-center justify-center px-4 text-center rounded-[var(--radius-card)] bg-background/70">
             <p className="text-sm font-medium text-foreground">
-              Choisissez Kinshasa ou Lubumbashi pour cadrer la carte.
+              Choisissez {cityList} pour cadrer la carte.
             </p>
           </div>
         ) : null}
@@ -310,7 +314,7 @@ export default function LocationPickerMap({
       <p className={cn('text-[11px] flex items-start gap-1.5', required && !hasPoint ? 'text-rose-600' : 'text-muted')}>
         <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         {!cityMeta
-          ? 'Choisissez Kinshasa ou Lubumbashi dans Détails pour cadrer la carte.'
+          ? `Choisissez ${cityList} dans Détails pour cadrer la carte.`
           : hasPoint
             ? `${hint || 'Position choisie'} · ${lat.toFixed(5)}, ${lng.toFixed(5)}`
             : required

@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { enabledMarketplaceCities } from '@/lib/platformCities';
 import {
   Building2, Plus, Trash2, Users, UserPlus, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
@@ -172,6 +174,8 @@ const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
+  const { site } = usePlatformSite();
+  const marketplaceCities = enabledMarketplaceCities(site);
   const canCatalogPublish = canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
@@ -452,7 +456,7 @@ export default function RoomsManagement() {
       const missing = missingPublishLocation(listingDraft);
       if (missing === 'city') {
         setListingTab('details');
-        setError('Choisissez Kinshasa ou Lubumbashi, puis la commune et le quartier.');
+        setError('Choisissez une ville active, puis la commune et le quartier.');
         return;
       }
       if (missing === 'map') {
@@ -863,10 +867,7 @@ export default function RoomsManagement() {
                 ) : null}
                 <CatalogueFilterField label="Ville de la fiche">
                   <CatalogueChoicePills
-                    options={[
-                      { id: 'Kinshasa', label: 'Kinshasa' },
-                      { id: 'Lubumbashi', label: 'Lubumbashi' },
-                    ]}
+                    options={marketplaceCities.map((name) => ({ id: name, label: name }))}
                     value={filterCity}
                     onChange={setFilterCity}
                   />
