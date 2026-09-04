@@ -216,7 +216,8 @@ async function visionStructure(
   prompt: string,
   imageUrls: string[],
 ): Promise<VisionResult> {
-  const visionModel = process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const visionModel =
+    process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
   const userContent: Array<Record<string, unknown>> = [
     {
       type: 'text',
@@ -290,7 +291,6 @@ async function downloadImageAsPngBuffer(url: string): Promise<Buffer> {
       fail(502, 'Image de référence invalide ou trop petite.');
     }
     if (buffer.byteLength > 4 * 1024 * 1024) {
-      // dall-e-2 edits limit ~4MB; keep a smaller payload
       fail(400, 'Image de référence trop lourde pour la génération (max ~4 Mo).');
     }
     return buffer;
@@ -312,7 +312,20 @@ function isDallEModel(model: string): boolean {
   return /^dall-e/i.test(model.trim());
 }
 
-function extractImagePayload(payload: {
+function responsesModel(): string {
+  return (
+    process.env.OPENAI_RESPONSES_MODEL ||
+    process.env.OPENAI_IMAGE_AGENT_MODEL ||
+    process.env.OPENAI_MODEL ||
+    'gpt-5.6-luna'
+  );
+}
+
+function imagesApiFallbackModel(): string {
+  return process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
+}
+
+function extractImagesApiPayload(payload: {
   data?: Array<{ b64_json?: string; url?: string }>;
 }): string | null {
   const b64 = payload.data?.[0]?.b64_json;
@@ -335,63 +348,146 @@ async function resolveGeneratedImage(
   fail(502, 'Réponse image IA invalide.');
 }
 
-/** Image-to-image : part de la 1re référence + prompt (brief + analyse). */
-async function generateBackgroundFromReference(
-  key: string,
-  referenceUrl: string,
-  imagePrompt: string,
-  tenantId: string | null | undefined,
-): Promise<string> {
-  const editModel = process.env.OPENAI_IMAGE_EDIT_MODEL || 'dall-e-2';
-  const imageBytes = await downloadImageAsPngBuffer(referenceUrl);
-  const form = new FormData();
-  form.append('model', editModel);
-  form.append('prompt', imagePrompt.slice(0, 1000));
-  form.append('n', '1');
-  form.append('size', '1024x1024');
-  // gpt-image-* n’accepte pas response_format (renvoie toujours du b64).
-  if (isDallEModel(editModel)) {
-    form.append('response_format', 'b64_json');
+function extractResponsesImageB64(payload: {
+  output?: Array<{ type?: string; result?: string | null }>;
+}): string | null {
+  const outputs = Array.isArray(payload.output) ? payload.output : [];
+  for (const item of outputs) {
+    if (item?.type === 'image_generation_call' && typeof item.result === 'string' && item.result) {
+      return item.result;
+    }
   }
-  form.append('image', new Blob([new Uint8Array(imageBytes)], { type: 'image/png' }), 'reference.png');
+  return null;
+}
+
+async function referenceToDataUrl(url: string): Promise<string> {
+  const buffer = await downloadImageAsPngBuffer(url);
+  const lower = url.toLowerCase();
+  const mime = lower.includes('.jpg') || lower.includes('.jpeg')
+    ? 'image/jpeg'
+    : lower.includes('.webp')
+      ? 'image/webp'
+      : 'image/png';
+  return `data:${mime};base64,${buffer.toString('base64')}`;
+}
+
+/**
+ * Génération / édition via GPT-5.6 Luna (Responses API + outil image_generation).
+ * Les images de référence sont fournies en input_image ; Luna orchestre gpt-image-*.
+ */
+async function generateImageWithGpt56Luna(
+  key: string,
+  imagePrompt: string,
+  referenceUrls: string[],
+  tenantId: string | null | undefined,
+): Promise<{ url: string; mode: 'edit' | 'generate' }> {
+  const model = responsesModel();
+  const hasRefs = referenceUrls.length > 0;
+
+  // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
+  const refDataUrls: string[] = [];
+  for (const ref of referenceUrls.slice(0, 4)) {
+    try {
+      refDataUrls.push(await referenceToDataUrl(ref));
+    } catch (err) {
+      console.warn('[invitationTemplateAi] skip ref download:', (err as Error)?.message);
+    }
+  }
+
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: 'input_text',
+      text: `${imagePrompt}
+
+Create ONE new vertical invitation artwork. Follow the brief and the reference photos. No readable text, names, dates, logos or watermarks.`,
+    },
+    ...refDataUrls.map((image_url) => ({
+      type: 'input_image',
+      image_url,
+      detail: 'high',
+    })),
+  ];
+
+  const body: Record<string, unknown> = {
+    model,
+    tool_choice: { type: 'image_generation' },
+    tools: [
+      {
+        type: 'image_generation',
+        action: refDataUrls.length ? 'auto' : 'generate',
+        size: '1024x1536',
+        quality: process.env.OPENAI_IMAGE_QUALITY || 'medium',
+      },
+    ],
+    input: [{ role: 'user', content }],
+  };
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 120_000);
+  const timer = setTimeout(() => controller.abort(), 180_000);
   try {
-    const response = await fetch('https://api.openai.com/v1/images/edits', {
+    let response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${key}` },
-      body: form,
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     });
-    const payload = (await response.json().catch(() => ({}))) as {
+    let payload = (await response.json().catch(() => ({}))) as {
       error?: { message?: string };
-      data?: Array<{ b64_json?: string; url?: string }>;
+      output?: Array<{ type?: string; result?: string | null }>;
     };
-    if (!response.ok) {
-      fail(502, payload.error?.message || 'Échec de la création d’image à partir des références.');
+
+    // Si la taille portrait n’est pas supportée, réessayer en auto.
+    if (!response.ok && /size/i.test(String(payload.error?.message || ''))) {
+      const retryTools = [
+        {
+          type: 'image_generation',
+          action: refDataUrls.length ? 'auto' : 'generate',
+          size: 'auto',
+          quality: process.env.OPENAI_IMAGE_QUALITY || 'medium',
+        },
+      ];
+      response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...body, tools: retryTools }),
+      });
+      payload = (await response.json().catch(() => ({}))) as typeof payload;
     }
-    const token = extractImagePayload(payload);
-    if (!token) fail(502, 'Aucune image générée à partir de la référence.');
-    return resolveGeneratedImage(token, tenantId);
+
+    if (!response.ok) {
+      fail(502, payload.error?.message || `Échec Responses API (${model}).`);
+    }
+
+    const b64 = extractResponsesImageB64(payload);
+    if (!b64) {
+      fail(502, `${model} n’a renvoyé aucune image (outil image_generation).`);
+    }
+    const url = await uploadGeneratedB64(b64, tenantId);
+    return { url, mode: hasRefs ? 'edit' : 'generate' };
   } catch (error) {
     if ((error as HttpError)?.status) throw error;
-    fail(502, (error as Error)?.message || 'Impossible de créer l’image depuis la référence.');
+    fail(502, (error as Error)?.message || `Impossible de générer l’image avec ${model}.`);
   } finally {
     clearTimeout(timer);
   }
 }
 
+/** Repli Images API (gpt-image-2 / dall-e) si Responses échoue. */
 async function generateBackgroundFromPrompt(
   key: string,
   imagePrompt: string,
   tenantId: string | null | undefined,
-  size: '1024x1792' | '1024x1024' = '1024x1792',
+  size: '1024x1536' | '1024x1024' = '1024x1536',
 ): Promise<string> {
-  const imageModel = process.env.OPENAI_IMAGE_MODEL || 'dall-e-3';
+  const imageModel = imagesApiFallbackModel();
   const dallE = isDallEModel(imageModel);
-  // gpt-image : tailles carrées / paysage supportées ; portrait dall-e-3 uniquement.
-  const resolvedSize = !dallE && size === '1024x1792' ? '1024x1024' : size;
+  const resolvedSize = !dallE && size === '1024x1536' ? '1024x1024' : size;
 
   const body: Record<string, unknown> = {
     model: imageModel,
@@ -427,7 +523,6 @@ async function generateBackgroundFromPrompt(
       if (resolvedSize !== '1024x1024' && errMsg.toLowerCase().includes('size')) {
         return generateBackgroundFromPrompt(key, imagePrompt, tenantId, '1024x1024');
       }
-      // Si le modèle n’accepte pas response_format, on réessaie sans (ex. gpt-image).
       if (dallE && /response_format/i.test(errMsg)) {
         const retryBody = { ...body };
         delete retryBody.response_format;
@@ -439,20 +534,17 @@ async function generateBackgroundFromPrompt(
           },
           body: JSON.stringify(retryBody),
         });
-        const retryPayload = (await retry.json().catch(() => ({}))) as {
-          error?: { message?: string };
-          data?: Array<{ b64_json?: string; url?: string }>;
-        };
+        const retryPayload = (await retry.json().catch(() => ({}))) as typeof payload;
         if (!retry.ok) {
           fail(502, retryPayload.error?.message || 'Échec de la génération de la nouvelle image.');
         }
-        const retryToken = extractImagePayload(retryPayload);
+        const retryToken = extractImagesApiPayload(retryPayload);
         if (!retryToken) fail(502, 'Aucune nouvelle image renvoyée par l’IA.');
         return resolveGeneratedImage(retryToken, tenantId);
       }
       fail(502, errMsg || 'Échec de la génération de la nouvelle image.');
     }
-    const token = extractImagePayload(payload);
+    const token = extractImagesApiPayload(payload);
     if (!token) fail(502, 'Aucune nouvelle image renvoyée par l’IA.');
     return resolveGeneratedImage(token, tenantId);
   } catch (error) {
@@ -463,9 +555,56 @@ async function generateBackgroundFromPrompt(
   }
 }
 
+/** Repli image-to-image classique (dall-e-2 / gpt-image edits). */
+async function generateBackgroundFromReference(
+  key: string,
+  referenceUrl: string,
+  imagePrompt: string,
+  tenantId: string | null | undefined,
+): Promise<string> {
+  const editModel = process.env.OPENAI_IMAGE_EDIT_MODEL || 'gpt-image-1';
+  const imageBytes = await downloadImageAsPngBuffer(referenceUrl);
+  const form = new FormData();
+  form.append('model', editModel);
+  form.append('prompt', imagePrompt.slice(0, 1000));
+  form.append('n', '1');
+  form.append('size', '1024x1024');
+  if (isDallEModel(editModel)) {
+    form.append('response_format', 'b64_json');
+  }
+  form.append('image', new Blob([new Uint8Array(imageBytes)], { type: 'image/png' }), 'reference.png');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120_000);
+  try {
+    const response = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${key}` },
+      body: form,
+    });
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: { message?: string };
+      data?: Array<{ b64_json?: string; url?: string }>;
+    };
+    if (!response.ok) {
+      fail(502, payload.error?.message || 'Échec de la création d’image à partir des références.');
+    }
+    const token = extractImagesApiPayload(payload);
+    if (!token) fail(502, 'Aucune image générée à partir de la référence.');
+    return resolveGeneratedImage(token, tenantId);
+  } catch (error) {
+    if ((error as HttpError)?.status) throw error;
+    fail(502, (error as Error)?.message || 'Impossible de créer l’image depuis la référence.');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
- * Crée une nouvelle image : d’abord image-à-image depuis la 1re ref,
- * sinon génération text-to-image enrichie par l’analyse Vision + brief.
+ * 1) GPT-5.6 Luna (Responses + image_generation)
+ * 2) Images API générate
+ * 3) Images API edits sur la 1re référence
  */
 async function createNewInvitationImage(
   key: string,
@@ -473,18 +612,31 @@ async function createNewInvitationImage(
   imagePrompt: string,
   tenantId: string | null | undefined,
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
-  const primary = imageUrls[0];
   try {
-    const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);
-    return { url, mode: 'edit' };
-  } catch (editErr) {
+    return await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId);
+  } catch (lunaErr) {
     console.warn(
-      '[invitationTemplateAi] image edit failed, falling back to generations:',
-      (editErr as Error)?.message,
+      '[invitationTemplateAi] gpt-5.6-luna image failed, falling back:',
+      (lunaErr as Error)?.message,
     );
+  }
+
+  try {
     const url = await generateBackgroundFromPrompt(key, imagePrompt, tenantId);
     return { url, mode: 'generate' };
+  } catch (genErr) {
+    console.warn(
+      '[invitationTemplateAi] images/generations failed, trying edits:',
+      (genErr as Error)?.message,
+    );
   }
+
+  const primary = imageUrls[0];
+  if (!primary) {
+    fail(502, 'Impossible de créer la nouvelle image (Luna + Images API).');
+  }
+  const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);
+  return { url, mode: 'edit' };
 }
 
 export type InvitationAiComposeResult = {
