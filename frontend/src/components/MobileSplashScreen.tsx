@@ -116,7 +116,7 @@ export default function MobileSplashScreen() {
           leaving ? 'scale-[0.98] opacity-0' : 'scale-100 opacity-100',
         )}
       >
-        <span className="w-12 h-12 rounded-2xl bg-primary-solid text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center">
+        <span className="w-12 h-12 rounded-2xl bg-primary-solid text-primary-foreground shadow-sm flex items-center justify-center">
           <PartyPopper className="w-5 h-5" aria-hidden />
         </span>
         <p className="text-sm font-bold tracking-tight text-foreground leading-none max-w-[14rem] truncate">

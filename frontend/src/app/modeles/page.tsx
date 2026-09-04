@@ -133,14 +133,14 @@ export default function ModelesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher un modèle…"
-              className="w-full pl-9 pr-8 py-2 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+              className="w-full pl-9 pr-10 py-2.5 min-h-11 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
               aria-label="Rechercher parmi les modèles"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground p-0.5 rounded"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground min-w-9 min-h-9 inline-flex items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 aria-label="Effacer la recherche"
               >
                 <X className="w-3.5 h-3.5" />

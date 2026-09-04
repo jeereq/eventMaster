@@ -210,6 +210,17 @@ export default function LandingInvitationAiGenerator({
     });
   };
 
+  const scrollResultIntoView = () => {
+    window.setTimeout(() => {
+      const el = resultRef.current;
+      if (!el) return;
+      const reduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' });
+    }, 80);
+  };
+
   const handleGenerate = async () => {
     if (busy) return;
     if (files.length < 1) {
@@ -254,9 +265,7 @@ export default function LandingInvitationAiGenerator({
       void fetchAiTemplateComposeHistory().then(setHistory);
       setActiveStep(3);
       setStage(null);
-      window.setTimeout(() => {
-        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 80);
+      scrollResultIntoView();
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };
       if (e?.status === 402) {
@@ -317,9 +326,7 @@ export default function LandingInvitationAiGenerator({
     setError('');
     setStage(null);
     setPreviewOpen(false);
-    window.setTimeout(() => {
-      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 80);
+    scrollResultIntoView();
   };
 
   return (
@@ -339,8 +346,8 @@ export default function LandingInvitationAiGenerator({
               id={`${id}-title`}
               className="text-base sm:text-xl font-bold text-foreground tracking-tight flex items-center gap-2"
             >
-              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary text-primary-foreground inline-flex items-center justify-center shadow-md shadow-primary/25 shrink-0">
-                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-sm shrink-0">
+                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden />
               </span>
               <span className="min-w-0 leading-tight break-words">Studio IA</span>
             </h2>
@@ -350,8 +357,11 @@ export default function LandingInvitationAiGenerator({
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums">
-              <Coins className="w-3.5 h-3.5 text-primary" />
+            <span
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
+              title="Jetons IA disponibles (invitations ou simulation)"
+            >
+              <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
               {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
             </span>
             {!allowance.canSimulate ? (
@@ -469,7 +479,7 @@ export default function LandingInvitationAiGenerator({
                       e.stopPropagation();
                       removeFile(i);
                     }}
-                    className="absolute top-1 right-1 min-w-9 min-h-9 inline-flex items-center justify-center bg-black/65 text-white rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation"
+                    className="absolute top-1 right-1 min-w-9 min-h-9 inline-flex items-center justify-center bg-foreground/75 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     aria-label={`Retirer l’image ${i + 1}`}
                   >
                     <XCircle className="w-4 h-4" aria-hidden />
@@ -481,20 +491,22 @@ export default function LandingInvitationAiGenerator({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <label htmlFor="ai-brief" className="text-xs font-bold text-foreground">
+              <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
                 Brief style
               </label>
-              <span className="text-[10px] text-muted tabular-nums">{prompt.trim().length}/1500</span>
+              <span className="text-[10px] text-muted tabular-nums" aria-live="polite">
+                {prompt.trim().length}/1500
+              </span>
             </div>
             <textarea
-              id="ai-brief"
+              id={`${id}-brief`}
               rows={4}
               maxLength={1500}
               value={prompt}
               disabled={busy}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Ex. Mariage élégant, tons ivoire et or, floraux discrets, typographie script pour les prénoms…"
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[6rem]"
+              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[6rem] disabled:opacity-60"
             />
             <div className="flex flex-wrap gap-1.5">
               {BRIEF_PRESETS.map((preset) => (
@@ -503,7 +515,7 @@ export default function LandingInvitationAiGenerator({
                   type="button"
                   disabled={busy}
                   onClick={() => setPrompt(preset)}
-                  className="text-[11px] font-semibold px-3 py-2 min-h-10 rounded-full border border-border bg-surface-muted/70 text-muted hover:text-foreground hover:border-primary/40 transition disabled:opacity-50 touch-manipulation break-words max-w-full text-left"
+                  className="text-[11px] font-semibold px-3 py-2 min-h-10 rounded-full border border-border bg-surface-muted/70 text-muted hover:text-foreground hover:border-primary/40 transition disabled:opacity-50 touch-manipulation break-words max-w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   {preset}
                 </button>
@@ -555,7 +567,13 @@ export default function LandingInvitationAiGenerator({
               type="button"
               onClick={handleGenerate}
               disabled={busy || !files.length || prompt.trim().length < 8}
-              leftIcon={busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              leftIcon={
+                busy ? (
+                  <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+                ) : (
+                  <Wand2 className="w-4 h-4" />
+                )
+              }
             >
               {busy ? 'Génération…' : 'Générer mon modèle'}
             </Button>
@@ -570,7 +588,7 @@ export default function LandingInvitationAiGenerator({
             items={history}
             activeId={activeHistoryId}
             onOpen={openHistoryItem}
-            className="pt-2"
+            className="pt-4 mt-1 border-t border-border/70"
             listClassName="max-h-56 sm:max-h-64"
           />
         </div>
@@ -599,8 +617,8 @@ export default function LandingInvitationAiGenerator({
           </div>
 
           {previewTemplate ? (
-            <div className="flex-1 flex flex-col gap-3 min-h-0">
-              <div className="rounded-2xl border border-border bg-surface shadow-md overflow-hidden">
+            <div className="flex-1 flex flex-col gap-3 min-h-0 animate-fade-in">
+              <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden">
                 <LandingInvitationPreview
                   template={previewTemplate}
                   className="!min-h-[280px] !max-h-[min(480px,58vh)] !p-4 sm:!p-5"
@@ -608,7 +626,7 @@ export default function LandingInvitationAiGenerator({
               </div>
 
               {palette ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2" aria-label="Palette détectée">
                   <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Palette</span>
                   {palette.map((swatch) => (
                     <span
@@ -617,7 +635,7 @@ export default function LandingInvitationAiGenerator({
                       className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted"
                     >
                       <span
-                        className="w-4 h-4 rounded-md border border-border shadow-sm"
+                        className="w-4 h-4 rounded-md border border-border shadow-2xs"
                         style={{ backgroundColor: swatch.color }}
                       />
                       {swatch.key}
@@ -633,11 +651,11 @@ export default function LandingInvitationAiGenerator({
                       key={`${el.type}-${i}`}
                       className="flex items-start gap-2 text-[11px] text-muted"
                     >
-                      <Type className="w-3 h-3 mt-0.5 text-primary shrink-0" />
+                      <Type className="w-3 h-3 mt-0.5 text-primary shrink-0" aria-hidden />
                       <span className="min-w-0">
                         <span className="font-bold text-foreground capitalize">{el.type}</span>
                         {el.text ? (
-                          <span className="line-clamp-1"> — {el.text}</span>
+                          <span className="line-clamp-1 break-words"> — {el.text}</span>
                         ) : null}
                       </span>
                     </li>
@@ -667,8 +685,8 @@ export default function LandingInvitationAiGenerator({
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 px-2">
-              <div className="w-14 h-14 rounded-2xl bg-surface border border-border flex items-center justify-center shadow-sm">
-                <Sparkles className="w-6 h-6 text-primary/50" />
+              <div className="w-14 h-14 rounded-2xl bg-surface border border-border flex items-center justify-center shadow-2xs">
+                <Sparkles className="w-6 h-6 text-primary/60" aria-hidden />
               </div>
               <p className="text-sm font-semibold text-foreground">En attente de génération</p>
               <p className="text-xs text-muted leading-relaxed max-w-[16rem]">
@@ -676,7 +694,7 @@ export default function LandingInvitationAiGenerator({
               </p>
               <Link
                 href="/#simulateur-ia"
-                className="text-[11px] font-semibold text-primary hover:underline"
+                className="text-xs font-semibold text-primary hover:underline min-h-10 inline-flex items-center px-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 Simulation budget IA →
               </Link>
