@@ -19,7 +19,6 @@ interface AuthFeature {
 }
 
 interface AuthSplitLayoutProps {
-  badge?: string;
   title: string;
   description: string;
   features?: AuthFeature[];
@@ -126,7 +125,7 @@ export function AuthSplitLayout({
           {backHref && (
             <Link
               href={backHref}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition"
+              className="inline-flex items-center gap-1.5 min-h-11 text-xs font-semibold text-muted hover:text-primary transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               {backLabel}
@@ -160,7 +159,7 @@ export function MethodToggle<T extends string>({ value, onChange, options, label
             type="button"
             onClick={() => onChange(opt.value)}
             className={cn(
-              'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-semibold transition flex items-center justify-center gap-2',
+              'min-h-11 py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-semibold transition flex items-center justify-center gap-2',
               value === opt.value
                 ? 'bg-primary/10 border-primary/30 text-primary'
                 : 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground',

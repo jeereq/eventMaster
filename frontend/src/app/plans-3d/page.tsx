@@ -330,7 +330,7 @@ export default function Plans3DPage() {
         {/* ─── Piliers technologiques de l’éditeur ─── */}
         <section className="rounded-2xl sm:rounded-3xl border border-border/80 bg-surface/70 p-6 sm:p-8 space-y-6">
           <div className="max-w-2xl space-y-1.5">
-            <h2 className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">
+            <h2 className="em-landing-heading text-lg sm:text-2xl text-foreground">
               Tout ce dont vous avez besoin pour agencer votre salle
             </h2>
             <p className="text-xs sm:text-sm text-muted">

@@ -4,22 +4,14 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Sparkles,
   LayoutGrid,
   CheckCircle2,
   ArrowRight,
   Eye,
-  Crown,
-  Grid,
   Building2,
-  Smartphone,
   Users,
   ScanLine,
-  Compass,
-  Layers,
   ShieldCheck,
-  DoorOpen,
-  Wine,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -136,7 +128,7 @@ export default function LandingRoomEditorShowcase() {
         {/* En-tête de section avec CTAs directs */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
           <div className="max-w-2xl space-y-3">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight leading-tight">
+            <h2 className="em-landing-heading text-2xl sm:text-3xl lg:text-4xl text-foreground">
               Modélisez vos espaces et placez vos invités
             </h2>
 
@@ -147,16 +139,12 @@ export default function LandingRoomEditorShowcase() {
 
           {/* Boutons d'action immédiats */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <Link href={roomEditorUrl}>
-              <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Ouvrir l’éditeur de salle
-              </Button>
-            </Link>
-            <Link href="/marketplace/salles">
-              <Button size="lg" variant="secondary" rightIcon={<Building2 className="w-4 h-4" />}>
-                Explorer les salles 3D
-              </Button>
-            </Link>
+            <Button href={roomEditorUrl} size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Ouvrir l’éditeur de salle
+            </Button>
+            <Button href="/marketplace/salles" size="lg" variant="secondary" rightIcon={<Building2 className="w-4 h-4" />}>
+              Explorer les salles 3D
+            </Button>
           </div>
         </div>
 
@@ -212,18 +200,17 @@ export default function LandingRoomEditorShowcase() {
 
                 {/* CTA direct vers la fonctionnalité */}
                 <div className="pt-4 mt-auto">
-                  <Link href={targetHref} className="block w-full">
-                    <Button
-                      variant={feat.primary ? 'primary' : 'secondary'}
-                      rightIcon={<ArrowRight className="w-4 h-4" />}
-                      className={cn(
-                        'w-full text-xs sm:text-sm font-semibold justify-between transition-all duration-200',
-                        feat.primary ? 'shadow-md shadow-primary/25' : 'hover:border-primary/40',
-                      )}
-                    >
-                      {feat.ctaLabel}
-                    </Button>
-                  </Link>
+                  <Button
+                    href={targetHref}
+                    variant={feat.primary ? 'primary' : 'secondary'}
+                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                    className={cn(
+                      'w-full text-xs sm:text-sm font-semibold justify-between transition-all duration-200',
+                      feat.primary ? 'shadow-md shadow-primary/25' : 'hover:border-primary/40',
+                    )}
+                  >
+                    {feat.ctaLabel}
+                  </Button>
                 </div>
               </div>
             );
@@ -276,11 +263,9 @@ export default function LandingRoomEditorShowcase() {
               <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
               Vos données de salle sont sauvegardées en temps réel et sécurisées dans le cloud.
             </span>
-            <Link href={roomEditorUrl}>
-              <Button size="sm" variant="primary" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                Démarrer mon plan de salle gratuitement
-              </Button>
-            </Link>
+            <Button href={roomEditorUrl} size="sm" variant="primary" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+              Démarrer mon plan de salle gratuitement
+            </Button>
           </div>
         </div>
       </div>

@@ -41,7 +41,7 @@ export default function LandingModelsSection({
       <div className="page-container relative z-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+            <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">
               Modèles d’invitation prêts à l’emploi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
@@ -49,11 +49,9 @@ export default function LandingModelsSection({
             </p>
           </div>
 
-          <Link href="/register?kind=ORGANIZER&intent=personal&action=template">
-            <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Créer mon invitation
-            </Button>
-          </Link>
+          <Button href="/register?kind=ORGANIZER&intent=personal&action=template" rightIcon={<ArrowRight className="w-4 h-4" />}>
+            Créer mon invitation
+          </Button>
         </div>
 
         {loading ? (

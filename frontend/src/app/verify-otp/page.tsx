@@ -113,7 +113,6 @@ function VerifyOtpForm() {
 
  return (
  <AuthSplitLayout
- badge="Vérification"
  title="Confirmez votre identité"
  description={
  fromLogin

@@ -51,7 +51,6 @@ export default function AskResetPasswordPage() {
 
   return (
     <AuthSplitLayout
-      badge="Sécurité"
       title="Récupérez l'accès à votre compte en toute sécurité."
       description="Recevez un lien de réinitialisation par e-mail ou directement sur WhatsApp."
       features={FEATURES}

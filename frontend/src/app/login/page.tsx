@@ -32,7 +32,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthSplitLayout badge="Connexion" title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
+        <AuthSplitLayout title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
           <Card padding="lg" className="shadow-xl animate-pulse h-96">
             <span className="sr-only">Chargement du formulaire de connexion</span>
           </Card>
@@ -79,7 +79,6 @@ function LoginPageContent() {
 
   return (
     <AuthSplitLayout
-      badge={isClientFlow ? 'Compte client' : 'Plateforme tout-en-un'}
       title={isClientFlow ? 'Connectez-vous pour retrouver vos demandes et billets.' : 'Heureux de vous revoir !'}
       description={
         isClientFlow

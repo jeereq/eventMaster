@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/cn';
 import {
@@ -66,15 +65,13 @@ export default function LandingProfileGate({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 px-1">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
-            Quel est votre projet ?
-          </h2>
-          <p className="text-xs sm:text-sm text-muted">
-            Choisissez votre cas : vos outils et actions s’ouvrent dans le détail, une fois le profil sélectionné.
-          </p>
-        </div>
+      <div className="px-1 space-y-1">
+        <h2 className="em-landing-heading text-xl sm:text-2xl text-foreground">
+          Quel est votre projet ?
+        </h2>
+        <p className="text-xs sm:text-sm text-muted">
+          Choisissez votre cas : vos outils et actions s’ouvrent dans le détail, une fois le profil sélectionné.
+        </p>
       </div>
 
       <div className="sm:hidden grid grid-cols-2 gap-2.5" role="tablist" aria-label="Choisir votre profil">
@@ -99,13 +96,13 @@ export default function LandingProfileGate({
                 <div
                   className={cn(
                     'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                    selected ? 'bg-primary text-white shadow-xs' : 'em-glow-icon-box',
+                    selected ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'em-glow-icon-box',
                   )}
                 >
                   <PIcon className="w-4 h-4" />
                 </div>
                 {selected ? (
-                  <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px] shadow-xs">
+                  <span className="w-5 h-5 rounded-full bg-primary-solid text-primary-foreground flex items-center justify-center text-[10px] shadow-xs">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 ) : (
@@ -114,19 +111,14 @@ export default function LandingProfileGate({
                   </span>
                 )}
               </div>
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-bold uppercase text-muted block truncate">
-                  {p.eyebrow}
-                </span>
-                <span
-                  className={cn(
-                    'text-xs font-bold leading-tight line-clamp-2',
-                    selected ? 'text-primary' : 'text-foreground',
-                  )}
-                >
-                  {p.label}
-                </span>
-              </div>
+              <span
+                className={cn(
+                  'text-xs font-bold leading-tight line-clamp-2',
+                  selected ? 'text-primary' : 'text-foreground',
+                )}
+              >
+                {p.label}
+              </span>
             </button>
           );
         })}
@@ -223,7 +215,7 @@ export default function LandingProfileGate({
                     className={cn(
                       'w-full py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center justify-between border transition-all',
                       selected
-                        ? 'bg-primary text-white border-primary shadow-md shadow-primary/30'
+                        ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-md shadow-primary/30'
                         : 'bg-surface-muted text-foreground border-border group-hover:border-primary/40 group-hover:text-primary',
                     )}
                   >
@@ -249,17 +241,15 @@ export default function LandingProfileGate({
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span>{activeProfile.registerHint}</span>
             </div>
-            <Link href={activeCtaHref} className="w-full sm:w-auto">
-              <Button
-                size="md"
-                variant="primary"
-                fullWidth
-                className="shadow-sm font-bold text-xs justify-center min-h-[44px] sm:min-w-[14rem]"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                {activeCtaLabel}
-              </Button>
-            </Link>
+            <Button
+              href={activeCtaHref}
+              size="md"
+              variant="primary"
+              className="shadow-sm font-bold text-xs justify-center min-h-[44px] sm:min-w-[14rem] w-full sm:w-auto"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              {activeCtaLabel}
+            </Button>
           </div>
         }
       >

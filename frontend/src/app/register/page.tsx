@@ -500,7 +500,6 @@ export default function RegisterPage() {
     <Suspense
       fallback={
         <AuthSplitLayout
-          badge="Inscription"
           title="Chargement…"
           description=""
           features={REGISTRATION_ACTION_CONFIGS.ORGANIZER.features}
@@ -665,7 +664,6 @@ function RegisterPageContent() {
 
   return (
     <AuthSplitLayout
-      badge={config.badge}
       title={config.heroTitle}
       description={interpolateRates(config.heroDescription, site)}
       features={layoutFeatures}

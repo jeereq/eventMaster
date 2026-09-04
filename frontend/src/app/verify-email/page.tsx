@@ -103,7 +103,6 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
   return (
     <AuthSplitLayout
-      badge="Confirmation"
       title="Activez votre compte EventMaster."
       description="Nous vérifions votre adresse e-mail pour sécuriser l'accès à votre organisation."
       features={FEATURES}

@@ -120,7 +120,6 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
  return (
  <AuthSplitLayout
- badge="Sécurité"
  title="Récupérez l'accès à votre compte."
  description="Définissez un nouveau mot de passe pour reprendre le contrôle de votre espace d'organisation."
  features={FEATURES}

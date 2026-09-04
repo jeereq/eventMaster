@@ -56,7 +56,7 @@ export function PublicPageHero({
       )}>
         <div className="max-w-3xl space-y-1.5 md:space-y-3.5">
           <h1 className={cn(
-            'font-semibold md:font-display tracking-tight text-foreground leading-tight',
+            'em-landing-heading text-foreground',
             compact
               ? 'text-base md:text-3xl lg:text-4xl'
               : 'text-lg md:text-4xl lg:text-[2.75rem]',

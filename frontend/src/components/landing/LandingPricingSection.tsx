@@ -215,7 +215,7 @@ export default function LandingPricingSection({
  >
  <div className="page-container relative z-10">
         <div className="max-w-2xl mb-10 space-y-2.5">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+          <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">
             {audience === 'B2C'
               ? 'Forfaits Particuliers'
               : audience === 'VENDOR'
