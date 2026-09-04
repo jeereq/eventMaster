@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -247,25 +247,28 @@ function EditorToolGroup({
   const open = openId === id;
   const panelId = `editor-tool-group-${id}`;
   return (
-    <div className="min-w-0">
+    <>
       <button
         type="button"
-        className="flex w-full min-h-11 items-center justify-between gap-2 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm font-semibold text-foreground sm:hidden"
+        className={cn(
+          'shrink-0 min-h-11 px-3 rounded-full border text-sm font-medium transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          open
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground',
+        )}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => onToggle(id)}
       >
-        <span>{label}</span>
-        <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
+        {label}
       </button>
-      <p className="mb-1.5 hidden text-xs font-semibold text-muted sm:block">{label}</p>
-      <div
-        id={panelId}
-        className={cn('flex flex-wrap items-center gap-1.5 max-sm:mt-1.5', open ? 'max-sm:flex' : 'max-sm:hidden')}
-      >
-        {items}
-      </div>
-    </div>
+      {open ? (
+        <div id={panelId} className="basis-full w-full flex flex-wrap items-center gap-1.5">
+          {items}
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -303,7 +306,7 @@ export default function RoomLayoutEditor({
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
   const [keepThemeFloor, setKeepThemeFloor] = useState(false);
   const [accordion, setAccordion] = useState<string>('murs-sols');
-  const [toolbarGroup, setToolbarGroup] = useState<EditorToolGroupId | null>('furniture');
+  const [toolbarGroup, setToolbarGroup] = useState<EditorToolGroupId | null>(null);
   const toggleToolbarGroup = useCallback((id: EditorToolGroupId) => {
     setToolbarGroup((current) => (current === id ? null : id));
   }, []);
@@ -3992,10 +3995,11 @@ export default function RoomLayoutEditor({
   };
 
   const templateBar = !readOnly && caps.canTemplates && (
-    <div className="space-y-3">
-      <p className="text-sm font-semibold text-foreground flex items-center gap-1">
-        <LayoutTemplate className="w-3.5 h-3.5" /> Modèles de salle
-      </p>
+    <details className="rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden">
+      <summary className="min-h-11 px-3 flex items-center gap-2 text-sm font-semibold text-foreground cursor-pointer select-none">
+        <LayoutTemplate className="w-3.5 h-3.5" aria-hidden /> Modèles de salle
+      </summary>
+      <div className="px-3 pb-3 space-y-3 border-t border-border">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex items-center gap-2 min-h-11 text-sm text-muted cursor-pointer">
           <input
@@ -4133,11 +4137,12 @@ export default function RoomLayoutEditor({
           </span>
         ))}
       </div>
-    </div>
+      </div>
+    </details>
   );
 
   const toolbar = !readOnly && (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-5 sm:gap-y-3">
+    <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Outils du plan">
       <EditorToolGroup
         id="history"
         label="Historique"
@@ -4966,17 +4971,10 @@ export default function RoomLayoutEditor({
   );
 
   const header = (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
-      <div>
-        <p className="text-sm font-bold text-foreground flex items-center gap-2">
-          <Move className="w-4 h-4 text-primary" />
-          Éditeur 3D — {roomTypeLabels[blueprint.roomType as RoomType]}
-        </p>
-        <p className="text-xs text-muted mt-0.5">
-          {blueprint.metadata.totalSeats} places · {(blueprint.walls ?? []).length} murs · {roomOutlineLabels[outline.shape]}
-          {caps.canSnapGrid ? ' · Grille' : ''} · Éditeur {caps.label}
-        </p>
-      </div>
+    <div className="flex items-center justify-between gap-2 shrink-0">
+      <p className="text-sm font-semibold text-foreground truncate min-w-0">
+        Plan — {roomTypeLabels[blueprint.roomType as RoomType]} · {blueprint.metadata.totalSeats} places
+      </p>
       <button
         type="button"
         onClick={() => setIsExpanded((v) => !v)}
@@ -5058,7 +5056,7 @@ export default function RoomLayoutEditor({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
           <div className="lg:col-span-2 min-h-0 space-y-2">
             {storyBar}
-            {renderCanvas('em-plan-stage lg:aspect-[16/10] lg:h-auto lg:min-h-[320px]')}
+            {renderCanvas('em-plan-stage min-h-[min(58vh,32rem)] lg:min-h-[min(64vh,40rem)]')}
           </div>
           <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint">
             {renderCanvasInventory()}
