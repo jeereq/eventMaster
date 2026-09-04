@@ -29,7 +29,8 @@ import {
  Sparkles, CheckCircle2, AlertCircle, Type, Image, 
  Columns, Eye, CheckSquare, Loader2, XCircle,
  Spline, Triangle, Trash, Layout, Palette, Square,
- ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins
+ ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
+ Undo2, Redo2, History
 } from 'lucide-react';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
@@ -172,6 +173,48 @@ export default function TemplatesPage() {
  const [templateName, setTemplateName] = useState('');
  const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+ // Historique des actions du Studio (Undo / Redo / Journal)
+ interface StudioActionHistoryEntry {
+ id: string;
+ label: string;
+ time: string;
+ elements: CanvasElement[];
+ }
+ const [studioHistory, setStudioHistory] = useState<StudioActionHistoryEntry[]>([]);
+ const [studioHistoryIndex, setStudioHistoryIndex] = useState<number>(-1);
+ const [studioHistoryModalOpen, setStudioHistoryModalOpen] = useState(false);
+
+ const recordStudioAction = (label: string, newElements: CanvasElement[]) => {
+ const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+ const entry: StudioActionHistoryEntry = {
+ id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+ label,
+ time,
+ elements: JSON.parse(JSON.stringify(newElements)),
+ };
+ setStudioHistory((prev) => {
+ const next = [...prev.slice(0, studioHistoryIndex + 1), entry].slice(-30);
+ setStudioHistoryIndex(next.length - 1);
+ return next;
+ });
+ };
+
+ const handleStudioUndo = () => {
+ if (studioHistoryIndex > 0) {
+ const target = studioHistory[studioHistoryIndex - 1];
+ setStudioHistoryIndex((i) => i - 1);
+ setCanvasElements(JSON.parse(JSON.stringify(target.elements)));
+ }
+ };
+
+ const handleStudioRedo = () => {
+ if (studioHistoryIndex < studioHistory.length - 1) {
+ const target = studioHistory[studioHistoryIndex + 1];
+ setStudioHistoryIndex((i) => i + 1);
+ setCanvasElements(JSON.parse(JSON.stringify(target.elements)));
+ }
+ };
 
  // Super Admin specific states
  const [tenants, setTenants] = useState<{ id: string; name: string }[]>([]);
@@ -371,7 +414,7 @@ export default function TemplatesPage() {
  setImportedWithOcr(false);
  setGeneratedByAi(false);
  setColorThemeId(ORG_BRAND_THEME_ID);
- setCanvasElements(applyPaletteToElements([
+ const initialElements: CanvasElement[] = applyPaletteToElements([
  { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: orgTheme.palette.accent, fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
  { id: '2', type: 'text', text: 'Hassan & Ayesha', color: orgTheme.palette.primary, fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
  { id: '3', type: 'divider', text: '', color: orgTheme.palette.accent, fontSize: '14px', align: 'center', width: 'full', dividerStyle: 'ornament-flower' },
@@ -391,7 +434,15 @@ export default function TemplatesPage() {
  rsvpFields: createDefaultReportingRsvpFields(),
  rsvpPlacement: 'outside',
  },
- ], orgTheme.palette));
+ ], orgTheme.palette) as CanvasElement[];
+ setCanvasElements(initialElements);
+ setStudioHistory([{
+ id: 'init',
+ label: 'Nouveau modèle créé',
+ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+ elements: JSON.parse(JSON.stringify(initialElements)),
+ }]);
+ setStudioHistoryIndex(0);
  
  // Set global styles for paper texture and double border
  setBgType('pattern');
@@ -420,7 +471,15 @@ export default function TemplatesPage() {
  setStudioOrigin(origin);
  setEditingTemplateId(t.id);
  setTemplateName(t.name);
- setCanvasElements(ensureMandatoryRsvpFieldsOnElements(t.content?.elements || []));
+ const loadedElements = ensureMandatoryRsvpFieldsOnElements((t.content?.elements || []) as CanvasElement[]);
+ setCanvasElements(loadedElements);
+ setStudioHistory([{
+ id: 'init',
+ label: `Modèle chargé : ${t.name}`,
+ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+ elements: JSON.parse(JSON.stringify(loadedElements)),
+ }]);
+ setStudioHistoryIndex(0);
  setSelectedTenantId(t.tenantId || '');
  
  // Load global styles
@@ -547,7 +606,9 @@ export default function TemplatesPage() {
  rsvpPlacement: type === 'rsvp-block' ? 'inline' as const : undefined,
  ...freeDefaults,
  };
- setCanvasElements([...canvasElements, newElement]);
+ const nextElements = [...canvasElements, newElement];
+ setCanvasElements(nextElements);
+ recordStudioAction(`Ajout élément (${type})`, nextElements);
  setSelectedElementId(newElement.id);
  
  // Set local states
@@ -651,6 +712,7 @@ export default function TemplatesPage() {
  updatedElements[index - 1] = temp;
  
  setCanvasElements(updatedElements);
+ recordStudioAction('Déplacement vers le haut', updatedElements);
  };
 
  // Move element down in the list
@@ -664,6 +726,7 @@ export default function TemplatesPage() {
  updatedElements[index + 1] = temp;
  
  setCanvasElements(updatedElements);
+ recordStudioAction('Déplacement vers le bas', updatedElements);
  };
 
  const uploadToCloudinary = async (source: File | string): Promise<string> => {
@@ -1410,7 +1473,9 @@ export default function TemplatesPage() {
  };
 
  const handleDeleteElement = (id: string) => {
- setCanvasElements(canvasElements.filter(el => el.id !== id));
+ const nextElements = canvasElements.filter(el => el.id !== id);
+ setCanvasElements(nextElements);
+ recordStudioAction('Suppression d\'élément', nextElements);
  if (selectedElementId === id) {
  setSelectedElementId(null);
  }
@@ -1864,6 +1929,64 @@ export default function TemplatesPage() {
  </p>
  ) : null}
  </Modal>
+
+ <Modal
+ open={studioHistoryModalOpen}
+ onClose={() => setStudioHistoryModalOpen(false)}
+ title="Historique d'actions du Studio"
+ description="Restaurez une étape précédente de votre modèle d'invitation."
+ size="md"
+ footer={
+ <div className="flex justify-end w-full">
+ <Button type="button" variant="secondary" onClick={() => setStudioHistoryModalOpen(false)}>
+ Fermer
+ </Button>
+ </div>
+ }
+ >
+ <div className="space-y-2 max-h-80 overflow-y-auto overscroll-contain pr-1">
+ {studioHistory.length === 0 ? (
+ <p className="text-xs text-muted text-center py-6">Aucune action enregistrée pour le moment.</p>
+ ) : (
+ studioHistory.map((entry, idx) => {
+ const isCurrent = idx === studioHistoryIndex;
+ return (
+ <div
+ key={entry.id}
+ className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition ${
+ isCurrent
+ ? 'border-primary bg-primary/10 text-foreground font-bold shadow-2xs'
+ : 'border-border bg-surface text-muted hover:border-primary/40'
+ }`}
+ >
+ <div className="flex items-center gap-2 min-w-0">
+ <span className={`w-2 h-2 rounded-full shrink-0 ${isCurrent ? 'bg-primary' : 'bg-muted/50'}`} />
+ <span className="truncate">{entry.label}</span>
+ <span className="text-[10px] text-muted font-mono">{entry.time}</span>
+ </div>
+ {isCurrent ? (
+ <span className="text-[10px] font-bold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20">
+ Actuel
+ </span>
+ ) : (
+ <button
+ type="button"
+ onClick={() => {
+ setStudioHistoryIndex(idx);
+ setCanvasElements(JSON.parse(JSON.stringify(entry.elements)));
+ setStudioHistoryModalOpen(false);
+ }}
+ className="text-primary hover:underline font-semibold text-xs px-2 py-1 rounded hover:bg-primary/10 transition cursor-pointer"
+ >
+ Rétablir
+ </button>
+ )}
+ </div>
+ );
+ })
+ )}
+ </div>
+ </Modal>
  <div className="flex flex-col gap-4">
  {/* Editor Header — identity left, primary actions right, admin meta secondary */}
  <header className="shrink-0 space-y-3 border-b border-border pb-4">
@@ -1931,6 +2054,43 @@ export default function TemplatesPage() {
  Formulaire RSVP prêt
  </p>
  ) : null}
+ <div className="flex items-center gap-1 border border-border rounded-xl p-1 bg-surface shadow-2xs">
+ <button
+ type="button"
+ onClick={handleStudioUndo}
+ disabled={studioHistoryIndex <= 0}
+ className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
+ title="Annuler (Ctrl+Z)"
+ aria-label="Annuler la dernière action"
+ >
+ <Undo2 className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
+ onClick={handleStudioRedo}
+ disabled={studioHistoryIndex >= studioHistory.length - 1}
+ className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
+ title="Rétablir (Ctrl+Y)"
+ aria-label="Rétablir la dernière action"
+ >
+ <Redo2 className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
+ onClick={() => setStudioHistoryModalOpen(true)}
+ className="inline-flex h-9 items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition cursor-pointer"
+ title="Historique d'actions"
+ aria-label="Ouvrir l'historique d'actions"
+ >
+ <History className="w-3.5 h-3.5 text-primary" />
+ <span className="hidden md:inline">Historique</span>
+ {studioHistory.length > 0 && (
+ <span className="text-[10px] font-mono px-1 rounded bg-surface-muted text-foreground">
+ {studioHistoryIndex + 1}/{studioHistory.length}
+ </span>
+ )}
+ </button>
+ </div>
  <button
  type="button"
  onClick={() => setShowGuestPreview((v) => !v)}

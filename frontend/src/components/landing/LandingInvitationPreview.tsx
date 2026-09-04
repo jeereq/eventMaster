@@ -39,7 +39,8 @@ export interface LandingInvitationPreviewProps {
   variant?: 'default' | 'hero' | 'compact' | 'studio';
   className?: string;
   showOnlyBackground?: boolean;
-  aspectRatio?: 'auto' | 'portrait' | 'card';
+  aspectRatio?: 'auto' | 'portrait' | 'card' | '9/16';
+  fitMode?: 'cover' | 'contain';
 }
 
 function isTailwindTypography(value?: string): boolean {
@@ -339,6 +340,7 @@ export default function LandingInvitationPreview({
   className = '',
   showOnlyBackground = false,
   aspectRatio = 'auto',
+  fitMode = 'cover',
 }: LandingInvitationPreviewProps) {
   useHeadStylesheet(LANDING_PREVIEW_FONTS, 'em-landing-preview-fonts');
 
@@ -357,9 +359,20 @@ export default function LandingInvitationPreview({
   const bgPattern = (global?.bgPattern as string | undefined) || 'paper';
   const frameType = (global?.frameType as string | undefined) || 'none';
 
-  const backgroundStyle = getTemplateBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern);
+  const baseBackgroundStyle = getTemplateBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern);
   const hasBackgroundImage = bgType === 'image' && Boolean(bgImageUrl);
   const useLegacyOnly = rawElements.length === 0;
+
+  const backgroundStyle: React.CSSProperties = {
+    ...baseBackgroundStyle,
+    ...(hasBackgroundImage
+      ? {
+          backgroundSize: fitMode === 'contain' ? 'contain' : 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }
+      : {}),
+  };
 
   const visibleElements = useLegacyOnly
     ? template.elements
@@ -369,8 +382,8 @@ export default function LandingInvitationPreview({
     ? (visibleElements as PreviewElement[]).slice(0, isHero ? 5 : hasBackgroundImage ? 5 : 6)
     : visibleElements;
 
-  // Calcul du format physique de carte
-  const isCardAspect = aspectRatio === 'card' || aspectRatio === 'portrait' || (!isCompact && aspectRatio === 'auto');
+  // Calcul du format physique de carte proportionnel 9:16
+  const is916 = aspectRatio === '9/16' || aspectRatio === 'card' || aspectRatio === 'portrait' || (!isCompact && aspectRatio === 'auto');
 
   return (
     <div
@@ -380,8 +393,8 @@ export default function LandingInvitationPreview({
           ? 'h-full max-h-full p-4 sm:p-5 justify-center'
           : isCompact
             ? 'min-h-[180px] max-h-[240px] p-3'
-            : isCardAspect
-              ? 'w-full max-w-[380px] mx-auto min-h-[340px] max-h-[min(540px,75vh)] p-4 sm:p-6 justify-center'
+            : is916
+              ? 'w-full max-w-[340px] sm:max-w-[360px] mx-auto aspect-[9/16] justify-end'
               : 'p-6 sm:p-8 min-h-[280px] max-h-[min(520px,70vh)]',
         className,
       )}
@@ -390,7 +403,7 @@ export default function LandingInvitationPreview({
         borderColor: template.style.borderColor || 'rgba(197, 160, 89, 0.4)',
       }}
     >
-      {/* Cadre ornemental physique (frameType) */}
+      {/* Cadre ornemental physique (frameType) si non masqué */}
       {renderFrame(frameType)}
 
       {/* Si l'utilisateur choisit d'admirer uniquement l'illustration générée */}
@@ -402,36 +415,51 @@ export default function LandingInvitationPreview({
         </div>
       ) : (
         <>
-          {/* Couche de contraste / Passe-partout si l'arrière-plan est une image */}
-          {hasBackgroundImage && (
-            isCompact ? (
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/45 to-black/20 pointer-events-none z-[1]" />
-            ) : (
-              <div className="absolute inset-0 bg-black/25 pointer-events-none z-[1]" />
-            )
+          {/* Rendu réaliste et proportionnel : aucun gros bloc opaque ne masque la photo */}
+          {hasBackgroundImage ? (
+            <div
+              className={cn(
+                'relative z-10 flex flex-col justify-end w-full mt-auto',
+                isCompact
+                  ? 'bg-gradient-to-t from-black/85 via-black/45 to-transparent p-2.5 text-white'
+                  : 'bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-14 pb-4 px-3.5 sm:px-4 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] rounded-b-[inherit]',
+              )}
+            >
+              <div className="flex flex-wrap gap-y-1 w-full">
+                {useLegacyOnly
+                  ? template.elements.map((el, i) => (
+                      <div key={i} className="w-full">
+                        {renderLegacyElement(el, isCompact)}
+                      </div>
+                    ))
+                  : (elementsToRender as PreviewElement[]).map((el, i) => (
+                      <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
+                        {renderElement(el, isCompact, paletteAccent, '#ffffff')}
+                      </div>
+                    ))}
+              </div>
+            </div>
+          ) : (
+            /* Arrière-plan uni ou texturé (papier, parchemin) */
+            <div
+              className={cn(
+                'relative z-10 flex flex-wrap gap-y-1.5 w-full p-4 sm:p-5',
+                isHero && 'overflow-hidden max-h-full',
+              )}
+            >
+              {useLegacyOnly
+                ? template.elements.map((el, i) => (
+                    <div key={i} className="w-full">
+                      {renderLegacyElement(el, isCompact)}
+                    </div>
+                  ))
+                : (elementsToRender as PreviewElement[]).map((el, i) => (
+                    <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
+                      {renderElement(el, isCompact, paletteAccent)}
+                    </div>
+                  ))}
+            </div>
           )}
-
-          {/* Contenu textuel et éléments interactifs */}
-          <div
-            className={cn(
-              'relative z-10 flex flex-wrap gap-y-1.5 w-full',
-              hasBackgroundImage && !isCompact && 'bg-surface/85 dark:bg-slate-950/85 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/40 dark:border-white/10 shadow-lg text-foreground',
-              hasBackgroundImage && isCompact && 'text-white',
-              isHero && 'overflow-hidden max-h-full',
-            )}
-          >
-            {useLegacyOnly
-              ? template.elements.map((el, i) => (
-                  <div key={i} className="w-full">
-                    {renderLegacyElement(el, isCompact)}
-                  </div>
-                ))
-              : (elementsToRender as PreviewElement[]).map((el, i) => (
-                  <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
-                    {renderElement(el, isCompact, paletteAccent)}
-                  </div>
-                ))}
-          </div>
         </>
       )}
     </div>

@@ -262,6 +262,7 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis) {
     const parts = [
         'Create ONE luxury vertical print-ready invitation card artwork (portrait orientation 1024x1536 / 9:16).',
         'PHOTOGRAPHIC REALISM REQUIREMENT: Hyper-realistic 35mm fine-grain photography aesthetic, natural skin micro-textures with visible pores, realistic lighting highlights on melanin skin tones, organic fabric drape (wax, satin, velvet, lace), authentic warm ambient event lighting (candles, chandeliers, golden hour). STRICTLY PROHIBIT 3D CGI plastic rendering, cartoonish styling, doll-like faces, or airbrushed beauty smoothing.',
+        'PROPORTIONAL & AUTHENTIC COMPOSITION (NO OVER-REDESIGN): Keep the visual clean, organic, and photographically balanced. Do NOT add artificial cluttered borders, excessive gaudy graphic stickers, fake 3D digital elements, or heavy opaque banners. Maintain natural photographic proportions (aspect ratio 9:16) with generous negative space so the subjects and the real setting remain the centerpiece.',
     ];
     if (isClone) {
         parts.push('=== INVITATION CARD CLONING & DUPLICATION MANDATE ===', 'The reference image contains an existing INVITATION CARD. You MUST faithfully duplicate and replicate its architectural composition, ornamental borders, arches, filigree flourishes, paper textures, background gradients, and color harmonies.', analysis?.clonedCardFeatures ? `Cloned card layout details: ${analysis.clonedCardFeatures}` : '');
@@ -780,15 +781,16 @@ The attached reference photo(s) depict REAL PEOPLE who must appear on this luxur
 1. ABSOLUTE FACIAL & CHARACTER FIDELITY: Maintain 100% photographic facial likeness and identity of each person.
 2. RAW 35mm PHOTOGRAPHY: Hyper-realistic photo quality, natural skin micro-texture, visible pores, lifelike melanin undertones (NEVER lighten, bleach, or change ethnicity), authentic eye catchlights, natural hair strand textures, realistic fabrics (wax, satin, velvet, lace).
 3. INVITATION CARD CLONING: If an invitation card sample was provided in the references, faithfully replicate its layout, ornamental borders, arches, paper textures, and aesthetic harmony.
-4. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, doll-like features, 3D CGI look, or altered bone structure.
-5. COMPOSITION: Seamlessly integrate the original subject(s) into the luxury vertical 9:16 invitation card artwork.
+4. PROPORTIONAL COMPOSITION & NO OVER-REDESIGN: Avoid gaudy digital overlays, heavy artificial graphics, fake 3D stickers, or clutter. Let the authentic human subjects and luxury venue shine with clean, proportional 9:16 portrait spatial hierarchy.
+5. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, doll-like features, 3D CGI look, or altered bone structure.
+6. COMPOSITION: Seamlessly integrate the original subject(s) into the luxury vertical 9:16 invitation card artwork.
 
 ${imagePrompt}`
         : `CRITICAL MANDATE - NANO BANANA LUXURY INVITATION ARTWORK & CARD CLONING:
 Generate a breathtaking, ultra-high-definition vertical 9:16 luxury invitation artwork.
 - REALISTIC TEXTURES: Fine luxury paper grain, metallic gold foil embossing, soft dimensional depth, natural floral arrangements.
 - INVITATION CLONING: If reference images contain an existing invitation card, faithfully reproduce its framing, ornaments, color scheme, and aesthetic composition.
-- NO ARTIFICIAL LOOK: Clean, refined, high-end print-quality aesthetic without cheap digital artifacts.
+- NO OVER-REDESIGN: Clean, refined, high-end photographic print aesthetic without cheap digital artifacts or gaudy fake 3D overlays. Maintain balanced proportional sizes.
 
 ${imagePrompt}`;
     const controller = new AbortController();

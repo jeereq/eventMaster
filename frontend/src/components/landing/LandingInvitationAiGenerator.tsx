@@ -20,6 +20,13 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  SlidersHorizontal,
+  History,
+  Undo2,
+  Redo2,
+  ZoomIn,
+  Clock,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -134,6 +141,15 @@ const STAGE_STEPS = [
   { id: 'ready', label: 'Aperçu' },
 ] as const;
 
+export interface FormActionItem {
+  id: string;
+  type: 'upload' | 'remove_image' | 'prompt_change' | 'model_applied' | 'generate_success' | 'restore_history' | 'reset';
+  label: string;
+  detail?: string;
+  time: string;
+  snapshotPrompt?: string;
+}
+
 export default function LandingInvitationAiGenerator({
   className,
   id = 'generateur-ia',
@@ -149,6 +165,14 @@ export default function LandingInvitationAiGenerator({
   const resultRef = useRef<HTMLDivElement>(null);
 
   const [prompt, setPrompt] = useState('');
+  const [promptHistory, setPromptHistory] = useState<string[]>(['']);
+  const [promptHistoryIndex, setPromptHistoryIndex] = useState<number>(0);
+  const [formTab, setFormTab] = useState<'form' | 'modeles' | 'historique'>('form');
+  const [historySubTab, setHistorySubTab] = useState<'generations' | 'actions'>('generations');
+  const [actionHistory, setActionHistory] = useState<FormActionItem[]>([]);
+  const [coverFitMode, setCoverFitMode] = useState<'cover' | 'contain'>('cover');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const previewsRef = useRef<string[]>([]);
@@ -168,6 +192,55 @@ export default function LandingInvitationAiGenerator({
   const [previewTab, setPreviewTab] = useState<'card' | 'artwork' | 'details'>('card');
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  const logAction = (
+    type: FormActionItem['type'],
+    label: string,
+    detail?: string,
+    snapshotPrompt?: string,
+  ) => {
+    const now = new Date();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const item: FormActionItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      type,
+      label,
+      detail,
+      time,
+      snapshotPrompt: snapshotPrompt ?? prompt,
+    };
+    setActionHistory((prev) => [item, ...prev].slice(0, 40));
+  };
+
+  const updatePromptWithHistory = (newPrompt: string, logLabel?: string) => {
+    setPrompt(newPrompt);
+    setPromptHistory((prev) => {
+      const next = [...prev.slice(0, promptHistoryIndex + 1), newPrompt].slice(-25);
+      setPromptHistoryIndex(next.length - 1);
+      return next;
+    });
+    if (logLabel) {
+      logAction('prompt_change', logLabel, newPrompt.slice(0, 60) + (newPrompt.length > 60 ? '…' : ''), newPrompt);
+    }
+  };
+
+  const handleUndoPrompt = () => {
+    if (promptHistoryIndex > 0) {
+      const target = promptHistory[promptHistoryIndex - 1];
+      setPromptHistoryIndex((i) => i - 1);
+      setPrompt(target);
+      logAction('prompt_change', 'Annulation (Undo)', target.slice(0, 60), target);
+    }
+  };
+
+  const handleRedoPrompt = () => {
+    if (promptHistoryIndex < promptHistory.length - 1) {
+      const target = promptHistory[promptHistoryIndex + 1];
+      setPromptHistoryIndex((i) => i + 1);
+      setPrompt(target);
+      logAction('prompt_change', 'Rétablissement (Redo)', target.slice(0, 60), target);
+    }
+  };
 
   const handleCopyColor = (color: string, key: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -235,6 +308,7 @@ export default function LandingInvitationAiGenerator({
     setFiles(merged);
     setPreviews(merged.map((f) => URL.createObjectURL(f)));
     setError('');
+    logAction('upload', 'Images ajoutées', `${validImages.length} photo(s) de référence téléversée(s)`);
   };
 
   const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,6 +323,7 @@ export default function LandingInvitationAiGenerator({
       URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
     });
+    logAction('remove_image', 'Image retirée', `Référence visuelle #${index + 1} retirée`);
   };
 
   const scrollResultIntoView = () => {
@@ -304,6 +379,7 @@ export default function LandingInvitationAiGenerator({
       setAllowance(getAiSimulationAllowance());
       saveAiTemplateDraft(data.content, prompt.trim());
       void fetchAiTemplateComposeHistory().then(setHistory);
+      logAction('generate_success', 'Génération réussie', `Modèle créé pour le brief : « ${prompt.slice(0, 50)}… »`);
       setActiveStep(3);
       setStage(null);
       scrollResultIntoView();
@@ -350,6 +426,7 @@ export default function LandingInvitationAiGenerator({
     setActiveHistoryId(null);
     setActiveStep(0);
     setPreviewOpen(false);
+    logAction('reset', 'Réinitialisation', 'Champs et résultat effacés');
   };
 
   const openHistoryItem = (item: AiTemplateComposeHistoryItem) => {
@@ -369,8 +446,13 @@ export default function LandingInvitationAiGenerator({
         : null,
     );
     setActiveHistoryId(item.id);
-    if (item.prompt) setPrompt(item.prompt);
+    if (item.prompt) {
+      setPrompt(item.prompt);
+      setPromptHistory((prev) => [...prev, item.prompt!]);
+      setPromptHistoryIndex((i) => i + 1);
+    }
     saveAiTemplateDraft(item.content, item.prompt || undefined);
+    logAction('restore_history', 'Génération rétablie', item.prompt ? item.prompt.slice(0, 50) : 'Modèle');
     setActiveStep(3);
     setError('');
     setStage(null);
@@ -536,7 +618,7 @@ export default function LandingInvitationAiGenerator({
             className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] gap-0 xl:divide-x divide-border"
           >
         {/* Compose */}
-        <div className="p-5 sm:p-7 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4">
           <input
             ref={inputRef}
             type="file"
@@ -546,184 +628,401 @@ export default function LandingInvitationAiGenerator({
             onChange={onPickFiles}
           />
 
+          {/* Onglets alignés pour maximiser l'espace */}
           <div
-            role="button"
-            tabIndex={busy || files.length >= 4 ? -1 : 0}
-            aria-label={
-              files.length >= 4
-                ? 'Maximum de 4 images atteint'
-                : 'Ajouter 1 à 4 images de référence (JPEG, PNG ou WebP)'
-            }
-            aria-disabled={busy || files.length >= 4}
-            aria-controls={previews.length ? `${id}-refs` : undefined}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (!busy && files.length < 4) inputRef.current?.click();
-              }
-            }}
-            onClick={() => {
-              if (!busy && files.length < 4) inputRef.current?.click();
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              if (!busy && files.length < 4) setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              if (busy || files.length >= 4) return;
-              addFiles(Array.from(e.dataTransfer.files || []));
-            }}
-            className={cn(
-              'rounded-2xl border-2 border-dashed p-5 sm:p-6 text-center transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              dragOver
-                ? 'border-primary bg-primary/10'
-                : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
-              (busy || files.length >= 4) && 'opacity-70 cursor-not-allowed',
-            )}
+            className="flex items-center gap-1 p-1 rounded-xl bg-surface-muted/90 border border-border shadow-2xs"
+            role="tablist"
+            aria-label="Sections du générateur IA"
           >
-            <Upload className="w-6 h-6 text-primary mx-auto mb-2" aria-hidden />
-            <p className="text-sm font-bold text-foreground">Déposez 1 à 4 photos ou cartes à copier</p>
-            <p className="text-xs text-muted mt-1">Photos de personnes (visages fidèles) et/ou modèle d’invitation à cloner</p>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={formTab === 'form'}
+              onClick={() => setFormTab('form')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition touch-manipulation cursor-pointer',
+                formTab === 'form'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-muted hover:text-foreground hover:bg-surface',
+              )}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Formulaire</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={formTab === 'modeles'}
+              onClick={() => setFormTab('modeles')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition touch-manipulation cursor-pointer',
+                formTab === 'modeles'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-muted hover:text-foreground hover:bg-surface',
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Modèles de prompt</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={formTab === 'historique'}
+              onClick={() => setFormTab('historique')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition touch-manipulation cursor-pointer',
+                formTab === 'historique'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'text-muted hover:text-foreground hover:bg-surface',
+              )}
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Historique</span>
+              {(history.length > 0 || actionHistory.length > 0) && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-primary/20 text-foreground ml-0.5 font-bold">
+                  {history.length}
+                </span>
+              )}
+            </button>
           </div>
 
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-foreground">
-            <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-            <div className="leading-relaxed">
-              <span className="font-bold text-primary">Réalisme 35mm & Clonage d’invitation :</span> Déposez une photo de personnes et/ou l’image d’une carte à reproduire. Notre IA clone fidèlement la mise en page tout en conservant les visages réels.
-            </div>
-          </div>
+          {/* ONGLET 1 : FORMULAIRE DE CRÉATION */}
+          {formTab === 'form' && (
+            <div className="space-y-4 animate-fade-in">
+              <div
+                role="button"
+                tabIndex={busy || files.length >= 4 ? -1 : 0}
+                aria-label={
+                  files.length >= 4
+                    ? 'Maximum de 4 images atteint'
+                    : 'Ajouter 1 à 4 images de référence (JPEG, PNG ou WebP)'
+                }
+                aria-disabled={busy || files.length >= 4}
+                aria-controls={previews.length ? `${id}-refs` : undefined}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (!busy && files.length < 4) inputRef.current?.click();
+                  }
+                }}
+                onClick={() => {
+                  if (!busy && files.length < 4) inputRef.current?.click();
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (!busy && files.length < 4) setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  if (busy || files.length >= 4) return;
+                  addFiles(Array.from(e.dataTransfer.files || []));
+                }}
+                className={cn(
+                  'rounded-xl border-2 border-dashed p-4 sm:p-5 text-center transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  dragOver
+                    ? 'border-primary bg-primary/10'
+                    : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
+                  (busy || files.length >= 4) && 'opacity-70 cursor-not-allowed',
+                )}
+              >
+                <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
+                <p className="text-sm font-bold text-foreground">Déposez 1 à 4 photos ou cartes à copier</p>
+                <p className="text-xs text-muted mt-0.5">Visages réels à conserver ou carton d’invitation à cloner</p>
+              </div>
 
-          {previews.length > 0 && (
-            <div id={`${id}-refs`} className="flex flex-wrap gap-2.5">
-              {previews.map((url, i) => (
-                <div
-                  key={url}
-                  className="relative w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-border shadow-sm group"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
+              {previews.length > 0 && (
+                <div id={`${id}-refs`} className="flex flex-wrap gap-2">
+                  {previews.map((url, i) => (
+                    <div
+                      key={url}
+                      className="relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-xl overflow-hidden border border-border shadow-xs group"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(i);
+                        }}
+                        className="absolute top-0.5 right-0.5 min-w-8 min-h-8 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs"
+                        aria-label={`Retirer l’image ${i + 1}`}
+                      >
+                        <XCircle className="w-3.5 h-3.5" aria-hidden />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
+                    Brief style ou demande de clonage
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {/* Boutons d'action annuler/rétablir */}
+                    <button
+                      type="button"
+                      disabled={promptHistoryIndex <= 0 || busy}
+                      onClick={handleUndoPrompt}
+                      className="text-[11px] font-semibold text-muted hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-muted transition disabled:opacity-30"
+                      title="Annuler (Undo)"
+                      aria-label="Annuler la modification du prompt"
+                    >
+                      <Undo2 className="w-3 h-3" />
+                      <span className="hidden sm:inline">Annuler</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={promptHistoryIndex >= promptHistory.length - 1 || busy}
+                      onClick={handleRedoPrompt}
+                      className="text-[11px] font-semibold text-muted hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-muted transition disabled:opacity-30"
+                      title="Rétablir (Redo)"
+                      aria-label="Rétablir la modification du prompt"
+                    >
+                      <Redo2 className="w-3 h-3" />
+                      <span className="hidden sm:inline">Rétablir</span>
+                    </button>
+                    <span className="text-[10px] text-muted tabular-nums ml-1" aria-live="polite">
+                      {prompt.trim().length}/1500
+                    </span>
+                  </div>
+                </div>
+
+                <textarea
+                  id={`${id}-brief`}
+                  rows={3}
+                  maxLength={1500}
+                  value={prompt}
+                  disabled={busy}
+                  onChange={(e) => updatePromptWithHistory(e.target.value)}
+                  placeholder="Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…"
+                  className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
+                />
+
+                <div className="flex items-center justify-between text-xs pt-0.5">
+                  <span className="text-muted text-[11px]">Besoin d’inspiration ou d’un modèle clé en main ?</span>
                   <button
                     type="button"
-                    disabled={busy}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFile(i);
-                    }}
-                    className="absolute top-0.5 right-0.5 min-w-10 min-h-10 sm:min-w-11 sm:min-h-11 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-95 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-sm"
-                    aria-label={`Retirer l’image ${i + 1}`}
+                    onClick={() => setFormTab('modeles')}
+                    className="font-bold text-primary hover:underline text-[11px] inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <XCircle className="w-4 h-4" aria-hidden />
+                    <Sparkles className="w-3 h-3" />
+                    Explorer les modèles de prompt →
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
-                Brief style ou demande de clonage
-              </label>
-              <span className="text-[10px] text-muted tabular-nums" aria-live="polite">
-                {prompt.trim().length}/1500
-              </span>
-            </div>
-            <textarea
-              id={`${id}-brief`}
-              rows={4}
-              maxLength={1500}
-              value={prompt}
-              disabled={busy}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…"
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[6rem] disabled:opacity-60"
-            />
+              {error ? (
+                <Alert variant="error" title="Génération interrompue" className="!p-3 text-xs">
+                  <p className="break-words">{error}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => {
+                        setError('');
+                        void handleGenerate();
+                      }}
+                    >
+                      Réessayer
+                    </Button>
+                    {error.toLowerCase().includes('jeton') ? (
+                      <Button type="button" size="sm" onClick={() => setTokenModalOpen(true)}>
+                        Recharger
+                      </Button>
+                    ) : null}
+                  </div>
+                </Alert>
+              ) : null}
 
-            {/* Sélecteur et bibliothèque de modèles de prompts */}
-            <PromptModelSelector
-              onSelectPrompt={(selected) => setPrompt(selected)}
-              selectedPrompt={prompt}
-              disabled={busy}
-            />
-          </div>
+              {busy ? (
+                <div
+                  className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 flex items-center gap-3"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0 motion-reduce:animate-none" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-foreground break-words">{stage || 'Génération en cours…'}</p>
+                    <p className="text-[11px] text-muted mt-0.5">Environ 20–40 s selon les images.</p>
+                  </div>
+                </div>
+              ) : null}
 
-          {error ? (
-            <Alert variant="error" title="Génération interrompue" className="!p-3 text-xs">
-              <p className="break-words">{error}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 <Button
                   type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => {
-                    setError('');
-                    void handleGenerate();
-                  }}
+                  onClick={handleGenerate}
+                  disabled={busy || !files.length || prompt.trim().length < 8}
+                  leftIcon={
+                    busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+                    ) : (
+                      <Wand2 className="w-4 h-4" />
+                    )
+                  }
                 >
-                  Réessayer
+                  {busy ? 'Génération…' : 'Générer mon modèle'}
                 </Button>
-                {error.toLowerCase().includes('jeton') ? (
-                  <Button type="button" size="sm" onClick={() => setTokenModalOpen(true)}>
-                    Recharger
+                {result ? (
+                  <Button type="button" variant="secondary" onClick={resetResult} disabled={busy}>
+                    Recommencer
                   </Button>
                 ) : null}
               </div>
-            </Alert>
-          ) : null}
-
-          {busy ? (
-            <div
-              className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 flex items-center gap-3"
-              role="status"
-              aria-live="polite"
-            >
-              <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0 motion-reduce:animate-none" aria-hidden />
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground break-words">{stage || 'Génération en cours…'}</p>
-                <p className="text-[11px] text-muted mt-0.5">Environ 20–40 s selon les images.</p>
-              </div>
             </div>
-          ) : null}
+          )}
 
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Button
-              type="button"
-              onClick={handleGenerate}
-              disabled={busy || !files.length || prompt.trim().length < 8}
-              leftIcon={
-                busy ? (
-                  <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
-                ) : (
-                  <Wand2 className="w-4 h-4" />
-                )
-              }
-            >
-              {busy ? 'Génération…' : 'Générer mon modèle'}
-            </Button>
-            {result ? (
-              <Button type="button" variant="secondary" onClick={resetResult} disabled={busy}>
-                Recommencer
-              </Button>
-            ) : null}
-          </div>
+          {/* ONGLET 2 : MODÈLES DE PROMPTS */}
+          {formTab === 'modeles' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="flex items-start justify-between gap-2 p-3 rounded-xl bg-surface-muted/60 border border-border">
+                <div className="text-xs text-muted leading-relaxed">
+                  <span className="font-bold text-foreground">Choisissez un modèle de prompt :</span> Cliquez sur une carte pour charger instantanément la formule testée (mariages, galas, clonage d'invitation).
+                </div>
+                {prompt.trim().length > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setFormTab('form')}
+                    className="shrink-0 text-xs"
+                  >
+                    Retour au form →
+                  </Button>
+                )}
+              </div>
 
-          <AiTemplateComposeHistoryList
-            items={history}
-            activeId={activeHistoryId}
-            onOpen={openHistoryItem}
-            className="pt-4 mt-1 border-t border-border/70"
-            listClassName="max-h-56 sm:max-h-64"
-          />
+              <PromptModelSelector
+                onSelectPrompt={(selected) => {
+                  updatePromptWithHistory(selected, 'Modèle de prompt sélectionné');
+                }}
+                selectedPrompt={prompt}
+                disabled={busy}
+              />
+
+              {prompt.trim().length > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/25">
+                  <p className="text-xs font-semibold text-foreground line-clamp-1 pr-2">
+                    ✓ Modèle appliqué dans votre formulaire
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setFormTab('form')}
+                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                  >
+                    Aller au formulaire
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ONGLET 3 : HISTORIQUE (GÉNÉRATIONS & JOURNAL D'ACTIONS) */}
+          {formTab === 'historique' && (
+            <div className="space-y-3 animate-fade-in">
+              {/* Sélecteur secondaire de sous-onglet */}
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface border border-border text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setHistorySubTab('generations')}
+                  className={cn(
+                    'flex-1 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
+                    historySubTab === 'generations'
+                      ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  Générations IA ({history.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistorySubTab('actions')}
+                  className={cn(
+                    'flex-1 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
+                    historySubTab === 'actions'
+                      ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  Actions récentes ({actionHistory.length})
+                </button>
+              </div>
+
+              {/* Sous-vue 1 : Générations IA sauvegardées */}
+              {historySubTab === 'generations' && (
+                <AiTemplateComposeHistoryList
+                  items={history}
+                  activeId={activeHistoryId}
+                  onOpen={(item) => {
+                    openHistoryItem(item);
+                    setFormTab('form');
+                  }}
+                  className="pt-1"
+                  listClassName="max-h-72 sm:max-h-80"
+                />
+              )}
+
+              {/* Sous-vue 2 : Journal d'actions de création */}
+              {historySubTab === 'actions' && (
+                <div className="space-y-2 max-h-72 sm:max-h-80 overflow-y-auto overscroll-contain pr-1">
+                  {actionHistory.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-muted border border-dashed border-border rounded-xl">
+                      <Clock className="w-5 h-5 mx-auto mb-1 text-muted/60" />
+                      Aucune action enregistrée pour cette session.
+                    </div>
+                  ) : (
+                    actionHistory.map((act) => (
+                      <div
+                        key={act.id}
+                        className="flex items-start justify-between gap-2 p-2.5 rounded-xl border border-border bg-surface shadow-2xs text-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-foreground">{act.label}</span>
+                            <span className="text-[10px] text-muted font-mono">{act.time}</span>
+                          </div>
+                          {act.detail && (
+                            <p className="text-[11px] text-muted line-clamp-1 mt-0.5">{act.detail}</p>
+                          )}
+                        </div>
+
+                        {act.snapshotPrompt && act.snapshotPrompt !== prompt && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updatePromptWithHistory(act.snapshotPrompt!, 'Rétablissement depuis action');
+                              setFormTab('form');
+                            }}
+                            className="shrink-0 text-[10px] font-bold text-primary hover:underline px-2 py-1 rounded bg-primary/10 border border-primary/20"
+                            title="Rétablir ce prompt dans le formulaire"
+                          >
+                            Rétablir
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Preview rail */}
         <aside
           ref={resultRef}
-          className="bg-surface-muted/35 p-5 sm:p-6 flex flex-col min-h-[22rem] xl:min-h-full"
+          className="bg-surface-muted/35 p-4 sm:p-6 flex flex-col min-h-[22rem] xl:min-h-full"
           aria-live="polite"
         >
           <div className="flex items-center justify-between gap-2 mb-3">
@@ -732,14 +1031,26 @@ export default function LandingInvitationAiGenerator({
               Aperçu du résultat
             </p>
             {previewTemplate ? (
-              <button
-                type="button"
-                onClick={() => setPreviewOpen(true)}
-                className="text-xs font-bold text-primary inline-flex items-center gap-1.5 min-h-10 px-2 touch-manipulation hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-lg"
-              >
-                <Maximize2 className="w-3.5 h-3.5" aria-hidden />
-                Agrandir
-              </button>
+              <div className="flex items-center gap-1.5">
+                {/* Bouton pour inspecter l'image HD originale sans aucune découpe */}
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(true)}
+                  className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-9 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs"
+                  title="Voir l'image cover entière sans aucun texte ni recadrage"
+                >
+                  <ZoomIn className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  <span className="hidden sm:inline">Plein format</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="text-xs font-bold text-primary inline-flex items-center gap-1 min-h-9 px-2.5 rounded-lg border border-primary/20 bg-primary/10 hover:bg-primary/20 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" aria-hidden />
+                  Agrandir
+                </button>
+              </div>
             ) : null}
           </div>
 
@@ -779,7 +1090,7 @@ export default function LandingInvitationAiGenerator({
                   )}
                 >
                   <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                  <span>Illustration</span>
+                  <span>Cover pure</span>
                 </button>
                 <button
                   type="button"
@@ -798,13 +1109,45 @@ export default function LandingInvitationAiGenerator({
                 </button>
               </div>
 
+              {/* Contrôle de cadrage : Cover (remplit 9:16) ou Entière (contain sans rogner) */}
+              {(previewTab === 'card' || previewTab === 'artwork') && (
+                <div className="flex items-center justify-between px-1 text-[11px] text-muted">
+                  <span>Ajustement :</span>
+                  <div className="inline-flex rounded-lg border border-border p-0.5 bg-surface">
+                    <button
+                      type="button"
+                      onClick={() => setCoverFitMode('cover')}
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer',
+                        coverFitMode === 'cover' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
+                      )}
+                    >
+                      Cover 9:16
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCoverFitMode('contain')}
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer',
+                        coverFitMode === 'contain' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
+                      )}
+                      title="Affiche 100% de l'image originale sans aucune découpe"
+                    >
+                      Entière (sans découpe)
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Vue 1 : Carte d'invitation complète */}
               {previewTab === 'card' && (
                 <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center">
                   <LandingInvitationPreview
                     template={previewTemplate}
                     showOnlyBackground={false}
-                    className="!min-h-[300px] !max-h-[min(480px,58vh)]"
+                    fitMode={coverFitMode}
+                    aspectRatio="9/16"
+                    className="!w-full !max-w-[320px] sm:!max-w-[340px]"
                   />
                 </div>
               )}
@@ -815,7 +1158,9 @@ export default function LandingInvitationAiGenerator({
                   <LandingInvitationPreview
                     template={previewTemplate}
                     showOnlyBackground={true}
-                    className="!min-h-[300px] !max-h-[min(480px,58vh)]"
+                    fitMode={coverFitMode}
+                    aspectRatio="9/16"
+                    className="!w-full !max-w-[320px] sm:!max-w-[340px]"
                   />
                   <div className="px-2 py-1 text-center">
                     <p className="text-[11px] text-muted">
@@ -931,6 +1276,55 @@ export default function LandingInvitationAiGenerator({
     </div>
   )}
 
+      {/* Modale d'inspection de l'image originale HD (Lightbox 100% sans découpe) */}
+      {previewTemplate && (
+        <Modal
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          title="Image Cover originale IA (Plein format)"
+          description="Visualisation 100% intégrale de l'illustration en résolution originale, sans rognage ni texte masquant."
+          size="xl"
+          footer={
+            <div className="flex w-full flex-col-reverse sm:flex-row gap-2 sm:justify-between items-center">
+              <span className="text-xs text-muted">
+                Format portrait 9:16 • Rendu ultra-réaliste
+              </span>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="secondary" onClick={() => setLightboxOpen(false)}>
+                  Fermer
+                </Button>
+                {typeof (previewTemplate?.previewContent?.global as Record<string, unknown>)?.bgImageUrl === 'string' && (
+                  <a
+                    href={(previewTemplate?.previewContent?.global as Record<string, unknown>).bgImageUrl as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary-hover transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Ouvrir en plein écran
+                  </a>
+                )}
+              </div>
+            </div>
+          }
+        >
+          <div className="flex flex-col items-center justify-center p-2 sm:p-4 bg-black/95 rounded-2xl overflow-hidden min-h-[300px]">
+            {typeof (previewTemplate?.previewContent?.global as Record<string, unknown>)?.bgImageUrl === 'string' ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={(previewTemplate?.previewContent?.global as Record<string, unknown>).bgImageUrl as string}
+                alt="Image de couverture originale générée par IA"
+                className="max-h-[70vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
+              />
+            ) : (
+              <div className="text-white/60 text-xs text-center p-6">
+                Aucune image d'arrière-plan détectée.
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
       <Modal
         open={previewOpen && Boolean(previewTemplate)}
         onClose={() => setPreviewOpen(false)}
@@ -971,14 +1365,16 @@ export default function LandingInvitationAiGenerator({
                 )}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Illustration seule</span>
+                <span>Cover pure</span>
               </button>
             </div>
             <div className="rounded-2xl border border-border overflow-hidden bg-surface-muted/30 p-2 sm:p-4 flex justify-center">
               <LandingInvitationPreview
                 template={previewTemplate}
                 showOnlyBackground={previewTab === 'artwork'}
-                className="!max-h-[min(70vh,640px)] !max-w-[420px]"
+                fitMode={coverFitMode}
+                aspectRatio="9/16"
+                className="!max-h-[min(70vh,640px)] !max-w-[360px]"
               />
             </div>
           </div>
