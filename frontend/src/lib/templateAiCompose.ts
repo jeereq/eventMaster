@@ -18,7 +18,11 @@ export type TemplateAiComposeContent = {
 
 export type TemplateAiComposeResult = {
   content: TemplateAiComposeContent;
-  stage: { structureReady: boolean; backgroundReady: boolean };
+  stage: {
+    structureReady: boolean;
+    backgroundReady: boolean;
+    imageMode?: 'edit' | 'generate' | null;
+  };
   remaining?: number;
   allowance?: Partial<AiAllowance>;
 };

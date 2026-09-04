@@ -907,12 +907,22 @@ export default function TemplatesPage() {
  const uploaded = await uploadImageFile(aiComposeFiles[i]);
  uploadedUrls.push(uploaded.url);
  }
- setAiComposeStage('Analyse des images…');
- const result = await composeTemplateWithAi({
+ setAiComposeStage('Analyse des images et du brief…');
+ const resultPromise = composeTemplateWithAi({
  prompt: aiComposePrompt.trim(),
  imageUrls: uploadedUrls,
  generateBackground: true,
  });
+ // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
+ const stageTimer = window.setTimeout(() => {
+ setAiComposeStage('Création de la nouvelle image…');
+ }, 2500);
+ let result;
+ try {
+ result = await resultPromise;
+ } finally {
+ window.clearTimeout(stageTimer);
+ }
  setAiComposeStage('Application du modèle…');
  applyAiComposeToEditor(result.content, {
  setCanvasElements,
@@ -942,8 +952,10 @@ export default function TemplatesPage() {
  resetAiComposeModal();
  setSuccess(
  result.stage?.backgroundReady
- ? 'Modèle généré par l’IA — structure et fond appliqués. Ajustez puis enregistrez.'
- : 'Modèle généré par l’IA — structure appliquée (fond couleur). Ajustez puis enregistrez.',
+ ? result.stage?.imageMode === 'edit'
+ ? 'Nouvelle image créée à partir de vos références + brief. Structure éditable appliquée.'
+ : 'Nouvelle image générée selon l’analyse et votre brief. Structure éditable appliquée.'
+ : 'Structure générée — la création d’image n’a pas abouti. Réessayez ou ajustez le brief.',
  );
  } catch (err: any) {
  if (err?.status === 402) {
@@ -975,7 +987,7 @@ export default function TemplatesPage() {
  Créer avec l’IA
  </h2>
  <p className="text-[11px] text-muted mt-1 leading-relaxed">
- 1 à 4 images de référence + un brief. Consomme 1 jeton IA.
+ L’IA analyse vos images, suit votre brief, puis crée une nouvelle image (1 jeton).
  </p>
  </div>
  <button
@@ -1997,7 +2009,7 @@ export default function TemplatesPage() {
  Créer avec l’IA
  </h3>
  <p className="text-[10px] text-muted leading-relaxed">
- Images + brief → structure éditable et fond généré (1 jeton).
+ Analyse vos images + brief → nouvelle image et structure éditable (1 jeton).
  </p>
  <button
  type="button"
