@@ -48,6 +48,7 @@ export default function LandingVitrineSection() {
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
   const [events, setEvents] = useState<PublicEventCard[]>([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [catalogError, setCatalogError] = useState('');
   const [query, setQuery] = useState('');
   const [applied, setApplied] = useState<EntityFilters>(emptyFilters);
