@@ -2,6 +2,8 @@ import { prisma } from '../db';
 import { calculateTokensForAmount, AI_TOKEN_MIN_COUNT } from './aiTokenFlexPayService';
 
 export const AI_FREE_TRIALS_MAX = 4;
+export const AI_SIMULATION_TOKEN_COST = 1;
+export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 
 export type AiWalletAllowance = {
   deviceId: string;
@@ -194,13 +196,22 @@ export async function getAiSimulationWalletAllowance(
   return serialize(wallet, paid);
 }
 
-export async function requireAiSimulationCredit(deviceId: string, userId?: string | null): Promise<AiWalletAllowance> {
+function insufficientCreditMessage(need: number, remaining: number) {
+  if (need > 1) {
+    return `Cette génération d’invitation consomme ${need} jetons. Solde insuffisant (${remaining}). Rechargez dès 2 500 FC pour 6 jetons.`;
+  }
+  return 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).';
+}
+
+export async function requireAiSimulationCredit(
+  deviceId: string,
+  userId?: string | null,
+  count = AI_SIMULATION_TOKEN_COST,
+): Promise<AiWalletAllowance> {
+  const need = Math.max(1, Math.round(count));
   const allowance = await getAiSimulationWalletAllowance(deviceId, userId);
-  if (!allowance.canSimulate) {
-    fail(
-      402,
-      'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).',
-    );
+  if (allowance.totalRemaining < need) {
+    fail(402, insufficientCreditMessage(need, allowance.totalRemaining));
   }
   return allowance;
 }
@@ -208,34 +219,29 @@ export async function requireAiSimulationCredit(deviceId: string, userId?: strin
 export async function consumeAiSimulationCredit(
   deviceId: string,
   userId?: string | null,
+  count = AI_SIMULATION_TOKEN_COST,
 ): Promise<AiWalletAllowance> {
+  const need = Math.max(1, Math.round(count));
   const { wallet, paid } = await ensureAiSimulationWallet(deviceId, userId);
-  const remaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed) + Math.max(0, wallet.bonusTokens);
-  if (remaining <= 0) {
-    fail(402, 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).');
+  const freeRemaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed);
+  const bonus = Math.max(0, wallet.bonusTokens);
+  const remaining = freeRemaining + bonus;
+  if (remaining < need) {
+    fail(402, insufficientCreditMessage(need, remaining));
   }
 
-  if (wallet.bonusTokens > 0) {
-    const result = await prisma.aiSimulationWallet.updateMany({
-      where: { id: wallet.id, bonusTokens: { gt: 0 } },
-      data: { bonusTokens: { decrement: 1 } },
-    });
-    if (!result.count) {
-      fail(402, 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).');
-    }
-  } else {
-    const result = await prisma.aiSimulationWallet.updateMany({
-      where: { id: wallet.id, freeTrialsUsed: { lt: AI_FREE_TRIALS_MAX } },
-      data: { freeTrialsUsed: { increment: 1 } },
-    });
-    if (!result.count) {
-      fail(402, 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).');
-    }
-  }
+  const fromBonus = Math.min(need, bonus);
+  const fromFree = need - fromBonus;
 
-  const next = await prisma.aiSimulationWallet.findUnique({ where: { id: wallet.id } });
-  if (!next) fail(500, 'Portefeuille de simulations introuvable.');
-  return serialize(next, paid);
+  const updated = await prisma.aiSimulationWallet.update({
+    where: { id: wallet.id },
+    data: {
+      bonusTokens: bonus - fromBonus,
+      freeTrialsUsed: Math.min(AI_FREE_TRIALS_MAX, wallet.freeTrialsUsed + fromFree),
+    },
+  });
+
+  return serialize(updated, paid);
 }
 
 export async function creditPaidAiTokenOrder(order: {

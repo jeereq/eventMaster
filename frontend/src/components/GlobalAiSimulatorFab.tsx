@@ -49,7 +49,7 @@ export default function GlobalAiSimulatorFab() {
         onClick={() => setOpen(true)}
         className="fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6 inline-flex items-center gap-2.5 min-h-12 pl-3 pr-3.5 sm:pr-4 rounded-2xl bg-primary-solid text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary-solid-hover transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary-solid text-left"
         aria-label="Jetons IA : modèles d’invitation et simulation budget"
-        title="1 jeton = 1 modèle IA ou 1 simulation budget"
+        title="1 jeton = 1 simulation budget · 2 jetons = 1 invitation IA"
       >
         <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center shrink-0">
           <Wand2 className="w-4 h-4" />
@@ -72,7 +72,7 @@ export default function GlobalAiSimulatorFab() {
         onClose={() => setOpen(false)}
         size="xl"
         title="Crédits & simulation IA"
-        description="Vos jetons servent à créer un modèle d’invitation avec l’IA ou à lancer une simulation budget (1 jeton par action)."
+        description="1 jeton pour une simulation budget, 2 jetons pour une génération d’invitation IA."
       >
         <div className="space-y-4">
           <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-3.5 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -83,7 +83,7 @@ export default function GlobalAiSimulatorFab() {
               <div className="min-w-0">
                 <p className="text-xs font-bold text-foreground">Modèles d’invitation IA</p>
                 <p className="text-[11px] text-muted leading-relaxed mt-0.5">
-                  Images + brief → nouvelle invitation éditable dans le studio.
+                  Images + brief → nouvelle invitation éditable (2 jetons).
                 </p>
               </div>
             </div>

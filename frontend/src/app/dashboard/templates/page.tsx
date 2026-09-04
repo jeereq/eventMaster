@@ -21,6 +21,8 @@ import PromptModelSelector from '@/components/PromptModelSelector';
 import {
  getAiSimulationAllowance,
  syncDeviceAiTokensWithBackend,
+ canAffordAiAction,
+ AI_INVITATION_COMPOSE_TOKEN_COST,
  type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
@@ -1046,7 +1048,10 @@ export default function TemplatesPage() {
  setError('Décrivez le style souhaité (quelques mots minimum).');
  return;
  }
- if (!aiAllowance.canSimulate) {
+ if (!canAffordAiAction(aiAllowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
+ setError(
+ `La génération d’invitation consomme ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons. Solde actuel : ${aiAllowance.totalRemaining}.`,
+ );
  setAiTokenModalOpen(true);
  return;
  }
@@ -1143,7 +1148,7 @@ export default function TemplatesPage() {
  Créer avec l’IA
  </h2>
  <p className="text-[11px] text-muted mt-1 leading-relaxed">
- L’IA applique votre brief, analyse vos images, puis crée une nouvelle image (1 jeton). Les visages présents sont conservés — aucun visage inventé.
+ L’IA applique votre brief, analyse vos images, puis crée une nouvelle image ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Les visages présents sont conservés — aucun visage inventé.
  </p>
  </div>
  <button
@@ -1166,13 +1171,13 @@ export default function TemplatesPage() {
  <Coins className="w-3.5 h-3.5" />
  {aiAllowance.totalRemaining} jeton{aiAllowance.totalRemaining === 1 ? '' : 's'} restant{aiAllowance.totalRemaining === 1 ? '' : 's'}
  </span>
- {!aiAllowance.canSimulate && (
+ {!canAffordAiAction(aiAllowance, AI_INVITATION_COMPOSE_TOKEN_COST) && (
  <button
  type="button"
  onClick={() => setAiTokenModalOpen(true)}
  className="text-primary font-bold hover:underline"
  >
- Acheter un pack
+ Recharger ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons / invitation)
  </button>
  )}
  </div>
@@ -1275,7 +1280,7 @@ export default function TemplatesPage() {
  className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md inline-flex items-center gap-2"
  >
  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
- Générer
+ {aiComposeBusy ? 'Génération…' : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
  </button>
  </div>
  </div>
@@ -2246,7 +2251,7 @@ export default function TemplatesPage() {
  Créer avec l’IA
  </h3>
  <p className="text-[10px] text-muted leading-relaxed mt-0.5">
- Analysez vos images, décrivez le style : l’IA crée une nouvelle invitation éditable (1 jeton).
+ Analysez vos images, décrivez le style : l’IA crée une nouvelle invitation éditable ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons).
  </p>
  </div>
  </div>
@@ -4313,7 +4318,7 @@ export default function TemplatesPage() {
  <Button
  onClick={startAiComposeFromList}
  disabled={templatesAtLimit || aiComposeBusy}
- title={templatesQuotaMsg || 'Créer une invitation à partir d’images et d’un brief (1 jeton IA)'}
+ title={templatesQuotaMsg || `Créer une invitation à partir d’images et d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
  leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  >
  Créer avec l’IA

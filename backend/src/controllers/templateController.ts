@@ -8,6 +8,7 @@ import { composeInvitationTemplateAi } from '../services/invitationTemplateAiSer
 import {
   consumeAiSimulationCredit,
   requireAiSimulationCredit,
+  AI_INVITATION_COMPOSE_TOKEN_COST,
 } from '../services/aiSimulationWalletService';
 import {
   saveAiTemplateComposeRun,
@@ -432,13 +433,13 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
     const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
     if (!deviceId) {
-      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer un jeton IA.' });
+      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
     }
     const prompt = typeof body.prompt === 'string' ? body.prompt : '';
     const generateBackground = body.generateBackground !== false;
     const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
 
-    await requireAiSimulationCredit(deviceId, req.user.id);
+    await requireAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST);
     const result = await composeInvitationTemplateAi({
       userId: req.user.id,
       tenantId: isSuperAdmin ? null : tenantId,
@@ -446,7 +447,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       imageUrls,
       generateBackground,
     });
-    const allowance = await consumeAiSimulationCredit(deviceId, req.user.id);
+    const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST);
     const historyId = await persistTemplateCompose({
       userId: req.user.id,
       deviceId,
@@ -487,14 +488,14 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
     const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
     if (!deviceId) {
-      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer un jeton IA.' });
+      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
     }
     const prompt = typeof body.prompt === 'string' ? body.prompt : '';
     const generateBackground = body.generateBackground !== false;
     const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
     const rateKey = user?.id || req.ip || deviceId;
 
-    await requireAiSimulationCredit(deviceId, user?.id || null);
+    await requireAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST);
     const result = await composeInvitationTemplateAi({
       userId: rateKey,
       tenantId: user?.tenantId || null,
@@ -502,7 +503,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       imageUrls,
       generateBackground,
     });
-    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null);
+    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST);
     const historyId = await persistTemplateCompose({
       userId: user?.id || null,
       deviceId,

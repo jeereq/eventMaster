@@ -133,7 +133,7 @@ export default function AiSimulationCounter({
           <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
           {empty
             ? 'Plus de crédit. Rechargez pour les invitations IA ou le simulateur.'
-            : '1 jeton = 1 modèle d’invitation IA ou 1 simulation budget.'}
+            : '1 jeton = 1 simulation budget · 2 jetons = 1 invitation IA.'}
         </p>
       ) : null}
     </div>

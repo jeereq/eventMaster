@@ -396,7 +396,7 @@ export default function AiTokenPurchaseModal({
                   <p className="text-xs font-bold text-foreground">Recharge proportionnelle</p>
                   <p className="text-[11px] text-muted">
                     {formatFc(AI_TOKEN_PACK_PRICE_FC)} = {AI_TOKEN_PACK_SIZE} jetons · 1 jeton = 1
-                    recherche ou invitation
+                    simulation · 2 jetons = 1 invitation
                   </p>
                 </div>
               </div>

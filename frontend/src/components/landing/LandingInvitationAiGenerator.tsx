@@ -33,6 +33,8 @@ import { api } from '@/lib/api';
 import {
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
+  canAffordAiAction,
+  AI_INVITATION_COMPOSE_TOKEN_COST,
   type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
@@ -351,7 +353,10 @@ export default function LandingInvitationAiGenerator({
       setError('Vous semblez hors ligne. Vérifiez votre connexion puis réessayez.');
       return;
     }
-    if (!allowance.canSimulate) {
+    if (!canAffordAiAction(allowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
+      setError(
+        `La génération d’invitation consomme ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons. Solde actuel : ${allowance.totalRemaining}.`,
+      );
       setTokenModalOpen(true);
       return;
     }
@@ -557,7 +562,7 @@ export default function LandingInvitationAiGenerator({
                   <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
                   {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
                 </span>
-                {!allowance.canSimulate ? (
+                {!canAffordAiAction(allowance, AI_INVITATION_COMPOSE_TOKEN_COST) ? (
                   <Button type="button" size="sm" variant="secondary" onClick={() => setTokenModalOpen(true)}>
                     Recharger
                   </Button>
@@ -871,7 +876,7 @@ export default function LandingInvitationAiGenerator({
                     )
                   }
                 >
-                  {busy ? 'Génération…' : 'Générer mon modèle'}
+                  {busy ? 'Génération…' : `Générer mon modèle (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
                 </Button>
                 {result ? (
                   <Button type="button" variant="secondary" onClick={resetResult} disabled={busy}>

@@ -6,6 +6,14 @@ export const AI_TOKEN_MIN_AMOUNT_FC = 2500;
 export const AI_TOKEN_MIN_COUNT = 6;
 export const AI_TOKEN_PACK_SIZE = 6;
 export const AI_TOKEN_PACK_PRICE_FC = 2500;
+/** 1 jeton = 1 simulation budget. */
+export const AI_SIMULATION_TOKEN_COST = 1;
+/** 2 jetons = 1 génération d’invitation (image). */
+export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
+
+export function canAffordAiAction(allowance: Pick<AiAllowance, 'totalRemaining'>, cost: number): boolean {
+  return allowance.totalRemaining >= Math.max(1, cost);
+}
 
 /**
  * Nombre de jetons crédités pour un montant payé (2 500 FC / 6 jetons).
@@ -187,15 +195,18 @@ export function applyServerAllowance(data: Partial<AiAllowance> | null | undefin
 }
 
 /**
- * Consomme 1 crédit de simulation IA en cache local (hors-ligne / repli).
+ * Consomme `count` crédits IA en cache local (hors-ligne / repli).
+ * Par défaut 1 (simulation). Les invitations en consomment 2.
  */
-export function consumeAiSimulation(): AiAllowance {
+export function consumeAiSimulation(count = AI_SIMULATION_TOKEN_COST): AiAllowance {
   let { freeTrialsUsed, bonusTokens } = getAiSimulationAllowance();
+  let left = Math.max(1, Math.round(count));
 
-  if (bonusTokens > 0) {
-    bonusTokens -= 1;
-  } else {
-    freeTrialsUsed += 1;
+  const fromBonus = Math.min(left, bonusTokens);
+  bonusTokens -= fromBonus;
+  left -= fromBonus;
+  if (left > 0) {
+    freeTrialsUsed += left;
   }
 
   writeLocalAllowance(freeTrialsUsed, bonusTokens);
