@@ -12,19 +12,6 @@ import {
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
   Globe, GlobeLock, Lock, Eye,
 } from 'lucide-react';
-import RoomLayoutPreview from '@/components/RoomLayoutPreview';
-
-const RoomLayoutEditor = dynamic(() => import('@/components/RoomLayoutEditor'), {
-  ssr: false,
-  loading: () => (
-    <div
-      className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-4 py-10 text-center text-sm text-muted"
-      role="status"
-    >
-      Chargement de l’éditeur 3D…
-    </div>
-  ),
-});
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
   Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems, usePageSize,
@@ -68,6 +55,28 @@ import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import { getQuotaLockMessage, getQuotaActionMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
+
+const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full min-h-24 w-full bg-surface-muted" role="status" aria-label="Chargement du plan" />
+  ),
+});
+
+const RoomLayoutEditor = dynamic(() => import('@/components/RoomLayoutEditor'), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-4 py-10 text-center text-sm text-muted"
+      role="status"
+    >
+      Chargement de l’éditeur 3D…
+    </div>
+  ),
+});
+
+const iconActionClass =
+  'inline-flex items-center justify-center min-h-11 min-w-11 p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-[var(--radius-button)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 interface RoomStaffItem {
   id: string;
@@ -241,6 +250,9 @@ export default function RoomsManagement() {
   const [blueprintDraft, setBlueprintDraft] = useState<RoomLayoutBlueprint | null>(null);
   const [wizardPlanTab, setWizardPlanTab] = useState<WizardPlanTab>('structure');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [farthestStep, setFarthestStep] = useState(1);
+  const [roomToDelete, setRoomToDelete] = useState<RoomItem | null>(null);
+  const [deletingRoom, setDeletingRoom] = useState(false);
   const notesFieldId = useId();
   const editNotesFieldId = useId();
   const [editingRoom, setEditingRoom] = useState<RoomItem | null>(null);
@@ -335,6 +347,7 @@ export default function RoomsManagement() {
     setBlueprintDraft(null);
     setWizardPlanTab('structure');
     setConfirmDiscard(false);
+    setFarthestStep(1);
   };
 
   const closeWizard = () => {
@@ -343,7 +356,7 @@ export default function RoomsManagement() {
   };
 
   const wizardIsDirty = Boolean(
-    name.trim() || description.trim() || floor.trim() || location.trim() || wizardStep > 1,
+    name.trim() || description.trim() || floor.trim() || location.trim() || farthestStep > 1,
   );
 
   const requestCloseWizard = () => {
@@ -369,6 +382,7 @@ export default function RoomsManagement() {
 
   const goToStep = (step: number) => {
     setWizardStep(step);
+    setFarthestStep((current) => Math.max(current, step));
   };
 
   const load = async () => {
@@ -436,14 +450,18 @@ export default function RoomsManagement() {
   };
 
   const handleDelete = async (room: RoomItem) => {
-    if (!confirm(`Supprimer la salle « ${room.name} » ?`)) return;
+    setDeletingRoom(true);
+    setError('');
     try {
       await api.delete(`/rooms/${room.id}`);
-      setSuccess('Salle supprimée.');
+      setSuccess(`« ${room.name} » a été supprimée.`);
+      setRoomToDelete(null);
       await load();
       await refreshPlanFeatures();
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la suppression.');
+      setError(err.message || 'Impossible de supprimer la salle. Réessayez.');
+    } finally {
+      setDeletingRoom(false);
     }
   };
 
@@ -853,10 +871,10 @@ export default function RoomsManagement() {
         </div>
       </div>
 
-      {error && !showWizard && !viewingRoom && !editingRoom && !listingRoom && (
+      {error && !showWizard && !viewingRoom && !editingRoom && !listingRoom && !roomToDelete && (
         <Alert variant="error">{error}</Alert>
       )}
-      {success && !showWizard && !viewingRoom && !editingRoom && !listingRoom && (
+      {success && !showWizard && !viewingRoom && !editingRoom && !listingRoom && !roomToDelete && (
         <Alert variant="success">{success}</Alert>
       )}
 
@@ -1053,7 +1071,14 @@ export default function RoomsManagement() {
                 <p className="text-xs text-muted mt-1">Nom et localisation visibles pour l’équipe et le catalogue.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input label="Nom de la salle" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Grand salon" />
+                <Input
+                  label="Nom de la salle"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex. Grand salon"
+                  data-modal-initial-focus
+                />
                 <Input label="Étage / Aile" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Ex. RDC, 1er étage" />
                 <div className="sm:col-span-2">
                   <Input label="Emplacement" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ex. Bâtiment A, jardin" />
@@ -1088,17 +1113,14 @@ export default function RoomsManagement() {
                 {planFeatures?.roomEditorLevel ? ` (éditeur ${planFeatures.roomEditorLevel})` : ''}.
               </p>
             </div>
+            <div role="radiogroup" aria-label="Type de salle" className="space-y-5">
             {ROOM_TYPE_THEME_GROUPS.map((group) => (
               <section key={group.id} className="space-y-2">
                 <div className="flex items-baseline justify-between gap-2 px-0.5">
                   <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
                   <span className="text-xs text-muted">{group.hint}</span>
                 </div>
-                <div
-                  role="radiogroup"
-                  aria-label={group.label}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {group.types.map((type) => {
                     const locked = Boolean(planFeatures) && !allowedRoomTypes.includes(type);
                     const minLevel = ROOM_TYPE_MIN_LEVEL[type];
@@ -1147,6 +1169,7 @@ export default function RoomsManagement() {
                 </div>
               </section>
             ))}
+            </div>
             {planFeatures && allowedRoomTypes.length < selectableRoomTypes.length && (
               <p className="text-xs text-muted">
                 <Link href="/dashboard/billing" className="font-semibold text-primary hover:underline">
@@ -1400,6 +1423,48 @@ export default function RoomsManagement() {
         )}
       </Modal>
 
+      <Modal
+        open={Boolean(roomToDelete)}
+        onClose={() => {
+          if (deletingRoom) return;
+          setRoomToDelete(null);
+        }}
+        title={roomToDelete ? `Supprimer « ${roomToDelete.name} » ?` : 'Supprimer la salle'}
+        description="La salle sera retirée de l’organisation. Cette action ne peut pas être annulée."
+        size="sm"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={deletingRoom}
+              onClick={() => setRoomToDelete(null)}
+            >
+              Garder la salle
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              loading={deletingRoom}
+              disabled={!roomToDelete}
+              onClick={() => {
+                if (roomToDelete) void handleDelete(roomToDelete);
+              }}
+            >
+              Supprimer la salle
+            </Button>
+          </div>
+        }
+      >
+        {error && roomToDelete ? <Alert variant="error">{error}</Alert> : (
+          <p className="text-sm text-muted">
+            Confirmez seulement si vous n’avez plus besoin de cette salle.
+          </p>
+        )}
+      </Modal>
+
       {loading ? (
         <SkeletonRoomsView mode={roomsViewMode} />
       ) : rooms.length === 0 ? (
@@ -1438,14 +1503,11 @@ export default function RoomsManagement() {
                 <button
                   type="button"
                   onClick={() => setViewingRoom(room)}
-                  className={cn(
-                    roomsViewMode === 'list'
-                      ? 'inline-flex items-center'
-                      : 'p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]',
-                  )}
+                  className={roomsViewMode === 'list' ? 'inline-flex items-center min-h-11' : iconActionClass}
+                  aria-label={`Voir les détails de ${room.name}`}
                   title="Voir les détails"
                 >
-                  {roomsViewMode === 'list' ? <ListRowAction>Détails</ListRowAction> : <Eye className="w-4 h-4" />}
+                  {roomsViewMode === 'list' ? <ListRowAction>Détails</ListRowAction> : <Eye className="w-4 h-4" aria-hidden />}
                 </button>
                 {canManage ? (
               <>
@@ -1453,30 +1515,30 @@ export default function RoomsManagement() {
                 <button
                   type="button"
                   onClick={() => openListing(room)}
-                  className="p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]"
+                  className={iconActionClass}
+                  aria-label={room.venueListing?.isPublic ? `Fiche marketplace de ${room.name}` : `Publier ${room.name}`}
                   title={room.venueListing?.isPublic ? 'Fiche marketplace' : 'Publier cette salle'}
                 >
-                  {room.venueListing?.isPublic ? <Globe className="w-4 h-4" /> : <GlobeLock className="w-4 h-4" />}
+                  {room.venueListing?.isPublic ? <Globe className="w-4 h-4" aria-hidden /> : <GlobeLock className="w-4 h-4" aria-hidden />}
                 </button>
                 )}
                 <button
                   type="button"
                   onClick={() => openEditLayout(room)}
-                  className={cn(
-                    roomsViewMode === 'list'
-                      ? 'inline-flex items-center'
-                      : 'p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]',
-                  )}
+                  className={roomsViewMode === 'list' ? 'inline-flex items-center min-h-11' : iconActionClass}
+                  aria-label={`Modifier le plan de ${room.name}`}
                   title="Modifier le plan 2D"
                 >
-                  {roomsViewMode === 'list' ? <ListRowAction>Plan 2D</ListRowAction> : <Edit3 className="w-4 h-4" />}
+                  {roomsViewMode === 'list' ? <ListRowAction>Plan 2D</ListRowAction> : <Edit3 className="w-4 h-4" aria-hidden />}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDelete(room)}
-                  className="p-2 text-muted hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-[var(--radius-button)]"
+                  onClick={() => setRoomToDelete(room)}
+                  className={iconActionClass}
+                  aria-label={`Supprimer ${room.name}`}
+                  title="Supprimer la salle"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" aria-hidden />
                 </button>
               </>
                 ) : null}
@@ -1560,9 +1622,10 @@ export default function RoomsManagement() {
                             <button
                               type="button"
                               onClick={() => handleRemoveStaff(room.id, s.user.id)}
-                              className="text-rose-500 hover:text-rose-700 shrink-0"
+                              className={cn(iconActionClass, 'shrink-0')}
+                              aria-label={`Retirer ${s.user.name || s.user.email} de ${room.name}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" aria-hidden />
                             </button>
                           )}
                         </div>

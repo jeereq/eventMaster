@@ -122,10 +122,17 @@ export default function Modal({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const focusTimer = window.setTimeout(() => {
-      const alreadyInside = panelRef.current?.contains(document.activeElement);
+      const panel = panelRef.current;
+      if (!panel) return;
+      const alreadyInside = panel.contains(document.activeElement);
       if (alreadyInside) return;
-      const closeBtn = panelRef.current?.querySelector<HTMLElement>('[data-modal-close]');
-      (closeBtn || panelRef.current)?.focus();
+      const preferred = panel.querySelector<HTMLElement>('[data-modal-initial-focus]');
+      const firstField = focusableIn(panel).find((el) => {
+        if (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return true;
+        return el.tagName === 'INPUT' && (el as HTMLInputElement).type !== 'hidden';
+      });
+      const closeBtn = panel.querySelector<HTMLElement>('[data-modal-close]');
+      (preferred || firstField || closeBtn || panel).focus();
     }, 0);
     return () => {
       openModalCount = Math.max(0, openModalCount - 1);
