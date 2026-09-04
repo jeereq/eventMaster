@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
 import type { EventPlanAiItem, EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 import { AI_TOKEN_PACK_SIZE } from '@/lib/aiTokens';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
 
 export default function AiSimulationPackModal({
@@ -50,10 +51,16 @@ export default function AiSimulationPackModal({
   onApplyAll?: (packages: EventPlanAiPackage[]) => void;
   onOpenListing?: (target: EventPrepPreviewTarget) => void;
 }) {
+  const { site } = usePlatformSite();
+  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+
   const [listing, setListing] = useState<EventPrepPreviewTarget | null>(null);
   const packages = result?.packages || [];
   const selected = packages.find((pack) => pack.id === selectedId) || packages[0] || null;
   const leftover = selected && budgetMaxFc > 0 ? budgetMaxFc - selected.estimatedTotalFc : null;
+  const totalUsd = selected ? Math.round(selected.estimatedTotalFc / exchangeRate) : 0;
+  const leftoverUsd = leftover != null ? Math.round(leftover / exchangeRate) : null;
+
   const openElement = (target: EventPrepPreviewTarget) => {
     if (onOpenListing) onOpenListing(target);
     else setListing(target);
@@ -75,14 +82,24 @@ export default function AiSimulationPackModal({
           selected ? (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">
-                  Total {formatFc(selected.estimatedTotalFc)}
-                </p>
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-base font-bold text-foreground">
+                    Total : {totalUsd.toLocaleString('fr-FR')} $
+                  </span>
+                  <span className="text-xs text-muted">
+                    ({formatFc(selected.estimatedTotalFc)})
+                  </span>
+                </div>
                 {leftover != null ? (
-                  <p className={cn('text-[11px] font-medium', leftover >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200')}>
-                    {leftover >= 0 ? `Reste ${formatFc(leftover)}` : `Dépassement ${formatFc(Math.abs(leftover))}`}
+                  <p className={cn('text-[11px] font-medium mt-0.5', leftover >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200')}>
+                    {leftover >= 0
+                      ? `Reste : ${leftoverUsd != null ? `${leftoverUsd.toLocaleString('fr-FR')} $ · ` : ''}${formatFc(leftover)}`
+                      : `Dépassement : ${leftoverUsd != null ? `${Math.abs(leftoverUsd).toLocaleString('fr-FR')} $ · ` : ''}${formatFc(Math.abs(leftover))}`}
                   </p>
                 ) : null}
+                <p className="text-[10px] text-muted">
+                  Taux calculé : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
+                </p>
                 {saveMessage ? <p className="text-[11px] text-muted mt-1">{saveMessage}</p> : null}
               </div>
               {onApply ? (
@@ -185,6 +202,7 @@ export default function AiSimulationPackModal({
                     item={selected.venue}
                     kind="Salle"
                     icon={<Building2 className="w-4 h-4" />}
+                    rate={exchangeRate}
                     onOpen={() => openElement({ kind: 'venue', slug: selected.venue!.slug })}
                   />
                 </li>
@@ -197,6 +215,7 @@ export default function AiSimulationPackModal({
                       item={item}
                       kind={rental ? 'Matériel' : 'Prestataire'}
                       icon={rental ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                      rate={exchangeRate}
                       onOpen={() => openElement({ kind: 'service', slug: item.slug })}
                     />
                   </li>
@@ -225,13 +244,17 @@ function ElementRow({
   item,
   kind,
   icon,
+  rate = 2800,
   onOpen,
 }: {
   item: EventPlanAiItem;
   kind: string;
   icon: React.ReactNode;
+  rate?: number;
   onOpen: () => void;
 }) {
+  const itemUsd = item.estimatedFc > 0 ? Math.round(item.estimatedFc / rate) : 0;
+
   return (
     <button
       type="button"
@@ -260,7 +283,14 @@ function ElementRow({
         </p>
       </div>
       {item.estimatedFc > 0 ? (
-        <span className="text-[11px] font-semibold shrink-0">{formatFc(item.estimatedFc)}</span>
+        <div className="text-right shrink-0">
+          <span className="text-xs font-bold text-foreground block">
+            {itemUsd.toLocaleString('fr-FR')} $
+          </span>
+          <span className="text-[10px] text-muted block">
+            {formatFc(item.estimatedFc)}
+          </span>
+        </div>
       ) : (
         <span className="text-[11px] text-muted shrink-0">Sur devis</span>
       )}

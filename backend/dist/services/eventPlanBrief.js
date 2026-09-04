@@ -4,6 +4,7 @@ exports.SERVICE_CATEGORY_VALUES = exports.EVENT_PLAN_TYPES = void 0;
 exports.parseEventPlanInput = parseEventPlanInput;
 exports.serializeBriefPayload = serializeBriefPayload;
 const client_1 = require("@prisma/client");
+const platformSettingsService_1 = require("./platformSettingsService");
 exports.EVENT_PLAN_TYPES = [
     'wedding',
     'birthday',
@@ -86,10 +87,20 @@ function parseEventPlanInput(body) {
     if (!eventType) {
         throw Object.assign(new Error('Choisissez un type d’événement.'), { status: 400 });
     }
-    const budgetMaxFc = parseMoney(body.budgetMaxFc ?? body.budgetFc);
-    const budgetMinFc = Math.max(0, parseMoney(body.budgetMinFc));
+    const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+    const rate = Number(settings.usdExchangeRateCdf) > 0 ? Number(settings.usdExchangeRateCdf) : 2800;
+    let budgetMaxFc = parseMoney(body.budgetMaxFc ?? body.budgetFc);
+    let budgetMinFc = Math.max(0, parseMoney(body.budgetMinFc));
+    const budgetMaxUsd = parseMoney(body.budgetMaxUsd ?? body.budgetUsd);
+    const budgetMinUsd = Math.max(0, parseMoney(body.budgetMinUsd));
+    if ((!budgetMaxFc || budgetMaxFc <= 0) && budgetMaxUsd > 0) {
+        budgetMaxFc = Math.round(budgetMaxUsd * rate);
+    }
+    if ((!budgetMinFc || budgetMinFc <= 0) && budgetMinUsd > 0) {
+        budgetMinFc = Math.round(budgetMinUsd * rate);
+    }
     if (!Number.isFinite(budgetMaxFc) || budgetMaxFc < 50000) {
-        throw Object.assign(new Error('Indiquez un budget d’au moins 50 000 FC.'), { status: 400 });
+        throw Object.assign(new Error('Indiquez un budget d’au moins 50 000 FC (ou environ 20 $).'), { status: 400 });
     }
     if (budgetMinFc > 0 && budgetMinFc > budgetMaxFc) {
         throw Object.assign(new Error('Le budget minimum ne peut pas dépasser le maximum.'), { status: 400 });

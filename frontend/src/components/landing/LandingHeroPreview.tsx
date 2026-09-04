@@ -39,7 +39,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   personal: [
     {
       title: 'Simulateur de Budget & Packs IA',
-      badge: '10 simulations',
+      badge: '4 simulations',
       description: 'Laissez l’IA calculer 3 formules chiffrées selon votre budget : salle, traiteur, déco, photo & DJ (sans connexion requise).',
       icon: Wand2,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
@@ -83,7 +83,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     },
     {
       title: 'Simulateur Budgétaire & Packs IA',
-      badge: '10 simulations',
+      badge: '4 simulations',
       description: 'Estimez vos coûts globaux et générez 3 packs prévisionnels clés en main pour vos clients & comités sans engagement.',
       icon: Wand2,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),
@@ -109,7 +109,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
   seeker: [
     {
       title: 'Simulateur IA & Formules Budget',
-      badge: '10 simulations',
+      badge: '4 simulations',
       description: 'Indiquez votre budget en Francs Congolais : l’IA compose 3 packs complets avec salle et prestataires certifiés (10 essais gratuits sans compte).',
       icon: Wand2,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue?tab=plan&planView=ai' : '/#simulateur-ia'),

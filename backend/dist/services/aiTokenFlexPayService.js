@@ -9,7 +9,7 @@ const db_1 = require("../db");
 const paymentTraceService_1 = require("./paymentTraceService");
 const aiSimulationWalletService_1 = require("./aiSimulationWalletService");
 const flexPayCardService_1 = require("./flexPayCardService");
-exports.AI_TOKEN_PACK_COUNT = 15;
+exports.AI_TOKEN_PACK_COUNT = 6;
 exports.AI_TOKEN_PACK_PRICE_CDF = 2500;
 // Mémoire de secours en cas d'indisponibilité momentanée de la table DB
 const memoryOrders = new Map();

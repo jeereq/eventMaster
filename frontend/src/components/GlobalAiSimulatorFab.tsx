@@ -5,11 +5,13 @@ import { usePathname } from 'next/navigation';
 import { Wand2 } from 'lucide-react';
 import { Modal } from '@/components/ui';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
+import { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import { api } from '@/lib/api';
 import {
   AI_ALLOWANCE_CHANGED,
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
+  type AiAllowance,
 } from '@/lib/aiTokens';
 
 const HIDDEN_PREFIXES = ['/rsvp/', '/invite/', '/print'];
@@ -17,21 +19,23 @@ const HIDDEN_PREFIXES = ['/rsvp/', '/invite/', '/print'];
 export default function GlobalAiSimulatorFab() {
   const pathname = usePathname() || '/';
   const [open, setOpen] = useState(false);
-  const [remaining, setRemaining] = useState(0);
+  const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
 
   const hidden = HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   useEffect(() => {
-    const sync = () => setRemaining(getAiSimulationAllowance().totalRemaining);
+    const sync = () => setAllowance(getAiSimulationAllowance());
     sync();
-    void syncDeviceAiTokensWithBackend(api).then((allowance) => {
-      setRemaining(allowance.totalRemaining);
+    void syncDeviceAiTokensWithBackend(api).then((serverAllowance) => {
+      setAllowance(serverAllowance);
     });
     window.addEventListener(AI_ALLOWANCE_CHANGED, sync);
     return () => window.removeEventListener(AI_ALLOWANCE_CHANGED, sync);
   }, [open, pathname]);
 
   if (hidden) return null;
+
+  const showCounter = isAiSimulationThresholdReached(allowance);
 
   return (
     <>
@@ -45,9 +49,11 @@ export default function GlobalAiSimulatorFab() {
           <Wand2 className="w-4 h-4" />
         </span>
         <span className="text-xs font-bold">Simuler</span>
-        <span className="text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-full bg-white/20">
-          {remaining}
-        </span>
+        {showCounter ? (
+          <span className="text-[10px] font-black tabular-nums px-1.5 py-0.5 rounded-full bg-white/20">
+            {allowance.totalRemaining}
+          </span>
+        ) : null}
       </button>
 
       <Modal
@@ -59,7 +65,7 @@ export default function GlobalAiSimulatorFab() {
       >
         <EventPrepAiSimulator
           defaultOpen
-          onAllowanceChange={(allowance) => setRemaining(allowance.totalRemaining)}
+          onAllowanceChange={(next) => setAllowance(next)}
         />
       </Modal>
     </>

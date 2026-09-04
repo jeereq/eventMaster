@@ -6,6 +6,36 @@ import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { AI_TOKEN_PACK_PRICE_FC, AI_TOKEN_PACK_SIZE, type AiAllowance } from '@/lib/aiTokens';
 
+/**
+ * Détermine si au moins 60% des jetons ont été utilisés.
+ * Le compteur ne doit s'afficher que si cette condition est remplie.
+ */
+export function isAiSimulationThresholdReached(allowance?: AiAllowance | null): boolean {
+  if (!allowance) return false;
+
+  // Si plus aucun crédit disponible (100% consommés)
+  if (allowance.totalRemaining <= 0) return true;
+
+  const freeMax = allowance.freeTrialsMax > 0 ? allowance.freeTrialsMax : 4;
+  const freeUsed = Math.min(freeMax, Math.max(0, allowance.freeTrialsUsed || 0));
+  const bonus = Math.max(0, allowance.bonusTokens || 0);
+
+  // Cas où l'utilisateur n'a aucun jeton acheté : calcul sur les jetons gratuits
+  if (bonus === 0) {
+    const freeUsedRatio = freeUsed / freeMax;
+    // 60% de 4 = 2.4 -> déclenché à partir de 3 utilisés (75%) ou plus
+    return freeUsedRatio >= 0.6;
+  }
+
+  // Cas avec jetons bonus achetés : pool total = gratuits + bonus achetés (au moins la taille d'un pack)
+  const totalAllocated = freeMax + Math.max(bonus, AI_TOKEN_PACK_SIZE);
+  const remaining = Math.max(0, allowance.totalRemaining);
+  const consumed = Math.max(0, totalAllocated - remaining);
+  const usedRatio = consumed / totalAllocated;
+
+  return usedRatio >= 0.6;
+}
+
 export default function AiSimulationCounter({
   allowance,
   onBuy,
@@ -17,6 +47,11 @@ export default function AiSimulationCounter({
   compact?: boolean;
   className?: string;
 }) {
+  // Règle : le compteur ne s'affiche que lorsque 60% des jetons sont utilisés
+  if (!isAiSimulationThresholdReached(allowance)) {
+    return null;
+  }
+
   const remaining = allowance.totalRemaining;
   const used = Math.min(allowance.freeTrialsUsed, allowance.freeTrialsMax);
   const max = allowance.freeTrialsMax;
@@ -26,7 +61,7 @@ export default function AiSimulationCounter({
   return (
     <div
       className={cn(
-        'rounded-2xl border p-3 sm:p-3.5',
+        'rounded-2xl border p-3 sm:p-3.5 animate-fade-in',
         empty
           ? 'border-amber-500/30 bg-amber-500/8'
           : 'border-primary/25 bg-primary/8',

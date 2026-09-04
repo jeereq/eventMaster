@@ -61,6 +61,7 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     marketplaceDepositRate: 0.3,
     commercialFirstCommissionRate: 0.3,
     commercialRenewalCommissionRate: 0.2,
+    usdExchangeRateCdf: 2800,
 };
 function ensureSettingsDir() {
     const dir = path_1.default.dirname(settingsFilePath);
@@ -136,6 +137,8 @@ function buildNextSettings(partial) {
     next.marketplaceDepositRate = (0, ratePercent_1.parseRateInput)(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
     next.commercialFirstCommissionRate = (0, ratePercent_1.parseRateInput)(next.commercialFirstCommissionRate, 0.3, 0, 1);
     next.commercialRenewalCommissionRate = (0, ratePercent_1.parseRateInput)(next.commercialRenewalCommissionRate, 0.2, 0, 1);
+    const parsedUsdRate = Number(next.usdExchangeRateCdf);
+    next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
     next.ticketPaymentProvider = 'flexpay_card';
     next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
     next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -221,6 +224,7 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         commercialRenewalCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
         commercialFirstCommissionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.commercialFirstCommissionRate, 0.3, 0, 1)),
         commercialRenewalCommissionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.commercialRenewalCommissionRate, 0.2, 0, 1)),
+        usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
     };
 }
 function getContactDestinations(settings = loadPlatformSettings()) {

@@ -31,6 +31,7 @@ export interface PublicSiteConfig {
   commercialRenewalCommissionRate: number;
   commercialFirstCommissionPercent: number;
   commercialRenewalCommissionPercent: number;
+  usdExchangeRateCdf: number;
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -61,6 +62,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   commercialRenewalCommissionRate: 0.2,
   commercialFirstCommissionPercent: 30,
   commercialRenewalCommissionPercent: 20,
+  usdExchangeRateCdf: 2800,
 };
 
 interface PlatformSiteContextValue {

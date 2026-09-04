@@ -841,7 +841,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     category: 'Intelligence Artificielle & Packs',
     label: 'Recharge simulations supplémentaires',
     values: {
-      FREE: '2 500 FC / 15 simulations',
+      FREE: '2 500 FC / 6 simulations',
       ...b2cSame('Inclus illimité'),
       STANDARD: 'Inclus illimité',
       PREMIUM_1: 'Inclus illimité',
@@ -849,9 +849,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_1: 'Inclus illimité',
       ENTERPRISE_2: 'Inclus illimité',
       ENTERPRISE_3: 'Inclus illimité',
-      VENUE: '2 500 FC / 15 sims',
-      SERVICE: '2 500 FC / 15 sims',
-      CATALOG: '2 500 FC / 15 sims',
+      VENUE: '2 500 FC / 6 sims',
+      SERVICE: '2 500 FC / 6 sims',
+      CATALOG: '2 500 FC / 6 sims',
     },
   },
   {

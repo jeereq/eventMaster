@@ -8,7 +8,7 @@ exports.consumeAiSimulationCredit = consumeAiSimulationCredit;
 exports.creditPaidAiTokenOrder = creditPaidAiTokenOrder;
 exports.claimAiSimulationWallet = claimAiSimulationWallet;
 const db_1 = require("../db");
-exports.AI_FREE_TRIALS_MAX = 10;
+exports.AI_FREE_TRIALS_MAX = 4;
 function fail(status, message) {
     const error = new Error(message);
     error.status = status;

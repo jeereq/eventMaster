@@ -14,7 +14,7 @@ import {
   type FlexPayMetadataUpdate,
 } from './flexPayCardService';
 
-export const AI_TOKEN_PACK_COUNT = 15;
+export const AI_TOKEN_PACK_COUNT = 6;
 export const AI_TOKEN_PACK_PRICE_CDF = 2500;
 
 export type AiTokenPaymentMethod = 'mobile' | 'card';

@@ -14,12 +14,14 @@ import { snapshotPlanItems } from '@/lib/eventPlan';
 import {
   applyServerAllowance,
   AI_ALLOWANCE_CHANGED,
+  AI_TOKEN_PACK_SIZE,
   consumeAiSimulation,
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
 import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
@@ -54,6 +56,7 @@ export type EventPrepAiDefaults = {
   eventDate?: string;
   eventTitle?: string;
   prompt?: string;
+  budgetMaxUsd?: number;
   budgetMaxFc?: number;
   keepVenueSlug?: string;
   keepServiceSlugs?: string[];
@@ -89,13 +92,20 @@ export default function EventPrepAiSimulator({
   const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [packModalOpen, setPackModalOpen] = useState(false);
+  const { site } = usePlatformSite();
+  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
   const [city, setCity] = useState(defaults?.city || '');
   const [commune, setCommune] = useState(defaults?.commune || '');
   const [neighborhood, setNeighborhood] = useState('');
   const [guestCount, setGuestCount] = useState(defaults?.guestCount && defaults.guestCount > 0 ? String(defaults.guestCount) : '');
-  const [budgetMinFc, setBudgetMinFc] = useState('');
-  const [budgetMaxFc, setBudgetMaxFc] = useState(defaults?.budgetMaxFc && defaults.budgetMaxFc > 0 ? String(defaults.budgetMaxFc) : '');
+  const [budgetMinUsd, setBudgetMinUsd] = useState('');
+  const [budgetMaxUsd, setBudgetMaxUsd] = useState(() => {
+    if (defaults?.budgetMaxUsd && defaults.budgetMaxUsd > 0) return String(defaults.budgetMaxUsd);
+    if (defaults?.budgetMaxFc && defaults.budgetMaxFc > 0) return String(Math.round(defaults.budgetMaxFc / exchangeRate));
+    return '';
+  });
   const [eventDate, setEventDate] = useState(defaults?.eventDate?.slice(0, 10) || '');
   const [prompt, setPrompt] = useState(initialPrompt(defaults));
   const [ambiance, setAmbiance] = useState<AiAmbianceId | ''>('');
@@ -120,7 +130,18 @@ export default function EventPrepAiSimulator({
   const communes = useMemo(() => communesForCity(city), [city]);
   const categoryChoices = useMemo(() => suggestedCategoriesForEvent(eventType), [eventType]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
-  const budgetValue = budgetMaxFc ? Number(budgetMaxFc) : 0;
+
+  const budgetMaxFcCalculated = useMemo(() => {
+    const parsed = parseFloat(String(budgetMaxUsd).replace(/\s+/g, ''));
+    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * exchangeRate) : 0;
+  }, [budgetMaxUsd, exchangeRate]);
+
+  const budgetMinFcCalculated = useMemo(() => {
+    const parsed = parseFloat(String(budgetMinUsd).replace(/\s+/g, ''));
+    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * exchangeRate) : 0;
+  }, [budgetMinUsd, exchangeRate]);
+
+  const budgetValue = budgetMaxFcCalculated;
 
   const publishAllowance = (next: AiAllowance) => {
     setAllowance(next);
@@ -135,7 +156,7 @@ export default function EventPrepAiSimulator({
     setMoment((fromBrief.moment || fromResult.moment || '') as AiMomentId | '');
     setSetting((fromBrief.setting || fromResult.setting || '') as AiSettingId | '');
     const min = fromBrief.budgetMinFc ?? fromResult.budgetMinFc;
-    setBudgetMinFc(min ? String(min) : '');
+    setBudgetMinUsd(min ? String(Math.round(Number(min) / exchangeRate)) : '');
     const cats = fromBrief.wantedCategories || fromResult.wantedCategories || [];
     setWantedCategories(cats.filter((id): id is ServiceCategory => Boolean(id)));
     const amenities = fromBrief.venueAmenities || fromResult.venueAmenities || [];
@@ -154,7 +175,9 @@ export default function EventPrepAiSimulator({
     if (cached.brief.city != null) setCity(cached.brief.city);
     if (cached.brief.commune != null) setCommune(cached.brief.commune);
     if (cached.brief.guestCount) setGuestCount(String(cached.brief.guestCount));
-    if (cached.brief.budgetMaxFc) setBudgetMaxFc(String(cached.brief.budgetMaxFc));
+    if (cached.brief.budgetMaxFc) {
+      setBudgetMaxUsd(String(Math.round(Number(cached.brief.budgetMaxFc) / exchangeRate)));
+    }
     if (cached.brief.eventDate) setEventDate(String(cached.brief.eventDate).slice(0, 10));
     if (cached.brief.prompt != null) setPrompt(cached.brief.prompt);
     criteriaFromCache(cached);
@@ -171,7 +194,11 @@ export default function EventPrepAiSimulator({
     if (seed.city != null) setCity(seed.city);
     if (seed.commune != null) setCommune(seed.commune);
     if (seed.guestCount && seed.guestCount > 0) setGuestCount(String(seed.guestCount));
-    if (seed.budgetMaxFc && seed.budgetMaxFc > 0) setBudgetMaxFc(String(seed.budgetMaxFc));
+    if (seed.budgetMaxUsd && seed.budgetMaxUsd > 0) {
+      setBudgetMaxUsd(String(seed.budgetMaxUsd));
+    } else if (seed.budgetMaxFc && seed.budgetMaxFc > 0) {
+      setBudgetMaxUsd(String(Math.round(seed.budgetMaxFc / exchangeRate)));
+    }
     if (seed.eventDate) setEventDate(seed.eventDate.slice(0, 10));
     if (seed.keepVenueSlug) setKeepVenue(true);
     const nextPrompt = initialPrompt(seed);
@@ -183,7 +210,8 @@ export default function EventPrepAiSimulator({
     moment: moment || undefined,
     setting: setting || undefined,
     neighborhood: neighborhood.trim() || undefined,
-    budgetMinFc: budgetMinFc ? Number(budgetMinFc) : null,
+    budgetMinFc: budgetMinFcCalculated > 0 ? budgetMinFcCalculated : null,
+    budgetMinUsd: budgetMinUsd ? Number(budgetMinUsd) : undefined,
     wantedCategories,
     venueAmenities,
   });
@@ -224,17 +252,19 @@ export default function EventPrepAiSimulator({
     defaults?.city,
     defaults?.commune,
     defaults?.guestCount,
+    defaults?.budgetMaxUsd,
     defaults?.budgetMaxFc,
     defaults?.eventDate,
     defaults?.eventTitle,
     defaults?.prompt,
+    exchangeRate,
   ]);
 
   const run = async () => {
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
-      setError('Plus de simulations disponibles. Rechargez 15 recherches pour continuer.');
+      setError(`Plus de simulations disponibles. Rechargez ${AI_TOKEN_PACK_SIZE} simulations pour continuer.`);
       publishAllowance(current);
       return;
     }
@@ -248,7 +278,8 @@ export default function EventPrepAiSimulator({
         city,
         commune,
         guestCount: guestCount ? Number(guestCount) : undefined,
-        budgetMaxFc: budgetMaxFc ? Number(budgetMaxFc) : undefined,
+        budgetMaxFc: budgetMaxFcCalculated > 0 ? budgetMaxFcCalculated : undefined,
+        budgetMaxUsd: budgetMaxUsd ? Number(budgetMaxUsd) : undefined,
         eventDate: eventDate || undefined,
         prompt: prompt.trim() || undefined,
         includeVenue,
@@ -276,7 +307,8 @@ export default function EventPrepAiSimulator({
           city,
           commune,
           guestCount: guestCount ? Number(guestCount) : null,
-          budgetMaxFc: budgetMaxFc ? Number(budgetMaxFc) : null,
+          budgetMaxFc: budgetMaxFcCalculated > 0 ? budgetMaxFcCalculated : null,
+          budgetMaxUsd: budgetMaxUsd ? Number(budgetMaxUsd) : null,
           eventDate,
           ...criteria,
         },
@@ -516,14 +548,22 @@ export default function EventPrepAiSimulator({
               onChange={(e) => setGuestCount(e.target.value)}
               placeholder="120"
             />
-            <Input
-              label="Budget max (FC)"
-              type="number"
-              min={0}
-              value={budgetMaxFc}
-              onChange={(e) => setBudgetMaxFc(e.target.value)}
-              placeholder="1 500 000"
-            />
+            <div className="space-y-1">
+              <Input
+                label="Budget max ($ USD)"
+                type="number"
+                min={1}
+                value={budgetMaxUsd}
+                onChange={(e) => setBudgetMaxUsd(e.target.value)}
+                placeholder="1 500"
+              />
+              <div className="flex items-center justify-between text-[11px] text-muted px-0.5">
+                <span>Calculé en francs :</span>
+                <span className="font-semibold text-primary">
+                  {budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—'}
+                </span>
+              </div>
+            </div>
             <div className="sm:col-span-2">
               <Input
                 label="Date"
@@ -532,6 +572,13 @@ export default function EventPrepAiSimulator({
                 onChange={(e) => setEventDate(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-muted bg-surface-muted/60 px-3 py-1.5 rounded-xl border border-border/70">
+            <span>Taux de change appliqué :</span>
+            <span className="font-semibold text-foreground">
+              1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-3 text-xs font-medium text-foreground">
@@ -629,14 +676,21 @@ export default function EventPrepAiSimulator({
                     onChange={(e) => setNeighborhood(e.target.value)}
                     placeholder="Gombe, Golf…"
                   />
-                  <Input
-                    label="Budget min (FC)"
-                    type="number"
-                    min={0}
-                    value={budgetMinFc}
-                    onChange={(e) => setBudgetMinFc(e.target.value)}
-                    placeholder="Optionnel"
-                  />
+                  <div className="space-y-1">
+                    <Input
+                      label="Budget min ($ USD)"
+                      type="number"
+                      min={0}
+                      value={budgetMinUsd}
+                      onChange={(e) => setBudgetMinUsd(e.target.value)}
+                      placeholder="Optionnel (ex: 500)"
+                    />
+                    {budgetMinFcCalculated > 0 ? (
+                      <p className="text-[11px] text-muted text-right px-0.5">
+                        Calculé : <span className="font-semibold text-primary">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span>
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Prestations souhaitées</p>

@@ -56,6 +56,8 @@ export interface PlatformSettings {
   commercialFirstCommissionRate: number;
   /** Commission commerciale plateforme sur les paiements suivants (0.2 = 20 %). */
   commercialRenewalCommissionRate: number;
+  /** Taux de change 1 USD en CDF/FC (ex: 2800 = 1$ pour 2800 FC). Configurable par le SuperAdmin. */
+  usdExchangeRateCdf: number;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -86,6 +88,8 @@ export interface PublicSiteConfig {
   commercialRenewalCommissionRate: number;
   commercialFirstCommissionPercent: number;
   commercialRenewalCommissionPercent: number;
+  /** Taux de change 1 USD en CDF/FC (ex: 2800). */
+  usdExchangeRateCdf: number;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -125,6 +129,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   marketplaceDepositRate: 0.3,
   commercialFirstCommissionRate: 0.3,
   commercialRenewalCommissionRate: 0.2,
+  usdExchangeRateCdf: 2800,
 };
 
 function ensureSettingsDir() {
@@ -218,6 +223,8 @@ function buildNextSettings(
   next.marketplaceDepositRate = parseRateInput(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
   next.commercialFirstCommissionRate = parseRateInput(next.commercialFirstCommissionRate, 0.3, 0, 1);
   next.commercialRenewalCommissionRate = parseRateInput(next.commercialRenewalCommissionRate, 0.2, 0, 1);
+  const parsedUsdRate = Number(next.usdExchangeRateCdf);
+  next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -318,6 +325,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     commercialRenewalCommissionPercent: rateToPercent(
       parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
     ),
+    usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
   };
 }
 

@@ -3107,6 +3107,34 @@ function DashboardPageContent() {
                                   className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                                 />
                               </div>
+
+                              <div className="space-y-1.5 sm:col-span-2 pt-2 border-t border-border">
+                                <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                                  <span>Taux de change Dollar vers Franc Congolais (1 $ en FC)</span>
+                                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-semibold">Simulateur & Devis</span>
+                                </label>
+                                <div className="flex items-center gap-3">
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="number"
+                                      min={1000}
+                                      max={5000}
+                                      step={10}
+                                      value={Number(adminSettings.usdExchangeRateCdf ?? 2800)}
+                                      onChange={(e) => setAdminSettings({ ...adminSettings, usdExchangeRateCdf: Number(e.target.value) || 2800 })}
+                                      className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
+                                      placeholder="2800"
+                                    />
+                                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted pointer-events-none">FC / 1 USD</span>
+                                  </div>
+                                  <div className="text-xs text-muted whitespace-nowrap bg-surface px-3 py-2.5 rounded-xl border border-border">
+                                    Exemple : <strong>100 $ = {(100 * Number(adminSettings.usdExchangeRateCdf || 2800)).toLocaleString('fr-FR')} FC</strong>
+                                  </div>
+                                </div>
+                                <p className="text-[11px] text-muted">
+                                  Ce taux permet de convertir automatiquement les montants en Dollars ($) en Francs Congolais (FC) pour le simulateur IA.
+                                </p>
+                              </div>
                             </div>
                           </div>
 

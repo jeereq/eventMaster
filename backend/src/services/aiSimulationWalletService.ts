@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 
-export const AI_FREE_TRIALS_MAX = 10;
+export const AI_FREE_TRIALS_MAX = 4;
 
 export type AiWalletAllowance = {
   deviceId: string;

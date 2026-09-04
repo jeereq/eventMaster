@@ -1,5 +1,5 @@
-export const MAX_FREE_TRIALS = 10;
-export const AI_TOKEN_PACK_SIZE = 15;
+export const MAX_FREE_TRIALS = 4;
+export const AI_TOKEN_PACK_SIZE = 6;
 export const AI_TOKEN_PACK_PRICE_FC = 2500;
 
 export const STORAGE_KEY_AI_DEVICE_ID = 'em_ai_device_id';

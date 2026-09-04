@@ -11,12 +11,14 @@ export type AiSimulationBrief = {
   city?: string;
   commune?: string;
   guestCount?: number | null;
+  budgetMaxUsd?: number | null;
   budgetMaxFc?: number | null;
   eventDate?: string | null;
   neighborhood?: string;
   ambiance?: string;
   moment?: string;
   setting?: string;
+  budgetMinUsd?: number | null;
   budgetMinFc?: number | null;
   wantedCategories?: string[];
   venueAmenities?: string[];

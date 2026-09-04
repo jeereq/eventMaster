@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
 import {
   Wand2,
@@ -28,7 +29,7 @@ import {
   type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
-import AiSimulationCounter from '@/components/AiSimulationCounter';
+import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import EventPrepAiSimulator, { type EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
 
 type ScenarioBrief = {
@@ -83,12 +84,13 @@ const SCENARIOS: ScenarioBrief[] = [
   },
 ];
 
-function scenarioToDefaults(scenario: ScenarioBrief): EventPrepAiDefaults {
+function scenarioToDefaults(scenario: ScenarioBrief, rate = 2800): EventPrepAiDefaults {
   return {
     eventType: scenario.eventType,
     city: scenario.city,
     commune: scenario.commune,
     guestCount: scenario.guests,
+    budgetMaxUsd: rate > 0 ? Math.round(scenario.budgetTargetFc / rate) : undefined,
     budgetMaxFc: scenario.budgetTargetFc,
     prompt: scenario.prompt,
   };
@@ -99,6 +101,9 @@ export default function LandingAiSimulationShowcase() {
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
 
+  const { site } = usePlatformSite();
+  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+
   const [viewMode, setViewMode] = useState<'presets' | 'live'>('presets');
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
@@ -107,6 +112,7 @@ export default function LandingAiSimulationShowcase() {
   const [preferDefaults, setPreferDefaults] = useState(false);
 
   const activeScenario = SCENARIOS.find((item) => item.id === selectedScenarioId) || SCENARIOS[0];
+  const activeScenarioUsd = Math.round(activeScenario.budgetTargetFc / exchangeRate);
   const simulatorUrl = isLoggedIn
     ? '/dashboard/catalogue?tab=plan&planView=ai'
     : '/register?kind=CLIENT&intent=seeker&action=ai_simulator';
@@ -138,7 +144,7 @@ export default function LandingAiSimulationShowcase() {
   }, []);
 
   const openLiveWithScenario = (scenario: ScenarioBrief) => {
-    setLiveDefaults(scenarioToDefaults(scenario));
+    setLiveDefaults(scenarioToDefaults(scenario, exchangeRate));
     setPreferDefaults(true);
     setViewMode('live');
   };
@@ -159,13 +165,15 @@ export default function LandingAiSimulationShowcase() {
               Intelligence Artificielle & Budget
             </span>
           </div>
-          <div className="max-w-xl mx-auto text-left">
-            <AiSimulationCounter
-              allowance={allowance}
-              onBuy={() => setPurchaseModalOpen(true)}
-              compact
-            />
-          </div>
+          {isAiSimulationThresholdReached(allowance) ? (
+            <div className="max-w-xl mx-auto text-left">
+              <AiSimulationCounter
+                allowance={allowance}
+                onBuy={() => setPurchaseModalOpen(true)}
+                compact
+              />
+            </div>
+          ) : null}
 
           <h2 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-foreground">
             Préparez votre événement par IA :{' '}
@@ -177,11 +185,11 @@ export default function LandingAiSimulationShowcase() {
 
           <p className="text-xs sm:text-base text-muted leading-relaxed">
             <span className="hidden sm:inline">
-              Indiquez votre budget en Francs Congolais, votre ville et vos envies : l’assistant EventMaster compose{' '}
+              Indiquez votre budget en Dollars ($) calculé automatiquement en Francs Congolais (1 $ = {exchangeRate.toLocaleString('fr-FR')} FC), votre ville et vos envies : l’assistant EventMaster compose{' '}
               <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples ci-dessous préremplissent votre projet — une simulation n’est lancée qu’au clic « Générer ».
             </span>
             <span className="inline sm:hidden">
-              Indiquez votre budget et votre ville : l'assistant compose instantanément 3 formules adaptées à votre enveloppe.
+              Indiquez votre budget en dollars ($) et votre ville : l'assistant calcule en francs et compose 3 formules sur-mesure.
             </span>
           </p>
 
@@ -210,9 +218,11 @@ export default function LandingAiSimulationShowcase() {
             >
               <Wand2 className="w-3.5 h-3.5 text-amber-400" />
               <span>Tester mon événement en direct</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold tabular-nums">
-                {allowance.totalRemaining} sim{allowance.totalRemaining > 1 ? 's' : ''}
-              </span>
+              {isAiSimulationThresholdReached(allowance) ? (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold tabular-nums">
+                  {allowance.totalRemaining} sim{allowance.totalRemaining > 1 ? 's' : ''}
+                </span>
+              ) : null}
             </button>
           </div>
         </div>
@@ -263,8 +273,9 @@ export default function LandingAiSimulationShowcase() {
                     </span>
                     <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
                   </div>
-                  <span className="text-xs font-bold text-emerald-400 bg-black/50 px-2.5 py-1 rounded-lg border border-white/20 backdrop-blur-sm self-start sm:self-auto">
-                    Budget cible : {formatFc(activeScenario.budgetTargetFc)}
+                  <span className="text-xs font-bold text-emerald-400 bg-black/60 px-2.5 py-1 rounded-lg border border-white/20 backdrop-blur-sm self-start sm:self-auto flex items-baseline gap-1.5">
+                    <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
+                    <span className="text-[11px] text-emerald-200/90 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
                   </span>
                 </div>
               </div>
@@ -294,10 +305,11 @@ export default function LandingAiSimulationShowcase() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Budget alloué
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Budget alloué ($ / FC)
                   </span>
-                  <p className="font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatFc(activeScenario.budgetTargetFc)}
+                  <p className="font-bold text-emerald-600 dark:text-emerald-400 flex items-baseline gap-1">
+                    <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
+                    <span className="text-[11px] font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
                   </p>
                 </div>
               </div>

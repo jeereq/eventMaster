@@ -3,6 +3,7 @@
 import React from 'react';
 import { Clock, Users } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 import { eventTypeLabel } from '@/lib/listingDetails';
 import type { AiSimulationHistoryItem } from '@/lib/aiSimulationHistory';
@@ -38,6 +39,9 @@ export default function AiSimulationHistoryList({
   className?: string;
   listClassName?: string;
 }) {
+  const { site } = usePlatformSite();
+  const exchangeRate = Number(site?.usdExchangeRateCdf) > 0 ? Number(site.usdExchangeRateCdf) : 2800;
+
   if (!items.length) return null;
 
   return (
@@ -82,7 +86,11 @@ export default function AiSimulationHistoryList({
                           {item.guestCount}
                         </span>
                       ) : null}
-                      {item.budgetMaxFc ? <span>{formatFc(item.budgetMaxFc)}</span> : null}
+                      {item.budgetMaxFc ? (
+                        <span>
+                          {Math.round(item.budgetMaxFc / exchangeRate).toLocaleString('fr-FR')} $ ({formatFc(item.budgetMaxFc)})
+                        </span>
+                      ) : null}
                       {packs.length ? (
                         <span>
                           {packs.length} formule{packs.length > 1 ? 's' : ''}
