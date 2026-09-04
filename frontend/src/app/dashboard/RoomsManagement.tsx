@@ -185,7 +185,7 @@ const defaultParams: Record<RoomType, LayoutParams> = {
 const WIZARD_STEPS = [
   { id: 1, label: 'Identité', shortLabel: 'Identité' },
   { id: 2, label: 'Type', shortLabel: 'Type' },
-  { id: 3, label: 'Structure & plan', shortLabel: 'Plan' },
+  { id: 3, label: 'Structure', shortLabel: 'Structure' },
 ] as const;
 
 type WizardPlanTab = 'structure' | 'capacite' | 'ambiance' | 'editeur';
@@ -436,6 +436,9 @@ export default function RoomsManagement() {
       setNameAttempted(true);
       setWizardStep(1);
       return;
+    }
+    if (step === 3 && (wizardStep < 3 || wizardPlanTab === 'editeur')) {
+      setWizardPlanTab('structure');
     }
     setWizardStep(step);
     setFarthestStep((current) => Math.max(current, step));
@@ -909,7 +912,7 @@ export default function RoomsManagement() {
             Salles de l&apos;organisation
           </h2>
           <p className="text-xs text-muted mt-1">
-            Créez une salle en 3 étapes : infos, type, puis plan 2D.
+            Créez une salle en 3 étapes : identité, type, puis structure.
             {canCatalogPublish
               ? ' Vous pouvez ensuite la publier pour la location.'
               : ' Ces salles servent au plan de table — elles ne sont pas publiées sur le marketplace.'}
@@ -1029,19 +1032,27 @@ export default function RoomsManagement() {
         title="Nouvelle salle"
         description={
           wizardStep === 3
-            ? 'Un onglet à la fois : structure, capacité, puis le plan.'
-            : 'Nommez la salle, choisissez le type, puis le plan — modifiable ensuite.'
+            ? wizardPlanTab === 'editeur'
+              ? 'Ajustez le plan si besoin, puis créez la salle.'
+              : 'Étages et capacité suffisent. Le plan est optionnel.'
+            : 'Nommez la salle, choisissez le type, puis la structure — le plan reste modifiable.'
         }
-        size={wizardStep === 3 ? 'full' : 'lg'}
-        className={wizardStep === 3 ? 'h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl' : undefined}
+        size={wizardStep === 3 && wizardPlanTab === 'editeur' ? 'full' : wizardStep === 3 ? 'lg' : 'lg'}
+        className={wizardStep === 3 && wizardPlanTab === 'editeur' ? 'h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl' : undefined}
         footer={
           <div className="flex w-full justify-between gap-2">
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              disabled={wizardStep === 1}
-              onClick={() => goToStep(wizardStep - 1)}
+              disabled={wizardStep === 1 && wizardPlanTab !== 'editeur'}
+              onClick={() => {
+                if (wizardStep === 3 && wizardPlanTab === 'editeur') {
+                  setWizardPlanTab('capacite');
+                  return;
+                }
+                goToStep(wizardStep - 1);
+              }}
               leftIcon={<ChevronLeft className="w-4 h-4" />}
             >
               Précédent
@@ -1146,7 +1157,7 @@ export default function RoomsManagement() {
           <div className="space-y-5">
             <div>
               <h3 className="text-sm font-semibold text-foreground">Identité</h3>
-              <p className="text-xs text-muted mt-1 mb-3">Nom et localisation visibles pour l’équipe et le catalogue.</p>
+              <p className="text-xs text-muted mt-1 mb-3">Nom et emplacement visibles pour l’équipe et le catalogue.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
                   label="Nom de la salle"
@@ -1181,7 +1192,7 @@ export default function RoomsManagement() {
             </div>
             <div className="space-y-2">
               <label htmlFor={notesFieldId} className="block text-sm font-semibold text-foreground">
-                Notes
+                Description
               </label>
               <textarea
                 id={notesFieldId}
@@ -1193,7 +1204,7 @@ export default function RoomsManagement() {
                 aria-describedby={`${notesFieldId}-hint`}
               />
               <p id={`${notesFieldId}-hint`} className="text-xs text-muted">
-                À l’étape Plan, vous pourrez ajouter étages, fondation, couloirs et une ambiance visuelle.
+                À l’étape Structure : étages, capacité, éventuellement le plan.
               </p>
             </div>
           </div>
@@ -1283,8 +1294,8 @@ export default function RoomsManagement() {
             ...(planFeatures?.roomThemesFixtures === true
               ? [{ id: 'ambiance' as const, label: 'Ambiance' }]
               : []),
-            { id: 'editeur', label: 'Plan 3D' },
           ];
+          const openOptionalPlan = () => setWizardPlanTab('editeur');
           const movePlanTab = (dir: 1 | -1) => {
             const i = wizardPlanTabs.findIndex((tab) => tab.id === wizardPlanTab);
             const next = wizardPlanTabs[(i + dir + wizardPlanTabs.length) % wizardPlanTabs.length];
@@ -1296,9 +1307,19 @@ export default function RoomsManagement() {
           };
           return (
             <div className="space-y-4">
+              {wizardPlanTab === 'editeur' ? (
+                <button
+                  type="button"
+                  onClick={() => setWizardPlanTab('capacite')}
+                  className="inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-primary underline-offset-2 hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <ChevronLeft className="w-4 h-4" aria-hidden />
+                  Retour à la capacité
+                </button>
+              ) : (
               <div
                 role="tablist"
-                aria-label="Structure et plan"
+                aria-label="Structure et capacité"
                 className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1"
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowRight') {
@@ -1335,6 +1356,7 @@ export default function RoomsManagement() {
                   );
                 })}
               </div>
+              )}
 
               <div
                 role="tabpanel"
@@ -1362,7 +1384,6 @@ export default function RoomsManagement() {
                           aria-pressed={active}
                           onClick={() => {
                             setBlueprintDraft(applyBuildingStoryPreset(blueprintDraft, preset.id));
-                            setWizardPlanTab('editeur');
                           }}
                           className={cn(
                             'text-left p-3 rounded-[var(--radius-card)] border transition min-h-11',
@@ -1385,18 +1406,18 @@ export default function RoomsManagement() {
                       );
                     })}
                   </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 pt-1">
                     <Button
                       type="button"
                       size="sm"
-                      onClick={() => setWizardPlanTab('editeur')}
+                      onClick={() => setWizardPlanTab('capacite')}
                       rightIcon={<ChevronRight className="w-4 h-4" />}
                     >
-                      Continuer vers le plan
+                      Suivant : capacité
                     </Button>
-                    <p className="text-xs text-muted">
-                      En vue empilée, tournez la caméra pour voir tous les étages.
-                    </p>
+                    <Button type="button" size="sm" variant="secondary" onClick={openOptionalPlan}>
+                      Ajuster le plan (optionnel)
+                    </Button>
                   </div>
                 </section>
               </div>
@@ -1424,10 +1445,13 @@ export default function RoomsManagement() {
                         Recalculer les tables et rangées
                       </Button>
                       <p className="text-xs text-muted">
-                        Remplace le mobilier du plan. Les dimensions du canvas s’appliquent tout de suite ; le thème d’étages est conservé.
+                        Remplace le mobilier. Les dimensions s’appliquent tout de suite ; les étages sont conservés.
                       </p>
                     </div>
                   )}
+                  <Button type="button" size="sm" variant="secondary" onClick={openOptionalPlan}>
+                    Ajuster le plan (optionnel)
+                  </Button>
                 </div>
               </div>
 
@@ -1490,6 +1514,9 @@ export default function RoomsManagement() {
                         </div>
                       ))}
                     </div>
+                    <Button type="button" size="sm" variant="secondary" onClick={openOptionalPlan}>
+                      Ajuster le plan (optionnel)
+                    </Button>
                   </section>
                 </div>
               ) : null}
@@ -1497,7 +1524,7 @@ export default function RoomsManagement() {
               <div
                 role="tabpanel"
                 id="wizard-panel-editeur"
-                aria-labelledby="wizard-tab-editeur"
+                aria-label="Plan"
                 hidden={wizardPlanTab !== 'editeur'}
               >
                 {wizardPlanTab === 'editeur' ? (
@@ -1566,7 +1593,7 @@ export default function RoomsManagement() {
         <EmptyState
           icon={<Building2 className="w-5 h-5" />}
           title="Aucune salle configurée"
-          description="Créez votre première salle pour générer un plan 2D et y assigner le staff."
+          description="Créez votre première salle pour le plan de table et le staff."
           action={
             canManage && !roomsAtLimit ? (
               <Button type="button" size="sm" onClick={openWizard} leftIcon={<Plus className="w-4 h-4" />}>
@@ -1622,9 +1649,9 @@ export default function RoomsManagement() {
                   onClick={() => openEditLayout(room)}
                   className={roomsViewMode === 'list' ? 'inline-flex items-center min-h-11' : iconActionClass}
                   aria-label={`Modifier le plan de ${room.name}`}
-                  title="Modifier le plan 2D"
+                  title="Modifier le plan"
                 >
-                  {roomsViewMode === 'list' ? <ListRowAction>Plan 2D</ListRowAction> : <Edit3 className="w-4 h-4" aria-hidden />}
+                  {roomsViewMode === 'list' ? <ListRowAction>Plan</ListRowAction> : <Edit3 className="w-4 h-4" aria-hidden />}
                 </button>
                 <button
                   type="button"
@@ -1876,8 +1903,8 @@ export default function RoomsManagement() {
       <Modal
         open={Boolean(editingRoom && editBlueprint)}
         onClose={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); }}
-        title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan 2D'}
-        description="Modifiez les infos, la disposition, les chaises, les couleurs et les éléments fixes."
+        title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan'}
+        description="Modifiez le nom, la description et le plan."
         size="full"
         footer={
           <div className="flex justify-end gap-2 w-full">
@@ -1892,7 +1919,7 @@ export default function RoomsManagement() {
               onClick={handleSaveRoomLayout}
               leftIcon={<CheckCircle2 className="w-4 h-4" />}
             >
-              Enregistrer le plan
+              Enregistrer la salle
             </Button>
           </div>
         }
