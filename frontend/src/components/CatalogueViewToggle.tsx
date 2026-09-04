@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { LayoutGrid, List, Map, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import useIsMobile from '@/hooks/useIsMobile';
 import type { CatalogueViewMode } from '@/lib/marketplace';
 
 const STORAGE_KEY = 'em-catalogue-view';
@@ -44,6 +45,7 @@ export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const isMobile = useIsMobile();
   const urlView = parseViewParam(searchParams.get('view'));
   const [mode, setMode] = useState<CatalogueViewMode>(urlView || defaultMode);
   const { gridCols, setGridCols } = useCatalogueGridCols();
@@ -85,7 +87,7 @@ export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
     router.replace(href, { scroll: false });
   };
 
-  return { mode, setView, gridCols, setGridCols };
+  return { mode: isMobile ? 'grid' : mode, setView, gridCols, setGridCols };
 }
 
 export function CatalogueGridColsToggle({
@@ -157,7 +159,7 @@ export default function CatalogueViewToggle({
   return (
     <div
       className={cn(
-        'flex items-center rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5',
+        'hidden md:flex items-center rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5',
         className,
       )}
       role="group"

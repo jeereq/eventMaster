@@ -20,8 +20,8 @@ export function LegalPageShell({
 }: LegalPageShellProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-50">
-        <div className="page-container h-14 flex items-center justify-between">
+      <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-50 pt-[env(safe-area-inset-top,0px)]">
+        <div className="page-container h-12 md:h-14 flex items-center justify-between">
           <SiteBrandMark size="sm" />
           <div className="flex items-center gap-2">
             <PWAInstallCta variant="inline" />

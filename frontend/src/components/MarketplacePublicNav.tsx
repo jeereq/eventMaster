@@ -27,9 +27,7 @@ export default function MarketplacePublicNav({
     <div
       className={cn(
         'inline-flex gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted',
-        dense
-          ? 'w-full max-w-full flex-nowrap overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
-          : 'flex-wrap',
+        'w-full max-w-full flex-nowrap overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto md:flex-wrap md:overflow-visible',
         className,
       )}
     >
@@ -48,7 +46,8 @@ export default function MarketplacePublicNav({
             )}
           >
             <Icon className="w-3.5 h-3.5" />
-            <span>{dense ? item.short : item.label}</span>
+            <span className="md:hidden">{item.short}</span>
+            <span className="hidden md:inline">{dense ? item.short : item.label}</span>
           </Link>
         );
       })}

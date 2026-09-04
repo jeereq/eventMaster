@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Store, LayoutGrid, FileText, Tag } from 'lucide-react';
+import { Home, Store, Rss, LayoutGrid, FileText } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export interface MobileNavItem {
@@ -29,9 +29,16 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     icon: Store,
   },
   {
+    id: 'publications',
+    label: 'Publications',
+    shortLabel: 'Publi',
+    href: '/activite',
+    icon: Rss,
+  },
+  {
     id: 'editor',
     label: 'Plans 2D/3D',
-    shortLabel: 'Plans 3D',
+    shortLabel: 'Plans',
     href: '/plans-3d',
     icon: LayoutGrid,
   },
@@ -40,12 +47,6 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     label: 'Modèles',
     href: '/modeles',
     icon: FileText,
-  },
-  {
-    id: 'tarifs',
-    label: 'Tarifs',
-    href: '/tarifs',
-    icon: Tag,
   },
 ];
 
@@ -59,11 +60,11 @@ function isItemActive(itemHref: string, pathname: string, currentHash: string): 
   if (itemHref === '/marketplace') {
     return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
   }
+  if (itemHref === '/activite') {
+    return pathname === '/activite' || pathname.startsWith('/activite/');
+  }
   if (itemHref === '/modeles') {
     return pathname === '/modeles' || pathname.startsWith('/modeles/');
-  }
-  if (itemHref === '/tarifs') {
-    return pathname === '/tarifs' || pathname === '/pricing' || pathname.startsWith('/tarifs/');
   }
   return pathname === itemHref;
 }

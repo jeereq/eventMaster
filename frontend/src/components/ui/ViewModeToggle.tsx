@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Columns2, Columns3, LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import useIsMobile from '@/hooks/useIsMobile';
 
 export type ViewMode = 'grid' | 'list';
 export type GridColumns = 2 | 3 | 4;
@@ -48,12 +49,12 @@ function readStoredColumns(key: string, fallback: GridColumns): GridColumns {
 export function gridColsClass(columns: GridColumns): string {
   switch (columns) {
     case 2:
-      return 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5';
+      return 'grid grid-cols-2 gap-3 sm:gap-5';
     case 4:
-      return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+      return 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4';
     case 3:
     default:
-      return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+      return 'grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4';
   }
 }
 
@@ -65,6 +66,7 @@ export function useViewMode(
   defaultMode: ViewMode = 'grid',
   defaultColumns: GridColumns = 3,
 ) {
+  const isMobile = useIsMobile();
   const [mode, setMode] = useState<ViewMode>(defaultMode);
   const [columns, setColumns] = useState<GridColumns>(defaultColumns);
   const [ready, setReady] = useState(false);
@@ -94,7 +96,7 @@ export function useViewMode(
   };
 
   return {
-    mode: ready ? mode : defaultMode,
+    mode: isMobile ? 'grid' : ready ? mode : defaultMode,
     columns: ready ? columns : defaultColumns,
     setViewMode,
     setGridColumns,
@@ -127,7 +129,7 @@ export function ViewModeToggle({
   const setColumns = onColumnsChange ?? internal.setGridColumns;
 
   return (
-    <div className={cn('inline-flex flex-wrap items-center gap-1.5', className)}>
+    <div className={cn('hidden md:inline-flex flex-wrap items-center gap-1.5', className)}>
       <div
         className="inline-flex items-center rounded-lg border border-border bg-surface-muted p-0.5"
         role="group"

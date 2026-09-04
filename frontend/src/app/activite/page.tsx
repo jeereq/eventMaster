@@ -37,7 +37,7 @@ export default function ActivitePage() {
       </PublicPageHero>
 
       {/* Flux de publications centré, aéré et 100% focalisé sur l'image */}
-      <div className="page-container py-6 sm:py-10 max-w-2xl mx-auto">
+      <div className="page-container py-3 md:py-10 max-w-2xl mx-auto">
         <MarketplaceGlobalActivityFeed linkBase="public" />
       </div>
     </PublicPageShell>

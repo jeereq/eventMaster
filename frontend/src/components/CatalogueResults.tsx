@@ -9,15 +9,16 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, serviceMobilityLabel, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 import { rememberCurrentCatalogueList } from '@/lib/catalogueQuery';
+import useIsMobile from '@/hooks/useIsMobile';
 
 export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
 export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
 
 const GRID_CLASS: Record<CatalogueGridCols, string> = {
-  2: 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5',
-  3: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
-  4: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
-  5: 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4',
+  2: 'grid grid-cols-2 gap-2.5 sm:gap-5',
+  3: 'grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4',
+  4: 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4',
+  5: 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-4',
 };
 
 function kindIcon(kind: CatalogueDisplayKind) {
@@ -56,7 +57,7 @@ function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'm
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold shadow-sm">
       <Icon className="w-3 h-3 text-white" strokeWidth={2.4} />
-      <span>{catalogueKindLabel(displayKind)}</span>
+      <span className="hidden sm:inline">{catalogueKindLabel(displayKind)}</span>
     </span>
   );
 }
@@ -116,9 +117,9 @@ function GridCard({
       </div>
 
       {/* Informations textuelles épurées & lisibles (Design photo-first aéré) */}
-      <div className="p-3.5 sm:p-4 space-y-2 flex-1 flex flex-col justify-between">
+      <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2 flex-1 flex flex-col justify-between">
         <div className="space-y-1">
-          <h3 className="font-bold text-sm sm:text-[15px] text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+          <h3 className="font-bold text-xs sm:text-[15px] text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
             {item.title}
           </h3>
 
@@ -246,6 +247,8 @@ export default function CatalogueResults({
   isFavorite?: (item: CatalogueItem) => boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
 }) {
+  const isMobile = useIsMobile();
+  const resolvedMode = isMobile ? 'grid' : mode;
   const rememberListOnNavigate = (e: React.MouseEvent) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     rememberCurrentCatalogueList();
@@ -267,7 +270,7 @@ export default function CatalogueResults({
     const groups = groupCatalogueItemsByDisplayKind(items);
     const showHeadings = groups.length > 1;
 
-    if (mode === 'list') {
+    if (resolvedMode === 'list') {
       return (
         <div className="space-y-6">
           {groups.map((group) => (
@@ -314,7 +317,7 @@ export default function CatalogueResults({
   }
 
   // Vue directe / tous mélangés
-  if (mode === 'list') {
+  if (resolvedMode === 'list') {
     return (
       <div className={listStackClass}>
         {items.map((item) => (
@@ -385,7 +388,9 @@ export function CatalogueResultsSkeleton({
   count?: number;
   gridCols?: CatalogueGridCols;
 }) {
-  if (mode === 'map' || mode === 'focus') {
+  const isMobile = useIsMobile();
+  const resolvedMode = isMobile ? 'grid' : mode;
+  if (resolvedMode === 'map' || resolvedMode === 'focus') {
     return (
       <div
         className="space-y-2"
@@ -396,7 +401,7 @@ export function CatalogueResultsSkeleton({
         <Skeleton
           className={cn(
             'w-full rounded-[var(--radius-card)] border border-border',
-            mode === 'focus' ? 'min-h-[420px] h-[calc(100dvh-10.5rem)]' : 'h-[480px]',
+            resolvedMode === 'focus' ? 'min-h-[420px] h-[calc(100dvh-10.5rem)]' : 'h-[480px]',
           )}
         />
         <span className="sr-only">Chargement du marketplace…</span>
@@ -404,7 +409,7 @@ export function CatalogueResultsSkeleton({
     );
   }
 
-  if (mode === 'list') {
+  if (resolvedMode === 'list') {
     return (
       <div className={listStackClass} role="status" aria-live="polite" aria-label="Chargement du marketplace">
         {Array.from({ length: count }).map((_, i) => (

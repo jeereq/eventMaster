@@ -665,7 +665,7 @@ export default function ListingDetailLayout({
             isWideTab ? 'lg:grid-cols-1' : 'lg:grid-cols-5',
           )}>
             <div className={cn('flex flex-col gap-4 min-w-0', isWideTab ? '' : 'lg:col-span-3')}>
-              <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
+              <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-[var(--em-site-header)]', 'md:top-16')}>
                 <MarketplaceFormTabs
                   value={viewTab}
                   onChange={onTab}

@@ -103,11 +103,11 @@ export default function SiteHeader({
     <>
       <header
         className={cn(
-          'sticky top-0 z-50 backdrop-blur-md bg-background/85 dark:bg-background/80 border-b border-border/80 transition-colors duration-200',
+          'sticky top-0 z-50 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md bg-background/85 dark:bg-background/80 border-b border-border/80 transition-colors duration-200',
           className,
         )}
       >
-        <div className="page-container h-14 flex items-center justify-between gap-4 sm:gap-6">
+        <div className="page-container h-12 md:h-14 flex items-center justify-between gap-3 sm:gap-6">
         <SiteBrandMark />
 
         {/* Barre de navigation HUD centrale */}
@@ -171,14 +171,13 @@ export default function SiteHeader({
               >
                 Tableau de bord
               </Button>
-              <Button
+              <Link
                 href="/dashboard"
-                size="sm"
-                className="sm:hidden ml-1 text-xs px-2.5 font-semibold shadow-xs"
-                rightIcon={<LayoutDashboard className="w-3 h-3" />}
+                className={cn(iconBtn, 'sm:hidden text-primary')}
+                aria-label="Tableau de bord"
               >
-                Dashboard
-              </Button>
+                <LayoutDashboard className="w-4 h-4" />
+              </Link>
             </>
           ) : (
             <div className="hidden md:flex items-center gap-2 ml-1">

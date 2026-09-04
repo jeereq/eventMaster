@@ -639,7 +639,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         {/* Header mobile */}
-        <header className="md:hidden bg-sidebar border-b border-border h-12 px-3 flex items-center justify-between sticky top-0 z-30">
+        <header className="md:hidden bg-sidebar border-b border-border px-3 flex items-center justify-between sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
+          <div className="h-12 w-full flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <div className="bg-primary p-1.5 rounded-lg text-white shrink-0">
               <PartyPopper className="w-4 h-4" />
@@ -664,6 +665,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+          </div>
           </div>
         </header>
 

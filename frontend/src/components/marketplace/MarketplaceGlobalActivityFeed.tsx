@@ -980,7 +980,7 @@ export default function MarketplaceGlobalActivityFeed({
       </div>
 
       {/* Barre d'outils / Filtres & Recherche (Toujours visible lors du défilement) */}
-      <div className="sticky top-14 z-30 flex flex-col md:flex-row gap-1.5 md:gap-3 md:items-center justify-between bg-surface/95 dark:bg-slate-900/95 backdrop-blur-xl p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
+      <div className="sticky top-[var(--em-site-header)] z-30 flex flex-col md:flex-row gap-1.5 md:gap-3 md:items-center justify-between bg-surface/95 dark:bg-slate-900/95 backdrop-blur-xl p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
         <div className="inline-flex gap-1 p-0.5 sm:p-1 rounded-lg sm:rounded-xl bg-surface-muted/80 border border-border/50 max-w-full overflow-x-auto [scrollbar-width:none]">
           {kindTabs.map((tab) => {
             const Icon = tab.icon;
