@@ -308,6 +308,33 @@ async function uploadGeneratedB64(
   return uploaded.url;
 }
 
+function isDallEModel(model: string): boolean {
+  return /^dall-e/i.test(model.trim());
+}
+
+function extractImagePayload(payload: {
+  data?: Array<{ b64_json?: string; url?: string }>;
+}): string | null {
+  const b64 = payload.data?.[0]?.b64_json;
+  if (b64) return `b64:${b64}`;
+  const url = payload.data?.[0]?.url;
+  if (url) return `url:${url}`;
+  return null;
+}
+
+async function resolveGeneratedImage(
+  token: string,
+  tenantId: string | null | undefined,
+): Promise<string> {
+  if (token.startsWith('b64:')) {
+    return uploadGeneratedB64(token.slice(4), tenantId);
+  }
+  if (token.startsWith('url:')) {
+    return token.slice(4);
+  }
+  fail(502, 'Réponse image IA invalide.');
+}
+
 /** Image-to-image : part de la 1re référence + prompt (brief + analyse). */
 async function generateBackgroundFromReference(
   key: string,
@@ -315,13 +342,17 @@ async function generateBackgroundFromReference(
   imagePrompt: string,
   tenantId: string | null | undefined,
 ): Promise<string> {
+  const editModel = process.env.OPENAI_IMAGE_EDIT_MODEL || 'dall-e-2';
   const imageBytes = await downloadImageAsPngBuffer(referenceUrl);
   const form = new FormData();
-  form.append('model', process.env.OPENAI_IMAGE_EDIT_MODEL || 'dall-e-2');
+  form.append('model', editModel);
   form.append('prompt', imagePrompt.slice(0, 1000));
   form.append('n', '1');
   form.append('size', '1024x1024');
-  form.append('response_format', 'b64_json');
+  // gpt-image-* n’accepte pas response_format (renvoie toujours du b64).
+  if (isDallEModel(editModel)) {
+    form.append('response_format', 'b64_json');
+  }
   form.append('image', new Blob([new Uint8Array(imageBytes)], { type: 'image/png' }), 'reference.png');
 
   const controller = new AbortController();
@@ -340,11 +371,9 @@ async function generateBackgroundFromReference(
     if (!response.ok) {
       fail(502, payload.error?.message || 'Échec de la création d’image à partir des références.');
     }
-    const b64 = payload.data?.[0]?.b64_json;
-    if (b64) return uploadGeneratedB64(b64, tenantId);
-    const url = payload.data?.[0]?.url;
-    if (url) return url;
-    fail(502, 'Aucune image générée à partir de la référence.');
+    const token = extractImagePayload(payload);
+    if (!token) fail(502, 'Aucune image générée à partir de la référence.');
+    return resolveGeneratedImage(token, tenantId);
   } catch (error) {
     if ((error as HttpError)?.status) throw error;
     fail(502, (error as Error)?.message || 'Impossible de créer l’image depuis la référence.');
@@ -360,6 +389,23 @@ async function generateBackgroundFromPrompt(
   size: '1024x1792' | '1024x1024' = '1024x1792',
 ): Promise<string> {
   const imageModel = process.env.OPENAI_IMAGE_MODEL || 'dall-e-3';
+  const dallE = isDallEModel(imageModel);
+  // gpt-image : tailles carrées / paysage supportées ; portrait dall-e-3 uniquement.
+  const resolvedSize = !dallE && size === '1024x1792' ? '1024x1024' : size;
+
+  const body: Record<string, unknown> = {
+    model: imageModel,
+    prompt: imagePrompt.slice(0, 3800),
+    n: 1,
+    size: resolvedSize,
+  };
+  if (dallE) {
+    body.response_format = 'b64_json';
+    if (/dall-e-3/i.test(imageModel)) {
+      body.quality = 'standard';
+    }
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
   try {
@@ -370,30 +416,45 @@ async function generateBackgroundFromPrompt(
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: imageModel,
-        prompt: imagePrompt.slice(0, 3800),
-        n: 1,
-        size,
-        response_format: 'b64_json',
-        quality: imageModel.includes('dall-e') ? 'standard' : undefined,
-      }),
+      body: JSON.stringify(body),
     });
     const payload = (await response.json().catch(() => ({}))) as {
       error?: { message?: string };
       data?: Array<{ b64_json?: string; url?: string }>;
     };
     if (!response.ok) {
-      if (size !== '1024x1024' && String(payload.error?.message || '').toLowerCase().includes('size')) {
+      const errMsg = String(payload.error?.message || '');
+      if (resolvedSize !== '1024x1024' && errMsg.toLowerCase().includes('size')) {
         return generateBackgroundFromPrompt(key, imagePrompt, tenantId, '1024x1024');
       }
-      fail(502, payload.error?.message || 'Échec de la génération de la nouvelle image.');
+      // Si le modèle n’accepte pas response_format, on réessaie sans (ex. gpt-image).
+      if (dallE && /response_format/i.test(errMsg)) {
+        const retryBody = { ...body };
+        delete retryBody.response_format;
+        const retry = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(retryBody),
+        });
+        const retryPayload = (await retry.json().catch(() => ({}))) as {
+          error?: { message?: string };
+          data?: Array<{ b64_json?: string; url?: string }>;
+        };
+        if (!retry.ok) {
+          fail(502, retryPayload.error?.message || 'Échec de la génération de la nouvelle image.');
+        }
+        const retryToken = extractImagePayload(retryPayload);
+        if (!retryToken) fail(502, 'Aucune nouvelle image renvoyée par l’IA.');
+        return resolveGeneratedImage(retryToken, tenantId);
+      }
+      fail(502, errMsg || 'Échec de la génération de la nouvelle image.');
     }
-    const b64 = payload.data?.[0]?.b64_json;
-    if (b64) return uploadGeneratedB64(b64, tenantId);
-    const url = payload.data?.[0]?.url;
-    if (url) return url;
-    fail(502, 'Aucune nouvelle image renvoyée par l’IA.');
+    const token = extractImagePayload(payload);
+    if (!token) fail(502, 'Aucune nouvelle image renvoyée par l’IA.');
+    return resolveGeneratedImage(token, tenantId);
   } catch (error) {
     if ((error as HttpError)?.status) throw error;
     fail(502, (error as Error)?.message || 'Impossible de générer la nouvelle image.');
