@@ -7,7 +7,9 @@ import { PartyPopper, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
 import PWAInstallCta from '@/components/PWAInstallCta';
+import SiteBrandMark from '@/components/SiteBrandMark';
 import CelebrateMood from '@/components/CelebrateMood';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 interface AuthFeature {
   icon: React.ComponentType<{ className?: string }>;
@@ -38,6 +40,7 @@ export function AuthSplitLayout({
   children,
 }: AuthSplitLayoutProps) {
   const { theme, toggleTheme } = useTheme();
+  const { site } = usePlatformSite();
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
@@ -66,12 +69,7 @@ export function AuthSplitLayout({
           }}
         />
 
-        <Link href="/" className="flex items-center gap-3 relative z-10 group">
-          <div className="bg-primary p-2.5 rounded-[var(--radius-button)] text-white shadow-lg transition group-hover:bg-primary-hover">
-            <PartyPopper className="w-5 h-5" />
-          </div>
-          <span className="font-display font-semibold text-xl tracking-tight">EventMaster</span>
-        </Link>
+        <SiteBrandMark href="/" tone="onDark" className="relative z-10" />
 
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
@@ -109,7 +107,7 @@ export function AuthSplitLayout({
         </div>
 
         <div className="text-xs text-white/40 relative z-10 flex justify-between items-center">
-          <span>© {new Date().getFullYear()} EventMaster</span>
+          <span>© {new Date().getFullYear()} {site.platformName}</span>
           <Link href="/contact" className="hover:text-white/80 transition">Support</Link>
         </div>
       </div>
@@ -118,20 +116,12 @@ export function AuthSplitLayout({
       <div className="w-full lg:w-[54%] xl:w-1/2 flex flex-col justify-center p-5 sm:p-10 lg:p-14 relative bg-background">
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 flex items-center gap-2">
           <PWAInstallCta variant="inline" />
-          <Link
-            href="/"
-            className="lg:hidden inline-flex items-center gap-2 text-sm font-semibold text-foreground"
-          >
-            <span className="bg-primary p-1.5 rounded-[var(--radius-button)] text-white">
-              <PartyPopper className="w-3.5 h-3.5" />
-            </span>
-            EventMaster
-          </Link>
+          <SiteBrandMark href="/" size="sm" className="lg:hidden" />
           <PublicAccentPicker />
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2.5 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:bg-surface-muted hover:text-foreground transition"
+            className="inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:bg-surface-muted hover:text-foreground transition"
             aria-label="Changer de thème"
           >
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -149,7 +139,7 @@ export function AuthSplitLayout({
             </Link>
           )}
           {children}
-          <p className="text-center text-xs text-muted lg:hidden">© {new Date().getFullYear()} EventMaster</p>
+          <p className="text-center text-xs text-muted lg:hidden">© {new Date().getFullYear()} {site.platformName}</p>
         </div>
       </div>
     </div>

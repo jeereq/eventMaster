@@ -8,13 +8,14 @@ import { getWorkspaceModules, type WorkspaceModules } from '@/lib/planAccess';
 import { useTheme } from '@/context/ThemeContext';
 import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
- LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
+ LogOut, Menu, X, Loader2, ShieldCheck, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
  Inbox, Sparkles, Bookmark, Heart, Rss,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import PWAInstallCta from '@/components/PWAInstallCta';
+import SiteBrandMark from '@/components/SiteBrandMark';
 import UserLegalGate from '@/components/UserLegalGate';
 import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
@@ -575,9 +576,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  return (
  <div className="min-h-screen flex items-center justify-center bg-background">
  <div className="flex flex-col items-center gap-4 animate-fade-in">
- <div className="bg-primary p-3 rounded-xl text-white">
- <PartyPopper className="w-8 h-8" />
- </div>
+ <SiteBrandMark href={null} size="lg" showLabel={false} />
  <Loader2 className="w-6 h-6 text-primary animate-spin" />
  <p className="text-sm font-medium text-muted">
  Chargement de votre espace…
@@ -642,9 +641,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="md:hidden bg-sidebar border-b border-border px-3 flex items-center justify-between sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
           <div className="h-12 w-full flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="bg-primary p-1.5 rounded-lg text-white shrink-0">
-              <PartyPopper className="w-4 h-4" />
-            </div>
+            <SiteBrandMark href="/dashboard" showLabel={false} />
             <DashboardMobileTitle />
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
@@ -652,14 +649,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <ViewCustomizerTrigger />
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
               aria-label="Changer de thème"
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
               aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               aria-expanded={mobileMenuOpen}
             >
@@ -681,29 +678,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           {/* Header spécifique du drawer mobile */}
           <div className="flex md:hidden items-center justify-between p-3.5 border-b border-border bg-surface shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="bg-primary p-1.5 rounded-lg text-white shrink-0">
-                <PartyPopper className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="font-bold text-sm text-foreground block leading-none tracking-tight">EventMaster</span>
-                <span className="text-[10px] font-medium text-muted mt-0.5 block">
-                  {user?.role === 'SUPER_ADMIN'
-                    ? 'Console plateforme'
-                    : user?.role === 'COMMERCIAL'
+            <SiteBrandMark
+              href="/dashboard"
+              size="sm"
+              meta={
+                user?.role === 'SUPER_ADMIN'
+                  ? 'Console plateforme'
+                  : user?.role === 'COMMERCIAL'
                     ? 'Espace commercial'
                     : isClientAccount
-                    ? 'Espace client'
-                    : tenant?.accountKind === 'VENDOR'
-                    ? 'Espace marketplace'
-                    : 'Workspace'}
-                </span>
-              </div>
-            </div>
+                      ? 'Espace client'
+                      : tenant?.accountKind === 'VENDOR'
+                        ? 'Espace marketplace'
+                        : 'Workspace'
+              }
+            />
             <button
               type="button"
               onClick={() => setMobileMenuOpen(false)}
-              className="p-1.5 rounded-lg bg-surface-muted hover:bg-border text-foreground transition touch-manipulation cursor-pointer"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 p-1.5 rounded-lg bg-surface-muted hover:bg-border text-foreground transition touch-manipulation cursor-pointer"
               aria-label="Fermer le menu"
             >
               <X className="w-5 h-5" />
@@ -713,27 +706,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className={cn('flex-1 overflow-y-auto overscroll-contain space-y-4', sidebarCollapsed ? 'p-2 md:p-2' : 'p-3.5 sm:p-4')}>
             {/* Logo desktop */}
             <div className={cn('hidden md:flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
-              <div className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : 'gap-2.5')}>
-                <div className="bg-primary p-1.5 rounded-[var(--radius-button)] text-white shrink-0">
-                  <PartyPopper className="w-4 h-4" />
-                </div>
-                {!sidebarCollapsed && (
-                  <div>
-                    <span className="font-semibold text-[15px] text-foreground block leading-none tracking-tight">EventMaster</span>
-                    <span className="text-[10px] font-medium text-muted mt-1 block">
-                      {user?.role === 'SUPER_ADMIN'
-                        ? 'Console plateforme'
-                        : user?.role === 'COMMERCIAL'
+              <SiteBrandMark
+                href="/dashboard"
+                showLabel={!sidebarCollapsed}
+                meta={
+                  sidebarCollapsed
+                    ? undefined
+                    : user?.role === 'SUPER_ADMIN'
+                      ? 'Console plateforme'
+                      : user?.role === 'COMMERCIAL'
                         ? 'Espace commercial'
                         : isClientAccount
-                        ? 'Espace client'
-                        : tenant?.accountKind === 'VENDOR'
-                        ? 'Espace marketplace'
-                        : 'Workspace'}
-                    </span>
-                  </div>
-                )}
-              </div>
+                          ? 'Espace client'
+                          : tenant?.accountKind === 'VENDOR'
+                            ? 'Espace marketplace'
+                            : 'Workspace'
+                }
+              />
               <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
                 <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
                   <button

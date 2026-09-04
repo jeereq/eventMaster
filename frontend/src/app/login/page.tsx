@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Calendar, Lock, PartyPopper, Sparkles, Table, MessageSquare, Ticket,
+  Calendar, Lock, Sparkles, Table, MessageSquare, Ticket,
 } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
+import SiteBrandMark from '@/components/SiteBrandMark';
 import { Button, Alert, Input, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
@@ -91,8 +92,8 @@ function LoginPageContent() {
     >
       <Card padding="lg" className="border-border shadow-sm">
         <div className="text-center lg:text-left mb-6">
-          <div className="inline-flex lg:hidden items-center justify-center bg-primary p-3 rounded-[var(--radius-button)] text-white mb-4">
-            <PartyPopper className="w-7 h-7" />
+          <div className="inline-flex lg:hidden justify-center mb-4">
+            <SiteBrandMark href={null} size="lg" showLabel={false} />
           </div>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h2>
           <p className="mt-2 text-sm text-muted">

@@ -11,7 +11,6 @@ import {
   User,
   Building,
   Building2,
-  PartyPopper,
   Phone,
   MessageSquare,
   UserCheck,

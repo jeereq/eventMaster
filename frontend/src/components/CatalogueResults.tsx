@@ -55,8 +55,8 @@ function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'm
   const displayKind = catalogueItemDisplayKind(item);
   const Icon = kindIcon(displayKind);
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold shadow-sm">
-      <Icon className="w-3 h-3 text-white" strokeWidth={2.4} />
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stage/70 backdrop-blur-md border border-stage-foreground/20 text-stage-foreground text-[11px] font-bold shadow-sm">
+      <Icon className="w-3 h-3 text-stage-foreground" strokeWidth={2.4} />
       <span className="hidden sm:inline">{catalogueKindLabel(displayKind)}</span>
     </span>
   );
