@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useMemo, useRef, useState } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { getFixtureClass } from '@/lib/roomLayoutUtils';
+import FixtureRenderer from '@/components/FixtureRenderer';
+import { PlanZoomControls } from '@/components/PlanViewChrome';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
@@ -146,36 +146,12 @@ export default function SeatSelectionPlanCanvas({
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] text-muted">Touchez un siège libre sur le plan</p>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => adjustZoom(-0.1)}
-            className="p-2 sm:p-1 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
-            aria-label="Zoom arrière"
-            title="Zoom arrière"
-          >
-            <ZoomOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-          </button>
-          <span className="text-[11px] text-muted font-mono w-9 text-center select-none">{Math.round(zoom * 100)}%</span>
-          <button
-            type="button"
-            onClick={() => adjustZoom(0.1)}
-            className="p-2 sm:p-1 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
-            aria-label="Zoom avant"
-            title="Zoom avant"
-          >
-            <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setZoom(1)}
-            className="p-2 sm:p-1 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
-            aria-label="Recentrer le plan"
-            title="Recentrer le plan"
-          >
-            <RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-          </button>
-        </div>
+        <PlanZoomControls
+          zoom={zoom}
+          onZoomOut={() => adjustZoom(-0.1)}
+          onZoomIn={() => adjustZoom(0.1)}
+          onReset={() => setZoom(1)}
+        />
       </div>
 
       {showZonePricing && pricingZones.length > 0 && (
@@ -238,10 +214,7 @@ export default function SeatSelectionPlanCanvas({
           {(fixtures ?? []).map((fixture) => (
             <div
               key={fixture.id}
-              className={cn(
-                'absolute pointer-events-none border text-[8px] font-semibold flex items-center justify-center px-1 text-center opacity-60',
-                getFixtureClass(fixture.kind),
-              )}
+              className="absolute pointer-events-none z-[5]"
               style={{
                 left: `${fixture.x}%`,
                 top: `${fixture.y}%`,
@@ -249,7 +222,18 @@ export default function SeatSelectionPlanCanvas({
                 height: `${fixture.h}%`,
               }}
             >
-              {fixture.kind !== 'aisle' && fixture.label}
+              <FixtureRenderer
+                fill
+                showLabel={fixture.kind !== 'flower' && fixture.kind !== 'aisle'}
+                fixture={{
+                  ...fixture,
+                  x: 0,
+                  y: 0,
+                  w: 100,
+                  h: 100,
+                  kind: fixture.kind as 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower',
+                }}
+              />
             </div>
           ))}
 

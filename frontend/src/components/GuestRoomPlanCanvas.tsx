@@ -22,7 +22,7 @@ import {
 } from '@/lib/guestPlanLayoutUtils';
 import FixtureRenderer from '@/components/FixtureRenderer';
 import { getTableShapeLabel } from '@/lib/tablePlanUtils';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { PlanZoomControls } from '@/components/PlanViewChrome';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
 
 interface GuestRoomPlanCanvasProps {
@@ -175,35 +175,13 @@ export default function GuestRoomPlanCanvas({
 
   return (
     <div className={`space-y-2 ${fill ? 'h-full min-h-0 flex flex-col' : ''} ${className}`} data-guest-no-swipe>
-      <div className="flex items-center justify-end gap-1.5 shrink-0">
-        <button
-          type="button"
-          onClick={() => adjustZoom(-0.15)}
-          className="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
-          aria-label="Zoom arrière"
-          title="Zoom arrière"
-        >
-          <ZoomOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-        </button>
-        <span className="text-[11px] text-muted font-mono w-10 text-center select-none">{Math.round(zoom * 100)}%</span>
-        <button
-          type="button"
-          onClick={() => adjustZoom(0.15)}
-          className="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
-          aria-label="Zoom avant"
-          title="Zoom avant"
-        >
-          <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={fitToContainer}
-          className="p-2 sm:p-1.5 min-w-[44px] min-h-[44px] sm:min-w-[34px] sm:min-h-[34px] flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation cursor-pointer"
-          aria-label="Recentrer le plan"
-          title="Recentrer le plan"
-        >
-          <RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-        </button>
+      <div className="flex items-center justify-end shrink-0">
+        <PlanZoomControls
+          zoom={zoom}
+          onZoomOut={() => adjustZoom(-0.15)}
+          onZoomIn={() => adjustZoom(0.15)}
+          onReset={fitToContainer}
+        />
       </div>
 
       <div

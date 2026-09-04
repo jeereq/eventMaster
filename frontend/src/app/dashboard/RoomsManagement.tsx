@@ -1788,13 +1788,13 @@ export default function RoomsManagement() {
             {listingTab === 'activity' && (
               <div className="text-center py-8 space-y-3">
                 <p className="text-sm text-muted">
-                  Les publications liées à cette salle se gèrent dans l’espace Publications.
+                  Les réalisations liées à cette salle se gèrent dans l’espace Réalisations.
                 </p>
                 <Link
                   href="/dashboard/publications?tab=create"
                   className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover"
                 >
-                  Ouvrir Publications
+                  Ouvrir Réalisations
                 </Link>
               </div>
             )}

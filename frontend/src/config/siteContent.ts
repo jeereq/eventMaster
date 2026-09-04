@@ -23,7 +23,7 @@ export const FOOTER_FEATURES = [
 export const FOOTER_PRODUCT = [
   { label: 'Plans & Modèles 2D/3D', href: '/plans-3d' },
   { label: 'Marketplace', href: '/marketplace' },
-  { label: 'Publications', href: '/activite' },
+  { label: 'Réalisations', href: '/activite' },
   { label: 'Modèles', href: '/modeles' },
   { label: 'Tarifs', href: '/tarifs' },
   { label: 'FAQ', href: '/faq' },

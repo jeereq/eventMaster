@@ -30,8 +30,8 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
   },
   {
     id: 'publications',
-    label: 'Publications',
-    shortLabel: 'Publi',
+    label: 'Réalisations',
+    shortLabel: 'Réalis.',
     href: '/activite',
     icon: Rss,
   },

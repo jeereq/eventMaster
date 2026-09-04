@@ -10,7 +10,7 @@ const TABS: Array<{ id: MarketplaceFormTab; label: string; icon: React.ReactNode
   { id: 'details', label: 'Détails', icon: <AlignLeft className="w-3.5 h-3.5" /> },
   { id: 'services', label: 'Prestations', icon: <Sparkles className="w-3.5 h-3.5" /> },
   { id: 'venues', label: 'Salles', icon: <Building2 className="w-3.5 h-3.5" /> },
-  { id: 'activity', label: 'Publications', icon: <Rss className="w-3.5 h-3.5" /> },
+  { id: 'activity', label: 'Réalisations', icon: <Rss className="w-3.5 h-3.5" /> },
   { id: 'map', label: 'Carte', icon: <Map className="w-3.5 h-3.5" /> },
   { id: 'medias', label: 'Médias', icon: <Images className="w-3.5 h-3.5" /> },
 ];

@@ -119,7 +119,7 @@ export function PostMediaGrid({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={sizedMediaUrl(m.url, 800)}
-                    alt={`Média ${i + 1} de la publication`}
+                    alt={`Média ${i + 1} de la réalisation`}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover/media:scale-105"
                     loading="lazy"
                   />
@@ -212,14 +212,14 @@ export function MarketplaceActivityFeedManager({
       setContent('');
       setMedia([]);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Publication impossible.');
+      setError(err instanceof Error ? err.message : 'Impossible de publier cette réalisation.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const remove = async (postId: string) => {
-    if (!window.confirm('Supprimer cette publication ?')) return;
+    if (!window.confirm('Supprimer cette réalisation ?')) return;
     try {
       await api.delete(`/marketplace/feed/${postId}`);
       setPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -233,7 +233,7 @@ export function MarketplaceActivityFeedManager({
       {/* Composer moderne */}
       <div className="rounded-3xl border border-border bg-surface p-4 sm:p-5 space-y-3.5 shadow-sm">
         <label htmlFor="marketplace-activity-composer" className="sr-only">
-          Nouvelle publication
+          Nouvelle réalisation
         </label>
         <textarea
           id="marketplace-activity-composer"
@@ -310,8 +310,8 @@ export function MarketplaceActivityFeedManager({
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-10 space-y-1.5 rounded-2xl border border-dashed border-border bg-surface/30">
-          <p className="text-sm font-bold text-foreground">Aucune publication</p>
-          <p className="text-xs text-muted">Vos publications apparaîtront sur votre fiche et sur le fil public.</p>
+          <p className="text-sm font-bold text-foreground">Aucune réalisation</p>
+          <p className="text-xs text-muted">Vos réalisations apparaîtront sur votre fiche et sur le fil public.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -391,7 +391,7 @@ function VenueCommentBox({
           }}
           placeholder="Envoyer un message ou commenter…"
           className="w-full min-h-11 pl-4 pr-10 rounded-full border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed transition shadow-2xs"
-          aria-label={`Commenter la publication de ${authorLabel}`}
+          aria-label={`Commenter la réalisation de ${authorLabel}`}
         />
       </div>
       <button
@@ -614,7 +614,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 liked && 'border-rose-500/40 bg-black/60 shadow-rose-500/20',
               )}
               aria-pressed={liked}
-              aria-label={liked ? "Je n'aime plus cette publication" : `Aimer cette publication (${post.likeCount ?? likes.length} mentions j'aime)`}
+              aria-label={liked ? "Je n'aime plus cette réalisation" : `Aimer cette réalisation (${post.likeCount ?? likes.length} mentions j'aime)`}
               title="J'aime"
             >
               <Heart className={cn(
@@ -653,7 +653,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                 'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 isCopied && 'border-emerald-400/60 bg-emerald-950/60 text-emerald-300',
               )}
-              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette publication ou copier le lien"}
+              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
               title="Partager"
             >
               {isCopied ? (
@@ -765,7 +765,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
                   liked && 'bg-rose-500/80 text-white',
                 )}
                 aria-pressed={liked}
-                aria-label={liked ? "Je n'aime plus cette publication" : `Aimer cette publication (${post.likeCount ?? likes.length} mentions j'aime)`}
+                aria-label={liked ? "Je n'aime plus cette réalisation" : `Aimer cette réalisation (${post.likeCount ?? likes.length} mentions j'aime)`}
               >
                 <Heart className={cn('w-4 h-4', liked && 'fill-current')} />
                 <span className="tabular-nums">{post.likeCount ?? likes.length}</span>
@@ -786,7 +786,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
               type="button"
               onClick={() => onShare(post.id)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
-              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette publication ou copier le lien"}
+              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
             >
               {isCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
               <span>{isCopied ? 'Copié !' : 'Partager'}</span>
@@ -896,7 +896,7 @@ export default function MarketplaceActivityFeed({
       setPosts((prev) => (cursor ? [...prev, ...page] : page));
       setNextCursor(data?.nextCursor || null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de charger les publications.');
+      setError(err instanceof Error ? err.message : 'Impossible de charger les réalisations.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -951,8 +951,8 @@ export default function MarketplaceActivityFeed({
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: `Publication de ${authorLabel} sur EventMaster`,
-          text: `Découvrez cette publication de ${authorLabel} sur EventMaster`,
+          title: `Réalisation de ${authorLabel} sur EventMaster`,
+          text: `Découvrez cette réalisation de ${authorLabel} sur EventMaster`,
           url,
         });
         return;
@@ -986,7 +986,7 @@ export default function MarketplaceActivityFeed({
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border border-primary/20 bg-primary/5 text-xs text-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary shrink-0" />
-            <span>Connectez-vous pour aimer et commenter les publications de {authorLabel}.</span>
+            <span>Connectez-vous pour aimer et commenter les réalisations de {authorLabel}.</span>
           </div>
           <Link
             href={loginHref}
@@ -1004,7 +1004,7 @@ export default function MarketplaceActivityFeed({
       ) : null}
 
       {loading ? (
-        <div className="space-y-6" role="status" aria-label="Chargement des publications">
+        <div className="space-y-6" role="status" aria-label="Chargement des réalisations">
           {[...Array(2)].map((_, i) => (
             <article
               key={i}
@@ -1036,7 +1036,7 @@ export default function MarketplaceActivityFeed({
           <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
             {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
           </div>
-          <p className="text-sm font-bold text-foreground">Pas encore de publication</p>
+          <p className="text-sm font-bold text-foreground">Pas encore de réalisation</p>
           <p className="text-xs text-muted max-w-sm mx-auto">
             Les photos, vidéos et annonces récentes de {authorLabel} apparaîtront directement ici.
           </p>
@@ -1071,7 +1071,7 @@ export default function MarketplaceActivityFeed({
           disabled={loadingMore}
           className="w-full min-h-11 rounded-2xl border border-border/80 bg-surface text-xs sm:text-sm font-semibold text-foreground hover:bg-surface-muted transition disabled:opacity-50 shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
-          {loadingMore ? 'Chargement…' : 'Voir plus de publications'}
+          {loadingMore ? 'Chargement…' : 'Voir plus de réalisations'}
         </button>
       ) : null}
 

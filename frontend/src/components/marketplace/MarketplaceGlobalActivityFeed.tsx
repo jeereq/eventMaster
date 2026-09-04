@@ -106,7 +106,7 @@ function PostCommentBox({
           }}
           placeholder="Envoyer un message ou commenter…"
           className="w-full min-h-11 pl-4 pr-10 rounded-full border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed transition shadow-2xs"
-          aria-label={`Commenter la publication de ${authorName || 'ce partenaire'}`}
+          aria-label={`Commenter la réalisation de ${authorName || 'ce partenaire'}`}
         />
       </div>
       <button
@@ -361,7 +361,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 liked && 'border-rose-500/40 bg-black/60 shadow-rose-500/20',
               )}
               aria-pressed={liked}
-              aria-label={liked ? "Je n'aime plus cette publication" : `Aimer cette publication (${post.likeCount ?? likes.length} mentions j'aime)`}
+              aria-label={liked ? "Je n'aime plus cette réalisation" : `Aimer cette réalisation (${post.likeCount ?? likes.length} mentions j'aime)`}
               title="J'aime"
             >
               <Heart className={cn(
@@ -400,7 +400,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 'w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex flex-col items-center justify-center text-white hover:bg-black/70 hover:scale-110 active:scale-90 transition shadow-lg',
                 isCopied && 'border-emerald-400/60 bg-emerald-950/60 text-emerald-300',
               )}
-              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette publication ou copier le lien"}
+              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
               title="Partager"
             >
               {isCopied ? (
@@ -526,7 +526,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   liked && 'bg-rose-500/80 text-white',
                 )}
                 aria-pressed={liked}
-                aria-label={liked ? "Je n'aime plus cette publication" : `Aimer cette publication (${post.likeCount ?? likes.length} mentions j'aime)`}
+                aria-label={liked ? "Je n'aime plus cette réalisation" : `Aimer cette réalisation (${post.likeCount ?? likes.length} mentions j'aime)`}
               >
                 <Heart className={cn('w-4 h-4', liked && 'fill-current')} />
                 <span className="tabular-nums">{post.likeCount ?? likes.length}</span>
@@ -547,7 +547,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               type="button"
               onClick={() => onShare(post.id)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition text-xs font-bold"
-              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette publication ou copier le lien"}
+              aria-label={isCopied ? "Lien copié dans le presse-papier" : "Partager cette réalisation ou copier le lien"}
             >
               {isCopied ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
               <span>{isCopied ? 'Copié !' : 'Partager'}</span>
@@ -614,7 +614,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
 
 export function GlobalFeedSkeleton() {
   return (
-    <div className="space-y-6" role="status" aria-label="Chargement des publications">
+    <div className="space-y-6" role="status" aria-label="Chargement des réalisations">
       {/* Skeleton de la barre de Stories */}
       <div className="rounded-xl sm:rounded-2xl border border-border/70 bg-surface p-3 sm:p-4 space-y-2.5 shadow-2xs overflow-hidden animate-pulse">
         <div className="flex items-center justify-between pb-1">
@@ -720,7 +720,7 @@ export default function MarketplaceGlobalActivityFeed({
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Impossible de charger les publications.');
+          setError(err instanceof Error ? err.message : 'Impossible de charger les réalisations.');
           setPosts([]);
           setLoading(false);
         }
@@ -746,7 +746,7 @@ export default function MarketplaceGlobalActivityFeed({
       setPosts((prev) => [...prev, ...page]);
       setNextCursor(data?.nextCursor || null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de charger plus de publications.');
+      setError(err instanceof Error ? err.message : 'Impossible de charger plus de réalisations.');
     } finally {
       setLoadingMore(false);
     }
@@ -798,7 +798,7 @@ export default function MarketplaceGlobalActivityFeed({
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: 'Publication sur EventMaster',
+          title: 'Réalisation sur EventMaster',
           text: 'Découvrez cette réalisation sur EventMaster',
           url,
         });
@@ -862,7 +862,7 @@ export default function MarketplaceGlobalActivityFeed({
     shortLabel: string;
     icon: React.ComponentType<{ className?: string }>;
   }> = [
-    { id: 'all', label: 'Toutes les publications', shortLabel: 'Toutes', icon: Rss },
+    { id: 'all', label: 'Toutes les réalisations', shortLabel: 'Toutes', icon: Rss },
     { id: 'venue', label: 'Salles & Espaces', shortLabel: 'Salles', icon: Building2 },
     { id: 'vendor', label: 'Prestataires & Métiers', shortLabel: 'Prestataires', icon: Sparkles },
   ];
@@ -1060,7 +1060,7 @@ export default function MarketplaceGlobalActivityFeed({
               onChange={(e) => setQ(e.target.value)}
               placeholder="Rechercher un pro, ville…"
               className="w-full min-h-9 sm:min-h-11 pl-9 pr-16 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
-              aria-label="Rechercher dans les publications"
+              aria-label="Rechercher dans les réalisations"
             />
             {q.trim() && (
               <button
@@ -1110,11 +1110,11 @@ export default function MarketplaceGlobalActivityFeed({
           <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-xs">
             <Rss className="w-6 h-6" aria-hidden />
           </div>
-          <h3 className="text-base font-bold text-foreground">Aucune publication pour le moment</h3>
+          <h3 className="text-base font-bold text-foreground">Aucune réalisation pour le moment</h3>
           <p className="text-xs sm:text-sm text-muted leading-relaxed">
             {search.trim()
               ? 'Aucun résultat ne correspond à votre recherche. Essayez d’autres mots-clés.'
-              : 'Les salles et prestataires certifiés partageront ici leurs photos, vidéos et publications.'}
+              : 'Les salles et prestataires certifiés partageront ici leurs photos, vidéos et réalisations.'}
           </p>
           {search.trim() && (
             <button
@@ -1162,10 +1162,10 @@ export default function MarketplaceGlobalActivityFeed({
           {loadingMore ? (
             <span className="inline-flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Chargement des publications suivantes…
+              Chargement des réalisations suivantes…
             </span>
           ) : (
-            'Charger plus de publications'
+            'Charger plus de réalisations'
           )}
         </button>
       ) : null}
@@ -1176,7 +1176,7 @@ export default function MarketplaceGlobalActivityFeed({
           urls={lightbox.urls}
           initialIndex={lightbox.index}
           onClose={() => setLightbox(null)}
-          title="Fil des publications"
+          title="Fil des réalisations"
         />
       )}
     </div>

@@ -76,12 +76,12 @@ function DashboardPublicationsPageInner() {
   return (
     <div className="space-y-6 w-full max-w-5xl">
       <PageHeader
-        title="Publications"
-        description="Fil de publications des salles et prestations — grille type réseau social, et création liée à vos fiches."
+        title="Réalisations"
+        description="Fil des réalisations des salles et prestations — grille type réseau social, et création liée à vos fiches."
         breadcrumbs={
           <Breadcrumbs
             items={[
-              { label: 'Publications', href: '/dashboard/publications' },
+              { label: 'Réalisations', href: '/dashboard/publications' },
               { label: tab === 'create' ? 'Créer' : 'Grille' },
             ]}
           />
@@ -90,7 +90,7 @@ function DashboardPublicationsPageInner() {
 
       <div
         role="tablist"
-        aria-label="Publications"
+        aria-label="Réalisations"
         className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
       >
         {[
@@ -125,8 +125,8 @@ function DashboardPublicationsPageInner() {
       ) : (
         <EmptyState
           icon={<Rss className="w-5 h-5" />}
-          title="Publication réservée aux propriétaires"
-          description="Seuls les comptes qui gèrent des salles ou des prestations peuvent créer des publications."
+          title="Réalisations réservées aux propriétaires"
+          description="Seuls les comptes qui gèrent des salles ou des prestations peuvent créer des réalisations."
         />
       )}
     </div>
@@ -240,7 +240,7 @@ function PublicationsGrid() {
       ) : tiles.length === 0 ? (
         <EmptyState
           icon={<Rss className="w-5 h-5" />}
-          title="Aucune publication"
+          title="Aucune réalisation"
           description="Dès que des salles ou prestations partagent une actualité, elle apparaîtra ici."
         />
       ) : (
@@ -254,7 +254,7 @@ function PublicationsGrid() {
                 type="button"
                 onClick={() => setSelected(post)}
                 className="group relative aspect-square overflow-hidden rounded-xl bg-surface-muted border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:shadow-md transition-all duration-200 text-left"
-                aria-label={`Ouvrir la publication de ${post.author?.name || 'ce partenaire'}`}
+                aria-label={`Ouvrir la réalisation de ${post.author?.name || 'ce partenaire'}`}
               >
                 {media ? (
                   video ? (
@@ -263,14 +263,14 @@ function PublicationsGrid() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={sizedMediaUrl(media.url, 480)}
-                      alt={post.content ? `Photo : ${post.content.slice(0, 60)}` : `Publication de ${post.author?.name || 'partenaire'}`}
+                      alt={post.content ? `Photo : ${post.content.slice(0, 60)}` : `Réalisation de ${post.author?.name || 'partenaire'}`}
                       loading="lazy"
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   )
                 ) : (
                   <div className="h-full w-full p-4 flex flex-col justify-between bg-gradient-to-br from-primary/10 via-surface to-surface-muted">
-                    <p className="text-xs font-semibold text-primary">{post.author?.name || 'Publication'}</p>
+                    <p className="text-xs font-semibold text-primary">{post.author?.name || 'Réalisation'}</p>
                     <p className="text-xs text-foreground line-clamp-4">{post.content}</p>
                   </div>
                 )}
@@ -294,7 +294,7 @@ function PublicationsGrid() {
           onClick={() => void load(nextCursor)}
           className="w-full min-h-11 rounded-2xl border border-border/80 bg-surface text-xs sm:text-sm font-semibold text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
-          Voir plus de publications
+          Voir plus de réalisations
         </button>
       ) : null}
 
@@ -324,7 +324,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
       className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Détail de la publication"
+      aria-label="Détail de la réalisation"
       onClick={onClose}
     >
       <div
@@ -333,7 +333,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
       >
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
           <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-bold text-foreground truncate">{post.author?.name || 'Publication'}</h3>
+            <h3 className="text-sm sm:text-base font-bold text-foreground truncate">{post.author?.name || 'Réalisation'}</h3>
             <div className="flex items-center gap-2 mt-1">
               <span
                 className={cn(
@@ -366,7 +366,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={sizedMediaUrl(media[0].url, 1200)}
-                alt={post.content ? `Photo de publication : ${post.content.slice(0, 60)}` : 'Photo de la publication'}
+                alt={post.content ? `Photo de réalisation : ${post.content.slice(0, 60)}` : 'Photo de la réalisation'}
                 className="w-full h-full object-cover"
               />
             )}
@@ -482,18 +482,18 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
       });
       setContent('');
       setMedia([]);
-      setSuccess('Publication créée.');
+      setSuccess('Réalisation créée.');
       await loadTargets();
       onCreated();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Publication impossible.');
+      setError(err instanceof Error ? err.message : 'Impossible de publier cette réalisation.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const remove = async (postId: string) => {
-    if (!window.confirm('Supprimer cette publication ?')) return;
+    if (!window.confirm('Supprimer cette réalisation ?')) return;
     try {
       await api.delete(`/marketplace/feed/${postId}`);
       setMyPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -515,7 +515,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
       <EmptyState
         icon={<Plus className="w-5 h-5" />}
         title="Aucune fiche à lier"
-        description="Créez et publiez d’abord une salle ou une prestation, puis revenez créer une publication."
+        description="Créez et publiez d’abord une salle ou une prestation, puis revenez créer une réalisation."
         action={
           <div className="flex flex-wrap gap-2 justify-center">
             <Link href="/dashboard/rooms"><Button size="sm">Mes salles</Button></Link>
@@ -575,7 +575,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
 
           <div className="space-y-1.5">
             <label htmlFor="publication-create-textarea" className="block text-xs font-semibold text-muted">
-              Description de la publication
+              Description de la réalisation
             </label>
             <textarea
               id="publication-create-textarea"
@@ -585,7 +585,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
               maxLength={4000}
               placeholder="Décrivez votre actualité, une nouveauté, un nouveau décor ou une réalisation…"
               className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-3 text-base sm:text-sm resize-y min-h-[6.5rem] focus:outline-none focus:ring-2 focus:ring-primary/40"
-              aria-label="Description de la publication"
+              aria-label="Description de la réalisation"
               aria-describedby="publication-desc-hint"
             />
             <div className="flex justify-between items-center text-[11px] text-muted">
@@ -649,9 +649,9 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
       </div>
 
       <div className="lg:col-span-2 space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Vos publications</h2>
+        <h2 className="text-sm font-semibold text-foreground">Vos réalisations</h2>
         {myPosts.length === 0 ? (
-          <p className="text-xs text-muted">Aucune publication pour l’instant.</p>
+          <p className="text-xs text-muted">Aucune réalisation pour l’instant.</p>
         ) : (
           <ul className="space-y-2">
             {myPosts.slice(0, 12).map((p) => (
@@ -689,7 +689,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
 
 export default function DashboardPublicationsPage() {
   return (
-    <Suspense fallback={<div className="py-16 text-sm text-muted">Chargement des publications…</div>}>
+    <Suspense fallback={<div className="py-16 text-sm text-muted">Chargement des réalisations…</div>}>
       <DashboardPublicationsPageInner />
     </Suspense>
   );

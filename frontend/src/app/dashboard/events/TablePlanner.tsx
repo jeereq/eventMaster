@@ -23,9 +23,10 @@ import type { PricingZone, TicketPricingMode } from '@/lib/ticketPricing';
 import { pricingZonesFromTablePlan } from '@/lib/ticketPricing';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
+import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import Link from 'next/link';
 
-type PlannerView = '2d' | '3d';
+type PlannerView = PlanViewMode;
 
 interface GuestItem {
  id: string;
@@ -571,7 +572,7 @@ export default function TablePlanner({
           <p className="text-[11px] text-muted leading-relaxed">
             Lecture seule — placement des invités en{' '}
             <button type="button" onClick={() => setPlannerView('2d')} className="font-semibold text-primary hover:underline">
-              vue Plan 2D
+              2D
             </button>
             .
             {roomLayoutBlueprint
@@ -631,17 +632,6 @@ export default function TablePlanner({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-       size="sm"
-       variant="ghost"
-       onClick={handleAutoAssign}
-       disabled={unassignedGuests.length === 0}
-       className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border border-amber-200 shadow-sm transition font-medium"
-     >
-       <Sparkles className="w-4 h-4 mr-1.5 text-amber-500" />
-       Placement Magique
-     </Button>
-     
           <Button
             size="sm"
             onClick={handleAutoAssign}
@@ -984,39 +974,16 @@ export default function TablePlanner({
  <div>
  <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
  <LayoutGrid className="w-5 h-5 text-primary" />
- Plan de Table Interactif
+ Plan de table
  </h2>
  <p className="text-muted text-sm mt-0.5">
  {plannerView === '3d'
-   ? `Vue 3D ${previewQuality === 'showcase' ? 'showcase' : 'standard'} · orbitez pour inspecter la salle`
+   ? `3D ${previewQuality === 'showcase' ? 'showcase' : 'standard'} · orbitez pour inspecter la salle`
    : `${tables.length}/${caps.maxTables} tables · ${caps.label}${caps.canSnapGrid ? ' · grille' : ''}${caps.canRotate ? ' · rotation' : ''}. Placez les invités confirmés sur les sièges.`}
  </p>
  </div>
  <div className="flex flex-wrap gap-2">
- <div className="flex gap-1 rounded-full border border-border bg-surface p-0.5">
- <button
- type="button"
- onClick={() => setPlannerView('2d')}
- className={cn(
- 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
- plannerView === '2d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
- )}
- >
- <LayoutGrid className="w-3 h-3" />
- Plan 2D
- </button>
- <button
- type="button"
- onClick={() => setPlannerView('3d')}
- className={cn(
- 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
- plannerView === '3d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
- )}
- >
- <Box className="w-3 h-3" />
- Vue 3D
- </button>
- </div>
+ <PlanViewToggle value={plannerView} onChange={setPlannerView} />
  <button
  onClick={() => {
  if (tables.length >= caps.maxTables) {
@@ -1204,14 +1171,17 @@ export default function TablePlanner({
  Survolez une table pour afficher son type, sa capacité et les invités placés.
  </p>
  </div>
+ <div className="flex items-center gap-2 shrink-0">
+ <PlanViewToggle value={plannerView} onChange={setPlannerView} />
  <button
  type="button"
  onClick={() => setIsExpanded(false)}
- className="inline-flex items-center gap-2 px-3 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition shrink-0"
+ className="inline-flex items-center gap-2 min-h-11 px-3 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  <Minimize2 className="w-4 h-4" />
  Réduire
  </button>
+ </div>
  </div>
  <div className="flex-1 min-h-0">
  {plannerView === '3d' ? render3DPreview('h-full min-h-0') : renderCanvas('h-full min-h-0')}

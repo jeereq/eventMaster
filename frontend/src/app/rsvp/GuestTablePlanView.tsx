@@ -12,13 +12,14 @@ import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
-import { LayoutGrid, Users, Maximize2, Download, Box } from 'lucide-react';
+import { LayoutGrid, Users, Maximize2, Download } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import { api } from '@/lib/api';
 import { ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { TableShape } from '@/lib/tablePlanUtils';
 
-type GuestPlanView = '2d' | '3d';
+type GuestPlanView = PlanViewMode;
 
 export interface GuestTableDetails {
   tableName: string;
@@ -237,40 +238,15 @@ export default function GuestTablePlanView({
       <div className={opts.fill ? 'space-y-2 w-full h-full min-h-0 flex flex-col' : 'space-y-3 w-full'}>
         <div className="flex items-center justify-between gap-2 shrink-0 px-1">
           <div>
-            <h4 className="font-semibold text-foreground text-sm">Plan de la salle</h4>
+            <h4 className="font-semibold text-foreground text-sm">Plan de table</h4>
             <p className="text-[10px] text-muted mt-0.5">
               Thème : <span style={{ color: theme.accentColor }}>{theme.name}</span>
-              {effectivePlanView === '3d' ? ' · vue 3D' : ''}
+              {effectivePlanView === '3d' ? ' · 3D' : ' · 2D'}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {canShow3d && (
-              <div className="flex gap-1 rounded-full border border-border bg-surface p-0.5 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setPlanView('2d')}
-                  className={cn(
-                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    effectivePlanView === '2d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  <LayoutGrid className="w-3 h-3" />
-                  2D
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlanView('3d')}
-                  className={cn(
-                    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    effectivePlanView === '3d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  <Box className="w-3 h-3" />
-                  3D
-                </button>
-              </div>
+              <PlanViewToggle value={effectivePlanView} onChange={setPlanView} />
             )}
             {!isFullscreen && !immersive && (
               <button
@@ -283,7 +259,7 @@ export default function GuestTablePlanView({
             )}
           </div>
         </div>
-        <div className="rounded-2xl border border-border overflow-hidden bg-surface shadow-[0_10px_40px_rgba(15,23,42,0.05)]">
+        <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
         {effectivePlanView === '3d' && previewBlueprint ? (
           <div className="p-2 sm:p-3 space-y-2">
             <RoomLayoutPreview

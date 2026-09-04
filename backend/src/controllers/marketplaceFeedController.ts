@@ -527,20 +527,20 @@ export async function deleteMarketplaceFeedPost(req: AuthenticatedRequest, res: 
     const post = await prisma.marketplacePost.findFirst({
       where: { id: postId, tenantId },
     });
-    if (!post) return res.status(404).json({ error: 'Publication introuvable.' });
+    if (!post) return res.status(404).json({ error: 'Réalisation introuvable.' });
 
     await prisma.marketplacePost.delete({ where: { id: post.id } });
     return res.json({ success: true });
   } catch (error) {
     console.error('deleteMarketplaceFeedPost:', error);
-    return res.status(500).json({ error: 'Impossible de supprimer la publication.' });
+    return res.status(500).json({ error: 'Impossible de supprimer la réalisation.' });
   }
 }
 
 export async function toggleMarketplaceFeedLike(req: AuthenticatedRequest, res: Response) {
   try {
     const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Connectez-vous pour aimer cette publication.' });
+    if (!userId) return res.status(401).json({ error: 'Connectez-vous pour aimer cette réalisation.' });
 
     const postId = String(req.params.postId || '').trim();
     const post = await prisma.marketplacePost.findFirst({
@@ -551,20 +551,20 @@ export async function toggleMarketplaceFeedLike(req: AuthenticatedRequest, res: 
         serviceOffering: { select: { isPublic: true, isBlockedByAdmin: true } },
       },
     });
-    if (!post) return res.status(404).json({ error: 'Publication introuvable.' });
+    if (!post) return res.status(404).json({ error: 'Réalisation introuvable.' });
 
     if (post.venueListingId) {
       if (!post.venueListing?.isPublic || post.venueListing.isBlockedByAdmin) {
-        return res.status(404).json({ error: 'Publication introuvable.' });
+        return res.status(404).json({ error: 'Réalisation introuvable.' });
       }
     }
     if (post.serviceOfferingId) {
       if (!post.serviceOffering?.isPublic || post.serviceOffering.isBlockedByAdmin) {
-        return res.status(404).json({ error: 'Publication introuvable.' });
+        return res.status(404).json({ error: 'Réalisation introuvable.' });
       }
     }
     if (post.vendorProfileId && post.vendorProfile?.isBlockedByAdmin) {
-      return res.status(404).json({ error: 'Publication introuvable.' });
+      return res.status(404).json({ error: 'Réalisation introuvable.' });
     }
 
     const key = likeKey(userId);
@@ -600,19 +600,19 @@ export async function createMarketplaceFeedComment(req: AuthenticatedRequest, re
         serviceOffering: { select: { isPublic: true, isBlockedByAdmin: true } },
       },
     });
-    if (!post) return res.status(404).json({ error: 'Publication introuvable.' });
+    if (!post) return res.status(404).json({ error: 'Réalisation introuvable.' });
     if (post.venueListingId) {
       if (!post.venueListing?.isPublic || post.venueListing.isBlockedByAdmin) {
-        return res.status(404).json({ error: 'Publication introuvable.' });
+        return res.status(404).json({ error: 'Réalisation introuvable.' });
       }
     }
     if (post.serviceOfferingId) {
       if (!post.serviceOffering?.isPublic || post.serviceOffering.isBlockedByAdmin) {
-        return res.status(404).json({ error: 'Publication introuvable.' });
+        return res.status(404).json({ error: 'Réalisation introuvable.' });
       }
     }
     if (post.vendorProfileId && post.vendorProfile?.isBlockedByAdmin) {
-      return res.status(404).json({ error: 'Publication introuvable.' });
+      return res.status(404).json({ error: 'Réalisation introuvable.' });
     }
 
     const user = await prisma.user.findUnique({
@@ -807,7 +807,7 @@ export async function listMyFeedPosts(req: AuthenticatedRequest, res: Response) 
     return res.json(posts.map(serializePublicFeedPost));
   } catch (error) {
     console.error('listMyFeedPosts:', error);
-    return res.status(500).json({ error: 'Impossible de charger vos publications.' });
+    return res.status(500).json({ error: 'Impossible de charger vos réalisations.' });
   }
 }
 

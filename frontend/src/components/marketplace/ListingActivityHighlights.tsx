@@ -56,8 +56,8 @@ export default function ListingActivityHighlights({
             <Rss className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-bold tracking-tight text-foreground">Publications</h2>
-            <p className="text-[11px] text-muted">Publications récentes de {authorLabel}</p>
+            <h2 className="text-sm font-bold tracking-tight text-foreground">Réalisations</h2>
+            <p className="text-[11px] text-muted">Réalisations récentes de {authorLabel}</p>
           </div>
         </div>
         {onViewAllActivity && (
@@ -168,7 +168,7 @@ export default function ListingActivityHighlights({
           urls={lightbox.urls}
           initialIndex={lightbox.index}
           onClose={() => setLightbox(null)}
-          title={`Publications — ${authorLabel}`}
+          title={`Réalisations — ${authorLabel}`}
         />
       )}
     </section>

@@ -543,7 +543,7 @@ export default function ListingDetailLayout({
                   </section>
                 )}
 
-                {/* Publications & Stories récentes */}
+                {/* Réalisations & Stories récentes */}
                 {activityPreview && activityPreview.length > 0 ? (
                   <ListingActivityHighlights
                     activityPreview={activityPreview}
