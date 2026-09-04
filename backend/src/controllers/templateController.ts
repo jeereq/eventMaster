@@ -2,8 +2,13 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
-import { assertPlanFeature } from '../services/planFeaturesService';
+import { assertPlanFeature, PlanFeatureError } from '../services/planFeaturesService';
 import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
+import { composeInvitationTemplateAi } from '../services/invitationTemplateAiService';
+import {
+  consumeAiSimulationCredit,
+  requireAiSimulationCredit,
+} from '../services/aiSimulationWalletService';
 
 function isCustomTemplateContent(content: unknown): boolean {
   if (!content || typeof content !== 'object') return false;
@@ -379,5 +384,58 @@ export async function deleteTemplate(req: AuthenticatedRequest, res: Response) {
   } catch (error: any) {
     console.error('Erreur lors de la suppression du template:', error);
     return res.status(500).json({ error: 'Erreur lors de la suppression du template' });
+  }
+}
+
+/** POST /templates/ai/compose — images + prompt → structure éditable + fond généré */
+export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
+    const tenantId = req.user.tenantId || null;
+    if (!isSuperAdmin && !tenantId) {
+      return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+    if (!isSuperAdmin && tenantId) {
+      await assertPlanFeature(tenantId, 'customTemplates');
+    }
+
+    const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
+    const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
+    if (!deviceId) {
+      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer un jeton IA.' });
+    }
+    const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+    const imageUrls = Array.isArray(body.imageUrls)
+      ? body.imageUrls.filter((u): u is string => typeof u === 'string')
+      : [];
+    const generateBackground = body.generateBackground !== false;
+
+    await requireAiSimulationCredit(deviceId, req.user.id);
+    const result = await composeInvitationTemplateAi({
+      userId: req.user.id,
+      tenantId: isSuperAdmin ? null : tenantId,
+      prompt,
+      imageUrls,
+      generateBackground,
+    });
+    const allowance = await consumeAiSimulationCredit(deviceId, req.user.id);
+
+    return res.json({
+      content: result.content,
+      stage: result.stage,
+      remaining: allowance.totalRemaining,
+      allowance,
+    });
+  } catch (error: unknown) {
+    if (error instanceof PlanFeatureError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    const err = error as { status?: number; message?: string };
+    if (err?.status) {
+      return res.status(err.status).json({ error: err.message || 'Erreur IA' });
+    }
+    console.error('composeTemplateWithAi:', error);
+    return res.status(500).json({ error: 'Impossible de générer le modèle avec l’IA.' });
   }
 }

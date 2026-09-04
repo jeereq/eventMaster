@@ -11,12 +11,19 @@ import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buil
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
+import { composeTemplateWithAi, applyAiComposeToEditor } from '@/lib/templateAiCompose';
+import {
+ getAiSimulationAllowance,
+ syncDeviceAiTokensWithBackend,
+ type AiAllowance,
+} from '@/lib/aiTokens';
+import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { 
  Mail, PlusCircle, Trash2, Edit3, ArrowLeft, Save, 
  Sparkles, CheckCircle2, AlertCircle, Type, Image, 
  Columns, Eye, CheckSquare, Loader2, XCircle,
- Spline, Triangle, Plus, Trash, Layout, Palette, Square,
- ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
+ Spline, Triangle, Trash, Layout, Palette, Square,
+ ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins
 } from 'lucide-react';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
@@ -27,15 +34,12 @@ import {
  type RsvpField,
  type CanvasSizePreset,
  CANVAS_SIZE_PRESETS,
- createDefaultRsvpField,
  createDefaultReportingRsvpFields,
  ensureReportingRsvpFields,
  ensureMandatoryRsvpFields,
  ensureMandatoryRsvpFieldsOnElements,
- isMandatoryRsvpField,
  validateRsvpFieldsForReporting,
  getCanvasStyle,
- slugifyAnalyticsKey,
 } from '@/lib/rsvpFormFields';
 import {
  INVITATION_GOOGLE_FONTS_HREF,
@@ -237,6 +241,7 @@ export default function TemplatesPage() {
  const [freeDragId, setFreeDragId] = useState<string | null>(null);
  const freeCanvasRef = useRef<HTMLDivElement>(null);
  const [importedWithOcr, setImportedWithOcr] = useState(false);
+ const [generatedByAi, setGeneratedByAi] = useState(false);
  const [ocrProgress, setOcrProgress] = useState<number | null>(null);
  const [mockupImportModalOpen, setMockupImportModalOpen] = useState(false);
  const [pendingMockupFile, setPendingMockupFile] = useState<File | null>(null);
@@ -244,6 +249,15 @@ export default function TemplatesPage() {
  const [mockupImportMode, setMockupImportMode] = useState<MockupImportTextMode>('placeholders');
  const mockupInputRef = useRef<HTMLInputElement>(null);
  const mockupEditorInputRef = useRef<HTMLInputElement>(null);
+ const aiComposeInputRef = useRef<HTMLInputElement>(null);
+ const [aiComposeModalOpen, setAiComposeModalOpen] = useState(false);
+ const [aiComposePrompt, setAiComposePrompt] = useState('');
+ const [aiComposeFiles, setAiComposeFiles] = useState<File[]>([]);
+ const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
+ const [aiComposeBusy, setAiComposeBusy] = useState(false);
+ const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
+ const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
+ const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
  const [showAllThemes, setShowAllThemes] = useState(false);
  const [showDecorTools, setShowDecorTools] = useState(false);
@@ -347,6 +361,7 @@ export default function TemplatesPage() {
  const orgTheme = buildOrgBrandInvitationTheme(tenant?.branding);
  setImportedPalette(orgTheme.palette);
  setImportedWithOcr(false);
+ setGeneratedByAi(false);
  setColorThemeId(ORG_BRAND_THEME_ID);
  setCanvasElements(applyPaletteToElements([
  { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: orgTheme.palette.accent, fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
@@ -414,6 +429,8 @@ export default function TemplatesPage() {
  setImportedPalette(global.palette || null);
  setColorThemeId(typeof global.colorThemeId === 'string' ? global.colorThemeId : '');
  setLayoutMode(global.layoutMode === 'free' ? 'free' : 'flow');
+ setImportedWithOcr(Boolean(global.importedWithOcr));
+ setGeneratedByAi(Boolean(global.generatedByAi));
  setLandingCategory(global.landingCategory || 'private');
  setLandingDescription(global.landingDescription || '');
  setShowOnLanding(Boolean(t.showOnLanding));
@@ -674,6 +691,7 @@ export default function TemplatesPage() {
  });
  setImportedPalette(palette);
  setImportedWithOcr(useOcr);
+ setGeneratedByAi(false);
  setColorThemeId('');
  setEditingTemplateId(null);
  if (openEditor) setEditorOpen(true);
@@ -813,6 +831,267 @@ export default function TemplatesPage() {
  className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md"
  >
  Importer l&apos;image
+ </button>
+ </div>
+ </div>
+ </div>
+ );
+ };
+
+ const resetAiComposeModal = () => {
+ aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+ setAiComposeFiles([]);
+ setAiComposePreviewUrls([]);
+ setAiComposePrompt('');
+ setAiComposeStage(null);
+ setAiComposeBusy(false);
+ };
+
+ const openAiComposeModal = async () => {
+ if (!canUseCustomTemplates) return;
+ setError('');
+ setAiComposeModalOpen(true);
+ try {
+ const next = await syncDeviceAiTokensWithBackend(api);
+ setAiAllowance(next);
+ } catch {
+ setAiAllowance(getAiSimulationAllowance());
+ }
+ };
+
+ const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+ const list = Array.from(e.target.files || []);
+ e.target.value = '';
+ if (!list.length) return;
+ const images = list.filter((f) => f.type.startsWith('image/')).slice(0, 4);
+ if (!images.length) {
+ setError('Sélectionnez des images (JPEG, PNG, WebP).');
+ return;
+ }
+ aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+ const merged = [...aiComposeFiles, ...images].slice(0, 4);
+ setAiComposeFiles(merged);
+ setAiComposePreviewUrls(merged.map((f) => URL.createObjectURL(f)));
+ };
+
+ const removeAiComposeFile = (index: number) => {
+ setAiComposeFiles((prev) => prev.filter((_, i) => i !== index));
+ setAiComposePreviewUrls((prev) => {
+ URL.revokeObjectURL(prev[index]);
+ return prev.filter((_, i) => i !== index);
+ });
+ };
+
+ const handleAiComposeGenerate = async () => {
+ if (!canUseCustomTemplates || aiComposeBusy) return;
+ if (aiComposeFiles.length < 1) {
+ setError('Ajoutez au moins une image de référence.');
+ return;
+ }
+ if (aiComposePrompt.trim().length < 8) {
+ setError('Décrivez le style souhaité (quelques mots minimum).');
+ return;
+ }
+ if (!aiAllowance.canSimulate) {
+ setAiTokenModalOpen(true);
+ return;
+ }
+
+ setError('');
+ setAiComposeBusy(true);
+ setAiComposeStage('Envoi des images…');
+ try {
+ const uploadedUrls: string[] = [];
+ for (let i = 0; i < aiComposeFiles.length; i += 1) {
+ setAiComposeStage(`Upload image ${i + 1}/${aiComposeFiles.length}…`);
+ const uploaded = await uploadImageFile(aiComposeFiles[i]);
+ uploadedUrls.push(uploaded.url);
+ }
+ setAiComposeStage('Analyse des images…');
+ const result = await composeTemplateWithAi({
+ prompt: aiComposePrompt.trim(),
+ imageUrls: uploadedUrls,
+ generateBackground: true,
+ });
+ setAiComposeStage('Application du modèle…');
+ applyAiComposeToEditor(result.content, {
+ setCanvasElements,
+ setBgType,
+ setBgColor,
+ setBgImageUrl,
+ setBgPattern,
+ setFrameType,
+ setFontTheme,
+ setFloralColor,
+ setFloralType,
+ setFloralDensity,
+ setImportedPalette,
+ setColorThemeId,
+ setLayoutMode,
+ setCanvasSizePreset,
+ setCanvasWidth,
+ setCanvasHeight,
+ setSelectedElementId,
+ });
+ setGeneratedByAi(true);
+ setImportedWithOcr(false);
+ if (result.allowance) {
+ setAiAllowance(getAiSimulationAllowance());
+ }
+ setAiComposeModalOpen(false);
+ resetAiComposeModal();
+ setSuccess(
+ result.stage?.backgroundReady
+ ? 'Modèle généré par l’IA — structure et fond appliqués. Ajustez puis enregistrez.'
+ : 'Modèle généré par l’IA — structure appliquée (fond couleur). Ajustez puis enregistrez.',
+ );
+ } catch (err: any) {
+ if (err?.status === 402) {
+ setAiTokenModalOpen(true);
+ setError(err.message || 'Plus de jetons IA. Rechargez pour continuer.');
+ } else {
+ setError(err?.message || 'Impossible de générer le modèle avec l’IA.');
+ }
+ } finally {
+ setAiComposeBusy(false);
+ setAiComposeStage(null);
+ }
+ };
+
+ const renderAiComposeModal = () => {
+ if (!aiComposeModalOpen) return null;
+ return (
+ <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/45 p-0 sm:p-4">
+ <div
+ role="dialog"
+ aria-modal="true"
+ aria-labelledby="ai-compose-title"
+ className="w-full sm:max-w-lg bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl border border-border overflow-hidden"
+ >
+ <div className="px-5 pt-5 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
+ <div>
+ <h2 id="ai-compose-title" className="text-sm font-bold text-foreground flex items-center gap-2">
+ <Wand2 className="w-4 h-4 text-primary" />
+ Créer avec l’IA
+ </h2>
+ <p className="text-[11px] text-muted mt-1 leading-relaxed">
+ 1 à 4 images de référence + un brief. Consomme 1 jeton IA.
+ </p>
+ </div>
+ <button
+ type="button"
+ disabled={aiComposeBusy}
+ onClick={() => {
+ setAiComposeModalOpen(false);
+ resetAiComposeModal();
+ }}
+ className="p-1.5 rounded-lg text-muted hover:bg-surface-muted disabled:opacity-50"
+ aria-label="Fermer"
+ >
+ <XCircle className="w-5 h-5" />
+ </button>
+ </div>
+
+ <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+ <div className="flex items-center justify-between gap-2 text-[11px]">
+ <span className="inline-flex items-center gap-1.5 font-bold text-muted">
+ <Coins className="w-3.5 h-3.5" />
+ {aiAllowance.totalRemaining} jeton{aiAllowance.totalRemaining === 1 ? '' : 's'} restant{aiAllowance.totalRemaining === 1 ? '' : 's'}
+ </span>
+ {!aiAllowance.canSimulate && (
+ <button
+ type="button"
+ onClick={() => setAiTokenModalOpen(true)}
+ className="text-primary font-bold hover:underline"
+ >
+ Acheter un pack
+ </button>
+ )}
+ </div>
+
+ <div>
+ <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Images (1–4)</label>
+ <input
+ ref={aiComposeInputRef}
+ type="file"
+ accept="image/jpeg,image/png,image/webp"
+ multiple
+ className="hidden"
+ onChange={handleAiComposeFilesSelected}
+ />
+ <button
+ type="button"
+ disabled={aiComposeBusy || aiComposeFiles.length >= 4}
+ onClick={() => aiComposeInputRef.current?.click()}
+ className="mt-1.5 w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition disabled:opacity-50"
+ >
+ <Upload className="w-4 h-4" />
+ Ajouter des images
+ </button>
+ {aiComposePreviewUrls.length > 0 && (
+ <div className="mt-2 flex flex-wrap gap-2">
+ {aiComposePreviewUrls.map((url, i) => (
+ <div key={url} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+ {/* eslint-disable-next-line @next/next/no-img-element */}
+ <img src={url} alt="" className="w-full h-full object-cover" />
+ <button
+ type="button"
+ disabled={aiComposeBusy}
+ onClick={() => removeAiComposeFile(i)}
+ className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5"
+ aria-label="Retirer"
+ >
+ <XCircle className="w-3.5 h-3.5" />
+ </button>
+ </div>
+ ))}
+ </div>
+ )}
+ </div>
+
+ <div>
+ <label htmlFor="ai-compose-prompt" className="text-[10px] font-bold text-muted uppercase tracking-wider">
+ Brief style
+ </label>
+ <textarea
+ id="ai-compose-prompt"
+ rows={4}
+ value={aiComposePrompt}
+ disabled={aiComposeBusy}
+ onChange={(e) => setAiComposePrompt(e.target.value)}
+ placeholder="Ex. Invitation mariage élégante, tons ivoire et or, floraux discrets, typographie script pour les prénoms…"
+ className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5rem]"
+ />
+ </div>
+
+ {aiComposeStage && (
+ <p className="text-[11px] font-bold text-primary flex items-center gap-2">
+ <Loader2 className="w-3.5 h-3.5 animate-spin" />
+ {aiComposeStage}
+ </p>
+ )}
+ </div>
+
+ <div className="px-5 py-4 border-t border-border-subtle flex justify-end gap-2 bg-surface-muted/40">
+ <button
+ type="button"
+ disabled={aiComposeBusy}
+ onClick={() => {
+ setAiComposeModalOpen(false);
+ resetAiComposeModal();
+ }}
+ className="px-4 py-2.5 text-xs font-bold text-muted hover:bg-surface-muted rounded-xl transition disabled:opacity-50"
+ >
+ Annuler
+ </button>
+ <button
+ type="button"
+ disabled={aiComposeBusy || !aiComposeFiles.length || aiComposePrompt.trim().length < 8}
+ onClick={handleAiComposeGenerate}
+ className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md inline-flex items-center gap-2"
+ >
+ {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+ Générer
  </button>
  </div>
  </div>
@@ -996,34 +1275,8 @@ export default function TemplatesPage() {
  };
 
  // Customizable RSVP fields management
- const handleAddRsvpField = () => {
- const newField = createDefaultRsvpField({
- analyticsKey: `champ_${elRsvpFields.length + 1}`,
- });
- const updatedFields = [...elRsvpFields, newField];
- handlePropertyChange('rsvpFields', updatedFields);
- };
-
  const handleEnsureReportingRsvpFields = () => {
  const updatedFields = ensureReportingRsvpFields(elRsvpFields);
- handlePropertyChange('rsvpFields', updatedFields);
- };
-
- const handleUpdateRsvpField = (fieldId: string, key: keyof RsvpField, value: any) => {
- const field = elRsvpFields.find((f) => f.id === fieldId);
- if (field && isMandatoryRsvpField(field) && (key === 'analyticsKey' || key === 'required')) {
- return;
- }
- const updatedFields = elRsvpFields.map(f => {
- if (f.id === fieldId) {
- const updated = { ...f, [key]: value };
- if (key === 'label' && !f.analyticsKey?.trim()) {
- updated.analyticsKey = slugifyAnalyticsKey(value);
- }
- return updated;
- }
- return f;
- });
  handlePropertyChange('rsvpFields', updatedFields);
  };
 
@@ -1033,13 +1286,6 @@ export default function TemplatesPage() {
  setCanvasWidth(CANVAS_SIZE_PRESETS[preset].width);
  setCanvasHeight(CANVAS_SIZE_PRESETS[preset].height);
  }
- };
-
- const handleDeleteRsvpField = (fieldId: string) => {
- const field = elRsvpFields.find((f) => f.id === fieldId);
- if (field && isMandatoryRsvpField(field)) return;
- const updatedFields = elRsvpFields.filter(f => f.id !== fieldId);
- handlePropertyChange('rsvpFields', updatedFields);
  };
 
  const handleDeleteElement = (id: string) => {
@@ -1273,6 +1519,7 @@ export default function TemplatesPage() {
  ...(isGlobalTemplate ? { landingCategory, landingDescription: landingDescription.trim() || undefined } : {}),
  ...(importedPalette ? { palette: importedPalette } : {}),
  ...(importedWithOcr ? { importedFromMockup: true, importedWithOcr } : {}),
+ ...(generatedByAi ? { generatedByAi: true } : {}),
  },
  elements: ensureMandatoryRsvpFieldsOnElements(canvasElements), 
  },
@@ -1457,6 +1704,12 @@ export default function TemplatesPage() {
  return (
  <>
  {renderMockupImportModal()}
+ {renderAiComposeModal()}
+ <AiTokenPurchaseModal
+ open={aiTokenModalOpen}
+ onClose={() => setAiTokenModalOpen(false)}
+ onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
+ />
  <Modal
  open={exitConfirmOpen}
  onClose={() => setExitConfirmOpen(false)}
@@ -1723,7 +1976,7 @@ export default function TemplatesPage() {
  />
  <button
  type="button"
- disabled={mockupImporting || imageUploading}
+ disabled={mockupImporting || imageUploading || aiComposeBusy}
  onClick={() => mockupEditorInputRef.current?.click()}
  className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
@@ -1733,6 +1986,27 @@ export default function TemplatesPage() {
  <Upload className="w-4 h-4" />
  )}
  {mockupImporting ? 'Analyse en cours…' : 'Choisir une image'}
+ </button>
+ </div>
+ )}
+
+ {canUseCustomTemplates && (
+ <div className="space-y-2">
+ <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+ <Wand2 className="w-3.5 h-3.5" />
+ Créer avec l’IA
+ </h3>
+ <p className="text-[10px] text-muted leading-relaxed">
+ Images + brief → structure éditable et fond généré (1 jeton).
+ </p>
+ <button
+ type="button"
+ disabled={mockupImporting || imageUploading || aiComposeBusy}
+ onClick={openAiComposeModal}
+ className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ >
+ {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+ {aiComposeBusy ? 'Génération…' : 'Ouvrir l’assistant IA'}
  </button>
  </div>
  )}
@@ -2989,31 +3263,17 @@ export default function TemplatesPage() {
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
  <div className="space-y-3 border-t border-border pt-3">
  <div className="flex items-center justify-between gap-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Champs</label>
- <div className="flex items-center gap-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Formulaire</label>
  <button
  type="button"
  onClick={handleEnsureReportingRsvpFields}
- className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg transition"
+ className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  title="Ajoute les champs menu, accompagnant et nombre de personnes s’ils manquent"
  >
  Compléter stats
  </button>
- <button
- type="button"
- onClick={handleAddRsvpField}
- className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg transition"
- >
- <Plus className="w-3 h-3 inline" /> Champ
- </button>
  </div>
- </div>
- {validateRsvpFieldsForReporting(elRsvpFields).length > 0 && (
- <p role="status" className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2 break-words">
- {validateRsvpFieldsForReporting(elRsvpFields)[0]}
- </p>
- )}
- <div className="max-h-80 overflow-y-auto pr-1">
+ <div className="max-h-[28rem] overflow-y-auto overscroll-contain pr-1">
  <RsvpFieldTypeEditor
  fields={elRsvpFields}
  onChange={(next) => handlePropertyChange('rsvpFields', next)}
@@ -3715,6 +3975,12 @@ export default function TemplatesPage() {
  return (
  <>
  {renderMockupImportModal()}
+ {renderAiComposeModal()}
+ <AiTokenPurchaseModal
+ open={aiTokenModalOpen}
+ onClose={() => setAiTokenModalOpen(false)}
+ onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
+ />
  <div className="space-y-6">
  <PageHeader
  title={
