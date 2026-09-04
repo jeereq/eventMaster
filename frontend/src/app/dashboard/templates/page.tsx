@@ -17,6 +17,7 @@ import {
  type AiTemplateComposeHistoryItem,
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
+import PromptModelSelector from '@/components/PromptModelSelector';
 import {
  getAiSimulationAllowance,
  syncDeviceAiTokensWithBackend,
@@ -1155,17 +1156,26 @@ export default function TemplatesPage() {
 
  <div>
  <label htmlFor="ai-compose-prompt" className="text-[10px] font-bold text-muted uppercase tracking-wider">
- Brief style
+ Brief style ou demande de clonage
  </label>
  <textarea
  id="ai-compose-prompt"
- rows={4}
+ rows={3}
  value={aiComposePrompt}
  disabled={aiComposeBusy}
  onChange={(e) => setAiComposePrompt(e.target.value)}
- placeholder="Ex. Invitation mariage élégante, tons ivoire et or, floraux discrets, typographie script pour les prénoms…"
- className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5rem]"
+ placeholder="Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…"
+ className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
  />
+
+ <div className="mt-2.5">
+ <PromptModelSelector
+ onSelectPrompt={(selected) => setAiComposePrompt(selected)}
+ selectedPrompt={aiComposePrompt}
+ disabled={aiComposeBusy}
+ compact
+ />
+ </div>
  </div>
 
  {aiComposeStage && (

@@ -40,13 +40,24 @@ Principe de fidélité et de vérité visuelle (non négociable) :
 - Carnation & morphologie : analyse avec exactitude le teint de peau (teinte mélanée, sous-tons dorés/chauds/acajou/ébène, échelle Fitzpatrick IV/V/VI), les formes faciales (arête nasale, arc des lèvres, pommettes, mâchoire) et les textures capillaires (crépus naturels 4A/4B/4C, dégradé fondu / taper fade soigné, tresses, locks, chignons, perruques soignées).
 - Si un détail est flou / hors cadre / indiscernable : écris "unclear" — ne comble PAS le vide.
 
+Réalisme photographique absolu (non négociable) :
+- Tout rendu de personne ou de décor doit avoir une qualité photographique 35mm authentique, avec micro-texture de peau réelle (pores fins visibles, sous-tons mélanés naturels avec reflets lumineux doux, ombres volumétriques).
+- INTERDIT : rendu plastique, peau lissée artificiellement (airbrush), effet poupée de cire, esthétique 3D CGI ou dessin animé.
+
+Clonage & copie d'invitation (priorité si une carte est fournie) :
+- Si l'une des images de référence est une CARTE D'INVITATION (ou si le brief mentionne 'copier', 'cloner', 'reproduire' une invitation) :
+  1) Analyse la disposition exacte : cadre, double bordure dorée, arche florale, ornementations baroques ou géométriques (Kuba/art déco), marges, fond papier/texturé.
+  2) Extrais la palette chromatique exacte (fond, textes, ornements, dorures).
+  3) Reproduis fidèlement la structure dans le JSON (elements, global.frameType, global.palette, fontTheme) et documente ces détails dans clonedCardFeatures et isInvitationClone=true.
+  4) Si des photos de personnes sont également fournies avec une invitation modèle : intègre ces personnes de façon ultra-réaliste dans le cadre de l'invitation clonée !
+
 Priorité absolue :
-1) Les images de référence = VÉRITÉ VISUELLE pour les personnes (visages, teintes de peau exactes, textures de cheveux, habits, posture).
+1) Les images de référence = VÉRITÉ VISUELLE pour les personnes (visages, teintes de peau exactes, textures de cheveux, habits, posture) ET pour la carte à cloner (mise en page, ornements, palette).
 2) Le BRIEF UTILISATEUR = besoins expressément demandés (ambiance, décor d'invitation, couleurs florales, ce qu’il faut changer dans l'environnement).
 3) Ne change habits / cheveux / peau / visages QUE si le brief le demande EXPLICITEMENT. Sinon, REPRODUIS à l’identique.
 
 Mission :
-1) Détecte : visages précis, points de repère anatomiques (faceLandmarks), teintes de peau réelles, styles de cheveux, styles d’habits, couleurs, motifs, composition.
+1) Détecte : visages précis, points de repère anatomiques (faceLandmarks), teintes de peau réelles, styles de cheveux, styles d’habits, couleurs, motifs, composition, et si une carte d'invitation est présente à cloner.
 2) Parse le brief : besoins exprimés (mustKeep / mustChange) — seulement ce qui est écrit, rien d’implicite inventé.
 3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation d'un luxe exceptionnel, fidèle aux refs + au brief.
 
@@ -64,9 +75,11 @@ Schéma exact :
     "skinTones": "none | precise observed skin tone(s) per person (e.g. rich warm mahogany Fitzpatrick VI, golden warm caramel, deep ebony) — STRICT FIDELITY, NEVER lighten or shift tone",
     "hairStyles": "none | hair length, texture (4C curls, precise taper fade, braids bun, dreadlocks), hairline OBSERVED per person",
     "clothingStyles": "none | garment cuts, fabrics (wax pagne, tailored tux, royal satin, embroidery), colors, accessories OBSERVED — preserve faithfully",
+    "isInvitationClone": true | false,
+    "clonedCardFeatures": "none | detailed breakdown of borders, frame, ornaments, typography, textures to clone from the reference card",
     "briefNeeds": ["besoin explicite 1 du brief", "..."],
     "briefInterpretation": "comment chaque besoin du brief s’applique aux refs, point par point",
-    "briefMustKeep": ["à conserver : refs (visages/peau/cheveux/habits) + éléments du brief"],
+    "briefMustKeep": ["à conserver : refs (visages/peau/cheveux/habits/carte) + éléments du brief"],
     "briefMustChange": ["UNIQUEMENT ce que le brief demande explicitement de modifier"]
   },
   "global": {
@@ -98,11 +111,12 @@ Schéma exact :
       "imageUrl": "https://..."
     }
   ],
-  "backgroundPrompt": "English prompt. If people: start with IDENTITY LOCK + face inventory from refs, THEN USER BRIEF for décor only. If no people: USER BRIEF then décor."
+  "backgroundPrompt": "English prompt. If card clone: specify CLONED INVITATION CARD LAYOUT with exact borders/textures. If people: start with IDENTITY LOCK + face inventory from refs, THEN USER BRIEF for décor only. If no people: USER BRIEF then décor."
 }
 
 Règles brief :
-- S’il y a des personnes : backgroundPrompt DOIT commencer par "IDENTITY LOCK:" (anglais) — les photos de référence sont l'unique source de vérité pour l'identité faciale ; puis "FACE INVENTORY:" (traits anatomiques observés, carnation, coiffure) ; puis "USER BRIEF:" (décor/ambiance d'invitation seulement).
+- Si copie/clonage de carte : backgroundPrompt DOIT intégrer la réplication des bordures, dorures et fonds de la carte de référence.
+- S’il y a des personnes : backgroundPrompt DOIT commencer par "IDENTITY LOCK & PHOTOREALISM:" (anglais) — les photos de référence sont l'unique source de vérité pour l'identité faciale ; puis "FACE INVENTORY:" (traits anatomiques observés, carnation, coiffure) ; puis "USER BRIEF:" (décor/ambiance d'invitation seulement).
 - S’il n’y a PAS de personnes : commence par "USER BRIEF:" puis décor somptueux sans présence humaine.
 - Applique chaque besoin du brief pour le décor (ambiance, couleurs, fioritures, sobriété, luxe, floral).
 - Si le brief et les refs divergent : brief = décor & ambiance ; refs = visages / peau / cheveux / habits (sauf demande EXPLICITE contraire sur habits/cheveux).
@@ -114,7 +128,7 @@ Règles personnes (non négociables) :
 - Si hasPeople=false : aucune personne, aucun visage, aucune silhouette. Décor uniquement.
 
 Règles layout :
-- Palette et style des éléments = couleurs réelles extraites des images + brief.
+- Palette et style des éléments = couleurs réelles extraites des images (ou de la carte clonée) + brief.
 - 6 à 12 éléments max, disposition empilée (flow), centrée.
 - Variables {{title}}, {{date}}, {{location}}, {{firstName}} dans les textes quand pertinent.
 - Exactement un élément "rsvp-block" avec rsvpPlacement "outside" et text "Confirmer votre présence".
@@ -212,6 +226,12 @@ function parseVisualAnalysis(raw) {
         : hasPeople
             ? 1
             : 0;
+    const isInvitationClone = Boolean(v.isInvitationClone) ||
+        /clone|copi|reprodu/i.test(String(v.style || '')) ||
+        /invitation|carte/i.test(String(v.composition || ''));
+    const clonedCardFeatures = typeof v.clonedCardFeatures === 'string'
+        ? v.clonedCardFeatures.slice(0, 600)
+        : '';
     return {
         colors,
         style: typeof v.style === 'string' ? v.style.slice(0, 300) : '',
@@ -224,6 +244,8 @@ function parseVisualAnalysis(raw) {
         skinTones: hasPeople ? skinTones || 'unclear' : 'none',
         hairStyles: hasPeople ? hairStyles || 'unclear' : 'none',
         clothingStyles: hasPeople ? clothingStyles || 'unclear' : 'none',
+        isInvitationClone,
+        clonedCardFeatures,
         briefNeeds: parseStringList(v.briefNeeds, 12),
         briefInterpretation: typeof v.briefInterpretation === 'string' ? v.briefInterpretation.slice(0, 600) : '',
         briefMustKeep: parseStringList(v.briefMustKeep),
@@ -231,13 +253,19 @@ function parseVisualAnalysis(raw) {
     };
 }
 const FACE_POLICY_NO_PEOPLE = 'FACE POLICY: No people, no faces, no human silhouettes, no invented couples or stock models. Decorative invitation artwork only.';
-const FACE_POLICY_KEEP_PEOPLE = 'IDENTITY LOCK (HIGHEST PRIORITY): The attached reference photo(s) are the ABSOLUTE GROUND TRUTH for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, natural skin tone (rich melanin / bronze / undertones intact — NEVER lighten, bleach, or change ethnicity), age appearance, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire. Photoreal likeness required. STRICTLY FORBIDDEN: different face, generic stock model, beautify/airbrush plastic filter, face swap, age alteration, ethnicity shift, skin tone correction, anime/illustration face, or "lookalike" substitute. Only the luxury background, invitation card border, lighting ambiance, and florals may follow the user brief.';
+const FACE_POLICY_KEEP_PEOPLE = 'IDENTITY LOCK & ULTRA-REALISM (HIGHEST PRIORITY): The attached reference photo(s) are the ABSOLUTE GROUND TRUTH for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, natural skin tone (rich melanin / bronze / caramel / mahogany / deep ebony undertones intact with natural skin pores, realistic subsurface scattering — NEVER lighten, bleach, or change ethnicity), age appearance, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire. Authentic 35mm photograph aesthetic with natural depth of field and warm ambient celebration lighting. STRICTLY FORBIDDEN: plastic AI skin smoothing, airbrushing, beauty filter, CGI/3D render look, doll-like faces, face swap, age alteration, ethnicity shift, skin tone correction, anime/illustration face, or "lookalike" substitute. Only the luxury background, invitation card border, lighting ambiance, and florals may follow the user brief.';
 function buildImagePrompt(userPrompt, backgroundPrompt, analysis) {
-    const brief = userPrompt.trim().slice(0, 800);
+    const brief = userPrompt.trim().slice(0, 1000);
     const hasPeople = Boolean(analysis?.hasPeople);
+    const isClone = Boolean(analysis?.isInvitationClone ||
+        /copi|clon|reprodu/i.test(brief));
     const parts = [
-        'Create ONE luxury vertical print-ready invitation card artwork (portrait orientation 1024x1536).',
+        'Create ONE luxury vertical print-ready invitation card artwork (portrait orientation 1024x1536 / 9:16).',
+        'PHOTOGRAPHIC REALISM REQUIREMENT: Hyper-realistic 35mm fine-grain photography aesthetic, natural skin micro-textures with visible pores, realistic lighting highlights on melanin skin tones, organic fabric drape (wax, satin, velvet, lace), authentic warm ambient event lighting (candles, chandeliers, golden hour). STRICTLY PROHIBIT 3D CGI plastic rendering, cartoonish styling, doll-like faces, or airbrushed beauty smoothing.',
     ];
+    if (isClone) {
+        parts.push('=== INVITATION CARD CLONING & DUPLICATION MANDATE ===', 'The reference image contains an existing INVITATION CARD. You MUST faithfully duplicate and replicate its architectural composition, ornamental borders, arches, filigree flourishes, paper textures, background gradients, and color harmonies.', analysis?.clonedCardFeatures ? `Cloned card layout details: ${analysis.clonedCardFeatures}` : '');
+    }
     if (hasPeople) {
         parts.push('=== STRICT IDENTITY LOCK (ABSOLUTE PRIORITY OVER DÉCOR) ===', 'The reference image(s) show REAL PEOPLE whose faces MUST be reproduced with 100% photographic likeness and zero alteration.', FACE_POLICY_KEEP_PEOPLE);
         if (analysis) {
@@ -465,11 +493,13 @@ async function generateImageWithGpt56Luna(key, imagePrompt, referenceUrls, tenan
         (hasPeople ? 'high' : 'medium');
     // Refs d’abord quand il y a des personnes : ancre mieux l’identité faciale.
     const identityPreamble = hasPeople
-        ? `CRITICAL MANDATE: The following reference image(s) show REAL PEOPLE. When you invoke the image_generation tool:
-1. You MUST maintain 100% photographic facial likeness and exact facial identity of each subject.
-2. NEVER replace the subject(s) with generic models, different faces, altered ethnicities, smoothed/airbrushed faces, or changed skin tones.
-3. Keep their exact eye shape, nose shape, lip shape, bone structure, natural melanin skin tone, expression, and hairstyle.
-4. Seamlessly integrate the original subject(s) into the luxury vertical invitation card artwork requested in the brief.\n\n${imagePrompt}`
+        ? `CRITICAL MANDATE - STRICT IDENTITY LOCK & HYPER-REALISM:
+The following reference image(s) show REAL PEOPLE. When you invoke the image_generation tool:
+1. 100% PHOTOGRAPHIC FACIAL LIKENESS: Maintain complete photographic likeness and exact facial identity of each subject.
+2. RAW 35MM REALISM: True-to-life organic skin texture with fine visible pores, natural melanin undertones (rich caramel, bronze, mahogany, deep ebony) with natural soft highlights, authentic eye reflections, natural hair strand textures, and authentic clothing fabrics (wax, satin, velvet, lace).
+3. STRICTLY FORBIDDEN: Airbrushed beauty filters, plastic skin, doll-like faces, CGI 3D looks, face swapping, or ethnicity/age shifting.
+4. INVITATION CLONING: If a reference card is provided or requested, faithfully replicate its layout, arches, borders, and decorative filigree.
+5. Seamlessly integrate the original subject(s) into the luxury vertical invitation card artwork requested in the brief.\n\n${imagePrompt}`
         : imagePrompt;
     const content = hasPeople
         ? [
@@ -745,16 +775,21 @@ async function generateImageWithNanoBanana(apiKey, imagePrompt, referenceUrls, t
         }
     }
     const promptText = hasPeople
-        ? `CRITICAL MANDATE - NANO BANANA CHARACTER CONSISTENCY:
+        ? `CRITICAL MANDATE - NANO BANANA CHARACTER CONSISTENCY & ULTRA-REALISM:
 The attached reference photo(s) depict REAL PEOPLE who must appear on this luxury vertical invitation card.
 1. ABSOLUTE FACIAL & CHARACTER FIDELITY: Maintain 100% photographic facial likeness and identity of each person.
-2. PRESERVE EVERY TRAIT: Keep their exact eye shape, brows, nose, lips, jawline, natural skin tone and melanin undertones intact (NEVER lighten, bleach, or change ethnicity), age, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire.
-3. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, lookalikes, or altered bone structure.
-4. COMPOSITION: Seamlessly integrate the original subject(s) into a lavish, high-end vertical 9:16 luxury event invitation card artwork as requested in the brief.
+2. RAW 35mm PHOTOGRAPHY: Hyper-realistic photo quality, natural skin micro-texture, visible pores, lifelike melanin undertones (NEVER lighten, bleach, or change ethnicity), authentic eye catchlights, natural hair strand textures, realistic fabrics (wax, satin, velvet, lace).
+3. INVITATION CARD CLONING: If an invitation card sample was provided in the references, faithfully replicate its layout, ornamental borders, arches, paper textures, and aesthetic harmony.
+4. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, doll-like features, 3D CGI look, or altered bone structure.
+5. COMPOSITION: Seamlessly integrate the original subject(s) into the luxury vertical 9:16 invitation card artwork.
 
 ${imagePrompt}`
-        : `CRITICAL MANDATE - NANO BANANA LUXURY INVITATION ARTWORK:
-Generate a breathtaking, ultra-high-definition vertical 9:16 luxury invitation background artwork according to the following brief:
+        : `CRITICAL MANDATE - NANO BANANA LUXURY INVITATION ARTWORK & CARD CLONING:
+Generate a breathtaking, ultra-high-definition vertical 9:16 luxury invitation artwork.
+- REALISTIC TEXTURES: Fine luxury paper grain, metallic gold foil embossing, soft dimensional depth, natural floral arrangements.
+- INVITATION CLONING: If reference images contain an existing invitation card, faithfully reproduce its framing, ornaments, color scheme, and aesthetic composition.
+- NO ARTIFICIAL LOOK: Clean, refined, high-end print-quality aesthetic without cheap digital artifacts.
+
 ${imagePrompt}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 120_000);

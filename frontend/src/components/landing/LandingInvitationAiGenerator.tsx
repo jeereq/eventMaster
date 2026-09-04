@@ -36,16 +36,10 @@ import {
   type AiTemplateComposeHistoryItem,
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
+import PromptModelSelector from '@/components/PromptModelSelector';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
-const BRIEF_PRESETS = [
-  'Mariage élégant à Kinshasa, ivoire, or et pagne chic',
-  'Dot traditionnelle & moderne, wax royal et touches dorées',
-  'Soirée gala prestige Gombe, noir et champagne, luxe minimal',
-  'Anniversaire festif, ambiance cocktail et musique raffinée',
-];
 
 function contentToLandingTemplate(
   content: TemplateAiComposeContent,
@@ -477,8 +471,15 @@ export default function LandingInvitationAiGenerator({
             )}
           >
             <Upload className="w-6 h-6 text-primary mx-auto mb-2" aria-hidden />
-            <p className="text-sm font-bold text-foreground">Déposez 1 à 4 images</p>
-            <p className="text-xs text-muted mt-1">JPEG, PNG ou WebP — ou cliquez pour choisir</p>
+            <p className="text-sm font-bold text-foreground">Déposez 1 à 4 photos ou cartes à copier</p>
+            <p className="text-xs text-muted mt-1">Photos de personnes (visages fidèles) et/ou modèle d’invitation à cloner</p>
+          </div>
+
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs text-foreground">
+            <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-bold text-primary">Réalisme 35mm & Clonage d’invitation :</span> Déposez une photo de personnes et/ou l’image d’une carte à reproduire. Notre IA clone fidèlement la mise en page tout en conservant les visages réels.
+            </div>
           </div>
 
           {previews.length > 0 && (
@@ -507,10 +508,10 @@ export default function LandingInvitationAiGenerator({
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
-                Brief style
+                Brief style ou demande de clonage
               </label>
               <span className="text-[10px] text-muted tabular-nums" aria-live="polite">
                 {prompt.trim().length}/1500
@@ -523,22 +524,16 @@ export default function LandingInvitationAiGenerator({
               value={prompt}
               disabled={busy}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ex. Mariage élégant, tons ivoire et or, floraux discrets, typographie script pour les prénoms…"
+              placeholder="Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…"
               className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[6rem] disabled:opacity-60"
             />
-            <div className="flex flex-wrap gap-1.5">
-              {BRIEF_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setPrompt(preset)}
-                  className="text-[11px] font-semibold px-3 py-2 min-h-10 rounded-full border border-border bg-surface-muted/70 text-muted hover:text-foreground hover:border-primary/40 transition disabled:opacity-50 touch-manipulation break-words max-w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
+
+            {/* Sélecteur et bibliothèque de modèles de prompts */}
+            <PromptModelSelector
+              onSelectPrompt={(selected) => setPrompt(selected)}
+              selectedPrompt={prompt}
+              disabled={busy}
+            />
           </div>
 
           {error ? (
