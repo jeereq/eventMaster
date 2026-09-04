@@ -231,6 +231,7 @@ model User {
   aiTokenOrders         AiTokenOrder[]
   aiSimulationRuns      AiSimulationRun[]
   aiSimulationWallets   AiSimulationWallet[]
+  aiTemplateComposeRuns AiTemplateComposeRun[]
 }
 
 model Event {
@@ -1162,6 +1163,24 @@ model AiSimulationRun {
   eventDate   String?
   result      Json
   createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([deviceId, createdAt])
+}
+
+/** Historique des générations de modèles d’invitation IA (studio + /modeles). */
+model AiTemplateComposeRun {
+  id               String   @id @default(uuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId         String?
+  source           String
+  prompt           String?
+  referenceUrls    Json     @default("[]")
+  previewImageUrl  String?
+  content          Json
+  stage            Json?
+  createdAt        DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([deviceId, createdAt])

@@ -9,6 +9,7 @@ import type { TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath } from '@/lib/safeAppPath';
 import { appendFirstTourQuery } from '@/lib/firstLoginTour';
 import { claimAiSimulationHistory } from '@/lib/aiSimulationHistory';
+import { claimAiTemplateComposeHistory } from '@/lib/aiTemplateComposeHistory';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -257,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
       void claimAiSimulationHistory();
+      void claimAiTemplateComposeHistory();
 
       router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null));
     } catch (error: any) {
@@ -333,6 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
       void claimAiSimulationHistory();
+      void claimAiTemplateComposeHistory();
       const dest = safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null);
       router.push(safeAppPath(options?.next) ? dest : appendFirstTourQuery(dest));
     } catch (error) {

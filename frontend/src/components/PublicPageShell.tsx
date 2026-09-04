@@ -58,8 +58,8 @@ export function PublicPageHero({
           <h1 className={cn(
             'em-landing-heading text-foreground',
             compact
-              ? 'text-base md:text-3xl lg:text-4xl'
-              : 'text-lg md:text-4xl lg:text-[2.75rem]',
+              ? 'text-sm md:text-2xl lg:text-3xl'
+              : 'text-base md:text-3xl lg:text-[2.5rem]',
           )}>
             {title}
           </h1>

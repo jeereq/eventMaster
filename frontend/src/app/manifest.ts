@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'EventMaster - SaaS de gestion d\'événements',
+    name: 'EventMaster',
     short_name: 'EventMaster',
     description: 'Plateforme SaaS Multi-tenant d\'organisation d\'événements, RSVP et invitations personnalisées',
     start_url: '/',

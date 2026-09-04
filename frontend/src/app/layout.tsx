@@ -12,6 +12,7 @@ import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import BrandFaviconSync from "@/components/BrandFaviconSync";
 import GlobalAiSimulatorFab from "@/components/GlobalAiSimulatorFab";
+import MobileSplashScreen from "@/components/MobileSplashScreen";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
@@ -73,7 +74,7 @@ export async function generateMetadata(): Promise<Metadata> {
     appleWebApp: {
       capable: true,
       statusBarStyle: 'black-translucent',
-      title: site.platformName,
+      title: site.platformName.length > 12 ? site.platformName.slice(0, 12) : site.platformName,
     },
   };
 }
@@ -110,6 +111,7 @@ export default function RootLayout({
                 <ViewPreferencesBridge>
                   <BrandFaviconSync />
                   <PWARegister />
+                  <MobileSplashScreen />
                   <MaintenanceOverlay />
                   <Suspense fallback={null}>
                     {children}

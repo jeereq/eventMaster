@@ -9,8 +9,35 @@ import {
   consumeAiSimulationCredit,
   requireAiSimulationCredit,
 } from '../services/aiSimulationWalletService';
+import {
+  saveAiTemplateComposeRun,
+  listAiTemplateComposeRuns,
+  getAiTemplateComposeRun,
+  claimDeviceTemplateComposeRuns,
+  type AiTemplateComposeSource,
+} from '../services/aiTemplateComposeHistoryService';
 import { uploadDataUrl } from '../services/cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
+
+async function persistTemplateCompose(
+  opts: {
+    userId?: string | null;
+    deviceId?: string | null;
+    source: AiTemplateComposeSource;
+    prompt?: string | null;
+    referenceUrls?: string[];
+    content: { global?: Record<string, unknown>; elements?: unknown[] };
+    stage?: Record<string, unknown> | null;
+  },
+) {
+  try {
+    const saved = await saveAiTemplateComposeRun(opts);
+    return saved?.id || null;
+  } catch (err) {
+    console.error('[AiTemplateCompose] persist:', err);
+    return null;
+  }
+}
 
 function isCustomTemplateContent(content: unknown): boolean {
   if (!content || typeof content !== 'object') return false;
@@ -420,10 +447,20 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       generateBackground,
     });
     const allowance = await consumeAiSimulationCredit(deviceId, req.user.id);
+    const historyId = await persistTemplateCompose({
+      userId: req.user.id,
+      deviceId,
+      source: 'studio',
+      prompt,
+      referenceUrls: imageUrls,
+      content: result.content,
+      stage: result.stage,
+    });
 
     return res.json({
       content: result.content,
       stage: result.stage,
+      historyId,
       remaining: allowance.totalRemaining,
       allowance,
     });
@@ -466,10 +503,20 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       generateBackground,
     });
     const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null);
+    const historyId = await persistTemplateCompose({
+      userId: user?.id || null,
+      deviceId,
+      source: user?.id ? 'studio' : 'landing',
+      prompt,
+      referenceUrls: imageUrls,
+      content: result.content,
+      stage: result.stage,
+    });
 
     return res.json({
       content: result.content,
       stage: result.stage,
+      historyId,
       remaining: allowance.totalRemaining,
       allowance,
     });
@@ -480,6 +527,71 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     }
     console.error('publicComposeTemplateWithAi:', error);
     return res.status(500).json({ error: 'Impossible de générer le modèle avec l’IA.' });
+  }
+}
+
+/** GET /public/templates/ai/history?deviceId= — historique générations invitation */
+export async function listPublicAiTemplateComposes(req: Request, res: Response) {
+  try {
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const userId = (req as AuthenticatedRequest).user?.id || null;
+    const items = await listAiTemplateComposeRuns({ userId, deviceId, limit: 20 });
+    return res.json({ items });
+  } catch (error: unknown) {
+    console.error('listPublicAiTemplateComposes:', error);
+    return res.status(500).json({ error: 'Impossible de charger l’historique des générations.' });
+  }
+}
+
+/** GET /templates/ai/history — studio authentifié */
+export async function listAiTemplateComposes(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const items = await listAiTemplateComposeRuns({
+      userId: req.user.id,
+      deviceId,
+      limit: 20,
+    });
+    return res.json({ items });
+  } catch (error: unknown) {
+    console.error('listAiTemplateComposes:', error);
+    return res.status(500).json({ error: 'Impossible de charger l’historique des générations.' });
+  }
+}
+
+/** GET /public/templates/ai/history/:id */
+export async function getPublicAiTemplateCompose(req: Request, res: Response) {
+  try {
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const userId = (req as AuthenticatedRequest).user?.id || null;
+    const item = await getAiTemplateComposeRun({ id, userId, deviceId });
+    if (!item) return res.status(404).json({ error: 'Génération introuvable.' });
+    return res.json({ item });
+  } catch (error: unknown) {
+    console.error('getPublicAiTemplateCompose:', error);
+    return res.status(500).json({ error: 'Impossible de charger cette génération.' });
+  }
+}
+
+/** POST /public/templates/ai/history/claim — rattache l’historique device au compte */
+export async function claimPublicAiTemplateComposes(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+    const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
+    const result = await claimDeviceTemplateComposeRuns(req.user.id, deviceId);
+    const items = await listAiTemplateComposeRuns({
+      userId: req.user.id,
+      deviceId,
+      limit: 20,
+    });
+    return res.json({ ...result, items });
+  } catch (error: unknown) {
+    console.error('claimPublicAiTemplateComposes:', error);
+    return res.status(500).json({ error: 'Impossible de rattacher l’historique à votre compte.' });
   }
 }
 

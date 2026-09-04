@@ -13,6 +13,11 @@ import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTex
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft } from '@/lib/templateAiCompose';
 import {
+ fetchAiTemplateComposeHistoryStudio,
+ type AiTemplateComposeHistoryItem,
+} from '@/lib/aiTemplateComposeHistory';
+import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
+import {
  getAiSimulationAllowance,
  syncDeviceAiTokensWithBackend,
  type AiAllowance,
@@ -256,6 +261,8 @@ export default function TemplatesPage() {
  const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
  const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
+ const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
+ const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
@@ -883,18 +890,50 @@ export default function TemplatesPage() {
  setAiComposePrompt('');
  setAiComposeStage(null);
  setAiComposeBusy(false);
+ setAiComposeHistoryId(null);
  };
 
  const openAiComposeModal = async () => {
  if (!canUseCustomTemplates) return;
  setError('');
  setAiComposeModalOpen(true);
+ void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
  try {
  const next = await syncDeviceAiTokensWithBackend(api);
  setAiAllowance(next);
  } catch {
  setAiAllowance(getAiSimulationAllowance());
  }
+ };
+
+ const applyAiComposeHistoryItem = (item: AiTemplateComposeHistoryItem) => {
+ if (aiComposeBusy) return;
+ applyAiComposeToEditor(item.content, {
+ setCanvasElements,
+ setBgType,
+ setBgColor,
+ setBgImageUrl,
+ setBgPattern,
+ setFrameType,
+ setFontTheme,
+ setFloralColor,
+ setFloralType,
+ setFloralDensity,
+ setImportedPalette,
+ setColorThemeId,
+ setLayoutMode,
+ setCanvasSizePreset,
+ setCanvasWidth,
+ setCanvasHeight,
+ setSelectedElementId,
+ });
+ setGeneratedByAi(true);
+ setImportedWithOcr(false);
+ setAiComposeHistoryId(item.id);
+ if (item.prompt) setAiComposePrompt(item.prompt);
+ setAiComposeModalOpen(false);
+ resetAiComposeModal();
+ setSuccess('Génération précédente rouverte dans l’éditeur.');
  };
 
  /** Depuis la liste : ouvre le studio puis l’assistant IA. */
@@ -999,6 +1038,8 @@ export default function TemplatesPage() {
  if (result.allowance) {
  setAiAllowance(getAiSimulationAllowance());
  }
+ setAiComposeHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
+ void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
  setAiComposeModalOpen(false);
  resetAiComposeModal();
  setSuccess(
@@ -1133,6 +1174,13 @@ export default function TemplatesPage() {
  {aiComposeStage}
  </p>
  )}
+
+ <AiTemplateComposeHistoryList
+ items={aiComposeHistory}
+ activeId={aiComposeHistoryId}
+ onOpen={applyAiComposeHistoryItem}
+ listClassName="max-h-48"
+ />
  </div>
 
  <div className="px-5 py-4 border-t border-border-subtle flex justify-end gap-2 bg-surface-muted/40">

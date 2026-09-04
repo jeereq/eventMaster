@@ -38,28 +38,38 @@ function requireOpenAiKey(): string {
 const STRUCTURE_SYSTEM = `Tu es un designer d'invitations EventMaster (RDC / Afrique centrale).
 Tu ANALYSES les images de référence fournies, puis tu produis UNIQUEMENT un JSON valide (response_format json_object).
 
-Priorité absolue :
-1) Le BRIEF UTILISATEUR dicte le style, le ton, les éléments à garder / changer, les couleurs souhaitées.
-2) Les images de référence fournissent la vérité visuelle (palette réelle, motifs, composition, personnes).
-3) Tu ne dois NI inventer des visages/personnes absents des refs, NI supprimer / remplacer / flouter des visages déjà présents.
+Principe de fidélité (non négociable) :
+- DÉTECTE uniquement ce qui est VISIBLE dans les images. Ne déduis pas, n’invente pas, n’idéalise pas.
+- Interdit : inventer des traits, une ethnie, un âge, une coiffure, une tenue, une teinte de peau, ou des personnes absentes.
+- Si un détail est flou / hors cadre / indiscernable : écris "unclear" — ne comble PAS le vide.
+
+Priorité :
+1) Les images = vérité visuelle pour personnes (visages, teinte de peau, cheveux, habits, pose).
+2) Le BRIEF UTILISATEUR = besoins expressément demandés (ambiance, décor, couleurs, ce qu’il faut changer).
+3) Ne change habits / cheveux / peau / visages QUE si le brief le demande EXPLICITEMENT. Sinon, REPRODUIS à l’identique.
 
 Mission :
-1) Observe couleurs, textures, motifs, composition, ambiance ET présence de personnes/visages.
-2) Interprète chaque consigne du brief et dis comment elle s’applique aux refs.
-3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation fidèle au brief + aux refs, avec règles visages strictes.
+1) Détecte : visages, teintes de peau, styles de cheveux, styles d’habits, couleurs, motifs, composition.
+2) Parse le brief : besoins exprimés (mustKeep / mustChange) — seulement ce qui est écrit, rien d’implicite inventé.
+3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation fidèle aux refs + au brief.
 
 Schéma exact :
 {
   "visualAnalysis": {
     "colors": ["#hex", "..."],
-    "style": "description courte du style vu dans les images",
+    "style": "style décoratif observé (papier, luxe, floral…) — sans inventer",
     "motifs": "motifs / textures / décor observés",
     "composition": "layout / cadrage observé",
     "hasPeople": true | false,
-    "peopleFaces": "none | describe count/roles/pose WITHOUT inventing identities; empty string if none",
-    "briefInterpretation": "comment le brief doit transformer ou respecter les refs, point par point",
-    "briefMustKeep": ["éléments du brief / des refs à conserver"],
-    "briefMustChange": ["éléments que le brief demande de modifier"]
+    "peopleCount": 0,
+    "peopleFaces": "none | count, gender presentation if visible, pose, facial features OBSERVED only — no invented identity",
+    "skinTones": "none | precise observed skin tone(s) per person (e.g. deep brown, medium olive) — no guessing",
+    "hairStyles": "none | hair length, texture, color, style OBSERVED per person",
+    "clothingStyles": "none | garment types, fabrics, colors, cuts, accessories OBSERVED — reproduce these",
+    "briefNeeds": ["besoin explicite 1 du brief", "..."],
+    "briefInterpretation": "comment chaque besoin du brief s’applique aux refs, point par point",
+    "briefMustKeep": ["à conserver : refs (visages/peau/cheveux/habits) + éléments du brief"],
+    "briefMustChange": ["UNIQUEMENT ce que le brief demande explicitement de modifier"]
   },
   "global": {
     "bgType": "color" | "pattern",
@@ -90,18 +100,20 @@ Schéma exact :
       "imageUrl": "https://..."
     }
   ],
-  "backgroundPrompt": "English image-generation prompt: apply the USER BRIEF first, then refs; include explicit FACE POLICY sentence"
+  "backgroundPrompt": "English image-generation prompt: DETECTED people details first, then USER BRIEF needs; include FACE/SKIN/HAIR/CLOTHING POLICY"
 }
 
 Règles brief :
-- Le backgroundPrompt DOIT commencer par "USER BRIEF:" suivi d’une paraphrase fidèle du brief (anglais).
-- Applique chaque intention du brief (ambiance, couleurs, fioritures, sobriété, luxe, floral, etc.).
-- Si le brief et les refs divergent, le brief gagne pour le style ; les refs gagnent pour les personnes/visages réellement présents.
+- Le backgroundPrompt DOIT commencer par "USER BRIEF:" suivi d’une paraphrase fidèle (anglais) des besoins EXPRIMÉS seulement.
+- Puis une section "DETECTED FROM REFS:" avec skin tones, hair, clothing, faces observés.
+- Applique chaque besoin du brief (ambiance, couleurs, fioritures, sobriété, luxe, floral, etc.).
+- Si le brief et les refs divergent : brief gagne pour décor/ambiance ; refs gagnent pour personnes (visages, peau, cheveux, habits) sauf demande explicite contraire.
 
-Règles visages (non négociables) :
-- Si hasPeople=true : conserver les mêmes personnes/visages des refs (même identité visuelle, pose raisonnable). Interdit d’effacer, remplacer, anonymiser, inventer d’autres visages, ou morpher vers quelqu’un d’autre.
-- Si hasPeople=false : aucune personne, aucun visage, aucune silhouette humaine. Décor / papier / floraux / motifs uniquement.
-- N’ajoute jamais de « couple inventé », mannequins, stock faces, ni enfants fictifs.
+Règles personnes (non négociables) :
+- Si hasPeople=true : REPRODUIRE les mêmes personnes — mêmes visages, mêmes teintes de peau, mêmes cheveux, mêmes styles d’habits (sauf modification EXPLICITE dans le brief).
+- Interdit : effacer, remplacer, anonymiser, blanchir/assombrir arbitrairement la peau, changer la coiffure, « améliorer » les traits, inventer d’autres personnes.
+- Si hasPeople=false : aucune personne, aucun visage, aucune silhouette. Décor uniquement.
+- N’ajoute jamais de couple inventé, mannequins, stock faces, enfants fictifs.
 
 Règles layout :
 - Palette et style des éléments = couleurs réelles extraites des images + brief.
@@ -180,7 +192,12 @@ type VisualAnalysis = {
   motifs: string;
   composition: string;
   hasPeople: boolean;
+  peopleCount: number;
   peopleFaces: string;
+  skinTones: string;
+  hairStyles: string;
+  clothingStyles: string;
+  briefNeeds: string[];
   briefInterpretation: string;
   briefMustKeep: string[];
   briefMustChange: string[];
@@ -208,21 +225,39 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
     ? v.colors.filter((c): c is string => typeof c === 'string').slice(0, 8)
     : [];
   const peopleFaces =
-    typeof v.peopleFaces === 'string' ? v.peopleFaces.slice(0, 400) : '';
+    typeof v.peopleFaces === 'string' ? v.peopleFaces.slice(0, 500) : '';
+  const skinTones =
+    typeof v.skinTones === 'string' ? v.skinTones.slice(0, 400) : '';
+  const hairStyles =
+    typeof v.hairStyles === 'string' ? v.hairStyles.slice(0, 400) : '';
+  const clothingStyles =
+    typeof v.clothingStyles === 'string' ? v.clothingStyles.slice(0, 500) : '';
   const hasPeople =
     v.hasPeople === true ||
     (typeof peopleFaces === 'string' &&
       peopleFaces.length > 0 &&
       !/^none$/i.test(peopleFaces.trim()));
+  const peopleCountRaw = Number(v.peopleCount);
+  const peopleCount =
+    Number.isFinite(peopleCountRaw) && peopleCountRaw >= 0
+      ? Math.min(Math.round(peopleCountRaw), 12)
+      : hasPeople
+        ? 1
+        : 0;
   return {
     colors,
     style: typeof v.style === 'string' ? v.style.slice(0, 300) : '',
     motifs: typeof v.motifs === 'string' ? v.motifs.slice(0, 300) : '',
     composition: typeof v.composition === 'string' ? v.composition.slice(0, 300) : '',
     hasPeople,
+    peopleCount: hasPeople ? Math.max(peopleCount, 1) : 0,
     peopleFaces: hasPeople ? peopleFaces : 'none',
+    skinTones: hasPeople ? skinTones || 'unclear' : 'none',
+    hairStyles: hasPeople ? hairStyles || 'unclear' : 'none',
+    clothingStyles: hasPeople ? clothingStyles || 'unclear' : 'none',
+    briefNeeds: parseStringList(v.briefNeeds, 12),
     briefInterpretation:
-      typeof v.briefInterpretation === 'string' ? v.briefInterpretation.slice(0, 500) : '',
+      typeof v.briefInterpretation === 'string' ? v.briefInterpretation.slice(0, 600) : '',
     briefMustKeep: parseStringList(v.briefMustKeep),
     briefMustChange: parseStringList(v.briefMustChange),
   };
@@ -232,7 +267,7 @@ const FACE_POLICY_NO_PEOPLE =
   'FACE POLICY: No people, no faces, no human silhouettes, no invented couples or stock models. Decorative invitation artwork only.';
 
 const FACE_POLICY_KEEP_PEOPLE =
-  'FACE POLICY: Real people appear in the reference photos. Preserve the same faces and identities — do NOT remove, replace, blur, anonymize, or invent different faces. Keep likeness faithful; only restyle clothing/background/décor per the brief.';
+  'FIDELITY POLICY: Real people appear in the reference photos. DETECT and REPRODUCE exactly — same faces/likeness, same skin tones (do not lighten, darken, or "correct"), same hair styles/texture/color, same clothing styles/colors/cuts. Do NOT invent, replace, blur, beautify, or morph anyone. Change clothing/hair/skin ONLY if the USER BRIEF explicitly requests it; otherwise keep them identical to the references. Décor/ambiance may follow the brief.';
 
 function buildImagePrompt(
   userPrompt: string,
@@ -243,11 +278,14 @@ function buildImagePrompt(
   const hasPeople = Boolean(analysis?.hasPeople);
   const parts = [
     'Create ONE vertical print-ready invitation card artwork (portrait orientation).',
-    'PRIMARY DIRECTIVE — USER BRIEF (follow faithfully, do not ignore):',
+    'FIDELITY RULE: Detect only what is visible in the references. Do not invent or guess missing details.',
+    'PRIMARY — USER BRIEF (apply only expressed needs; do not invent extra changes):',
     brief,
-    'Apply every stylistic request in the brief (mood, colors, florals, luxury level, layout feel).',
   ];
 
+  if (analysis?.briefNeeds?.length) {
+    parts.push(`Brief needs (expressed): ${analysis.briefNeeds.join('; ')}`);
+  }
   if (analysis?.briefInterpretation) {
     parts.push(`Brief interpretation: ${analysis.briefInterpretation}`);
   }
@@ -255,27 +293,41 @@ function buildImagePrompt(
     parts.push(`Must keep: ${analysis.briefMustKeep.join('; ')}`);
   }
   if (analysis?.briefMustChange?.length) {
-    parts.push(`Must change per brief: ${analysis.briefMustChange.join('; ')}`);
+    parts.push(`Must change (brief only): ${analysis.briefMustChange.join('; ')}`);
+  } else {
+    parts.push('Must change: nothing about people unless the brief explicitly says so.');
   }
 
-  parts.push(`Design execution notes: ${backgroundPrompt.slice(0, 1000)}`);
+  parts.push(`Design execution notes: ${backgroundPrompt.slice(0, 1200)}`);
 
   if (analysis) {
-    if (analysis.style) parts.push(`Reference style: ${analysis.style}`);
+    if (analysis.style) parts.push(`Reference décor style: ${analysis.style}`);
     if (analysis.motifs) parts.push(`Reference motifs/textures: ${analysis.motifs}`);
     if (analysis.composition) parts.push(`Reference composition: ${analysis.composition}`);
     if (analysis.colors.length) parts.push(`Palette close to: ${analysis.colors.join(', ')}`);
-    if (hasPeople && analysis.peopleFaces && analysis.peopleFaces !== 'none') {
-      parts.push(`People in references (preserve): ${analysis.peopleFaces}`);
+    if (hasPeople) {
+      parts.push(`People count (detected): ${analysis.peopleCount}`);
+      if (analysis.peopleFaces && analysis.peopleFaces !== 'none') {
+        parts.push(`Faces (reproduce): ${analysis.peopleFaces}`);
+      }
+      if (analysis.skinTones && analysis.skinTones !== 'none') {
+        parts.push(`Skin tones (reproduce exactly): ${analysis.skinTones}`);
+      }
+      if (analysis.hairStyles && analysis.hairStyles !== 'none') {
+        parts.push(`Hair styles (reproduce exactly): ${analysis.hairStyles}`);
+      }
+      if (analysis.clothingStyles && analysis.clothingStyles !== 'none') {
+        parts.push(`Clothing styles (reproduce exactly unless brief changes them): ${analysis.clothingStyles}`);
+      }
     }
   }
 
   parts.push(hasPeople ? FACE_POLICY_KEEP_PEOPLE : FACE_POLICY_NO_PEOPLE);
   parts.push(
-    'When brief and references conflict on décor/style, prefer the brief; when they conflict on people/faces, prefer the references.',
+    'Conflict rule: brief wins for décor/ambiance; references win for faces, skin tone, hair, and clothing unless the brief explicitly overrides.',
     'No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).',
   );
-  return parts.join('\n').slice(0, 4000);
+  return parts.join('\n').slice(0, 4500);
 }
 
 async function visionStructure(
@@ -288,17 +340,17 @@ async function visionStructure(
   const userContent: Array<Record<string, unknown>> = [
     {
       type: 'text',
-      text: `BRIEF UTILISATEUR (priorité #1 — à appliquer fidèlement) :
+      text: `BRIEF UTILISATEUR (besoins exprimés — analyse-les sans inventer d’intentions) :
 """
 ${prompt.slice(0, 1500)}
 """
 
-Tâches :
-1) Analyse les images (style, couleurs, motifs, composition, présence de personnes/visages).
-2) Décompose le brief : ce qu’il demande de garder vs changer.
-3) Renseigne hasPeople / peopleFaces avec précision (ne invente rien).
+Tâches (fidélité stricte) :
+1) DÉTECTE dans les images : visages, teintes de peau, styles de cheveux, styles d’habits, couleurs, motifs, composition. Ne déduis rien d’invisible.
+2) Liste briefNeeds = besoins EXPLICITEMENT écrits ; briefMustKeep / briefMustChange en conséquence.
+3) Renseigne hasPeople, peopleCount, peopleFaces, skinTones, hairStyles, clothingStyles avec précision (ou "unclear" / "none").
 4) Produis le JSON (structure éditeur + backgroundPrompt).
-5) Dans backgroundPrompt : commence par "USER BRIEF:" + paraphrase anglaise du brief, puis FACE POLICY explicite.`,
+5) Dans backgroundPrompt : "USER BRIEF:" + paraphrase des besoins ; puis "DETECTED FROM REFS:" (skin, hair, clothing, faces) ; puis FIDELITY POLICY.`,
     },
     ...imageUrls.slice(0, 4).map((url) => ({
       type: 'image_url',
@@ -318,7 +370,7 @@ Tâches :
       },
       body: JSON.stringify({
         model: visionModel,
-        temperature: 0.4,
+        temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: STRUCTURE_SYSTEM },
@@ -341,8 +393,8 @@ Tâches :
       : FACE_POLICY_NO_PEOPLE;
     const backgroundPrompt =
       typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()
-        ? parsed.backgroundPrompt.trim().slice(0, 1400)
-        : `USER BRIEF: ${prompt.slice(0, 400)}. Elegant invitation artwork inspired by the reference photos. ${faceClause} Soft print look, no readable text.`;
+        ? parsed.backgroundPrompt.trim().slice(0, 1800)
+        : `USER BRIEF: ${prompt.slice(0, 400)}. DETECTED FROM REFS: match people, skin tones, hair, and clothing exactly when present. ${faceClause} Soft print look, no readable text.`;
     return {
       global: parsed.global,
       elements: parsed.elements,
@@ -490,7 +542,8 @@ async function generateImageWithGpt56Luna(
       text: `${imagePrompt}
 
 OUTPUT RULES:
-- Produce ONE vertical invitation artwork that applies the USER BRIEF above as the primary creative driver.
+- Detect and reproduce reference people faithfully (faces, skin tones, hair, clothing) — invent nothing.
+- Apply only the expressed USER BRIEF needs for décor/ambiance; do not invent extra restyles of people.
 - ${faceBlock}
 - Do not add readable text, names, dates, logos or watermarks.`,
     },

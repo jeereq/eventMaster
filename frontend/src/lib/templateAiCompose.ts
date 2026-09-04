@@ -25,6 +25,7 @@ export type TemplateAiComposeResult = {
     backgroundReady: boolean;
     imageMode?: 'edit' | 'generate' | null;
   };
+  historyId?: string | null;
   remaining?: number;
   allowance?: Partial<AiAllowance>;
 };

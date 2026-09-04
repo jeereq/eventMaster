@@ -7,6 +7,7 @@ import {
   deleteTemplate,
   duplicateTemplate,
   composeTemplateWithAi,
+  listAiTemplateComposes,
 } from '../controllers/templateController';
 import { requireAuth, requireActiveLicense } from '../middleware/auth';
 
@@ -18,6 +19,7 @@ router.use(requireActiveLicense);
 router.get('/', getTemplates);
 router.post('/', createTemplate);
 router.post('/ai/compose', composeTemplateWithAi);
+router.get('/ai/history', listAiTemplateComposes);
 router.post('/:id/duplicate', duplicateTemplate);
 router.get('/:id', getTemplateById);
 router.put('/:id', updateTemplate);

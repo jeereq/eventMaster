@@ -31,6 +31,11 @@ import {
   type TemplateAiComposeContent,
   type TemplateAiComposeResult,
 } from '@/lib/templateAiCompose';
+import {
+  fetchAiTemplateComposeHistory,
+  type AiTemplateComposeHistoryItem,
+} from '@/lib/aiTemplateComposeHistory';
+import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -150,6 +155,8 @@ export default function LandingInvitationAiGenerator({
   const [error, setError] = useState('');
   const [result, setResult] = useState<TemplateAiComposeContent | null>(null);
   const [lastStageMeta, setLastStageMeta] = useState<TemplateAiComposeResult['stage'] | null>(null);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [history, setHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
   const [allowance, setAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -159,6 +166,7 @@ export default function LandingInvitationAiGenerator({
     void syncDeviceAiTokensWithBackend(api).then(setAllowance).catch(() => {
       setAllowance(getAiSimulationAllowance());
     });
+    void fetchAiTemplateComposeHistory().then(setHistory);
   }, []);
 
   useEffect(() => {
@@ -221,6 +229,7 @@ export default function LandingInvitationAiGenerator({
     setBusy(true);
     setResult(null);
     setLastStageMeta(null);
+    setActiveHistoryId(null);
     setActiveStep(1);
     setStage('Analyse des images et du brief…');
     const tick = window.setTimeout(() => {
@@ -235,8 +244,10 @@ export default function LandingInvitationAiGenerator({
       });
       setResult(data.content);
       setLastStageMeta(data.stage || null);
+      setActiveHistoryId(typeof data.historyId === 'string' ? data.historyId : null);
       setAllowance(getAiSimulationAllowance());
       saveAiTemplateDraft(data.content, prompt.trim());
+      void fetchAiTemplateComposeHistory().then(setHistory);
       setActiveStep(3);
       setStage(null);
       window.setTimeout(() => {
@@ -272,8 +283,25 @@ export default function LandingInvitationAiGenerator({
   const resetResult = () => {
     setResult(null);
     setLastStageMeta(null);
+    setActiveHistoryId(null);
     setActiveStep(0);
     setPreviewOpen(false);
+  };
+
+  const openHistoryItem = (item: AiTemplateComposeHistoryItem) => {
+    if (busy) return;
+    setResult(item.content);
+    setLastStageMeta(item.stage || null);
+    setActiveHistoryId(item.id);
+    if (item.prompt) setPrompt(item.prompt);
+    saveAiTemplateDraft(item.content, item.prompt || undefined);
+    setActiveStep(3);
+    setError('');
+    setStage(null);
+    setPreviewOpen(false);
+    window.setTimeout(() => {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
   };
 
   return (
@@ -287,13 +315,13 @@ export default function LandingInvitationAiGenerator({
       <div className="px-5 sm:px-7 pt-6 sm:pt-7 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div className="space-y-2 max-w-2xl">
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
-              <span className="w-9 h-9 rounded-xl bg-primary text-primary-foreground inline-flex items-center justify-center shadow-md shadow-primary/25">
-                <Wand2 className="w-4 h-4" />
+            <h2 className="text-base sm:text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
+              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary text-primary-foreground inline-flex items-center justify-center shadow-md shadow-primary/25 shrink-0">
+                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </span>
-              Studio IA — invitations
+              <span className="min-w-0 leading-tight">Studio IA</span>
             </h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
               Images + brief → aperçu éditable. Le brief guide le style ; les visages présents sont
               conservés, aucun visage n’est inventé.
             </p>
@@ -479,6 +507,14 @@ export default function LandingInvitationAiGenerator({
               </Button>
             ) : null}
           </div>
+
+          <AiTemplateComposeHistoryList
+            items={history}
+            activeId={activeHistoryId}
+            onOpen={openHistoryItem}
+            className="pt-2"
+            listClassName="max-h-56 sm:max-h-64"
+          />
         </div>
 
         {/* Preview rail */}

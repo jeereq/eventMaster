@@ -47,9 +47,9 @@ export default function SiteBrandMark({
         <span className="min-w-0">
           <span
             className={cn(
-              'font-bold tracking-tight block leading-none',
+              'font-bold tracking-tight block leading-none truncate max-w-[9.5rem] sm:max-w-[14rem]',
               tone === 'onDark' ? 'text-white' : 'text-foreground',
-              size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg' : 'text-[15px]',
+              size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base sm:text-lg' : 'text-[13px] sm:text-[15px]',
             )}
           >
             {label}
