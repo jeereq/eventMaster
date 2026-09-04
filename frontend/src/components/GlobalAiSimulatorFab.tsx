@@ -15,13 +15,16 @@ import {
 } from '@/lib/aiTokens';
 
 const HIDDEN_PREFIXES = ['/rsvp/', '/invite/', '/print'];
+const LISTING_DETAIL = /^\/marketplace\/(salles|prestataires|evenements)\/[^/]+/;
 
 export default function GlobalAiSimulatorFab() {
   const pathname = usePathname() || '/';
   const [open, setOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
 
-  const hidden = HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const hidden =
+    HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+    LISTING_DETAIL.test(pathname);
 
   useEffect(() => {
     const sync = () => setAllowance(getAiSimulationAllowance());
@@ -42,7 +45,7 @@ export default function GlobalAiSimulatorFab() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed z-[60] bottom-24 right-4 sm:bottom-6 inline-flex items-center gap-2 min-h-12 pl-3 pr-4 rounded-full bg-primary text-white shadow-xl shadow-primary/30 hover:bg-primary-hover transition cursor-pointer touch-manipulation"
+        className="fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6 inline-flex items-center gap-2 min-h-12 pl-3 pr-3.5 sm:pr-4 rounded-full bg-primary-solid text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary-solid-hover transition cursor-pointer touch-manipulation"
         aria-label="Lancer une simulation IA"
       >
         <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">

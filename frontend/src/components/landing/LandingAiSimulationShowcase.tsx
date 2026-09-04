@@ -191,12 +191,12 @@ export default function LandingAiSimulationShowcase() {
             </span>
           </p>
 
-          <div className="inline-flex items-center p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2">
+          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2">
             <button
               type="button"
               onClick={() => setViewMode('presets')}
               className={cn(
-                'px-4 py-2 rounded-[var(--radius-button)] text-xs font-bold transition cursor-pointer touch-manipulation',
+                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition cursor-pointer touch-manipulation',
                 viewMode === 'presets'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',
@@ -208,7 +208,7 @@ export default function LandingAiSimulationShowcase() {
               type="button"
               onClick={() => setViewMode('live')}
               className={cn(
-                'px-4 py-2 rounded-[var(--radius-button)] text-xs font-bold transition flex items-center gap-1.5 cursor-pointer touch-manipulation',
+                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation',
                 viewMode === 'live'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',

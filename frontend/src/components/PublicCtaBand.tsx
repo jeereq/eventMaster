@@ -46,7 +46,7 @@ export default function PublicCtaBand({
           {description}
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3 w-full max-w-sm mx-auto sm:max-w-none [&>*]:w-full sm:[&>*]:w-auto">
           {actions || (
             <>
               {primaryHref && primaryLabel ? (

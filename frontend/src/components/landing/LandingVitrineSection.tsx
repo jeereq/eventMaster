@@ -338,14 +338,14 @@ export default function LandingVitrineSection() {
           </div>
         ) : null}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 md:justify-start">
           {tabs.map(({ id, label, icon: Icon, hash }) => (
             <button
               key={id}
               type="button"
               onClick={() => selectTab(id, hash)}
               className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm md:text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                 tab === id
                   ? 'bg-primary-solid text-primary-foreground border border-primary/30 shadow-xs'
                   : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60',

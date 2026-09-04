@@ -27,7 +27,7 @@ export default function LandingDashboardQuickAccess() {
   if (!user || !visible) return null;
 
   return (
-    <div className="fixed bottom-36 sm:bottom-24 right-4 sm:right-6 z-40 animate-fade-in pointer-events-auto">
+    <div className="hidden md:block fixed bottom-24 right-6 z-40 animate-fade-in pointer-events-auto">
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-surface/90 dark:bg-surface/90 backdrop-blur-md border border-primary/40 text-foreground text-xs sm:text-sm font-semibold shadow-xl shadow-primary/15 hover:scale-105 hover:border-primary transition-all duration-200 group active:scale-95"

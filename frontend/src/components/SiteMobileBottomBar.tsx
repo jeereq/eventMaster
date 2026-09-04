@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Store, Rss, LayoutGrid, FileText, Tag } from 'lucide-react';
+import { Home, Store, LayoutGrid, FileText, Tag } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export interface MobileNavItem {
@@ -27,13 +27,6 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     shortLabel: 'Market',
     href: '/marketplace',
     icon: Store,
-  },
-  {
-    id: 'publications',
-    label: 'Publications',
-    shortLabel: 'Publis',
-    href: '/activite',
-    icon: Rss,
   },
   {
     id: 'editor',
@@ -65,9 +58,6 @@ function isItemActive(itemHref: string, pathname: string, currentHash: string): 
   }
   if (itemHref === '/marketplace') {
     return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
-  }
-  if (itemHref === '/activite') {
-    return pathname === '/activite' || pathname.startsWith('/activite/');
   }
   if (itemHref === '/modeles') {
     return pathname === '/modeles' || pathname.startsWith('/modeles/');
@@ -115,11 +105,11 @@ export default function SiteMobileBottomBar({
     <nav
       aria-label="Navigation mobile principale"
       className={cn(
-        'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 dark:bg-background/95 backdrop-blur-xl border-t border-border/80 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 px-1 transition-transform',
+        'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 dark:bg-background/95 backdrop-blur-xl border-t border-border/80 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))] transition-transform',
         className,
       )}
     >
-      <div className="grid grid-cols-6 gap-0.5 items-center max-w-lg mx-auto">
+      <div className="grid grid-cols-5 gap-0.5 items-center max-w-lg mx-auto">
         {SITE_MOBILE_NAV_ITEMS.map((item) => {
           const active = isItemActive(item.href, pathname, currentHash);
           const Icon = item.icon;
@@ -150,7 +140,7 @@ export default function SiteMobileBottomBar({
                   <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary" />
                 )}
               </div>
-              <span className="text-[10px] tracking-tight leading-tight truncate max-w-full text-center">
+              <span className="text-[11px] tracking-tight leading-tight truncate max-w-full text-center">
                 {item.shortLabel ? (
                   <>
                     <span className="hidden min-[400px]:inline">{item.label}</span>

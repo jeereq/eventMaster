@@ -53,7 +53,7 @@ export default function Home() {
   const { site } = usePlatformSite();
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased pb-16 md:pb-0">
+    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased em-public-bottom-pad">
       <SiteHeader variant="landing" />
 
       <main id="main-content" className="flex-1 flex flex-col">

@@ -132,11 +132,11 @@ export default function LandingVisualBanner() {
           </p>
 
           {/* Filtres de catégories rapides */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
+          <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 pt-2">
             <button
               type="button"
               onClick={() => setActiveCategory('all')}
-              className={`px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation ${
+              className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation ${
                 activeCategory === 'all'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'bg-surface-muted border border-border text-muted hover:text-foreground'
@@ -149,7 +149,7 @@ export default function LandingVisualBanner() {
                 key={item.id}
                 type="button"
                 onClick={() => setActiveCategory(item.id)}
-                className={`px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation ${
+                className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation ${
                   activeCategory === item.id
                     ? 'bg-primary-solid text-primary-foreground shadow-xs'
                     : 'bg-surface-muted border border-border text-muted hover:text-foreground'

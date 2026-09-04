@@ -81,7 +81,7 @@ export default function LandingHeroStreamlined() {
             <div className="pt-1 flex justify-center">
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 max-w-full px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-xs text-primary font-semibold hover:bg-primary/15 transition"
+                className="inline-flex items-center gap-2 max-w-full min-h-11 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-xs text-primary font-semibold hover:bg-primary/15 transition touch-manipulation"
               >
                 <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
                 <span className="min-w-0 truncate">
@@ -160,7 +160,7 @@ export default function LandingHeroStreamlined() {
                     <div className="relative z-10 flex items-start justify-between gap-2">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-black/55 backdrop-blur-md border border-white/20 text-white">
                         <Icon className="w-3 h-3 text-primary" />
-                        <span className="truncate max-w-[9rem]">{item.eyebrow}</span>
+                        <span className="truncate max-w-[5.5rem] sm:max-w-[9rem]">{item.eyebrow}</span>
                       </span>
                       <span
                         className={cn(

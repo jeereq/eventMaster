@@ -216,12 +216,12 @@ export default function SiteHeader({
         hidden={!mobileMenuOpen}
         className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-xl shadow-xl"
       >
-        <div className="page-container py-4 space-y-3">
+        <div className="page-container py-4 space-y-3 pb-[calc(var(--em-site-bottom-nav)+1rem)]">
             <div className="space-y-1">
               {links.map((item) => {
                 const active = isLinkActive(item.href);
                 const mobileClass = cn(
-                  'flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition',
+                  'flex items-center justify-between min-h-11 px-3 py-2.5 rounded-xl text-sm font-semibold transition touch-manipulation',
                   active
                     ? 'bg-primary/10 text-primary border border-primary/20'
                     : 'text-muted hover:text-foreground hover:bg-surface-muted/50',

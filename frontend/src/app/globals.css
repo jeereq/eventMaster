@@ -23,8 +23,11 @@
   --radius-card: 0.5rem; /* Asana ~8px */
   --radius-button: 0.5rem;
   --shadow-soft: 0 0 0 1px rgba(0, 0, 0, 0.04);
-  /* Nav dashboard mobile (pt-1 + 48px + pb max(0.375rem, safe-area)) */
-  --em-dash-bottom-nav: calc(0.25rem + 3rem + max(0.375rem, env(safe-area-inset-bottom, 0px)));
+  /* Barre publique mobile (pt-1 + 48px + pb max(0.375rem, safe-area)) */
+  --em-site-bottom-nav: calc(0.25rem + 3rem + max(0.375rem, env(safe-area-inset-bottom, 0px)));
+  --em-site-fab-bottom: calc(var(--em-site-bottom-nav) + 0.75rem);
+  /* Nav dashboard / dock listing : même hauteur que la barre publique */
+  --em-dash-bottom-nav: var(--em-site-bottom-nav);
   /* Barre Devis / Réserver des fiches (pt-3 + 44px + pb-3) */
   --em-listing-dock: 4.5rem;
   /* Panneau auth — surchargés par brandTheme / env */
@@ -368,6 +371,52 @@ html[data-mood="celebrate"] .font-display {
 .em-landing-defer {
   content-visibility: auto;
   contain-intrinsic-size: auto 720px;
+}
+
+.em-public-bottom-pad {
+  padding-bottom: calc(var(--em-site-bottom-nav) + 0.5rem);
+}
+
+@media (min-width: 768px) {
+  .em-public-bottom-pad {
+    padding-bottom: 0;
+  }
+}
+
+/* Rangée de chips : swipe au pouce, wrap dès la tablette */
+.em-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-block: 0.125rem 0.25rem;
+  scroll-snap-type: x proximity;
+}
+
+.em-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.em-chip-row > * {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  scroll-snap-align: start;
+}
+
+@media (min-width: 768px) {
+  .em-chip-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+
+  .em-chip-row > * {
+    min-height: auto;
+  }
 }
 
 .em-landing-section-glow::before,
