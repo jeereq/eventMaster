@@ -227,7 +227,7 @@ export default function LandingAiSimulationShowcase() {
         </div>
 
         {viewMode === 'presets' && (
-          <div className="bg-surface/90 dark:bg-slate-900/90 border border-primary/25 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
+          <div className="bg-surface/90 dark:bg-surface border border-primary/25 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
               <p className="text-xs font-bold text-foreground">
                 Choisissez un projet type, puis générez de vrais packs catalogue.
@@ -255,7 +255,7 @@ export default function LandingAiSimulationShowcase() {
             </div>
 
             <div className="relative rounded-[var(--radius-card)] overflow-hidden border border-border shadow-sm">
-              <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-slate-900">
+              <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-stage">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={activeScenario.imageUrl}
@@ -272,9 +272,9 @@ export default function LandingAiSimulationShowcase() {
                     </span>
                     <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
                   </div>
-                  <span className="text-xs font-bold text-emerald-400 bg-black/60 px-2.5 py-1 rounded-lg border border-white/20 backdrop-blur-sm self-start sm:self-auto flex items-baseline gap-1.5">
+                  <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-lg border border-festive-accent/30 backdrop-blur-sm self-start sm:self-auto flex items-baseline gap-1.5">
                     <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
-                    <span className="text-[11px] text-emerald-200/90 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
+                    <span className="text-[11px] text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
                   </span>
                 </div>
               </div>
@@ -304,9 +304,9 @@ export default function LandingAiSimulationShowcase() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Budget alloué ($ / FC)
+                    <DollarSign className="w-3.5 h-3.5 text-festive-accent" /> Budget alloué ($ / FC)
                   </span>
-                  <p className="font-bold text-emerald-600 dark:text-emerald-400 flex items-baseline gap-1">
+                  <p className="font-bold text-primary flex items-baseline gap-1">
                     <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
                     <span className="text-[11px] font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
                   </p>
@@ -344,7 +344,7 @@ export default function LandingAiSimulationShowcase() {
 
         <div
           className={cn(
-            'bg-surface/90 dark:bg-slate-900/90 border-2 border-primary/40 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-4 max-w-5xl mx-auto',
+            'bg-surface/90 dark:bg-surface border-2 border-primary/40 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-4 max-w-5xl mx-auto',
             viewMode === 'live' ? 'animate-fade-in' : 'hidden',
           )}
           hidden={viewMode !== 'live'}
@@ -361,7 +361,7 @@ export default function LandingAiSimulationShowcase() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto pt-4">
           <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-festive-accent/15 text-festive-accent flex items-center justify-center">
               <Heart className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Pour les Particuliers & Mariés</h3>
@@ -371,7 +371,7 @@ export default function LandingAiSimulationShowcase() {
           </div>
 
           <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/15 text-primary flex items-center justify-center">
               <Briefcase className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Pour les Organisateurs & Entreprises</h3>
@@ -381,7 +381,7 @@ export default function LandingAiSimulationShowcase() {
           </div>
 
           <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-brand-accent/15 text-brand-accent flex items-center justify-center">
               <Building2 className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Pour les Prestataires & Salles</h3>

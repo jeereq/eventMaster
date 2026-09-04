@@ -189,7 +189,7 @@ export default function Plans3DPage() {
           </div>
 
           {/* Visualiseur WebGL / 2D interactif */}
-          <div className="rounded-2xl sm:rounded-3xl border border-border/80 bg-slate-950 overflow-hidden shadow-xl relative">
+          <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-stage overflow-hidden shadow-xl relative">
             <div className="w-full aspect-[16/10] sm:aspect-[16/9] max-h-[580px] min-h-[340px]">
               {activeBlueprint ? (
                 <RoomLayoutPreview

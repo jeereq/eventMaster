@@ -99,7 +99,7 @@ export default function SiteHeader({
     <>
       <header
         className={cn(
-          'sticky top-0 z-50 backdrop-blur-md bg-background/85 dark:bg-slate-950/80 border-b border-border/80 dark:border-white/10 transition-colors duration-200',
+          'sticky top-0 z-50 backdrop-blur-md bg-background/85 dark:bg-background/80 border-b border-border/80 transition-colors duration-200',
           className,
         )}
       >
@@ -113,14 +113,14 @@ export default function SiteHeader({
         </Link>
 
         {/* Barre de navigation HUD centrale */}
-        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-surface-muted/60 dark:bg-white/5 border border-border/60 dark:border-white/10 backdrop-blur-xs min-w-0">
+        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-surface-muted/60 dark:bg-surface-muted/50 border border-border/60 backdrop-blur-xs min-w-0">
           {links.map((item) => {
             const active = isLinkActive(item.href);
             const itemClass = cn(
               'px-3.5 py-1 text-xs font-semibold transition rounded-full focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
               active
-                ? 'text-primary bg-surface dark:bg-white/10 shadow-xs border border-primary/20 font-bold'
-                : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-white/5',
+                ? 'text-primary bg-surface dark:bg-surface shadow-xs border border-primary/20 font-bold'
+                : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-surface-muted',
             );
 
             return item.href.startsWith('/#') ? (

@@ -178,7 +178,7 @@ export default function LandingVisualBanner() {
                 className="group relative rounded-[var(--radius-card)] border border-border bg-surface-muted/60 overflow-hidden shadow-md hover:shadow-xl hover:border-primary/50 transition-all duration-300 flex flex-col justify-between"
               >
                 {/* Photo avec ratio cinématique et overlay subtil */}
-                <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
+                <div className="relative aspect-[16/10] overflow-hidden bg-stage">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.imageUrl}

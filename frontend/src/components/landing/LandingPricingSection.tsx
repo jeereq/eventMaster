@@ -257,7 +257,7 @@ export default function LandingPricingSection({
 
  <div className="flex flex-col items-start gap-3 mb-10">
  <div className="flex flex-wrap items-center gap-3">
- <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-slate-900 border border-border">
+ <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border">
  <button
  type="button"
  onClick={() => setAudience('B2B')}
@@ -296,7 +296,7 @@ export default function LandingPricingSection({
  </button>
  </div>
 
- <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-slate-900 border border-border">
+ <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border">
  <button
  type="button"
  onClick={() => setBilling('monthly')}
@@ -364,9 +364,9 @@ export default function LandingPricingSection({
  key={plan.id}
  className={`relative flex flex-col rounded-[var(--radius-card)] overflow-hidden transition-all duration-300 min-w-[17.5rem] sm:min-w-0 shrink-0 snap-start flex-1 ${
  plan.highlighted
- ? 'border-2 border-primary bg-surface dark:bg-slate-900 shadow-xl shadow-primary/25 ring-2 ring-primary/30 sm:scale-[1.02] z-10'
+ ? 'border-2 border-primary bg-surface dark:bg-surface shadow-xl shadow-primary/25 ring-2 ring-primary/30 sm:scale-[1.02] z-10'
  : plan.promoActive
- ? 'border border-rose-500/40 bg-surface dark:bg-slate-900 shadow-md'
+ ? 'border border-rose-500/40 bg-surface dark:bg-surface shadow-md'
  : 'em-hud-card border-border'
  }`}
  >
@@ -584,7 +584,7 @@ export default function LandingPricingSection({
  </div>
 
  {/* Bandeau des moyens de paiement acceptés (Orange Money, M-Pesa, Airtel, Cartes) */}
- <div className="mt-8 p-4 rounded-2xl bg-surface/80 dark:bg-slate-900/80 border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+ <div className="mt-8 p-4 rounded-2xl bg-surface/80 dark:bg-surface/80 border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
  <div className="flex items-center gap-2.5 text-xs text-muted">
  <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
  <div>

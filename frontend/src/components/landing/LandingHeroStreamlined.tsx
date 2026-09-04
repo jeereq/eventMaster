@@ -177,7 +177,7 @@ export default function LandingHeroStreamlined() {
                       <span
                         className={cn(
                           'block text-xs sm:text-base font-bold tracking-tight leading-snug line-clamp-2',
-                          selected ? 'text-amber-200' : 'text-white',
+                          selected ? 'text-festive-on-stage' : 'text-white',
                         )}
                       >
                         {item.label}
@@ -199,7 +199,7 @@ export default function LandingHeroStreamlined() {
           role="region"
           aria-live="polite"
           aria-labelledby="landing-profile-title"
-          className="rounded-[var(--radius-card)] border border-primary/25 bg-surface/90 dark:bg-slate-900/90 p-4 sm:p-6 shadow-xl shadow-primary/5 space-y-5 animate-fade-in"
+          className="rounded-[var(--radius-card)] border border-primary/25 bg-surface/90 dark:bg-surface p-4 sm:p-6 shadow-xl shadow-primary/5 space-y-5 animate-fade-in"
         >
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div className="min-w-0 space-y-1">

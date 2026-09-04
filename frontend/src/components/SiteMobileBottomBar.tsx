@@ -115,7 +115,7 @@ export default function SiteMobileBottomBar({
     <nav
       aria-label="Navigation mobile principale"
       className={cn(
-        'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-border/80 dark:border-white/10 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 px-1 transition-transform',
+        'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 dark:bg-background/95 backdrop-blur-xl border-t border-border/80 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 px-1 transition-transform',
         className,
       )}
     >

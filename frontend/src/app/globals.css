@@ -35,8 +35,13 @@
   /* Celebrate (landing / RSVP / auth) — touche Kinshasa + confetti minimal */
   --festive-accent: #d97706;
   --festive-accent-soft: color-mix(in srgb, #d97706 14%, transparent);
+  --festive-on-stage: #fbbf24;
   --surface-warm: #f3f5f2;
   --celebrate-glow: 217, 119, 6;
+  /* Scène inversée (bandeaux 3D / CTA) : ardoise chaude, pas le slate Tailwind */
+  --stage: #171614;
+  --stage-elevated: #221f1c;
+  --stage-foreground: #f7f4ef;
 }
 
 /* Ambiance Celebrate — surfaces tièdes, accent festif (dashboard reste Work par défaut) */
@@ -60,6 +65,9 @@ html[data-mood="celebrate"].dark,
   --card-hover: #303133;
   --brand-accent: #6ee7b7;
   --festive-accent: #fbbf24;
+  --festive-on-stage: #fcd34d;
+  --stage: #121110;
+  --stage-elevated: #1c1a18;
 }
 
 .dark {
@@ -79,6 +87,9 @@ html[data-mood="celebrate"].dark,
   --sidebar: #191a1c;
   --card-hover: #303133;
   --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --festive-on-stage: #fcd34d;
+  --stage: #121110;
+  --stage-elevated: #1c1a18;
 }
 
 @theme inline {
@@ -98,6 +109,12 @@ html[data-mood="celebrate"].dark,
   --color-sidebar: var(--sidebar);
   --color-card-hover: var(--card-hover);
   --color-festive-accent: var(--festive-accent);
+  --color-festive-accent-soft: var(--festive-accent-soft);
+  --color-festive-on-stage: var(--festive-on-stage);
+  --color-surface-warm: var(--surface-warm);
+  --color-stage: var(--stage);
+  --color-stage-elevated: var(--stage-elevated);
+  --color-stage-foreground: var(--stage-foreground);
   --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-display: var(--font-fraunces), var(--font-inter), Georgia, serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -260,9 +277,13 @@ html[data-mood="celebrate"] .font-display {
 
 .em-landing-hero {
   position: relative;
-  background-color: var(--background);
+  background-color: var(--surface-warm);
   border-bottom: 1px solid var(--border);
   overflow: hidden;
+}
+
+.dark .em-landing-hero {
+  background-color: var(--background);
 }
 
 /* Dégradés radiaux chaleureux & élégants (Prestige & Célébration) */
@@ -305,8 +326,8 @@ html[data-mood="celebrate"] .font-display {
 .dark .em-landing-hero::before {
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--festive-accent) 12%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 10%, transparent) 45%,
+    color-mix(in srgb, var(--festive-accent) 18%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 12%, transparent) 45%,
     transparent 70%
   );
 }
@@ -314,8 +335,8 @@ html[data-mood="celebrate"] .font-display {
 .dark .em-landing-hero::after {
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--primary) 16%, transparent) 0%,
-    color-mix(in srgb, var(--festive-accent) 8%, transparent) 50%,
+    color-mix(in srgb, var(--primary) 18%, transparent) 0%,
+    color-mix(in srgb, var(--festive-accent) 12%, transparent) 50%,
     transparent 75%
   );
 }
@@ -363,8 +384,8 @@ html[data-mood="celebrate"] .font-display {
   max-height: 600px;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--brand-accent) 10%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 5%, transparent) 55%,
+    color-mix(in srgb, var(--festive-accent) 10%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 6%, transparent) 55%,
     transparent 75%
   );
 }
@@ -413,10 +434,20 @@ html[data-mood="celebrate"] .font-display {
 .dark .em-landing-section-glow-alt::after {
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--brand-accent) 12%, transparent) 0%,
-    color-mix(in srgb, var(--primary) 8%, transparent) 50%,
+    color-mix(in srgb, var(--festive-accent) 14%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 10%, transparent) 50%,
     transparent 75%
   );
+}
+
+.em-stage {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 82% -10%, color-mix(in srgb, var(--primary) 28%, transparent), transparent 52%),
+    radial-gradient(ellipse at 12% 110%, color-mix(in srgb, var(--festive-accent) 22%, transparent), transparent 48%),
+    var(--stage);
+  color: var(--stage-foreground);
 }
 
 /* ─── Ambiance et dégradés pour le Dashboard ─── */
@@ -635,7 +666,7 @@ html[data-mood="celebrate"] .font-display {
 
 .em-hud-card:hover .em-glow-icon-box {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-foreground);
   box-shadow: 0 0 24px 0 color-mix(in srgb, var(--primary) 60%, transparent);
 }
 

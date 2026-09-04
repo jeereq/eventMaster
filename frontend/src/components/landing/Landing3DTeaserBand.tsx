@@ -14,23 +14,20 @@ export default function Landing3DTeaserBand() {
   return (
     <section className="py-10 sm:py-14 border-t border-border bg-gradient-to-b from-surface/90 to-surface-muted/50">
       <div className="page-container relative z-10">
-        <div className="rounded-[var(--radius-card)] border border-primary/25 bg-slate-950 text-white p-6 sm:p-10 relative overflow-hidden shadow-xl">
-          {/* Éléments de fond décoratifs */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="rounded-[var(--radius-card)] border border-primary/30 em-stage p-6 sm:p-10 shadow-xl">
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8">
             <div className="max-w-2xl space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-primary text-xs font-semibold">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-festive-accent/30 text-festive-on-stage text-xs font-semibold">
                 <Box className="w-3.5 h-3.5" />
                 <span>Plans de salle 2D & Immersion 3D</span>
               </div>
 
-              <h2 className="font-display text-xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-snug">
+              <h2 className="font-display text-xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-stage-foreground leading-snug">
                 Modélisez vos réceptions au millimètre et placez vos invités
               </h2>
 
-              <p className="text-xs sm:text-sm text-white/80 leading-relaxed max-w-xl">
+              <p className="text-xs sm:text-sm text-stage-foreground/80 leading-relaxed max-w-xl">
                 <span className="hidden sm:inline">
                   Tables rondes, scènes d’honneur, allées et éclairages : testez nos modèles 2D/3D prêts à l'emploi directement dans votre navigateur.
                 </span>
@@ -40,21 +37,21 @@ export default function Landing3DTeaserBand() {
               </p>
 
               {/* 4 points clés en capsules compactes */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] sm:text-xs text-white/90 font-medium">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] sm:text-xs text-stage-foreground/90 font-medium">
                 <div className="flex items-center gap-1.5">
-                  <LayoutGrid className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <LayoutGrid className="w-3.5 h-3.5 text-brand-accent shrink-0" />
                   <span>Plan 2D coté</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <Eye className="w-3.5 h-3.5 text-primary shrink-0" />
                   <span>Visite 3D 360°</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <Users className="w-3.5 h-3.5 text-festive-on-stage shrink-0" />
                   <span>Placement VIP</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <ScanLine className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <ScanLine className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                   <span>Accueil QR</span>
                 </div>
               </div>

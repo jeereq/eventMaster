@@ -213,7 +213,7 @@ export default function LandingHeroPreview({
 
           <span className="text-xs text-muted font-medium">
             {isLoggedIn ? (
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="text-primary font-semibold">
                 Connecté · Accès direct à votre espace
               </span>
             ) : (
@@ -238,8 +238,8 @@ export default function LandingHeroPreview({
                 className={cn(
                   'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 flex flex-col justify-between h-full group hover:border-primary/60 hover:shadow-md cursor-pointer block',
                   act.highlight
-                    ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/30'
-                    : 'bg-surface/80 dark:bg-slate-900/60 border-border',
+                    ? 'bg-festive-accent-soft border-festive-accent/40 ring-1 ring-festive-accent/25'
+                    : 'bg-surface/80 dark:bg-surface/70 border-border',
                 )}
               >
                 <div className="space-y-1.5 sm:space-y-2 mb-2.5 sm:mb-3">

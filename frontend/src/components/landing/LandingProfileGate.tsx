@@ -101,7 +101,7 @@ export default function LandingProfileGate({
                 'p-3.5 rounded-xl text-left border transition-all flex flex-col justify-between gap-2.5 touch-manipulation relative active:scale-[0.98]',
                 selected
                   ? 'border-2 border-primary bg-primary/10 shadow-md shadow-primary/20 ring-1 ring-primary/40'
-                  : 'bg-surface/90 dark:bg-slate-900/80 border-border hover:border-primary/40',
+                  : 'bg-surface/90 dark:bg-surface/80 border-border hover:border-primary/40',
               )}
             >
               <div className="flex items-center justify-between gap-1 w-full">
@@ -167,7 +167,7 @@ export default function LandingProfileGate({
                 className={cn(
                   'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group cursor-pointer select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                   selected
-                    ? 'border-2 border-primary bg-surface dark:bg-slate-900/90 shadow-xl shadow-primary/25 ring-2 ring-primary/30 scale-[1.01] z-10'
+                    ? 'border-2 border-primary bg-surface dark:bg-surface shadow-xl shadow-primary/25 ring-2 ring-primary/30 scale-[1.01] z-10'
                     : 'em-hud-card border-border hover:border-primary/50 hover:bg-surface/90',
                 )}
               >

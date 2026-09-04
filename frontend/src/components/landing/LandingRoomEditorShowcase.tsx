@@ -182,8 +182,8 @@ export default function LandingRoomEditorShowcase() {
                 className={cn(
                   'rounded-[var(--radius-card)] p-5 sm:p-6 border transition-all duration-200 flex flex-col justify-between group hover:shadow-lg',
                   feat.primary
-                    ? 'em-hud-card border-primary/40 bg-surface dark:bg-slate-900/90 ring-1 ring-primary/30'
-                    : 'em-hud-card border-border bg-surface/90 dark:bg-slate-900/60',
+                    ? 'em-hud-card border-primary/40 bg-surface dark:bg-surface ring-1 ring-primary/30'
+                    : 'em-hud-card border-border bg-surface/90 dark:bg-surface/80',
                 )}
               >
                 <div className="space-y-4">
