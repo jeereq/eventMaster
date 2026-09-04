@@ -48,6 +48,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
       return { title: 'Marketplace', subtitle: 'Salles, prestataires et matériel & équipements' };
     }
     if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
+    if (pathname.startsWith('/dashboard/admin/payments')) return { title: 'Paiements', subtitle: 'Tentatives et sources' };
     if (pathname.startsWith('/dashboard/admin/payouts')) return { title: 'Versements SaaS', subtitle: 'Commissions hors plateforme' };
     if (pathname.startsWith('/dashboard/admin/events')) return { title: 'Événements', subtitle: 'Console Super Admin' };
     if (pathname.startsWith('/dashboard/admin/guests')) return { title: 'Invités', subtitle: 'Console Super Admin' };

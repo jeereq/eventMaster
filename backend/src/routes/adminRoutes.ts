@@ -71,6 +71,10 @@ import {
   toggleVenueBlock,
   toggleOfferingBlock,
 } from '../controllers/adminCatalogController';
+import {
+  getAdminPaymentsOverview,
+  listAdminPaymentAttempts,
+} from '../controllers/adminPaymentsController';
 
 const router = Router();
 
@@ -126,6 +130,9 @@ router.patch('/catalog/venues/:id/visibility', setVenueListingVisibility);
 router.patch('/catalog/offerings/:id/visibility', setServiceOfferingVisibility);
 router.patch('/catalog/venues/:id/unpublish', unpublishVenueListing);
 router.patch('/catalog/offerings/:id/unpublish', unpublishServiceOffering);
+
+router.get('/payments/overview', getAdminPaymentsOverview);
+router.get('/payments/attempts', listAdminPaymentAttempts);
 
 router.put('/tenants/:id', updateTenantPlanOrLicense);
 router.delete('/tenants/:id', deleteTenant);

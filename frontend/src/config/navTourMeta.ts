@@ -79,6 +79,12 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'File des commissions des commerciaux plateforme : EventMaster verse hors plateforme, puis le Super Admin joint une preuve et un motif. Distinct du 8 % marketplace (Catalogue).',
     route: '/dashboard/admin/payouts',
   },
+  'nav-payments-admin': {
+    title: 'Paiements',
+    description:
+      'Journal de toutes les tentatives de paiement (billets, abonnements, jetons IA) — abouties, en cours ou échouées — avec récapitulatif par source et canal FlexPay.',
+    route: '/dashboard/admin/payments',
+  },
   'nav-settings': {
     title: 'Configurations',
     description:

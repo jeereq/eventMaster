@@ -57,6 +57,8 @@ export function catalogueReturnBackLabel(href: string): string {
   if (path === '/dashboard/rooms') return 'Salles';
   if (path === '/dashboard/marketplace') return 'Prestations';
   if (path === '/dashboard/admin/catalogue') return 'Catalogue';
+  if (path === '/dashboard/admin/payments') return 'Paiements';
+  if (path === '/dashboard/admin/payouts') return 'Versements SaaS';
   if (path === '/dashboard/catalogue') {
     const hub = params.get('hub');
     if (hub === 'favorites') return 'Favoris';
