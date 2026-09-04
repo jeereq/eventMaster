@@ -429,12 +429,16 @@ export function validateRsvpFieldsForReporting(fields: RsvpField[]): string[] {
     const field = normalizeRsvpField(raw);
     const key = (field.analyticsKey || '').trim();
     if (!key) {
-      issues.push(`Champ #${index + 1} (« ${field.label} ») : clé analytique manquante.`);
+      issues.push(
+        `Le champ « ${field.label || `#${index + 1}`} » n’a pas d’identifiant d’export. Donnez-lui un libellé clair.`,
+      );
       return;
     }
     const lower = key.toLowerCase();
     if (keys.has(lower)) {
-      issues.push(`Clé analytique « ${key} » dupliquée (champs « ${keys.get(lower)} » et « ${field.label} »).`);
+      issues.push(
+        `Deux champs (« ${keys.get(lower)} » et « ${field.label} ») produisent le même identifiant d’export. Renommez l’un des libellés pour les distinguer dans les statistiques.`,
+      );
     } else {
       keys.set(lower, field.label);
     }
