@@ -50,6 +50,7 @@ export async function composeTemplateWithAi(input: {
   prompt: string;
   imageUrls: string[];
   generateBackground?: boolean;
+  embedText?: boolean;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const data = await api.post('/templates/ai/compose', {
@@ -57,6 +58,7 @@ export async function composeTemplateWithAi(input: {
     prompt: input.prompt,
     imageUrls: input.imageUrls,
     generateBackground: input.generateBackground !== false,
+    embedText: Boolean(input.embedText),
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
@@ -72,6 +74,7 @@ export async function composeTemplateWithAiPublic(input: {
   prompt: string;
   files: File[];
   generateBackground?: boolean;
+  embedText?: boolean;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
@@ -83,6 +86,7 @@ export async function composeTemplateWithAiPublic(input: {
     prompt: input.prompt,
     imageDataUrls,
     generateBackground: input.generateBackground !== false,
+    embedText: Boolean(input.embedText),
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
@@ -114,6 +118,48 @@ export function loadAiTemplateDraft(): AiTemplateDraft | null {
     return parsed;
   } catch {
     return null;
+  }
+}
+
+export function generatedImageUrlFromContent(content: TemplateAiComposeContent | null | undefined): string | null {
+  const url = content?.global && typeof content.global === 'object'
+    ? (content.global as Record<string, unknown>).bgImageUrl
+    : null;
+  return typeof url === 'string' && url.trim() ? url.trim() : null;
+}
+
+/** Télécharge l’image générée (blob) ; ouvre un onglet si le navigateur bloque le fetch. */
+export async function downloadAiGeneratedImage(
+  url: string,
+  filename = `invitation-ia-${new Date().toISOString().slice(0, 10)}.png`,
+): Promise<void> {
+  const src = url.trim();
+  if (!src || typeof document === 'undefined') return;
+
+  const trigger = (href: string, revoke?: boolean) => {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (revoke) {
+      window.setTimeout(() => URL.revokeObjectURL(href), 2000);
+    }
+  };
+
+  try {
+    const res = await fetch(src, { mode: 'cors', credentials: 'omit' });
+    if (!res.ok) throw new Error('download-fetch-failed');
+    const blob = await res.blob();
+    trigger(URL.createObjectURL(blob), true);
+  } catch {
+    try {
+      trigger(src);
+    } catch {
+      window.open(src, '_blank', 'noopener,noreferrer');
+    }
   }
 }
 

@@ -74,8 +74,8 @@ Schéma exact :
     "composition": "layout / cadrage observé",
     "hasPeople": true | false,
     "peopleCount": 0,
-    "peopleFaces": "none | per person: age range if visible, precise face shape, eye shape & color, brows, nose contour, lips fullness & cupid bow, jawline, distinctive marks — OBSERVED only",
-    "faceLandmarks": "none | detailed likeness landmarks: bone structure, eye spacing & slant, cheekbones, smile/expression, facial hair lines, scars/moles — sufficient to guarantee 100% identity lock",
+    "peopleFaces": "none | per person: age range if visible, precise face shape, EYES (iris color, eyelid crease, gaze, catchlights), SMILE (closed/half/teeth, dimples, lip asymmetry, cupid bow), CHEEKS (volume, apple, nasolabial softness), brows, nose, jawline, distinctive marks — OBSERVED only, never beautified",
+    "faceLandmarks": "none | detailed likeness landmarks: bone structure, eye spacing & slant, exact smile geometry, natural cheek plumpness, facial hair lines, scars/moles — sufficient to guarantee 100% identity lock without slimming or symmetrizing",
     "skinTones": "none | precise observed skin tone(s) per person (e.g. rich warm mahogany Fitzpatrick VI, golden warm caramel, deep ebony) — STRICT FIDELITY, NEVER lighten or shift tone",
     "hairStyles": "none | hair length, texture (4C curls, precise taper fade, braids bun, dreadlocks), hairline OBSERVED per person",
     "clothingStyles": "none | garment cuts, fabrics (wax pagne, tailored tux, royal satin, embroidery), colors, accessories OBSERVED — preserve faithfully",
@@ -301,12 +301,13 @@ const FACE_POLICY_NO_PEOPLE =
   'FACE POLICY: No people, no faces, no human silhouettes, no invented couples or stock models. Decorative invitation artwork only.';
 
 const FACE_POLICY_KEEP_PEOPLE =
-  'IDENTITY LOCK & ULTRA-REALISM (HIGHEST PRIORITY): The attached reference photo(s) are the ABSOLUTE GROUND TRUTH for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, natural skin tone (rich melanin / bronze / caramel / mahogany / deep ebony undertones intact with natural skin pores, realistic subsurface scattering — NEVER lighten, bleach, or change ethnicity), age appearance, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire. Authentic 35mm photograph aesthetic with natural depth of field and warm ambient celebration lighting. STRICTLY FORBIDDEN: plastic AI skin smoothing, airbrushing, beauty filter, CGI/3D render look, doll-like faces, face swap, age alteration, ethnicity shift, skin tone correction, anime/illustration face, or "lookalike" substitute. Only the luxury background, invitation card border, lighting ambiance, and florals may follow the user brief.';
+  'IDENTITY LOCK & ULTRA-REALISM (HIGHEST PRIORITY): The attached reference photo(s) are the ABSOLUTE GROUND TRUTH for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, natural skin tone (rich melanin / bronze / caramel / mahogany / deep ebony undertones intact with natural skin pores, realistic subsurface scattering — NEVER lighten, bleach, or change ethnicity), age appearance, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire. Authentic 35mm photograph aesthetic with natural depth of field and warm ambient celebration lighting. MICRO-FEATURES (DO NOT BEAUTIFY): EYES — exact iris color, eyelid crease, lash density, sclera, catchlight position and gaze; never enlarge or doll-eye. SMILE / MOUTH — copy the exact smile (closed, half, teeth, dimples, lip asymmetry, cupid\'s bow); do not widen, straighten, or invent a grin. CHEEKS — preserve natural cheek volume, apple of the cheek, nasolabial softness and any plumpness; do not slim, contour, or flatten. STRICTLY FORBIDDEN: plastic AI skin smoothing, airbrushing, beauty filter, CGI/3D render look, doll-like faces, symmetrized "pretty" face, face swap, age alteration, ethnicity shift, skin tone correction, anime/illustration face, or "lookalike" substitute. Only the luxury background, invitation card border, lighting ambiance, and florals may follow the user brief.';
 
 function buildImagePrompt(
   userPrompt: string,
   backgroundPrompt: string,
   analysis: VisualAnalysis | null,
+  options?: { embedText?: boolean },
 ): string {
   const brief = userPrompt.trim().slice(0, 1000);
   const hasPeople = Boolean(analysis?.hasPeople);
@@ -390,18 +391,39 @@ function buildImagePrompt(
 
   parts.push(
     'Conflict rule: faces/skin/hair/clothing from references ALWAYS win over décor; brief only wins for background, florals, paper, lighting mood.',
-    'No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).',
   );
+  if (options?.embedText) {
+    parts.push(
+      '=== EMBEDDED INVITATION TYPOGRAPHY (MANDATORY) ===',
+      'Incrust sharp, correctly spelled luxury invitation lettering ON the artwork itself: names, date, time, venue and greeting extracted from the USER BRIEF (and any cloned card). Elegant serif or script, gold-foil or ink, integrated into the 9:16 layout — not a floating UI overlay, not a watermark.',
+      'Keep faces fully visible; place typography in the lower third or in a refined cartouche that does not cover eyes, smile or cheeks.',
+    );
+  } else {
+    parts.push(
+      'No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).',
+    );
+  }
   return parts.join('\n').slice(0, 5000);
+}
+
+function structureSystemPrompt(embedText: boolean): string {
+  return STRUCTURE_SYSTEM.replace(
+    '- Image print-ready verticale, SANS texte lisible, noms, dates, logos, watermarks (l’éditeur ajoute le texte).',
+    embedText
+      ? '- Image print-ready verticale AVEC typographie d’invitation incrustée (noms, date, lieu extraits du brief), nette, orthographiée, sans recouvrir les visages.'
+      : '- Image print-ready verticale, SANS texte lisible, noms, dates, logos, watermarks (l’éditeur ajoute le texte).',
+  );
 }
 
 async function visionStructure(
   key: string,
   prompt: string,
   imageUrls: string[],
+  options?: { embedText?: boolean },
 ): Promise<VisionResult> {
   const visionModel =
     process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+  const hasRefs = imageUrls.length > 0;
   const userContent: Array<Record<string, unknown>> = [
     {
       type: 'text',
@@ -410,12 +432,15 @@ async function visionStructure(
 ${prompt.slice(0, 1500)}
 """
 
+${hasRefs ? '' : 'AUCUNE IMAGE DE RÉFÉRENCE : compose uniquement à partir du brief (décor + textes). hasPeople=false.'}
+
 Tâches (fidélité stricte — PRIORITÉ VISAGES) :
-1) S’il y a des personnes : inventaire facial DÉTAILLÉ (peopleFaces + faceLandmarks), teinte de peau, cheveux, habits. Ne déduis rien d’invisible.
+1) S’il y a des personnes : inventaire facial DÉTAILLÉ (peopleFaces + faceLandmarks) — yeux (iris, regard, reflets), sourire exact, volume des joues, teinte de peau, cheveux, habits. Ne déduis rien d’invisible. Ne « préttifie » pas.
 2) Liste briefNeeds = besoins EXPLICITEMENT écrits ; briefMustKeep / briefMustChange (décor vs personnes).
 3) Renseigne hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
 4) Produis le JSON (structure éditeur + backgroundPrompt).
-5) backgroundPrompt : si personnes → commence par "IDENTITY LOCK:" + "FACE INVENTORY:" puis "USER BRIEF:" (décor seulement). Sinon → "USER BRIEF:" puis décor.`,
+5) backgroundPrompt : si personnes → commence par "IDENTITY LOCK:" + "FACE INVENTORY:" puis "USER BRIEF:" (décor seulement). Sinon → "USER BRIEF:" puis décor.
+${options?.embedText ? '6) INCRUSTER le texte du brief (noms, date, lieu) dans backgroundPrompt comme typographie d’invitation.' : ''}`,
     },
     ...imageUrls.slice(0, 4).map((url) => ({
       type: 'image_url',
@@ -438,7 +463,7 @@ Tâches (fidélité stricte — PRIORITÉ VISAGES) :
         temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: STRUCTURE_SYSTEM },
+          { role: 'system', content: structureSystemPrompt(Boolean(options?.embedText)) },
           { role: 'user', content: userContent },
         ],
       }),
@@ -459,7 +484,7 @@ Tâches (fidélité stricte — PRIORITÉ VISAGES) :
     const backgroundPrompt =
       typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()
         ? parsed.backgroundPrompt.trim().slice(0, 1800)
-        : `IDENTITY LOCK: Match people in the references exactly (faces, skin, hair, clothing). USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, no readable text.`;
+        : `${hasRefs ? 'IDENTITY LOCK: Match people in the references exactly (faces, skin, hair, clothing, eyes, smile, cheeks). ' : ''}USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, ${options?.embedText ? 'embed invitation typography from the brief.' : 'no readable text.'}`;
     return {
       global: parsed.global,
       elements: parsed.elements,
@@ -577,10 +602,13 @@ async function generateImageWithGpt56Luna(
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean },
+  options?: { hasPeople?: boolean; embedText?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   const model = responsesModel();
   const hasRefs = referenceUrls.length > 0;
+  const textRule = options?.embedText
+    ? 'Embed sharp invitation typography (names, date, venue from the brief) on the card without covering faces.'
+    : 'Do not add readable text, names, dates, logos or watermarks.';
   const hasPeople = Boolean(options?.hasPeople);
 
   // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
@@ -611,9 +639,10 @@ async function generateImageWithGpt56Luna(
 The following reference image(s) show REAL PEOPLE. When you invoke the image_generation tool:
 1. 100% PHOTOGRAPHIC FACIAL LIKENESS: Maintain complete photographic likeness and exact facial identity of each subject.
 2. RAW 35MM REALISM: True-to-life organic skin texture with fine visible pores, natural melanin undertones (rich caramel, bronze, mahogany, deep ebony) with natural soft highlights, authentic eye reflections, natural hair strand textures, and authentic clothing fabrics (wax, satin, velvet, lace).
-3. STRICTLY FORBIDDEN: Airbrushed beauty filters, plastic skin, doll-like faces, CGI 3D looks, face swapping, or ethnicity/age shifting.
-4. INVITATION CLONING: If a reference card is provided or requested, faithfully replicate its layout, arches, borders, and decorative filigree.
-5. Seamlessly integrate the original subject(s) into the luxury vertical invitation card artwork requested in the brief.\n\n${imagePrompt}`
+3. MICRO-FEATURES (DO NOT BEAUTIFY): Copy the exact eyes (iris, crease, lashes, sclera, catchlight, gaze — never doll-eye), the exact smile (closed/half/teeth, dimples, lip asymmetry — do not invent a grin), and natural cheek volume (apple, nasolabial softness — do not slim or contour).
+4. STRICTLY FORBIDDEN: Airbrushed beauty filters, plastic skin, doll-like faces, CGI 3D looks, face swapping, or ethnicity/age shifting.
+5. INVITATION CLONING: If a reference card is provided or requested, faithfully replicate its layout, arches, borders, and decorative filigree.
+6. Seamlessly integrate the original subject(s) into the luxury vertical invitation card artwork requested in the brief.\n\n${imagePrompt}`
     : imagePrompt;
 
   const content: Array<Record<string, unknown>> = hasPeople
@@ -631,7 +660,7 @@ OUTPUT RULES (faces first):
 - Edit/compose from the reference image(s) above — keep the SAME faces, not lookalikes.
 - ${faceBlock}
 - Brief controls décor/ambiance only; never restyle or replace faces to match décor.
-- Do not add readable text, names, dates, logos or watermarks.`,
+- ${textRule}`,
         },
       ]
     : [
@@ -642,7 +671,7 @@ OUTPUT RULES (faces first):
 OUTPUT RULES:
 - ${faceBlock}
 - Apply USER BRIEF for décor.
-- Do not add readable text, names, dates, logos or watermarks.`,
+- ${textRule}`,
         },
         ...refDataUrls.map((image_url) => ({
           type: 'input_image',
@@ -897,7 +926,7 @@ async function generateImageWithNanoBanana(
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean },
+  options?: { hasPeople?: boolean; embedText?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   const model = getNanoBananaModel();
   const hasRefs = referenceUrls.length > 0;
@@ -928,10 +957,12 @@ async function generateImageWithNanoBanana(
 The attached reference photo(s) depict REAL PEOPLE who must appear on this luxury vertical invitation card.
 1. ABSOLUTE FACIAL & CHARACTER FIDELITY: Maintain 100% photographic facial likeness and identity of each person.
 2. RAW 35mm PHOTOGRAPHY: Hyper-realistic photo quality, natural skin micro-texture, visible pores, lifelike melanin undertones (NEVER lighten, bleach, or change ethnicity), authentic eye catchlights, natural hair strand textures, realistic fabrics (wax, satin, velvet, lace).
-3. INVITATION CARD CLONING: If an invitation card sample was provided in the references, faithfully replicate its layout, ornamental borders, arches, paper textures, and aesthetic harmony.
-4. PROPORTIONAL COMPOSITION & NO OVER-REDESIGN: Avoid gaudy digital overlays, heavy artificial graphics, fake 3D stickers, or clutter. Let the authentic human subjects and luxury venue shine with clean, proportional 9:16 portrait spatial hierarchy.
-5. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, doll-like features, 3D CGI look, or altered bone structure.
-6. COMPOSITION: Seamlessly integrate the original subject(s) into the luxury vertical 9:16 invitation card artwork.
+3. MICRO-FEATURES: Copy the exact smile, eye geometry/gaze, and natural cheek plumpness — never beautify or slim the face.
+4. INVITATION CARD CLONING: If an invitation card sample was provided in the references, faithfully replicate its layout, ornamental borders, arches, paper textures, and aesthetic harmony.
+5. PROPORTIONAL COMPOSITION & NO OVER-REDESIGN: Avoid gaudy digital overlays, heavy artificial graphics, fake 3D stickers, or clutter. Let the authentic human subjects and luxury venue shine with clean, proportional 9:16 portrait spatial hierarchy.
+6. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, doll-like features, 3D CGI look, or altered bone structure.
+7. COMPOSITION: Seamlessly integrate the original subject(s) into the luxury vertical 9:16 invitation card artwork.
+${options?.embedText ? '8. EMBEDDED TEXT: Render sharp invitation typography from the brief on the card, never over faces.' : ''}
 
 ${imagePrompt}`
     : `CRITICAL MANDATE - NANO BANANA LUXURY INVITATION ARTWORK & CARD CLONING:
@@ -939,6 +970,7 @@ Generate a breathtaking, ultra-high-definition vertical 9:16 luxury invitation a
 - REALISTIC TEXTURES: Fine luxury paper grain, metallic gold foil embossing, soft dimensional depth, natural floral arrangements.
 - INVITATION CLONING: If reference images contain an existing invitation card, faithfully reproduce its framing, ornaments, color scheme, and aesthetic composition.
 - NO OVER-REDESIGN: Clean, refined, high-end photographic print aesthetic without cheap digital artifacts or gaudy fake 3D overlays. Maintain balanced proportional sizes.
+${options?.embedText ? '- EMBEDDED TEXT: Render sharp invitation typography from the brief (names, date, venue) as part of the artwork.' : ''}
 
 ${imagePrompt}`;
 
@@ -1085,7 +1117,7 @@ async function createNewInvitationImage(
   imageUrls: string[],
   imagePrompt: string,
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean },
+  options?: { hasPeople?: boolean; embedText?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   // 1) Priorité demandée : Nano Banana (Gemini 3.1 Flash Image)
   const nanoKey = getNanoBananaApiKey();
@@ -1161,26 +1193,30 @@ export async function composeInvitationTemplateAi(input: {
   prompt: string;
   imageUrls: string[];
   generateBackground?: boolean;
+  embedText?: boolean;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const prompt = String(input.prompt || '').trim();
   if (prompt.length < 8) {
     fail(400, 'Décrivez le style d’invitation souhaité (au moins quelques mots).');
   }
+  const embedText = Boolean(input.embedText);
   const imageUrls = (input.imageUrls || [])
     .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))
     .map((u) => u.trim())
     .slice(0, 4);
-  if (!imageUrls.length) {
-    fail(400, 'Ajoutez au moins une image de référence (URL).');
-  }
 
   const key = requireOpenAiKey();
-  const structured = await visionStructure(key, prompt, imageUrls);
+  const structured = await visionStructure(key, prompt, imageUrls, { embedText });
+  if (!imageUrls.length && structured.visualAnalysis) {
+    structured.visualAnalysis.hasPeople = false;
+    structured.visualAnalysis.peopleCount = 0;
+  }
   const imagePrompt = buildImagePrompt(
     prompt,
     structured.backgroundPrompt,
     structured.visualAnalysis,
+    { embedText },
   );
 
   let bgImageUrl = '';
@@ -1193,7 +1229,10 @@ export async function composeInvitationTemplateAi(input: {
         imageUrls,
         imagePrompt,
         input.tenantId,
-        { hasPeople: Boolean(structured.visualAnalysis?.hasPeople) },
+        {
+          hasPeople: Boolean(structured.visualAnalysis?.hasPeople) && imageUrls.length > 0,
+          embedText,
+        },
       );
       bgImageUrl = created.url;
       imageMode = created.mode;
@@ -1208,7 +1247,11 @@ export async function composeInvitationTemplateAi(input: {
   if (structured.visualAnalysis) {
     (global as Record<string, unknown>).aiVisualAnalysis = structured.visualAnalysis;
   }
-  const elements = sanitizeElements(structured.elements);
+  (global as Record<string, unknown>).aiEmbedText = embedText;
+  let elements = sanitizeElements(structured.elements);
+  if (embedText) {
+    elements = elements.filter((el) => el.type === 'rsvp-block');
+  }
   if (!elements.some((el) => el.type === 'rsvp-block')) {
     elements.push({
       id: `ai-rsvp-${Date.now()}`,

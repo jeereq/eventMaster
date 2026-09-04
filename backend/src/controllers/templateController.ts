@@ -437,6 +437,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     }
     const prompt = typeof body.prompt === 'string' ? body.prompt : '';
     const generateBackground = body.generateBackground !== false;
+    const embedText = body.embedText === true;
     const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
 
     await requireAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST);
@@ -446,6 +447,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       prompt,
       imageUrls,
       generateBackground,
+      embedText,
     });
     const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST);
     const historyId = await persistTemplateCompose({
@@ -492,6 +494,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     }
     const prompt = typeof body.prompt === 'string' ? body.prompt : '';
     const generateBackground = body.generateBackground !== false;
+    const embedText = body.embedText === true;
     const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
     const rateKey = user?.id || req.ip || deviceId;
 
@@ -502,6 +505,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       prompt,
       imageUrls,
       generateBackground,
+      embedText,
     });
     const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST);
     const historyId = await persistTemplateCompose({

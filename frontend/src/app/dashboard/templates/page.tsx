@@ -11,7 +11,8 @@ import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buil
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
-import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft } from '@/lib/templateAiCompose';
+import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage } from '@/lib/templateAiCompose';
+import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
  fetchAiTemplateComposeHistoryStudio,
  type AiTemplateComposeHistoryItem,
@@ -32,7 +33,7 @@ import {
  Columns, Eye, CheckSquare, Loader2, XCircle,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
- Undo2, Redo2, History
+ Undo2, Redo2, History, Download
 } from 'lucide-react';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
@@ -307,6 +308,8 @@ export default function TemplatesPage() {
  const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
  const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
+ const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
+ const [aiImageDownloading, setAiImageDownloading] = useState(false);
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
@@ -1040,10 +1043,6 @@ export default function TemplatesPage() {
 
  const handleAiComposeGenerate = async () => {
  if (!canUseCustomTemplates || aiComposeBusy) return;
- if (aiComposeFiles.length < 1) {
- setError('Ajoutez au moins une image de référence.');
- return;
- }
  if (aiComposePrompt.trim().length < 8) {
  setError('Décrivez le style souhaité (quelques mots minimum).');
  return;
@@ -1058,7 +1057,7 @@ export default function TemplatesPage() {
 
  setError('');
  setAiComposeBusy(true);
- setAiComposeStage('Envoi des images…');
+ setAiComposeStage(aiComposeFiles.length ? 'Envoi des images…' : 'Lecture du brief…');
  try {
  const uploadedUrls: string[] = [];
  for (let i = 0; i < aiComposeFiles.length; i += 1) {
@@ -1066,11 +1065,18 @@ export default function TemplatesPage() {
  const uploaded = await uploadImageFile(aiComposeFiles[i]);
  uploadedUrls.push(uploaded.url);
  }
- setAiComposeStage('Analyse des images et du brief…');
+ setAiComposeStage(
+ aiComposeFiles.length
+ ? 'Analyse des visages et du brief…'
+ : aiComposeEmbedText
+ ? 'Composition de la carte et de la typographie…'
+ : 'Composition de la carte à partir du brief…',
+ );
  const resultPromise = composeTemplateWithAi({
  prompt: aiComposePrompt.trim(),
  imageUrls: uploadedUrls,
  generateBackground: true,
+ embedText: aiComposeEmbedText,
  });
  // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
  const stageTimer = window.setTimeout(() => {
@@ -1148,7 +1154,7 @@ export default function TemplatesPage() {
  Créer avec l’IA
  </h2>
  <p className="text-[11px] text-muted mt-1 leading-relaxed">
- L’IA applique votre brief, analyse vos images, puis crée une nouvelle image ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Les visages présents sont conservés — aucun visage inventé.
+ Brief seul ou photos + brief ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Yeux, sourire et joues restent fidèles aux photos.
  </p>
  </div>
  <button
@@ -1183,7 +1189,7 @@ export default function TemplatesPage() {
  </div>
 
  <div>
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Images (1–4)</label>
+ <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Images optionnelles (1–4)</label>
  <input
  ref={aiComposeInputRef}
  type="file"
@@ -1199,7 +1205,7 @@ export default function TemplatesPage() {
  className="mt-1.5 w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition disabled:opacity-50"
  >
  <Upload className="w-4 h-4" />
- Ajouter des images
+ Ajouter des photos (optionnel)
  </button>
  {aiComposePreviewUrls.length > 0 && (
  <div className="mt-2 flex flex-wrap gap-2">
@@ -1244,6 +1250,38 @@ export default function TemplatesPage() {
  compact
  />
  </div>
+
+ <button
+ type="button"
+ role="switch"
+ aria-checked={aiComposeEmbedText}
+ disabled={aiComposeBusy}
+ onClick={() => setAiComposeEmbedText((v) => !v)}
+ className={`mt-3 w-full flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:opacity-60 ${
+ aiComposeEmbedText
+ ? 'border-primary/40 bg-primary/10'
+ : 'border-border bg-surface-muted/40 hover:border-primary/30'
+ }`}
+ >
+ <span
+ className={`mt-0.5 w-9 h-5 rounded-full relative shrink-0 ${
+ aiComposeEmbedText ? 'bg-primary' : 'bg-border'
+ }`}
+ aria-hidden
+ >
+ <span
+ className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform ${
+ aiComposeEmbedText ? 'translate-x-4' : ''
+ }`}
+ />
+ </span>
+ <span className="min-w-0">
+ <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
+ <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
+ Noms, date et lieu du brief sont dessinés sur la carte. Aucune photo n’est obligatoire.
+ </span>
+ </span>
+ </button>
  </div>
 
  {aiComposeStage && (
@@ -1275,7 +1313,7 @@ export default function TemplatesPage() {
  </button>
  <button
  type="button"
- disabled={aiComposeBusy || !aiComposeFiles.length || aiComposePrompt.trim().length < 8}
+ disabled={aiComposeBusy || aiComposePrompt.trim().length < 8}
  onClick={handleAiComposeGenerate}
  className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md inline-flex items-center gap-2"
  >
@@ -1284,6 +1322,12 @@ export default function TemplatesPage() {
  </button>
  </div>
  </div>
+ <AiComposeFullscreenLoader
+ active={aiComposeBusy}
+ embedText={aiComposeEmbedText}
+ hasReferences={aiComposeFiles.length > 0}
+ stageHint={aiComposeStage}
+ />
  </div>
  );
  };
@@ -2096,6 +2140,26 @@ export default function TemplatesPage() {
  )}
  </button>
  </div>
+ {bgImageUrl ? (
+ <button
+ type="button"
+ disabled={aiImageDownloading}
+ onClick={async () => {
+ if (!bgImageUrl || aiImageDownloading) return;
+ setAiImageDownloading(true);
+ try {
+ await downloadAiGeneratedImage(bgImageUrl);
+ } finally {
+ setAiImageDownloading(false);
+ }
+ }}
+ className="inline-flex min-h-11 items-center justify-center gap-2 px-3.5 py-2.5 border border-border font-bold rounded-[var(--radius-button)] text-sm text-muted hover:border-primary hover:text-primary transition disabled:opacity-60"
+ title="Télécharger l’image générée"
+ >
+ {aiImageDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+ <span className="hidden sm:inline">Télécharger</span>
+ </button>
+ ) : null}
  <button
  type="button"
  onClick={() => setShowGuestPreview((v) => !v)}
@@ -4002,6 +4066,7 @@ export default function TemplatesPage() {
  />
  </div>
  {bgImageUrl && (
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
  <button
  type="button"
  onClick={() => handleOpenCropper('background')}
@@ -4010,6 +4075,24 @@ export default function TemplatesPage() {
  <Crop className="w-3.5 h-3.5" />
  Rogner l'image de fond
  </button>
+ <button
+ type="button"
+ disabled={aiImageDownloading}
+ onClick={async () => {
+ if (!bgImageUrl || aiImageDownloading) return;
+ setAiImageDownloading(true);
+ try {
+ await downloadAiGeneratedImage(bgImageUrl);
+ } finally {
+ setAiImageDownloading(false);
+ }
+ }}
+ className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20 shadow-sm disabled:opacity-60"
+ >
+ {aiImageDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+ Télécharger l'image
+ </button>
+ </div>
  )}
  </div>
  )}

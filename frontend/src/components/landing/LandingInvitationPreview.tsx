@@ -39,6 +39,8 @@ export interface LandingInvitationPreviewProps {
   variant?: 'default' | 'hero' | 'compact' | 'studio';
   className?: string;
   showOnlyBackground?: boolean;
+  /** Masque le badge « illustration HD » sur la vue cover. */
+  showCaption?: boolean;
   aspectRatio?: 'auto' | 'portrait' | 'card' | '9/16';
   fitMode?: 'cover' | 'contain';
 }
@@ -339,6 +341,7 @@ export default function LandingInvitationPreview({
   variant,
   className = '',
   showOnlyBackground = false,
+  showCaption = true,
   aspectRatio = 'auto',
   fitMode = 'cover',
 }: LandingInvitationPreviewProps) {
@@ -408,11 +411,13 @@ export default function LandingInvitationPreview({
 
       {/* Si l'utilisateur choisit d'admirer uniquement l'illustration générée */}
       {showOnlyBackground ? (
-        <div className="relative z-10 flex flex-col items-center justify-end h-full p-3 pointer-events-none">
-          <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/20 shadow-sm animate-fade-in">
-            Illustration haute définition générée par IA
-          </span>
-        </div>
+        showCaption ? (
+          <div className="relative z-10 flex flex-col items-center justify-end h-full p-3 pointer-events-none">
+            <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/20 shadow-sm animate-fade-in">
+              Illustration haute définition générée par IA
+            </span>
+          </div>
+        ) : null
       ) : (
         <>
           {/* Rendu réaliste et proportionnel : aucun gros bloc opaque ne masque la photo */}

@@ -27,6 +27,7 @@ import {
   ZoomIn,
   Clock,
   RotateCcw,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -42,9 +43,12 @@ import LandingInvitationPreview from '@/components/landing/LandingInvitationPrev
 import {
   composeTemplateWithAiPublic,
   saveAiTemplateDraft,
+  downloadAiGeneratedImage,
+  generatedImageUrlFromContent,
   type TemplateAiComposeContent,
   type TemplateAiComposeResult,
 } from '@/lib/templateAiCompose';
+import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
   fetchAiTemplateComposeHistory,
   type AiTemplateComposeHistoryItem,
@@ -137,7 +141,7 @@ function elementSummary(content: TemplateAiComposeContent | null) {
 }
 
 const STAGE_STEPS = [
-  { id: 'upload', label: 'Images' },
+  { id: 'brief', label: 'Brief' },
   { id: 'analyse', label: 'Analyse' },
   { id: 'image', label: 'Image' },
   { id: 'ready', label: 'Aperçu' },
@@ -194,6 +198,8 @@ export default function LandingInvitationAiGenerator({
   const [previewTab, setPreviewTab] = useState<'card' | 'artwork' | 'details'>('card');
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [embedText, setEmbedText] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const logAction = (
     type: FormActionItem['type'],
@@ -290,6 +296,20 @@ export default function LandingInvitationAiGenerator({
   );
   const palette = useMemo(() => paletteFromContent(result), [result]);
   const elements = useMemo(() => elementSummary(result), [result]);
+  const generatedImageUrl = useMemo(() => generatedImageUrlFromContent(result), [result]);
+  const resultEmbedText = Boolean(
+    result?.global && typeof result.global === 'object' && (result.global as Record<string, unknown>).aiEmbedText,
+  );
+
+  const handleDownloadGenerated = async () => {
+    if (!generatedImageUrl || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadAiGeneratedImage(generatedImageUrl);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -341,10 +361,6 @@ export default function LandingInvitationAiGenerator({
 
   const handleGenerate = async () => {
     if (busy) return;
-    if (files.length < 1) {
-      setError('Ajoutez au moins une image de référence.');
-      return;
-    }
     if (prompt.trim().length < 8) {
       setError('Décrivez le style souhaité (quelques mots minimum).');
       return;
@@ -367,16 +383,27 @@ export default function LandingInvitationAiGenerator({
     setLastStageMeta(null);
     setActiveHistoryId(null);
     setActiveStep(1);
-    setStage('Analyse des images et du brief…');
+    setStage(
+      files.length
+        ? 'Analyse des visages et du brief…'
+        : embedText
+          ? 'Composition de la carte et de la typographie…'
+          : 'Composition de la carte à partir du brief…',
+    );
     const tick = window.setTimeout(() => {
       setActiveStep(2);
-      setStage('Création de la nouvelle image…');
+      setStage(
+        embedText
+          ? 'Incrustation des textes dans l’image…'
+          : 'Création de la nouvelle image…',
+      );
     }, 2800);
 
     try {
       const data = await composeTemplateWithAiPublic({
         prompt: prompt.trim(),
         files,
+        embedText,
       });
       setResult(data.content);
       setLastStageMeta(data.stage || null);
@@ -505,7 +532,7 @@ export default function LandingInvitationAiGenerator({
                 </span>
               </div>
               <p className="text-xs text-muted truncate max-w-xl">
-                Photos + brief → aperçu personnalisé généré en quelques secondes. Déroulez pour créer ou cloner votre invitation.
+                Brief seul ou photos + brief → invitation 9:16. Déroulez le studio pour créer ou cloner.
               </p>
             </div>
           </div>
@@ -549,7 +576,7 @@ export default function LandingInvitationAiGenerator({
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                    Images + brief → aperçu éditable. Les visages réels sont fidèlement reproduits à 100%.
+                    Brief seul ou photos + brief. Yeux, sourire et joues restent fidèles aux références.
                   </p>
                 </div>
               </div>
@@ -571,6 +598,7 @@ export default function LandingInvitationAiGenerator({
                   type="button"
                   size="sm"
                   variant="secondary"
+                  disabled={busy}
                   onClick={() => setIsExpanded(false)}
                   rightIcon={<ChevronUp className="w-4 h-4" />}
                   aria-expanded={true}
@@ -702,7 +730,7 @@ export default function LandingInvitationAiGenerator({
                 aria-label={
                   files.length >= 4
                     ? 'Maximum de 4 images atteint'
-                    : 'Ajouter 1 à 4 images de référence (JPEG, PNG ou WebP)'
+                    : 'Ajouter jusqu’à 4 photos optionnelles (JPEG, PNG ou WebP)'
                 }
                 aria-disabled={busy || files.length >= 4}
                 aria-controls={previews.length ? `${id}-refs` : undefined}
@@ -735,8 +763,10 @@ export default function LandingInvitationAiGenerator({
                 )}
               >
                 <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
-                <p className="text-sm font-bold text-foreground">Déposez 1 à 4 photos ou cartes à copier</p>
-                <p className="text-xs text-muted mt-0.5">Visages réels à conserver ou carton d’invitation à cloner</p>
+                <p className="text-sm font-bold text-foreground">Photos optionnelles (1 à 4) ou carte à cloner</p>
+                <p className="text-xs text-muted mt-0.5">
+                  Sans image : carte générée depuis le brief. Avec photos : visages (yeux, sourire, joues) conservés.
+                </p>
               </div>
 
               {previews.length > 0 && (
@@ -811,6 +841,41 @@ export default function LandingInvitationAiGenerator({
                   className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
                 />
 
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={embedText}
+                  disabled={busy}
+                  onClick={() => setEmbedText((v) => !v)}
+                  className={cn(
+                    'w-full flex items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
+                    embedText
+                      ? 'border-primary/40 bg-primary/10'
+                      : 'border-border bg-surface-muted/40 hover:border-primary/30',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'mt-0.5 w-9 h-5 rounded-full relative shrink-0 transition-colors',
+                      embedText ? 'bg-primary' : 'bg-border',
+                    )}
+                    aria-hidden
+                  >
+                    <span
+                      className={cn(
+                        'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform',
+                        embedText && 'translate-x-4',
+                      )}
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
+                    <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
+                      Noms, date et lieu du brief sont dessinés sur la carte. Aucune photo n’est obligatoire.
+                    </span>
+                  </span>
+                </button>
+
                 <div className="flex items-center justify-between text-xs pt-0.5">
                   <span className="text-muted text-[11px]">Besoin d’inspiration ou d’un modèle clé en main ?</span>
                   <button
@@ -849,25 +914,11 @@ export default function LandingInvitationAiGenerator({
                 </Alert>
               ) : null}
 
-              {busy ? (
-                <div
-                  className="rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 flex items-center gap-3"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0 motion-reduce:animate-none" aria-hidden />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground break-words">{stage || 'Génération en cours…'}</p>
-                    <p className="text-[11px] text-muted mt-0.5">Environ 20–40 s selon les images.</p>
-                  </div>
-                </div>
-              ) : null}
-
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button
                   type="button"
                   onClick={handleGenerate}
-                  disabled={busy || !files.length || prompt.trim().length < 8}
+                  disabled={busy || prompt.trim().length < 8}
                   leftIcon={
                     busy ? (
                       <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
@@ -1038,6 +1089,22 @@ export default function LandingInvitationAiGenerator({
             {previewTemplate ? (
               <div className="flex items-center gap-1.5">
                 {/* Bouton pour inspecter l'image HD originale sans aucune découpe */}
+                {generatedImageUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadGenerated()}
+                    disabled={downloading}
+                    className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-9 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs disabled:opacity-60"
+                    title="Télécharger l’image générée"
+                  >
+                    {downloading ? (
+                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin motion-reduce:animate-none" aria-hidden />
+                    ) : (
+                      <Download className="w-3.5 h-3.5 text-primary" aria-hidden />
+                    )}
+                    <span className="hidden sm:inline">Télécharger</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setLightboxOpen(true)}
@@ -1149,7 +1216,8 @@ export default function LandingInvitationAiGenerator({
                 <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center">
                   <LandingInvitationPreview
                     template={previewTemplate}
-                    showOnlyBackground={false}
+                    showOnlyBackground={resultEmbedText}
+                    showCaption={false}
                     fitMode={coverFitMode}
                     aspectRatio="9/16"
                     className="!w-full !max-w-[320px] sm:!max-w-[340px]"
@@ -1163,13 +1231,16 @@ export default function LandingInvitationAiGenerator({
                   <LandingInvitationPreview
                     template={previewTemplate}
                     showOnlyBackground={true}
+                    showCaption={!resultEmbedText}
                     fitMode={coverFitMode}
                     aspectRatio="9/16"
                     className="!w-full !max-w-[320px] sm:!max-w-[340px]"
                   />
                   <div className="px-2 py-1 text-center">
                     <p className="text-[11px] text-muted">
-                      Illustration HD d'origine sans superposition : découvrez la fidélité des visages, le grain 35mm et les dorures.
+                      {resultEmbedText
+                        ? 'Image finale avec typographie incrustée : noms, date et lieu font partie du visuel.'
+                        : 'Illustration HD d’origine sans superposition : fidélité des visages, grain 35 mm et dorures.'}
                     </p>
                   </div>
                 </div>
@@ -1254,6 +1325,24 @@ export default function LandingInvitationAiGenerator({
                 >
                   {user ? 'Ouvrir dans le studio' : 'Continuer et éditer'}
                 </Button>
+                {generatedImageUrl ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void handleDownloadGenerated()}
+                    disabled={downloading}
+                    leftIcon={
+                      downloading ? (
+                        <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )
+                    }
+                    fullWidth
+                  >
+                    {downloading ? 'Téléchargement…' : 'Télécharger l’image'}
+                  </Button>
+                ) : null}
                 <Button type="button" variant="secondary" onClick={() => setPreviewOpen(true)} fullWidth>
                   Voir l’aperçu large
                 </Button>
@@ -1298,26 +1387,43 @@ export default function LandingInvitationAiGenerator({
                 <Button type="button" variant="secondary" onClick={() => setLightboxOpen(false)}>
                   Fermer
                 </Button>
-                {typeof (previewTemplate?.previewContent?.global as Record<string, unknown>)?.bgImageUrl === 'string' && (
-                  <a
-                    href={(previewTemplate?.previewContent?.global as Record<string, unknown>).bgImageUrl as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary-hover transition"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    Ouvrir en plein écran
-                  </a>
-                )}
+                {generatedImageUrl ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => void handleDownloadGenerated()}
+                      disabled={downloading}
+                      leftIcon={
+                        downloading ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
+                        ) : (
+                          <Download className="w-3.5 h-3.5" />
+                        )
+                      }
+                    >
+                      Télécharger
+                    </Button>
+                    <a
+                      href={generatedImageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary-hover transition"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Ouvrir en plein écran
+                    </a>
+                  </>
+                ) : null}
               </div>
             </div>
           }
         >
           <div className="flex flex-col items-center justify-center p-2 sm:p-4 bg-black/95 rounded-2xl overflow-hidden min-h-[300px]">
-            {typeof (previewTemplate?.previewContent?.global as Record<string, unknown>)?.bgImageUrl === 'string' ? (
+            {generatedImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={(previewTemplate?.previewContent?.global as Record<string, unknown>).bgImageUrl as string}
+                src={generatedImageUrl}
                 alt="Image de couverture originale générée par IA"
                 className="max-h-[70vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
               />
@@ -1341,6 +1447,23 @@ export default function LandingInvitationAiGenerator({
             <Button type="button" variant="secondary" onClick={() => setPreviewOpen(false)}>
               Fermer
             </Button>
+            {generatedImageUrl ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void handleDownloadGenerated()}
+                disabled={downloading}
+                leftIcon={
+                  downloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )
+                }
+              >
+                Télécharger
+              </Button>
+            ) : null}
             <Button type="button" onClick={continueToStudio} rightIcon={<ArrowRight className="w-4 h-4" />}>
               {user ? 'Éditer dans le studio' : 'Continuer et éditer'}
             </Button>
@@ -1376,7 +1499,8 @@ export default function LandingInvitationAiGenerator({
             <div className="rounded-2xl border border-border overflow-hidden bg-surface-muted/30 p-2 sm:p-4 flex justify-center">
               <LandingInvitationPreview
                 template={previewTemplate}
-                showOnlyBackground={previewTab === 'artwork'}
+                showOnlyBackground={previewTab === 'artwork' || resultEmbedText}
+                showCaption={previewTab === 'artwork' && !resultEmbedText}
                 fitMode={coverFitMode}
                 aspectRatio="9/16"
                 className="!max-h-[min(70vh,640px)] !max-w-[360px]"
@@ -1390,6 +1514,13 @@ export default function LandingInvitationAiGenerator({
         open={tokenModalOpen}
         onClose={() => setTokenModalOpen(false)}
         onSuccess={() => setAllowance(getAiSimulationAllowance())}
+      />
+
+      <AiComposeFullscreenLoader
+        active={busy && isExpanded}
+        embedText={embedText}
+        hasReferences={files.length > 0}
+        stageHint={stage}
       />
     </section>
   );
