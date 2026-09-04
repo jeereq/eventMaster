@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Building2, Clock, CreditCard, FileText, Loader2, LogIn, Store, Users, Wallet, Download,
@@ -321,6 +320,7 @@ export default function AdminCataloguePage() {
   } | null>(null);
   const [moderationReason, setModerationReason] = useState('');
 
+  const [mapSelectedId, setMapSelectedId] = useState<string | null>(null);
   const [ficheOpen, setFicheOpen] = useState(false);
   const [fiche, setFiche] = useState<TenantOps | null>(null);
   const [ficheLoading, setFicheLoading] = useState(false);
@@ -395,6 +395,10 @@ export default function AdminCataloguePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setMapSelectedId(null);
+  }, [tab, page, q, visibility]);
 
   const openFiche = async (tenantId: string) => {
     setFicheOpen(true);
@@ -523,6 +527,7 @@ export default function AdminCataloguePage() {
   const catalogMarkers = catalogItems
     .filter((item) => item.latitude != null && item.longitude != null)
     .map(catalogueItemToMapMarker);
+  const mapSelected = catalogItems.find((item) => item.id === mapSelectedId) || null;
   const mapMode = (tab === 'venues' || tab === 'offerings' || tab === 'rentals') && isCatalogueMapView(view);
 
   const listingKind = tab === 'venues' ? 'venues' as const : 'offerings' as const;
@@ -608,36 +613,42 @@ export default function AdminCataloguePage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
-        {[
-          { label: 'Salles publiques', value: overview?.venues.publicCount ?? 0 },
-          { label: 'Prestataires publics', value: overview?.trades?.publicCount ?? overview?.offerings.publicCount ?? 0 },
-          { label: 'Matériels & Équipements publics', value: overview?.rentals?.publicCount ?? 0 },
-          { label: 'Devis nouveaux', value: overview?.inquiries.newCount ?? 0 },
-          { label: 'Réservations demandées', value: overview?.bookings.requestedCount ?? 0 },
-          { label: 'Commissions dues', value: formatFc(overview?.commissions?.dueFc ?? 0) },
-        ].map((card) => (
-          <div key={card.label} className="bg-surface px-4 py-3">
-            <div className="text-lg font-semibold text-foreground">{card.value}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted">{card.label}</div>
-          </div>
+      <nav aria-label="Aller à une section" className="flex flex-wrap gap-x-1 gap-y-1">
+        {([
+          { id: 'venues' as CatalogTab, label: 'Salles publiques', value: overview?.venues.publicCount ?? 0 },
+          { id: 'offerings' as CatalogTab, label: 'Prestataires publics', value: overview?.trades?.publicCount ?? overview?.offerings.publicCount ?? 0 },
+          { id: 'rentals' as CatalogTab, label: 'Matériel public', value: overview?.rentals?.publicCount ?? 0 },
+          { id: 'inquiries' as CatalogTab, label: 'Devis nouveaux', value: overview?.inquiries.newCount ?? 0 },
+          { id: 'bookings' as CatalogTab, label: 'Réservations demandées', value: overview?.bookings.requestedCount ?? 0 },
+          { id: 'commissions' as CatalogTab, label: 'Commissions dues', value: formatFc(overview?.commissions?.dueFc ?? 0) },
+        ]).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              setTab(item.id);
+              setPage(1);
+              if (item.id === 'venues' || item.id === 'offerings' || item.id === 'rentals') {
+                setExtras({ ...EMPTY_CATALOGUE_EXTRAS });
+              }
+            }}
+            className={cn(
+              'inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-button)] px-2.5 text-sm transition',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              tab === item.id ? 'text-foreground' : 'text-muted hover:text-foreground',
+            )}
+          >
+            <span className="font-semibold tabular-nums text-foreground">{item.value}</span>
+            <span>{item.label}</span>
+          </button>
         ))}
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
-        {[
-          { label: 'Favoris', value: overview?.engagement?.favorites ?? 0 },
-          { label: 'Packs enregistrés', value: overview?.engagement?.packs ?? 0 },
-          { label: 'GMV salles', value: formatFc(overview?.gmv?.venueFc ?? 0) },
-          { label: 'GMV prestataires', value: formatFc(overview?.gmv?.tradeFc ?? 0) },
-          { label: 'GMV matériel & équipements', value: formatFc(overview?.gmv?.rentalFc ?? 0) },
-        ].map((card) => (
-          <div key={card.label} className="bg-surface px-4 py-3">
-            <div className="text-lg font-semibold text-foreground">{card.value}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted">{card.label}</div>
-          </div>
-        ))}
-      </div>
+      </nav>
+      <p className="text-xs text-muted">
+        GMV : salles {formatFc(overview?.gmv?.venueFc ?? 0)} · prestataires {formatFc(overview?.gmv?.tradeFc ?? 0)} · matériel {formatFc(overview?.gmv?.rentalFc ?? 0)}
+        {(overview?.engagement?.favorites || overview?.engagement?.packs)
+          ? ` · ${overview?.engagement?.favorites ?? 0} favoris · ${overview?.engagement?.packs ?? 0} packs`
+          : ''}
+      </p>
 
       <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Sections du catalogue">
         {tabs.map((item) => (
@@ -683,6 +694,12 @@ export default function AdminCataloguePage() {
         ))}
       </div>
 
+      <div
+        role="tabpanel"
+        id={`catalog-panel-${tab}`}
+        aria-labelledby={`catalog-tab-${tab}`}
+        className="space-y-6"
+      >
       <CatalogueFilterBar
         search={qInput}
         onSearchChange={setQInput}
@@ -807,11 +824,6 @@ export default function AdminCataloguePage() {
         </div>
       )}
 
-      <div
-        role="tabpanel"
-        id={`catalog-panel-${tab}`}
-        aria-labelledby={`catalog-tab-${tab}`}
-      >
       {loading ? (
         (tab === 'venues' || tab === 'offerings' || tab === 'rentals') ? (
           <CatalogueResultsSkeleton mode={mapMode ? 'map' : view === 'list' ? 'list' : 'grid'} count={8} gridCols={gridCols} />
@@ -825,13 +837,31 @@ export default function AdminCataloguePage() {
           catalogMarkers.length === 0 ? (
             <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond aux filtres." />
           ) : (
-            <MarketplaceLocationsMap
-              markers={catalogMarkers}
-              listingSearch
-              navigateOnClick
-              height={480}
-              city={geo.city || null}
-            />
+            <div className="space-y-3">
+              <MarketplaceLocationsMap
+                markers={catalogMarkers}
+                listingSearch
+                height={480}
+                city={geo.city || null}
+                onMarkerSelect={(marker) => setMapSelectedId(marker.id)}
+              />
+              {mapSelected ? (
+                <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 space-y-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{mapSelected.title}</p>
+                    <p className="text-xs text-muted truncate">{[mapSelected.orgName, mapSelected.location].filter(Boolean).join(' · ')}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button type="button" size="sm" variant="secondary" href={mapSelected.href}>
+                      Ouvrir la fiche
+                    </Button>
+                    {renderListingActions(mapSelected)}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted">Sélectionnez un marqueur pour modérer la fiche.</p>
+              )}
+            </div>
           )
         ) : (
           <CatalogueResults
@@ -878,14 +908,14 @@ export default function AdminCataloguePage() {
                 <p className="text-sm text-muted leading-relaxed">{row.message}</p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {row.vendorTenantId && (
-                    <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => void openFiche(row.vendorTenantId!)}>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => void openFiche(row.vendorTenantId!)}>
                       {row.vendorName || 'Organisation'}
-                    </button>
+                    </Button>
                   )}
                   {row.href && (
-                    <Link href={row.href} className="text-xs font-medium text-primary hover:underline">
+                    <Button size="sm" variant="secondary" href={row.href}>
                       Voir la fiche
-                    </Link>
+                    </Button>
                   )}
                 </div>
               </li>
@@ -908,15 +938,13 @@ export default function AdminCataloguePage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => void openFiche(row.vendorTenantId)}>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => void openFiche(row.vendorTenantId)}>
                     {row.vendorName}
-                  </button>
+                  </Button>
                   {row.href && (
-                    <Link href={row.href} className="inline-flex">
-                      <Button variant="secondary" size="sm">
-                        Fiche
-                      </Button>
-                    </Link>
+                    <Button variant="secondary" size="sm" href={row.href}>
+                      Fiche
+                    </Button>
                   )}
                 </div>
               </li>
@@ -940,9 +968,9 @@ export default function AdminCataloguePage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => void openFiche(row.vendorTenantId)}>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => void openFiche(row.vendorTenantId)}>
                     {row.vendorName}
-                  </button>
+                  </Button>
                   <Button
                     size="sm"
                     variant={row.commissionSettledAt ? 'secondary' : 'primary'}

@@ -64,7 +64,7 @@ function Cover({
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : 'auto'}
         decoding="async"
-        className={cn('object-cover transition duration-500 group-hover:scale-110', className)}
+        className={cn('object-cover transition duration-500 group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100', className)}
       />
     );
   }
@@ -86,7 +86,7 @@ function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'm
   const displayKind = catalogueItemDisplayKind(item);
   const Icon = kindIcon(displayKind);
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stage/70 backdrop-blur-md border border-stage-foreground/20 text-stage-foreground text-[11px] font-bold shadow-sm">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stage border border-stage-foreground/20 text-stage-foreground text-[11px] font-bold shadow-sm">
       <Icon className="w-3 h-3 text-stage-foreground" strokeWidth={2.4} />
       <span className="hidden sm:inline">{catalogueKindLabel(displayKind)}</span>
     </span>
@@ -126,7 +126,7 @@ function GridCard({
 }) {
   const distance = formatDistanceKm(item.distanceKm);
   return (
-    <article className="group relative flex flex-col bg-surface border border-border/80 rounded-[var(--radius-card)] overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300">
+    <article className="group relative flex flex-col bg-surface border border-border/80 rounded-[var(--radius-card)] overflow-hidden shadow-2xs hover:shadow-xl hover:border-primary/40 hover:-translate-y-1 transition-all duration-300 motion-reduce:translate-y-0 motion-reduce:transition-none motion-reduce:hover:-translate-y-0">
       {onToggleFavorite && item.kind !== 'event' ? (
         <div className="absolute top-2.5 right-2.5 z-10">
           <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
@@ -151,7 +151,7 @@ function GridCard({
             sizes={compact
               ? '(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw'
               : '(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw'}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
           <div className="absolute top-2.5 left-2.5 z-[1] flex flex-col items-start gap-1">
             <KindMark item={item} size="sm" />
