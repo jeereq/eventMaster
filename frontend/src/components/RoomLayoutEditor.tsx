@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -227,6 +227,15 @@ const EDITOR_TOOL_ICON =
 const EDITOR_PICK =
   'min-h-11 p-2.5 rounded-[var(--radius-card)] border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-left transition flex flex-col justify-between';
 
+function DiscloseChevron({ open }: { open: boolean }) {
+  return (
+    <ChevronDown
+      className={cn('h-4 w-4 shrink-0 text-muted transition-transform', open && 'rotate-180')}
+      aria-hidden
+    />
+  );
+}
+
 type EditorToolGroupId = 'history' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene';
 
 function EditorToolGroup({
@@ -251,7 +260,7 @@ function EditorToolGroup({
       <button
         type="button"
         className={cn(
-          'shrink-0 min-h-11 px-3 rounded-full border text-sm font-medium transition-colors',
+          'inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 rounded-full border text-sm font-medium transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           open
             ? 'bg-primary text-primary-foreground border-primary'
@@ -262,6 +271,7 @@ function EditorToolGroup({
         onClick={() => onToggle(id)}
       >
         {label}
+        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 opacity-80 transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
       {open ? (
         <div id={panelId} className="basis-full w-full flex flex-wrap items-center gap-1.5">
@@ -1589,12 +1599,14 @@ export default function RoomLayoutEditor({
             <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
               <button
                 type="button"
+                aria-expanded={accordion === 'murs-sols'}
                 className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs-sols' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
                 onClick={() => setAccordion(accordion === 'murs-sols' ? '' : 'murs-sols')}
               >
                 <span className="flex items-center gap-2">
                   <Layers className="w-4 h-4" /> Environnement & Thèmes
                 </span>
+                <DiscloseChevron open={accordion === 'murs-sols'} />
               </button>
               
               {accordion === 'murs-sols' && (
@@ -2213,9 +2225,10 @@ export default function RoomLayoutEditor({
                     )}
                   </div>
 
-                  <details className="rounded-[var(--radius-button)] border border-border bg-surface-muted/30 px-2.5 py-2">
-                    <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center">
+                  <details className="group rounded-[var(--radius-button)] border border-border bg-surface-muted/30 px-2.5 py-2">
+                    <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                       Autre décor (uplights, rideaux…)
+                      <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
                     </summary>
                     <div className="mt-2 space-y-1.5">
                       {([
@@ -2308,12 +2321,14 @@ export default function RoomLayoutEditor({
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
+              aria-expanded={accordion === 'batiment'}
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'batiment' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'batiment' ? '' : 'batiment')}
             >
               <span className="flex items-center gap-2">
                 <Layers className="w-4 h-4" /> Étages & vues
               </span>
+              <DiscloseChevron open={accordion === 'batiment'} />
             </button>
             {accordion === 'batiment' && (
               <div className="p-4 bg-surface space-y-4 border-t border-border">
@@ -2526,9 +2541,10 @@ export default function RoomLayoutEditor({
                   </p>
                 </div>
 
-                <details className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2">
-                  <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center">
+                <details className="group rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2">
+                  <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                     Options avancées (fondation, couloirs)
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
                   </summary>
                   <div className="mt-3 space-y-3">
                     <div className="space-y-2">
@@ -2602,12 +2618,14 @@ export default function RoomLayoutEditor({
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
+              aria-expanded={accordion === 'outils'}
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'outils' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'outils' ? '' : 'outils')}
             >
               <span className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4" /> Agencement automatique
               </span>
+              <DiscloseChevron open={accordion === 'outils'} />
             </button>
             
             {accordion === 'outils' && (
@@ -2676,6 +2694,7 @@ export default function RoomLayoutEditor({
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
+              aria-expanded={accordion === 'murs'}
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => {
                 const next = accordion === 'murs' ? '' : 'murs';
@@ -2686,6 +2705,7 @@ export default function RoomLayoutEditor({
               <span className="flex items-center gap-2">
                 <BrickWall className="w-4 h-4" /> Murs, portes & fenêtres
               </span>
+              <DiscloseChevron open={accordion === 'murs'} />
             </button>
             {accordion === 'murs' && (
               <div className="p-4 bg-surface space-y-3 border-t border-border">
@@ -2724,12 +2744,14 @@ export default function RoomLayoutEditor({
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
+              aria-expanded={accordion === 'config'}
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'config' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'config' ? '' : 'config')}
             >
               <span className="flex items-center gap-2">
                 <Ruler className="w-4 h-4" /> Configuration Globale
               </span>
+              <DiscloseChevron open={accordion === 'config'} />
             </button>
             
             {accordion === 'config' && (
@@ -3215,8 +3237,11 @@ export default function RoomLayoutEditor({
 
                 <StairsUserGuide defaultOpen={!def.linked} />
 
-                <details className="text-xs">
-                  <summary className="font-semibold text-muted cursor-pointer">Réglages fins</summary>
+                <details className="group text-xs">
+                  <summary className="font-semibold text-muted cursor-pointer min-h-11 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                    Réglages fins
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+                  </summary>
                   <div className="mt-2 space-y-2">
                     <label className="block space-y-1">
                       <span className="font-semibold text-muted">Hauteur (m)</span>
@@ -3995,9 +4020,12 @@ export default function RoomLayoutEditor({
   };
 
   const templateBar = !readOnly && caps.canTemplates && (
-    <details className="rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden">
-      <summary className="min-h-11 px-3 flex items-center gap-2 text-sm font-semibold text-foreground cursor-pointer select-none">
-        <LayoutTemplate className="w-3.5 h-3.5" aria-hidden /> Modèles de salle
+    <details className="group rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden">
+      <summary className="min-h-11 px-3 flex items-center justify-between gap-2 text-sm font-semibold text-foreground cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+        <span className="inline-flex items-center gap-2">
+          <LayoutTemplate className="w-3.5 h-3.5" aria-hidden /> Modèles de salle
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
       </summary>
       <div className="px-3 pb-3 space-y-3 border-t border-border">
       <div className="flex flex-wrap items-end gap-3">
@@ -4143,6 +4171,41 @@ export default function RoomLayoutEditor({
 
   const toolbar = !readOnly && (
     <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Outils du plan">
+      <button
+        type="button"
+        onClick={() => setLockOrbit((v) => !v)}
+        title="Verrouiller / déverrouiller la caméra (Ctrl+L)"
+        className={cn(EDITOR_TOOL, lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        {lockOrbit ? <VideoOff className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
+        {lockOrbit ? 'Caméra bloquée' : 'Caméra libre'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          if (walkthroughActive) {
+            setWalkthroughActive(false);
+            setWalkthroughLabel('');
+            return;
+          }
+          setLockOrbit(false);
+          if (blueprint.metadata.presentationMode) {
+            updateBlueprint({
+              ...blueprint,
+              metadata: { ...blueprint.metadata, presentationMode: false },
+            }, { message: 'Présentation désactivée pour la visite', kind: 'settings' });
+          }
+          setWalkthroughActive(true);
+          setWalkthroughLabel('Approche de l’entrée');
+          log('Visite guidée démarrée', 'info');
+        }}
+        title="Entre par la porte et visite la salle en 3D"
+        className={cn(EDITOR_TOOL, walkthroughActive ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <DoorOpen className="w-3.5 h-3.5" aria-hidden />
+        {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
+      </button>
+      <span className="hidden sm:block h-6 w-px bg-border mx-0.5" aria-hidden />
       <EditorToolGroup
         id="history"
         label="Historique"
@@ -4185,15 +4248,6 @@ export default function RoomLayoutEditor({
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      <button
-        type="button"
-        onClick={() => setLockOrbit((v) => !v)}
-        title="Verrouiller / déverrouiller la caméra (Ctrl+L)"
-        className={cn(EDITOR_TOOL, lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        {lockOrbit ? <VideoOff className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
-        {lockOrbit ? 'Caméra bloquée' : 'Caméra libre'}
-      </button>
       <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
         <Aperture className="w-3.5 h-3.5" aria-hidden />
         <select
@@ -4238,31 +4292,6 @@ export default function RoomLayoutEditor({
         {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
       </button>
       ) : null}
-      <button
-        type="button"
-        onClick={() => {
-          if (walkthroughActive) {
-            setWalkthroughActive(false);
-            setWalkthroughLabel('');
-            return;
-          }
-          setLockOrbit(false);
-          if (blueprint.metadata.presentationMode) {
-            updateBlueprint({
-              ...blueprint,
-              metadata: { ...blueprint.metadata, presentationMode: false },
-            }, { message: 'Présentation désactivée pour la visite', kind: 'settings' });
-          }
-          setWalkthroughActive(true);
-          setWalkthroughLabel('Approche de l’entrée');
-          log('Visite guidée démarrée', 'info');
-        }}
-        title="Entre par la porte et visite la salle en 3D"
-        className={cn(EDITOR_TOOL, walkthroughActive ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <DoorOpen className="w-3.5 h-3.5" aria-hidden />
-        {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
-      </button>
       <button
         type="button"
         onClick={exportShowcasePng}
