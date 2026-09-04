@@ -27,6 +27,15 @@ export function calculateAmountForTokens(tokensCount: number): number {
   return Math.ceil((count * AI_TOKEN_BASE_PRICE_FC) / AI_TOKEN_BASE_COUNT);
 }
 
+/** Montant exact du prochain jeton au-delà de ceux déjà couverts par `amountFc`. */
+export function calculateNextTokenAmount(amountFc: number): number | null {
+  if (!Number.isFinite(amountFc) || amountFc < AI_TOKEN_MIN_AMOUNT_FC) {
+    return AI_TOKEN_MIN_AMOUNT_FC;
+  }
+  const currentTokens = calculateTokensForAmount(amountFc);
+  return calculateAmountForTokens(currentTokens + 1);
+}
+
 export const STORAGE_KEY_AI_DEVICE_ID = 'em_ai_device_id';
 export const STORAGE_KEY_AI_TRIALS = 'em_ai_free_trials_count';
 export const STORAGE_KEY_AI_BONUS_TOKENS = 'em_ai_bonus_tokens';
