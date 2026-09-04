@@ -124,6 +124,28 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
         : prisma.event.count({ where: { date: { gte: now } } }),
     ]);
 
+    const [ownerCount, staffUserCount, clientUserCount, noTenantUserCount] = await Promise.all([
+      prisma.tenant.count({
+        where: { ...tenantWhere, managerId: { not: null } },
+      }),
+      commercialId
+        ? prisma.user.count({
+            where: {
+              tenant: tenantWhere,
+              OR: [{ eventStaff: { some: {} } }, { roomStaff: { some: {} } }],
+            },
+          })
+        : prisma.user.count({
+            where: {
+              OR: [{ eventStaff: { some: {} } }, { roomStaff: { some: {} } }],
+            },
+          }),
+      commercialId
+        ? prisma.user.count({ where: { tenant: { ...tenantWhere, accountKind: 'CLIENT' } } })
+        : prisma.user.count({ where: { tenant: { accountKind: 'CLIENT' } } }),
+      commercialId ? Promise.resolve(0) : prisma.user.count({ where: { tenantId: null } }),
+    ]);
+
     const planCounts: Record<string, number> = {};
     for (const row of planGroups) planCounts[row.plan] = row._count._all;
     const accountKindCounts: Record<string, number> = {};
@@ -140,11 +162,16 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
         events: eventCount,
         guests: guestCount,
         verifiedUsers,
+        unverifiedUsers: Math.max(0, userCount - verifiedUsers),
         licensesActive,
         checkedIn,
         openTasks,
         overdueTasks,
         upcomingEvents,
+        owners: ownerCount,
+        staffUsers: staffUserCount,
+        clientUsers: clientUserCount,
+        noTenantUsers: noTenantUserCount,
       },
       planCounts,
       accountKindCounts,
@@ -697,7 +724,26 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        include: { tenant: { select: { name: true } } },
+        include: {
+          tenant: {
+            select: {
+              name: true,
+              plan: true,
+              accountKind: true,
+              licenseActive: true,
+              licenseExpiresAt: true,
+              managerId: true,
+            },
+          },
+          _count: {
+            select: {
+              eventStaff: true,
+              roomStaff: true,
+              managedTenants: true,
+              referredTenants: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: pageSize,
@@ -707,19 +753,33 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
 
     return res.json(
       listPayload(
-        users.map((u) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          role: u.role,
-          orgRole: u.orgRole,
-          tenantId: u.tenantId,
-          isEmailVerified: u.isEmailVerified,
-          tenantName: u.tenant?.name || 'Aucun (Super Admin)',
-          createdAt: u.createdAt,
-          commissionRate: u.commissionRate,
-          renewalCommissionRate: u.renewalCommissionRate,
-        })),
+        users.map((u) => {
+          const isOwner = Boolean(u.tenant && u.tenant.managerId === u.id) || u._count.managedTenants > 0;
+          return {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            phone: u.phone,
+            role: u.role,
+            orgRole: u.orgRole,
+            tenantId: u.tenantId,
+            isEmailVerified: u.isEmailVerified,
+            tenantName: u.tenant?.name || (u.role === 'SUPER_ADMIN' || u.role === 'COMMERCIAL' ? 'Aucune (plateforme)' : 'Sans organisation'),
+            tenantPlan: u.tenant?.plan || null,
+            tenantAccountKind: u.tenant?.accountKind || null,
+            tenantLicenseActive: u.tenant?.licenseActive ?? null,
+            tenantLicenseExpiresAt: u.tenant?.licenseExpiresAt || null,
+            isOwner,
+            eventStaffCount: u._count.eventStaff,
+            roomStaffCount: u._count.roomStaff,
+            referredTenantsCount: u._count.referredTenants,
+            referralCode: u.referralCode,
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+            commissionRate: u.commissionRate,
+            renewalCommissionRate: u.renewalCommissionRate,
+          };
+        }),
         total,
         page,
         pageSize,

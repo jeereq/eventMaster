@@ -3,10 +3,16 @@
 import React from 'react';
 import {
   Building2, Users, FileText, Calendar, Eye, History, Loader2,
-  Mail, Shield, CheckCircle2, AlertCircle, MapPin,
+  Mail, Shield, CheckCircle2, AlertCircle, MapPin, Phone,
 } from 'lucide-react';
 import { Modal, Button, Badge } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import {
+  platformRoleLabel,
+  orgRoleLabel,
+  accountKindShortLabel,
+  formatCommissionPercent,
+} from '@/lib/adminRoles';
 
 export type AdminDetailsType = 'tenant' | 'user' | 'template' | 'event' | 'guest';
 
@@ -53,7 +59,7 @@ const TITLES: Record<AdminDetailsType, string> = {
 
 const DESCRIPTIONS: Record<AdminDetailsType, string> = {
   tenant: 'Licence, forfait, gérant et historique d’abonnements.',
-  user: 'Rôle plateforme, vérification e-mail et rattachement organisation.',
+  user: 'Rôle plateforme, rôle organisation, forfait et rattachement.',
   template: 'Portée (global / privé) et visibilité sur la landing.',
   event: 'Planning, lieu et volumes d’invités.',
   guest: 'Contact, RSVP, événement et préférences.',
@@ -70,10 +76,7 @@ function formatDate(value?: string | null, withTime = false) {
 }
 
 function roleLabel(role?: string) {
-  if (role === 'SUPER_ADMIN') return 'Super Admin';
-  if (role === 'COMMERCIAL') return 'Commercial plateforme';
-  if (role === 'USER') return 'Membre organisation';
-  return role || '—';
+  return platformRoleLabel(role);
 }
 
 function roleBadgeVariant(role?: string): 'danger' | 'warning' | 'primary' | 'default' {
@@ -358,6 +361,9 @@ export default function AdminDetailsModal({
               badges={
                 <>
                   <Badge variant={roleBadgeVariant(data.role)}>{roleLabel(data.role)}</Badge>
+                  {orgRoleLabel(data.orgRole, data.isOwner) ? (
+                    <Badge variant={data.isOwner ? 'primary' : 'default'}>{orgRoleLabel(data.orgRole, data.isOwner)}</Badge>
+                  ) : null}
                   <Badge variant={data.isEmailVerified ? 'success' : 'warning'}>
                     {data.isEmailVerified ? (
                       <><CheckCircle2 className="w-3 h-3" /> E-mail vérifié</>
@@ -370,18 +376,43 @@ export default function AdminDetailsModal({
             />
 
             <DetailSection title="Compte" icon={Shield}>
-              <DetailRow label="Rôle">{roleLabel(data.role)}</DetailRow>
+              <DetailRow label="Rôle plateforme">{roleLabel(data.role)}</DetailRow>
+              {orgRoleLabel(data.orgRole, data.isOwner) ? (
+                <DetailRow label="Rôle organisation">{orgRoleLabel(data.orgRole, data.isOwner)}</DetailRow>
+              ) : null}
               <DetailRow label="E-mail">
                 <span className="inline-flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-muted" />
                   {data.email}
                 </span>
               </DetailRow>
+              {data.phone ? (
+                <DetailRow label="Téléphone">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-muted" />
+                    {data.phone}
+                  </span>
+                </DetailRow>
+              ) : null}
               <DetailRow label="Vérification">
                 <Badge variant={data.isEmailVerified ? 'success' : 'warning'}>
                   {data.isEmailVerified ? 'Vérifié' : 'En attente'}
                 </Badge>
               </DetailRow>
+              {data.referralCode ? <DetailRow label="Code parrainage" mono>{data.referralCode}</DetailRow> : null}
+              {(data.commissionRate != null || data.renewalCommissionRate != null) ? (
+                <DetailRow label="Commissions">
+                  {[
+                    formatCommissionPercent(data.commissionRate) ? `1er ${formatCommissionPercent(data.commissionRate)}` : null,
+                    formatCommissionPercent(data.renewalCommissionRate) ? `renouvellement ${formatCommissionPercent(data.renewalCommissionRate)}` : null,
+                  ].filter(Boolean).join(' · ') || '—'}
+                </DetailRow>
+              ) : null}
+              {(data.referredTenantsCount ?? 0) > 0 ? (
+                <DetailRow label="Organisations parrainées">{data.referredTenantsCount}</DetailRow>
+              ) : null}
+              <DetailRow label="Inscrit le">{formatDate(data.createdAt, true)}</DetailRow>
+              {data.updatedAt ? <DetailRow label="Mis à jour">{formatDate(data.updatedAt, true)}</DetailRow> : null}
               <DetailRow label="ID utilisateur" mono>{data.id}</DetailRow>
             </DetailSection>
 
@@ -393,8 +424,29 @@ export default function AdminDetailsModal({
                     ? 'Aucune (rôle plateforme)'
                     : 'Aucune'}
               </DetailRow>
+              {data.tenantPlan ? <DetailRow label="Forfait">{data.tenantPlan}</DetailRow> : null}
+              {accountKindShortLabel(data.tenantAccountKind) ? (
+                <DetailRow label="Type de compte">{accountKindShortLabel(data.tenantAccountKind)}</DetailRow>
+              ) : null}
+              {data.tenantLicenseActive != null ? (
+                <DetailRow label="Licence">
+                  <Badge variant={data.tenantLicenseActive ? 'success' : 'danger'}>
+                    {data.tenantLicenseActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                </DetailRow>
+              ) : null}
+              {data.tenantLicenseExpiresAt ? (
+                <DetailRow label="Expire le">{formatDate(data.tenantLicenseExpiresAt)}</DetailRow>
+              ) : null}
+              {(data.eventStaffCount ?? 0) > 0 || (data.roomStaffCount ?? 0) > 0 ? (
+                <DetailRow label="Affectations staff">
+                  {[
+                    (data.eventStaffCount ?? 0) > 0 ? `${data.eventStaffCount} événement${data.eventStaffCount > 1 ? 's' : ''}` : null,
+                    (data.roomStaffCount ?? 0) > 0 ? `${data.roomStaffCount} salle${data.roomStaffCount > 1 ? 's' : ''}` : null,
+                  ].filter(Boolean).join(' · ')}
+                </DetailRow>
+              ) : null}
               {data.tenantId && <DetailRow label="ID organisation" mono>{data.tenantId}</DetailRow>}
-              {data.createdAt && <DetailRow label="Créé le">{formatDate(data.createdAt, true)}</DetailRow>}
             </DetailSection>
           </>
         )}

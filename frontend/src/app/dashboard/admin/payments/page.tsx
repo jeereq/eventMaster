@@ -6,7 +6,7 @@ import { CreditCard, Loader2, Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Badge, usePageSize,
+  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Badge, Input, usePageSize,
 } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -94,12 +94,78 @@ function statusBadge(status: PaymentStatus) {
   return <Badge variant="warning">En cours</Badge>;
 }
 
+type DatePreset = 'all' | 'today' | '7d' | '30d' | 'month' | 'custom';
+type DateField = 'created' | 'paid';
+
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function rangeForPreset(preset: DatePreset): { from: string; to: string } {
+  const now = new Date();
+  const today = isoDate(now);
+  if (preset === 'today') return { from: today, to: today };
+  if (preset === '7d') {
+    const from = new Date(now);
+    from.setDate(from.getDate() - 6);
+    return { from: isoDate(from), to: today };
+  }
+  if (preset === '30d') {
+    const from = new Date(now);
+    from.setDate(from.getDate() - 29);
+    return { from: isoDate(from), to: today };
+  }
+  if (preset === 'month') {
+    return { from: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: today };
+  }
+  return { from: '', to: '' };
+}
+
+const CHANNEL_OPTIONS = [
+  { id: 'all', label: 'Tous' },
+  { id: 'card', label: 'Carte' },
+  { id: 'mobile', label: 'Mobile Money' },
+  { id: 'mpesa', label: 'M-Pesa' },
+  { id: 'orange', label: 'Orange Money' },
+  { id: 'airtel', label: 'Airtel Money' },
+  { id: 'afrimoney', label: 'Afrimoney' },
+  { id: 'manual', label: 'Manuel / preuve' },
+  { id: 'unknown', label: 'Non précisé' },
+];
+
+const PROVIDER_OPTIONS = [
+  { id: 'all', label: 'Tous' },
+  { id: 'flexpay_card', label: 'FlexPay carte' },
+  { id: 'flexpay_mobile', label: 'FlexPay mobile' },
+  { id: 'manual', label: 'Manuel' },
+];
+
+const DATE_PRESET_OPTIONS: Array<{ id: DatePreset; label: string }> = [
+  { id: 'all', label: 'Toutes' },
+  { id: 'today', label: 'Aujourd’hui' },
+  { id: '7d', label: '7 jours' },
+  { id: '30d', label: '30 jours' },
+  { id: 'month', label: 'Ce mois' },
+  { id: 'custom', label: 'Personnalisé' },
+];
+
 export default function AdminPaymentsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
   const [kind, setKind] = useState<'all' | PaymentKind>('all');
   const [status, setStatus] = useState<'all' | PaymentStatus>('all');
+  const [channel, setChannel] = useState('all');
+  const [provider, setProvider] = useState('all');
+  const [datePreset, setDatePreset] = useState<DatePreset>('30d');
+  const [dateField, setDateField] = useState<DateField>('created');
+  const [from, setFrom] = useState(() => rangeForPreset('30d').from);
+  const [to, setTo] = useState(() => rangeForPreset('30d').to);
+  const [minFc, setMinFc] = useState('');
+  const [maxFc, setMaxFc] = useState('');
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
@@ -123,33 +189,59 @@ export default function AdminPaymentsPage() {
     return () => window.clearTimeout(t);
   }, [qInput]);
 
+  const applyDatePreset = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      const next = rangeForPreset(preset);
+      setFrom(next.from);
+      setTo(next.to);
+    }
+    setPage(1);
+  };
+
+  const filterParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (kind !== 'all') params.set('kind', kind);
+    if (status !== 'all') params.set('status', status);
+    if (channel !== 'all') params.set('channel', channel);
+    if (provider !== 'all') params.set('provider', provider);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (from || to) params.set('dateField', dateField);
+    const min = minFc.trim();
+    const max = maxFc.trim();
+    if (min) params.set('minFc', min);
+    if (max) params.set('maxFc', max);
+    if (q) params.set('q', q);
+    return params;
+  }, [kind, status, channel, provider, from, to, dateField, minFc, maxFc, q]);
+
   const loadOverview = useCallback(async () => {
     if (user?.role !== 'SUPER_ADMIN') return;
     try {
-      setOverview(await api.get('/admin/payments/overview'));
+      const params = filterParams();
+      const qs = params.toString();
+      setOverview(await api.get(qs ? `/admin/payments/overview?${qs}` : '/admin/payments/overview'));
     } catch {
       /* compteurs facultatifs */
     }
-  }, [user?.role]);
+  }, [user?.role, filterParams]);
 
   const load = useCallback(async () => {
     if (user?.role !== 'SUPER_ADMIN') return;
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams();
+      const params = filterParams();
       params.set('page', String(page));
       params.set('limit', String(pageSize));
-      if (kind !== 'all') params.set('kind', kind);
-      if (status !== 'all') params.set('status', status);
-      if (q) params.set('q', q);
       setList(await api.get(`/admin/payments/attempts?${params}`));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les paiements.');
     } finally {
       setLoading(false);
     }
-  }, [user?.role, page, pageSize, kind, status, q]);
+  }, [user?.role, page, pageSize, filterParams]);
 
   useEffect(() => {
     void loadOverview();
@@ -168,10 +260,38 @@ export default function AdminPaymentsPage() {
   }
 
   const totals = overview?.totals;
+  const channelLabel = CHANNEL_OPTIONS.find((o) => o.id === channel)?.label || channel;
+  const providerLabel = PROVIDER_OPTIONS.find((o) => o.id === provider)?.label || provider;
+  const datePresetLabel = DATE_PRESET_OPTIONS.find((o) => o.id === datePreset)?.label || datePreset;
   const chips: CatalogueFilterChip[] = [
     ...(kind !== 'all' ? [{ id: 'kind', label: 'Source', value: kind === 'ticket' ? 'Billets' : kind === 'subscription' ? 'Abonnements' : 'Jetons IA' }] : []),
     ...(status !== 'all' ? [{ id: 'status', label: 'Statut', value: status === 'paid' ? 'Aboutis' : status === 'pending' ? 'En cours' : 'Échoués' }] : []),
+    ...(channel !== 'all' ? [{ id: 'channel', label: 'Canal', value: channelLabel }] : []),
+    ...(provider !== 'all' ? [{ id: 'provider', label: 'Fournisseur', value: providerLabel }] : []),
+    ...(from || to
+      ? [{
+          id: 'dates',
+          label: dateField === 'paid' ? 'Payé' : 'Créé',
+          value: datePreset === 'custom' || datePreset === 'all'
+            ? `${from || '…'} → ${to || '…'}`
+            : datePresetLabel,
+        }]
+      : []),
+    ...(minFc.trim() ? [{ id: 'minFc', label: 'Min.', value: `${minFc} FC` }] : []),
+    ...(maxFc.trim() ? [{ id: 'maxFc', label: 'Max.', value: `${maxFc} FC` }] : []),
   ];
+
+  const resetFilters = () => {
+    setKind('all');
+    setStatus('all');
+    setChannel('all');
+    setProvider('all');
+    applyDatePreset('30d');
+    setDateField('created');
+    setMinFc('');
+    setMaxFc('');
+    setPage(1);
+  };
 
   return (
     <div className="space-y-6 w-full">
@@ -264,13 +384,14 @@ export default function AdminPaymentsPage() {
         onRemoveChip={(id) => {
           if (id === 'kind') setKind('all');
           if (id === 'status') setStatus('all');
+          if (id === 'channel') setChannel('all');
+          if (id === 'provider') setProvider('all');
+          if (id === 'dates') applyDatePreset('all');
+          if (id === 'minFc') setMinFc('');
+          if (id === 'maxFc') setMaxFc('');
           setPage(1);
         }}
-        onClearChips={() => {
-          setKind('all');
-          setStatus('all');
-          setPage(1);
-        }}
+        onClearChips={resetFilters}
         resultLabel={`${list?.total ?? 0} tentative${(list?.total ?? 0) > 1 ? 's' : ''}`}
         modalTitle="Filtres paiements"
         filters={
@@ -305,6 +426,96 @@ export default function AdminPaymentsPage() {
                 }}
               />
             </CatalogueFilterField>
+            <CatalogueFilterField label="Période">
+              <CatalogueChoicePills
+                options={DATE_PRESET_OPTIONS}
+                value={datePreset}
+                onChange={(id) => applyDatePreset((id as DatePreset) || 'all')}
+              />
+            </CatalogueFilterField>
+            <CatalogueFilterField label="Référence de date">
+              <CatalogueChoicePills
+                options={[
+                  { id: 'created', label: 'Date de création' },
+                  { id: 'paid', label: 'Date de paiement' },
+                ]}
+                value={dateField}
+                onChange={(id) => {
+                  setDateField((id as DateField) || 'created');
+                  setPage(1);
+                }}
+              />
+            </CatalogueFilterField>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                type="date"
+                label="Du"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  setDatePreset('custom');
+                  setPage(1);
+                }}
+                className="text-base sm:text-sm min-h-11"
+              />
+              <Input
+                type="date"
+                label="Au"
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value);
+                  setDatePreset('custom');
+                  setPage(1);
+                }}
+                className="text-base sm:text-sm min-h-11"
+              />
+            </div>
+            <CatalogueFilterField label="Canal">
+              <CatalogueChoicePills
+                options={CHANNEL_OPTIONS}
+                value={channel}
+                onChange={(id) => {
+                  setChannel(id || 'all');
+                  setPage(1);
+                }}
+              />
+            </CatalogueFilterField>
+            <CatalogueFilterField label="Fournisseur">
+              <CatalogueChoicePills
+                options={PROVIDER_OPTIONS}
+                value={provider}
+                onChange={(id) => {
+                  setProvider(id || 'all');
+                  setPage(1);
+                }}
+              />
+            </CatalogueFilterField>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                label="Montant min. (FC)"
+                value={minFc}
+                onChange={(e) => {
+                  setMinFc(e.target.value);
+                  setPage(1);
+                }}
+                className="text-base sm:text-sm min-h-11"
+              />
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                label="Montant max. (FC)"
+                value={maxFc}
+                onChange={(e) => {
+                  setMaxFc(e.target.value);
+                  setPage(1);
+                }}
+                className="text-base sm:text-sm min-h-11"
+              />
+            </div>
           </>
         }
       />
@@ -327,6 +538,9 @@ export default function AdminPaymentsPage() {
                 {statusBadge(row.status)}
                 <Badge variant="default">{row.kindLabel}</Badge>
                 <span className="text-[10px] text-muted">{row.channelLabel}</span>
+                {row.paymentProvider ? (
+                  <span className="text-[10px] text-muted">{row.paymentProvider}</span>
+                ) : null}
                 <span className="text-[10px] text-muted ml-auto">{formatWhen(row.createdAt)}</span>
               </div>
               <p className="text-sm font-semibold text-foreground">{row.summary}</p>

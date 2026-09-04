@@ -37,6 +37,13 @@ import AdminOpsHome from '@/components/admin/AdminOpsHome';
 import AdminPlatformSettings from '@/components/admin/AdminPlatformSettings';
 import { ACCOUNT_KIND_FILTER_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
+import {
+  platformRoleLabel,
+  orgRoleLabel,
+  accountKindShortLabel,
+  formatCommissionPercent,
+  formatAdminDate,
+} from '@/lib/adminRoles';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commercialPercent, renewalPercent } from '@/lib/platformRates';
 
@@ -104,11 +111,16 @@ interface AdminStats {
     events: number;
     guests: number;
     verifiedUsers?: number;
+    unverifiedUsers?: number;
     licensesActive?: number;
     checkedIn?: number;
     openTasks?: number;
     overdueTasks?: number;
     upcomingEvents?: number;
+    owners?: number;
+    staffUsers?: number;
+    clientUsers?: number;
+    noTenantUsers?: number;
   };
   planCounts?: Record<string, number>;
   accountKindCounts?: Record<string, number>;
@@ -120,12 +132,23 @@ interface AdminUserItem {
   id: string;
   name: string | null;
   email: string;
+  phone?: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
   orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
   isEmailVerified: boolean;
   tenantId: string | null;
   tenantName: string;
+  tenantPlan?: string | null;
+  tenantAccountKind?: string | null;
+  tenantLicenseActive?: boolean | null;
+  tenantLicenseExpiresAt?: string | null;
+  isOwner?: boolean;
+  eventStaffCount?: number;
+  roomStaffCount?: number;
+  referredTenantsCount?: number;
+  referralCode?: string | null;
   createdAt: string;
+  updatedAt?: string;
   commissionRate?: number | null;
   renewalCommissionRate?: number | null;
 }
@@ -2429,15 +2452,24 @@ function DashboardPageContent() {
                         >
                           {paginatedUsers.map((u) => {
                             const roleTone =
-                              u.role === 'SUPER_ADMIN' ? 'rose' : u.role === 'COMMERCIAL' ? 'amber' : 'slate';
+                              u.role === 'SUPER_ADMIN' ? 'rose' : u.role === 'COMMERCIAL' ? 'amber' : u.isOwner ? 'violet' : 'slate';
+                            const orgLabel = orgRoleLabel(u.orgRole, u.isOwner);
                             const roleChip = (
-                              <StatusPill tone={roleTone as 'rose' | 'amber' | 'slate'}>{u.role}</StatusPill>
+                              <StatusPill tone={roleTone as 'rose' | 'amber' | 'violet' | 'slate'}>
+                                {u.role === 'USER' && orgLabel ? orgLabel : platformRoleLabel(u.role)}
+                              </StatusPill>
                             );
                             const verifiedChip = (
                               <StatusPill tone={u.isEmailVerified ? 'emerald' : 'slate'}>
                                 {u.isEmailVerified ? 'Vérifié' : 'Non vérifié'}
                               </StatusPill>
                             );
+                            const kindLabel = accountKindShortLabel(u.tenantAccountKind);
+                            const commission = formatCommissionPercent(u.commissionRate);
+                            const staffBits = [
+                              (u.eventStaffCount ?? 0) > 0 ? `${u.eventStaffCount} événement${(u.eventStaffCount ?? 0) > 1 ? 's' : ''}` : null,
+                              (u.roomStaffCount ?? 0) > 0 ? `${u.roomStaffCount} salle${(u.roomStaffCount ?? 0) > 1 ? 's' : ''}` : null,
+                            ].filter(Boolean);
                             const actions = (
                               <>
                                 {usersViewMode === 'list' ? (
@@ -2496,24 +2528,53 @@ function DashboardPageContent() {
                                       {u.email}
                                       {' · '}
                                       {u.tenantName || '—'}
+                                      {u.tenantPlan ? ` · ${u.tenantPlan}` : ''}
+                                      {kindLabel ? ` · ${kindLabel}` : ''}
+                                      {u.phone ? ` · ${u.phone}` : ''}
                                     </span>
                                   ) : (
                                     <div className="space-y-1.5">
                                       <p className="truncate text-xs">{u.email}</p>
                                       <div className="flex flex-wrap items-center gap-1.5">
                                         {roleChip}
+                                        {u.role === 'USER' && orgLabel && !u.isOwner ? (
+                                          <StatusPill tone="slate">{platformRoleLabel(u.role)}</StatusPill>
+                                        ) : null}
                                         {verifiedChip}
+                                        {u.tenantLicenseActive === false ? (
+                                          <StatusPill tone="rose">Licence inactive</StatusPill>
+                                        ) : null}
                                       </div>
                                       <p className="truncate text-xs text-muted">{u.tenantName || 'Sans organisation'}</p>
+                                      <p className="truncate text-[11px] text-muted">
+                                        {[
+                                          u.tenantPlan,
+                                          kindLabel,
+                                          u.phone,
+                                          `Inscrit ${formatAdminDate(u.createdAt)}`,
+                                        ].filter(Boolean).join(' · ')}
+                                      </p>
                                     </div>
                                   )
                                 }
                                 status={usersViewMode === 'list' ? roleChip : undefined}
                                 aside={usersViewMode === 'list' ? verifiedChip : undefined}
                                 footer={
-                                  usersViewMode === 'grid' ? (
-                                    <span className="text-[11px] text-muted truncate">{u.tenantName || '—'}</span>
-                                  ) : undefined
+                                  <span className="text-[11px] text-muted truncate">
+                                    {usersViewMode === 'grid'
+                                      ? [
+                                          u.tenantName || '—',
+                                          staffBits.length ? `Staff : ${staffBits.join(', ')}` : null,
+                                          commission ? `Commission ${commission}` : null,
+                                          (u.referredTenantsCount ?? 0) > 0 ? `${u.referredTenantsCount} parrainage${(u.referredTenantsCount ?? 0) > 1 ? 's' : ''}` : null,
+                                        ].filter(Boolean).join(' · ')
+                                      : [
+                                          `Inscrit ${formatAdminDate(u.createdAt)}`,
+                                          staffBits.length ? `Staff : ${staffBits.join(', ')}` : null,
+                                          commission ? `Commission ${commission}` : null,
+                                          (u.referredTenantsCount ?? 0) > 0 ? `${u.referredTenantsCount} parrainage${(u.referredTenantsCount ?? 0) > 1 ? 's' : ''}` : null,
+                                        ].filter(Boolean).join(' · ')}
+                                  </span>
                                 }
                                 actions={actions}
                               />
@@ -3825,12 +3886,18 @@ function DashboardPageContent() {
                             {[
                               { label: 'Total', value: adminData?.stats.users ?? 0, color: 'text-foreground dark:text-foreground' },
                               { label: 'Super administrateurs', value: adminData?.userRoleCounts?.SUPER_ADMIN ?? 0, color: 'text-rose-600 dark:text-rose-400' },
-                              { label: 'Commerciaux', value: adminData?.userRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
-                              { label: 'Utilisateurs standards', value: adminData?.userRoleCounts?.USER ?? 0, color: 'text-foreground dark:text-foreground' },
-                              { label: 'E-mails vérifiés', value: adminData?.stats.verifiedUsers ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
+                              { label: 'Commerciaux plateforme', value: adminData?.userRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
+                              { label: 'Membres d’organisation', value: adminData?.userRoleCounts?.USER ?? 0, color: 'text-foreground dark:text-foreground' },
+                              { label: 'Propriétaires (gérants)', value: adminData?.stats.owners ?? 0, color: 'text-violet-600 dark:text-violet-400' },
                               { label: 'Managers d’organisation', value: adminData?.orgRoleCounts?.MANAGER ?? 0, color: 'text-primary' },
                               { label: 'Protocole', value: adminData?.orgRoleCounts?.PROTOCOL ?? 0, color: 'text-sky-600 dark:text-sky-400' },
                               { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
+                              { label: 'Sans rôle org.', value: adminData?.orgRoleCounts?.NONE ?? 0, color: 'text-muted' },
+                              { label: 'Staff salle / événement', value: adminData?.stats.staffUsers ?? 0, color: 'text-foreground dark:text-foreground' },
+                              { label: 'Clients catalogue', value: adminData?.stats.clientUsers ?? 0, color: 'text-emerald-700 dark:text-emerald-300' },
+                              { label: 'Sans organisation', value: adminData?.stats.noTenantUsers ?? 0, color: 'text-muted' },
+                              { label: 'E-mails vérifiés', value: adminData?.stats.verifiedUsers ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
+                              { label: 'E-mails non vérifiés', value: adminData?.stats.unverifiedUsers ?? 0, color: 'text-amber-700 dark:text-amber-300' },
                             ].map((row) => (
                               <div key={row.label} className="flex justify-between text-sm">
                                 <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -3849,9 +3916,15 @@ function DashboardPageContent() {
                               <div key={u.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
                                 <div className="min-w-0">
                                   <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{u.name || u.email}</p>
-                                  <p className="text-xs text-muted truncate">{u.tenantName}</p>
+                                  <p className="text-xs text-muted truncate">
+                                    {[u.tenantName, orgRoleLabel(u.orgRole, u.isOwner) || platformRoleLabel(u.role), formatAdminDate(u.createdAt)].filter(Boolean).join(' · ')}
+                                  </p>
                                 </div>
-                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">{u.role}</span>
+                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">
+                                  {u.role === 'USER' && orgRoleLabel(u.orgRole, u.isOwner)
+                                    ? orgRoleLabel(u.orgRole, u.isOwner)
+                                    : platformRoleLabel(u.role)}
+                                </span>
                               </div>
                             ))}
                             {recentUsers.length === 0 && (
@@ -4017,10 +4090,13 @@ function DashboardPageContent() {
                           </h3>
                           <div className="space-y-3">
                             {[
+                              { label: 'Propriétaires', value: adminData?.stats.owners ?? 0 },
                               { label: 'Managers', value: platformInsights?.team?.managerUsers ?? adminData?.orgRoleCounts?.MANAGER ?? 0 },
                               { label: 'Protocole', value: platformInsights?.team?.protocolUsers ?? adminData?.orgRoleCounts?.PROTOCOL ?? 0 },
                               { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0 },
                               { label: 'Sans rôle org.', value: adminData?.orgRoleCounts?.NONE ?? 0 },
+                              { label: 'Staff salle / événement', value: adminData?.stats.staffUsers ?? 0 },
+                              { label: 'Clients catalogue', value: adminData?.stats.clientUsers ?? 0 },
                             ].map((row) => (
                               <div key={row.label} className="flex justify-between text-sm">
                                 <span className="text-muted dark:text-muted font-medium">{row.label}</span>

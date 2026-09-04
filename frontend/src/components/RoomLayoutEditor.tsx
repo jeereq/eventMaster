@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -199,14 +199,45 @@ const EDITOR_TOOL_ICON =
 const EDITOR_PICK =
   'min-h-11 p-2.5 rounded-[var(--radius-card)] border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-left transition flex flex-col justify-between';
 
-function EditorToolGroup({ label, children }: { label: string; children: React.ReactNode }) {
+type EditorToolGroupId = 'history' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene';
+
+function EditorToolGroup({
+  id,
+  label,
+  openId,
+  onToggle,
+  children,
+}: {
+  id: EditorToolGroupId;
+  label: string;
+  openId: EditorToolGroupId | null;
+  onToggle: (id: EditorToolGroupId) => void;
+  children: React.ReactNode;
+}) {
   const items = React.Children.toArray(children).filter(Boolean);
   if (items.length === 0) return null;
+  const open = openId === id;
+  const panelId = `editor-tool-group-${id}`;
   return (
-    <fieldset className="m-0 min-w-0 border-0 p-0">
-      <legend className="mb-1.5 px-0 text-xs font-semibold text-muted">{label}</legend>
-      <div className="flex flex-wrap items-center gap-1.5">{items}</div>
-    </fieldset>
+    <div className="min-w-0">
+      <button
+        type="button"
+        className="flex w-full min-h-11 items-center justify-between gap-2 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm font-semibold text-foreground sm:hidden"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => onToggle(id)}
+      >
+        <span>{label}</span>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted transition-transform', open && 'rotate-180')} aria-hidden />
+      </button>
+      <p className="mb-1.5 hidden text-xs font-semibold text-muted sm:block">{label}</p>
+      <div
+        id={panelId}
+        className={cn('flex flex-wrap items-center gap-1.5 max-sm:mt-1.5', open ? 'max-sm:flex' : 'max-sm:hidden')}
+      >
+        {items}
+      </div>
+    </div>
   );
 }
 
@@ -244,6 +275,10 @@ export default function RoomLayoutEditor({
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
   const [keepThemeFloor, setKeepThemeFloor] = useState(false);
   const [accordion, setAccordion] = useState<string>('murs-sols');
+  const [toolbarGroup, setToolbarGroup] = useState<EditorToolGroupId | null>('furniture');
+  const toggleToolbarGroup = useCallback((id: EditorToolGroupId) => {
+    setToolbarGroup((current) => (current === id ? null : id));
+  }, []);
   const [wallEditMode, setWallEditMode] = useState(false);
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
@@ -4036,8 +4071,13 @@ export default function RoomLayoutEditor({
   );
 
   const toolbar = !readOnly && (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-5 sm:gap-y-3">
-      <EditorToolGroup label="Historique">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-5 sm:gap-y-3">
+      <EditorToolGroup
+        id="history"
+        label="Historique"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
       <button
         type="button"
         onClick={undo}
@@ -4068,7 +4108,12 @@ export default function RoomLayoutEditor({
       )}
       </EditorToolGroup>
 
-      <EditorToolGroup label="Vue">
+      <EditorToolGroup
+        id="view"
+        label="Vue"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
       <button
         type="button"
         onClick={() => setLockOrbit((v) => !v)}
@@ -4157,7 +4202,12 @@ export default function RoomLayoutEditor({
       </button>
       </EditorToolGroup>
 
-      <EditorToolGroup label="Lumière">
+      <EditorToolGroup
+        id="light"
+        label="Lumière"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
       <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
         <Sun className="w-3.5 h-3.5" aria-hidden />
         <select
@@ -4203,7 +4253,12 @@ export default function RoomLayoutEditor({
       </button>
       </EditorToolGroup>
 
-      <EditorToolGroup label="Mobilier">
+      <EditorToolGroup
+        id="furniture"
+        label="Mobilier"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
       <button type="button" onClick={addTable} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
         <Plus className="w-3.5 h-3.5" aria-hidden /> Table
       </button>
@@ -4233,7 +4288,12 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={addFreeChair} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Fauteuil</button>
       </EditorToolGroup>
 
-      <EditorToolGroup label="Zones">
+      <EditorToolGroup
+        id="zones"
+        label="Zones"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
       {caps.canZones ? (
         <>
           <button type="button" onClick={() => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Piste</button>
@@ -4244,7 +4304,12 @@ export default function RoomLayoutEditor({
       ) : null}
       </EditorToolGroup>
 
-      <EditorToolGroup label="Bâtiment">
+      <EditorToolGroup
+        id="building"
+        label="Bâtiment"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
       {caps.canCustomImages ? (
         <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
           <ImagePlus className="w-3.5 h-3.5" aria-hidden />
@@ -4311,7 +4376,12 @@ export default function RoomLayoutEditor({
       ) : null}
       </EditorToolGroup>
 
-      <EditorToolGroup label="Scène et décor">
+      <EditorToolGroup
+        id="scene"
+        label="Scène et décor"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
       {caps.fixtureKinds.includes('stage') ? (
         <button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button>
       ) : null}

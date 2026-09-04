@@ -37,6 +37,20 @@ function parseChannel(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
+function parseDateField(value: unknown): 'created' | 'paid' {
+  return String(value || '').trim().toLowerCase() === 'paid' ? 'paid' : 'created';
+}
+
+function parseProvider(value: unknown): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function parseAmountBound(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
 function dateRange(req: AuthenticatedRequest): { gte?: Date; lte?: Date } | undefined {
   const from = typeof req.query.from === 'string' ? req.query.from.trim() : '';
   const to = typeof req.query.to === 'string' ? req.query.to.trim() : '';
@@ -194,12 +208,13 @@ function matchesQ(row: PaymentAttemptRow, q: string) {
 
 async function collectAttempts(opts: {
   kind: PaymentAttemptKind | 'all';
-  createdAt?: { gte?: Date; lte?: Date };
+  dateRange?: { gte?: Date; lte?: Date };
+  dateField?: 'created' | 'paid';
   takePerSource?: number;
 }): Promise<PaymentAttemptRow[]> {
   const take = opts.takePerSource ?? 400;
-  const createdAt = opts.createdAt;
-  const whereDate = createdAt ? { createdAt } : {};
+  const dateField = opts.dateField === 'paid' ? 'paidAt' : 'createdAt';
+  const whereDate = opts.dateRange ? { [dateField]: opts.dateRange } : {};
 
   const [tickets, aiOrders, subscriptions] = await Promise.all([
     opts.kind === 'all' || opts.kind === 'ticket'
@@ -338,8 +353,20 @@ export async function getAdminPaymentsOverview(req: AuthenticatedRequest, res: R
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const createdAt = dateRange(req);
-    const rows = await collectAttempts({ kind: 'all', createdAt, takePerSource: 2000 });
+    const kind = parseKind(req.query.kind);
+    const status = parseStatus(req.query.status);
+    const channel = parseChannel(req.query.channel);
+    const provider = parseProvider(req.query.provider);
+    const range = dateRange(req);
+    const dateField = parseDateField(req.query.dateField);
+    const minFc = parseAmountBound(req.query.minFc);
+    const maxFc = parseAmountBound(req.query.maxFc);
+    let rows = await collectAttempts({ kind, dateRange: range, dateField, takePerSource: 2000 });
+    if (status !== 'all') rows = rows.filter((row) => row.status === status);
+    if (channel) rows = rows.filter((row) => row.channel === channel);
+    if (provider) rows = rows.filter((row) => String(row.paymentProvider || '').toLowerCase() === provider);
+    if (minFc !== undefined) rows = rows.filter((row) => row.amountFc >= minFc);
+    if (maxFc !== undefined) rows = rows.filter((row) => row.amountFc <= maxFc);
 
     const bySourceMap = new Map<string, SourceBucket>();
     const byKindMap = new Map<PaymentAttemptKind, ReturnType<typeof emptyBucket> & { kind: PaymentAttemptKind; kindLabel: string }>();
@@ -395,12 +422,19 @@ export async function listAdminPaymentAttempts(req: AuthenticatedRequest, res: R
     const kind = parseKind(req.query.kind);
     const status = parseStatus(req.query.status);
     const channel = parseChannel(req.query.channel);
+    const provider = parseProvider(req.query.provider);
     const q = searchQ(req);
-    const createdAt = dateRange(req);
+    const range = dateRange(req);
+    const dateField = parseDateField(req.query.dateField);
+    const minFc = parseAmountBound(req.query.minFc);
+    const maxFc = parseAmountBound(req.query.maxFc);
 
-    let rows = await collectAttempts({ kind, createdAt, takePerSource: 800 });
+    let rows = await collectAttempts({ kind, dateRange: range, dateField, takePerSource: 800 });
     if (status !== 'all') rows = rows.filter((row) => row.status === status);
     if (channel) rows = rows.filter((row) => row.channel === channel);
+    if (provider) rows = rows.filter((row) => String(row.paymentProvider || '').toLowerCase() === provider);
+    if (minFc !== undefined) rows = rows.filter((row) => row.amountFc >= minFc);
+    if (maxFc !== undefined) rows = rows.filter((row) => row.amountFc <= maxFc);
     if (q) rows = rows.filter((row) => matchesQ(row, q));
 
     const total = rows.length;

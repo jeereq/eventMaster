@@ -3,6 +3,7 @@
 import React from 'react';
 import { Check, Clock, Edit2, Eye, Trash2, X } from 'lucide-react';
 import type { PlanId } from '@/config/landingPricing';
+import { platformRoleLabel, orgRoleLabel, accountKindShortLabel, formatAdminDate } from '@/lib/adminRoles';
 
 function planBadgeClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted border-border text-muted';
@@ -157,10 +158,15 @@ export type AdminUserRow = {
  id: string;
  name: string | null;
  email: string;
+ phone?: string | null;
  role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+ orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
  isEmailVerified: boolean;
  tenantId: string | null;
  tenantName: string;
+ tenantPlan?: string | null;
+ tenantAccountKind?: string | null;
+ isOwner?: boolean;
  createdAt: string;
 };
 
@@ -195,7 +201,9 @@ export function UsersMobileList({
  u.role === 'COMMERCIAL' ? 'bg-amber-50 border-amber-100 text-amber-700' :
  'bg-surface-muted border-border text-muted'
  }`}>
- {u.role}
+ {u.role === 'USER' && orgRoleLabel(u.orgRole, u.isOwner)
+ ? orgRoleLabel(u.orgRole, u.isOwner)
+ : platformRoleLabel(u.role)}
  </span>
  </div>
  <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -205,7 +213,9 @@ export function UsersMobileList({
  {u.isEmailVerified ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
  {u.isEmailVerified ? 'Vérifié' : 'Non vérifié'}
  </span>
- <span className="text-muted font-semibold truncate">{u.tenantName}</span>
+ <span className="text-muted font-semibold truncate">
+ {[u.tenantName, u.tenantPlan, accountKindShortLabel(u.tenantAccountKind), formatAdminDate(u.createdAt)].filter(Boolean).join(' · ')}
+ </span>
  </div>
  <AdminActionButtons
  onView={() => onView(u)}
