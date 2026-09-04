@@ -2036,7 +2036,7 @@ export default function RoomLayoutEditor({
                         ...blueprint,
                         metadata: { ...blueprint.metadata, floorColor: e.target.value },
                       }, { message: 'Couleur de sol personnalisée', kind: 'settings' })}
-                      className="w-8 h-8 rounded border cursor-pointer"
+                      className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   </div>
                 </div>
@@ -2052,7 +2052,7 @@ export default function RoomLayoutEditor({
                           metadata: { ...blueprint.metadata, wallPaintColor: c },
                           walls: (blueprint.walls ?? []).map((w) => ({ ...w, color: c })),
                         }, { message: 'Peinture des murs', kind: 'settings' })}
-                        className={`w-7 h-7 rounded-full border-2 ${(blueprint.metadata.wallPaintColor ?? '') === c ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
+                        className={`min-h-11 min-w-11 rounded-full border-2 ${(blueprint.metadata.wallPaintColor ?? '') === c ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
                         style={{ background: c }}
                       />
                     ))}
@@ -2064,16 +2064,16 @@ export default function RoomLayoutEditor({
                         metadata: { ...blueprint.metadata, wallPaintColor: e.target.value },
                         walls: (blueprint.walls ?? []).map((w) => ({ ...w, color: e.target.value })),
                       }, { message: 'Couleur mur personnalisée', kind: 'settings' })}
-                      className="w-8 h-8 rounded border cursor-pointer"
+                      className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   </div>
                 </div>
                 <div className="space-y-3 pt-3 border-t border-border/50">
                   <div>
                     <p className={EDITOR_HEADING}>Toit & éclairage</p>
-                    <p className="text-[10px] text-muted mt-0.5">Plafond visible + style de lustres.</p>
+                    <p className={EDITOR_HINT}>Plafond visible + style de lustres.</p>
                   </div>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                  <label className="flex items-center gap-2 min-h-11 text-sm font-semibold text-foreground cursor-pointer">
                     <input
                       type="checkbox"
                       checked={blueprint.metadata.showRoof === true}
@@ -2081,14 +2081,14 @@ export default function RoomLayoutEditor({
                         ...blueprint,
                         metadata: { ...blueprint.metadata, showRoof: e.target.checked },
                       }, { message: e.target.checked ? 'Toit affiché' : 'Toit masqué', kind: 'settings' })}
-                      className="rounded border-border"
+                      className="rounded border-border size-4"
                     />
                     Afficher le toit / plafond
                   </label>
                   {blueprint.metadata.showRoof && (
-                    <div className="grid grid-cols-2 gap-2 pl-1">
-                      <label className="text-[9px] space-y-0.5">
-                        <span className="text-muted">Couleur plafond</span>
+                    <div className="grid grid-cols-2 gap-3 pl-1">
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-semibold text-foreground">Couleur plafond</span>
                         <input
                           type="color"
                           value={blueprint.metadata.roofColor ?? '#d6d3d1'}
@@ -2096,11 +2096,11 @@ export default function RoomLayoutEditor({
                             ...blueprint,
                             metadata: { ...blueprint.metadata, roofColor: e.target.value },
                           }, { message: 'Couleur du toit', kind: 'settings' })}
-                          className="w-full h-8 rounded border cursor-pointer"
+                          className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                         />
                       </label>
-                      <label className="text-[9px] space-y-0.5">
-                        <span className="text-muted">Opacité {(Math.round((blueprint.metadata.roofOpacity ?? 0.45) * 100))}%</span>
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-semibold text-foreground">Opacité {(Math.round((blueprint.metadata.roofOpacity ?? 0.45) * 100))}%</span>
                         <input
                           type="range"
                           min={0.15}
@@ -2118,7 +2118,7 @@ export default function RoomLayoutEditor({
                   )}
 
                   <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-2.5">
-                    <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                    <label className="flex items-center gap-2 min-h-11 text-sm font-semibold text-foreground cursor-pointer">
                       <input
                         type="checkbox"
                         checked={blueprint.metadata.showChandeliers === true}
@@ -2130,7 +2130,7 @@ export default function RoomLayoutEditor({
                             ...(e.target.checked && !blueprint.metadata.showRoof ? { showRoof: true } : {}),
                           },
                         }, { message: e.target.checked ? 'Lustres activés' : 'Lustres masqués', kind: 'settings' })}
-                        className="rounded border-border"
+                        className="rounded border-border size-4"
                       />
                       Lustres au plafond
                     </label>
@@ -2154,20 +2154,20 @@ export default function RoomLayoutEditor({
                                   },
                                 }, { message: `Lustre : ${chandelierTypeLabels[type]}`, kind: 'settings' })}
                                 className={cn(
-                                  'text-left px-2 py-1.5 rounded-[var(--radius-button)] border transition',
+                                  'text-left min-h-11 px-3 py-2.5 rounded-[var(--radius-button)] border text-sm font-medium transition-colors',
                                   active
                                     ? 'border-primary bg-primary/10 text-primary'
                                     : 'border-border bg-surface text-muted hover:bg-surface-muted',
                                 )}
                               >
-                                <span className="block text-[10px] font-bold">{chandelierTypeLabels[type]}</span>
-                                <span className="block text-[9px] opacity-80 font-normal mt-0.5">{chandelierTypeHints[type]}</span>
+                                <span className="block font-semibold">{chandelierTypeLabels[type]}</span>
+                                <span className="block text-xs opacity-80 font-normal mt-0.5">{chandelierTypeHints[type]}</span>
                               </button>
                             );
                           })}
                         </div>
-                        <label className="block text-[9px] space-y-0.5">
-                          <span className="text-muted">
+                        <label className="block space-y-1.5">
+                          <span className="text-xs font-semibold text-foreground">
                             Nombre : {resolveChandelierCount(blueprint.metadata.chandelierCount, 5)}
                           </span>
                           <input
@@ -2188,7 +2188,7 @@ export default function RoomLayoutEditor({
                         </label>
                       </div>
                     ) : (
-                      <p className="text-[10px] text-muted">Activez pour choisir le style (classique, cristal, moderne…).</p>
+                      <p className={EDITOR_HINT}>Activez pour choisir le style (classique, cristal, moderne…).</p>
                     )}
                   </div>
 
@@ -2740,18 +2740,18 @@ export default function RoomLayoutEditor({
             </div>
           </div>
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
-            <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables</p>
+            <p className={EDITOR_HEADING}><Palette className="w-3.5 h-3.5" /> Couleur des tables</p>
             <div className="flex gap-2 items-center">
               <input
                 type="color"
                 value={blueprint.metadata.defaultTableColor ?? '#ffffff'}
                 onChange={(e) => setDefaultTableColor(e.target.value)}
-                className="w-12 h-9 rounded-[var(--radius-button)] border cursor-pointer shrink-0"
+                className="min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border cursor-pointer shrink-0"
               />
               <button
                 type="button"
                 onClick={() => applyTableColorToAll(blueprint.metadata.defaultTableColor ?? '#ffffff')}
-                className="flex-1 py-2 px-2 rounded-[var(--radius-button)] border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/15"
+                className={cn(EDITOR_PANEL_BTN, 'flex-1 border-primary/30 bg-primary/10 text-primary')}
               >
                 Appliquer à toutes les tables
               </button>
@@ -2875,15 +2875,15 @@ export default function RoomLayoutEditor({
             {/* ───────── PORTES & ENTRÉES D’ACCUEIL ───────── */}
             {isDoor && (
               <div className="space-y-2 pt-2 border-t border-border">
-                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <DoorOpen className="w-3.5 h-3.5 text-amber-600" /> Style de porte (Pinterest)
+                <p className={EDITOR_HEADING}>
+                  <DoorOpen className="w-3.5 h-3.5 text-primary" /> Style de porte
                 </p>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Modèle architectural</span>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Modèle architectural</span>
                   <select
                     value={selectedFixture.doorStyle ?? (selectedFixture.kind === 'entrance' ? 'grandPortal' : 'frenchDoor')}
                     onChange={(e) => updateFixture(selectedFixture.id, { doorStyle: e.target.value as DoorStyle }, `Style porte : ${doorStyleLabels[e.target.value as DoorStyle]}`)}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs font-semibold bg-surface"
+                    className={EDITOR_FIELD}
                   >
                     {(Object.keys(doorStyleLabels) as DoorStyle[]).map((st) => (
                       <option key={st} value={st}>
@@ -2892,17 +2892,17 @@ export default function RoomLayoutEditor({
                     ))}
                   </select>
                   {selectedFixture.doorStyle && doorStyleHints[selectedFixture.doorStyle] && (
-                    <p className="text-[10px] text-muted italic">{doorStyleHints[selectedFixture.doorStyle]}</p>
+                    <p className={EDITOR_HINT}>{doorStyleHints[selectedFixture.doorStyle]}</p>
                   )}
                 </label>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="block text-xs space-y-1">
-                    <span className="font-semibold text-muted">Sens battant</span>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-foreground">Sens battant</span>
                     <select
                       value={selectedFixture.doorSwing ?? 'double'}
                       onChange={(e) => updateFixture(selectedFixture.id, { doorSwing: e.target.value as any }, 'Sens ouverture porte')}
-                      className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs bg-surface"
+                      className={EDITOR_FIELD}
                     >
                       <option value="double">Double battant</option>
                       <option value="left">Gauche (tirant)</option>
@@ -2911,13 +2911,13 @@ export default function RoomLayoutEditor({
                       <option value="arch">Cintré / Arche</option>
                     </select>
                   </label>
-                  <label className="block text-xs space-y-1">
-                    <span className="font-semibold text-muted">Couleur porte</span>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-foreground">Couleur porte</span>
                     <input
                       type="color"
                       value={selectedFixture.color ?? '#78350f'}
                       onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })}
-                      className="w-full h-8 rounded-[var(--radius-button)] border cursor-pointer"
+                      className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
                     />
                   </label>
                 </div>
@@ -2948,15 +2948,15 @@ export default function RoomLayoutEditor({
             {/* ───────── ALLÉES & TAPIS DE PRESTIGE ───────── */}
             {isAisle && (
               <div className="space-y-2 pt-2 border-t border-border">
-                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Style de l’allée d’honneur
+                <p className={EDITOR_HEADING}>
+                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Style de l’allée d’honneur
                 </p>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Thème de tapis (Pinterest)</span>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Thème de tapis</span>
                   <select
                     value={selectedFixture.aisleStyle ?? 'royalRed'}
                     onChange={(e) => updateFixture(selectedFixture.id, { aisleStyle: e.target.value as AisleStyle }, `Allée : ${aisleStyleLabels[e.target.value as AisleStyle]}`)}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs font-semibold bg-surface"
+                    className={EDITOR_FIELD}
                   >
                     {(Object.keys(aisleStyleLabels) as AisleStyle[]).map((st) => (
                       <option key={st} value={st}>
@@ -2965,7 +2965,7 @@ export default function RoomLayoutEditor({
                     ))}
                   </select>
                   {selectedFixture.aisleStyle && aisleStyleHints[selectedFixture.aisleStyle] && (
-                    <p className="text-[10px] text-muted italic">{aisleStyleHints[selectedFixture.aisleStyle]}</p>
+                    <p className={EDITOR_HINT}>{aisleStyleHints[selectedFixture.aisleStyle]}</p>
                   )}
                 </label>
 
@@ -3004,15 +3004,15 @@ export default function RoomLayoutEditor({
             {/* ───────── LUSTRES & SUSPENSIONS DE CRISTAL ───────── */}
             {isChandelier && (
               <div className="space-y-2.5 pt-2 border-t border-border">
-                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Suspension & Éclairage (Pinterest)
+                <p className={EDITOR_HEADING}>
+                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Suspension & éclairage
                 </p>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Type de lustre</span>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Type de lustre</span>
                   <select
                     value={selectedFixture.chandelierStyle ?? 'crystalCascade'}
                     onChange={(e) => updateFixture(selectedFixture.id, { chandelierStyle: e.target.value as ChandelierFixtureStyle }, `Lustre : ${chandelierFixtureStyleLabels[e.target.value as ChandelierFixtureStyle]}`)}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs font-semibold bg-surface"
+                    className={EDITOR_FIELD}
                   >
                     {(Object.keys(chandelierFixtureStyleLabels) as ChandelierFixtureStyle[]).map((st) => (
                       <option key={st} value={st}>
@@ -3021,17 +3021,17 @@ export default function RoomLayoutEditor({
                     ))}
                   </select>
                   {selectedFixture.chandelierStyle && chandelierFixtureStyleHints[selectedFixture.chandelierStyle] && (
-                    <p className="text-[10px] text-muted italic">{chandelierFixtureStyleHints[selectedFixture.chandelierStyle]}</p>
+                    <p className={EDITOR_HINT}>{chandelierFixtureStyleHints[selectedFixture.chandelierStyle]}</p>
                   )}
                 </label>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="block text-xs space-y-1">
-                    <span className="font-semibold text-muted">Ambiance lumineuse</span>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-foreground">Ambiance lumineuse</span>
                     <select
                       value={selectedFixture.lightWarmth ?? 'gold'}
                       onChange={(e) => updateFixture(selectedFixture.id, { lightWarmth: e.target.value as any }, 'Teinte lumière')}
-                      className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs bg-surface"
+                      className={EDITOR_FIELD}
                     >
                       <option value="gold">Or & Ambre (2700K)</option>
                       <option value="candle">Flamme bougie chaleureuse</option>
@@ -3104,7 +3104,7 @@ export default function RoomLayoutEditor({
                               { message: `Escalier : ${def.fromLabel} → ${s.label}`, kind: 'edit' },
                             )}
                             className={cn(
-                              'px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                              EDITOR_CHIP,
                               def.toStoryId === s.id
                                 ? 'bg-primary/10 border-primary/40 text-primary'
                                 : 'border-border bg-surface text-muted hover:bg-surface-muted',
@@ -3238,9 +3238,9 @@ export default function RoomLayoutEditor({
                       type="button"
                       onClick={() => updateFixture(selectedFixture.id, { balconySide: side }, `Balcon ${balconySideLabels[side]}`)}
                       className={cn(
-                        'px-2 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                        EDITOR_PANEL_BTN,
                         (selectedFixture.balconySide ?? 'south') === side
-                          ? 'bg-sky-100 border-sky-400 text-sky-900'
+                          ? 'bg-primary/10 border-primary/40 text-primary'
                           : 'border-border text-muted hover:bg-surface-muted',
                       )}
                     >
@@ -4487,7 +4487,7 @@ export default function RoomLayoutEditor({
               <select
                 value={amphiStyle}
                 onChange={(e) => setAmphiStyle(e.target.value as AmphitheaterStyle)}
-                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+                className={EDITOR_FIELD}
               >
                 {(Object.keys(amphitheaterStyleLabels) as AmphitheaterStyle[]).map((st) => (
                   <option key={st} value={st}>
@@ -4505,7 +4505,7 @@ export default function RoomLayoutEditor({
                 max={10}
                 value={amphiTiers}
                 onChange={(e) => setAmphiTiers(Math.max(2, Math.min(10, parseInt(e.target.value, 10) || 2)))}
-                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+                className={EDITOR_FIELD}
               />
             </label>
 
@@ -4517,7 +4517,7 @@ export default function RoomLayoutEditor({
                 max={30}
                 value={amphiSeatsPerRow}
                 onChange={(e) => setAmphiSeatsPerRow(Math.max(4, Math.min(30, parseInt(e.target.value, 10) || 4)))}
-                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+                className={EDITOR_FIELD}
               />
             </label>
 
@@ -4526,7 +4526,7 @@ export default function RoomLayoutEditor({
               <select
                 value={amphiChairType}
                 onChange={(e) => setAmphiChairType(e.target.value as ChairType)}
-                className="block w-full px-2 py-1.5 rounded border border-border text-xs font-bold text-foreground bg-surface"
+                className={EDITOR_FIELD}
               >
                 <option value="THEATER">Fauteuil Théâtre velours</option>
                 <option value="ARMCHAIR">Fauteuil Club VIP</option>
