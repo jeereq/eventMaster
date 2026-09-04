@@ -299,6 +299,8 @@ export default function RoomsManagement() {
   const [wizardPlanTab, setWizardPlanTab] = useState<WizardPlanTab>('structure');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [farthestStep, setFarthestStep] = useState(1);
+  const [nameAttempted, setNameAttempted] = useState(false);
+  const [editNameAttempted, setEditNameAttempted] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<RoomItem | null>(null);
   const [deletingRoom, setDeletingRoom] = useState(false);
   const notesFieldId = useId();
@@ -396,6 +398,7 @@ export default function RoomsManagement() {
     setWizardPlanTab('structure');
     setConfirmDiscard(false);
     setFarthestStep(1);
+    setNameAttempted(false);
   };
 
   const closeWizard = () => {
@@ -429,9 +432,18 @@ export default function RoomsManagement() {
   };
 
   const goToStep = (step: number) => {
+    if (step > 1 && !name.trim()) {
+      setNameAttempted(true);
+      setWizardStep(1);
+      return;
+    }
     setWizardStep(step);
     setFarthestStep((current) => Math.max(current, step));
   };
+
+  const nameError = nameAttempted && !name.trim()
+    ? 'Indiquez le nom de la salle pour continuer.'
+    : undefined;
 
   const load = async () => {
     setLoading(true);
@@ -515,6 +527,10 @@ export default function RoomsManagement() {
 
   const handleSaveRoomLayout = async () => {
     if (!editingRoom || !editBlueprint) return;
+    if (!editMeta.name.trim()) {
+      setEditNameAttempted(true);
+      return;
+    }
     setSavingLayout(true);
     setError('');
     try {
@@ -616,6 +632,7 @@ export default function RoomsManagement() {
 
   const openEditLayout = (room: RoomItem) => {
     const bp = room.layoutBlueprint as RoomLayoutBlueprint | null;
+    setEditNameAttempted(false);
     setEditingRoom(room);
     setEditMeta({
       name: room.name,
@@ -1033,7 +1050,6 @@ export default function RoomsManagement() {
               <Button
                 type="button"
                 size="sm"
-                disabled={wizardStep === 1 && !name.trim()}
                 onClick={() => goToStep(wizardStep + 1)}
                 rightIcon={<ChevronRight className="w-4 h-4" />}
               >
@@ -1045,8 +1061,14 @@ export default function RoomsManagement() {
                 variant="success"
                 size="sm"
                 loading={saving}
-                disabled={!name.trim()}
-                onClick={handleCreate}
+                onClick={() => {
+                  if (!name.trim()) {
+                    setNameAttempted(true);
+                    setWizardStep(1);
+                    return;
+                  }
+                  void handleCreate();
+                }}
                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
               >
                 Créer la salle
@@ -1079,9 +1101,7 @@ export default function RoomsManagement() {
             {WIZARD_STEPS.map((step, idx) => {
               const active = wizardStep === step.id;
               const done = wizardStep > step.id;
-              const canReach =
-                step.id <= wizardStep
-                || (step.id === wizardStep + 1 && (wizardStep > 1 || Boolean(name.trim())));
+              const canReach = step.id <= Math.max(wizardStep, farthestStep) || step.id === wizardStep + 1;
               return (
                 <li key={step.id} className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 last:flex-none">
                   {idx > 0 && (
@@ -1094,7 +1114,7 @@ export default function RoomsManagement() {
                     disabled={!canReach}
                     onClick={() => goToStep(step.id)}
                     className={cn(
-                      'inline-flex items-center gap-2 min-h-11 px-2.5 sm:px-3 rounded-[var(--radius-button)] text-xs font-medium transition-colors shrink-0',
+                      'inline-flex items-center gap-2 min-h-11 px-2.5 sm:px-3 rounded-[var(--radius-button)] text-sm font-medium transition-colors shrink-0',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                       active && 'bg-primary/10 text-primary',
                       done && !active && 'text-primary',
@@ -1132,7 +1152,11 @@ export default function RoomsManagement() {
                   label="Nom de la salle"
                   required
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  error={nameError}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (e.target.value.trim()) setNameAttempted(false);
+                  }}
                   placeholder="Ex. Grand salon"
                   className="text-base sm:text-sm min-h-11"
                   data-modal-initial-focus
@@ -1843,13 +1867,13 @@ export default function RoomsManagement() {
 
       <Modal
         open={Boolean(editingRoom && editBlueprint)}
-        onClose={() => { setEditingRoom(null); setEditBlueprint(null); }}
+        onClose={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); }}
         title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan 2D'}
         description="Modifiez les infos, la disposition, les chaises, les couleurs et les éléments fixes."
         size="full"
         footer={
           <div className="flex justify-end gap-2 w-full">
-            <Button type="button" variant="secondary" size="sm" onClick={() => { setEditingRoom(null); setEditBlueprint(null); }}>
+            <Button type="button" variant="secondary" size="sm" onClick={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); }}>
               Annuler
             </Button>
             <Button
@@ -1873,8 +1897,13 @@ export default function RoomsManagement() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Nom de la salle"
+                required
                 value={editMeta.name}
-                onChange={(e) => setEditMeta((m) => ({ ...m, name: e.target.value }))}
+                error={editNameAttempted && !editMeta.name.trim() ? 'Indiquez le nom de la salle pour enregistrer.' : undefined}
+                onChange={(e) => {
+                  setEditMeta((m) => ({ ...m, name: e.target.value }));
+                  if (e.target.value.trim()) setEditNameAttempted(false);
+                }}
                 className="text-base sm:text-sm min-h-11"
               />
               <Input

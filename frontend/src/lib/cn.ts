@@ -1,4 +1,7 @@
-/** Fusionne des classes Tailwind en ignorant les valeurs falsy. */
-export function cn(...classes: (string | false | null | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+/** Fusionne les classes Tailwind : falsy ignorés, conflits résolus. */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }

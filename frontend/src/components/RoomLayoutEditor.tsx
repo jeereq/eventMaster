@@ -187,6 +187,20 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
+import { Alert, Button, Input } from '@/components/ui';
+
+const EDITOR_FIELD =
+  'w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+const EDITOR_CHIP =
+  'inline-flex items-center justify-center min-h-11 px-3 rounded-full border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+const EDITOR_PANEL_BTN =
+  'inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-[var(--radius-button)] border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40 disabled:cursor-not-allowed';
+const EDITOR_OVERLAY_ICON =
+  'absolute inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+const EDITOR_FILE =
+  'block w-full min-h-11 text-sm text-foreground file:mr-3 file:min-h-11 file:px-3 file:rounded-[var(--radius-button)] file:border-0 file:bg-surface-muted file:text-sm file:font-medium file:text-foreground';
+const EDITOR_REMOVE =
+  'inline-flex items-center min-h-11 text-sm font-medium text-rose-700 dark:text-rose-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]';
 
 const EDITOR_TOOL =
   'inline-flex items-center justify-center gap-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-bold border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40 disabled:cursor-not-allowed';
@@ -1277,27 +1291,27 @@ export default function RoomLayoutEditor({
           <span className="flex items-center gap-2">
             <ListTree className="w-4 h-4" />
             Éléments du plan
-            <span className="text-[10px] font-bold text-muted tabular-nums">({counts.all})</span>
+            <span className="text-sm font-medium text-muted tabular-nums">({counts.all})</span>
           </span>
-          <span className="text-[10px] text-muted">{elementsOpen ? 'Masquer' : 'Afficher'}</span>
+          <span className="text-sm text-muted">{elementsOpen ? 'Masquer' : 'Afficher'}</span>
         </button>
         {elementsOpen ? (
           <div className="border-t border-border p-2.5 space-y-2">
-            <input
+            <Input
               type="search"
+              label="Rechercher un élément"
               value={elementsQuery}
               onChange={(e) => setElementsQuery(e.target.value)}
-              placeholder="Rechercher…"
-              className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border text-xs bg-background"
+              placeholder="Nom, table, rangée…"
             />
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {filters.filter((f) => f.id === 'all' || f.n > 0).map((f) => (
                 <button
                   key={f.id}
                   type="button"
                   onClick={() => setElementsFilter(f.id)}
                   className={cn(
-                    'px-2 py-0.5 rounded-full text-[10px] font-bold border',
+                    EDITOR_CHIP,
                     elementsFilter === f.id
                       ? 'bg-primary/10 border-primary/40 text-primary'
                       : 'bg-surface-muted border-border text-muted',
@@ -1309,7 +1323,7 @@ export default function RoomLayoutEditor({
             </div>
             <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
               {canvasInventory.length === 0 ? (
-                <p className="text-[11px] text-muted px-1 py-3 text-center">Aucun élément</p>
+                <p className="text-sm text-muted px-1 py-3 text-center">Aucun élément</p>
               ) : (
                 canvasInventory.map((it) => {
                   const active = selection.some((s) => s.kind === it.kind && s.id === it.id);
@@ -1322,15 +1336,15 @@ export default function RoomLayoutEditor({
                         handleCanvasSelect({ kind: it.kind, id: it.id }, { additive: e.shiftKey || e.metaKey || e.ctrlKey });
                       }}
                       className={cn(
-                        'w-full text-left px-2.5 py-1.5 rounded-[var(--radius-button)] border transition',
+                        'w-full min-h-11 text-left px-2.5 py-2 rounded-[var(--radius-button)] border transition-colors',
                         active
                           ? 'bg-primary/10 border-primary/40 text-primary'
                           : 'bg-background border-transparent hover:border-border hover:bg-surface-muted',
                       )}
                       title="Clic = sélectionner · Shift/Cmd = multi"
                     >
-                      <span className="block text-xs font-bold truncate">{it.title}</span>
-                      <span className="block text-[10px] text-muted truncate capitalize">{it.subtitle}</span>
+                      <span className="block text-sm font-semibold truncate">{it.title}</span>
+                      <span className="block text-xs text-muted truncate capitalize">{it.subtitle}</span>
                     </button>
                   );
                 })
@@ -1384,12 +1398,12 @@ export default function RoomLayoutEditor({
   }, []);
 
   const renderChairImageUpload = (id: string, currentUrl?: string) => (
-    <label className="block text-xs space-y-1">
-      <span className="font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de chaise (optionnel)</span>
+    <label className="block space-y-1.5">
+      <span className="text-sm font-semibold text-foreground flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de chaise (optionnel)</span>
       <input
         type="file"
         accept="image/*"
-        className="w-full text-[10px]"
+        className={EDITOR_FILE}
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
@@ -1398,7 +1412,7 @@ export default function RoomLayoutEditor({
         }}
       />
       {currentUrl && (
-        <button type="button" className="text-[10px] text-rose-600 font-bold" onClick={() => updateFurniture(id, { chairImageUrl: undefined }, 'Image de chaise retirée')}>
+        <button type="button" className={EDITOR_REMOVE} onClick={() => updateFurniture(id, { chairImageUrl: undefined }, 'Image de chaise retirée')}>
           Retirer l&apos;image
         </button>
       )}
@@ -1406,12 +1420,12 @@ export default function RoomLayoutEditor({
   );
 
   const renderTableImageUpload = (id: string, currentUrl?: string) => (
-    <label className="block text-xs space-y-1">
-      <span className="font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de table (nappage, bois…)</span>
+    <label className="block space-y-1.5">
+      <span className="text-sm font-semibold text-foreground flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de table (nappage, bois…)</span>
       <input
         type="file"
         accept="image/*"
-        className="w-full text-[10px]"
+        className={EDITOR_FILE}
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
@@ -1420,7 +1434,7 @@ export default function RoomLayoutEditor({
         }}
       />
       {currentUrl && (
-        <button type="button" className="text-[10px] text-rose-600 font-bold" onClick={() => updateFurniture(id, { tableImageUrl: undefined }, 'Image de table retirée')}>
+        <button type="button" className={EDITOR_REMOVE} onClick={() => updateFurniture(id, { tableImageUrl: undefined }, 'Image de table retirée')}>
           Retirer l&apos;image
         </button>
       )}
@@ -1542,17 +1556,12 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-4">
           {!caps.canThemes ? (
-            <div className="p-4 bg-amber-50 rounded-[var(--radius-card)] border border-amber-200 space-y-2">
-              <p className="text-xs font-bold uppercase text-amber-800 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5" /> Forfait {caps.label}
-              </p>
-              <p className="text-xs text-amber-900/80">
-                {caps.description}
-              </p>
-              <a href="/dashboard/billing" className="inline-block text-xs font-bold text-primary hover:underline">
-                Voir les forfaits →
-              </a>
-            </div>
+            <Alert variant="warning" title={`Forfait ${caps.label}`}>
+              <p>{caps.description}</p>
+              <Button href="/dashboard/billing" variant="ghost" size="sm" className="mt-2 -ml-3">
+                Voir les forfaits
+              </Button>
+            </Alert>
           ) : (
             <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
               <button
@@ -1568,30 +1577,32 @@ export default function RoomLayoutEditor({
               {accordion === 'murs-sols' && (
                 <div className="p-4 bg-surface space-y-5 border-t border-border">
                   <div className="space-y-3">
-                    <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
-                <label className="flex items-center gap-2 text-[10px] text-muted cursor-pointer">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
+                <label className="flex items-center gap-2 min-h-11 text-sm text-muted cursor-pointer">
                   <input
                     type="checkbox"
                     checked={keepThemeFloor}
                     onChange={(e) => setKeepThemeFloor(e.target.checked)}
-                    className="rounded border-border"
+                    className="rounded border-border size-4"
                   />
                   Conserver le sol actuel en changeant de thème
                 </label>
                 <div className="space-y-4">
                   {themesByCategory.map(({ category, label, themes }) => (
                     <div key={category} className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-muted">{label}</p>
+                      <p className="text-sm font-semibold text-foreground">{label}</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {themes.map((theme) => (
                           <button
                             key={theme.id}
                             type="button"
                             onClick={() => applyTheme(theme.id)}
-                            className={`text-left py-2 px-2.5 rounded-[var(--radius-button)] border text-[10px] font-bold transition overflow-hidden ${blueprint.metadata.roomThemeId === theme.id || (!blueprint.metadata.roomThemeId && theme.id === 'classic')
+                            className={cn(
+                              'text-left min-h-11 py-2.5 px-2.5 rounded-[var(--radius-button)] border text-sm font-medium transition-colors overflow-hidden',
+                              blueprint.metadata.roomThemeId === theme.id || (!blueprint.metadata.roomThemeId && theme.id === 'classic')
                                 ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
-                                : 'border-border text-muted hover:bg-white'
-                              }`}
+                                : 'border-border text-muted hover:bg-surface-muted',
+                            )}
                           >
                             <span
                               className="block h-8 rounded-[var(--radius-button)] mb-1.5 border border-black/5"
@@ -1621,22 +1632,20 @@ export default function RoomLayoutEditor({
                 ) : null}
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
-                    <p className="text-xs font-bold uppercase text-muted flex items-center gap-1">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5" /> Ambiances complètes
                     </p>
-                    <p className="text-[10px] text-muted leading-snug">
+                    <p className="text-sm text-muted leading-snug">
                       Applique murs, sol, thème et style de chaises / tables en un clic.
                     </p>
-                    <label className="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-button)] border border-border bg-white">
-                      <Search className="w-3.5 h-3.5 text-muted shrink-0" />
-                      <input
-                        type="search"
-                        value={ambiencePresetQuery}
-                        onChange={(e) => setAmbiencePresetQuery(e.target.value)}
-                        placeholder="Rechercher un preset (mariage, industriel…)"
-                        className="flex-1 min-w-0 text-[11px] bg-transparent outline-none"
-                      />
-                    </label>
+                    <Input
+                      type="search"
+                      label="Rechercher une ambiance"
+                      value={ambiencePresetQuery}
+                      onChange={(e) => setAmbiencePresetQuery(e.target.value)}
+                      placeholder="Mariage, industriel…"
+                      leftIcon={<Search className="w-4 h-4" />}
+                    />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-0.5">
                       {filteredAmbiencePresets.map((preset) => (
                         <RoomAmbienceCard
@@ -1648,22 +1657,23 @@ export default function RoomLayoutEditor({
                         />
                       ))}
                       {filteredAmbiencePresets.length === 0 ? (
-                        <p className="text-[10px] text-muted col-span-full py-2">Aucun preset ne correspond à votre recherche.</p>
+                        <p className="text-sm text-muted col-span-full py-2">Aucun preset ne correspond à votre recherche.</p>
                       ) : null}
                     </div>
                     <div className="rounded-[var(--radius-button)] border border-dashed border-border p-2.5 space-y-2">
-                      <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
-                        <BookmarkPlus className="w-3 h-3" /> Mes ambiances
+                      <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+                        <BookmarkPlus className="w-3.5 h-3.5" /> Mes ambiances
                       </p>
-                      <div className="flex gap-1.5 flex-wrap">
-                        <input
-                          type="text"
-                          value={customAmbienceName}
-                          onChange={(e) => setCustomAmbienceName(e.target.value)}
-                          placeholder="Nom de l’ambiance…"
-                          className="flex-1 min-w-0 px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
-                          maxLength={48}
-                        />
+                      <div className="flex gap-1.5 flex-wrap items-end">
+                        <div className="flex-1 min-w-[10rem]">
+                          <Input
+                            label="Nom de l’ambiance"
+                            value={customAmbienceName}
+                            onChange={(e) => setCustomAmbienceName(e.target.value)}
+                            placeholder="Nom de l’ambiance…"
+                            maxLength={48}
+                          />
+                        </div>
                         <button
                           type="button"
                           disabled={!customAmbienceName.trim()}
@@ -1674,17 +1684,17 @@ export default function RoomLayoutEditor({
                             updateBlueprint(next, { message: `Ambiance enregistrée : ${trimmed}`, kind: 'settings' });
                             setCustomAmbienceName('');
                           }}
-                          className="shrink-0 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary disabled:opacity-40"
+                          className={cn(EDITOR_PANEL_BTN, 'border-primary/30 bg-primary/5 text-primary')}
                         >
-                          Sauver
+                          Enregistrer
                         </button>
                         <button
                           type="button"
                           onClick={() => downloadAmbienceExport(blueprint.metadata.customAmbiences ?? [], 'ambiances-salle.json')}
                           disabled={(blueprint.metadata.customAmbiences?.length ?? 0) === 0}
-                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted disabled:opacity-40"
+                          className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
                         >
-                          <Download className="w-3 h-3" /> Export
+                          <Download className="w-3.5 h-3.5" /> Export
                         </button>
                         <button
                           type="button"
@@ -1692,9 +1702,9 @@ export default function RoomLayoutEditor({
                             setAmbienceImportTarget('room');
                             ambienceImportRef.current?.click();
                           }}
-                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted"
+                          className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
                         >
-                          <Upload className="w-3 h-3" /> Import
+                          <Upload className="w-3.5 h-3.5" /> Import
                         </button>
                       </div>
                       {(blueprint.metadata.customAmbiences?.length ?? 0) > 0 ? (
@@ -1719,7 +1729,7 @@ export default function RoomLayoutEditor({
                                       updateBlueprint(blueprint, { message: `Publié pour l’équipe : ${saved.name}`, kind: 'settings' });
                                     });
                                   }}
-                                  className="absolute top-1 right-[6.5rem] p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-indigo-700"
+                                  className="absolute top-1 right-[9.75rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
                                 >
                                   <Building2 className="w-3 h-3" />
                                 </button>
@@ -1736,7 +1746,7 @@ export default function RoomLayoutEditor({
                                     });
                                   });
                                 }}
-                                className="absolute top-1 right-[4.25rem] p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                                className="absolute top-1 right-[6.5rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
                               >
                                 <Link2 className="w-3 h-3" />
                               </button>
@@ -1747,7 +1757,7 @@ export default function RoomLayoutEditor({
                                   e.stopPropagation();
                                   setAmbienceLibrary(addAmbienceToLibrary(saved));
                                 }}
-                                className="absolute top-1 right-8 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                                className="absolute top-1 right-[3.25rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
                               >
                                 <BookmarkPlus className="w-3 h-3" />
                               </button>
@@ -1759,7 +1769,7 @@ export default function RoomLayoutEditor({
                                   const next = deleteCustomAmbienceFromBlueprint(blueprint, saved.id);
                                   updateBlueprint(next, { message: `Ambiance supprimée : ${saved.name}`, kind: 'settings' });
                                 }}
-                                className="absolute top-1 right-1 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-red-600"
+                                className="absolute top-1 right-1 min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-rose-700"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -1781,7 +1791,7 @@ export default function RoomLayoutEditor({
                             void captureAmbienceForLibrary(customAmbienceName);
                             if (!customAmbienceName.trim()) setCustomAmbienceName('');
                           }}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-primary/30 bg-primary/5 text-[10px] font-bold text-primary"
+                          className={cn(EDITOR_PANEL_BTN, 'border-primary/30 bg-primary/5 text-primary')}
                         >
                           <Copy className="w-3 h-3" /> Capturer la salle
                         </button>
@@ -1790,7 +1800,7 @@ export default function RoomLayoutEditor({
                             type="button"
                             disabled={ambienceCloudSyncing}
                             onClick={() => void syncCloudLibrary()}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted disabled:opacity-40"
+                            className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
                           >
                             <Cloud className={`w-3 h-3 ${ambienceCloudSyncing ? 'animate-pulse' : ''}`} />
                             {ambienceCloudSyncing ? 'Sync…' : 'Sync cloud'}
@@ -1800,7 +1810,7 @@ export default function RoomLayoutEditor({
                           type="button"
                           onClick={() => downloadAmbienceExport(ambienceLibrary)}
                           disabled={ambienceLibrary.length === 0}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted disabled:opacity-40"
+                          className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
                         >
                           <Download className="w-3 h-3" /> Export
                         </button>
@@ -1810,7 +1820,7 @@ export default function RoomLayoutEditor({
                             setAmbienceImportTarget('library');
                             ambienceImportRef.current?.click();
                           }}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted"
+                          className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
                         >
                           <Upload className="w-3 h-3" /> Import
                         </button>
@@ -1842,7 +1852,7 @@ export default function RoomLayoutEditor({
                                     });
                                   });
                                 }}
-                                className="absolute top-1 right-[4.25rem] p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                                className="absolute top-1 right-[6.5rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
                               >
                                 <Link2 className="w-3 h-3" />
                               </button>
@@ -1854,7 +1864,7 @@ export default function RoomLayoutEditor({
                                   const next = importCustomAmbiencesToBlueprint(blueprint, [saved], 'merge');
                                   updateBlueprint(next, { message: `Ambiance ajoutée à la salle : ${saved.name}`, kind: 'settings' });
                                 }}
-                                className="absolute top-1 right-8 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-primary"
+                                className="absolute top-1 right-[3.25rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
                               >
                                 <Plus className="w-3 h-3" />
                               </button>
@@ -1870,7 +1880,7 @@ export default function RoomLayoutEditor({
                                     setAmbienceLibrary(removeAmbienceFromLibrary(saved.id));
                                   })();
                                 }}
-                                className="absolute top-1 right-1 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-red-600"
+                                className="absolute top-1 right-1 min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-rose-700"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -1893,9 +1903,9 @@ export default function RoomLayoutEditor({
                       />
                     </div>
                     {tenant?.id ? (
-                      <div className="rounded-[var(--radius-button)] border border-indigo-200 bg-indigo-50/40 p-2.5 space-y-2">
+                      <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-2.5 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-[10px] font-bold uppercase text-indigo-900 flex items-center gap-1">
+                          <p className="text-sm font-semibold text-foreground flex items-center gap-1">
                             <Building2 className="w-3 h-3" /> Bibliothèque organisation
                           </p>
                           <button
@@ -1910,12 +1920,12 @@ export default function RoomLayoutEditor({
                                 if (!customAmbienceName.trim()) setCustomAmbienceName('');
                               });
                             }}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-indigo-300 bg-white text-[10px] font-bold text-indigo-800"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-primary/30 bg-surface text-sm font-medium text-primary min-h-11 px-3"
                           >
                             <Building2 className="w-3 h-3" /> Publier pour l’équipe
                           </button>
                         </div>
-                        <p className="text-[9px] text-indigo-900/70 leading-snug">
+                        <p className="text-[9px] text-muted leading-snug">
                           Partagée avec tous les membres de votre organisation.
                         </p>
                         {orgAmbiences.length > 0 ? (
@@ -1938,7 +1948,7 @@ export default function RoomLayoutEditor({
                                       .then(() => setOrgAmbiences((prev) => prev.filter((item) => item.id !== saved.id)))
                                       .catch(() => updateBlueprint(blueprint, { message: 'Suppression non autorisée', kind: 'settings' }));
                                   }}
-                                  className="absolute top-1 right-1 p-1 rounded bg-white/90 border border-border opacity-0 group-hover:opacity-100 transition text-muted hover:text-red-600"
+                                  className="absolute top-1 right-1 min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-rose-700"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
@@ -1946,7 +1956,7 @@ export default function RoomLayoutEditor({
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[9px] text-indigo-900/60">Aucune ambiance partagée par l’équipe.</p>
+                          <p className="text-[9px] text-muted">Aucune ambiance partagée par l’équipe.</p>
                         )}
                       </div>
                     ) : null}
@@ -1962,7 +1972,7 @@ export default function RoomLayoutEditor({
                               type="button"
                               disabled={!entry.preset}
                               onClick={() => entry.preset && applyAmbience(entry.preset)}
-                              className="px-2 py-1 rounded-full border border-border bg-white text-[9px] font-semibold text-foreground hover:border-primary/40 disabled:opacity-40"
+                              className="px-2 py-1 rounded-full border border-border bg-surface text-[9px] font-semibold text-foreground hover:border-primary/40 disabled:opacity-40"
                               title={new Date(entry.appliedAt).toLocaleString('fr-FR')}
                             >
                               {entry.label}
@@ -1973,17 +1983,19 @@ export default function RoomLayoutEditor({
                     ) : null}
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
-                    <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {FLOOR_TYPE_PICKER_ORDER.map((type) => (
                     <button
                       key={type}
                       type="button"
                       onClick={() => setFloorType(type)}
-                      className={`py-2 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold transition overflow-hidden ${effectiveFloorType === type && !blueprint.metadata.floorImageUrl
-                          ? 'bg-emerald-50 border-emerald-400 text-emerald-800 ring-1 ring-emerald-200'
-                          : 'border-border text-muted hover:bg-white'
-                        }`}
+                      className={cn(
+                        'min-h-11 py-2.5 px-2.5 rounded-[var(--radius-button)] border text-sm font-medium transition-colors overflow-hidden',
+                        effectiveFloorType === type && !blueprint.metadata.floorImageUrl
+                          ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
+                          : 'border-border text-muted hover:bg-surface-muted',
+                      )}
                     >
                       <span
                         className="block h-10 rounded mb-1 border border-black/10 shadow-inner"
@@ -1994,7 +2006,7 @@ export default function RoomLayoutEditor({
                   ))}
                 </div>
                 <div className="space-y-2 pt-2">
-                  <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1"><Palette className="w-3 h-3" /> Teinte / couleur du sol</p>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Teinte / couleur du sol</p>
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#ffffff', '#f5f0e8', '#e8d5a3', '#d4a574', '#a16207', '#78716c', '#1e3a5f', '#166534', '#7f1d1d', '#312e81'].map((c) => (
                       <button
@@ -2005,7 +2017,7 @@ export default function RoomLayoutEditor({
                           ...blueprint,
                           metadata: { ...blueprint.metadata, floorColor: c === '#ffffff' ? undefined : c },
                         }, { message: 'Teinte de sol', kind: 'settings' })}
-                        className={`w-7 h-7 rounded-full border-2 shrink-0 ${(blueprint.metadata.floorColor ?? '#ffffff') === c ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
+                        className={`min-h-11 min-w-11 rounded-full border-2 shrink-0 ${(blueprint.metadata.floorColor ?? '#ffffff') === c ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
                         style={{ background: c }}
                       />
                     ))}
@@ -2137,7 +2149,7 @@ export default function RoomLayoutEditor({
                                   'text-left px-2 py-1.5 rounded-[var(--radius-button)] border transition',
                                   active
                                     ? 'border-primary bg-primary/10 text-primary'
-                                    : 'border-border bg-surface text-muted hover:bg-white',
+                                    : 'border-border bg-surface text-muted hover:bg-surface-muted',
                                 )}
                               >
                                 <span className="block text-[10px] font-bold">{chandelierTypeLabels[type]}</span>
@@ -2210,7 +2222,7 @@ export default function RoomLayoutEditor({
                       <input
                         type="file"
                         accept="image/*"
-                        className="w-full text-[10px]"
+                        className={EDITOR_FILE}
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) await importRoomPlanImage(file);
@@ -2225,7 +2237,7 @@ export default function RoomLayoutEditor({
                       <input
                         type="file"
                         accept="image/*"
-                        className="w-full text-[10px]"
+                        className={EDITOR_FILE}
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) await setFloorImage(file);
@@ -2235,12 +2247,12 @@ export default function RoomLayoutEditor({
                     </label>
                     {blueprint.metadata.floorImageUrl && (
                       <div className="flex flex-wrap gap-2 items-center">
-                        <span className="text-[10px] font-bold text-primary">
+                        <span className="text-sm font-medium text-primary">
                           {blueprint.metadata.floorImageFit === 'cover' ? 'Plan importé' : 'Texture tuilée'}
                         </span>
                         <button
                           type="button"
-                          className="text-[10px] text-rose-600 font-bold"
+                          className={EDITOR_REMOVE}
                           onClick={() => updateBlueprint({
                             ...blueprint,
                             metadata: {
@@ -2296,7 +2308,7 @@ export default function RoomLayoutEditor({
                             'text-left px-2.5 py-2 rounded-[var(--radius-button)] border text-[10px]',
                             active
                               ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border text-muted hover:bg-white',
+                              : 'border-border text-muted hover:bg-surface-muted',
                           )}
                         >
                           <span className="font-bold block">{preset.label}</span>
@@ -2341,7 +2353,7 @@ export default function RoomLayoutEditor({
                             );
                             setSelection([]);
                           }}
-                          className="px-2.5 py-1 hover:bg-white/60"
+                          className="px-2.5 py-1 hover:bg-surface-muted"
                         >
                           {story.label}
                         </button>
@@ -2446,7 +2458,7 @@ export default function RoomLayoutEditor({
                         'py-2 rounded-[var(--radius-button)] border text-xs font-bold',
                         !blueprint.metadata.stackView
                           ? 'bg-primary/10 border-primary/40 text-primary'
-                          : 'border-border text-muted hover:bg-white',
+                          : 'border-border text-muted hover:bg-surface-muted',
                       )}
                     >
                       Éditer un étage
@@ -2471,7 +2483,7 @@ export default function RoomLayoutEditor({
                         'inline-flex items-center justify-center gap-1 py-2 rounded-[var(--radius-button)] border text-xs font-bold',
                         blueprint.metadata.stackView
                           ? 'bg-violet-50 border-violet-300 text-violet-900'
-                          : 'border-border text-muted hover:bg-white',
+                          : 'border-border text-muted hover:bg-surface-muted',
                       )}
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -2504,7 +2516,7 @@ export default function RoomLayoutEditor({
                             { message: `Fondation : ${foundationKindLabels[kind]}`, kind: 'settings' },
                           );
                         }}
-                        className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
+                        className={EDITOR_FIELD}
                       >
                         {(Object.keys(foundationKindLabels) as FoundationKind[]).map((k) => (
                           <option key={k} value={k}>{foundationKindLabels[k]}</option>
@@ -2523,7 +2535,7 @@ export default function RoomLayoutEditor({
                               updateFoundation(blueprint, { heightM: parseFloat(e.target.value) || 0.35 }),
                               { message: 'Hauteur fondation mise à jour', kind: 'settings' },
                             )}
-                            className="w-full px-2 py-1.5 rounded border text-xs"
+                            className={EDITOR_FIELD}
                           />
                         </label>
                       ) : null}
@@ -2534,7 +2546,7 @@ export default function RoomLayoutEditor({
                         <button
                           type="button"
                           onClick={addCorridor}
-                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-border text-xs font-bold text-muted hover:bg-white"
+                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-border text-xs font-bold text-muted hover:bg-surface-muted"
                         >
                           + Couloir sur l’étage actif
                         </button>
@@ -2547,7 +2559,7 @@ export default function RoomLayoutEditor({
                               kind: 'edit',
                             });
                           }}
-                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-white"
+                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-surface-muted"
                         >
                           Percer les portes (couloirs → murs)
                         </button>
@@ -2571,7 +2583,7 @@ export default function RoomLayoutEditor({
             
             {accordion === 'outils' && (
               <div className="p-4 bg-surface space-y-4 border-t border-border">
-                <p className="text-[10px] text-muted leading-relaxed">
+                <p className="text-sm text-muted leading-relaxed">
                   Répartit les tables déverrouillées dans la salle, en évitant la scène.
                 </p>
             <div className="flex flex-wrap gap-1.5">
@@ -2580,8 +2592,12 @@ export default function RoomLayoutEditor({
                   key={id}
                   type="button"
                   onClick={() => setArrangeDensity(id)}
-                  className={`px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold ${arrangeDensity === id ? 'bg-primary/10 border-primary/40 text-primary' : 'border-border text-muted hover:bg-white'
-                    }`}
+                  className={cn(
+                    EDITOR_CHIP,
+                    arrangeDensity === id
+                      ? 'bg-primary/10 border-primary/40 text-primary'
+                      : 'border-border text-muted hover:bg-surface-muted',
+                  )}
                 >
                   {arrangeDensityLabels[id]}
                 </button>
@@ -2598,7 +2614,7 @@ export default function RoomLayoutEditor({
                   key={id}
                   type="button"
                   onClick={() => applyArrange(id)}
-                  className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-[var(--radius-button)] border border-border text-[10px] font-bold text-muted hover:bg-white hover:text-foreground"
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted hover:text-foreground')}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {label}
@@ -2699,7 +2715,7 @@ export default function RoomLayoutEditor({
                         max={80}
                         value={blueprint.canvas.widthM}
                         onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, widthM: parseInt(e.target.value, 10) || 5 } }, { message: 'Largeur de salle modifiée', kind: 'settings' })}
-                        className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                        className={EDITOR_FIELD}
                       />
                     </label>
                     <label className="text-xs space-y-1">
@@ -2710,7 +2726,7 @@ export default function RoomLayoutEditor({
                   max={80}
                   value={blueprint.canvas.heightM}
                   onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, heightM: parseInt(e.target.value, 10) || 5 } }, { message: 'Longueur de salle modifiée', kind: 'settings' })}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                  className={EDITOR_FIELD}
                 />
               </label>
             </div>
@@ -2736,8 +2752,8 @@ export default function RoomLayoutEditor({
           
           {caps.canChangeOutline ? (
             <div className="space-y-3 pt-4 border-t border-border/50">
-              <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
-              <p className="text-[10px] text-muted leading-relaxed">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
+              <p className="text-sm text-muted leading-relaxed">
                 Met à jour le sol découpé et les murs 3D (L, U, hexagone, cercle…). Annulable avec Ctrl+Z.
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -2746,7 +2762,12 @@ export default function RoomLayoutEditor({
                     key={shape}
                     type="button"
                     onClick={() => setRoomOutlineShape(shape)}
-                    className={`py-2 px-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold transition ${outline.shape === shape ? 'bg-primary/10 border-primary/50 text-primary' : 'border-border text-muted hover:bg-white'}`}
+                    className={cn(
+                      'min-h-11 py-2.5 px-1.5 rounded-[var(--radius-button)] border text-sm font-medium transition-colors',
+                      outline.shape === shape
+                        ? 'bg-primary/10 border-primary/50 text-primary'
+                        : 'border-border text-muted hover:bg-surface-muted',
+                    )}
                   >
                     <span
                       className="block h-7 mx-auto mb-1 bg-primary/25 border border-primary/20"
@@ -2835,11 +2856,11 @@ export default function RoomLayoutEditor({
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Largeur %</span>
-                <input type="number" min={1} max={100} value={Math.round(selectedFixture.w)} onChange={(e) => updateFixture(selectedFixture.id, { w: parseFloat(e.target.value) })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+                <input type="number" min={1} max={100} value={Math.round(selectedFixture.w)} onChange={(e) => updateFixture(selectedFixture.id, { w: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
               </label>
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Profondeur %</span>
-                <input type="number" min={1} max={100} value={Math.round(selectedFixture.h)} onChange={(e) => updateFixture(selectedFixture.id, { h: parseFloat(e.target.value) })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+                <input type="number" min={1} max={100} value={Math.round(selectedFixture.h)} onChange={(e) => updateFixture(selectedFixture.id, { h: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
               </label>
             </div>
 
@@ -3048,11 +3069,11 @@ export default function RoomLayoutEditor({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-[10px]">
-                    <div className="rounded border border-border bg-white px-2 py-1.5">
+                    <div className="rounded border border-border bg-surface px-2 py-1.5">
                       <p className="font-bold uppercase text-muted">Départ</p>
                       <p className="font-semibold text-foreground mt-0.5">{def.fromLabel}</p>
                     </div>
-                    <div className="rounded border border-border bg-white px-2 py-1.5">
+                    <div className="rounded border border-border bg-surface px-2 py-1.5">
                       <p className="font-bold uppercase text-muted">Arrivée</p>
                       <p className="font-semibold text-foreground mt-0.5">{def.toLabel ?? '—'}</p>
                     </div>
@@ -3078,7 +3099,7 @@ export default function RoomLayoutEditor({
                               'px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
                               def.toStoryId === s.id
                                 ? 'bg-primary/10 border-primary/40 text-primary'
-                                : 'border-border bg-white text-muted hover:bg-surface-muted',
+                                : 'border-border bg-surface text-muted hover:bg-surface-muted',
                             )}
                           >
                             {s.label}
@@ -3111,7 +3132,7 @@ export default function RoomLayoutEditor({
                             'text-left px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px]',
                             def.style === style
                               ? 'bg-stone-800 text-white border-stone-800'
-                              : 'border-border bg-white text-muted hover:bg-surface-muted',
+                              : 'border-border bg-surface text-muted hover:bg-surface-muted',
                           )}
                         >
                           <span className="font-bold">{stairStyleLabels[style]}</span>
@@ -3133,7 +3154,7 @@ export default function RoomLayoutEditor({
                           onClick={() => updateFixture(selectedFixture.id, { stairDirection: deg }, `Orientation ${stairDirectionLabels[deg]}`)}
                           className={cn(
                             'py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
-                            def.direction === deg ? 'bg-stone-200 border-stone-500' : 'bg-white text-muted',
+                            def.direction === deg ? 'bg-stone-200 border-stone-500' : 'bg-surface text-muted',
                           )}
                         >
                           {stairDirectionLabels[deg]}
@@ -3152,7 +3173,7 @@ export default function RoomLayoutEditor({
                         }),
                         { message: 'Escalier recalibré', kind: 'edit' },
                       )}
-                      className="w-full py-1.5 rounded-[var(--radius-button)] border border-stone-300 bg-white text-[10px] font-bold text-stone-800 hover:bg-stone-100"
+                      className="w-full py-1.5 rounded-[var(--radius-button)] border border-stone-300 bg-surface text-[10px] font-bold text-stone-800 hover:bg-stone-100"
                     >
                       Recalibrer hauteur &amp; course
                     </button>
@@ -3175,7 +3196,7 @@ export default function RoomLayoutEditor({
                         step={0.1}
                         value={selectedFixture.heightM ?? 1.2}
                         onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || 1.2 }, 'Hauteur escalier')}
-                        className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                        className={EDITOR_FIELD}
                       />
                     </label>
                     <label className="block space-y-1">
@@ -3186,7 +3207,7 @@ export default function RoomLayoutEditor({
                         max={24}
                         value={selectedFixture.steps ?? 6}
                         onChange={(e) => updateFixture(selectedFixture.id, { steps: Math.max(4, Math.min(24, parseInt(e.target.value, 10) || 6)) }, 'Marches escalier')}
-                        className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                        className={EDITOR_FIELD}
                       />
                     </label>
                     <label className="block space-y-1">
@@ -3242,7 +3263,7 @@ export default function RoomLayoutEditor({
                     step={0.05}
                     value={selectedFixture.heightM ?? 0.6}
                     onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || 0.6 }, 'Hauteur podium')}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                    className={EDITOR_FIELD}
                   />
                 </label>
                 <label className="block text-xs space-y-1">
@@ -3253,7 +3274,7 @@ export default function RoomLayoutEditor({
                     max={4}
                     value={selectedFixture.steps ?? 2}
                     onChange={(e) => updateFixture(selectedFixture.id, { steps: Math.max(1, Math.min(4, parseInt(e.target.value, 10) || 2)) }, 'Marches podium')}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                    className={EDITOR_FIELD}
                   />
                 </label>
                 <label className="block text-xs space-y-1">
@@ -3279,7 +3300,7 @@ export default function RoomLayoutEditor({
                   <select
                     value={selectedFixture.buffetStyle ?? 'straight'}
                     onChange={(e) => updateFixture(selectedFixture.id, { buffetStyle: e.target.value as 'straight' | 'corner' | 'island' })}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                    className={EDITOR_FIELD}
                   >
                     <option value="straight">Linéaire</option>
                     <option value="corner">En L / angle</option>
@@ -3296,7 +3317,7 @@ export default function RoomLayoutEditor({
                   <select
                     value={selectedFixture.flowerType ?? 'boquet'}
                     onChange={(e) => updateFixture(selectedFixture.id, { flowerType: e.target.value as FlowerType }, 'Type de fleurs modifié')}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                    className={EDITOR_FIELD}
                   >
                     {Object.entries(flowerTypeLabels).map(([k, v]) => (
                       <option key={k} value={k}>{v}</option>
@@ -3314,7 +3335,7 @@ export default function RoomLayoutEditor({
               <>
                 <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Forme colonne</span>
-                  <select value={selectedFixture.columnShape ?? 'round'} onChange={(e) => updateFixture(selectedFixture.id, { columnShape: e.target.value as ColumnShape }, 'Forme colonne modifiée')} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm">
+                  <select value={selectedFixture.columnShape ?? 'round'} onChange={(e) => updateFixture(selectedFixture.id, { columnShape: e.target.value as ColumnShape }, 'Forme colonne modifiée')} className={EDITOR_FIELD}>
                     <option value="round">Ronde</option>
                     <option value="square">Carrée</option>
                   </select>
@@ -3325,7 +3346,7 @@ export default function RoomLayoutEditor({
                 </label>
                 <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Rotation (°)</span>
-                  <input type="number" min={0} max={360} value={selectedFixture.rotation ?? 0} onChange={(e) => updateFixture(selectedFixture.id, { rotation: parseFloat(e.target.value) })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+                  <input type="number" min={0} max={360} value={selectedFixture.rotation ?? 0} onChange={(e) => updateFixture(selectedFixture.id, { rotation: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
                 </label>
                 <div className="space-y-1.5">
                   <p className="text-xs font-semibold text-muted">Position</p>
@@ -3396,7 +3417,7 @@ export default function RoomLayoutEditor({
                   <button
                     type="button"
                     onClick={() => updateFixture(selectedFixture.id, { imageUrl: undefined, imageCrop: undefined }, 'Image retirée')}
-                    className="text-[10px] text-rose-600 font-bold"
+                    className={EDITOR_REMOVE}
                   >
                     Retirer l&apos;image
                   </button>
@@ -3421,7 +3442,7 @@ export default function RoomLayoutEditor({
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Forme</span>
-                <select value={selectedFurniture.shape} onChange={(e) => updateFurniture(selectedFurniture.id, { shape: e.target.value as TableShape })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm">
+                <select value={selectedFurniture.shape} onChange={(e) => updateFurniture(selectedFurniture.id, { shape: e.target.value as TableShape })} className={EDITOR_FIELD}>
                   {caps.tableShapes.includes('round') ? <option value="round">Ronde</option> : null}
                   {caps.tableShapes.includes('rectangular') ? <option value="rectangular">Rectangulaire</option> : null}
                   {caps.tableShapes.includes('square') ? <option value="square">Carrée</option> : null}
@@ -3432,7 +3453,7 @@ export default function RoomLayoutEditor({
               </label>
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Places</span>
-                <input type="number" min={2} max={24} value={selectedFurniture.capacity} onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+                <input type="number" min={2} max={24} value={selectedFurniture.capacity} onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })} className={EDITOR_FIELD} />
               </label>
             </div>
             <label className="block text-xs space-y-1">
@@ -3479,9 +3500,9 @@ export default function RoomLayoutEditor({
                 );
               }
               return (
-                <p className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-[var(--radius-button)] px-2 py-1.5">
+                <Alert variant="info">
                   Posée sur « {surface.label} » ({surface.elevationM.toFixed(2)} m)
-                </p>
+                </Alert>
               );
             })()}
             <div className="block text-xs space-y-1.5">
@@ -3497,7 +3518,7 @@ export default function RoomLayoutEditor({
                 <select
                   value={selectedFurniture.chairStyle ?? 'classic'}
                   onChange={(e) => updateFurniture(selectedFurniture.id, { chairStyle: e.target.value as ChairStyle }, 'Style chaise')}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                  className={EDITOR_FIELD}
                 >
                   {(Object.keys(chairStyleLabels) as ChairStyle[]).map((k) => (
                     <option key={k} value={k}>{chairStyleLabels[k]}</option>
@@ -3524,7 +3545,7 @@ export default function RoomLayoutEditor({
                   step={15}
                   value={selectedFurniture.rotation ?? 0}
                   onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 }, 'Rotation de table')}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                  className={EDITOR_FIELD}
                 />
               </label>
             ) : null}
@@ -3577,35 +3598,35 @@ export default function RoomLayoutEditor({
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['shape']), { message: 'Forme appliquée à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-white"
+                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
                 >
                   Forme
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['chairType']), { message: 'Chaises appliquées à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-white"
+                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
                 >
                   Chaises
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['tableColor']), { message: 'Couleur appliquée à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-white"
+                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
                 >
                   Couleur
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['tableSurface']), { message: 'Finition appliquée à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-white"
+                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
                 >
                   Plateau
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['capacity']), { message: 'Places appliquées à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-white"
+                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
                 >
                   Places
                 </button>
@@ -3720,7 +3741,7 @@ export default function RoomLayoutEditor({
                 <select
                   value={selectedFurniture.chairStyle ?? 'classic'}
                   onChange={(e) => updateFurniture(selectedFurniture.id, { chairStyle: e.target.value as ChairStyle })}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                  className={EDITOR_FIELD}
                 >
                   {(Object.keys(chairStyleLabels) as ChairStyle[]).map((k) => (
                     <option key={k} value={k}>{chairStyleLabels[k]}</option>
@@ -3758,7 +3779,7 @@ export default function RoomLayoutEditor({
               <select
                 value={selectedFurniture.zoneKind ?? 'custom'}
                 onChange={(e) => updateFurniture(selectedFurniture.id, { zoneKind: e.target.value as ZoneKind }, 'Type de zone modifié')}
-                className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                className={EDITOR_FIELD}
               >
                 {(Object.keys(zoneKindLabels) as ZoneKind[]).map((k) => (
                   <option key={k} value={k}>{zoneKindLabels[k]}</option>
@@ -3784,11 +3805,11 @@ export default function RoomLayoutEditor({
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Largeur %</span>
-                <input type="number" min={8} max={90} value={selectedFurniture.w} onChange={(e) => updateFurniture(selectedFurniture.id, { w: parseInt(e.target.value, 10) || 20 })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+                <input type="number" min={8} max={90} value={selectedFurniture.w} onChange={(e) => updateFurniture(selectedFurniture.id, { w: parseInt(e.target.value, 10) || 20 })} className={EDITOR_FIELD} />
               </label>
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Profondeur %</span>
-                <input type="number" min={8} max={90} value={selectedFurniture.h} onChange={(e) => updateFurniture(selectedFurniture.id, { h: parseInt(e.target.value, 10) || 16 })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+                <input type="number" min={8} max={90} value={selectedFurniture.h} onChange={(e) => updateFurniture(selectedFurniture.id, { h: parseInt(e.target.value, 10) || 16 })} className={EDITOR_FIELD} />
               </label>
             </div>
             <div className="space-y-2 pt-1 border-t border-border">
@@ -3798,7 +3819,7 @@ export default function RoomLayoutEditor({
                   type="button"
                   title="Déplacer vers le haut"
                   onClick={() => updateFurniture(selectedFurniture.id, { y: Math.max(2, selectedFurniture.y - 3) }, 'Zone déplacée ↑')}
-                  className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                  className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
                 >
                   <ArrowUp className="w-4 h-4" />
                 </button>
@@ -3807,7 +3828,7 @@ export default function RoomLayoutEditor({
                     type="button"
                     title="Déplacer à gauche"
                     onClick={() => updateFurniture(selectedFurniture.id, { x: Math.max(2, selectedFurniture.x - 3) }, 'Zone déplacée ←')}
-                    className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                    className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
@@ -3823,7 +3844,7 @@ export default function RoomLayoutEditor({
                     type="button"
                     title="Déplacer à droite"
                     onClick={() => updateFurniture(selectedFurniture.id, { x: Math.min(98 - selectedFurniture.w, selectedFurniture.x + 3) }, 'Zone déplacée →')}
-                    className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                    className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
                   >
                     <ArrowRight className="w-4 h-4" />
                   </button>
@@ -3832,7 +3853,7 @@ export default function RoomLayoutEditor({
                   type="button"
                   title="Déplacer vers le bas"
                   onClick={() => updateFurniture(selectedFurniture.id, { y: Math.min(98 - selectedFurniture.h, selectedFurniture.y + 3) }, 'Zone déplacée ↓')}
-                  className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                  className="p-2 rounded-[var(--radius-button)] border bg-surface hover:bg-surface-muted"
                 >
                   <ArrowDown className="w-4 h-4" />
                 </button>
@@ -3848,7 +3869,12 @@ export default function RoomLayoutEditor({
                     key={deg}
                     type="button"
                     onClick={() => updateFurniture(selectedFurniture.id, { rotation: deg }, `Orientation ${label}`)}
-                    className={`py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold ${(selectedFurniture.rotation ?? 0) === deg ? 'bg-amber-50 border-amber-400 text-amber-900' : 'bg-white text-muted'}`}
+                    className={cn(
+                      'min-h-11 rounded-[var(--radius-button)] border text-sm font-medium',
+                      (selectedFurniture.rotation ?? 0) === deg
+                        ? 'bg-primary/10 border-primary/40 text-primary'
+                        : 'bg-surface text-muted',
+                    )}
                   >
                     {label}
                   </button>
@@ -3887,7 +3913,7 @@ export default function RoomLayoutEditor({
                 <select
                   value={selectedFurniture.chairStyle ?? 'lounge'}
                   onChange={(e) => updateFurniture(selectedFurniture.id, { chairStyle: e.target.value as ChairStyle }, 'Style siège')}
-                  className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                  className={EDITOR_FIELD}
                 >
                   {(Object.keys(chairStyleLabels) as ChairStyle[]).map((k) => (
                     <option key={k} value={k}>{chairStyleLabels[k]}</option>
@@ -3905,7 +3931,7 @@ export default function RoomLayoutEditor({
             {caps.canRotate ? (
               <label className="block text-xs space-y-1">
                 <span className="font-semibold text-muted">Rotation °</span>
-                <input type="number" min={0} max={360} value={selectedFurniture.rotation ?? 0} onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+                <input type="number" min={0} max={360} value={selectedFurniture.rotation ?? 0} onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 })} className={EDITOR_FIELD} />
               </label>
             ) : null}
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
@@ -3917,9 +3943,9 @@ export default function RoomLayoutEditor({
                 );
               }
               return (
-                <p className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-[var(--radius-button)] px-2 py-1.5">
+                <Alert variant="info">
                   Posé sur « {surface.label} » ({surface.elevationM.toFixed(2)} m)
-                </p>
+                </Alert>
               );
             })()}
             <p className="text-[10px] text-muted">Glissez la chaise librement dans la vue 3D.</p>
@@ -3933,24 +3959,25 @@ export default function RoomLayoutEditor({
   };
 
   const templateBar = !readOnly && caps.canTemplates && (
-    <div className="space-y-2">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
+    <div className="space-y-3">
+      <p className="text-sm font-semibold text-foreground flex items-center gap-1">
         <LayoutTemplate className="w-3.5 h-3.5" /> Modèles de salle
       </p>
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="flex items-center gap-1.5 text-[10px] text-muted cursor-pointer pb-1">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex items-center gap-2 min-h-11 text-sm text-muted cursor-pointer">
           <input
             type="checkbox"
             checked={keepTemplateStyle}
             onChange={(e) => setKeepTemplateStyle(e.target.checked)}
-            className="rounded border-border"
+            className="rounded border-border size-4"
           />
           Conserver thème et sol
         </label>
-        <label className="text-[10px] space-y-0.5">
-          <span className="font-semibold text-muted">Places au total</span>
-          <input
+        <div className="w-[8.5rem]">
+          <Input
             type="number"
+            inputMode="numeric"
+            label="Places au total"
             min={2}
             max={400}
             value={tplParams.totalSeats ?? 64}
@@ -3964,14 +3991,14 @@ export default function RoomLayoutEditor({
                 rowCount: Math.max(1, Math.ceil(totalSeats / (p.seatsPerRow ?? per))),
               }));
             }}
-            className="w-[88px] px-2 py-1 rounded-[var(--radius-button)] border border-primary/40 text-xs font-bold"
             title="Cliquez ensuite un modèle pour générer ce nombre de places"
           />
-        </label>
-        <label className="text-[10px] space-y-0.5">
-          <span className="font-semibold text-muted">Places / table</span>
-          <input
+        </div>
+        <div className="w-[8.5rem]">
+          <Input
             type="number"
+            inputMode="numeric"
+            label="Places / table"
             min={2}
             max={24}
             value={tplParams.seatsPerTable ?? 8}
@@ -3985,30 +4012,29 @@ export default function RoomLayoutEditor({
                 tableCount: Math.max(1, Math.ceil(total / seatsPerTable)),
               }));
             }}
-            className="w-[72px] px-2 py-1 rounded-[var(--radius-button)] border text-xs"
           />
-        </label>
-        <p className="text-[10px] text-muted pb-1.5">
-          → {Math.max(1, Math.ceil((tplParams.totalSeats ?? 64) / (tplParams.seatsPerTable ?? 8)))} tables · cliquez un modèle
+        </div>
+        <p className="text-sm text-muted pb-2">
+          {Math.max(1, Math.ceil((tplParams.totalSeats ?? 64) / (tplParams.seatsPerTable ?? 8)))} tables · cliquez un modèle
         </p>
-        <label className="text-[10px] space-y-0.5">
-          <span className="font-semibold text-muted">Forme</span>
+        <label className="block min-w-[8.5rem]">
+          <span className="block text-xs font-semibold text-foreground mb-1.5">Forme</span>
           <select
             value={tplParams.tableShape ?? 'round'}
             onChange={(e) => setTplParams((p) => ({ ...p, tableShape: e.target.value as TableShape }))}
-            className="px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+            className={EDITOR_FIELD}
           >
             {(Object.keys(tableShapeLabels) as TableShape[]).filter((shape) => caps.tableShapes.includes(shape)).map((shape) => (
               <option key={shape} value={shape}>{tableShapeLabels[shape]}</option>
             ))}
           </select>
         </label>
-        <label className="text-[10px] space-y-0.5">
-          <span className="font-semibold text-muted">Chaises</span>
+        <label className="block min-w-[8.5rem]">
+          <span className="block text-xs font-semibold text-foreground mb-1.5">Chaises</span>
           <select
             value={tplParams.chairType ?? 'BANQUET'}
             onChange={(e) => setTplParams((p) => ({ ...p, chairType: e.target.value as ChairType }))}
-            className="px-2 py-1 rounded-[var(--radius-button)] border text-xs max-w-[140px]"
+            className={EDITOR_FIELD}
           >
             {Object.entries(chairTypeLabels).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
@@ -4022,7 +4048,12 @@ export default function RoomLayoutEditor({
             key={tpl.id}
             type="button"
             onClick={() => applyTemplate(tpl.id)}
-            className={`shrink-0 text-left px-3 py-2 rounded-[var(--radius-card)] border text-[10px] font-bold transition min-w-[128px] ${blueprint.templateId === tpl.id ? 'bg-primary/10 border-primary/50 text-primary' : 'bg-white border-border text-muted hover:border-primary/30'}`}
+            className={cn(
+              'shrink-0 text-left min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-sm font-medium transition-colors min-w-[128px]',
+              blueprint.templateId === tpl.id
+                ? 'bg-primary/10 border-primary/50 text-primary'
+                : 'bg-surface border-border text-muted hover:border-primary/30',
+            )}
           >
             <span className="block">{tpl.name}</span>
             <span className="font-normal text-muted">{tpl.description}</span>
@@ -4030,13 +4061,15 @@ export default function RoomLayoutEditor({
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-subtle">
-        <p className="text-[10px] font-bold uppercase text-muted shrink-0">Mes modèles</p>
-        <input
-          value={customTplName}
-          onChange={(e) => setCustomTplName(e.target.value)}
-          placeholder="Nom du modèle"
-          className="px-2 py-1 rounded-[var(--radius-button)] border text-xs min-w-[140px] flex-1 max-w-[220px]"
-        />
+        <p className="text-sm font-semibold text-foreground shrink-0">Mes modèles</p>
+        <div className="min-w-[140px] flex-1 max-w-[220px]">
+          <Input
+            label="Nom du modèle"
+            value={customTplName}
+            onChange={(e) => setCustomTplName(e.target.value)}
+            placeholder="Nom du modèle"
+          />
+        </div>
         <button
           type="button"
           onClick={saveCurrentAsTemplate}
@@ -4947,7 +4980,7 @@ export default function RoomLayoutEditor({
           initialCrop={cropFixture?.imageCrop}
         />
         <div className="fixed inset-0 z-[70] bg-background/70 backdrop-blur-sm flex flex-col p-1.5 sm:p-3">
-          <div className="bg-background sm:bg-white rounded-none sm:rounded-2xl shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="bg-background sm:bg-surface rounded-none sm:rounded-2xl shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 border-b border-border-subtle shrink-0">
               {header}
               {templateBar}
