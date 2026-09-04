@@ -1,11 +1,17 @@
 'use client';
 
 import { useEffect } from 'react';
+import type { BeforeInstallPromptEvent } from '@/lib/pwa';
 
 export default function PWARegister() {
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      // Register service worker
+    const capture = (event: Event) => {
+      event.preventDefault();
+      window.deferredPwaPrompt = event as BeforeInstallPromptEvent;
+    };
+    window.addEventListener('beforeinstallprompt', capture);
+
+    if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
@@ -16,6 +22,8 @@ export default function PWARegister() {
           console.error('[PWA] Service Worker registration failed:', error);
         });
     }
+
+    return () => window.removeEventListener('beforeinstallprompt', capture);
   }, []);
 
   return null;

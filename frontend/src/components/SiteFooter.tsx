@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
+import { Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
+import SiteBrandMark from '@/components/SiteBrandMark';
+import PWAInstallCta from '@/components/PWAInstallCta';
 import {
   FOOTER_BRAND_DESCRIPTION,
   FOOTER_FEATURES,
@@ -32,15 +34,11 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
       <div className="page-container py-14 sm:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           <div className="sm:col-span-2 lg:col-span-4 space-y-4">
-            <Link href="/" className="inline-flex items-center gap-2.5 group">
-              <div className="bg-primary-solid text-primary-foreground p-2 rounded-[var(--radius-button)] shadow-xs shadow-primary/30 transition group-hover:scale-105">
-                <Building2 className="w-4 h-4" />
-              </div>
-              <span className="text-base font-bold tracking-tight text-foreground">{site.platformName}</span>
-            </Link>
+            <SiteBrandMark />
             <p className="text-sm text-muted leading-relaxed max-w-sm">
               {FOOTER_BRAND_DESCRIPTION}
             </p>
+            <PWAInstallCta variant="footer" />
             <ul className="space-y-1.5 pt-1">
               {FOOTER_FEATURES.slice(0, 4).map((feature) => (
                 <li key={feature} className="text-xs text-muted/90 leading-snug">

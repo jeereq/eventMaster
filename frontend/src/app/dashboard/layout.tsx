@@ -14,6 +14,7 @@ import {
  Inbox, Sparkles, Bookmark, Heart, Rss,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
+import PWAInstallCta from '@/components/PWAInstallCta';
 import UserLegalGate from '@/components/UserLegalGate';
 import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
@@ -882,7 +883,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={toggleSidebarCollapsed}
         />
-        <div className="page-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
+        <div className="page-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+var(--em-site-install-bar)+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
           <UserLegalGate>
             {children}
             <FirstLoginTourHost />
@@ -901,6 +902,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         onCloseMobileMenu={() => setMobileMenuOpen(false)}
       />
+      <PWAInstallCta variant="bar" />
 
       <div id="em-dashboard-stage" />
 

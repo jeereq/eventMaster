@@ -6,6 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { PartyPopper, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
+import PWAInstallCta from '@/components/PWAInstallCta';
 import CelebrateMood from '@/components/CelebrateMood';
 
 interface AuthFeature {
@@ -116,6 +117,7 @@ export function AuthSplitLayout({
       {/* Formulaire */}
       <div className="w-full lg:w-[54%] xl:w-1/2 flex flex-col justify-center p-5 sm:p-10 lg:p-14 relative bg-background">
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 flex items-center gap-2">
+          <PWAInstallCta variant="inline" />
           <Link
             href="/"
             className="lg:hidden inline-flex items-center gap-2 text-sm font-semibold text-foreground"

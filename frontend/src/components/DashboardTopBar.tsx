@@ -9,6 +9,7 @@ import { NotificationBell } from '@/components/CommercialNotifications';
 import UserAvatar from '@/components/UserAvatar';
 import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
+import PWAInstallCta from '@/components/PWAInstallCta';
 import { Sun, Moon, User, PanelLeft, PanelLeftClose } from 'lucide-react';
 
 export function useDashboardTitle(): { title: string; subtitle?: string } {
@@ -127,6 +128,7 @@ export default function DashboardTopBar({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+        <PWAInstallCta variant="header" />
         <NotificationBell />
         <ViewCustomizerTrigger />
         <button

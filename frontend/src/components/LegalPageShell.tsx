@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { PartyPopper, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import SiteBrandMark from '@/components/SiteBrandMark';
+import PWAInstallCta from '@/components/PWAInstallCta';
 
 interface LegalPageShellProps {
   title: string;
@@ -20,16 +22,14 @@ export function LegalPageShell({
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-50">
         <div className="page-container h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
-            <div className="bg-foreground p-1.5 rounded-[var(--radius-button)] text-background">
-              <PartyPopper className="w-3.5 h-3.5" />
-            </div>
-            <span className="font-semibold text-base tracking-tight">EventMaster</span>
-          </Link>
+          <SiteBrandMark size="sm" />
+          <div className="flex items-center gap-2">
+            <PWAInstallCta variant="inline" />
           <Link href="/" className="text-xs font-semibold text-primary flex items-center gap-1 hover:underline">
             <ArrowLeft className="w-3.5 h-3.5" />
             Retour à l&apos;accueil
           </Link>
+          </div>
         </div>
       </header>
 

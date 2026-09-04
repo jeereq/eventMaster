@@ -8,9 +8,12 @@ import { useTheme } from '@/context/ThemeContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { PartyPopper, Sun, Moon, Menu, X, Sparkles, LayoutDashboard, ArrowRight } from 'lucide-react';
+import { Sun, Moon, Menu, X, Sparkles, LayoutDashboard, ArrowRight, Download } from 'lucide-react';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
 import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
+import SiteBrandMark from '@/components/SiteBrandMark';
+import PWAInstallCta from '@/components/PWAInstallCta';
+import usePwaInstall from '@/hooks/usePwaInstall';
 
 export type SiteHeaderLink = {
   href: string;
@@ -41,6 +44,7 @@ export default function SiteHeader({
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState('');
+  const { visible: showInstall, install } = usePwaInstall();
 
   useEffect(() => {
     const onHashChange = () => {
@@ -104,13 +108,7 @@ export default function SiteHeader({
         )}
       >
         <div className="page-container h-14 flex items-center justify-between gap-4 sm:gap-6">
-        {/* Logo & Nom de la plateforme */}
-        <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition shrink-0 group">
-          <div className="bg-primary-solid text-primary-foreground p-1.5 rounded-lg shadow-sm shadow-primary/30 group-hover:scale-105 transition-transform">
-            <PartyPopper className="w-4 h-4" />
-          </div>
-          <span className="text-[15px] font-bold tracking-tight text-foreground">{site.platformName}</span>
-        </Link>
+        <SiteBrandMark />
 
         {/* Barre de navigation HUD centrale */}
         <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-surface-muted/60 dark:bg-surface-muted/50 border border-border/60 backdrop-blur-xs min-w-0">
@@ -148,6 +146,7 @@ export default function SiteHeader({
 
         {/* Actions à droite : Palette de couleurs, Thème Nuit/Jour, Auth */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <PWAInstallCta variant="header" />
           <div className="hidden sm:flex items-center">
             <PublicAccentPicker />
           </div>
@@ -216,7 +215,7 @@ export default function SiteHeader({
         hidden={!mobileMenuOpen}
         className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-xl shadow-xl"
       >
-        <div className="page-container py-4 space-y-3 pb-[calc(var(--em-site-bottom-nav)+1rem)]">
+        <div className="page-container py-4 space-y-3 pb-[calc(var(--em-site-bottom-nav)+var(--em-site-install-bar)+1rem)]">
             <div className="space-y-1">
               {links.map((item) => {
                 const active = isLinkActive(item.href);
@@ -252,6 +251,21 @@ export default function SiteHeader({
                 );
               })}
             </div>
+
+            {showInstall ? (
+              <Button
+                type="button"
+                size="sm"
+                fullWidth
+                leftIcon={<Download className="w-3.5 h-3.5" />}
+                onClick={() => {
+                  void install();
+                  setMobileMenuOpen(false);
+                }}
+              >
+                Installer l’application
+              </Button>
+            ) : null}
 
             {/* Accent Picker & Options en mobile */}
             <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-surface-muted/50 border border-border/60">
@@ -311,7 +325,12 @@ export default function SiteHeader({
       </div>
     </header>
 
-    {variant !== 'minimal' && <SiteMobileBottomBar />}
+    {variant !== 'minimal' && (
+      <>
+        <SiteMobileBottomBar />
+        <PWAInstallCta variant="bar" />
+      </>
+    )}
   </>
   );
 }

@@ -25,7 +25,8 @@
   --shadow-soft: 0 0 0 1px rgba(0, 0, 0, 0.04);
   /* Barre publique mobile (pt-1 + 48px + pb max(0.375rem, safe-area)) */
   --em-site-bottom-nav: calc(0.25rem + 3rem + max(0.375rem, env(safe-area-inset-bottom, 0px)));
-  --em-site-fab-bottom: calc(var(--em-site-bottom-nav) + 0.75rem);
+  --em-site-install-bar: 0px;
+  --em-site-fab-bottom: calc(var(--em-site-bottom-nav) + var(--em-site-install-bar) + 0.75rem);
   /* Nav dashboard / dock listing : même hauteur que la barre publique */
   --em-dash-bottom-nav: var(--em-site-bottom-nav);
   /* Barre Devis / Réserver des fiches (pt-3 + 44px + pb-3) */
@@ -374,7 +375,13 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-public-bottom-pad {
-  padding-bottom: calc(var(--em-site-bottom-nav) + 0.5rem);
+  padding-bottom: calc(var(--em-site-bottom-nav) + var(--em-site-install-bar) + 0.5rem);
+}
+
+@media (max-width: 767px) {
+  html[data-pwa-install="ask"] {
+    --em-site-install-bar: 2.75rem;
+  }
 }
 
 @media (min-width: 768px) {
