@@ -107,8 +107,8 @@ export default function CatalogueFilterBar({
   search,
   onSearchChange,
   searchPlaceholder,
-  view,
-  onViewChange,
+  view = 'grid',
+  onViewChange = () => undefined,
   chips = [],
   onRemoveChip,
   onClearChips,
@@ -135,8 +135,8 @@ export default function CatalogueFilterBar({
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder: string;
-  view: CatalogueViewMode;
-  onViewChange: (mode: CatalogueViewMode) => void;
+  view?: CatalogueViewMode;
+  onViewChange?: (mode: CatalogueViewMode) => void;
   chips?: CatalogueFilterChip[];
   onRemoveChip?: (id: string) => void;
   onClearChips?: () => void;
