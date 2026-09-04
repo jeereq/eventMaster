@@ -195,8 +195,10 @@ const EDITOR_CHIP =
   'inline-flex items-center justify-center min-h-11 px-3 rounded-full border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 const EDITOR_PANEL_BTN =
   'inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-[var(--radius-button)] border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40 disabled:cursor-not-allowed';
-const EDITOR_OVERLAY_ICON =
-  'absolute inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+const EDITOR_HEADING = 'text-sm font-semibold text-foreground flex items-center gap-1';
+const EDITOR_HINT = 'text-sm text-muted leading-snug';
+const EDITOR_CARD_ACTION =
+  'inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 const EDITOR_FILE =
   'block w-full min-h-11 text-sm text-foreground file:mr-3 file:min-h-11 file:px-3 file:rounded-[var(--radius-button)] file:border-0 file:bg-surface-muted file:text-sm file:font-medium file:text-foreground';
 const EDITOR_REMOVE =
@@ -1495,7 +1497,7 @@ export default function RoomLayoutEditor({
               <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer la sélection
             </button>
             <div className="pt-2 border-t border-border space-y-2">
-              <p className="text-[10px] font-bold uppercase text-muted">Déplacer le groupe</p>
+              <p className={EDITOR_HEADING}>Déplacer le groupe</p>
               <div className="grid grid-cols-3 gap-1 place-items-center max-w-[140px] mx-auto">
                 <span />
                 <button type="button" aria-label="Déplacer le groupe vers le haut" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, -3), { message: 'Groupe déplacé ↑', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowUp className="w-4 h-4" aria-hidden /></button>
@@ -1504,7 +1506,7 @@ export default function RoomLayoutEditor({
                 <button type="button" aria-label="Déplacer le groupe vers le bas" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, 3), { message: 'Groupe déplacé ↓', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowDown className="w-4 h-4" aria-hidden /></button>
                 <button type="button" aria-label="Déplacer le groupe vers la droite" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 3, 0), { message: 'Groupe déplacé →', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowRight className="w-4 h-4" aria-hidden /></button>
               </div>
-              <p className="text-[10px] font-bold uppercase text-muted pt-1">Style du groupe</p>
+              <p className={cn(EDITOR_HEADING, 'pt-1')}>Style du groupe</p>
               <label className="flex items-center gap-2 text-xs">
                 <span className="text-muted font-semibold">Couleur</span>
                 <input
@@ -1710,35 +1712,36 @@ export default function RoomLayoutEditor({
                       {(blueprint.metadata.customAmbiences?.length ?? 0) > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-0.5">
                           {blueprint.metadata.customAmbiences!.map((saved) => (
-                            <div key={saved.id} className="relative group">
+                            <div key={saved.id} className="min-w-0 space-y-1.5">
                               <RoomAmbienceCard
                                 preset={saved.preset}
                                 active={activeAmbienceId === saved.id}
                                 onClick={() => applyAmbience(saved.preset)}
                                 onPreview={() => setAmbiencePreviewPreset(saved.preset)}
                               />
+                              <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Actions pour ${saved.name}`}>
                               {tenant?.id ? (
                                 <button
                                   type="button"
                                   title="Publier pour l’équipe"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                                  aria-label="Publier pour l’équipe"
+                                  onClick={() => {
                                     void publishOrgAmbience(saved).then((row) => {
                                       if (!row) return;
                                       setOrgAmbiences((prev) => [row, ...prev.filter((item) => item.id !== row.id)]);
                                       updateBlueprint(blueprint, { message: `Publié pour l’équipe : ${saved.name}`, kind: 'settings' });
                                     });
                                   }}
-                                  className="absolute top-1 right-[9.75rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
+                                  className={EDITOR_CARD_ACTION}
                                 >
-                                  <Building2 className="w-3 h-3" />
+                                  <Building2 className="w-3.5 h-3.5" aria-hidden />
                                 </button>
                               ) : null}
                               <button
                                 type="button"
                                 title="Copier le lien de partage"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                aria-label="Copier le lien de partage"
+                                onClick={() => {
                                   void copyAmbienceShareLink(saved).then((ok) => {
                                     updateBlueprint(blueprint, {
                                       message: ok ? `Lien copié : ${saved.name}` : 'Impossible de copier le lien',
@@ -1746,44 +1749,45 @@ export default function RoomLayoutEditor({
                                     });
                                   });
                                 }}
-                                className="absolute top-1 right-[6.5rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
+                                className={EDITOR_CARD_ACTION}
                               >
-                                <Link2 className="w-3 h-3" />
+                                <Link2 className="w-3.5 h-3.5" aria-hidden />
                               </button>
                               <button
                                 type="button"
                                 title="Ajouter à la bibliothèque globale"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                aria-label="Ajouter à la bibliothèque globale"
+                                onClick={() => {
                                   setAmbienceLibrary(addAmbienceToLibrary(saved));
                                 }}
-                                className="absolute top-1 right-[3.25rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
+                                className={EDITOR_CARD_ACTION}
                               >
-                                <BookmarkPlus className="w-3 h-3" />
+                                <BookmarkPlus className="w-3.5 h-3.5" aria-hidden />
                               </button>
                               <button
                                 type="button"
                                 title="Supprimer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                aria-label={`Supprimer ${saved.name}`}
+                                onClick={() => {
                                   const next = deleteCustomAmbienceFromBlueprint(blueprint, saved.id);
                                   updateBlueprint(next, { message: `Ambiance supprimée : ${saved.name}`, kind: 'settings' });
                                 }}
-                                className="absolute top-1 right-1 min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-rose-700"
+                                className={cn(EDITOR_CARD_ACTION, 'hover:text-rose-700')}
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3.5 h-3.5" aria-hidden />
                               </button>
+                              </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[9px] text-muted">Enregistrez la configuration actuelle (murs, sol, chaises, éclairage).</p>
+                        <p className={EDITOR_HINT}>Enregistrez la configuration actuelle (murs, sol, chaises, éclairage).</p>
                       )}
                     </div>
                     <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-2.5 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
-                          <Layers className="w-3 h-3" /> Bibliothèque globale
+                        <p className={EDITOR_HEADING}>
+                          <Layers className="w-3.5 h-3.5" /> Bibliothèque globale
                         </p>
                         <button
                           type="button"
@@ -1825,7 +1829,7 @@ export default function RoomLayoutEditor({
                           <Upload className="w-3 h-3" /> Import
                         </button>
                       </div>
-                      <p className="text-[9px] text-muted leading-snug">
+                      <p className={EDITOR_HINT}>
                         {user
                           ? 'Synchronisée avec votre compte et disponible sur tous vos appareils.'
                           : 'Stockage local navigateur — connectez-vous pour la sync cloud.'}
@@ -1833,18 +1837,19 @@ export default function RoomLayoutEditor({
                       {ambienceLibrary.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-0.5">
                           {ambienceLibrary.map((saved) => (
-                            <div key={saved.id} className="relative group">
+                            <div key={saved.id} className="min-w-0 space-y-1.5">
                               <RoomAmbienceCard
                                 preset={saved.preset}
                                 active={activeAmbienceId === saved.id}
                                 onClick={() => applyAmbience(saved.preset)}
                                 onPreview={() => setAmbiencePreviewPreset(saved.preset)}
                               />
+                              <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Actions pour ${saved.name}`}>
                               <button
                                 type="button"
                                 title="Copier le lien de partage"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                aria-label="Copier le lien de partage"
+                                onClick={() => {
                                   void copyAmbienceShareLink(saved).then((ok) => {
                                     updateBlueprint(blueprint, {
                                       message: ok ? `Lien copié : ${saved.name}` : 'Impossible de copier le lien',
@@ -1852,27 +1857,27 @@ export default function RoomLayoutEditor({
                                     });
                                   });
                                 }}
-                                className="absolute top-1 right-[6.5rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
+                                className={EDITOR_CARD_ACTION}
                               >
-                                <Link2 className="w-3 h-3" />
+                                <Link2 className="w-3.5 h-3.5" aria-hidden />
                               </button>
                               <button
                                 type="button"
                                 title="Importer dans cette salle"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                aria-label="Importer dans cette salle"
+                                onClick={() => {
                                   const next = importCustomAmbiencesToBlueprint(blueprint, [saved], 'merge');
                                   updateBlueprint(next, { message: `Ambiance ajoutée à la salle : ${saved.name}`, kind: 'settings' });
                                 }}
-                                className="absolute top-1 right-[3.25rem] min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-primary"
+                                className={EDITOR_CARD_ACTION}
                               >
-                                <Plus className="w-3 h-3" />
+                                <Plus className="w-3.5 h-3.5" aria-hidden />
                               </button>
                               <button
                                 type="button"
                                 title="Supprimer de la bibliothèque"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                aria-label={`Supprimer ${saved.name} de la bibliothèque`}
+                                onClick={() => {
                                   void (async () => {
                                     if (isCloudAmbienceId(saved.id)) {
                                       try { await deleteCloudAmbience(saved.id); } catch { /* ignore */ }
@@ -1880,15 +1885,16 @@ export default function RoomLayoutEditor({
                                     setAmbienceLibrary(removeAmbienceFromLibrary(saved.id));
                                   })();
                                 }}
-                                className="absolute top-1 right-1 min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-rose-700"
+                                className={cn(EDITOR_CARD_ACTION, 'hover:text-rose-700')}
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3.5 h-3.5" aria-hidden />
                               </button>
+                              </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[9px] text-muted">Aucune ambiance globale pour l’instant.</p>
+                        <p className={EDITOR_HINT}>Aucune ambiance globale pour l’instant.</p>
                       )}
                       <input
                         ref={ambienceImportRef}
@@ -1920,18 +1926,18 @@ export default function RoomLayoutEditor({
                                 if (!customAmbienceName.trim()) setCustomAmbienceName('');
                               });
                             }}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-primary/30 bg-surface text-sm font-medium text-primary min-h-11 px-3"
+                            className={cn(EDITOR_PANEL_BTN, 'border-primary/30 bg-surface text-primary')}
                           >
                             <Building2 className="w-3 h-3" /> Publier pour l’équipe
                           </button>
                         </div>
-                        <p className="text-[9px] text-muted leading-snug">
+                        <p className={EDITOR_HINT}>
                           Partagée avec tous les membres de votre organisation.
                         </p>
                         {orgAmbiences.length > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-0.5">
                             {orgAmbiences.map((saved) => (
-                              <div key={saved.id} className="relative group">
+                              <div key={saved.id} className="min-w-0 space-y-1.5">
                                 <RoomAmbienceCard
                                   preset={saved.preset}
                                   active={activeAmbienceId === saved.id}
@@ -1939,31 +1945,33 @@ export default function RoomLayoutEditor({
                                   onClick={() => applyAmbience(saved.preset)}
                                   onPreview={() => setAmbiencePreviewPreset(saved.preset)}
                                 />
+                                <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Actions pour ${saved.name}`}>
                                 <button
                                   type="button"
                                   title="Supprimer (équipe)"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                                  aria-label={`Supprimer ${saved.name} (équipe)`}
+                                  onClick={() => {
                                     void deleteOrgAmbience(saved.id)
                                       .then(() => setOrgAmbiences((prev) => prev.filter((item) => item.id !== saved.id)))
                                       .catch(() => updateBlueprint(blueprint, { message: 'Suppression non autorisée', kind: 'settings' }));
                                   }}
-                                  className="absolute top-1 right-1 min-h-11 min-w-11 rounded-[var(--radius-button)] bg-surface border border-border text-muted hover:text-rose-700"
+                                  className={cn(EDITOR_CARD_ACTION, 'hover:text-rose-700')}
                                 >
-                                  <Trash2 className="w-3 h-3" />
+                                  <Trash2 className="w-3.5 h-3.5" aria-hidden />
                                 </button>
+                                </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[9px] text-muted">Aucune ambiance partagée par l’équipe.</p>
+                          <p className={EDITOR_HINT}>Aucune ambiance partagée par l’équipe.</p>
                         )}
                       </div>
                     ) : null}
                     {(blueprint.metadata.ambienceHistory?.length ?? 0) > 0 ? (
                       <div className="rounded-[var(--radius-button)] border border-border/70 p-2.5 space-y-2">
-                        <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
-                          <History className="w-3 h-3" /> Historique récent
+                        <p className={EDITOR_HEADING}>
+                          <History className="w-3.5 h-3.5" /> Historique récent
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {blueprint.metadata.ambienceHistory!.map((entry) => (
@@ -1972,7 +1980,7 @@ export default function RoomLayoutEditor({
                               type="button"
                               disabled={!entry.preset}
                               onClick={() => entry.preset && applyAmbience(entry.preset)}
-                              className="px-2 py-1 rounded-full border border-border bg-surface text-[9px] font-semibold text-foreground hover:border-primary/40 disabled:opacity-40"
+                              className={cn(EDITOR_CHIP, 'border-border bg-surface text-foreground hover:border-primary/40 disabled:opacity-40')}
                               title={new Date(entry.appliedAt).toLocaleString('fr-FR')}
                             >
                               {entry.label}
@@ -2033,7 +2041,7 @@ export default function RoomLayoutEditor({
                   </div>
                 </div>
                 <div className="space-y-2 pt-3 border-t border-border/50">
-                  <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1"><BrickWall className="w-3 h-3" /> Peinture murs (globale)</p>
+                  <p className={EDITOR_HEADING}><BrickWall className="w-3 h-3" /> Peinture murs (globale)</p>
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {['#e8e4df', '#f8fafc', '#d6d3d1', '#b4533c', '#8b6914', '#78716c', '#1e3a5f', '#fef3c7'].map((c) => (
                       <button
@@ -2062,7 +2070,7 @@ export default function RoomLayoutEditor({
                 </div>
                 <div className="space-y-3 pt-3 border-t border-border/50">
                   <div>
-                    <p className="text-[10px] font-bold uppercase text-muted">Toit & éclairage</p>
+                    <p className={EDITOR_HEADING}>Toit & éclairage</p>
                     <p className="text-[10px] text-muted mt-0.5">Plafond visible + style de lustres.</p>
                   </div>
                   <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
@@ -2128,7 +2136,7 @@ export default function RoomLayoutEditor({
                     </label>
                     {blueprint.metadata.showChandeliers === true ? (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-bold uppercase text-muted">Type de lustre</p>
+                        <p className={EDITOR_HEADING}>Type de lustre</p>
                         <div className="grid grid-cols-2 gap-1.5">
                           {CHANDELIER_TYPE_ORDER.map((type) => {
                             const active = resolveChandelierType(blueprint.metadata.chandelierType) === type;
@@ -2185,7 +2193,7 @@ export default function RoomLayoutEditor({
                   </div>
 
                   <details className="rounded-[var(--radius-button)] border border-border bg-surface-muted/30 px-2.5 py-2">
-                    <summary className="text-[10px] font-bold uppercase text-muted cursor-pointer select-none">
+                    <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center">
                       Autre décor (uplights, rideaux…)
                     </summary>
                     <div className="mt-2 space-y-1.5">
@@ -2289,7 +2297,7 @@ export default function RoomLayoutEditor({
             {accordion === 'batiment' && (
               <div className="p-4 bg-surface space-y-4 border-t border-border">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-muted">Modèle prêt à l’emploi</p>
+                  <p className={EDITOR_HEADING}>Modèle prêt à l’emploi</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {BUILDING_STORY_PRESETS.map((preset) => {
                       const active = resolveBuildingPresetId(blueprint) === preset.id;
@@ -2305,7 +2313,7 @@ export default function RoomLayoutEditor({
                             setSelection([]);
                           }}
                           className={cn(
-                            'text-left px-2.5 py-2 rounded-[var(--radius-button)] border text-[10px]',
+                            'text-left min-h-11 px-3 py-2.5 rounded-[var(--radius-button)] border text-sm',
                             active
                               ? 'border-primary bg-primary/10 text-primary'
                               : 'border-border text-muted hover:bg-surface-muted',
@@ -2320,8 +2328,8 @@ export default function RoomLayoutEditor({
                 </div>
 
                 <div className="rounded-[var(--radius-button)] border border-primary/20 bg-primary/5 px-3 py-2 space-y-1">
-                  <p className="text-[11px] font-semibold text-foreground">En 3 gestes</p>
-                  <ol className="text-[10px] text-muted leading-relaxed list-decimal pl-3.5 space-y-0.5">
+                  <p className="text-sm font-semibold text-foreground">En 3 gestes</p>
+                  <ol className="text-sm text-muted leading-relaxed list-decimal pl-3.5 space-y-0.5">
                     <li>Choisissez un modèle (ci-dessus) ou créez les étages</li>
                     <li>Ajustez escaliers / balcons si besoin</li>
                     <li>Activez « Empiler » pour voir le bâtiment</li>
@@ -2329,13 +2337,13 @@ export default function RoomLayoutEditor({
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-muted">1 · Étages</p>
+                  <p className={EDITOR_HEADING}>Étages</p>
                   <div className="flex flex-wrap gap-1.5">
                     {resolveStories(blueprint).map((story) => (
                       <div
                         key={story.id}
                         className={cn(
-                          'inline-flex items-center rounded-[var(--radius-button)] border text-[10px] font-bold overflow-hidden',
+                          'inline-flex items-center rounded-[var(--radius-button)] border text-sm font-medium overflow-hidden',
                           resolveActiveStoryId(blueprint) === story.id && !blueprint.metadata.stackView
                             ? 'border-primary/40 bg-primary/10 text-primary'
                             : 'border-border text-muted',
@@ -2353,7 +2361,7 @@ export default function RoomLayoutEditor({
                             );
                             setSelection([]);
                           }}
-                          className="px-2.5 py-1 hover:bg-surface-muted"
+                          className="min-h-11 px-3 hover:bg-surface-muted"
                         >
                           {story.label}
                         </button>
@@ -2385,7 +2393,7 @@ export default function RoomLayoutEditor({
                       + Étage
                     </button>
                   </div>
-                  <p className="text-[10px] text-muted">
+                  <p className={EDITOR_HINT}>
                     Vous éditez : <span className="font-semibold text-foreground">{resolveStories(blueprint).find((s) => s.id === resolveActiveStoryId(blueprint))?.label ?? 'RDC'}</span>
                     {' '}— supprimer un étage retire aussi son mobilier.
                   </p>
@@ -2393,9 +2401,9 @@ export default function RoomLayoutEditor({
 
                 {caps.fixtureKinds.includes('stairs') ? (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase text-muted">2 · Escalier vers…</p>
+                    <p className={EDITOR_HEADING}>Escalier vers…</p>
                     {resolveStories(blueprint).length < 2 ? (
-                      <p className="text-[10px] text-muted">Ajoutez un 2ᵉ étage (ou un modèle Duplex) pour créer un escalier.</p>
+                      <p className={EDITOR_HINT}>Ajoutez un 2ᵉ étage (ou un modèle Duplex) pour créer un escalier.</p>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {resolveStories(blueprint)
@@ -2419,7 +2427,7 @@ export default function RoomLayoutEditor({
 
                 {caps.fixtureKinds.includes('balcony') ? (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase text-muted">Balcons</p>
+                    <p className={EDITOR_HEADING}>Balcons</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
                         <button
@@ -2439,12 +2447,12 @@ export default function RoomLayoutEditor({
                     >
                       Ajouter les 4 façades
                     </button>
-                    <p className="text-[10px] text-muted">Les balcons se placent sur l’étage actif. Déplacez-les ensuite sur le plan.</p>
+                    <p className={EDITOR_HINT}>Les balcons se placent sur l’étage actif. Déplacez-les ensuite sur le plan.</p>
                   </div>
                 ) : null}
 
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-muted">3 · Vue</p>
+                  <p className={EDITOR_HEADING}>Vue</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
@@ -2455,7 +2463,7 @@ export default function RoomLayoutEditor({
                         });
                       }}
                       className={cn(
-                        'py-2 rounded-[var(--radius-button)] border text-xs font-bold',
+                        EDITOR_PANEL_BTN,
                         !blueprint.metadata.stackView
                           ? 'bg-primary/10 border-primary/40 text-primary'
                           : 'border-border text-muted hover:bg-surface-muted',
@@ -2480,9 +2488,9 @@ export default function RoomLayoutEditor({
                         });
                       }}
                       className={cn(
-                        'inline-flex items-center justify-center gap-1 py-2 rounded-[var(--radius-button)] border text-xs font-bold',
+                        EDITOR_PANEL_BTN,
                         blueprint.metadata.stackView
-                          ? 'bg-violet-50 border-violet-300 text-violet-900'
+                          ? 'bg-primary/10 border-primary/40 text-primary'
                           : 'border-border text-muted hover:bg-surface-muted',
                       )}
                     >
@@ -2490,7 +2498,7 @@ export default function RoomLayoutEditor({
                       Empiler les étages
                     </button>
                   </div>
-                  <p className="text-[10px] text-muted leading-relaxed">
+                  <p className={EDITOR_HINT}>
                     {blueprint.metadata.stackView
                       ? 'Tous les niveaux sont empilés en 3D (RDC en bas, étages au-dessus). Tournez la caméra pour voir la coupe.'
                       : 'Seul l’étage actif est affiché — idéal pour placer tables et murs.'}
@@ -2498,12 +2506,12 @@ export default function RoomLayoutEditor({
                 </div>
 
                 <details className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2">
-                  <summary className="text-[10px] font-bold uppercase text-muted cursor-pointer select-none">
+                  <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center">
                     Options avancées (fondation, couloirs)
                   </summary>
                   <div className="mt-3 space-y-3">
                     <div className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase text-muted">Fondation</p>
+                      <p className={EDITOR_HEADING}>Fondation</p>
                       <select
                         value={resolveFoundation(blueprint).kind}
                         onChange={(e) => {
@@ -2523,8 +2531,8 @@ export default function RoomLayoutEditor({
                         ))}
                       </select>
                       {resolveFoundation(blueprint).kind !== 'none' ? (
-                        <label className="block text-[10px] space-y-1">
-                          <span className="font-semibold text-muted">Hauteur (m)</span>
+                        <label className="block space-y-1.5">
+                          <span className="text-xs font-semibold text-foreground">Hauteur (m)</span>
                           <input
                             type="number"
                             min={0.1}
@@ -2542,11 +2550,11 @@ export default function RoomLayoutEditor({
                     </div>
                     {caps.fixtureKinds.includes('corridor') ? (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-bold uppercase text-muted">Couloir</p>
+                        <p className={EDITOR_HEADING}>Couloir</p>
                         <button
                           type="button"
                           onClick={addCorridor}
-                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-border text-xs font-bold text-muted hover:bg-surface-muted"
+                          className={cn(EDITOR_PANEL_BTN, 'w-full border-border text-muted hover:bg-surface-muted')}
                         >
                           + Couloir sur l’étage actif
                         </button>
@@ -2559,7 +2567,7 @@ export default function RoomLayoutEditor({
                               kind: 'edit',
                             });
                           }}
-                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-surface-muted"
+                          className={cn(EDITOR_PANEL_BTN, 'w-full border-dashed border-border text-muted hover:bg-surface-muted')}
                         >
                           Percer les portes (couloirs → murs)
                         </button>
@@ -3062,9 +3070,9 @@ export default function RoomLayoutEditor({
               const def = resolveStairDefinition(blueprint, selectedFixture as Extract<typeof selectedFixture, { kind: 'stairs' }>);
               return (
               <>
-                <div className="rounded-[var(--radius-button)] border border-stone-300 bg-stone-50 px-3 py-2.5 space-y-3">
+                <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2.5 space-y-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase text-muted">Définition de l’escalier</p>
+                    <p className={EDITOR_HEADING}>Définition de l’escalier</p>
                     <p className="text-[11px] font-semibold text-foreground mt-1">{formatStairSummary(def)}</p>
                   </div>
 
@@ -3080,7 +3088,7 @@ export default function RoomLayoutEditor({
                   </div>
 
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold uppercase text-muted">Étage d’arrivée</p>
+                    <p className={EDITOR_HEADING}>Étage d’arrivée</p>
                     <div className="flex flex-wrap gap-1.5">
                       {resolveStories(blueprint)
                         .filter((s) => s.id !== def.fromStoryId)
@@ -3109,7 +3117,7 @@ export default function RoomLayoutEditor({
                   </div>
 
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold uppercase text-muted">Style</p>
+                    <p className={EDITOR_HEADING}>Style</p>
                     <div className="grid grid-cols-1 gap-1">
                       {(Object.keys(stairStyleLabels) as StairStyle[]).map((style) => (
                         <button
@@ -3129,14 +3137,14 @@ export default function RoomLayoutEditor({
                             }
                           }}
                           className={cn(
-                            'text-left px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px]',
+                            'text-left min-h-11 px-3 py-2.5 rounded-[var(--radius-button)] border text-sm',
                             def.style === style
-                              ? 'bg-stone-800 text-white border-stone-800'
+                              ? 'bg-primary text-primary-foreground border-primary'
                               : 'border-border bg-surface text-muted hover:bg-surface-muted',
                           )}
                         >
                           <span className="font-bold">{stairStyleLabels[style]}</span>
-                          <span className={cn('block mt-0.5', def.style === style ? 'text-white/75' : 'opacity-80')}>
+                          <span className={cn('block mt-0.5', def.style === style ? 'text-primary-foreground/80' : 'opacity-80')}>
                             {stairStyleHints[style]}
                           </span>
                         </button>
@@ -3145,7 +3153,7 @@ export default function RoomLayoutEditor({
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted">Orientation (montée)</p>
+                    <p className={EDITOR_HEADING}>Orientation (montée)</p>
                     <div className="grid grid-cols-4 gap-1">
                       {STAIR_DIRECTION_ORDER.map((deg) => (
                         <button
@@ -3153,8 +3161,8 @@ export default function RoomLayoutEditor({
                           type="button"
                           onClick={() => updateFixture(selectedFixture.id, { stairDirection: deg }, `Orientation ${stairDirectionLabels[deg]}`)}
                           className={cn(
-                            'py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
-                            def.direction === deg ? 'bg-stone-200 border-stone-500' : 'bg-surface text-muted',
+                            'min-h-11 rounded-[var(--radius-button)] border text-sm font-medium',
+                            def.direction === deg ? 'bg-primary/10 border-primary/40 text-primary' : 'bg-surface text-muted',
                           )}
                         >
                           {stairDirectionLabels[deg]}
@@ -3173,12 +3181,12 @@ export default function RoomLayoutEditor({
                         }),
                         { message: 'Escalier recalibré', kind: 'edit' },
                       )}
-                      className="w-full py-1.5 rounded-[var(--radius-button)] border border-stone-300 bg-surface text-[10px] font-bold text-stone-800 hover:bg-stone-100"
+                      className={cn(EDITOR_PANEL_BTN, 'w-full border-border bg-surface text-foreground hover:bg-surface-muted')}
                     >
                       Recalibrer hauteur &amp; course
                     </button>
                   ) : (
-                    <p className="text-[10px] text-amber-800">Choisissez l’étage d’arrivée pour figer la définition.</p>
+                    <p className={EDITOR_HINT}>Choisissez l’étage d’arrivée pour figer la définition.</p>
                   )}
                 </div>
 
@@ -3222,7 +3230,7 @@ export default function RoomLayoutEditor({
 
             {isBalcony && (
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase text-muted">Façade</p>
+                <p className={EDITOR_HEADING}>Façade</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
                     <button
@@ -3554,9 +3562,9 @@ export default function RoomLayoutEditor({
                 <button
                   type="button"
                   onClick={() => updateFurniture(selectedFurniture.id, { locked: !selectedFurniture.locked }, selectedFurniture.locked ? 'Table déverrouillée' : 'Table verrouillée')}
-                  className="flex-1 inline-flex items-center justify-center gap-1 py-2 rounded-[var(--radius-button)] border text-[10px] font-bold"
+                  className={cn(EDITOR_PANEL_BTN, 'flex-1 border-border')}
                 >
-                  {selectedFurniture.locked ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  {selectedFurniture.locked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                   {selectedFurniture.locked ? 'Déverrouiller' : 'Verrouiller'}
                 </button>
               ) : null}
@@ -3564,7 +3572,7 @@ export default function RoomLayoutEditor({
                 <button
                   type="button"
                   onClick={duplicateSelectedTable}
-                  className="flex-1 inline-flex items-center justify-center gap-1 py-2 rounded-[var(--radius-button)] border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold"
+                  className={cn(EDITOR_PANEL_BTN, 'flex-1 border-primary/30 bg-primary/10 text-primary')}
                 >
                   <Copy className="w-3 h-3" /> Dupliquer
                 </button>
@@ -3579,7 +3587,7 @@ export default function RoomLayoutEditor({
                     kind: 'edit',
                   });
                 }}
-                className="w-full py-2 rounded-[var(--radius-button)] border border-violet-200 bg-violet-50 text-violet-800 text-[10px] font-bold"
+                className={cn(EDITOR_PANEL_BTN, 'w-full border-border bg-surface text-foreground hover:bg-surface-muted')}
               >
                 Détacher les chaises (placement libre)
               </button>
@@ -3587,46 +3595,46 @@ export default function RoomLayoutEditor({
               <button
                 type="button"
                 onClick={() => updateFurniture(selectedFurniture.id, { attachedChairs: true }, 'Chaises rattachées à la table')}
-                className="w-full py-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted"
+                className={cn(EDITOR_PANEL_BTN, 'w-full border-border text-muted')}
               >
                 Réafficher chaises autour de la table
               </button>
             )}
             <div className="pt-2 border-t border-border space-y-1.5">
-              <p className="text-[10px] font-bold uppercase text-muted">Appliquer à toutes les tables</p>
+              <p className={EDITOR_HEADING}>Appliquer à toutes les tables</p>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['shape']), { message: 'Forme appliquée à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Forme
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['chairType']), { message: 'Chaises appliquées à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Chaises
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['tableColor']), { message: 'Couleur appliquée à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Couleur
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['tableSurface']), { message: 'Finition appliquée à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Plateau
                 </button>
                 <button
                   type="button"
                   onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['capacity']), { message: 'Places appliquées à toutes les tables', kind: 'edit' })}
-                  className="py-1.5 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted hover:bg-surface-muted"
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Places
                 </button>
@@ -3813,7 +3821,7 @@ export default function RoomLayoutEditor({
               </label>
             </div>
             <div className="space-y-2 pt-1 border-t border-border">
-              <p className="text-[10px] font-bold uppercase text-muted">Direction / placement</p>
+              <p className={EDITOR_HEADING}>Direction / placement</p>
               <div className="flex flex-col items-center gap-1">
                 <button
                   type="button"
@@ -4474,7 +4482,7 @@ export default function RoomLayoutEditor({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <label className="text-xs font-semibold text-foreground space-y-1">
               <span>Configuration d’arc</span>
               <select
                 value={amphiStyle}
@@ -4489,7 +4497,7 @@ export default function RoomLayoutEditor({
               </select>
             </label>
 
-            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <label className="text-xs font-semibold text-foreground space-y-1">
               <span>Nombre de gradins</span>
               <input
                 type="number"
@@ -4501,7 +4509,7 @@ export default function RoomLayoutEditor({
               />
             </label>
 
-            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <label className="text-xs font-semibold text-foreground space-y-1">
               <span>Sièges de base / rang</span>
               <input
                 type="number"
@@ -4513,7 +4521,7 @@ export default function RoomLayoutEditor({
               />
             </label>
 
-            <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <label className="text-xs font-semibold text-foreground space-y-1">
               <span>Type de siège</span>
               <select
                 value={amphiChairType}
@@ -4714,7 +4722,7 @@ export default function RoomLayoutEditor({
           </div>
 
           <div className="flex items-center gap-3 pt-1 border-t border-border text-xs">
-            <label className="text-[10px] font-bold uppercase text-muted flex items-center gap-2">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-2">
               <span>Nombre d’allées parallèles :</span>
               <input
                 type="number"
@@ -4737,7 +4745,7 @@ export default function RoomLayoutEditor({
       )}
       {quickCreate === 'chairs' && (
         <>
-          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+          <label className="text-xs font-semibold text-foreground space-y-1">
             <span>Groupes</span>
             <input
               type="number"
@@ -4748,7 +4756,7 @@ export default function RoomLayoutEditor({
               className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
             />
           </label>
-          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+          <label className="text-xs font-semibold text-foreground space-y-1">
             <span>Rangées / groupe</span>
             <input
               type="number"
@@ -4759,7 +4767,7 @@ export default function RoomLayoutEditor({
               className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
             />
           </label>
-          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+          <label className="text-xs font-semibold text-foreground space-y-1">
             <span>Sièges / rangée</span>
             <input
               type="number"
