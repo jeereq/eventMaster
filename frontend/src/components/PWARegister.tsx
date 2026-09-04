@@ -8,6 +8,7 @@ export default function PWARegister() {
     const capture = (event: Event) => {
       event.preventDefault();
       window.deferredPwaPrompt = event as BeforeInstallPromptEvent;
+      window.dispatchEvent(new Event('em-pwa-prompt-ready'));
     };
     window.addEventListener('beforeinstallprompt', capture);
 
@@ -16,7 +17,6 @@ export default function PWARegister() {
         .register('/sw.js')
         .then((registration) => {
           registration.update().catch(() => {});
-          console.log('[PWA] Service Worker registered successfully with scope:', registration.scope);
         })
         .catch((error) => {
           console.error('[PWA] Service Worker registration failed:', error);

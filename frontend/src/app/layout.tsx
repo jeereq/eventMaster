@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { PlatformSiteProvider } from "@/context/PlatformSiteContext";
 import PWARegister from "@/components/PWARegister";
+import { PwaInstallProvider } from "@/context/PwaInstallContext";
 import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import BrandFaviconSync from "@/components/BrandFaviconSync";
@@ -103,17 +104,19 @@ export default function RootLayout({
         <ThemeProvider>
           <PlatformSiteProvider>
             <AuthProvider>
-              <ViewPreferencesBridge>
-                <BrandFaviconSync />
-                <PWARegister />
-                <MaintenanceOverlay />
-                <Suspense fallback={null}>
-                  {children}
-                </Suspense>
-                <Suspense fallback={null}>
-                  <GlobalAiSimulatorFab />
-                </Suspense>
-              </ViewPreferencesBridge>
+              <PwaInstallProvider>
+                <ViewPreferencesBridge>
+                  <BrandFaviconSync />
+                  <PWARegister />
+                  <MaintenanceOverlay />
+                  <Suspense fallback={null}>
+                    {children}
+                  </Suspense>
+                  <Suspense fallback={null}>
+                    <GlobalAiSimulatorFab />
+                  </Suspense>
+                </ViewPreferencesBridge>
+              </PwaInstallProvider>
             </AuthProvider>
           </PlatformSiteProvider>
         </ThemeProvider>

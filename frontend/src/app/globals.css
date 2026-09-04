@@ -394,7 +394,7 @@ html[data-mood="celebrate"] .font-display {
   }
 
   html[data-pwa-install="ask"] {
-    --em-site-install-bar: 2.75rem;
+    --em-site-install-bar: 3rem;
   }
 }
 

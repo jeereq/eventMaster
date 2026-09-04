@@ -44,7 +44,7 @@ export default function SiteHeader({
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState('');
-  const { visible: showInstall, install } = usePwaInstall();
+  const { visible: showInstall, install, busy: installBusy } = usePwaInstall();
 
   useEffect(() => {
     const onHashChange = () => {
@@ -256,6 +256,7 @@ export default function SiteHeader({
                 type="button"
                 size="sm"
                 fullWidth
+                loading={installBusy}
                 leftIcon={<Download className="w-3.5 h-3.5" />}
                 onClick={() => {
                   void install();
