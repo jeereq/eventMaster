@@ -8,7 +8,7 @@ import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import { Button, Modal, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2, Wand2 } from 'lucide-react';
+import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2, Wand2, Mail, ScanLine } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/cn';
 import LandingInvitationAiGenerator from '@/components/landing/LandingInvitationAiGenerator';
@@ -297,30 +297,22 @@ export default function ModelesPage() {
           </div>
         </div>
 
-        {/* CTA final */}
-        <PublicCtaBand
-          title="Prêt à créer votre propre modèle d'invitation ?"
-          description="Inscrivez-vous gratuitement et personnalisez vos faire-part en quelques minutes."
-          actions={
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/register?kind=ORGANIZER&intent=personal&action=template">
-                <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Commencer maintenant
-                </Button>
-              </Link>
-              <Link href="/tarifs">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
-                >
-                  Voir les forfaits
-                </Button>
-              </Link>
-            </div>
-          }
-        />
       </div>
+
+      <PublicCtaBand
+        title="Prêt à créer votre propre modèle d'invitation ?"
+        description="Inscrivez-vous gratuitement et personnalisez vos faire-part en quelques minutes — puis placez vos invités et suivez les RSVP."
+        highlights={[
+          { icon: Wand2, label: 'Studio IA' },
+          { icon: Mail, label: 'WhatsApp' },
+          { icon: Sparkles, label: 'RSVP live' },
+          { icon: ScanLine, label: 'Pass QR' },
+        ]}
+        primaryHref={user ? '/dashboard/templates?aiDraft=1' : '/register?kind=ORGANIZER&intent=personal&action=template'}
+        primaryLabel="Commencer maintenant"
+        secondaryHref="/tarifs"
+        secondaryLabel="Voir les forfaits"
+      />
 
       {/* Modale d'aperçu de modèle d'invitation */}
       <Modal

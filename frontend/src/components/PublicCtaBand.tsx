@@ -1,8 +1,21 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui';
+import type { LucideIcon } from 'lucide-react';
 import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui';
+
+export type PublicCtaHighlight = {
+  icon: LucideIcon;
+  label: string;
+};
+
+const HIGHLIGHT_ICON_TONES = [
+  'text-brand-accent',
+  'text-primary',
+  'text-festive-on-stage',
+  'text-festive-accent',
+] as const;
 
 export default function PublicCtaBand({
   title,
@@ -11,6 +24,7 @@ export default function PublicCtaBand({
   primaryLabel,
   secondaryHref,
   secondaryLabel,
+  highlights,
   actions,
 }: {
   title: string;
@@ -19,54 +33,66 @@ export default function PublicCtaBand({
   primaryLabel?: string;
   secondaryHref?: string;
   secondaryLabel?: string;
+  highlights?: PublicCtaHighlight[];
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="em-landing-defer relative overflow-hidden py-10 sm:py-16 lg:py-20 em-stage border-t border-primary/25">
-      <div
-        className="absolute inset-0 bg-radial-[at_50%_20%] from-primary/35 via-transparent to-transparent pointer-events-none"
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0 bg-radial-[at_80%_90%] from-festive-accent/20 via-transparent to-transparent pointer-events-none"
-        aria-hidden
-      />
-
-      <div className="page-container relative z-10 text-center space-y-4 sm:space-y-5">
-        <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground max-w-xl mx-auto">
-          {title}
-        </h2>
-
-        <p className="text-xs sm:text-base text-stage-foreground/75 max-w-md mx-auto leading-relaxed">
-          {description}
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 justify-center pt-2 sm:pt-3 w-full max-w-sm mx-auto sm:max-w-none [&>*]:w-full sm:[&>*]:w-auto">
-          {actions || (
-            <>
-              {primaryHref && primaryLabel ? (
-                <Button
-                  href={primaryHref}
-                  size="lg"
-                  variant="primary"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                  className="shadow-lg shadow-primary/40 text-sm font-bold"
-                >
-                  {primaryLabel}
-                </Button>
+    <section className="em-landing-defer py-10 sm:py-14 border-t border-border bg-gradient-to-b from-surface/90 to-surface-muted/50">
+      <div className="page-container relative z-10">
+        <div className="rounded-[var(--radius-card)] border border-primary/30 em-stage p-6 sm:p-10 shadow-xl">
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8">
+            <div className="max-w-2xl space-y-3">
+              <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground">
+                {title}
+              </h2>
+              <p className="text-xs sm:text-sm text-stage-foreground/80 leading-relaxed max-w-xl">
+                {description}
+              </p>
+              {highlights?.length ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] sm:text-xs text-stage-foreground/90 font-medium">
+                  {highlights.map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.label} className="flex items-center gap-1.5">
+                        <Icon
+                          className={`w-3.5 h-3.5 shrink-0 ${HIGHLIGHT_ICON_TONES[index % HIGHLIGHT_ICON_TONES.length]}`}
+                        />
+                        <span>{item.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : null}
-              {secondaryHref && secondaryLabel ? (
-                <Button
-                  href={secondaryHref}
-                  size="lg"
-                  variant="secondary"
-                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
-                >
-                  {secondaryLabel}
-                </Button>
-              ) : null}
-            </>
-          )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0 w-full sm:w-auto lg:min-w-[16rem] [&>*]:w-full [&>*]:justify-center">
+              {actions || (
+                <>
+                  {primaryHref && primaryLabel ? (
+                    <Button
+                      href={primaryHref}
+                      size="lg"
+                      variant="primary"
+                      rightIcon={<ArrowRight className="w-4 h-4" />}
+                      className="w-full justify-center shadow-md font-semibold text-xs sm:text-sm"
+                    >
+                      {primaryLabel}
+                    </Button>
+                  ) : null}
+                  {secondaryHref && secondaryLabel ? (
+                    <Button
+                      href={secondaryHref}
+                      size="lg"
+                      variant="secondary"
+                      className="w-full justify-center bg-white/10 text-white hover:bg-white/20 border-white/20 text-xs sm:text-sm font-semibold"
+                    >
+                      {secondaryLabel}
+                    </Button>
+                  ) : null}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </section>

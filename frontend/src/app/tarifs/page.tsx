@@ -10,8 +10,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { enabledPublicCities, formatCityList } from '@/lib/platformCities';
-import { ArrowRight, Sparkles, MessageSquare } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Sparkles, MessageSquare, Wallet, Zap, ShieldCheck, MapPin } from 'lucide-react';
 
 export default function TarifsPage() {
   const { user } = useAuth();
@@ -77,25 +76,17 @@ export default function TarifsPage() {
 
         <PublicCtaBand
           title="Une question avant de choisir votre forfait ?"
-          description={`Notre équipe à ${cityLabel} est disponible pour vous conseiller et vous guider.`}
-          actions={
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/contact">
-                <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Contacter un conseiller
-                </Button>
-              </Link>
-              <Link href="/marketplace">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
-                >
-                  Explorer le marketplace
-                </Button>
-              </Link>
-            </div>
-          }
+          description={`Notre équipe à ${cityLabel} est disponible pour vous conseiller — forfaits clairs, paiement Mobile Money et activation immédiate.`}
+          highlights={[
+            { icon: Wallet, label: 'Mobile Money' },
+            { icon: Zap, label: 'Activation immédiate' },
+            { icon: ShieldCheck, label: 'Sans frais cachés' },
+            { icon: MapPin, label: cityLabel },
+          ]}
+          primaryHref="/contact"
+          primaryLabel="Contacter un conseiller"
+          secondaryHref="/marketplace"
+          secondaryLabel="Explorer le marketplace"
         />
       </div>
     </PublicPageShell>

@@ -381,30 +381,22 @@ export default function Plans3DPage() {
           </div>
         </section>
 
-        {/* ─── CTA Final ─── */}
-        <PublicCtaBand
-          title="Prêt à concevoir le plan de votre événement ?"
-          description="Inscrivez-vous gratuitement pour créer vos propres plans de salle 2D et 3D."
-          actions={
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href={editorUrl}>
-                <Button size="lg" variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Lancer l’éditeur maintenant
-                </Button>
-              </Link>
-              <Link href="/tarifs">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
-                >
-                  Voir les forfaits
-                </Button>
-              </Link>
-            </div>
-          }
-        />
       </div>
+
+      <PublicCtaBand
+        title="Prêt à concevoir le plan de votre événement ?"
+        description="Modélisez vos réceptions au millimètre et placez vos invités — plans 2D cotés, visite 3D et accueil QR le jour J."
+        highlights={[
+          { icon: LayoutGrid, label: 'Plan 2D coté' },
+          { icon: Eye, label: 'Visite 3D 360°' },
+          { icon: Users, label: 'Placement VIP' },
+          { icon: ScanLine, label: 'Accueil QR' },
+        ]}
+        primaryHref={editorUrl}
+        primaryLabel="Lancer l’éditeur maintenant"
+        secondaryHref="/tarifs"
+        secondaryLabel="Voir les forfaits"
+      />
     </PublicPageShell>
   );
 }

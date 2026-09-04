@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Loader2, Sparkles, Wand2, Clock, PlusCircle } from 'lucide-react';
+import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -23,6 +23,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
+import { AiBudgetFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
 import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
 import AiSimulationPackModal from '@/components/AiSimulationPackModal';
@@ -797,12 +798,14 @@ export default function EventPrepAiSimulator({
         </Alert>
       ) : null}
 
-      {loading && !result?.packages.length ? (
-        <p className="text-xs text-muted inline-flex items-center gap-2">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          Recherche dans le catalogue, puis recommandation…
-        </p>
-      ) : null}
+      <AiBudgetFullscreenLoader
+        active={loading}
+        stageHint={
+          result?.packages.length
+            ? 'Actualisation des formules à partir du catalogue…'
+            : 'Recherche dans le catalogue, puis recommandation…'
+        }
+      />
 
       {result?.packages.length ? (
         <div className="space-y-4 pt-2 border-t border-border">

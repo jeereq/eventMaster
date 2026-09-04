@@ -1,38 +1,47 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-const BASE_STEPS = [
+export type AiProcessStep = {
+  id: string;
+  label: string;
+};
+
+const COMPOSE_STEPS: AiProcessStep[] = [
   { id: 'brief', label: 'Lecture du brief' },
   { id: 'faces', label: 'Yeux, sourire et joues' },
   { id: 'layout', label: 'Composition 9:16' },
   { id: 'photo', label: 'Rendu photographique 35 mm' },
   { id: 'finish', label: 'Finition de l’invitation' },
-] as const;
+];
 
-export default function AiComposeFullscreenLoader({
+const BUDGET_STEPS: AiProcessStep[] = [
+  { id: 'brief', label: 'Lecture du projet et du budget' },
+  { id: 'venues', label: 'Salles du catalogue' },
+  { id: 'vendors', label: 'Prestataires et matériel' },
+  { id: 'packs', label: '3 formules chiffrées' },
+  { id: 'split', label: 'Répartition des coûts' },
+];
+
+export function AiProcessFullscreenLoader({
   active,
-  embedText = false,
-  hasReferences = false,
+  eyebrow,
+  title,
+  footnote,
+  steps,
   stageHint,
+  icon: Icon = Sparkles,
 }: {
   active: boolean;
-  embedText?: boolean;
-  hasReferences?: boolean;
+  eyebrow: string;
+  title: string;
+  footnote?: string;
+  steps: AiProcessStep[];
   stageHint?: string | null;
+  icon?: LucideIcon;
 }) {
-  const steps = BASE_STEPS.map((step) => {
-    if (step.id === 'faces' && !hasReferences) {
-      return { ...step, label: 'Ambiance et matières' };
-    }
-    if (step.id === 'finish' && embedText) {
-      return { ...step, label: 'Incrustation de la typographie' };
-    }
-    return step;
-  });
-
   const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
@@ -46,7 +55,7 @@ export default function AiComposeFullscreenLoader({
     if (reduced) return;
     const timer = window.setInterval(() => {
       setStepIndex((i) => (i + 1) % steps.length);
-    }, 3200);
+    }, 2800);
     return () => window.clearInterval(timer);
   }, [active, steps.length]);
 
@@ -69,8 +78,8 @@ export default function AiComposeFullscreenLoader({
       role="alertdialog"
       aria-modal="true"
       aria-busy="true"
-      aria-labelledby="ai-compose-loader-title"
-      aria-describedby="ai-compose-loader-desc"
+      aria-labelledby="ai-process-loader-title"
+      aria-describedby="ai-process-loader-desc"
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
         <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/25 blur-3xl motion-safe:animate-pulse" />
@@ -87,26 +96,22 @@ export default function AiComposeFullscreenLoader({
             }}
           />
           <div className="absolute inset-[7px] rounded-full bg-[#110e0b] border border-white/10 shadow-2xl flex items-center justify-center">
-            <Sparkles className="w-8 h-8 text-primary motion-safe:animate-pulse" />
+            <Icon className="w-8 h-8 text-primary motion-safe:animate-pulse" />
           </div>
           <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary motion-safe:animate-spin motion-reduce:animate-none" />
           <div className="absolute inset-3 rounded-full border border-transparent border-b-white/40 motion-safe:animate-spin motion-reduce:animate-none [animation-direction:reverse] [animation-duration:2.4s]" />
         </div>
 
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary/90">Studio IA</p>
-        <h2 id="ai-compose-loader-title" className="mt-2 text-xl sm:text-2xl font-bold tracking-tight">
-          Création en cours
+        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary/90">{eyebrow}</p>
+        <h2 id="ai-process-loader-title" className="mt-2 text-xl sm:text-2xl font-bold tracking-tight">
+          {title}
         </h2>
-        <p id="ai-compose-loader-desc" className="mt-2 text-sm text-white/70 leading-relaxed">
+        <p id="ai-process-loader-desc" className="mt-2 text-sm text-white/70 leading-relaxed">
           {stageHint || current.label}
         </p>
-        <p className="mt-1 text-xs text-white/45">
-          {hasReferences
-            ? 'Les regards, le sourire et le volume des joues restent fidèles aux photos.'
-            : 'Carte générée uniquement à partir de votre brief.'}
-        </p>
+        {footnote ? <p className="mt-1 text-xs text-white/45">{footnote}</p> : null}
 
-        <ol className="mt-6 space-y-2 text-left" aria-label="Étapes de génération">
+        <ol className="mt-6 space-y-2 text-left" aria-label="Étapes en cours">
           {steps.map((step, index) => {
             const isCurrent = index === stepIndex;
             const isDone = index < stepIndex;
@@ -148,5 +153,61 @@ export default function AiComposeFullscreenLoader({
         </ol>
       </div>
     </div>
+  );
+}
+
+export default function AiComposeFullscreenLoader({
+  active,
+  embedText = false,
+  hasReferences = false,
+  stageHint,
+}: {
+  active: boolean;
+  embedText?: boolean;
+  hasReferences?: boolean;
+  stageHint?: string | null;
+}) {
+  const steps = COMPOSE_STEPS.map((step) => {
+    if (step.id === 'faces' && !hasReferences) {
+      return { ...step, label: 'Ambiance et matières' };
+    }
+    if (step.id === 'finish' && embedText) {
+      return { ...step, label: 'Incrustation de la typographie' };
+    }
+    return step;
+  });
+
+  return (
+    <AiProcessFullscreenLoader
+      active={active}
+      eyebrow="Studio IA"
+      title="Création en cours"
+      stageHint={stageHint}
+      steps={steps}
+      footnote={
+        hasReferences
+          ? 'Les regards, le sourire et le volume des joues restent fidèles aux photos.'
+          : 'Carte générée uniquement à partir de votre brief.'
+      }
+    />
+  );
+}
+
+export function AiBudgetFullscreenLoader({
+  active,
+  stageHint,
+}: {
+  active: boolean;
+  stageHint?: string | null;
+}) {
+  return (
+    <AiProcessFullscreenLoader
+      active={active}
+      eyebrow="Simulation IA"
+      title="Calcul des formules"
+      stageHint={stageHint}
+      steps={BUDGET_STEPS}
+      footnote="Catalogue réel : salles, prestataires et matériel de votre ville."
+    />
   );
 }
