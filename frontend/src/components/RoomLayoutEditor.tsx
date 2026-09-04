@@ -199,6 +199,17 @@ const EDITOR_TOOL_ICON =
 const EDITOR_PICK =
   'min-h-11 p-2.5 rounded-[var(--radius-card)] border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-left transition flex flex-col justify-between';
 
+function EditorToolGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  const items = React.Children.toArray(children).filter(Boolean);
+  if (items.length === 0) return null;
+  return (
+    <fieldset className="m-0 min-w-0 border-0 p-0">
+      <legend className="mb-1.5 px-0 text-xs font-semibold text-muted">{label}</legend>
+      <div className="flex flex-wrap items-center gap-1.5">{items}</div>
+    </fieldset>
+  );
+}
+
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
 
 interface RoomLayoutEditorProps {
@@ -4025,7 +4036,8 @@ export default function RoomLayoutEditor({
   );
 
   const toolbar = !readOnly && (
-    <div className="flex flex-nowrap lg:flex-wrap gap-2 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-5 sm:gap-y-3">
+      <EditorToolGroup label="Historique">
       <button
         type="button"
         onClick={undo}
@@ -4044,6 +4056,19 @@ export default function RoomLayoutEditor({
       >
         <Redo2 className="w-3.5 h-3.5" aria-hidden /> Rétablir
       </button>
+      {onRegenerate && (
+        <button type="button" onClick={() => { onRegenerate(); log('Plan régénéré depuis les paramètres', 'template'); }} className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}>
+          <RefreshCw className="w-3.5 h-3.5" aria-hidden /> Régénérer
+        </button>
+      )}
+      {selection.length > 0 && (
+        <button type="button" onClick={deleteSelected} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer{selection.length > 1 ? ` (${selection.length})` : ''}
+        </button>
+      )}
+      </EditorToolGroup>
+
+      <EditorToolGroup label="Vue">
       <button
         type="button"
         onClick={() => setLockOrbit((v) => !v)}
@@ -4068,49 +4093,6 @@ export default function RoomLayoutEditor({
           ))}
         </select>
       </label>
-      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
-        <Sun className="w-3.5 h-3.5" aria-hidden />
-        <select
-          value={lightingPreset}
-          onChange={(e) => setLightingPreset(e.target.value as LightingPreset)}
-          className="bg-transparent text-xs font-bold text-foreground outline-none max-w-[140px]"
-          title="Éclairage scénique"
-        >
-          {lightingPresetGroups.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.presets.map((p) => (
-                <option key={p} value={p}>{lightingPresetLabels[p]}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
-      <button
-        type="button"
-        onClick={() => setLightingPreset('day')}
-        title="Soleil de midi — lumière zénithale, ombres franches"
-        className={cn(EDITOR_TOOL, lightingPreset === 'day' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <Sun className="w-3.5 h-3.5" aria-hidden />
-        Midi
-      </button>
-      <button
-        type="button"
-        onClick={() => setLightingPreset('dusk')}
-        title="Crépuscule — ciel orange / rose / violet, lumière latérale douce"
-        className={cn(EDITOR_TOOL, lightingPreset === 'dusk' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        Crépuscule
-      </button>
-      <button
-        type="button"
-        onClick={() => setLightingPreset('night')}
-        title="Nuit — ciel étoilé + réglette LED sur le haut du plan"
-        className={cn(EDITOR_TOOL, lightingPreset === 'night' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <Moon className="w-3.5 h-3.5" aria-hidden />
-        Nuit LED
-      </button>
       {caps.canShowcaseRender ? (
       <button
         type="button"
@@ -4173,25 +4155,58 @@ export default function RoomLayoutEditor({
       >
         <Download className="w-3.5 h-3.5" aria-hidden /> Export PNG
       </button>
+      </EditorToolGroup>
+
+      <EditorToolGroup label="Lumière">
+      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
+        <Sun className="w-3.5 h-3.5" aria-hidden />
+        <select
+          value={lightingPreset}
+          onChange={(e) => setLightingPreset(e.target.value as LightingPreset)}
+          className="bg-transparent text-xs font-bold text-foreground outline-none max-w-[140px]"
+          title="Éclairage scénique"
+        >
+          {lightingPresetGroups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.presets.map((p) => (
+                <option key={p} value={p}>{lightingPresetLabels[p]}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('day')}
+        title="Soleil de midi — lumière zénithale, ombres franches"
+        className={cn(EDITOR_TOOL, lightingPreset === 'day' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Sun className="w-3.5 h-3.5" aria-hidden />
+        Midi
+      </button>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('dusk')}
+        title="Crépuscule — ciel orange / rose / violet, lumière latérale douce"
+        className={cn(EDITOR_TOOL, lightingPreset === 'dusk' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        Crépuscule
+      </button>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('night')}
+        title="Nuit — ciel étoilé + réglette LED sur le haut du plan"
+        className={cn(EDITOR_TOOL, lightingPreset === 'night' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Moon className="w-3.5 h-3.5" aria-hidden />
+        Nuit LED
+      </button>
+      </EditorToolGroup>
+
+      <EditorToolGroup label="Mobilier">
       <button type="button" onClick={addTable} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
         <Plus className="w-3.5 h-3.5" aria-hidden /> Table
       </button>
-      {caps.canCustomImages ? (
-        <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
-          <ImagePlus className="w-3.5 h-3.5" />
-          Importer plan
-          <input
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (file) await importRoomPlanImage(file);
-              e.target.value = '';
-            }}
-          />
-        </label>
-      ) : null}
       {caps.canAddRows ? (
         <>
           <button type="button" onClick={addRow} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
@@ -4215,6 +4230,10 @@ export default function RoomLayoutEditor({
           </button>
         </>
       ) : null}
+      <button type="button" onClick={addFreeChair} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Fauteuil</button>
+      </EditorToolGroup>
+
+      <EditorToolGroup label="Zones">
       {caps.canZones ? (
         <>
           <button type="button" onClick={() => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Piste</button>
@@ -4223,14 +4242,26 @@ export default function RoomLayoutEditor({
           <button type="button" onClick={addCarpet} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Moquette</button>
         </>
       ) : null}
-      <button type="button" onClick={addFreeChair} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Fauteuil</button>
+      </EditorToolGroup>
+
+      <EditorToolGroup label="Bâtiment">
+      {caps.canCustomImages ? (
+        <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
+          <ImagePlus className="w-3.5 h-3.5" aria-hidden />
+          Importer plan
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (file) await importRoomPlanImage(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
+      ) : null}
       <button type="button" onClick={clearWalls} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Sans murs</button>
-      {caps.fixtureKinds.includes('stage') ? (
-        <button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button>
-      ) : null}
-      {caps.fixtureKinds.includes('podium') ? (
-        <button type="button" onClick={() => addFixture('podium')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Podium</button>
-      ) : null}
       {caps.fixtureKinds.includes('door') ? (
         <button
           type="button"
@@ -4239,26 +4270,6 @@ export default function RoomLayoutEditor({
           title="Ajouter une porte ouvrante ou grand portail"
         >
           <DoorOpen className="w-3.5 h-3.5" aria-hidden /> Portes…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('chandelier') ? (
-        <button
-          type="button"
-          onClick={() => setQuickCreate(quickCreate === 'chandeliers' ? null : 'chandeliers')}
-          className={cn(EDITOR_TOOL, quickCreate === 'chandeliers' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
-          title="Lustres de cristal, halos dorés, suspensions pampa"
-        >
-          <Sparkles className="w-3.5 h-3.5" aria-hidden /> Lustres…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('aisle') ? (
-        <button
-          type="button"
-          onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
-          className={cn(EDITOR_TOOL, quickCreate === 'aisles' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
-          title="Tapis rouge royal, allée miroir blanc, lin & pétales"
-        >
-          <Sparkles className="w-3.5 h-3.5" aria-hidden /> Allées VIP…
         </button>
       ) : null}
       {caps.fixtureKinds.includes('stairs') ? (
@@ -4280,17 +4291,9 @@ export default function RoomLayoutEditor({
           Balcons…
         </button>
       ) : null}
-      {caps.fixtureKinds.includes('buffet') ? (
-        <button type="button" onClick={() => addFixture('buffet')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Buffet + couverts</button>
-      ) : null}
       {caps.fixtureKinds.includes('column') ? (
         <button type="button" onClick={() => addFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           <Columns3 className="w-3.5 h-3.5" aria-hidden /> Colonne
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('flower') ? (
-        <button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
-          <Flower2 className="w-3.5 h-3.5" aria-hidden /> Fleurs
         </button>
       ) : null}
       {caps.fixtureKinds.includes('corridor') ? (
@@ -4306,16 +4309,44 @@ export default function RoomLayoutEditor({
       {caps.fixtureKinds.includes('perimeter') ? (
         <button type="button" onClick={() => addFixture('perimeter')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Périmètre</button>
       ) : null}
-      {selection.length > 0 && (
-        <button type="button" onClick={deleteSelected} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'ml-auto')}>
-          <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer{selection.length > 1 ? ` (${selection.length})` : ''}
+      </EditorToolGroup>
+
+      <EditorToolGroup label="Scène et décor">
+      {caps.fixtureKinds.includes('stage') ? (
+        <button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button>
+      ) : null}
+      {caps.fixtureKinds.includes('podium') ? (
+        <button type="button" onClick={() => addFixture('podium')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Podium</button>
+      ) : null}
+      {caps.fixtureKinds.includes('chandelier') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'chandeliers' ? null : 'chandeliers')}
+          className={cn(EDITOR_TOOL, quickCreate === 'chandeliers' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title="Lustres de cristal, halos dorés, suspensions pampa"
+        >
+          <Sparkles className="w-3.5 h-3.5" aria-hidden /> Lustres…
         </button>
-      )}
-      {onRegenerate && (
-        <button type="button" onClick={() => { onRegenerate(); log('Plan régénéré depuis les paramètres', 'template'); }} className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}>
-          <RefreshCw className="w-3.5 h-3.5" aria-hidden /> Régénérer
+      ) : null}
+      {caps.fixtureKinds.includes('aisle') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
+          className={cn(EDITOR_TOOL, quickCreate === 'aisles' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title="Tapis rouge royal, allée miroir blanc, lin & pétales"
+        >
+          <Sparkles className="w-3.5 h-3.5" aria-hidden /> Allées VIP…
         </button>
-      )}
+      ) : null}
+      {caps.fixtureKinds.includes('buffet') ? (
+        <button type="button" onClick={() => addFixture('buffet')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Buffet + couverts</button>
+      ) : null}
+      {caps.fixtureKinds.includes('flower') ? (
+        <button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          <Flower2 className="w-3.5 h-3.5" aria-hidden /> Fleurs
+        </button>
+      ) : null}
+      </EditorToolGroup>
     </div>
   );
 
