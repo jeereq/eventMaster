@@ -14,7 +14,7 @@ import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/te
 import { 
  Mail, PlusCircle, Trash2, Edit3, ArrowLeft, Save, 
  Sparkles, CheckCircle2, AlertCircle, Type, Image, 
- Columns, Settings, Eye, CheckSquare, Loader2, XCircle,
+ Columns, Eye, CheckSquare, Loader2, XCircle,
  Spline, Triangle, Plus, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
@@ -243,6 +243,11 @@ export default function TemplatesPage() {
  const [mockupImportMode, setMockupImportMode] = useState<MockupImportTextMode>('placeholders');
  const mockupInputRef = useRef<HTMLInputElement>(null);
  const mockupEditorInputRef = useRef<HTMLInputElement>(null);
+ const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
+ const [showAllThemes, setShowAllThemes] = useState(false);
+ const [showDecorTools, setShowDecorTools] = useState(false);
+ const [propsAdvanced, setPropsAdvanced] = useState(false);
+ const [styleAdvancedOpen, setStyleAdvancedOpen] = useState(false);
 
  const loadTemplates = async () => {
  try {
@@ -506,6 +511,8 @@ export default function TemplatesPage() {
 
  const handleElementSelect = (id: string) => {
  setSelectedElementId(id);
+ setStudioRail('content');
+ setPropsAdvanced(false);
  const el = canvasElements.find(e => e.id === id);
  if (el) {
  setElText(el.text);
@@ -1456,6 +1463,17 @@ export default function TemplatesPage() {
  </option>
  ))}
  </select>
+ {!selectedTenantId && (
+ <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 cursor-pointer">
+ <input
+ type="checkbox"
+ checked={showOnLanding}
+ onChange={(e) => setShowOnLanding(e.target.checked)}
+ className="rounded text-emerald-600 focus:ring-emerald-500"
+ />
+ Landing
+ </label>
+ )}
  </>
  )}
  </div>
@@ -1523,20 +1541,49 @@ export default function TemplatesPage() {
 
  {/* Editor Workspace */}
  <div className="grid lg:grid-cols-4 gap-8 items-start">
- {/* Left Toolbox */}
- <div className="bg-white border border-border rounded-3xl p-5 space-y-6 shadow-sm">
+ {/* Left Toolbox — Contenu | Style */}
+ <div className="bg-white border border-border rounded-3xl p-5 space-y-5 shadow-sm">
+ <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border">
+ <button
+ type="button"
+ onClick={() => setStudioRail('content')}
+ className={`py-2 rounded-lg text-[11px] font-bold transition ${
+ studioRail === 'content'
+ ? 'bg-white text-foreground shadow-sm'
+ : 'text-muted hover:text-foreground'
+ }`}
+ >
+ Contenu
+ </button>
+ <button
+ type="button"
+ onClick={() => {
+ setStudioRail('style');
+ setSelectedElementId(null);
+ }}
+ className={`py-2 rounded-lg text-[11px] font-bold transition ${
+ studioRail === 'style'
+ ? 'bg-white text-foreground shadow-sm'
+ : 'text-muted hover:text-foreground'
+ }`}
+ >
+ Style
+ </button>
+ </div>
+
+ {studioRail === 'content' ? (
+ <>
  {canUseMockupImport && (
- <div className="space-y-3 pb-4 border-b border-border-subtle">
+ <div className="space-y-2">
  <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
  <Sparkles className="w-3.5 h-3.5" />
- Importer ma maquette
+ Import maquette
  </h3>
  <p className="text-[10px] text-muted leading-relaxed">
- Image + palette automatique. Choisissez ensuite le mode : avec ou sans texte, ou OCR
- {canUseMockupOcr ? ' (Premium 2+).' : '.'}
+ Image → palette auto{canUseMockupOcr ? ', OCR Premium 2+' : ''}.
  </p>
  {ocrProgress !== null && (
- <p className="text-[10px] text-primary font-bold">OCR en cours… {ocrProgress}%</p>
+ <p className="text-[10px] text-primary font-bold">OCR… {ocrProgress}%</p>
  )}
  <input
  ref={mockupEditorInputRef}
@@ -1556,17 +1603,14 @@ export default function TemplatesPage() {
  ) : (
  <Upload className="w-4 h-4" />
  )}
- {mockupImporting ? 'Analyse en cours…' : 'Choisir une image'}
+ {mockupImporting ? 'Analyse…' : 'Choisir une image'}
  </button>
  </div>
  )}
 
  {importedPalette && (
  <div className="space-y-2 pb-4 border-b border-border-subtle">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Palette active</h3>
- <p className="text-[9px] font-bold text-muted uppercase tracking-wider">
- Clic = appliquer {selectedElementId ? 'à la sélection' : '(fond si background)'}
- </p>
+ <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Palette importée</h3>
  <div className="flex flex-wrap gap-1.5">
  {(['primary', 'secondary', 'accent', 'background'] as const).map((key) => (
  <button
@@ -1577,29 +1621,14 @@ export default function TemplatesPage() {
  title={`${key}: ${importedPalette[key]}`}
  >
  <span
- className="w-5 h-5 rounded-md border border-border shadow-sm ring-offset-1 hover:ring-2 hover:ring-primary"
+ className="w-5 h-5 rounded-md border border-border shadow-sm"
  style={{ backgroundColor: importedPalette[key] }}
  />
  {key.slice(0, 3)}
  </button>
  ))}
  </div>
- <div className="grid grid-cols-2 gap-1.5">
- {(['primary', 'secondary', 'accent', 'background'] as const).map((key) => (
- <label key={`hex-${key}`} className="flex items-center gap-1 text-[9px] font-bold text-muted">
- <input
- type="color"
- value={importedPalette[key]}
- onChange={(e) =>
- setImportedPalette((prev) => (prev ? { ...prev, [key]: e.target.value } : prev))
- }
- className="w-6 h-6 rounded border border-border cursor-pointer p-0"
- />
- {key}
- </label>
- ))}
- </div>
- <div className="flex flex-col gap-1">
+ <div className="flex flex-wrap gap-x-3 gap-y-1">
  <button
  type="button"
  onClick={() => {
@@ -1613,9 +1642,9 @@ export default function TemplatesPage() {
  }),
  );
  }}
- className="text-[10px] font-bold text-primary hover:underline text-left"
+ className="text-[10px] font-bold text-primary hover:underline"
  >
- Appliquer accent aux titres
+ Accent → titres
  </button>
  <button
  type="button"
@@ -1624,65 +1653,15 @@ export default function TemplatesPage() {
  setBgColor(importedPalette.background);
  setBgType('color');
  }}
- className="text-[10px] font-bold text-primary hover:underline text-left"
+ className="text-[10px] font-bold text-primary hover:underline"
  >
- Appliquer fond à la carte
+ Fond → carte
  </button>
  </div>
  </div>
  )}
 
- <div className="space-y-3 pb-4 border-b border-border-subtle">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Thèmes couleurs</h3>
- <div className="grid grid-cols-2 gap-2">
- {invitationColorThemes(tenant?.branding).map((theme) => (
- <button
- key={theme.id}
- type="button"
- onClick={() => applyColorTheme(theme.id, true)}
- className={`text-left p-2 rounded-xl border transition ${
- colorThemeId === theme.id
- ? 'border-primary bg-primary/5'
- : 'border-border hover:border-primary hover:bg-primary/5'
- }`}
- title={theme.description}
- >
- <div className="flex gap-0.5 mb-1.5">
- {(['primary', 'secondary', 'accent', 'background'] as const).map((k) => (
- <span
- key={k}
- className="w-3.5 h-3.5 rounded-sm border border-border/80"
- style={{ backgroundColor: theme.palette[k] }}
- />
- ))}
- </div>
- <span className="text-[10px] font-bold text-foreground block leading-tight">{theme.name}</span>
- </button>
- ))}
- </div>
- </div>
-
- <div className="space-y-2 pb-4 border-b border-border-subtle">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Typographie</h3>
- <select
- value={fontTheme}
- onChange={(e) => setFontTheme(e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
- >
- {FONT_THEMES.map((t) => (
- <option key={t.id} value={t.id}>{t.name}</option>
- ))}
- </select>
- <button
- type="button"
- onClick={() => applyCurrentFontTheme(true)}
- className="w-full text-[10px] font-bold text-primary hover:bg-primary/5 py-1.5 rounded-lg transition"
- >
- Appliquer aux textes
- </button>
- </div>
-
- <div className="space-y-2 pb-4 border-b border-border-subtle">
+ <div className="space-y-2">
  <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Disposition</h3>
  <div className="grid grid-cols-2 gap-1.5">
  <button
@@ -1708,71 +1687,81 @@ export default function TemplatesPage() {
  Libre
  </button>
  </div>
- {layoutMode === 'flow' && canvasElements.length > 0 && (
- <button
- type="button"
- onClick={convertToFreeLayout}
- className="text-[10px] font-bold text-primary hover:underline"
- >
- Convertir en positions libres
- </button>
- )}
  </div>
 
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider border-b border-border-subtle pb-2">Composants</h3>
- <div className="grid grid-cols-2 gap-3">
- <button 
+ <div className="space-y-3">
+ <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Composants</h3>
+ <div className="grid grid-cols-2 gap-2">
+ <button
+ type="button"
  onClick={() => handleAddElement('text')}
- className="flex flex-col items-center gap-2 p-3.5 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
  >
  <Type className="w-5 h-5" />
  <span>Texte</span>
  </button>
- <button 
+ <button
+ type="button"
  onClick={() => handleAddElement('button')}
- className="flex flex-col items-center gap-2 p-3.5 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
  >
  <Columns className="w-5 h-5" />
  <span>Bouton</span>
  </button>
- <button 
+ <button
+ type="button"
  onClick={() => handleAddElement('image')}
- className="flex flex-col items-center gap-2 p-3.5 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
  >
  <Image className="w-5 h-5" />
  <span>Image</span>
  </button>
- <button 
+ <button
+ type="button"
  onClick={() => handleAddElement('divider')}
- className="flex flex-col items-center gap-2 p-3.5 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
  >
  <Palette className="w-5 h-5" />
  <span>Séparateur</span>
  </button>
- <button 
- onClick={() => handleAddElement('curve')}
- className="flex flex-col items-center gap-2 p-3.5 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
- >
- <Spline className="w-5 h-5" />
- <span>Courbe</span>
- </button>
- <button 
- onClick={() => handleAddElement('triangle')}
- className="flex flex-col items-center gap-2 p-3.5 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
- >
- <Triangle className="w-5 h-5" />
- <span>Triangle</span>
- </button>
- <button 
+ <button
+ type="button"
  onClick={() => handleAddElement('rsvp-block')}
- className="flex flex-col items-center gap-2 p-3.5 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition col-span-2"
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition col-span-2"
  >
  <CheckSquare className="w-5 h-5" />
  <span>Formulaire RSVP</span>
  </button>
  </div>
+ <button
+ type="button"
+ onClick={() => setShowDecorTools((v) => !v)}
+ className="w-full text-[10px] font-bold text-muted hover:text-primary py-1.5 transition"
+ >
+ {showDecorTools ? 'Masquer le décor' : 'Décor (courbe, triangle)'}
+ </button>
+ {showDecorTools && (
+ <div className="grid grid-cols-2 gap-2">
+ <button
+ type="button"
+ onClick={() => handleAddElement('curve')}
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ >
+ <Spline className="w-5 h-5" />
+ <span>Courbe</span>
+ </button>
+ <button
+ type="button"
+ onClick={() => handleAddElement('triangle')}
+ className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition"
+ >
+ <Triangle className="w-5 h-5" />
+ <span>Triangle</span>
+ </button>
+ </div>
+ )}
+ </div>
 
- <div className="border-t border-border-subtle pt-4 space-y-2">
  <button
  type="button"
  onClick={() => {
@@ -1828,23 +1817,85 @@ export default function TemplatesPage() {
  className="w-full flex items-center justify-center gap-2 p-2.5 border border-dashed border-primary/30 rounded-xl hover:bg-primary/5 text-primary font-bold text-xs transition"
  >
  <Sparkles className="w-4 h-4" />
- Preset titre + date + CTA
+ Preset titre · date · CTA
  </button>
- <button 
- onClick={() => setSelectedElementId(null)}
- className="w-full flex items-center justify-center gap-2 p-2.5 border border-border rounded-xl hover:border-primary hover:bg-primary/5 text-muted hover:text-primary font-bold text-xs transition"
+ </>
+ ) : (
+ <>
+ <div className="space-y-3">
+ <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Thèmes couleurs</h3>
+ <div className="grid grid-cols-2 gap-2">
+ {(showAllThemes
+ ? invitationColorThemes(tenant?.branding)
+ : invitationColorThemes(tenant?.branding).slice(0, 4)
+ ).map((theme) => (
+ <button
+ key={theme.id}
+ type="button"
+ onClick={() => applyColorTheme(theme.id, true)}
+ className={`text-left p-2 rounded-xl border transition ${
+ colorThemeId === theme.id
+ ? 'border-primary bg-primary/5'
+ : 'border-border hover:border-primary hover:bg-primary/5'
+ }`}
+ title={theme.description}
  >
- <Settings className="w-4 h-4" />
- Paramètres Globaux
+ <div className="flex gap-0.5 mb-1.5">
+ {(['primary', 'secondary', 'accent', 'background'] as const).map((k) => (
+ <span
+ key={k}
+ className="w-3.5 h-3.5 rounded-sm border border-border/80"
+ style={{ backgroundColor: theme.palette[k] }}
+ />
+ ))}
+ </div>
+ <span className="text-[10px] font-bold text-foreground block leading-tight">{theme.name}</span>
+ </button>
+ ))}
+ </div>
+ {invitationColorThemes(tenant?.branding).length > 4 && (
+ <button
+ type="button"
+ onClick={() => setShowAllThemes((v) => !v)}
+ className="w-full text-[10px] font-bold text-primary hover:underline py-1"
+ >
+ {showAllThemes ? 'Moins de thèmes' : `Tous les thèmes (${invitationColorThemes(tenant?.branding).length})`}
+ </button>
+ )}
+ </div>
+
+ <div className="space-y-2">
+ <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Typographie</h3>
+ <select
+ value={fontTheme}
+ onChange={(e) => setFontTheme(e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
+ >
+ {FONT_THEMES.map((t) => (
+ <option key={t.id} value={t.id}>{t.name}</option>
+ ))}
+ </select>
+ <button
+ type="button"
+ onClick={() => applyCurrentFontTheme(true)}
+ className="w-full text-[10px] font-bold text-primary hover:bg-primary/5 py-1.5 rounded-lg transition"
+ >
+ Appliquer aux textes
  </button>
  </div>
+
+ <p className="text-[10px] text-muted leading-relaxed rounded-xl bg-surface-muted border border-border px-3 py-2">
+ Fond, cadre et format : panneau de droite (aucun élément sélectionné).
+ </p>
+ </>
+ )}
  </div>
 
  {/* Center Canvas Preview */}
  <div className="lg:col-span-2 space-y-4">
  <div className="text-center space-y-1">
  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-muted border border-border text-muted text-[10px] font-bold uppercase tracking-wider">
- <Eye className="w-3.5 h-3.5" /> Zone de prévisualisation de l&apos;invitation
+ <Eye className="w-3.5 h-3.5" /> Aperçu
  </span>
  <p className="text-[10px] text-muted font-semibold">
  {canvasWidth} × {canvasHeight} px
@@ -2554,17 +2605,42 @@ export default function TemplatesPage() {
  </div>
 
  {/* Right Properties Panel */}
- <div className="bg-white border border-border rounded-3xl p-5 space-y-6 shadow-sm">
+ <div className="bg-white border border-border rounded-3xl p-5 space-y-5 shadow-sm">
  {selectedElementId ? (
  // Element Properties Panel
- <div className="space-y-5">
- <div className="flex items-center justify-between border-b border-border-subtle pb-2">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Propriétés de l'élément</h3>
- <button 
- onClick={() => setSelectedElementId(null)}
- className="text-[10px] font-bold text-primary hover:text-primary bg-primary/10 px-2 py-1 rounded-lg transition flex items-center gap-1"
+ <div className="space-y-4">
+ <div className="flex items-center justify-between gap-2 border-b border-border-subtle pb-2">
+ <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Élément</h3>
+ <button
+ type="button"
+ onClick={() => {
+ setSelectedElementId(null);
+ setStudioRail('style');
+ }}
+ className="text-[10px] font-bold text-primary hover:text-primary bg-primary/10 px-2 py-1 rounded-lg transition"
  >
- <Settings className="w-3 h-3" /> Global
+ Style carte
+ </button>
+ </div>
+
+ <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border">
+ <button
+ type="button"
+ onClick={() => setPropsAdvanced(false)}
+ className={`py-1.5 rounded-lg text-[10px] font-bold transition ${
+ !propsAdvanced ? 'bg-white text-foreground shadow-sm' : 'text-muted'
+ }`}
+ >
+ Essentiel
+ </button>
+ <button
+ type="button"
+ onClick={() => setPropsAdvanced(true)}
+ className={`py-1.5 rounded-lg text-[10px] font-bold transition ${
+ propsAdvanced ? 'bg-white text-foreground shadow-sm' : 'text-muted'
+ }`}
+ >
+ Avancé
  </button>
  </div>
 
@@ -2573,433 +2649,53 @@ export default function TemplatesPage() {
  <div className="space-y-1.5">
  <div className="flex justify-between items-center">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' ? "Texte alternatif d'image" : 
- canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre du bloc RSVP" : 
- "Contenu du texte"}
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' ? "Texte alternatif" :
+ canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre RSVP" :
+ "Texte"}
  </label>
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'text' && (
  <span className="text-[9px] text-primary font-bold uppercase tracking-wider">
- Variables: {"{{firstName}}"}, {"{{location}}"}
+ {'{{firstName}}'}
  </span>
  )}
  </div>
- <textarea 
+ <textarea
  value={elText}
  onChange={(e) => handlePropertyChange('text', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition h-20 resize-none"
- placeholder={canvasElements.find(e => e.id === selectedElementId)?.type === 'text' ? "Ex: Vous êtes invité au {{title}} à {{location}}..." : ""}
+ placeholder={canvasElements.find(e => e.id === selectedElementId)?.type === 'text' ? "Ex: Vous êtes invité au {{title}}…" : ""}
  />
  </div>
  )}
 
- {/* Width selection (for layout grid) */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur de l'élément</label>
- <select 
- value={elWidth}
- onChange={(e) => handlePropertyChange('width', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="full">Pleine largeur (100%)</option>
- <option value="half">Demi-largeur (50%)</option>
- <option value="third">Un tiers (33%)</option>
- </select>
- </div>
-
- {/* Font Family Selection */}
- {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Police de caractères</label>
- <select 
- value={elFontFamily}
- onChange={(e) => handlePropertyChange('fontFamily', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- {fontFamilies.map(font => (
- <option key={font.id} value={font.id}>{font.label}</option>
- ))}
- </select>
- </div>
- )}
-
- {/* Letter Spacing */}
- {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Espacement des lettres</label>
- <select 
- value={elLetterSpacing}
- onChange={(e) => handlePropertyChange('letterSpacing', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- {letterSpacings.map(spacing => (
- <option key={spacing.id} value={spacing.id}>{spacing.label}</option>
- ))}
- </select>
- </div>
- )}
-
- {/* Bold / Italic Toggles */}
- {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
- <div className="flex gap-4 pt-1">
- <label className="flex items-center gap-2 cursor-pointer text-xs text-muted font-semibold select-none">
- <input 
- type="checkbox" 
- checked={elBold}
- onChange={(e) => handlePropertyChange('bold', e.target.checked)}
- className="rounded text-primary focus:ring-primary"
- />
- Gras
- </label>
- <label className="flex items-center gap-2 cursor-pointer text-xs text-muted font-semibold select-none">
- <input 
- type="checkbox" 
- checked={elItalic}
- onChange={(e) => handlePropertyChange('italic', e.target.checked)}
- className="rounded text-primary focus:ring-primary"
- />
- Italique
- </label>
- </div>
- )}
-
- {/* Divider style selection */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'divider' && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style du séparateur</label>
- <select 
- value={elDividerStyle}
- onChange={(e) => handlePropertyChange('dividerStyle', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="solid">Ligne continue</option>
- <option value="dashed">Ligne pointillée</option>
- <option value="ornament-flower">Ornement Fleur (❀)</option>
- <option value="ornament-diamond">Ornement Losange (✦ ❖ ✦)</option>
- <option value="ornament-star">Ornement Étoile (✦)</option>
- <option value="ornament-leaves">Ornement Feuillage (🌿 ❀ 🌿)</option>
- <option value="ornament-lace">Ornement Dentelle (⚜ ⚜ ⚜)</option>
- </select>
- </div>
- )}
-
- {/* Button style selection */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de bouton</label>
- <select 
- value={elButtonStyle}
- onChange={(e) => handlePropertyChange('buttonStyle', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="filled">Plein (Luxe)</option>
- <option value="outline">Contour élégant</option>
- <option value="pill">Bords ronds (Pilule)</option>
- <option value="gold-glow">Effet or lumineux</option>
- <option value="double-border">Double bordure fine</option>
- <option value="minimalist">Minimaliste souligné</option>
- </select>
- </div>
- )}
-
- {/* Button link input */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Lien de redirection (URL)</label>
- <input 
- type="text"
- value={elButtonLink}
- onChange={(e) => handlePropertyChange('buttonLink', e.target.value)}
- placeholder="ex: https://g.co/maps/... ou {{rsvpLink}}"
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- />
- <p className="text-[10px] text-muted">
- Lien vers lequel rediriger l'invité au clic (ex: liste de mariage, itinéraire GPS, etc.). Laissez vide si le bouton n'a pas de lien.
- </p>
- </div>
- )}
-
- {/* Curve style selection */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de la courbe</label>
- <select 
- value={elCurveStyle}
- onChange={(e) => handlePropertyChange('curveStyle', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="wave">Vague douce</option>
- <option value="arc">Arche fine</option>
- <option value="flourish-1">Volute florale élégante</option>
- <option value="flourish-2">Ornement baroque</option>
- <option value="spiral">Spirale délicate</option>
- <option value="infinity">Nœud de l'infini</option>
- </select>
- </div>
- )}
-
- {/* Image style selection */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style d'image</label>
- <select 
- value={elImageStyle}
- onChange={(e) => handlePropertyChange('imageStyle', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="rounded">Bords arrondis standard</option>
- <option value="circle">Cercle parfait</option>
- <option value="arch">Arche royale</option>
- <option value="oval">Ovale élégant</option>
- <option value="gold-frame">Cadre doré fin</option>
- <option value="vintage">Effet sépia vintage</option>
- <option value="shadow-luxury">Ombre douce de luxe</option>
- </select>
- </div>
- )}
-
- {/* Image-specific properties */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
- <div className="space-y-4 border-t border-border-subtle pt-4">
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Importer une image (Cloudinary)</label>
- <input 
- type="file" 
- accept="image/*"
- onChange={handleImageUpload}
- className="w-full text-xs text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/15 cursor-pointer"
- />
- </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Ou URL de l'image externe</label>
- <input 
- type="text" 
- value={elImageUrl}
- onChange={(e) => handlePropertyChange('imageUrl', e.target.value)}
- placeholder="https://images.unsplash.com/..."
- className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- />
- </div>
- <div className="grid grid-cols-2 gap-2">
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur</label>
- <input 
- type="text" 
- value={elImageWidth}
- onChange={(e) => handlePropertyChange('imageWidth', e.target.value)}
- placeholder="100% ou 200px"
- className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- />
- </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Hauteur</label>
- <input 
- type="text" 
- value={elImageHeight}
- onChange={(e) => handlePropertyChange('imageHeight', e.target.value)}
- placeholder="200px ou auto"
- className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- />
- </div>
- </div>
-
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Mode d'affichage</label>
- <select 
- value={elImageObjectFit}
- onChange={(e) => handlePropertyChange('imageObjectFit', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="cover">Remplir l'espace (Cover)</option>
- <option value="contain">Afficher en entier (Contain)</option>
- <option value="fill">Étirer (Fill)</option>
- <option value="none">Taille réelle (None)</option>
- </select>
- </div>
-
- {elImageUrl && (
- <button
- type="button"
- onClick={() => handleOpenCropper('element')}
- className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20 shadow-sm"
- >
- <Crop className="w-3.5 h-3.5" />
- Rogner / Recadrer l'image
- </button>
- )}
- </div>
- )}
-
- {/* Curve-specific properties */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
- <div className="space-y-1.5 border-t border-border-subtle pt-4">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Épaisseur du trait</label>
- <select 
- value={elStrokeWidth}
- onChange={(e) => handlePropertyChange('strokeWidth', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="1px">Fin (1px)</option>
- <option value="2px">Normal (2px)</option>
- <option value="3px">Moyen (3px)</option>
- <option value="5px">Épais (5px)</option>
- <option value="8px">Très épais (8px)</option>
- </select>
- </div>
- )}
-
- {/* Triangle-specific properties */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' && (
- <div className="space-y-1.5 border-t border-border-subtle pt-4">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille du triangle</label>
- <select 
- value={elShapeSize}
- onChange={(e) => handlePropertyChange('shapeSize', e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="30px">Petit (30px)</option>
- <option value="45px">Moyen (45px)</option>
- <option value="60px">Grand (60px)</option>
- <option value="80px">Très grand (80px)</option>
- <option value="120px">Géant (120px)</option>
- </select>
- </div>
- )}
-
- {/* RSVP placement */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
- <div className="space-y-2 border-t border-border-subtle pt-4">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Emplacement du formulaire</label>
- <div className="grid grid-cols-2 gap-2">
- {[
- { id: 'inline' as const, label: 'Dans l\'invitation', hint: 'Intégré au design' },
- { id: 'outside' as const, label: 'Sous l\'invitation', hint: 'Plus visible' },
- ].map((opt) => (
- <button
- key={opt.id}
- type="button"
- onClick={() => handlePropertyChange('rsvpPlacement', opt.id)}
- className={`py-2.5 px-2 border rounded-xl text-left transition ${
- elRsvpPlacement === opt.id
- ? 'border-primary bg-primary/10 text-primary'
- : 'border-border text-muted hover:bg-surface-muted'
- }`}
- >
- <span className="block text-[11px] font-bold">{opt.label}</span>
- <span className="block text-[9px] opacity-70 mt-0.5">{opt.hint}</span>
- </button>
- ))}
- </div>
- {elRsvpPlacement === 'outside' && (
- <p className="text-[10px] text-primary leading-relaxed">
- Le formulaire s&apos;affichera dans un panneau dédié sous la carte d&apos;invitation, pour une meilleure lisibilité sur mobile.
- </p>
- )}
- </div>
- )}
-
- {/* Customizable RSVP Fields Properties */}
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
- <div className="space-y-4 border-t border-border pt-4">
- <div className="flex items-center justify-between gap-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Champs du formulaire</label>
- <div className="flex items-center gap-1.5">
- <button
- type="button"
- onClick={handleEnsureReportingRsvpFields}
- className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-lg transition"
- title="Ajoute menu, plus-one et nombre de personnes s'ils manquent"
- >
- <Sparkles className="w-3 h-3" /> Reporting
- </button>
- <button 
- type="button"
- onClick={handleAddRsvpField}
- className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-lg transition"
- >
- <Plus className="w-3 h-3" /> Ajouter
- </button>
- </div>
- </div>
-
- <p className="text-[10px] text-muted leading-relaxed bg-surface-muted border border-border rounded-lg px-2.5 py-2">
- Genre, allergies, boissons et type de menu sont toujours présents. Vous pouvez changer le libellé, l’affichage (liste / boutons) et les valeurs — prédéfinies ou personnalisées.
- </p>
-
- {validateRsvpFieldsForReporting(elRsvpFields).length > 0 && (
- <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2">
- {validateRsvpFieldsForReporting(elRsvpFields)[0]}
- </p>
- )}
-
- <div className="max-h-80 overflow-y-auto pr-1">
- <RsvpFieldTypeEditor
- fields={elRsvpFields}
- onChange={(next) => handlePropertyChange('rsvpFields', next)}
- />
- </div>
- </div>
- )}
-
- {/* Color input */}
- <div className="space-y-2 border-t border-border-subtle pt-4">
+ {/* Color + size + align — essential */}
+ <div className="space-y-2">
  <label className="text-xs font-bold text-muted uppercase tracking-wider block">
- {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' ? "Couleur du bouton" : 
- canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' ? "Couleur du trait" : 
- canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' ? "Couleur de remplissage" : 
- "Couleur du texte"}
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' ? "Couleur du bouton" :
+ canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' ? "Couleur du trait" :
+ canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' ? "Couleur de remplissage" :
+ "Couleur"}
  </label>
  <div className="flex gap-2">
- <input 
- type="color" 
+ <input
+ type="color"
  value={elColor.startsWith('#') ? elColor : '#059669'}
  onChange={(e) => handlePropertyChange('color', e.target.value)}
  className="w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden p-0"
  />
- <input 
- type="text" 
+ <input
+ type="text"
  value={elColor}
  onChange={(e) => handlePropertyChange('color', e.target.value)}
  className="flex-1 px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition font-mono"
  />
  </div>
-
- {/* Luxury Predefined Palette */}
- <div className="space-y-1 pt-1">
- <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Palette de Luxe :</span>
- <div className="flex flex-wrap gap-1.5">
- {[
- { hex: '#c5a059', name: 'Or Royal' },
- { hex: '#7d8c5c', name: 'Vert Sauge' },
- { hex: '#6b1d2f', name: 'Bourgogne' },
- { hex: '#1d2d44', name: 'Bleu Nuit' },
- { hex: '#e8c5c8', name: 'Rose Poudré' },
- { hex: '#b05a47', name: 'Terracotta' },
- { hex: '#8c6239', name: 'Bronze' },
- { hex: '#1e293b', name: 'Ardoise' },
- { hex: '#faf6f0', name: 'Ivoire' },
- ].map((c) => (
- <button
- key={c.hex}
- type="button"
- onClick={() => handlePropertyChange('color', c.hex)}
- className="w-6 h-6 rounded-full border border-border shadow-sm transition hover:scale-110 relative group"
- style={{ backgroundColor: c.hex }}
- title={c.name}
- >
- <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-surface-muted text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30">
- {c.name}
- </span>
- </button>
- ))}
- </div>
- </div>
  </div>
 
- {/* Font size (only for text/button) */}
  {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille de police</label>
- <select 
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille</label>
+ <select
  value={elFontSize}
  onChange={(e) => handlePropertyChange('fontSize', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -3016,7 +2712,29 @@ export default function TemplatesPage() {
  </div>
  )}
 
- {/* Alignment */}
+ {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
+ <div className="flex gap-4">
+ <label className="flex items-center gap-2 cursor-pointer text-xs text-muted font-semibold select-none">
+ <input
+ type="checkbox"
+ checked={elBold}
+ onChange={(e) => handlePropertyChange('bold', e.target.checked)}
+ className="rounded text-primary focus:ring-primary"
+ />
+ Gras
+ </label>
+ <label className="flex items-center gap-2 cursor-pointer text-xs text-muted font-semibold select-none">
+ <input
+ type="checkbox"
+ checked={elItalic}
+ onChange={(e) => handlePropertyChange('italic', e.target.checked)}
+ className="rounded text-primary focus:ring-primary"
+ />
+ Italique
+ </label>
+ </div>
+ )}
+
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Alignement</label>
  <div className="grid grid-cols-3 gap-2">
@@ -3032,14 +2750,343 @@ export default function TemplatesPage() {
  ))}
  </div>
  </div>
+
+ {/* Button essentials */}
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de bouton</label>
+ <select
+ value={elButtonStyle}
+ onChange={(e) => handlePropertyChange('buttonStyle', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="filled">Plein</option>
+ <option value="outline">Contour</option>
+ <option value="pill">Pilule</option>
+ <option value="gold-glow">Or lumineux</option>
+ <option value="double-border">Double bordure</option>
+ <option value="minimalist">Minimaliste</option>
+ </select>
+ </div>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'divider' && (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Style du séparateur</label>
+ <select
+ value={elDividerStyle}
+ onChange={(e) => handlePropertyChange('dividerStyle', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="solid">Ligne continue</option>
+ <option value="dashed">Ligne pointillée</option>
+ <option value="ornament-flower">Ornement Fleur</option>
+ <option value="ornament-diamond">Ornement Losange</option>
+ <option value="ornament-star">Ornement Étoile</option>
+ <option value="ornament-leaves">Ornement Feuillage</option>
+ <option value="ornament-lace">Ornement Dentelle</option>
+ </select>
+ </div>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
+ <div className="space-y-3">
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Importer une image</label>
+ <input
+ type="file"
+ accept="image/*"
+ onChange={handleImageUpload}
+ className="w-full text-xs text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/15 cursor-pointer"
+ />
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">URL</label>
+ <input
+ type="text"
+ value={elImageUrl}
+ onChange={(e) => handlePropertyChange('imageUrl', e.target.value)}
+ placeholder="https://…"
+ className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ />
+ </div>
+ {elImageUrl && (
+ <button
+ type="button"
+ onClick={() => handleOpenCropper('element')}
+ className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20"
+ >
+ <Crop className="w-3.5 h-3.5" />
+ Recadrer
+ </button>
+ )}
+ </div>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
+ <div className="space-y-2">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Emplacement</label>
+ <div className="grid grid-cols-2 gap-2">
+ {[
+ { id: 'inline' as const, label: 'Dans la carte' },
+ { id: 'outside' as const, label: 'Sous la carte' },
+ ].map((opt) => (
+ <button
+ key={opt.id}
+ type="button"
+ onClick={() => handlePropertyChange('rsvpPlacement', opt.id)}
+ className={`py-2 px-2 border rounded-xl text-[11px] font-bold transition ${
+ elRsvpPlacement === opt.id
+ ? 'border-primary bg-primary/10 text-primary'
+ : 'border-border text-muted hover:bg-surface-muted'
+ }`}
+ >
+ {opt.label}
+ </button>
+ ))}
+ </div>
+ </div>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
+ <div className="space-y-3 border-t border-border pt-3">
+ <div className="flex items-center justify-between gap-2">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Champs</label>
+ <div className="flex items-center gap-1.5">
+ <button
+ type="button"
+ onClick={handleEnsureReportingRsvpFields}
+ className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg transition"
+ title="Ajoute menu, plus-one et nombre de personnes s'ils manquent"
+ >
+ Reporting
+ </button>
+ <button
+ type="button"
+ onClick={handleAddRsvpField}
+ className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg transition"
+ >
+ <Plus className="w-3 h-3 inline" /> Ajouter
+ </button>
+ </div>
+ </div>
+ {validateRsvpFieldsForReporting(elRsvpFields).length > 0 && (
+ <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2">
+ {validateRsvpFieldsForReporting(elRsvpFields)[0]}
+ </p>
+ )}
+ <div className="max-h-80 overflow-y-auto pr-1">
+ <RsvpFieldTypeEditor
+ fields={elRsvpFields}
+ onChange={(next) => handlePropertyChange('rsvpFields', next)}
+ />
+ </div>
+ </div>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de courbe</label>
+ <select
+ value={elCurveStyle}
+ onChange={(e) => handlePropertyChange('curveStyle', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="wave">Vague douce</option>
+ <option value="arc">Arche fine</option>
+ <option value="flourish-1">Volute florale</option>
+ <option value="flourish-2">Ornement baroque</option>
+ <option value="spiral">Spirale</option>
+ <option value="infinity">Nœud infini</option>
+ </select>
+ </div>
+ )}
+
+ {/* Advanced element props */}
+ {propsAdvanced && (
+ <div className="space-y-4 border-t border-border-subtle pt-4">
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur</label>
+ <select
+ value={elWidth}
+ onChange={(e) => handlePropertyChange('width', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="full">Pleine (100%)</option>
+ <option value="half">Demi (50%)</option>
+ <option value="third">Tiers (33%)</option>
+ </select>
+ </div>
+
+ {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
+ <>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Police</label>
+ <select
+ value={elFontFamily}
+ onChange={(e) => handlePropertyChange('fontFamily', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ {fontFamilies.map(font => (
+ <option key={font.id} value={font.id}>{font.label}</option>
+ ))}
+ </select>
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Espacement lettres</label>
+ <select
+ value={elLetterSpacing}
+ onChange={(e) => handlePropertyChange('letterSpacing', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ {letterSpacings.map(spacing => (
+ <option key={spacing.id} value={spacing.id}>{spacing.label}</option>
+ ))}
+ </select>
+ </div>
+ </>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Lien (URL)</label>
+ <input
+ type="text"
+ value={elButtonLink}
+ onChange={(e) => handlePropertyChange('buttonLink', e.target.value)}
+ placeholder="https://… ou {{rsvpLink}}"
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ />
+ </div>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
+ <>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Style d'image</label>
+ <select
+ value={elImageStyle}
+ onChange={(e) => handlePropertyChange('imageStyle', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="rounded">Arrondi</option>
+ <option value="circle">Cercle</option>
+ <option value="arch">Arche</option>
+ <option value="oval">Ovale</option>
+ <option value="gold-frame">Cadre doré</option>
+ <option value="vintage">Sépia</option>
+ <option value="shadow-luxury">Ombre douce</option>
+ </select>
+ </div>
+ <div className="grid grid-cols-2 gap-2">
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur</label>
+ <input
+ type="text"
+ value={elImageWidth}
+ onChange={(e) => handlePropertyChange('imageWidth', e.target.value)}
+ placeholder="100%"
+ className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ />
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Hauteur</label>
+ <input
+ type="text"
+ value={elImageHeight}
+ onChange={(e) => handlePropertyChange('imageHeight', e.target.value)}
+ placeholder="200px"
+ className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ />
+ </div>
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Mode d'affichage</label>
+ <select
+ value={elImageObjectFit}
+ onChange={(e) => handlePropertyChange('imageObjectFit', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="cover">Cover</option>
+ <option value="contain">Contain</option>
+ <option value="fill">Fill</option>
+ <option value="none">None</option>
+ </select>
+ </div>
+ </>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Épaisseur</label>
+ <select
+ value={elStrokeWidth}
+ onChange={(e) => handlePropertyChange('strokeWidth', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="1px">Fin (1px)</option>
+ <option value="2px">Normal (2px)</option>
+ <option value="3px">Moyen (3px)</option>
+ <option value="5px">Épais (5px)</option>
+ <option value="8px">Très épais (8px)</option>
+ </select>
+ </div>
+ )}
+
+ {canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' && (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille</label>
+ <select
+ value={elShapeSize}
+ onChange={(e) => handlePropertyChange('shapeSize', e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="30px">Petit</option>
+ <option value="45px">Moyen</option>
+ <option value="60px">Grand</option>
+ <option value="80px">Très grand</option>
+ <option value="120px">Géant</option>
+ </select>
+ </div>
+ )}
+
+ <div className="space-y-1">
+ <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Palette rapide</span>
+ <div className="flex flex-wrap gap-1.5">
+ {[
+ { hex: '#c5a059', name: 'Or' },
+ { hex: '#7d8c5c', name: 'Sauge' },
+ { hex: '#6b1d2f', name: 'Bourgogne' },
+ { hex: '#1d2d44', name: 'Nuit' },
+ { hex: '#e8c5c8', name: 'Rose' },
+ { hex: '#b05a47', name: 'Terracotta' },
+ { hex: '#1e293b', name: 'Ardoise' },
+ { hex: '#faf6f0', name: 'Ivoire' },
+ ].map((c) => (
+ <button
+ key={c.hex}
+ type="button"
+ onClick={() => handlePropertyChange('color', c.hex)}
+ className="w-6 h-6 rounded-full border border-border shadow-sm transition hover:scale-110"
+ style={{ backgroundColor: c.hex }}
+ title={c.name}
+ />
+ ))}
+ </div>
+ </div>
+ </div>
+ )}
  </div>
  ) : (
- // Global Template Properties Panel (shown when no element is selected)
+ // Global Style Panel
  <div className="space-y-5">
  <div className="border-b border-border-subtle pb-2">
  <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
- <Palette className="w-4 h-4 text-primary" /> Paramètres Globaux
+ <Palette className="w-4 h-4 text-primary" /> Style de la carte
  </h3>
+ <p className="text-[10px] text-muted mt-1">
+ Thèmes & typo à gauche · Fond & cadre ici
+ </p>
  </div>
 
  {user?.role === 'SUPER_ADMIN' && !selectedTenantId && (
@@ -3182,9 +3229,15 @@ export default function TemplatesPage() {
  </div>
 
  {/* Luxury Predefined Background Palette */}
- <div className="space-y-1 pt-1">
- <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Fonds Recommandés :</span>
- <div className="flex flex-wrap gap-1.5">
+ <button
+ type="button"
+ onClick={() => setStyleAdvancedOpen((v) => !v)}
+ className="text-[10px] font-bold text-primary hover:underline"
+ >
+ {styleAdvancedOpen ? 'Masquer les fonds recommandés' : 'Fonds recommandés'}
+ </button>
+ {styleAdvancedOpen && (
+ <div className="flex flex-wrap gap-1.5 pt-1">
  {[
  { hex: '#faf8f5', name: 'Blanc Pur' },
  { hex: '#faf6f0', name: 'Ivoire Doux' },
@@ -3200,17 +3253,13 @@ export default function TemplatesPage() {
  key={c.hex}
  type="button"
  onClick={() => setBgColor(c.hex)}
- className="w-6 h-6 rounded-full border border-border shadow-sm transition hover:scale-110 relative group"
+ className="w-6 h-6 rounded-full border border-border shadow-sm transition hover:scale-110"
  style={{ backgroundColor: c.hex }}
  title={c.name}
- >
- <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-surface-muted text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30">
- {c.name}
- </span>
- </button>
+ />
  ))}
  </div>
- </div>
+ )}
  </div>
  )}
 
@@ -3343,15 +3392,6 @@ export default function TemplatesPage() {
  </div>
  </div>
  )}
-
- <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 space-y-2">
- <h4 className="text-xs font-bold text-amber-800 flex items-center gap-1">
- <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Conseil de Design
- </h4>
- <p className="text-[11px] text-amber-700 leading-relaxed">
- Pour reproduire les invitations de mariage fournies : utilisez la texture <strong>Papier grainé</strong> ou <strong>Aquarelle</strong>, combinez-la avec l'<strong>Arche Royale</strong> ou la <strong>Double Bordure</strong>, et utilisez la police <strong>Cormorant Garamond</strong> ou <strong>Great Vibes</strong> pour les noms.
- </p>
- </div>
  </div>
  )}
  </div>
