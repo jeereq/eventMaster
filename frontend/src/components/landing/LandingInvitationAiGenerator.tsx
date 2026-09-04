@@ -150,6 +150,8 @@ export default function LandingInvitationAiGenerator({
   const [prompt, setPrompt] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const previewsRef = useRef<string[]>([]);
+  previewsRef.current = previews;
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState(0);
@@ -172,9 +174,8 @@ export default function LandingInvitationAiGenerator({
 
   useEffect(() => {
     return () => {
-      previews.forEach((url) => URL.revokeObjectURL(url));
+      previewsRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup on unmount only
   }, []);
 
   const previewTemplate = useMemo(
@@ -184,14 +185,22 @@ export default function LandingInvitationAiGenerator({
   const palette = useMemo(() => paletteFromContent(result), [result]);
   const elements = useMemo(() => elementSummary(result), [result]);
 
+  const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
   const addFiles = (list: File[]) => {
-    const images = list.filter((f) => f.type.startsWith('image/')).slice(0, 4);
-    if (!images.length) {
-      setError('Sélectionnez des images (JPEG, PNG, WebP).');
+    const validImages = list.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type) || f.type.startsWith('image/')).slice(0, 4);
+    if (!validImages.length) {
+      setError('Format non supporté. Veuillez sélectionner des photos JPEG, PNG ou WebP.');
+      return;
+    }
+    const oversized = validImages.find((f) => f.size > MAX_IMAGE_FILE_SIZE);
+    if (oversized) {
+      setError(`L’image « ${oversized.name} » dépasse la taille maximale de 10 Mo.`);
       return;
     }
     previews.forEach((url) => URL.revokeObjectURL(url));
-    const merged = [...files, ...images].slice(0, 4);
+    const merged = [...files, ...validImages].slice(0, 4);
     setFiles(merged);
     setPreviews(merged.map((f) => URL.createObjectURL(f)));
     setError('');
@@ -271,13 +280,17 @@ export default function LandingInvitationAiGenerator({
       const e = err as { status?: number; message?: string };
       if (e?.status === 402) {
         setTokenModalOpen(true);
-        setError(e.message || 'Plus de jetons IA. Rechargez pour continuer.');
+        setError(e.message || 'Plus de jetons IA disponibles. Rechargez votre solde pour continuer.');
+      } else if (e?.status === 413) {
+        setError('Le volume total de vos images est trop lourd. Réduisez la taille ou la résolution de vos photos.');
       } else if (e?.status === 429) {
-        setError(e.message || 'Trop de demandes. Attendez une minute puis réessayez.');
-      } else if (e?.status === 503) {
-        setError(e.message || 'Le service IA est temporairement indisponible. Réessayez plus tard.');
+        setError(e.message || 'Trop de demandes simultanées. Attendez une minute puis réessayez.');
+      } else if (e?.status === 503 || e?.status === 504) {
+        setError(e.message || 'Le service IA est temporairement saturé. Veuillez réessayer dans quelques instants.');
+      } else if (e?.status === 401 || e?.status === 403) {
+        setError('Session expirée ou non autorisée pour cette action.');
       } else if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        setError('Connexion interrompue. Vérifiez le réseau puis réessayez.');
+        setError('Connexion interrompue. Vérifiez votre accès Internet puis réessayez.');
       } else {
         setError(e?.message || 'Impossible de générer le modèle. Réessayez dans un instant.');
       }
@@ -310,6 +323,10 @@ export default function LandingInvitationAiGenerator({
 
   const openHistoryItem = (item: AiTemplateComposeHistoryItem) => {
     if (busy) return;
+    if (!item?.content) {
+      setError('Impossible de recharger cet élément : données incomplètes ou corrompues.');
+      return;
+    }
     setResult(item.content);
     setLastStageMeta(
       item.stage

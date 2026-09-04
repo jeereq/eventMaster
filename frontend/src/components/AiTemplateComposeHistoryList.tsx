@@ -26,6 +26,30 @@ function composeTitle(item: AiTemplateComposeHistoryItem) {
   return item.source === 'studio' ? 'Génération studio' : 'Génération modèle';
 }
 
+function HistoryPreviewThumb({ src }: { src?: string | null }) {
+  const [error, setError] = React.useState(false);
+
+  if (!src || error) {
+    return (
+      <span className="absolute inset-0 flex items-center justify-center text-muted" aria-hidden>
+        <ImageIcon className="w-4 h-4" />
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => setError(true)}
+      className="absolute inset-0 w-full h-full object-cover"
+    />
+  );
+}
+
 export default function AiTemplateComposeHistoryList({
   items,
   onOpen,
@@ -74,20 +98,7 @@ export default function AiTemplateComposeHistoryList({
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="relative w-12 h-14 shrink-0 rounded-md overflow-hidden border border-border bg-surface-muted">
-                    {item.previewImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.previewImageUrl}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="absolute inset-0 flex items-center justify-center text-muted" aria-hidden>
-                        <ImageIcon className="w-4 h-4" />
-                      </span>
-                    )}
+                    <HistoryPreviewThumb src={item.previewImageUrl} />
                   </div>
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2 break-words">

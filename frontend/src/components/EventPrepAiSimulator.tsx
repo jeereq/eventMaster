@@ -271,11 +271,16 @@ export default function EventPrepAiSimulator({
   ]);
 
   const run = async () => {
+    if (loading) return;
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
       setError(`Plus de simulations disponibles. Rechargez ${AI_TOKEN_PACK_SIZE} simulations pour continuer.`);
       publishAllowance(current);
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setError('Vous semblez hors ligne. Vérifiez votre connexion Internet puis réessayez.');
       return;
     }
     setLoading(true);
@@ -335,17 +340,29 @@ export default function EventPrepAiSimulator({
       if (status === 402) {
         setPurchaseModalOpen(true);
         void syncDeviceAiTokensWithBackend(api).then(publishAllowance);
+        setError('Solde de simulations épuisé. Rechargez pour générer de nouveaux packs.');
+      } else if (status === 429) {
+        setError('Trop de requêtes simultanées. Veuillez patienter une minute avant de relancer.');
+      } else if (status === 503 || status === 504) {
+        setError('Le service d’estimation IA est temporairement saturé. Veuillez réessayer dans un instant.');
+      } else if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setError('Connexion interrompue. Vérifiez votre accès Internet puis réessayez.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Simulation impossible. Réessayez dans un instant.');
       }
       setResult(null);
       setSelectedId(null);
-      setError(err instanceof Error ? err.message : 'Simulation impossible.');
     } finally {
       setLoading(false);
     }
   };
 
   const saveSelectedPack = async () => {
-    if (!selected) return;
+    if (!selected || saveBusy) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setError('Connexion indisponible. Vérifiez votre accès Internet pour sauvegarder ce pack.');
+      return;
+    }
     setSaveBusy(true);
     setSaveMessage('');
     try {

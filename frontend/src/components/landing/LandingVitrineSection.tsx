@@ -67,6 +67,11 @@ export default function LandingVitrineSection() {
   const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : 'event';
 
   const load = useCallback(async (filters: EntityFilters, search: string) => {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setCatalogError('Vous semblez hors ligne. Vérifiez votre connexion Internet puis réessayez.');
+      setLoadingCatalog(false);
+      return;
+    }
     setLoadingCatalog(true);
     setCatalogError('');
     try {
@@ -204,6 +209,7 @@ export default function LandingVitrineSection() {
   const pagedRentals = paginateItems(rentalItems, page, pageSize);
   const pagedEvents = paginateItems(eventItems, page, pageSize);
   const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity }));
+  const hasFilterOrSearch = Boolean(query.trim() || chips.length > 0);
 
   const catalogFilters = (
     <CatalogueFilterBar
@@ -384,8 +390,12 @@ export default function LandingVitrineSection() {
                   items={pagedVenues}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle="Aucune salle publiée"
-                  emptyDescription="Les salles enregistrées sur EventMaster apparaîtront ici."
+                  emptyTitle={hasFilterOrSearch ? 'Aucune salle trouvée' : 'Aucune salle publiée'}
+                  emptyDescription={
+                    hasFilterOrSearch
+                      ? 'Aucune salle ne correspond à vos filtres ou termes de recherche. Essayez d’élargir vos critères ou de réinitialiser la recherche.'
+                      : 'Les salles enregistrées sur EventMaster apparaîtront ici.'
+                  }
                 />
                 <Pagination
                   page={page}
@@ -411,8 +421,12 @@ export default function LandingVitrineSection() {
                   items={pagedServices}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle="Aucun prestataire publié"
-                  emptyDescription="Les prestataires enregistrés apparaîtront ici."
+                  emptyTitle={hasFilterOrSearch ? 'Aucun prestataire trouvé' : 'Aucun prestataire publié'}
+                  emptyDescription={
+                    hasFilterOrSearch
+                      ? 'Aucun prestataire ne correspond à vos filtres ou termes de recherche. Essayez d’élargir vos critères ou de réinitialiser la recherche.'
+                      : 'Les prestataires enregistrés apparaîtront ici.'
+                  }
                 />
                 <Pagination
                   page={page}
@@ -438,8 +452,12 @@ export default function LandingVitrineSection() {
                   items={pagedRentals}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle="Aucune offre de matériel ou équipement"
-                  emptyDescription="Les matériels et équipements disponibles apparaîtront ici."
+                  emptyTitle={hasFilterOrSearch ? 'Aucun matériel trouvé' : 'Aucune offre de matériel ou équipement'}
+                  emptyDescription={
+                    hasFilterOrSearch
+                      ? 'Aucune offre de matériel ne correspond à vos filtres ou termes de recherche.'
+                      : 'Les matériels et équipements disponibles apparaîtront ici.'
+                  }
                 />
                 <Pagination
                   page={page}
@@ -465,8 +483,12 @@ export default function LandingVitrineSection() {
                   items={pagedEvents}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle="Aucun événement public"
-                  emptyDescription="Les événements publiés sur EventMaster apparaîtront ici."
+                  emptyTitle={hasFilterOrSearch ? 'Aucun événement trouvé' : 'Aucun événement public'}
+                  emptyDescription={
+                    hasFilterOrSearch
+                      ? 'Aucun événement ne correspond à vos filtres ou termes de recherche.'
+                      : 'Les événements publiés sur EventMaster apparaîtront ici.'
+                  }
                 />
                 <Pagination
                   page={page}
