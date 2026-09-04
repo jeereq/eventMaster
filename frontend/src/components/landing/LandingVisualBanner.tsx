@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Sparkles,
   Building2,
   Utensils,
   Camera,
@@ -116,12 +115,7 @@ export default function LandingVisualBanner() {
     >
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
         {/* En-tête de section */}
-        <div className="text-center max-w-3xl mx-auto space-y-3.5">
-          <span className="em-festive-chip">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            Inspiration & Réalisations
-          </span>
-
+        <div className="text-center max-w-3xl mx-auto space-y-2.5">
           <h2 className="em-landing-heading text-2xl sm:text-4xl text-foreground">
             Des réceptions d’exception,{' '}
             <span className="text-primary">conçues pour marquer les esprits</span>
@@ -136,7 +130,7 @@ export default function LandingVisualBanner() {
             <button
               type="button"
               onClick={() => setActiveCategory('all')}
-              className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation ${
+              className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                 activeCategory === 'all'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'bg-surface-muted border border-border text-muted hover:text-foreground'
@@ -149,7 +143,7 @@ export default function LandingVisualBanner() {
                 key={item.id}
                 type="button"
                 onClick={() => setActiveCategory(item.id)}
-                className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation ${
+                className={`px-3.5 py-2 rounded-[var(--radius-button)] text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                   activeCategory === item.id
                     ? 'bg-primary-solid text-primary-foreground shadow-xs'
                     : 'bg-surface-muted border border-border text-muted hover:text-foreground'

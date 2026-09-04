@@ -25,7 +25,7 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
   const resources = FOOTER_RESOURCES;
 
   const linkClass =
-    'text-sm text-muted hover:text-foreground transition-colors';
+    'text-sm text-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm';
 
   return (
     <footer className={cn('mt-auto border-t border-border bg-surface text-foreground', className)}>
@@ -123,18 +123,18 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
             © {new Date().getFullYear()} {site.platformName}. Tous droits réservés.
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <Link href="/terms" className="hover:text-foreground transition-colors">
+            <Link href="/terms" className="hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               Conditions d&apos;utilisation
             </Link>
-            <Link href="/privacy" className="hover:text-foreground transition-colors">
+            <Link href="/privacy" className="hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               Confidentialité
             </Link>
-            <Link href={faqHref} className="hover:text-foreground transition-colors">
+            <Link href={faqHref} className="hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               FAQ
             </Link>
           </div>
           <p className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
             Données isolées par organisation · HTTPS
           </p>
         </div>

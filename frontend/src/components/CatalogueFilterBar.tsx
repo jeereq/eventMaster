@@ -89,7 +89,7 @@ export function CatalogueChoicePills({
             className={cn(
               'min-h-11 sm:min-h-0 px-3 py-1.5 rounded-[var(--radius-button)] text-sm sm:text-xs font-medium border transition touch-manipulation',
               active
-                ? 'bg-primary text-white border-primary'
+                ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
             )}
           >
@@ -317,7 +317,7 @@ export default function CatalogueFilterBar({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full h-10 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full min-h-11 h-11 sm:h-10 sm:min-h-10 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
           </div>
           {hasFilters && (
@@ -325,9 +325,9 @@ export default function CatalogueFilterBar({
               type="button"
               onClick={openModal}
               className={cn(
-                'relative h-10 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation',
+                'relative min-h-11 sm:min-h-10 sm:h-10 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation',
                 count
-                  ? 'bg-primary text-white border-primary'
+                  ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                   : 'bg-surface/95 text-foreground border-white/25 dark:border-white/10',
               )}
               aria-label="Ouvrir les filtres"
@@ -335,7 +335,7 @@ export default function CatalogueFilterBar({
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Filtres</span>
               {count > 0 ? (
-                <span className="inline-flex h-4 min-w-4 px-1 rounded-full bg-white text-primary text-[10px] font-bold leading-4 items-center justify-center">
+                <span className="inline-flex h-4 min-w-4 px-1 rounded-full bg-primary-foreground text-primary-solid text-[10px] font-bold leading-4 items-center justify-center tabular-nums">
                   {count}
                 </span>
               ) : null}

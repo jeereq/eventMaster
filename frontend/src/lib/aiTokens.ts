@@ -105,6 +105,7 @@ export function getCreditedOrders(): string[] {
  * Récupère le solde actuel de simulations (cache local ; la vérité est le portefeuille serveur).
  */
 export function getAiSimulationAllowance(): AiAllowance {
+  
   let freeTrialsUsed = 0;
   let bonusTokens = 0;
   const deviceId = getOrCreateDeviceId();

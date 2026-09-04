@@ -117,7 +117,7 @@ export default function SiteHeader({
           {links.map((item) => {
             const active = isLinkActive(item.href);
             const itemClass = cn(
-              'px-3.5 py-1 text-xs font-semibold transition rounded-full focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+              'px-3.5 py-1.5 text-xs font-semibold transition rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               active
                 ? 'text-primary bg-surface dark:bg-surface shadow-xs border border-primary/20 font-bold'
                 : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-surface-muted',

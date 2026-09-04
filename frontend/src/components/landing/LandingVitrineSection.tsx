@@ -32,7 +32,7 @@ import {
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
-import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Store } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles } from 'lucide-react';
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -281,10 +281,6 @@ export default function LandingVitrineSection() {
       <div className="page-container relative z-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
-            <span className="em-festive-chip">
-              <Store className="w-3 h-3" />
-              Catalogue & Marketplace
-            </span>
             <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">
               Lieux, prestataires et billetteries
             </h2>
@@ -292,7 +288,7 @@ export default function LandingVitrineSection() {
               Explorez les espaces vérifiés avec visite 3D et contactez les professionnels en direct.
             </p>
           </div>
-          <Button href="/marketplace" rightIcon={<ArrowRight className="w-4 h-4" />}>
+          <Button href="/marketplace" className="w-full sm:w-auto" rightIcon={<ArrowRight className="w-4 h-4" />}>
             Tout le marketplace
           </Button>
         </div>
@@ -310,13 +306,14 @@ export default function LandingVitrineSection() {
               </p>
             </div>
           </div>
-          <a
-            href="#simulateur-ia"
-            className="shrink-0 px-3.5 py-2 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs flex items-center gap-1.5 w-full sm:w-auto justify-center"
+          <Button
+            href="/#simulateur-ia"
+            size="sm"
+            className="shrink-0 w-full sm:w-auto"
+            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
           >
-            <span>Tester la simulation IA</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </a>
+            Tester la simulation IA
+          </Button>
         </div>
 
         {catalogError ? (
@@ -345,7 +342,7 @@ export default function LandingVitrineSection() {
               type="button"
               onClick={() => selectTab(id, hash)}
               className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm md:text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                'inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 tab === id
                   ? 'bg-primary-solid text-primary-foreground border border-primary/30 shadow-xs'
                   : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60',

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function PublicCtaBand({
   title,
@@ -33,11 +33,6 @@ export default function PublicCtaBand({
       />
 
       <div className="page-container relative z-10 text-center space-y-5">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-festive-accent/35 text-[11px] font-bold text-festive-on-stage uppercase tracking-wider mx-auto">
-          <Sparkles className="w-3.5 h-3.5" />
-          Rejoignez EventMaster
-        </div>
-
         <h2 className="em-landing-heading text-2xl sm:text-3xl lg:text-4xl text-stage-foreground max-w-xl mx-auto">
           {title}
         </h2>

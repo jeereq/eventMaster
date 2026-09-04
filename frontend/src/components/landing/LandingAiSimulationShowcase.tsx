@@ -158,13 +158,7 @@ export default function LandingAiSimulationShowcase() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] sm:w-[600px] sm:h-[600px] bg-primary/10 rounded-full blur-2xl sm:blur-3xl pointer-events-none -z-10" />
 
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
-        <div className="text-center max-w-3xl mx-auto space-y-3.5">
-          <div className="inline-flex flex-wrap items-center justify-center gap-2">
-            <span className="em-festive-chip">
-              <Wand2 className="w-3.5 h-3.5 text-primary" />
-              Intelligence Artificielle & Budget
-            </span>
-          </div>
+        <div className="text-center max-w-3xl mx-auto space-y-2.5">
           {isAiSimulationThresholdReached(allowance) ? (
             <div className="max-w-xl mx-auto text-left">
               <AiSimulationCounter

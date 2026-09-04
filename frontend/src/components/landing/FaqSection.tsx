@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, HelpCircle, Sparkles } from 'lucide-react';
+import { ChevronDown, HelpCircle } from 'lucide-react';
 import { FAQ_ITEMS } from '@/config/siteContent';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -52,10 +52,6 @@ export default function FaqSection({
     <section id={id} className={cn('em-landing-defer py-16 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
       <div className="page-container relative z-10">
         <div className="max-w-2xl mb-8 space-y-2.5">
-          <span className="em-festive-chip">
-            <Sparkles className="w-3 h-3" />
-            FAQ & Aide
-          </span>
           <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">{title}</h2>
           <p className="text-sm text-muted leading-relaxed">{subtitle}</p>
         </div>
@@ -77,7 +73,7 @@ export default function FaqSection({
                   type="button"
                   id={`faq-trigger-${item.id}`}
                   onClick={() => setOpenId(isOpen ? null : item.id)}
-                  className="w-full flex items-center justify-between gap-4 px-4 sm:px-5 py-4 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+                  className="w-full flex items-center justify-between gap-4 px-4 sm:px-5 py-4 text-left transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-expanded={isOpen}
                   aria-controls={`faq-panel-${item.id}`}
                 >

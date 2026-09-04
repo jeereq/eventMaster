@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, ArrowRight, LayoutGrid, Eye, Users, ScanLine } from 'lucide-react';
+import { ArrowRight, LayoutGrid, Eye, Users, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 
@@ -18,11 +18,6 @@ export default function Landing3DTeaserBand() {
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8">
             <div className="max-w-2xl space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-festive-accent/30 text-festive-on-stage text-xs font-semibold">
-                <Box className="w-3.5 h-3.5" />
-                <span>Plans de salle 2D & Immersion 3D</span>
-              </div>
-
               <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground">
                 Modélisez vos réceptions au millimètre et placez vos invités
               </h2>
