@@ -18,6 +18,8 @@ import {
   Eye,
   Palette,
   ExternalLink,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -135,9 +137,11 @@ const STAGE_STEPS = [
 export default function LandingInvitationAiGenerator({
   className,
   id = 'generateur-ia',
+  defaultExpanded = false,
 }: {
   className?: string;
   id?: string;
+  defaultExpanded?: boolean;
 }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -163,6 +167,7 @@ export default function LandingInvitationAiGenerator({
   const [dragOver, setDragOver] = useState(false);
   const [previewTab, setPreviewTab] = useState<'card' | 'artwork' | 'details'>('card');
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const handleCopyColor = (color: string, key: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -171,6 +176,25 @@ export default function LandingInvitationAiGenerator({
       setTimeout(() => setCopiedColorKey(null), 1800);
     }
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkHash = () => {
+        if (window.location.hash === `#${id}`) {
+          setIsExpanded(true);
+        }
+      };
+      checkHash();
+      window.addEventListener('hashchange', checkHash);
+      return () => window.removeEventListener('hashchange', checkHash);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (files.length > 0 || result || busy || prompt.trim().length > 0) {
+      setIsExpanded(true);
+    }
+  }, [files.length, result, busy, prompt]);
 
   useEffect(() => {
     void syncDeviceAiTokensWithBackend(api).then(setAllowance).catch(() => {
@@ -360,80 +384,157 @@ export default function LandingInvitationAiGenerator({
       aria-busy={busy}
       aria-labelledby={`${id}-title`}
       className={cn(
-        'rounded-[1.25rem] border border-border bg-surface shadow-sm overflow-hidden scroll-mt-20',
+        'rounded-[1.25rem] border border-border bg-surface shadow-sm overflow-hidden scroll-mt-20 transition-all duration-300',
         className,
       )}
     >
-      <div className="px-5 sm:px-7 pt-6 sm:pt-7 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div className="space-y-2 max-w-2xl min-w-0">
-            <h2
-              id={`${id}-title`}
-              className="text-base sm:text-xl font-bold text-foreground tracking-tight flex items-center gap-2"
-            >
-              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-sm shrink-0">
-                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden />
-              </span>
-              <span className="min-w-0 leading-tight break-words">Studio IA</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Images + brief → aperçu éditable. Le brief guide le style ; les visages présents sont
-              conservés, aucun visage n’est inventé.
-            </p>
+      {!isExpanded ? (
+        /* ─── BANNIÈRE COMPACTE (STUDIO COMPRESSÉ) ─── */
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={false}
+          aria-controls={`${id}-body`}
+          onClick={() => setIsExpanded(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsExpanded(true);
+            }
+          }}
+          className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer hover:bg-surface-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 group"
+        >
+          <div className="flex items-center gap-3.5 min-w-0">
+            <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+              <Wand2 className="w-5 h-5" aria-hidden />
+            </span>
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 id={`${id}-title`} className="text-sm sm:text-base font-bold text-foreground tracking-tight">
+                  Studio IA — Créateur & Clonage d’invitations
+                </h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  Réalisme 35mm
+                </span>
+              </div>
+              <p className="text-xs text-muted truncate max-w-xl">
+                Photos + brief → aperçu personnalisé généré en quelques secondes. Déroulez pour créer ou cloner votre invitation.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+
+          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
             <span
               className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
-              title="Jetons IA disponibles (invitations ou simulation)"
+              title="Jetons IA disponibles"
             >
               <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
               {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
             </span>
-            {!allowance.canSimulate ? (
-              <Button type="button" size="sm" variant="secondary" onClick={() => setTokenModalOpen(true)}>
-                Recharger
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIsExpanded(true)}
+              rightIcon={<ChevronDown className="w-4 h-4" />}
+              aria-expanded={false}
+              aria-controls={`${id}-body`}
+            >
+              Dérouler le Studio IA
+            </Button>
           </div>
         </div>
-
-        <ol className="mt-5 flex flex-wrap gap-2" aria-label="Étapes du studio">
-          {STAGE_STEPS.map((step, index) => {
-            const done = Boolean(result ? index <= 3 : activeStep > index);
-            const isCurrent = busy
-              ? activeStep === index
-              : result
-                ? index === 3
-                : activeStep === index;
-            return (
-              <li
-                key={step.id}
-                aria-current={isCurrent ? 'step' : undefined}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition',
-                  done && !isCurrent
-                    ? 'bg-primary/15 border-primary/30 text-primary'
-                    : isCurrent
-                      ? 'bg-surface border-primary text-foreground'
-                      : 'bg-surface-muted/60 border-border text-muted',
-                )}
-              >
-                <span
-                  className={cn(
-                    'w-4 h-4 rounded-full inline-flex items-center justify-center text-[9px]',
-                    done || isCurrent ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
-                  )}
-                >
-                  {done && !isCurrent ? <Check className="w-2.5 h-2.5" /> : index + 1}
+      ) : (
+        /* ─── ATELIER COMPLET DÉROULÉ ─── */
+        <div className="animate-fade-in">
+          <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-sm shrink-0">
+                  <Wand2 className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
                 </span>
-                {step.label}
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 id={`${id}-title`} className="text-base sm:text-xl font-bold text-foreground tracking-tight">
+                      Studio IA
+                    </h2>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      Déroulé
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                    Images + brief → aperçu éditable. Les visages réels sont fidèlement reproduits à 100%.
+                  </p>
+                </div>
+              </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] gap-0 xl:divide-x divide-border">
+              <div className="flex items-center gap-2 shrink-0">
+                <span
+                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
+                  title="Jetons IA disponibles (invitations ou simulation)"
+                >
+                  <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
+                </span>
+                {!allowance.canSimulate ? (
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setTokenModalOpen(true)}>
+                    Recharger
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setIsExpanded(false)}
+                  rightIcon={<ChevronUp className="w-4 h-4" />}
+                  aria-expanded={true}
+                  aria-controls={`${id}-body`}
+                  title="Réduire le Studio IA"
+                >
+                  Réduire le Studio
+                </Button>
+              </div>
+            </div>
+
+            <ol className="mt-4 flex flex-wrap gap-2" aria-label="Étapes du studio">
+              {STAGE_STEPS.map((step, index) => {
+                const done = Boolean(result ? index <= 3 : activeStep > index);
+                const isCurrent = busy
+                  ? activeStep === index
+                  : result
+                    ? index === 3
+                    : activeStep === index;
+                return (
+                  <li
+                    key={step.id}
+                    aria-current={isCurrent ? 'step' : undefined}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition',
+                      done && !isCurrent
+                        ? 'bg-primary/15 border-primary/30 text-primary'
+                        : isCurrent
+                          ? 'bg-surface border-primary text-foreground'
+                          : 'bg-surface-muted/60 border-border text-muted',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'w-4 h-4 rounded-full inline-flex items-center justify-center text-[9px]',
+                        done || isCurrent ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
+                      )}
+                    >
+                      {done && !isCurrent ? <Check className="w-2.5 h-2.5" /> : index + 1}
+                    </span>
+                    {step.label}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          <div
+            id={`${id}-body`}
+            className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] gap-0 xl:divide-x divide-border"
+          >
         {/* Compose */}
         <div className="p-5 sm:p-7 space-y-5">
           <input
@@ -827,6 +928,8 @@ export default function LandingInvitationAiGenerator({
           )}
         </aside>
       </div>
+    </div>
+  )}
 
       <Modal
         open={previewOpen && Boolean(previewTemplate)}
