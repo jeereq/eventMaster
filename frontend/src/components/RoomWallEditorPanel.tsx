@@ -121,16 +121,16 @@ export default function RoomWallEditorPanel({
         <button
           type="button"
           onClick={addWall}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] bg-primary text-white text-[10px] font-bold"
+          className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary text-white text-xs font-bold"
         >
-          <Plus className="w-3 h-3" /> Mur
+          <Plus className="w-3.5 h-3.5" /> Mur
         </button>
         <button
           type="button"
           onClick={resetFromOutline}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border text-[10px] font-bold text-muted hover:bg-surface-muted"
+          className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border text-xs font-bold text-muted hover:bg-surface-muted"
         >
-          <BrickWall className="w-3 h-3" /> Contour → 4 murs
+          <BrickWall className="w-3.5 h-3.5" /> Contour → 4 murs
         </button>
         <button
           type="button"
@@ -138,14 +138,14 @@ export default function RoomWallEditorPanel({
             setWalls([], 'Tous les murs retirés');
             onSelectWall(null);
           }}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-rose-200 bg-rose-50 text-rose-700 text-[10px] font-bold"
+          className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold"
         >
-          <Trash2 className="w-3 h-3" /> Enlever les murs
+          <Trash2 className="w-3.5 h-3.5" /> Enlever les murs
         </button>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <label className="text-[10px] space-y-1">
+        <label className="text-xs space-y-1">
           <span className="font-semibold text-muted">Hauteur (m)</span>
           <input
             type="number"
@@ -154,10 +154,10 @@ export default function RoomWallEditorPanel({
             step={0.1}
             value={walls[0]?.heightM ?? 3}
             onChange={(e) => applyHeightToAll(Math.max(1.5, parseFloat(e.target.value) || 3))}
-            className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
+            className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
           />
         </label>
-        <label className="text-[10px] space-y-1">
+        <label className="text-xs space-y-1">
           <span className="font-semibold text-muted">Épaisseur (m)</span>
           <input
             type="number"
@@ -166,15 +166,15 @@ export default function RoomWallEditorPanel({
             step={0.02}
             value={walls[0]?.thicknessM ?? 0.2}
             onChange={(e) => applyThicknessToAll(Math.max(0.08, parseFloat(e.target.value) || 0.2))}
-            className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
+            className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
           />
         </label>
-        <label className="text-[10px] space-y-1">
+        <label className="text-xs space-y-1">
           <span className="font-semibold text-muted">Texture</span>
           <select
             value={walls[0]?.texture ?? 'plaster'}
             onChange={(e) => applyTextureToAll(e.target.value as WallTextureStyle)}
-            className="w-full px-1.5 py-1.5 rounded-[var(--radius-button)] border text-xs"
+            className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
           >
             {(Object.keys(wallTextureLabels) as WallTextureStyle[]).map((k) => (
               <option key={k} value={k}>{wallTextureLabels[k]}</option>
@@ -184,16 +184,16 @@ export default function RoomWallEditorPanel({
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-[10px] font-bold uppercase text-muted">Ambiances prêtes</p>
+        <p className="text-xs font-bold uppercase text-muted">Ambiances prêtes</p>
         <div className="flex flex-wrap gap-1.5">
           {WALL_STYLE_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
               onClick={() => applyWallPreset(preset.texture, preset.color)}
-              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-button)] border border-border text-[9px] font-semibold hover:bg-surface-muted"
+              className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border text-xs font-semibold hover:bg-surface-muted"
             >
-              <WallTextureSwatch texture={preset.texture} className="h-4 w-4 shrink-0" />
+              <WallTextureSwatch texture={preset.texture} className="h-5 w-5 shrink-0" />
               {preset.label}
             </button>
           ))}
@@ -207,7 +207,7 @@ export default function RoomWallEditorPanel({
             type="button"
             onClick={() => applyTextureToAll(tex)}
             className={cn(
-              'py-1.5 px-1 rounded-[var(--radius-button)] border text-[8px] font-bold transition text-center leading-tight',
+              'min-h-11 py-2 px-1 rounded-[var(--radius-button)] border text-xs font-bold transition text-center leading-tight',
               (walls[0]?.texture ?? 'plaster') === tex
                 ? 'border-primary ring-1 ring-primary/30'
                 : 'border-border hover:bg-surface-muted',
@@ -220,7 +220,7 @@ export default function RoomWallEditorPanel({
       </div>
 
       <div className="space-y-1.5 max-h-40 overflow-y-auto">
-        <p className="text-[10px] font-bold uppercase text-muted">Segments ({walls.length})</p>
+        <p className="text-xs font-bold uppercase text-muted">Segments ({walls.length})</p>
         {walls.map((w, i) => {
           const len = wallLengthMeters(w, blueprint.canvas);
           return (
@@ -229,7 +229,7 @@ export default function RoomWallEditorPanel({
               type="button"
               onClick={() => onSelectWall(w.id)}
               className={cn(
-                'w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-[var(--radius-button)] border text-left text-[10px]',
+                'w-full min-h-11 flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-button)] border text-left text-xs',
                 selectedWallId === w.id
                   ? 'bg-primary/10 border-primary/40 text-primary'
                   : 'border-border text-muted hover:bg-surface-muted',
@@ -249,14 +249,14 @@ export default function RoomWallEditorPanel({
             <button
               type="button"
               onClick={() => deleteWall(selected.id)}
-              className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600"
+              className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 text-xs font-bold text-rose-600"
             >
-              <Trash2 className="w-3 h-3" /> Supprimer
+              <Trash2 className="w-3.5 h-3.5" /> Supprimer
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-[10px] space-y-1">
+            <label className="text-xs space-y-1">
               <span className="font-semibold text-muted">Départ X %</span>
               <input
                 type="number"
@@ -264,10 +264,10 @@ export default function RoomWallEditorPanel({
                 max={100}
                 value={Math.round(selected.start.x)}
                 onChange={(e) => updateWall(selected.id, { start: { ...selected.start, x: Number(e.target.value) } })}
-                className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+                className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
               />
             </label>
-            <label className="text-[10px] space-y-1">
+            <label className="text-xs space-y-1">
               <span className="font-semibold text-muted">Départ Y %</span>
               <input
                 type="number"
@@ -275,10 +275,10 @@ export default function RoomWallEditorPanel({
                 max={100}
                 value={Math.round(selected.start.y)}
                 onChange={(e) => updateWall(selected.id, { start: { ...selected.start, y: Number(e.target.value) } })}
-                className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+                className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
               />
             </label>
-            <label className="text-[10px] space-y-1">
+            <label className="text-xs space-y-1">
               <span className="font-semibold text-muted">Fin X %</span>
               <input
                 type="number"
@@ -286,10 +286,10 @@ export default function RoomWallEditorPanel({
                 max={100}
                 value={Math.round(selected.end.x)}
                 onChange={(e) => updateWall(selected.id, { end: { ...selected.end, x: Number(e.target.value) } })}
-                className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+                className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
               />
             </label>
-            <label className="text-[10px] space-y-1">
+            <label className="text-xs space-y-1">
               <span className="font-semibold text-muted">Fin Y %</span>
               <input
                 type="number"
@@ -297,13 +297,13 @@ export default function RoomWallEditorPanel({
                 max={100}
                 value={Math.round(selected.end.y)}
                 onChange={(e) => updateWall(selected.id, { end: { ...selected.end, y: Number(e.target.value) } })}
-                className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+                className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
               />
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-[10px] space-y-1">
+            <label className="text-xs space-y-1">
               <span className="font-semibold text-muted">Hauteur (m)</span>
               <input
                 type="number"
@@ -312,10 +312,10 @@ export default function RoomWallEditorPanel({
                 step={0.1}
                 value={selected.heightM}
                 onChange={(e) => updateWall(selected.id, { heightM: Math.max(1.5, parseFloat(e.target.value) || 3) })}
-                className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+                className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
               />
             </label>
-            <label className="text-[10px] space-y-1">
+            <label className="text-xs space-y-1">
               <span className="font-semibold text-muted">Épaisseur (m)</span>
               <input
                 type="number"
@@ -324,17 +324,17 @@ export default function RoomWallEditorPanel({
                 step={0.02}
                 value={selected.thicknessM}
                 onChange={(e) => updateWall(selected.id, { thicknessM: Math.max(0.08, parseFloat(e.target.value) || 0.2) })}
-                className="w-full px-2 py-1 rounded-[var(--radius-button)] border text-xs"
+                className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
               />
             </label>
           </div>
 
-          <label className="text-[10px] space-y-1 block">
+          <label className="text-xs space-y-1 block">
             <span className="font-semibold text-muted">Texture</span>
             <select
               value={selected.texture}
               onChange={(e) => updateWall(selected.id, { texture: e.target.value as WallTextureStyle, color: undefined })}
-              className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
+              className="w-full min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-xs"
             >
               {(Object.keys(wallTextureLabels) as WallTextureStyle[]).map((k) => (
                 <option key={k} value={k}>{wallTextureLabels[k]}</option>
@@ -343,18 +343,18 @@ export default function RoomWallEditorPanel({
           </label>
 
           <div className="space-y-2 pt-2 border-t border-border/50">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1">
-                <DoorOpen className="w-3 h-3" /> Portes & fenêtres
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-bold uppercase text-muted flex items-center gap-1.5">
+                <DoorOpen className="w-3.5 h-3.5" /> Portes & fenêtres
               </p>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   onClick={() => {
                     const op = createWallOpening('door', { t: 0.5 });
                     updateWall(selected.id, { openings: [...(selected.openings ?? []), op] });
                   }}
-                  className="px-2 py-0.5 rounded border text-[9px] font-bold text-emerald-700 border-emerald-200 bg-emerald-50"
+                  className="min-h-11 px-3 py-2 rounded-[var(--radius-button)] border text-xs font-bold text-emerald-700 border-emerald-200 bg-emerald-50"
                 >
                   + Porte
                 </button>
@@ -364,7 +364,7 @@ export default function RoomWallEditorPanel({
                     const op = createWallOpening('window', { t: 0.4 });
                     updateWall(selected.id, { openings: [...(selected.openings ?? []), op] });
                   }}
-                  className="px-2 py-0.5 rounded border text-[9px] font-bold text-sky-700 border-sky-200 bg-sky-50"
+                  className="min-h-11 px-3 py-2 rounded-[var(--radius-button)] border text-xs font-bold text-sky-700 border-sky-200 bg-sky-50"
                 >
                   + Fenêtre
                 </button>
@@ -372,27 +372,28 @@ export default function RoomWallEditorPanel({
             </div>
 
             {(selected.openings ?? []).length === 0 && (
-              <p className="text-[10px] text-muted">Aucune ouverture sur ce mur.</p>
+              <p className="text-xs text-muted">Aucune ouverture sur ce mur.</p>
             )}
 
             {(selected.openings ?? []).map((op) => (
-              <div key={op.id} className="p-2 rounded-[var(--radius-button)] border border-border bg-surface space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold">{op.kind === 'door' ? 'Porte' : 'Fenêtre'}</span>
+              <div key={op.id} className="p-3 rounded-[var(--radius-card)] border border-border bg-surface space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold">{op.kind === 'door' ? 'Porte' : 'Fenêtre'}</span>
                   <button
                     type="button"
-                    className="text-rose-500"
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 text-rose-500"
+                    aria-label={`Supprimer cette ${op.kind === 'door' ? 'porte' : 'fenêtre'}`}
                     onClick={() => {
                       updateWall(selected.id, {
                         openings: (selected.openings ?? []).filter((o) => o.id !== op.id),
                       });
                     }}
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <label className="text-[9px] space-y-0.5">
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="text-xs space-y-1">
                     <span className="text-muted">Position</span>
                     <input
                       type="range"
@@ -401,10 +402,10 @@ export default function RoomWallEditorPanel({
                       step={0.02}
                       value={op.t}
                       onChange={(e) => updateOpening(selected.id, op.id, { t: parseFloat(e.target.value) })}
-                      className="w-full accent-primary"
+                      className="w-full min-h-11 accent-primary"
                     />
                   </label>
-                  <label className="text-[9px] space-y-0.5">
+                  <label className="text-xs space-y-1">
                     <span className="text-muted">Largeur m</span>
                     <input
                       type="number"
@@ -413,10 +414,10 @@ export default function RoomWallEditorPanel({
                       step={0.05}
                       value={op.widthM}
                       onChange={(e) => updateOpening(selected.id, op.id, { widthM: parseFloat(e.target.value) || 0.9 })}
-                      className="w-full px-1 py-0.5 rounded border text-[10px]"
+                      className="w-full min-h-11 px-2 py-2 rounded border text-xs"
                     />
                   </label>
-                  <label className="text-[9px] space-y-0.5">
+                  <label className="text-xs space-y-1">
                     <span className="text-muted">Hauteur m</span>
                     <input
                       type="number"
@@ -425,11 +426,11 @@ export default function RoomWallEditorPanel({
                       step={0.05}
                       value={op.heightM}
                       onChange={(e) => updateOpening(selected.id, op.id, { heightM: parseFloat(e.target.value) || 2 })}
-                      className="w-full px-1 py-0.5 rounded border text-[10px]"
+                      className="w-full min-h-11 px-2 py-2 rounded border text-xs"
                     />
                   </label>
                 </div>
-                <label className="text-[9px] space-y-0.5 block">
+                <label className="text-xs space-y-1 block">
                   <span className="text-muted">{op.kind === 'door' ? 'Seuil / bas (m)' : 'Allège bas (m)'}</span>
                   <input
                     type="number"
@@ -438,11 +439,11 @@ export default function RoomWallEditorPanel({
                     step={0.05}
                     value={op.sillM ?? (op.kind === 'door' ? 0 : 0.9)}
                     onChange={(e) => updateOpening(selected.id, op.id, { sillM: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-1 py-0.5 rounded border text-[10px]"
+                    className="w-full min-h-11 px-2 py-2 rounded border text-xs"
                   />
                 </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <label className="text-[9px] space-y-0.5">
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-xs space-y-1">
                     <span className="text-muted">Style</span>
                     <select
                       value={op.style}
@@ -465,7 +466,7 @@ export default function RoomWallEditorPanel({
                         }
                         updateOpening(selected.id, op.id, patch);
                       }}
-                      className="w-full px-1 py-1 rounded border text-[10px]"
+                      className="w-full min-h-11 px-2 py-2 rounded border text-xs"
                     >
                       {op.kind === 'door'
                         ? (Object.keys(doorStyleLabels) as DoorStyle[]).map((k) => (
@@ -476,14 +477,14 @@ export default function RoomWallEditorPanel({
                           ))}
                     </select>
                   </label>
-                  <label className="text-[9px] space-y-0.5">
+                  <label className="text-xs space-y-1">
                     <span className="text-muted">Matériau</span>
                     <select
                       value={op.material ?? (op.kind === 'door' ? 'wood' : 'glass')}
                       onChange={(e) => updateOpening(selected.id, op.id, {
                         material: e.target.value as OpeningMaterial,
                       })}
-                      className="w-full px-1 py-1 rounded border text-[10px]"
+                      className="w-full min-h-11 px-2 py-2 rounded border text-xs"
                     >
                       {(Object.keys(openingMaterialLabels) as OpeningMaterial[]).map((k) => (
                         <option key={k} value={k}>{openingMaterialLabels[k]}</option>
@@ -491,15 +492,16 @@ export default function RoomWallEditorPanel({
                     </select>
                   </label>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {(Object.keys(openingMaterialLabels) as OpeningMaterial[]).map((mat) => (
                     <button
                       key={mat}
                       type="button"
                       title={openingMaterialLabels[mat]}
+                      aria-label={openingMaterialLabels[mat]}
                       onClick={() => updateOpening(selected.id, op.id, { material: mat })}
                       className={cn(
-                        'p-1 rounded border transition',
+                        'inline-flex items-center justify-center min-h-11 min-w-11 p-1.5 rounded border transition',
                         (op.material ?? (op.kind === 'door' ? 'wood' : 'glass')) === mat
                           ? 'border-primary ring-1 ring-primary/30'
                           : 'border-border hover:bg-surface-muted',
@@ -509,29 +511,29 @@ export default function RoomWallEditorPanel({
                     </button>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <label className="text-[9px] space-y-0.5">
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-xs space-y-1">
                     <span className="text-muted">Couleur vantail</span>
                     <input
                       type="color"
                       value={op.color ?? '#6b4423'}
                       onChange={(e) => updateOpening(selected.id, op.id, { color: e.target.value })}
-                      className="w-full h-7 rounded border cursor-pointer"
+                      className="w-full min-h-11 rounded border cursor-pointer"
                     />
                   </label>
-                  <label className="text-[9px] space-y-0.5">
+                  <label className="text-xs space-y-1">
                     <span className="text-muted">Couleur cadre</span>
                     <input
                       type="color"
                       value={op.frameColor ?? '#3f2a1a'}
                       onChange={(e) => updateOpening(selected.id, op.id, { frameColor: e.target.value })}
-                      className="w-full h-7 rounded border cursor-pointer"
+                      className="w-full min-h-11 rounded border cursor-pointer"
                     />
                   </label>
                 </div>
                 {op.kind === 'window' && (
-                  <div className="space-y-1.5 pt-1 border-t border-border/60">
-                    <label className="flex items-center gap-2 text-[9px] text-muted cursor-pointer">
+                  <div className="space-y-2 pt-1 border-t border-border/60">
+                    <label className="flex items-center gap-2 min-h-11 text-xs text-muted cursor-pointer">
                       <input
                         type="checkbox"
                         checked={op.hasCurtains === true}
@@ -541,21 +543,21 @@ export default function RoomWallEditorPanel({
                       Rideaux
                     </label>
                     {op.hasCurtains && (
-                      <label className="text-[9px] space-y-0.5 block">
+                      <label className="text-xs space-y-1 block">
                         <span className="text-muted">Couleur rideaux</span>
                         <input
                           type="color"
                           value={op.curtainColor ?? '#7f1d1d'}
                           onChange={(e) => updateOpening(selected.id, op.id, { curtainColor: e.target.value })}
-                          className="w-full h-7 rounded border cursor-pointer"
+                          className="w-full min-h-11 rounded border cursor-pointer"
                         />
                       </label>
                     )}
                   </div>
                 )}
                 {op.kind === 'door' && (
-                  <div className="space-y-1.5 pt-1 border-t border-border/60">
-                    <label className="flex items-center gap-2 text-[9px] text-muted cursor-pointer">
+                  <div className="space-y-2 pt-1 border-t border-border/60">
+                    <label className="flex items-center gap-2 min-h-11 text-xs text-muted cursor-pointer">
                       <input
                         type="checkbox"
                         checked={op.hasMat !== false}
@@ -565,19 +567,19 @@ export default function RoomWallEditorPanel({
                       Paillasson / tapis d&apos;entrée
                     </label>
                     {op.hasMat !== false && (
-                      <label className="text-[9px] space-y-0.5 block">
+                      <label className="text-xs space-y-1 block">
                         <span className="text-muted">Couleur tapis</span>
                         <input
                           type="color"
                           value={op.matColor ?? '#1e3a5f'}
                           onChange={(e) => updateOpening(selected.id, op.id, { matColor: e.target.value })}
-                          className="w-full h-7 rounded border cursor-pointer"
+                          className="w-full min-h-11 rounded border cursor-pointer"
                         />
                       </label>
                     )}
                   </div>
                 )}
-                <p className="text-[9px] text-muted leading-snug">
+                <p className="text-xs text-muted leading-snug">
                   {op.kind === 'door'
                     ? 'Porte : largeur / hauteur / matériau (bois, vitre…) et tapis devant.'
                     : 'Fenêtre : allège, style, verre, et rideaux optionnels.'}

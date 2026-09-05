@@ -81,7 +81,7 @@ export function RowSeatsLOD({
     if (backRef.current) backRef.current.instanceMatrix.needsUpdate = true;
   }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct]);
 
-  const numbers = showSeatNumbers
+  const numbers = showSeatNumbers && selected
     ? Array.from({ length: count }).map((_, i) => {
         const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
         return (
@@ -92,7 +92,7 @@ export function RowSeatsLOD({
             style={{ pointerEvents: 'none' }}
             position={[p.localX, p.y + 0.94, p.localZ]}
           >
-            <span className="block min-w-[1.25rem] rounded bg-stone-900/80 px-1 py-px text-center text-[8px] font-semibold tabular-nums text-amber-100 shadow-sm">
+            <span className="block min-w-[1.75rem] rounded bg-foreground/85 px-1.5 py-0.5 text-center text-xs font-semibold tabular-nums text-background shadow-sm">
               {rowSeatCode(rowName, i)}
             </span>
           </Html>

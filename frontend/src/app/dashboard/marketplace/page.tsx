@@ -611,7 +611,7 @@ export default function MarketplaceDeskPage() {
                       <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-surface-muted">
                         {cover ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={cover} alt="" className="h-full w-full object-cover" />
+                          <img src={cover} alt={item.title} className="h-full w-full object-cover" />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-muted">
                             {listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
@@ -638,7 +638,7 @@ export default function MarketplaceDeskPage() {
                   <div className="relative aspect-[16/10] bg-surface-muted">
                     {cover ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cover} alt="" className="h-full w-full object-cover" />
+                      <img src={cover} alt={item.title} className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center text-muted">
                         {listingIsRental ? <KeyRound className="w-8 h-8" /> : <Sparkles className="w-8 h-8" />}

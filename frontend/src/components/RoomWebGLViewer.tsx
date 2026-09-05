@@ -76,6 +76,28 @@ export interface WebGLSelection {
   id: string;
 }
 
+function describeRoomScene(blueprint: RoomLayoutBlueprint): string {
+  let tables = 0;
+  let rows = 0;
+  let seats = 0;
+  for (const item of blueprint.furniture) {
+    if (item.kind === 'table') {
+      tables += 1;
+      seats += item.capacity;
+    } else if (item.kind === 'row') {
+      rows += 1;
+      seats += item.seatCount;
+    } else if (item.kind === 'chair') {
+      seats += 1;
+    }
+  }
+  const parts = ['Vue 3D de la salle'];
+  if (tables) parts.push(`${tables} table${tables > 1 ? 's' : ''}`);
+  if (rows) parts.push(`${rows} rang${rows > 1 ? 's' : ''}`);
+  if (seats) parts.push(`${seats} place${seats > 1 ? 's' : ''}`);
+  return parts.join(' · ');
+}
+
 export type RoomWebGLCaptureApi = {
   capturePng: (scale?: number) => string | null;
 };
@@ -2340,6 +2362,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     [lightingPresetProp, blueprint.metadata.lightingPreset, blueprint.roomType],
   );
   const captureApiRef = useRef<RoomWebGLCaptureApi | null>(null);
+  const sceneLabel = useMemo(() => describeRoomScene(blueprint), [blueprint]);
 
   useImperativeHandle(ref, () => ({
     capturePng: (scale) => captureApiRef.current?.capturePng(scale) ?? null,
@@ -2347,9 +2370,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
   return (
     <div
+      role="img"
+      aria-label={sceneLabel}
       className={cn(
-        'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border',
-        previewMode ? 'bg-gradient-to-b from-[#1c1917] to-[#0c0a09]' : 'bg-[#1a1410]',
+        'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground',
         className,
       )}
     >

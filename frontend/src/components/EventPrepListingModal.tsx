@@ -332,7 +332,7 @@ export default function EventPrepListingModal({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={sizedMediaUrl(url, 160)}
-                    alt=""
+                    alt={`${title}, photo ${index + 1}`}
                     loading="lazy"
                     decoding="async"
                     className="w-full h-full object-cover"

@@ -242,7 +242,7 @@ export default function MarketplaceMediaField({
                 />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={currentUrl} alt="" className="w-full h-full object-contain bg-surface-muted" />
+                <img src={currentUrl} alt={`Photo ${galleryIndex + 1} de la galerie`} className="w-full h-full object-contain bg-surface-muted" />
               )}
               {galleryIndex === 0 && (
                 <span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wider bg-primary text-white px-2 py-0.5 rounded-md">
@@ -302,7 +302,7 @@ export default function MarketplaceMediaField({
                 )}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={mediaPosterUrl(url)} alt="" className="w-full h-full object-cover" />
+                <img src={mediaPosterUrl(url)} alt={isVideoUrl(url) ? `Vidéo ${i + 1}` : `Photo ${i + 1}`} className="w-full h-full object-cover" />
                 {isVideoUrl(url) && (
                   <span className="absolute inset-0 flex items-center justify-center bg-black/35">
                     <Play className="w-3.5 h-3.5 text-white fill-white" />
@@ -374,7 +374,7 @@ export default function MarketplaceMediaField({
                   <video src={item.previewUrl} className="w-full h-full object-cover" muted />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.previewUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={item.previewUrl} alt={item.file.name || 'Prévisualisation à envoyer'} className="w-full h-full object-cover" />
                 )}
                 <span
                   className="absolute top-0 right-0 bg-surface/90 text-[10px] px-1"
@@ -398,7 +398,7 @@ export default function MarketplaceMediaField({
               ) : (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={active.previewUrl} alt="" className="w-full h-full object-contain" />
+                  <img src={active.previewUrl} alt={active.file.name || 'Prévisualisation à recadrer'} className="w-full h-full object-contain" />
                   <div className="absolute border-2 border-primary bg-primary/20 pointer-events-none" style={cropPreviewStyle} />
                 </>
               )}

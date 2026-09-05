@@ -135,20 +135,13 @@ export default function LandingProfileGate({
 
           return (
             <li key={profile.id} className="w-full">
-              <div
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 aria-pressed={selected}
                 aria-label={`Ouvrir les outils de ${profile.label}`}
                 onClick={() => openDetails(profile.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    openDetails(profile.id);
-                  }
-                }}
                 className={cn(
-                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group cursor-pointer select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
+                  'w-full h-full text-left rounded-[var(--radius-card)] p-4 sm:p-5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                   selected
                     ? 'border-2 border-primary bg-surface dark:bg-surface shadow-xl shadow-primary/25 ring-2 ring-primary/30 scale-[1.01] z-10'
                     : 'em-hud-card border-border hover:border-primary/50 hover:bg-surface/90',
@@ -196,14 +189,14 @@ export default function LandingProfileGate({
                     {profile.targetAudience}
                   </p>
 
-                  <h3
+                  <span
                     className={cn(
-                      'text-base font-bold mb-1.5 leading-snug transition-colors',
+                      'block text-base font-bold mb-1.5 leading-snug transition-colors',
                       selected ? 'text-primary' : 'text-foreground group-hover:text-primary',
                     )}
                   >
                     {profile.label}
-                  </h3>
+                  </span>
 
                   <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-4">
                     {profile.intro}
@@ -223,7 +216,7 @@ export default function LandingProfileGate({
                     <ArrowRight className="w-3.5 h-3.5" />
                   </span>
                 </div>
-              </div>
+              </button>
             </li>
           );
         })}

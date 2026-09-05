@@ -1849,7 +1849,6 @@ html[data-mood="celebrate"] .font-display {
     box-shadow 0.18s ease,
     transform 0.18s ease,
     filter 0.18s ease;
-  will-change: transform;
 }
 
 .em-floor-item:hover {
@@ -1864,6 +1863,7 @@ html[data-mood="celebrate"] .font-display {
 .em-floor-item--dragging {
   z-index: 40;
   cursor: grabbing !important;
+  will-change: transform;
   filter: drop-shadow(0 14px 22px rgba(40, 18, 4, 0.35));
 }
 

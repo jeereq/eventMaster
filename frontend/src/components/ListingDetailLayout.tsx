@@ -45,7 +45,7 @@ function ListingPhotoThumbs({
             src={sizedMediaUrl(url, 160)}
             srcSet={listingSrcSet(url, [160, 280])}
             sizes="80px"
-            alt=""
+            alt={`${listingTitle}, photo ${i + 1}`}
             loading="lazy"
             decoding="async"
             className="w-full h-full object-cover"
@@ -454,7 +454,7 @@ export default function ListingDetailLayout({
                             <div className="w-14 h-14 rounded-lg bg-surface-muted overflow-hidden shrink-0 relative">
                               {cover ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={sizedMediaUrl(cover, 160)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <img src={sizedMediaUrl(cover, 160)} alt={srv.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted">
                                   <Sparkles className="w-5 h-5 text-amber-500/60" />
@@ -516,7 +516,7 @@ export default function ListingDetailLayout({
                             <div className="w-14 h-14 rounded-lg bg-surface-muted overflow-hidden shrink-0 relative">
                               {cover ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={sizedMediaUrl(cover, 160)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <img src={sizedMediaUrl(cover, 160)} alt={vn.headline || vn.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted">
                                   <Building2 className="w-5 h-5 text-emerald-500/60" />

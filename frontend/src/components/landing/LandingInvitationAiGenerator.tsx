@@ -558,19 +558,12 @@ export default function LandingInvitationAiGenerator({
     >
       {!isExpanded ? (
         /* ─── BANNIÈRE COMPACTE (STUDIO COMPRESSÉ) ─── */
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           aria-expanded={false}
           aria-controls={`${id}-body`}
           onClick={() => setIsExpanded(true)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setIsExpanded(true);
-            }
-          }}
-          className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer hover:bg-surface-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 group"
+          className="w-full text-left px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-surface-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 group"
         >
           <div className="flex items-center gap-3.5 min-w-0">
             <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
@@ -578,9 +571,9 @@ export default function LandingInvitationAiGenerator({
             </span>
             <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 id={`${id}-title`} className="text-sm sm:text-base font-display font-semibold text-foreground tracking-tight">
+                <span id={`${id}-title`} className="text-sm sm:text-base font-display font-semibold text-foreground tracking-tight">
                   Invitation
-                </h2>
+                </span>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   Carte 9:16
                 </span>
@@ -591,7 +584,7 @@ export default function LandingInvitationAiGenerator({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
             <span
               className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
               title="Jetons IA disponibles"
@@ -599,18 +592,12 @@ export default function LandingInvitationAiGenerator({
               <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
               {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
             </span>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setIsExpanded(true)}
-              rightIcon={<ChevronDown className="w-4 h-4" />}
-              aria-expanded={false}
-              aria-controls={`${id}-body`}
-            >
+            <span className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold">
               Ouvrir
-            </Button>
+              <ChevronDown className="w-4 h-4" aria-hidden />
+            </span>
           </div>
-        </div>
+        </button>
       ) : (
         /* ─── ATELIER COMPLET DÉROULÉ ─── */
         <div className="animate-fade-in">
@@ -720,9 +707,8 @@ export default function LandingInvitationAiGenerator({
           </div>
 
           <div className="space-y-4">
-              <div
-                role="button"
-                tabIndex={busy || files.length >= 4 ? -1 : 0}
+              <button
+                type="button"
                 aria-label={
                   files.length >= 4
                     ? 'Maximum de 4 images atteint'
@@ -732,12 +718,6 @@ export default function LandingInvitationAiGenerator({
                 }
                 aria-disabled={busy || files.length >= 4}
                 aria-controls={previews.length ? `${id}-refs` : undefined}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    if (!busy && files.length < 4) inputRef.current?.click();
-                  }
-                }}
                 onClick={() => {
                   if (!busy && files.length < 4) inputRef.current?.click();
                 }}
@@ -753,7 +733,7 @@ export default function LandingInvitationAiGenerator({
                   addFiles(Array.from(e.dataTransfer.files || []));
                 }}
                 className={cn(
-                  'rounded-xl border-2 border-dashed p-4 sm:p-5 text-center transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  'w-full rounded-xl border-2 border-dashed p-4 sm:p-5 text-center transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   dragOver
                     ? 'border-primary bg-primary/10'
                     : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
@@ -771,7 +751,7 @@ export default function LandingInvitationAiGenerator({
                     ? 'Une photo nette de l’invitation à cloner. JPEG, PNG ou WebP, jusqu’à 4 vues.'
                     : 'Sans photo : carte depuis le brief. Avec photos : visages conservés (yeux, sourire, joues).'}
                 </p>
-              </div>
+              </button>
 
               {previews.length > 0 && (
                 <div id={`${id}-refs`} className="flex flex-wrap gap-2">
