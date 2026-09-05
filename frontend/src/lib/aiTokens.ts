@@ -10,7 +10,7 @@ export const AI_TOKEN_PACK_PRICE_FC = 2500;
 export const AI_SIMULATION_TOKEN_COST = 1;
 /** 2 jetons = 1 génération d’invitation (image). */
 export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
-/** 3 jetons = 1 lecture de plan de salle depuis une photo. */
+/** 3 jetons = 1 composition ou lecture de plan de salle. */
 export const AI_ROOM_PLAN_TOKEN_COST = 3;
 
 export function aiTokenCostLegend(): string {

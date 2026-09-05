@@ -24,6 +24,7 @@ import {
 } from '../services/aiSimulationWalletService';
 import {
   analyzeRoomPlanPhoto,
+  composeRoomPlanAi,
   normalizeRoomPlanImageUrl,
   rateLimitRoomPlanAi,
 } from '../services/roomPlanAiService';
@@ -434,5 +435,113 @@ export async function analyzeRoomPlanFromPhoto(req: AuthenticatedRequest, res: R
     }
     console.error('analyzeRoomPlanFromPhoto:', error);
     return res.status(500).json({ error: 'Impossible de lire le plan depuis la photo.' });
+  }
+}
+
+function readRoomPlanComposeBody(body: Record<string, unknown>) {
+  const imageRaw = typeof body.imageUrl === 'string' && body.imageUrl.trim()
+    ? body.imageUrl
+    : typeof body.imageDataUrl === 'string' && body.imageDataUrl.trim()
+      ? body.imageDataUrl
+      : undefined;
+  const imageUrl = imageRaw ? normalizeRoomPlanImageUrl(imageRaw) : undefined;
+  const brief = typeof body.brief === 'string'
+    ? body.brief
+    : typeof body.prompt === 'string'
+      ? body.prompt
+      : '';
+  return {
+    brief,
+    imageUrl,
+    widthM: typeof body.widthM === 'number' && Number.isFinite(body.widthM) ? body.widthM : 20,
+    heightM: typeof body.heightM === 'number' && Number.isFinite(body.heightM) ? body.heightM : 16,
+    roomType: typeof body.roomType === 'string' ? body.roomType : undefined,
+  };
+}
+
+export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageRooms) {
+      return res.status(403).json({ error: 'Accès refusé pour composer un plan de salle.' });
+    }
+
+    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+    const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
+    if (!deviceId) {
+      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
+    }
+
+    const input = readRoomPlanComposeBody(body);
+    if (!input.imageUrl && input.brief.trim().length < 8) {
+      return res.status(400).json({ error: 'Décrivez la salle, ou ajoutez une photo.' });
+    }
+
+    rateLimitRoomPlanAi(userId);
+    await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST);
+    const draft = await composeRoomPlanAi(input);
+    const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, {
+      action: 'room_plan_from_photo',
+      source: 'studio',
+    });
+
+    return res.json({
+      draft,
+      remaining: allowance.totalRemaining,
+      allowance,
+      tokenCost: AI_ROOM_PLAN_TOKEN_COST,
+    });
+  } catch (error: unknown) {
+    const err = error as { status?: number; message?: string };
+    if (err?.status) {
+      return res.status(err.status).json({ error: err.message || 'Erreur IA' });
+    }
+    console.error('composeRoomPlan:', error);
+    return res.status(500).json({ error: 'Impossible de composer le plan de salle.' });
+  }
+}
+
+export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Response) {
+  try {
+    const user = req.user;
+    const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+    const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
+    if (!deviceId) {
+      return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
+    }
+
+    const input = readRoomPlanComposeBody(body);
+    if (!input.imageUrl && input.brief.trim().length < 8) {
+      return res.status(400).json({ error: 'Décrivez la salle, ou ajoutez une photo.' });
+    }
+
+    const rateKey = user?.id || deviceId;
+    rateLimitRoomPlanAi(rateKey);
+    await requireAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST);
+    const draft = await composeRoomPlanAi(input);
+    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, {
+      action: 'room_plan_from_photo',
+      source: user?.id ? 'studio' : 'landing',
+    });
+
+    return res.json({
+      draft,
+      remaining: allowance.totalRemaining,
+      allowance,
+      tokenCost: AI_ROOM_PLAN_TOKEN_COST,
+    });
+  } catch (error: unknown) {
+    const err = error as { status?: number; message?: string };
+    if (err?.status) {
+      return res.status(err.status).json({ error: err.message || 'Erreur IA' });
+    }
+    console.error('publicComposeRoomPlan:', error);
+    return res.status(500).json({ error: 'Impossible de composer le plan de salle.' });
   }
 }

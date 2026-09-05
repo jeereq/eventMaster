@@ -703,21 +703,70 @@ Règles items (déduction autorisée) :
 Si la photo n’est pas une salle, view="unclear", items=[], warnings explicites.`;
 }
 
-export async function analyzeRoomPlanPhoto(input: {
-  imageUrl: string;
-  roomType?: string;
+function composeSystemPrompt(): string {
+  return `Tu es l’architecte de plans de salle EventMaster (RDC).
+À partir du BRIEF, tu CONÇOIS un plan réaliste et tu produis UNIQUEMENT un JSON valide (response_format json_object).
+
+Mission :
+- Place un agencement cohérent : chaque table, rangée, piste, scène, allée, buffet, DJ, colonne… est un item séparé.
+- 10 tables demandées = 10 items "table". 4 rangées = 4 items "row".
+- Respecte le type de salle et les mètres fournis pour canvas.widthM / heightM.
+- N’ajoute or, pétales, lustre cristal ou allée rouge que si le brief les demande.
+- view="top", appearance.imageRole="plan".
+
+Le schéma JSON est le même que pour une lecture photo :
+{
+  "view": "top",
+  "canvas": { "widthM": number, "heightM": number },
+  "outline": { "shape": "rectangle"|"square"|"circle"|"ellipse"|"lShape"|"uShape"|"hexagon"|"octagon"|"trapezoid"|"stadium", "x":0-100, "y":0-100, "w":0-100, "h":0-100 },
+  "appearance": {
+    "imageRole": "plan",
+    "floorType": "parquet"|"marbre"|"moquette"|"carrelage"|"beton"|"herbe"|"damier"|"terrazzo"|"sable"|"brique"|"bois"|"pierre"|"epoxy",
+    "floorColor": "#rrggbb",
+    "wallTexture": "plaster"|"brick"|"wood"|"concrete"|"wallpaper"|"stone"|"tadelakt"|"travertine"|"metroTile"|"woodPanel",
+    "wallColor": "#rrggbb",
+    "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
+    "tableColor": "#rrggbb",
+    "roofStyle": "flat"|"tentSwag"|"gabled"|"coffered",
+    "curtainColor": "#rrggbb"
+  },
+  "items": [{
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
+    "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
+    "rotation":-180-180, "seats":number,
+    "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
+    "hasCenterpiece": true,
+    "stageShape": "rect"|"semiCircle",
+    "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom",
+    "color": "#rrggbb", "surface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
+    "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
+    "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack",
+    "seatMaterial": "velvet"|"wood"|"fabric"|"leather"|"plastic"|"linen",
+    "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet"
+  }],
+  "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
+  "confidence": 0-1,
+  "warnings": ["..."]
+}
+
+Répartis le mobilier sans chevauchement. Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items.`;
+}
+
+async function requestRoomPlanJson(input: {
+  system: string;
+  userText: string;
+  imageUrl?: string;
+  temperature: number;
   widthM: number;
   heightM: number;
-  brief?: string;
+  failMessage: string;
 }): Promise<RoomPlanVisionDraft> {
   const key = requireOpenAiKey();
   const visionModel = process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
-  const roomType = input.roomType && ROOM_TYPES.has(input.roomType) ? input.roomType : 'CUSTOM';
-  const brief = (input.brief || '').trim().slice(0, 400);
-  const userText = `Salle déclarée par l’utilisateur (indice seulement, la PHOTO gagne) : type=${roomType}, largeur=${input.widthM} m, longueur=${input.heightM} m.
-Utilise CES mètres pour canvas.widthM / heightM. Ne change l’échelle que si une cote lisible sur l’image la contredit clairement.
-${brief ? `Note utilisateur : """${brief}"""` : 'Pas de note utilisateur.'}
-Analyse l’image, déduis chaque élément visible, puis produis le JSON du plan à importer.`;
+  const userContent: Array<Record<string, unknown>> = [{ type: 'text', text: input.userText }];
+  if (input.imageUrl) {
+    userContent.push({ type: 'image_url', image_url: { url: input.imageUrl, detail: 'high' } });
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 90_000);
@@ -731,17 +780,11 @@ Analyse l’image, déduis chaque élément visible, puis produis le JSON du pla
       },
       body: JSON.stringify({
         model: visionModel,
-        temperature: 0.2,
+        temperature: input.temperature,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: systemPrompt() },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: userText },
-              { type: 'image_url', image_url: { url: input.imageUrl, detail: 'high' } },
-            ],
-          },
+          { role: 'system', content: input.system },
+          { role: 'user', content: userContent },
         ],
       }),
     });
@@ -750,20 +793,96 @@ Analyse l’image, déduis chaque élément visible, puis produis le JSON du pla
       choices?: Array<{ message?: { content?: string } }>;
     };
     if (!response.ok) {
-      fail(502, payload.error?.message || 'Échec de la lecture IA du plan.');
+      fail(502, payload.error?.message || input.failMessage);
     }
     const raw = payload.choices?.[0]?.message?.content || '{}';
     let parsed: unknown = {};
     try {
       parsed = JSON.parse(raw);
     } catch {
-      fail(502, 'L’IA a renvoyé un plan illisible. Réessayez avec une photo vue du dessus.');
+      fail(502, 'L’IA a renvoyé un plan illisible. Réessayez avec un brief plus précis.');
     }
     return parseRoomPlanVisionDraft(parsed, { widthM: input.widthM, heightM: input.heightM });
   } catch (error) {
     if ((error as HttpError)?.status) throw error;
-    fail(502, (error as Error)?.message || 'Impossible d’analyser la photo de la salle.');
+    fail(502, (error as Error)?.message || input.failMessage);
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function analyzeRoomPlanPhoto(input: {
+  imageUrl: string;
+  roomType?: string;
+  widthM: number;
+  heightM: number;
+  brief?: string;
+}): Promise<RoomPlanVisionDraft> {
+  const roomType = input.roomType && ROOM_TYPES.has(input.roomType) ? input.roomType : 'CUSTOM';
+  const brief = (input.brief || '').trim().slice(0, 1500);
+  const userText = `Salle déclarée par l’utilisateur (indice seulement, la PHOTO gagne) : type=${roomType}, largeur=${input.widthM} m, longueur=${input.heightM} m.
+Utilise CES mètres pour canvas.widthM / heightM. Ne change l’échelle que si une cote lisible sur l’image la contredit clairement.
+${brief ? `Note utilisateur : """${brief}"""` : 'Pas de note utilisateur.'}
+Analyse l’image, déduis chaque élément visible, puis produis le JSON du plan à importer.`;
+
+  return requestRoomPlanJson({
+    system: systemPrompt(),
+    userText,
+    imageUrl: input.imageUrl,
+    temperature: 0.2,
+    widthM: input.widthM,
+    heightM: input.heightM,
+    failMessage: 'Impossible d’analyser la photo de la salle.',
+  });
+}
+
+export async function composeRoomPlanFromBrief(input: {
+  brief: string;
+  roomType?: string;
+  widthM: number;
+  heightM: number;
+}): Promise<RoomPlanVisionDraft> {
+  const brief = input.brief.trim();
+  if (brief.length < 8) {
+    fail(400, 'Décrivez la salle en quelques mots (type d’événement, nombre de tables, ambiance).');
+  }
+  const roomType = input.roomType && ROOM_TYPES.has(input.roomType) ? input.roomType : 'BANQUET';
+  const userText = `Brief : """${brief.slice(0, 1500)}"""
+Salle : type=${roomType}, largeur=${input.widthM} m, longueur=${input.heightM} m.
+Utilise CES mètres pour canvas.widthM / heightM.
+Conçois le plan et produis le JSON à importer.`;
+
+  return requestRoomPlanJson({
+    system: composeSystemPrompt(),
+    userText,
+    temperature: 0.4,
+    widthM: input.widthM,
+    heightM: input.heightM,
+    failMessage: 'Impossible de composer le plan de salle.',
+  });
+}
+
+export async function composeRoomPlanAi(input: {
+  brief?: string;
+  imageUrl?: string;
+  roomType?: string;
+  widthM: number;
+  heightM: number;
+}): Promise<RoomPlanVisionDraft> {
+  const brief = (input.brief || '').trim();
+  if (input.imageUrl) {
+    return analyzeRoomPlanPhoto({
+      imageUrl: input.imageUrl,
+      roomType: input.roomType,
+      widthM: input.widthM,
+      heightM: input.heightM,
+      brief,
+    });
+  }
+  return composeRoomPlanFromBrief({
+    brief,
+    roomType: input.roomType,
+    widthM: input.widthM,
+    heightM: input.heightM,
+  });
 }

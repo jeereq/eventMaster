@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
-import type { RoomEditorCapabilities } from '@/lib/roomEditorAccess';
+import { roomEditorCapabilities, type RoomEditorCapabilities } from '@/lib/roomEditorAccess';
 import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import {
@@ -30,6 +30,8 @@ import {
 
 export { AI_ROOM_PLAN_TOKEN_COST };
 export const AI_ROOM_IMPORT_GROUP_ID = 'ai-import';
+export const AI_ROOM_PLAN_DRAFT_KEY = 'em_ai_room_plan_draft';
+export const ROOM_PLAN_BRIEF_MIN = 8;
 
 export const ROOM_PLAN_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
 export const ROOM_PLAN_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
@@ -138,6 +140,24 @@ export type RoomPlanAiResult = {
   allowance?: Partial<AiAllowance>;
   tokenCost?: number;
 };
+
+export type RoomPlanAiDraft = {
+  draft: RoomPlanVisionDraft;
+  prompt?: string;
+  roomType?: RoomLayoutBlueprint['roomType'];
+  widthM?: number;
+  heightM?: number;
+  savedAt: string;
+};
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Impossible de lire l’image.'));
+    reader.readAsDataURL(file);
+  });
+}
 
 const FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
   'stage',
@@ -542,6 +562,106 @@ export async function analyzeRoomPlanFromPhoto(input: {
   });
   if (data?.allowance) applyServerAllowance(data.allowance);
   return data as RoomPlanAiResult;
+}
+
+export function emptyRoomPlanSeed(
+  roomType: RoomLayoutBlueprint['roomType'] = 'BANQUET',
+  widthM = 20,
+  heightM = 16,
+): RoomLayoutBlueprint {
+  return {
+    version: 1,
+    roomType,
+    canvas: { widthM, heightM },
+    fixtures: [],
+    furniture: [],
+    metadata: { totalSeats: 0 },
+  };
+}
+
+export async function composeRoomPlanWithAi(input: {
+  brief: string;
+  imageUrl?: string;
+  roomType: RoomLayoutBlueprint['roomType'];
+  widthM: number;
+  heightM: number;
+}): Promise<RoomPlanAiResult> {
+  const deviceId = getOrCreateDeviceId();
+  const data = await api.post('/rooms/ai/compose', {
+    deviceId,
+    brief: input.brief,
+    imageUrl: input.imageUrl,
+    roomType: input.roomType,
+    widthM: input.widthM,
+    heightM: input.heightM,
+  });
+  if (data?.allowance) applyServerAllowance(data.allowance);
+  return data as RoomPlanAiResult;
+}
+
+export async function composeRoomPlanWithAiPublic(input: {
+  brief: string;
+  file?: File | null;
+  roomType: RoomLayoutBlueprint['roomType'];
+  widthM: number;
+  heightM: number;
+}): Promise<RoomPlanAiResult> {
+  const deviceId = getOrCreateDeviceId();
+  const imageDataUrl = input.file ? await fileToDataUrl(input.file) : undefined;
+  const data = await api.post('/public/rooms/ai/compose', {
+    deviceId,
+    brief: input.brief,
+    imageDataUrl,
+    roomType: input.roomType,
+    widthM: input.widthM,
+    heightM: input.heightM,
+  });
+  if (data?.allowance) applyServerAllowance(data.allowance);
+  return data as RoomPlanAiResult;
+}
+
+export function saveRoomPlanAiDraft(draft: RoomPlanVisionDraft, extra: Omit<RoomPlanAiDraft, 'draft' | 'savedAt'> = {}) {
+  if (typeof window === 'undefined') return;
+  const payload: RoomPlanAiDraft = {
+    draft,
+    ...extra,
+    savedAt: new Date().toISOString(),
+  };
+  try {
+    sessionStorage.setItem(AI_ROOM_PLAN_DRAFT_KEY, JSON.stringify(payload));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function loadRoomPlanAiDraft(): RoomPlanAiDraft | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(AI_ROOM_PLAN_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as RoomPlanAiDraft;
+    if (!parsed?.draft || !Array.isArray(parsed.draft.items)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearRoomPlanAiDraft() {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(AI_ROOM_PLAN_DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function previewRoomPlanDraft(
+  draft: RoomPlanVisionDraft,
+  roomType: RoomLayoutBlueprint['roomType'] = 'BANQUET',
+): { blueprint: RoomLayoutBlueprint; warnings: string[] } {
+  const seed = emptyRoomPlanSeed(roomType, draft.canvas.widthM, draft.canvas.heightM);
+  return applyRoomPlanVisionDraft(seed, draft, roomEditorCapabilities('complete'));
 }
 
 export function applyRoomPlanVisionDraft(

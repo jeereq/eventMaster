@@ -43,6 +43,7 @@ export function resolveAiFabPlacement(input: {
   const onRooms = pathname.startsWith('/dashboard/rooms');
   const onHome = pathname === '/';
   const onModeles = pathname.startsWith('/modeles');
+  const onPlans3d = pathname.startsWith('/plans-3d');
 
   const inviteHref = onDashboard ? '/dashboard/templates' : '/modeles';
   const roomsHref = '/dashboard/rooms';
@@ -88,6 +89,26 @@ export function resolveAiFabPlacement(input: {
     };
   }
 
+  if (onPlans3d) {
+    return {
+      mood: 'celebrate',
+      label: 'Studio plan IA',
+      subtitle: `${AI_ROOM_PLAN_TOKEN_COST} jetons · 2D / 3D`,
+      ariaLabel: 'Aller au studio IA de plan de salle',
+      title: `Composer un plan depuis un brief ou une photo · ${AI_ROOM_PLAN_TOKEN_COST} jetons`,
+      click: 'scroll',
+      scrollId: 'studio-ia',
+      href: '/plans-3d#studio-ia',
+      modalTitle: 'Studio plan de salle',
+      modalDescription: `Brief ou photo → plan 2D / 3D éditable. ${aiTokenCostLegend()}.`,
+      highlight: 'room',
+      embedSimulator: false,
+      inviteHref,
+      roomsHref,
+      catalogueHref,
+    };
+  }
+
   if (onModeles) {
     return {
       mood: 'celebrate',
@@ -112,12 +133,12 @@ export function resolveAiFabPlacement(input: {
     return {
       mood: 'work',
       label: 'Plan de salle',
-      subtitle: `${AI_ROOM_PLAN_TOKEN_COST} jetons · photo → salle`,
+      subtitle: `${AI_ROOM_PLAN_TOKEN_COST} jetons · studio 2D / 3D`,
       ariaLabel: 'Lire un plan de salle avec l’IA',
       title: `Créer le plan de salle à la main ou depuis une photo · ${AI_ROOM_PLAN_TOKEN_COST} jetons`,
       click: 'open',
       modalTitle: 'Plan de salle IA',
-      modalDescription: `Nouvelle salle : « Depuis une photo » ou « À la main ». L’IA reprend ce qui est visible. ${aiTokenCostLegend()}.`,
+      modalDescription: `Studio IA dans l’éditeur : brief ou photo, puis le plan s’ouvre en 2D / 3D. ${aiTokenCostLegend()}.`,
       highlight: 'room',
       embedSimulator: true,
       inviteHref,

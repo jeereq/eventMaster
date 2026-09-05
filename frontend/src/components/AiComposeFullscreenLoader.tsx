@@ -25,6 +25,14 @@ const BUDGET_STEPS: AiProcessStep[] = [
   { id: 'split', label: 'Répartition des coûts' },
 ];
 
+const ROOM_PLAN_STEPS: AiProcessStep[] = [
+  { id: 'brief', label: 'Lecture du brief' },
+  { id: 'photo', label: 'Lecture de la photo' },
+  { id: 'layout', label: 'Placement du mobilier' },
+  { id: 'look', label: 'Matières et couleurs' },
+  { id: 'finish', label: 'Finition du plan' },
+];
+
 export function AiProcessFullscreenLoader({
   active,
   eyebrow,
@@ -278,6 +286,37 @@ export function AiBudgetFullscreenLoader({
       stageHint={stageHint}
       steps={BUDGET_STEPS}
       footnote="Catalogue réel : salles, prestataires et matériel de votre ville."
+    />
+  );
+}
+
+export function AiRoomPlanFullscreenLoader({
+  active,
+  hasPhoto = false,
+  stageHint,
+  onCancel,
+}: {
+  active: boolean;
+  hasPhoto?: boolean;
+  stageHint?: string | null;
+  onCancel?: () => void;
+}) {
+  const steps = hasPhoto
+    ? ROOM_PLAN_STEPS
+    : ROOM_PLAN_STEPS.filter((step) => step.id !== 'photo');
+  return (
+    <AiProcessFullscreenLoader
+      active={active}
+      eyebrow="Plan de salle"
+      title="Le studio compose votre plan"
+      stageHint={stageHint}
+      steps={steps}
+      onCancel={onCancel}
+      footnote={
+        hasPhoto
+          ? 'Les tables, rangées et zones visibles sont déduites de la photo et du brief.'
+          : 'Le mobilier est placé à partir de votre brief, prêt à ajuster en 2D / 3D.'
+      }
     />
   );
 }

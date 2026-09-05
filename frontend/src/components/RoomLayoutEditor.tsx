@@ -167,6 +167,7 @@ import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry } fr
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import PlanCreationPath, { type PlanCreationPathId } from '@/components/PlanCreationPath';
+import RoomPlanAiStudioModal from '@/components/RoomPlanAiStudioModal';
 import { scrollToElementId } from '@/lib/prefersReducedMotion';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
@@ -375,6 +376,7 @@ export default function RoomLayoutEditor({
   const [aiPlanWarnings, setAiPlanWarnings] = useState<string[]>([]);
   const [retryPlanPhoto, setRetryPlanPhoto] = useState<File | null>(null);
   const [planPath, setPlanPath] = useState<PlanCreationPathId>(focusPlanImport ? 'photo' : 'manual');
+  const [studioOpen, setStudioOpen] = useState(false);
   const aiPlanFileRef = useRef<HTMLInputElement>(null);
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
@@ -1865,6 +1867,22 @@ export default function RoomLayoutEditor({
     if (!selected) {
       return (
         <div className="space-y-4">
+          {caps.canPlanFromPhoto && !readOnly ? (
+            <button
+              type="button"
+              disabled={aiPlanReading}
+              onClick={() => setStudioOpen(true)}
+              className="w-full text-left p-3.5 rounded-[var(--radius-card)] border border-primary bg-primary/10 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary-solid" aria-hidden />
+                Studio IA — plan 2D / 3D
+              </p>
+              <p className="text-sm text-foreground mt-1 leading-snug">
+                Décrivez la salle ou importez une photo. L’IA pose tables, rangées et décor.
+              </p>
+            </button>
+          ) : null}
           <PlanCreationPath
             value={planPath}
             busy={aiPlanReading}
@@ -5762,6 +5780,29 @@ export default function RoomLayoutEditor({
   );
 
   const ambiencePreviewModal = (
+    <>
+    {caps.canPlanFromPhoto && !readOnly ? (
+      <RoomPlanAiStudioModal
+        open={studioOpen}
+        onClose={() => setStudioOpen(false)}
+        current={blueprint}
+        caps={caps}
+        onApplied={({ blueprint: next, warnings }) => {
+          updateBlueprint(next, {
+            message: `Studio IA (${next.furniture.length + next.fixtures.length} éléments)`,
+            kind: 'template',
+          });
+          setAiPlanWarnings(warnings);
+          setAiPlanError('');
+          log(
+            warnings.length
+              ? 'Plan composé — vérifiez les positions avant d’enregistrer.'
+              : 'Plan composé depuis le studio IA.',
+            'info',
+          );
+        }}
+      />
+    ) : null}
     <RoomAmbiencePreviewModal
       open={Boolean(ambiencePreviewPreset)}
       onClose={() => setAmbiencePreviewPreset(null)}
@@ -5771,6 +5812,7 @@ export default function RoomLayoutEditor({
         if (ambiencePreviewPreset) applyAmbience(ambiencePreviewPreset, scope);
       }}
     />
+    </>
   );
 
   const aiPlanFileInput = caps.canPlanFromPhoto && !readOnly ? (

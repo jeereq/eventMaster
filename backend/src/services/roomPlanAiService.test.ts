@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  composeRoomPlanFromBrief,
   normalizeRoomPlanImageUrl,
   normalizeRoomPlanVisionKind,
   parseHexColor,
@@ -189,6 +190,15 @@ describe('normalizeRoomPlanVisionKind', () => {
     assert.equal(normalizeRoomPlanVisionKind('régie'), 'djBooth');
     assert.equal(normalizeRoomPlanVisionKind('guirlandes'), 'stringLight');
     assert.equal(normalizeRoomPlanVisionKind('spaceship'), undefined);
+  });
+});
+
+describe('composeRoomPlanFromBrief', () => {
+  it('refuse un brief trop court', async () => {
+    await assert.rejects(
+      () => composeRoomPlanFromBrief({ brief: 'ok', widthM: 20, heightM: 16 }),
+      { status: 400 },
+    );
   });
 });
 

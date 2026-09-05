@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import LandingRoomPlanAiStudio from '@/components/landing/LandingRoomPlanAiStudio';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => (
@@ -62,6 +63,7 @@ export default function Plans3DPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('banquet-honor');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [force2d, setForce2d] = useState(false);
+  const [studioBlueprint, setStudioBlueprint] = useState<RoomLayoutBlueprint | null>(null);
 
   const selectedTemplate = useMemo(() => {
     return (
@@ -70,13 +72,14 @@ export default function Plans3DPage() {
     );
   }, [selectedTemplateId]);
 
-  const activeBlueprint = useMemo<RoomLayoutBlueprint | null>(() => {
+  const templateBlueprint = useMemo<RoomLayoutBlueprint | null>(() => {
     try {
       return applyRoomTemplate(selectedTemplateId);
     } catch {
       return null;
     }
   }, [selectedTemplateId]);
+  const activeBlueprint = studioBlueprint ?? templateBlueprint;
 
   const filteredTemplates = useMemo(() => {
     return SHOWCASE_TEMPLATES.filter((item) => {
@@ -109,17 +112,17 @@ export default function Plans3DPage() {
       {/* ─── Hero épuré ─── */}
       <PublicPageHero
         title="Modèles de salles 2D & 3D interactifs"
-        description="Mariages, banquets de gala, conférences ou cocktails. Explorez nos agencements types, visualisez l'immersion 3D et placez vos invités avec précision."
+        description="Mariages, banquets, conférences ou cocktails. Composez un plan avec l’IA, explorez-le en 2D / 3D, puis ouvrez-le dans l’éditeur."
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
-          <Link
-            href={editorUrl}
+          <a
+            href="#studio-ia"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Ouvrir l’éditeur de salle</span>
-          </Link>
+            <span>Ouvrir le studio IA</span>
+          </a>
           <Link
             href="/marketplace/salles"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
@@ -131,6 +134,11 @@ export default function Plans3DPage() {
       </PublicPageHero>
 
       <div className="page-container py-6 sm:py-10 space-y-12">
+        <LandingRoomPlanAiStudio
+          defaultExpanded
+          onBlueprintChange={setStudioBlueprint}
+        />
+
         {/* ─── Studio Interactif 2D/3D ─── */}
         <section className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface/80 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border/80 shadow-xs">
@@ -138,7 +146,7 @@ export default function Plans3DPage() {
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 <h2 className="text-sm sm:text-base font-bold text-foreground">
-                  {selectedTemplate.name}
+                  {studioBlueprint ? 'Plan généré par l’IA' : selectedTemplate.name}
                 </h2>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   {selectedTemplate.roomType}
@@ -281,7 +289,10 @@ export default function Plans3DPage() {
                       ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
                       : 'border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs',
                   )}
-                  onClick={() => setSelectedTemplateId(tpl.id)}
+                  onClick={() => {
+                    setStudioBlueprint(null);
+                    setSelectedTemplateId(tpl.id);
+                  }}
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
@@ -312,6 +323,7 @@ export default function Plans3DPage() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setStudioBlueprint(null);
                         setSelectedTemplateId(tpl.id);
                         window.scrollTo({ top: 120, behavior: 'smooth' });
                       }}

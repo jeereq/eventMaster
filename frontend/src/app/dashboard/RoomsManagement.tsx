@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -64,6 +65,12 @@ import {
 import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
 import PlanCreationPath from '@/components/PlanCreationPath';
 import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
+import {
+  applyRoomPlanVisionDraft,
+  clearRoomPlanAiDraft,
+  emptyRoomPlanSeed,
+  loadRoomPlanAiDraft,
+} from '@/lib/roomPlanAi';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
@@ -277,6 +284,8 @@ function ParamNumber({
 }
 
 export default function RoomsManagement() {
+  const router = useRouter();
+  const aiDraftConsumed = useRef(false);
   const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
   const { site } = usePlatformSite();
   const marketplaceCities = enabledMarketplaceCities(site);
@@ -504,6 +513,42 @@ export default function RoomsManagement() {
       setShowWizard(true);
     })();
   };
+
+  useEffect(() => {
+    if (aiDraftConsumed.current) return;
+    if (typeof window === 'undefined' || new URLSearchParams(window.location.search).get('aiDraft') !== '1') return;
+    if (roomsAtLimit) {
+      setError(getQuotaActionMessage('rooms', planQuota, tenant?.plan));
+      return;
+    }
+    const stored = loadRoomPlanAiDraft();
+    if (!stored?.draft) return;
+    aiDraftConsumed.current = true;
+    const type = (
+      stored.roomType && allowedRoomTypes.includes(stored.roomType as RoomType)
+        ? stored.roomType
+        : allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE'
+    ) as RoomType;
+    const caps = roomEditorCapabilities(
+      planFeatures?.roomEditorLevel,
+      planFeatures?.roomThemesFixtures === true,
+    );
+    const applied = applyRoomPlanVisionDraft(
+      emptyRoomPlanSeed(type, stored.widthM ?? 20, stored.heightM ?? 16),
+      stored.draft,
+      caps,
+    );
+    resetWizard();
+    setRoomType(type);
+    setLayoutParams(defaultParams[type]);
+    setBlueprintDraft(refreshBlueprintMetadata(applied.blueprint));
+    setWizardStep(3);
+    setWizardPlanTab('editeur');
+    setFarthestStep(3);
+    setShowWizard(true);
+    clearRoomPlanAiDraft();
+    router.replace('/dashboard/rooms', { scroll: false });
+  }, [allowedRoomTypes, roomsAtLimit, planFeatures, planQuota, tenant?.plan, router]);
 
   const goToStep = (step: number) => {
     if (step > 1 && !name.trim()) {
