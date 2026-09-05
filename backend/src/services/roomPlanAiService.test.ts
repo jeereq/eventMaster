@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeRoomPlanImageUrl,
+  normalizeRoomPlanVisionKind,
   parseHexColor,
   parseRoomPlanVisionDraft,
   ROOM_PLAN_VISION_ITEM_MAX,
@@ -46,16 +47,39 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.canvas.widthM, 18);
   });
 
-  it('avertit si rien n’est visible et ignore un amphithéâtre inventé via kind inconnu', () => {
+  it('déduit un kind proche (amphithéâtre → rangée) au lieu de jeter l’objet', () => {
     const draft = parseRoomPlanVisionDraft({
       view: 'perspective',
-      items: [{ kind: 'amphitheater', x: 50, y: 50, seats: 200 }],
+      items: [{ kind: 'amphitheater', x: 50, y: 50, w: 40, h: 12, seats: 200 }],
     }, { widthM: 20, heightM: 16 });
 
-    assert.equal(draft.items.length, 0);
-    assert.ok(draft.warnings.some((w) => w.includes('Aucun objet')));
+    assert.equal(draft.items.length, 1);
+    assert.equal(draft.items[0]?.kind, 'row');
+    assert.equal(draft.items[0]?.seats, 40);
     assert.ok(draft.warnings.some((w) => w.includes('perspective')));
     assert.equal(draft.canvas.widthM, 20);
+  });
+
+  it('mappe les alias vision courants et estime les sièges manquants', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [
+        { kind: 'tables', x: 20, y: 24, w: 10, h: 10, shape: 'ronde' },
+        { kind: 'chairs', x: 18, y: 60, w: 28, h: 6 },
+        { kind: 'dancefloor', x: 40, y: 40, w: 22, h: 18 },
+        { kind: 'dj', x: 42, y: 6, w: 16, h: 8 },
+        { kind: 'lights', x: 12, y: 12, w: 70, h: 70 },
+        { kind: 'spaceship', x: 10, y: 10 },
+      ],
+    }, { widthM: 22, heightM: 18 });
+
+    assert.deepEqual(draft.items.map((item) => item.kind), [
+      'table', 'row', 'zone', 'djBooth', 'stringLight',
+    ]);
+    assert.equal(draft.items[0]?.shape, 'round');
+    assert.equal(draft.items[0]?.seats, 8);
+    assert.equal(draft.items[1]?.seats, 12);
+    assert.equal(draft.items[2]?.zoneKind, 'dance');
   });
 
   it('conserve couleurs, matières et bbox haut-gauche', () => {
@@ -155,6 +179,16 @@ describe('parseRoomPlanVisionDraft', () => {
     const draft = parseRoomPlanVisionDraft({ items }, { widthM: 20, heightM: 15 });
     assert.equal(draft.items.length, ROOM_PLAN_VISION_ITEM_MAX);
     assert.ok(draft.warnings.some((w) => w.includes(String(ROOM_PLAN_VISION_ITEM_MAX))));
+  });
+});
+
+describe('normalizeRoomPlanVisionKind', () => {
+  it('reconnaît les kinds canoniques et les alias FR / EN', () => {
+    assert.equal(normalizeRoomPlanVisionKind('table'), 'table');
+    assert.equal(normalizeRoomPlanVisionKind('Piste de danse'), 'zone');
+    assert.equal(normalizeRoomPlanVisionKind('régie'), 'djBooth');
+    assert.equal(normalizeRoomPlanVisionKind('guirlandes'), 'stringLight');
+    assert.equal(normalizeRoomPlanVisionKind('spaceship'), undefined);
   });
 });
 

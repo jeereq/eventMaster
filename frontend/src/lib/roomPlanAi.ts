@@ -31,6 +31,24 @@ import {
 export { AI_ROOM_PLAN_TOKEN_COST };
 export const AI_ROOM_IMPORT_GROUP_ID = 'ai-import';
 
+export const ROOM_PLAN_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
+export const ROOM_PLAN_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
+const ROOM_PLAN_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ROOM_PLAN_PHOTO_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
+
+/** `null` si le fichier peut être envoyé à la lecture IA. */
+export function roomPlanPhotoError(file: File): string | null {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  const typeOk = ROOM_PLAN_PHOTO_TYPES.has(file.type) || ROOM_PLAN_PHOTO_EXTS.has(ext);
+  if (!typeOk) {
+    return 'Utilisez une photo JPEG, PNG ou WebP. Les fichiers HEIC ne sont pas lus.';
+  }
+  if (file.size > ROOM_PLAN_PHOTO_MAX_BYTES) {
+    return `« ${file.name} » dépasse 10 Mo. Compressez l’image ou choisissez-en une autre.`;
+  }
+  return null;
+}
+
 export type RoomPlanVisionView = 'top' | 'perspective' | 'unclear';
 
 export type RoomPlanVisionItemKind =
@@ -214,6 +232,62 @@ const DEFAULT_FOOTPRINT: Record<string, { w: number; h: number }> = {
   zone: { w: 26, h: 16 },
 };
 
+const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
+  tables: 'table',
+  chairs: 'row',
+  rangee: 'row',
+  rangees: 'row',
+  banquettes: 'row',
+  amphitheater: 'row',
+  amphitheatre: 'row',
+  dancefloor: 'zone',
+  dance: 'zone',
+  piste: 'zone',
+  dj: 'djBooth',
+  lights: 'stringLight',
+  lighting: 'stringLight',
+  guirlandes: 'stringLight',
+  scene: 'stage',
+  allee: 'aisle',
+  porte: 'door',
+  entree: 'entrance',
+  ecran: 'screen',
+  fontaine: 'fountain',
+  lustre: 'chandelier',
+};
+
+const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
+  dance: 'dance',
+  dancefloor: 'dance',
+  piste: 'dance',
+  vip: 'vip',
+  lounge: 'vip',
+  buffet: 'buffet',
+  carpet: 'carpet',
+  tapis: 'carpet',
+  moquette: 'carpet',
+  custom: 'custom',
+};
+
+const ZONE_FALLBACK_FIXTURES = new Set<RoomPlanVisionItemKind>([
+  'stage',
+  'podium',
+  'carpet',
+  'buffet',
+  'arch',
+  'partition',
+  'decal',
+  'fountain',
+  'gazebo',
+  'djBooth',
+  'screen',
+  'flower',
+  'pedestal',
+]);
+
+const CANVAS_MIN_M = 5;
+const CANVAS_MAX_M = 80;
+
 function clampPct(value: number): number {
   return Math.min(100, Math.max(0, Math.round(value * 10) / 10));
 }
@@ -245,6 +319,89 @@ function asAisleStyle(value: string | undefined): AisleStyle | undefined {
 function asFloorType(value: string | undefined): FloorType | undefined {
   if (!value) return undefined;
   return FLOOR_ALIASES[value] ?? FLOOR_ALIASES[value.toLowerCase()];
+}
+
+function aliasKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function resolveImportedKind(item: RoomPlanVisionItem): RoomPlanVisionItemKind {
+  if (FIXTURE_KINDS.has(item.kind as RoomLayoutBlueprint['fixtures'][number]['kind'])) return item.kind;
+  if (item.kind === 'table' || item.kind === 'row' || item.kind === 'chair' || item.kind === 'zone') {
+    return item.kind;
+  }
+  return VISION_KIND_ALIASES[aliasKey(item.kind)] ?? item.kind;
+}
+
+function resolveZoneKind(item: RoomPlanVisionItem, fallback?: ZoneKind): ZoneKind | undefined {
+  if (item.zoneKind && ZONE_KIND_ALIASES[aliasKey(item.zoneKind)]) {
+    return ZONE_KIND_ALIASES[aliasKey(item.zoneKind)];
+  }
+  const fromKind = ZONE_KIND_ALIASES[aliasKey(item.kind)];
+  if (fromKind) return fromKind;
+  return fallback;
+}
+
+function inferTableCapacity(item: RoomPlanVisionItem, shape: TableShape): number {
+  if (item.seats != null) return Math.max(2, Math.min(16, Math.round(item.seats)));
+  if (shape === 'cocktail' || shape === 'highTop') return 2;
+  const span = Math.max(item.w ?? 10, item.h ?? 10);
+  if (span <= 6) return 4;
+  if (span <= 11) return 8;
+  if (span <= 14) return 10;
+  return 12;
+}
+
+function inferRowSeatCount(item: RoomPlanVisionItem): number {
+  if (item.seats != null) return Math.max(2, Math.min(40, Math.round(item.seats)));
+  if (item.w == null) return 10;
+  return Math.max(4, Math.min(40, Math.round(item.w / 2.4)));
+}
+
+function inferTableShape(item: RoomPlanVisionItem, allowed: TableShape[]): TableShape {
+  if (item.shape) return asTableShape(item.shape, allowed);
+  const w = item.w ?? 10;
+  const h = item.h ?? 10;
+  const ratio = w / Math.max(h, 0.1);
+  if (ratio > 1.45 || ratio < 0.7) return asTableShape('rectangular', allowed);
+  return allowed[0] ?? 'round';
+}
+
+function applyDraftCanvas(
+  current: RoomLayoutBlueprint['canvas'],
+  draft: RoomPlanVisionDraft,
+): RoomLayoutBlueprint['canvas'] {
+  const widthM = Number.isFinite(draft.canvas?.widthM) ? draft.canvas.widthM : current.widthM;
+  const heightM = Number.isFinite(draft.canvas?.heightM) ? draft.canvas.heightM : current.heightM;
+  return {
+    widthM: Math.min(CANVAS_MAX_M, Math.max(CANVAS_MIN_M, widthM)),
+    heightM: Math.min(CANVAS_MAX_M, Math.max(CANVAS_MIN_M, heightM)),
+  };
+}
+
+function fixtureAsZoneLabel(kind: RoomPlanVisionItemKind, label?: string): string {
+  if (label) return label;
+  const names: Partial<Record<RoomPlanVisionItemKind, string>> = {
+    stage: 'Scène',
+    podium: 'Podium',
+    carpet: 'Moquette',
+    buffet: 'Buffet',
+    arch: 'Arche',
+    partition: 'Cloison',
+    decal: 'Motif au sol',
+    fountain: 'Fontaine',
+    gazebo: 'Gloriette',
+    djBooth: 'Régie DJ',
+    screen: 'Écran',
+    flower: 'Fleurs',
+    pedestal: 'Piédestal',
+  };
+  return names[kind] ?? 'Zone';
 }
 
 function looksGold(color?: string): boolean {
@@ -408,16 +565,19 @@ export function applyRoomPlanVisionDraft(
   let zoneCount = 0;
   let chairCount = 0;
 
-  for (const item of draft.items) {
-    if (FIXTURE_KINDS.has(item.kind as RoomLayoutBlueprint['fixtures'][number]['kind'])) {
-      const kind = item.kind as RoomLayoutBlueprint['fixtures'][number]['kind'];
-      const allowed = caps.canFixtures && caps.fixtureKinds.includes(kind as RoomEditorCapabilities['fixtureKinds'][number]);
-      if (!allowed && kind === 'carpet' && caps.canZones) {
+  for (const rawItem of draft.items) {
+    const kind = resolveImportedKind(rawItem);
+    const item = kind === rawItem.kind ? rawItem : { ...rawItem, kind };
+    if (FIXTURE_KINDS.has(kind as RoomLayoutBlueprint['fixtures'][number]['kind'])) {
+      const fixtureKind = kind as RoomLayoutBlueprint['fixtures'][number]['kind'];
+      const allowed = caps.canFixtures && caps.fixtureKinds.includes(fixtureKind as RoomEditorCapabilities['fixtureKinds'][number]);
+      if (!allowed && caps.canZones && ZONE_FALLBACK_FIXTURES.has(kind)) {
         const box = itemFootprint(item, DEFAULT_FOOTPRINT.zone);
+        const zoneKind = resolveZoneKind(item, kind === 'carpet' ? 'carpet' : kind === 'buffet' ? 'buffet' : 'custom');
         const zone = {
-          ...createBlueprintZone(item.label || 'Moquette', zoneCount + 1, {
-            zoneKind: 'carpet',
-            material: asZoneMaterial(item.material) ?? 'carpet',
+          ...createBlueprintZone(fixtureAsZoneLabel(kind, item.label), zoneCount + 1, {
+            zoneKind,
+            material: asZoneMaterial(item.material) ?? (zoneKind === 'carpet' ? 'carpet' : undefined),
             color: item.color,
             w: box.w,
             h: box.h,
@@ -431,13 +591,14 @@ export function applyRoomPlanVisionDraft(
         zoneCount += 1;
         furniture.push(zone);
         selection.push({ kind: 'zone', id: zone.id });
+        warnings.push(`« ${zone.label} » importé comme zone — élément hors forfait décor.`);
         continue;
       }
       if (!allowed) {
         warnings.push(`« ${item.label || kind} » ignoré — non inclus dans votre forfait.`);
         continue;
       }
-      const created = applyFixtureLook(createBlueprintFixture(kind), item);
+      const created = applyFixtureLook(createBlueprintFixture(fixtureKind), item);
       const box = itemFootprint(item, { w: created.w, h: created.h });
       const fixture = {
         ...created,
@@ -455,17 +616,18 @@ export function applyRoomPlanVisionDraft(
       continue;
     }
 
-    if (item.kind === 'table') {
+    if (kind === 'table') {
       if (tableCount >= caps.maxTables) {
         warnings.push(`Limite de ${caps.maxTables} tables (${caps.label}) — tables supplémentaires ignorées.`);
         continue;
       }
       tableCount += 1;
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.table);
+      const shape = inferTableShape(item, caps.tableShapes);
       const table = {
         ...createBlueprintTable(tableCount, {
-          shape: asTableShape(item.shape, caps.tableShapes),
-          capacity: item.seats ?? 8,
+          shape,
+          capacity: inferTableCapacity(item, shape),
           chairType,
         }),
         name: item.label || `Table ${tableCount}`,
@@ -485,7 +647,7 @@ export function applyRoomPlanVisionDraft(
       continue;
     }
 
-    if (item.kind === 'row') {
+    if (kind === 'row') {
       if (!caps.canAddRows) {
         warnings.push('Les rangées ne sont pas incluses dans votre forfait.');
         continue;
@@ -498,7 +660,7 @@ export function applyRoomPlanVisionDraft(
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.row);
       const row = {
         ...createBlueprintRow(rowCount, {
-          seatCount: item.seats ?? 10,
+          seatCount: inferRowSeatCount(item),
           chairType,
           x: box.cx,
           y: box.cy,
@@ -515,7 +677,7 @@ export function applyRoomPlanVisionDraft(
       continue;
     }
 
-    if (item.kind === 'chair') {
+    if (kind === 'chair') {
       chairCount += 1;
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.chair);
       const chair = {
@@ -535,7 +697,7 @@ export function applyRoomPlanVisionDraft(
       continue;
     }
 
-    if (item.kind === 'zone') {
+    if (kind === 'zone') {
       if (!caps.canZones) {
         warnings.push('Les zones (piste, VIP, buffet) ne sont pas incluses dans votre forfait.');
         continue;
@@ -544,7 +706,7 @@ export function applyRoomPlanVisionDraft(
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.zone);
       const zone = {
         ...createBlueprintZone(item.label || 'Zone', zoneCount, {
-          zoneKind: (item.zoneKind as ZoneKind | undefined),
+          zoneKind: resolveZoneKind(item),
           material: asZoneMaterial(item.material),
           color: item.color,
           w: box.w,
@@ -623,7 +785,7 @@ export function applyRoomPlanVisionDraft(
     walls,
     furniture,
     fixtures,
-    canvas: current.canvas,
+    canvas: applyDraftCanvas(current.canvas, draft),
     metadata: {
       ...current.metadata,
       defaultTableColor: defaultTableColor ?? current.metadata.defaultTableColor,

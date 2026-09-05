@@ -1,7 +1,7 @@
 type HttpError = Error & { status?: number };
 
 export const ROOM_PLAN_AI_GROUP_ID = 'ai-import';
-export const ROOM_PLAN_VISION_ITEM_MAX = 80;
+export const ROOM_PLAN_VISION_ITEM_MAX = 120;
 export const ROOM_PLAN_CANVAS_MIN_M = 5;
 export const ROOM_PLAN_CANVAS_MAX_M = 80;
 export const ROOM_PLAN_DATA_URL_MAX_CHARS = 2_500_000;
@@ -83,6 +83,213 @@ const ITEM_KINDS = new Set([
   'djBooth',
   'screen',
 ]);
+
+/** Vocabulaire courant renvoyé par les modèles vision → kind EventMaster. */
+const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
+  table: 'table',
+  tables: 'table',
+  diningtable: 'table',
+  banquettable: 'table',
+  roundtable: 'table',
+  longtable: 'table',
+  cocktailtable: 'table',
+  hightop: 'table',
+  hightoptable: 'table',
+  mangeedebout: 'table',
+  desk: 'table',
+  row: 'row',
+  rows: 'row',
+  chairrow: 'row',
+  seating: 'row',
+  seatingrow: 'row',
+  bench: 'row',
+  benches: 'row',
+  banquette: 'row',
+  banquettes: 'row',
+  pew: 'row',
+  pews: 'row',
+  bleacher: 'row',
+  bleachers: 'row',
+  theaterseats: 'row',
+  chairs: 'row',
+  rangee: 'row',
+  rangees: 'row',
+  gradin: 'row',
+  gradins: 'row',
+  amphitheater: 'row',
+  amphitheatre: 'row',
+  chair: 'chair',
+  fauteuil: 'chair',
+  armchair: 'chair',
+  loungechair: 'chair',
+  stool: 'chair',
+  zone: 'zone',
+  dancefloor: 'zone',
+  dance: 'zone',
+  piste: 'zone',
+  pistededanse: 'zone',
+  vip: 'zone',
+  lounge: 'zone',
+  stage: 'stage',
+  scene: 'stage',
+  platform: 'stage',
+  podium: 'podium',
+  lectern: 'podium',
+  speaker: 'podium',
+  aisle: 'aisle',
+  allee: 'aisle',
+  runner: 'aisle',
+  carpetrunner: 'aisle',
+  door: 'door',
+  porte: 'door',
+  entrance: 'entrance',
+  entree: 'entrance',
+  lobby: 'entrance',
+  carpet: 'carpet',
+  tapis: 'carpet',
+  moquette: 'carpet',
+  buffet: 'buffet',
+  bar: 'buffet',
+  catering: 'buffet',
+  column: 'column',
+  colonne: 'column',
+  pillar: 'column',
+  pilier: 'column',
+  stairs: 'stairs',
+  escalier: 'stairs',
+  staircase: 'stairs',
+  balcony: 'balcony',
+  balcon: 'balcony',
+  chandelier: 'chandelier',
+  lustre: 'chandelier',
+  flower: 'flower',
+  flowers: 'flower',
+  fleurs: 'flower',
+  bouquet: 'flower',
+  plant: 'flower',
+  plants: 'flower',
+  arch: 'arch',
+  arche: 'arch',
+  floralarch: 'arch',
+  partition: 'partition',
+  cloison: 'partition',
+  hedge: 'partition',
+  decal: 'decal',
+  motif: 'decal',
+  floordecal: 'decal',
+  pedestal: 'pedestal',
+  piedestal: 'pedestal',
+  stringlight: 'stringLight',
+  stringlights: 'stringLight',
+  lights: 'stringLight',
+  lighting: 'stringLight',
+  fairylights: 'stringLight',
+  guirlande: 'stringLight',
+  guirlandes: 'stringLight',
+  edison: 'stringLight',
+  fountain: 'fountain',
+  fontaine: 'fountain',
+  gazebo: 'gazebo',
+  gloriette: 'gazebo',
+  pergola: 'gazebo',
+  tent: 'gazebo',
+  djbooth: 'djBooth',
+  dj: 'djBooth',
+  djtable: 'djBooth',
+  mixer: 'djBooth',
+  regie: 'djBooth',
+  screen: 'screen',
+  ecran: 'screen',
+  tv: 'screen',
+  projector: 'screen',
+};
+
+const SHAPE_ALIASES: Record<string, string> = {
+  round: 'round',
+  circular: 'round',
+  circle: 'round',
+  ronde: 'round',
+  rond: 'round',
+  rectangular: 'rectangular',
+  rectangle: 'rectangular',
+  rect: 'rectangular',
+  long: 'rectangular',
+  banquet: 'rectangular',
+  square: 'square',
+  carre: 'square',
+  oval: 'oval',
+  ovale: 'oval',
+  cocktail: 'cocktail',
+  hightop: 'highTop',
+  mangdebout: 'highTop',
+  mangeedebout: 'highTop',
+  arc: 'arc',
+  curved: 'arc',
+  curve: 'arc',
+  cshape: 'arc',
+};
+
+const ZONE_KIND_ALIASES: Record<string, string> = {
+  dance: 'dance',
+  dancefloor: 'dance',
+  piste: 'dance',
+  vip: 'vip',
+  lounge: 'vip',
+  buffet: 'buffet',
+  catering: 'buffet',
+  bar: 'buffet',
+  carpet: 'carpet',
+  tapis: 'carpet',
+  moquette: 'carpet',
+  custom: 'custom',
+};
+
+function normalizeAliasKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+export function normalizeRoomPlanVisionKind(raw: unknown): RoomPlanVisionItemKind | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const key = normalizeAliasKey(raw);
+  if (!key) return undefined;
+  if (ITEM_KINDS.has(raw)) return raw as RoomPlanVisionItemKind;
+  return KIND_ALIASES[key] ?? KIND_ALIASES[key.replace(/s$/, '')];
+}
+
+function resolveTableShape(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  if (TABLE_SHAPES.has(raw)) return raw;
+  return SHAPE_ALIASES[normalizeAliasKey(raw)];
+}
+
+function resolveZoneKind(raw: unknown, kindHint?: string): string | undefined {
+  if (typeof raw === 'string') {
+    if (ZONE_KINDS.has(raw)) return raw;
+    const aliased = ZONE_KIND_ALIASES[normalizeAliasKey(raw)];
+    if (aliased) return aliased;
+  }
+  if (!kindHint) return undefined;
+  return ZONE_KIND_ALIASES[normalizeAliasKey(kindHint)];
+}
+
+function inferTableSeats(w?: number, h?: number, shape?: string): number {
+  if (shape === 'cocktail' || shape === 'highTop') return 2;
+  const span = Math.max(w ?? 10, h ?? 10);
+  if (span <= 6) return 4;
+  if (span <= 11) return 8;
+  if (span <= 14) return 10;
+  return 12;
+}
+
+function inferRowSeats(w?: number): number {
+  if (w == null) return 10;
+  return Math.round(clamp(w / 2.4, 4, 40));
+}
 
 export type RoomPlanVisionView = 'top' | 'perspective' | 'unclear';
 
@@ -318,8 +525,8 @@ export function parseRoomPlanVisionDraft(
     }
     if (!entry || typeof entry !== 'object') continue;
     const row = entry as Record<string, unknown>;
-    if (typeof row.kind !== 'string' || !ITEM_KINDS.has(row.kind)) continue;
-    const kind = row.kind as RoomPlanVisionItemKind;
+    const kind = normalizeRoomPlanVisionKind(row.kind);
+    if (!kind) continue;
     const item: RoomPlanVisionItem = {
       kind,
       x: clampPct(row.x, 50),
@@ -328,13 +535,24 @@ export function parseRoomPlanVisionDraft(
     if (row.w != null) item.w = clampPct(row.w, 10);
     if (row.h != null) item.h = clampPct(row.h, 8);
     if (row.rotation != null) item.rotation = Math.round(clamp(asNumber(row.rotation, 0), -180, 180));
+    const shape = resolveTableShape(row.shape)
+      ?? (kind === 'table' && typeof row.kind === 'string' ? resolveTableShape(row.kind) : undefined);
+    if (shape) item.shape = shape;
+    else if (kind === 'table' && item.w != null && item.h != null) {
+      const ratio = item.w / Math.max(item.h, 0.1);
+      if (ratio > 1.45 || ratio < 0.7) item.shape = 'rectangular';
+    }
     if (row.seats != null) {
       item.seats = Math.round(clamp(asNumber(row.seats, kind === 'row' ? 10 : 8), 2, kind === 'row' ? 40 : 16));
+    } else if (kind === 'table') {
+      item.seats = inferTableSeats(item.w, item.h, item.shape);
+    } else if (kind === 'row') {
+      item.seats = inferRowSeats(item.w);
     }
-    if (typeof row.shape === 'string' && TABLE_SHAPES.has(row.shape)) item.shape = row.shape;
     const label = asString(row.label, 40);
     if (label) item.label = label;
-    if (typeof row.zoneKind === 'string' && ZONE_KINDS.has(row.zoneKind)) item.zoneKind = row.zoneKind;
+    const zoneKind = resolveZoneKind(row.zoneKind, typeof row.kind === 'string' ? row.kind : kind);
+    if (zoneKind) item.zoneKind = zoneKind;
     const color = parseHexColor(row.color);
     if (color) item.color = color;
     const surface = asKnown(row.surface, TABLE_SURFACES);
@@ -411,20 +629,21 @@ export function parseRoomPlanVisionDraft(
 
 function systemPrompt(): string {
   return `Tu es l’analyste de plans de salle EventMaster (RDC).
-Tu ANALYSES UNIQUEMENT la photo fournie, puis tu produis UNIQUEMENT un JSON valide (response_format json_object).
+Tu ANALYSES la photo, tu DÉDUIS le mobilier visible, puis tu produis UNIQUEMENT un JSON valide (response_format json_object).
 
-Vérité visuelle (non négociable) :
-- DÉTECTE uniquement ce qui est RÉELLEMENT VISIBLE. Ne déduis pas, n’invente pas, n’idéalise pas.
-- Interdit : inventer des tables, rangées, sièges, une scène, des murs, des portes, un amphithéâtre ou un fer à cheval « parce que ça ressemble ».
-- Interdit : inventer or, pétales, lanternes, lustre cristal ou allée rouge royal s’ils ne sont pas visibles.
-- Si un détail est flou, coupé ou indiscernable : omets-le et ajoute un warning.
-- N’invente jamais de numéros de sièges.
+Mission :
+- ÉNUMÈRE chaque élément visible (table, rangée, chaise isolée, piste, scène, allée, buffet, DJ, écran, colonne, fleurs, lustre, porte…).
+- Un item JSON par objet au sol. 12 tables visibles = 12 items "table". 5 rangées = 5 items "row".
+- DÉDUIS le kind le plus proche à partir des preuves visuelles (silhouette, nappe, chaises autour, tapis, estrade).
+- Un plan vide n’est acceptable que si la photo n’est vraiment pas une salle (texture seule, selfie, document).
+- Interdit : inventer de l’or, des pétales, des lanternes, un lustre cristal, une allée rouge, des portes ou un amphithéâtre fantôme s’ils ne se voient pas.
+- Si un détail est flou : estime quand même l’objet principal (table / rangée / zone) et ajoute un warning. N’invente pas de numéros de sièges.
 
 Repère :
 - Le rectangle de la salle = 0–100 % (origine haut-gauche, y vers le bas), comme un plan 2D vu du dessus.
 - Pour CHAQUE item : x,y = coin HAUT-GAUCHE de l’empreinte au sol, w et h = largeur et hauteur en % (anchor="box").
 - Photo verticale / scan / PDF : view="top", appearance.imageRole="plan".
-- Photo en perspective : view="perspective", appearance.imageRole="photo", confidence plus basse.
+- Photo en perspective : view="perspective", appearance.imageRole="photo", confidence plus basse. Projette quand même le mobilier au sol (devant = y élevé, fond = y faible).
 - Photo d’un parquet / carrelage sans mobilier : appearance.imageRole="texture".
 
 Champs JSON obligatoires :
@@ -470,21 +689,18 @@ Règles appearance :
 - floorType / floorColor / wallTexture / wallColor / curtainColor : seulement si clairement visibles.
 - Couleurs en hex (#rrggbb) d’après la teinte observée, pas une couleur de thème EventMaster.
 
-Règles items :
-- table = table isolée. seats = couverts visibles ou lisibles, sinon omets seats. color + surface = nappe / plateau vus. shape="arc" pour tables en C / S / courbe. hasCenterpiece=true si vase ou bouquet central.
-- row = rangée de chaises alignées (pas une table ronde). chairStyle + seatMaterial si visibles. louis = Louis XVI, ovalBack = dossier ovale rose, chiavari = Chiavari or.
-- chair = fauteuil isolé seulement, pas les chaises collées à une table.
-- arch = arche florale (fer à cheval / semi-cercle fleuri). partition = cloison basse courbe végétalisée.
-- pedestal = colonne / piédestal carré surmonté d’un bouquet. decal = grand motif peint ou projeté au sol (roses, papillons, chemin).
-- stringLight = guirlandes Edison entre poteaux. fountain = fontaine. gazebo = gloriette / pergola. djBooth = régie. screen = écran.
-- aisle : aisleStyle seulement si le tapis correspond vraiment (rouge royal, bois, LED…). Sinon color hex seule. hasPetals / hasSideLanterns seulement s’ils sont visibles.
-- stage : stageShape="semiCircle" si plateau en demi-lune / D. roofStyle="tentSwag" si plafond tente drapé. curtainColor si rideaux / tentures murales visibles.
-- zone = piste, VIP, buffet au sol, moquette large. color + material obligatoires si la surface se voit.
+Règles items (déduction autorisée) :
+- table = chaque table isolée. seats = chaises / couverts visibles autour, sinon estime d’après le diamètre (cocktail 2, ronde 8, longue 10–14). shape d’après la silhouette. hasCenterpiece=true si vase ou bouquet central.
+- row = chaque rangée de chaises alignées (théâtre, banquettes, gradin). Une rangée visible = un item. chairs autour d’une table → seats de la table, pas des row.
+- chair = fauteuil / tabouret isolé seulement.
+- zone = piste de danse, VIP, buffet au sol, grande moquette. zoneKind obligatoire. color + material si la surface se voit.
+- aisle = tapis / allée au sol. aisleStyle seulement si le tapis correspond vraiment. hasPetals / hasSideLanterns seulement s’ils sont visibles.
+- stage / podium / djBooth / screen / buffet / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo : dès qu’ils se voient, pose-les.
 - door / entrance : seulement si clairement une ouverture d’accès (sinon walls.doors).
 - walls : uniquement les murs / ouvertures VISIBLES. Tableau vide si tu n’es pas sûr — n’invente pas de portes.
-- Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, du plus certain au moins certain.
+- Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, du plus certain au moins certain. Préfère trop d’objets réels plutôt qu’un items[].
 
-Si la photo n’est pas un plan de salle, view="unclear", items=[], warnings explicites.`;
+Si la photo n’est pas une salle, view="unclear", items=[], warnings explicites.`;
 }
 
 export async function analyzeRoomPlanPhoto(input: {
@@ -499,9 +715,9 @@ export async function analyzeRoomPlanPhoto(input: {
   const roomType = input.roomType && ROOM_TYPES.has(input.roomType) ? input.roomType : 'CUSTOM';
   const brief = (input.brief || '').trim().slice(0, 400);
   const userText = `Salle déclarée par l’utilisateur (indice seulement, la PHOTO gagne) : type=${roomType}, largeur=${input.widthM} m, longueur=${input.heightM} m.
-Utilise CES mètres pour canvas.widthM / heightM. Ne change l’échelle que si un cotes lisible sur l’image la contredit clairement.
+Utilise CES mètres pour canvas.widthM / heightM. Ne change l’échelle que si une cote lisible sur l’image la contredit clairement.
 ${brief ? `Note utilisateur : """${brief}"""` : 'Pas de note utilisateur.'}
-Produis le JSON du plan visible.`;
+Analyse l’image, déduis chaque élément visible, puis produis le JSON du plan à importer.`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 90_000);
@@ -515,7 +731,7 @@ Produis le JSON du plan visible.`;
       },
       body: JSON.stringify({
         model: visionModel,
-        temperature: 0.1,
+        temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt() },

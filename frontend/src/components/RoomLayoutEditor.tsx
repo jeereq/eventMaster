@@ -172,6 +172,8 @@ import {
   AI_ROOM_PLAN_TOKEN_COST,
   analyzeRoomPlanFromPhoto,
   applyRoomPlanVisionDraft,
+  ROOM_PLAN_PHOTO_ACCEPT,
+  roomPlanPhotoError,
 } from '@/lib/roomPlanAi';
 import {
   applyRoomTheme,
@@ -247,6 +249,8 @@ const EDITOR_TOOL =
 const EDITOR_TOOL_IDLE = 'bg-surface border-border text-foreground hover:bg-surface-muted';
 const EDITOR_TOOL_MUTED = 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground';
 const EDITOR_TOOL_ON = 'bg-primary/10 border-primary/40 text-primary';
+
+const launchedPlanPhotoSeeds = new WeakSet<File>();
 const EDITOR_TOOL_PRIMARY = 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover';
 const EDITOR_TOOL_ICON =
   'inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-foreground hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
@@ -369,6 +373,7 @@ export default function RoomLayoutEditor({
   const [aiPlanReading, setAiPlanReading] = useState(false);
   const [aiPlanError, setAiPlanError] = useState('');
   const [aiPlanWarnings, setAiPlanWarnings] = useState<string[]>([]);
+  const [retryPlanPhoto, setRetryPlanPhoto] = useState<File | null>(null);
   const [planPath, setPlanPath] = useState<PlanCreationPathId>(focusPlanImport ? 'photo' : 'manual');
   const aiPlanFileRef = useRef<HTMLInputElement>(null);
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
@@ -1215,18 +1220,27 @@ export default function RoomLayoutEditor({
     return readImageFile(file);
   };
 
-  const readRoomPlanWithAi = async (file?: File) => {
-    if (readOnly || aiPlanReading) return;
+  const readRoomPlanWithAi = async (file?: File): Promise<boolean> => {
+    if (readOnly || aiPlanReading) return false;
     setAiPlanError('');
     setAiPlanWarnings([]);
+    if (file) {
+      const problem = roomPlanPhotoError(file);
+      if (problem) {
+        setAiPlanError(problem);
+        setRetryPlanPhoto(null);
+        return false;
+      }
+      setRetryPlanPhoto(file);
+    }
     let imageUrl = blueprint.metadata.floorImageUrl;
     if (file) {
       imageUrl = await resolvePlanImageUrl(file);
     }
     if (!imageUrl) {
-      setAiPlanError('Importez d’abord une photo ou un scan du plan.');
+      setAiPlanError('Choisissez une photo JPEG, PNG ou WebP de la salle (10 Mo max).');
       aiPlanFileRef.current?.click();
-      return;
+      return false;
     }
     setAiPlanReading(true);
     try {
@@ -1238,22 +1252,25 @@ export default function RoomLayoutEditor({
       });
       const applied = applyRoomPlanVisionDraft(latestBlueprintRef.current, result.draft, caps, { imageUrl });
       updateBlueprint(applied.blueprint, {
-        message: `Plan lu par l’IA (${applied.selection.length} éléments, ${Math.round((result.draft.confidence || 0) * 100)} %)`,
+        message: `Plan importé (${applied.selection.length} éléments déduits, ${Math.round((result.draft.confidence || 0) * 100)} %)`,
         kind: 'template',
       });
       setSelection(applied.selection);
       setAiPlanWarnings(applied.warnings);
+      setRetryPlanPhoto(null);
       if (applied.selection.length === 0) {
-        log('Aucun objet posé — le plan reste un repère visuel. Placez les tables à la main.', 'info');
+        log('Aucun élément déduit — le plan reste un repère. Placez le mobilier à la main ou réessayez avec une photo plus nette.', 'info');
       } else {
-        log('Objets IA sélectionnés — déplacez, tournez ou supprimez avant d’enregistrer.', 'info');
+        log('Éléments importés depuis la photo — déplacez, tournez ou supprimez avant d’enregistrer.', 'info');
       }
+      return true;
     } catch (err) {
       const message = err instanceof Error && err.message
         ? err.message
         : 'Impossible de lire le plan avec l’IA.';
       setAiPlanError(message);
       log(message, 'info');
+      return false;
     } finally {
       setAiPlanReading(false);
     }
@@ -1261,8 +1278,16 @@ export default function RoomLayoutEditor({
 
   useEffect(() => {
     if (!seedPlanPhoto || readOnly) return;
-    void readRoomPlanWithAi(seedPlanPhoto);
-    onSeedPlanPhotoConsumed?.();
+    if (launchedPlanPhotoSeeds.has(seedPlanPhoto)) return;
+    launchedPlanPhotoSeeds.add(seedPlanPhoto);
+    void (async () => {
+      const ok = await readRoomPlanWithAi(seedPlanPhoto);
+      if (ok) {
+        onSeedPlanPhotoConsumed?.();
+        return;
+      }
+      launchedPlanPhotoSeeds.delete(seedPlanPhoto);
+    })();
     // Une fois par fichier fourni par le wizard.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedPlanPhoto]);
@@ -1897,8 +1922,8 @@ export default function RoomLayoutEditor({
                         <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
                         Lire le plan avec l’IA
                       </p>
-                      <p className={EDITOR_HINT}>
-                        Photo vue du dessus ou scan. Rien n’est inventé (or, portes, pétales).
+                      <p className={cn('text-sm leading-snug', planPath === 'photo' ? 'text-foreground' : 'text-muted')}>
+                        L’IA détecte le mobilier visible et l’importe. JPEG / PNG / WebP, 10 Mo. Vérifiez les positions ensuite.
                       </p>
                       {aiPlanReading ? (
                         <p role="status" aria-live="polite" className="text-sm text-foreground">
@@ -1924,8 +1949,18 @@ export default function RoomLayoutEditor({
                             ? 'Lecture en cours…'
                             : blueprint.metadata.floorImageUrl
                               ? 'Lire cette image'
-                              : 'Choisir une photo'}
+                              : 'Choisir une photo de la salle'}
                         </button>
+                        {retryPlanPhoto && aiPlanError ? (
+                          <button
+                            type="button"
+                            disabled={readOnly || aiPlanReading}
+                            onClick={() => void readRoomPlanWithAi(retryPlanPhoto)}
+                            className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
+                          >
+                            Réessayer
+                          </button>
+                        ) : null}
                         {blueprint.metadata.floorImageUrl ? (
                           <button
                             type="button"
@@ -5742,16 +5777,68 @@ export default function RoomLayoutEditor({
     <input
       ref={aiPlanFileRef}
       type="file"
-      accept="image/*"
+      accept={ROOM_PLAN_PHOTO_ACCEPT}
       className="sr-only"
       tabIndex={-1}
-      aria-hidden
+      aria-label="Choisir une photo de la salle"
       onChange={async (e) => {
         const file = e.target.files?.[0];
-        if (file) await readRoomPlanWithAi(file);
         e.target.value = '';
+        if (file) await readRoomPlanWithAi(file);
       }}
     />
+  ) : null;
+
+  const photoDock = planPath === 'photo' && caps.canPlanFromPhoto && !readOnly ? (
+    <div className="lg:hidden rounded-[var(--radius-card)] border border-primary bg-primary/10 p-3 space-y-2">
+      <p className="text-sm font-semibold text-foreground">Photo de la salle</p>
+      {aiPlanReading ? (
+        <p role="status" aria-live="polite" className="text-sm text-foreground">
+          Lecture du plan en cours…
+        </p>
+      ) : (
+        <p className="text-sm text-foreground leading-snug">
+          {aiPlanError || 'JPEG, PNG ou WebP, 10 Mo max. L’IA analyse la photo et importe les éléments visibles.'}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={aiPlanReading}
+          aria-busy={aiPlanReading || undefined}
+          onClick={() => {
+            if (retryPlanPhoto && aiPlanError) {
+              void readRoomPlanWithAi(retryPlanPhoto);
+              return;
+            }
+            if (blueprint.metadata.floorImageUrl && !aiPlanError) {
+              void readRoomPlanWithAi();
+              return;
+            }
+            aiPlanFileRef.current?.click();
+          }}
+          className={cn(EDITOR_PANEL_BTN, 'bg-primary text-primary-foreground border-primary')}
+        >
+          {aiPlanReading
+            ? 'Lecture en cours…'
+            : retryPlanPhoto && aiPlanError
+              ? 'Réessayer'
+              : blueprint.metadata.floorImageUrl
+                ? 'Lire cette image'
+                : 'Choisir une photo de la salle'}
+        </button>
+        {blueprint.metadata.floorImageUrl || retryPlanPhoto ? (
+          <button
+            type="button"
+            disabled={aiPlanReading}
+            onClick={() => aiPlanFileRef.current?.click()}
+            className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
+          >
+            Autre photo
+          </button>
+        ) : null}
+      </div>
+    </div>
   ) : null;
 
   if (isExpanded) {
@@ -5778,6 +5865,7 @@ export default function RoomLayoutEditor({
             <div className="flex flex-col md:flex-row flex-1 min-h-0 gap-2 sm:gap-3 p-2 sm:p-3 overflow-hidden">
               <div className="flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col gap-2">
                 {storyBar}
+                {photoDock}
                 {renderCanvas('flex-1 min-h-0 h-full')}
               </div>
               <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint">
@@ -5814,6 +5902,7 @@ export default function RoomLayoutEditor({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
           <div className="lg:col-span-2 min-h-0 space-y-2">
             {storyBar}
+            {photoDock}
             {renderCanvas('em-plan-stage min-h-[min(58vh,32rem)] lg:min-h-[min(64vh,40rem)]')}
           </div>
           <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint">

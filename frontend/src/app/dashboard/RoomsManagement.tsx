@@ -1589,7 +1589,7 @@ export default function RoomsManagement() {
                     setFocusPlanImport(false);
                     setWizardPlanTab('capacite');
                   }}
-                  className="inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-primary underline-offset-2 hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-primary-solid underline-offset-2 hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   <ChevronLeft className="w-4 h-4" aria-hidden />
                   Retour à la capacité
