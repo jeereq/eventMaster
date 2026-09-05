@@ -1,3 +1,7 @@
+import { seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
+
+export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent } from '@/lib/roomAmphitheaterGeom';
+
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
 export type ChairType =
   | 'BANQUET'
@@ -923,43 +927,115 @@ export function generateAmphitheaterRows(options: {
     chairStyle = 'napoleon',
     seatMaterial = 'velvet',
     centerX = 50,
-    startY = 35,
     aisleSplit = true,
   } = options;
 
-  const rows: Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> = [];
-  const baseCurve =
-    style === 'romanSemiCircle' ? 65 :
-    style === 'modernFan' ? 38 :
-    style === 'horseshoeU' ? 85 :
+  const focusY = 12;
+  const spanCurve =
+    style === 'romanSemiCircle' ? 72 :
+    style === 'horseshoeU' ? 58 :
+    style === 'modernFan' ? 42 :
     0;
+  const radiusStart = style === 'romanSemiCircle' ? 20 : 23;
+  const radiusStep = style === 'tieredSteps' ? 9 : 8.2;
+  const risePerTierM = style === 'tieredSteps' ? 0.32 : 0.26;
 
-  for (let t = 0; t < tierCount; t++) {
-    const y = startY + t * 11;
-    const curve = baseCurve > 0 ? Math.max(15, baseCurve - t * 4) : 0;
-    const elevationM = Number((0.25 * (t + 1)).toFixed(2));
-    const letter = String.fromCharCode(65 + t);
+  const rows: Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> = [];
 
+  const pushRow = (opts: {
+    letter: string;
+    suffix?: string;
+    seats: number;
+    x: number;
+    y: number;
+    rotation: number;
+    curve: number;
+    tier: number;
+    elevationM: number;
+  }) => {
     rows.push({
       id: makeLayoutId('row'),
       kind: 'row',
-      label: `Rangée ${letter}`,
-      rowName: `Rang ${letter}`,
-      seatCount: seatsPerRow + (style === 'modernFan' || style === 'romanSemiCircle' ? t * 2 : 0),
+      label: opts.suffix ? `Rang ${opts.letter} · ${opts.suffix}` : `Rangée ${opts.letter}`,
+      rowName: `Rang ${opts.letter}${opts.suffix ? ` ${opts.suffix}` : ''}`,
+      seatCount: opts.seats,
       chairType,
       chairStyle,
       seatMaterial,
-      tier: t + 1,
-      x: centerX,
-      y,
-      curve,
-      aisleSplit,
+      tier: opts.tier,
+      x: opts.x,
+      y: opts.y,
+      curve: opts.curve,
+      rotation: opts.rotation,
+      aisleSplit: style === 'horseshoeU' ? opts.suffix === 'fond' : aisleSplit,
       aisleWidthPct: 14,
-      elevationM,
+      elevationM: opts.elevationM,
       focusX: centerX,
-      focusY: 10,
+      focusY,
       showSeatNumbers: true,
       amphitheaterStyle: style,
+    });
+  };
+
+  for (let t = 0; t < tierCount; t += 1) {
+    const letter = String.fromCharCode(65 + t);
+    const radius = radiusStart + t * radiusStep;
+    const elevationM = Number(((t + 1) * risePerTierM).toFixed(2));
+    const seats = seatsGrownForTier(style, seatsPerRow, t);
+    const curve = spanCurve > 0 ? Math.max(12, spanCurve - t * 3) : 0;
+    const y = Math.min(92, focusY + radius);
+
+    if (style === 'horseshoeU') {
+      const wingSeats = Math.max(4, Math.round(seats * 0.45));
+      const wingAngle = 46;
+      const rad = (wingAngle * Math.PI) / 180;
+      const wingY = Math.min(90, focusY + Math.cos(rad) * radius * 0.78);
+      const wingX = Math.sin(rad) * radius * 0.9;
+      pushRow({
+        letter,
+        suffix: 'fond',
+        seats: Math.max(4, seats - 4),
+        x: centerX,
+        y,
+        rotation: 0,
+        curve,
+        tier: t + 1,
+        elevationM,
+      });
+      pushRow({
+        letter,
+        suffix: 'ouest',
+        seats: wingSeats,
+        x: Math.max(8, centerX - wingX),
+        y: wingY,
+        rotation: wingAngle,
+        curve: Math.round(curve * 0.55),
+        tier: t + 1,
+        elevationM,
+      });
+      pushRow({
+        letter,
+        suffix: 'est',
+        seats: wingSeats,
+        x: Math.min(92, centerX + wingX),
+        y: wingY,
+        rotation: -wingAngle,
+        curve: Math.round(curve * 0.55),
+        tier: t + 1,
+        elevationM,
+      });
+      continue;
+    }
+
+    pushRow({
+      letter,
+      seats,
+      x: centerX,
+      y,
+      rotation: 0,
+      curve,
+      tier: t + 1,
+      elevationM,
     });
   }
 
@@ -2777,7 +2853,7 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
       const progress = rowDepth / Math.max(1, tierCount * rowsPerTier - 1);
       const y = 28 + progress * 58;
       const seats = baseSeats + tier * 2;
-      const curve = 0.12 + progress * 0.22;
+      const curve = Math.round(38 + progress * 22);
       const elevationM = tier * risePerTierM + r * (risePerTierM * 0.35);
       furniture.push({
         id: uid('row'),
@@ -2789,10 +2865,14 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
         x: 50,
         y,
         curve,
+        aisleSplit: true,
+        aisleWidthPct: 14,
         elevationM,
         focusX: stageFocus.x,
         focusY: stageFocus.y,
         rotation: 0,
+        amphitheaterStyle: 'modernFan',
+        showSeatNumbers: true,
       });
       totalSeats += seats;
       rowIndex++;

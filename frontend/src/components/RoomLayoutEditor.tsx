@@ -60,6 +60,7 @@ import {
   chandelierFixtureStyleHints,
   amphitheaterStyleLabels,
   generateAmphitheaterRows,
+  estimateAmphitheaterSeats,
   createBlueprintChair,
   createBlueprintFixture,
   createBlueprintRow,
@@ -770,8 +771,25 @@ export default function RoomLayoutEditor({
       aisleSplit: amphiAisleSplit,
     }).map((r) => ({ ...r, storyId: activeStoryId }));
 
+    const hasStage = blueprint.fixtures.some((f) => f.kind === 'stage' || f.kind === 'podium');
+    const extras = hasStage
+      ? []
+      : [{
+          ...createBlueprintFixture('stage'),
+          x: 28,
+          y: 3,
+          w: 44,
+          h: 10,
+          label: 'Scène',
+          storyId: activeStoryId,
+        }];
+
     updateBlueprint(
-      { ...blueprint, furniture: [...blueprint.furniture, ...rows] },
+      {
+        ...blueprint,
+        furniture: [...blueprint.furniture, ...rows],
+        fixtures: extras.length ? [...blueprint.fixtures, ...extras] : blueprint.fixtures,
+      },
       { message: `Amphithéâtre ${amphitheaterStyleLabels[amphiStyle]} créé (${rows.length} gradins)`, kind: 'add' },
     );
     setQuickCreate(null);
@@ -4631,7 +4649,7 @@ export default function RoomLayoutEditor({
               </label>
 
               <span className="text-[11px] text-muted">
-                Capacité totale estimée : <strong className="text-foreground">{amphiTiers * amphiSeatsPerRow + (amphiStyle === 'modernFan' ? amphiTiers * (amphiTiers - 1) : 0)} places</strong>
+                Capacité totale estimée : <strong className="text-foreground">{estimateAmphitheaterSeats(amphiStyle, amphiTiers, amphiSeatsPerRow)} places</strong>
               </span>
             </div>
 

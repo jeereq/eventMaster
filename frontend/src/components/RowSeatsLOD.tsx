@@ -6,23 +6,9 @@ import type { ChairType, ChairStyle, SeatMaterial } from '@/lib/roomLayoutUtils'
 import { resolveChairVisual } from '@/lib/roomWebGLMaterials';
 import { CatalogueChair } from '@/components/CatalogueFurnitureMeshes';
 import type { RenderQualitySettings } from '@/lib/roomRenderQuality';
+import { computeRowSeatPose } from '@/lib/roomAmphitheaterGeom';
 
 type Lod = RenderQualitySettings['rowChairLod'];
-
-function seatPose(
-  i: number,
-  count: number,
-  spacing: number,
-  curve: number,
-  elevation: number,
-  focusLocal: { x: number; z: number },
-) {
-  const t = i - (count - 1) / 2;
-  const localX = t * spacing;
-  const localZ = curve * (t * t) * 0.08;
-  const faceY = Math.atan2(focusLocal.x - localX, focusLocal.z - localZ);
-  return { localX, localZ, y: elevation, faceY };
-}
 
 /** Rangée de sièges avec LOD / instancing selon la qualité. */
 export function RowSeatsLOD({
@@ -38,6 +24,8 @@ export function RowSeatsLOD({
   selected,
   lod,
   castShadow,
+  aisleSplit,
+  aisleWidthPct,
 }: {
   count: number;
   spacing: number;
@@ -52,6 +40,8 @@ export function RowSeatsLOD({
   selected: boolean;
   lod: Lod;
   castShadow: boolean;
+  aisleSplit?: boolean;
+  aisleWidthPct?: number;
 }) {
   const visual = useMemo(
     () => resolveChairVisual(chairType, chairStyle, seatMaterial),
@@ -67,7 +57,7 @@ export function RowSeatsLOD({
     if (lod !== 'instanced') return;
     const dummy = new THREE.Object3D();
     for (let i = 0; i < count; i += 1) {
-      const p = seatPose(i, count, spacing, curve, elevation, focusLocal);
+      const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
       if (seatRef.current) {
         dummy.position.set(p.localX, p.y + 0.45, p.localZ);
         dummy.rotation.set(0, p.faceY, 0);
@@ -84,13 +74,13 @@ export function RowSeatsLOD({
     }
     if (seatRef.current) seatRef.current.instanceMatrix.needsUpdate = true;
     if (backRef.current) backRef.current.instanceMatrix.needsUpdate = true;
-  }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z]);
+  }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct]);
 
   if (lod === 'full') {
     return (
       <>
         {Array.from({ length: count }).map((_, i) => {
-          const p = seatPose(i, count, spacing, curve, elevation, focusLocal);
+          const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           return (
             <CatalogueChair
               key={i}
@@ -112,7 +102,7 @@ export function RowSeatsLOD({
     return (
       <>
         {Array.from({ length: count }).map((_, i) => {
-          const p = seatPose(i, count, spacing, curve, elevation, focusLocal);
+          const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           return (
             <group key={i} position={[p.localX, p.y, p.localZ]} rotation={[0, p.faceY, 0]}>
               <mesh position={[0, 0.42, 0]} castShadow={castShadow}>

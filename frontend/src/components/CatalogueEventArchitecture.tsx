@@ -1,78 +1,149 @@
 'use client';
 
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { ZoneKind, ZoneMaterial } from '@/lib/roomLayoutUtils';
 import { getStairWoodMap, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
+import { rowArcZ, rowCurveFactor, rowSeatLocalX } from '@/lib/roomAmphitheaterGeom';
 
-/** Gradin / rangée amphithéâtre. */
+const RISER_TREAD_M = 1.18;
+const RISER_FRONT_OVERHANG_M = 0.32;
+const RISER_ARC_SEGMENTS = 18;
+
+function buildRiserFootprint(
+  seatCount: number,
+  spacing: number,
+  curveFactor: number,
+  aisleSplit: boolean,
+  aisleWidthPct: number,
+) {
+  const firstX = rowSeatLocalX(0, seatCount, spacing, aisleSplit, aisleWidthPct);
+  const lastX = rowSeatLocalX(seatCount - 1, seatCount, spacing, aisleSplit, aisleWidthPct);
+  const pad = 0.42;
+  const x0 = Math.min(firstX, lastX) - pad;
+  const x1 = Math.max(firstX, lastX) + pad;
+  const shape = new THREE.Shape();
+  const zFront = (x: number) => rowArcZ(x, spacing, curveFactor) - RISER_FRONT_OVERHANG_M;
+  const zBack = (x: number) => rowArcZ(x, spacing, curveFactor) + RISER_TREAD_M;
+
+  shape.moveTo(x0, zFront(x0));
+  for (let i = 1; i <= RISER_ARC_SEGMENTS; i += 1) {
+    const x = x0 + ((x1 - x0) * i) / RISER_ARC_SEGMENTS;
+    shape.lineTo(x, zFront(x));
+  }
+  for (let i = RISER_ARC_SEGMENTS; i >= 0; i -= 1) {
+    const x = x0 + ((x1 - x0) * i) / RISER_ARC_SEGMENTS;
+    shape.lineTo(x, zBack(x));
+  }
+  shape.closePath();
+  return { shape, x0, x1, zFront, zBack };
+}
+
+/** Gradin amphithéâtre : dalle cintrée qui suit l’arc des sièges. */
 export function AmphitheaterRiser({
   seatCount,
   spacing,
   elevation,
   curve = 0,
+  aisleSplit = false,
+  aisleWidthPct = 14,
   selected = false,
 }: {
   seatCount: number;
   spacing: number;
   elevation: number;
   curve?: number;
+  aisleSplit?: boolean;
+  aisleWidthPct?: number;
   selected?: boolean;
 }) {
   const wood = useMemo(() => getStairWoodMap(), []);
-  const width = seatCount * spacing + 0.85;
-  const depth = 1.35 + curve * 2.2;
   const h = Math.max(elevation, 0.14);
+  const curveF = rowCurveFactor(curve);
   const selectedTint = selected ? '#c7d2fe' : undefined;
+
+  const { volume, carpet, x0, x1, zFront } = useMemo(() => {
+    const footprint = buildRiserFootprint(seatCount, spacing, curveF, aisleSplit, aisleWidthPct);
+    const volume = new THREE.ExtrudeGeometry(footprint.shape, {
+      depth: h,
+      bevelEnabled: true,
+      bevelThickness: 0.012,
+      bevelSize: 0.012,
+      bevelSegments: 1,
+    });
+    volume.rotateX(-Math.PI / 2);
+
+    const carpetShape = footprint.shape.clone();
+    const carpet = new THREE.ExtrudeGeometry(carpetShape, {
+      depth: 0.028,
+      bevelEnabled: false,
+    });
+    carpet.rotateX(-Math.PI / 2);
+    carpet.translate(0, h + 0.002, 0);
+
+    return { volume, carpet, x0: footprint.x0, x1: footprint.x1, zFront: footprint.zFront };
+  }, [seatCount, spacing, curveF, aisleSplit, aisleWidthPct, h]);
+
+  useEffect(() => () => {
+    volume.dispose();
+    carpet.dispose();
+  }, [volume, carpet]);
+
+  const nosing = useMemo(() => {
+    const pts: Array<[number, number, number]> = [];
+    for (let i = 0; i <= 10; i += 1) {
+      const x = x0 + ((x1 - x0) * i) / 10;
+      pts.push([x, h + 0.02, zFront(x) + 0.03]);
+    }
+    return pts;
+  }, [x0, x1, zFront, h]);
+
+  const aisleGap = aisleSplit && seatCount >= 4
+    ? spacing * (0.55 + Math.min(30, Math.max(5, aisleWidthPct)) / 20)
+    : 0;
 
   return (
     <group>
-      {/* Structure béton / bois */}
-      <mesh position={[0, h / 2, 0.22]} receiveShadow castShadow>
-        <boxGeometry args={[width, h, depth]} />
-        <meshStandardMaterial color={selectedTint ?? '#57534e'} map={wood} roughness={0.72} />
+      <mesh geometry={volume} receiveShadow castShadow>
+        <meshStandardMaterial
+          color={selectedTint ?? '#6b5e52'}
+          map={wood}
+          roughness={0.74}
+          metalness={0.04}
+        />
       </mesh>
-      {/* Contremarche avant */}
-      <mesh position={[0, h / 2, 0.22 + depth / 2]} castShadow>
-        <boxGeometry args={[width, h, 0.07]} />
-        <meshStandardMaterial color={selectedTint ?? '#3f3f46'} roughness={0.65} metalness={0.05} />
+      <mesh geometry={carpet} receiveShadow>
+        <meshStandardMaterial color={selectedTint ?? '#3b1220'} roughness={0.97} metalness={0} />
       </mesh>
-      {/* Bande décorative */}
-      <mesh position={[0, h * 0.75, 0.22 + depth / 2 + 0.02]}>
-        <boxGeometry args={[width * 0.92, 0.04, 0.02]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.55} roughness={0.35} />
-      </mesh>
-      {/* Moquette de rangée */}
-      <mesh position={[0, h + 0.018, 0.12]} receiveShadow>
-        <boxGeometry args={[width - 0.2, 0.035, depth * 0.72]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.96} metalness={0} />
-      </mesh>
-      {/* Nez de marche avant */}
-      <mesh position={[0, h + 0.01, 0.22 + depth * 0.28]} castShadow>
-        <boxGeometry args={[width - 0.15, 0.025, 0.06]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.9} />
-      </mesh>
-      {/* Garde-corps latéraux si hauteur significative */}
-      {h > 0.25 && ([-1, 1] as const).map((side) => (
-        <group key={side} position={[side * (width / 2 - 0.08), 0, 0.15]}>
-          <mesh position={[0, h + 0.35, 0]} castShadow>
-            <cylinderGeometry args={[0.02, 0.02, 0.7, 10]} />
-            <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.25} />
-          </mesh>
-          <mesh position={[0, h + 0.68, depth * 0.15]} rotation={[0.15, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.015, 0.015, depth * 0.7, 8]} />
-            <meshStandardMaterial color="#d6d3d1" metalness={0.75} roughness={0.2} />
-          </mesh>
-        </group>
+      {nosing.map((pos, i) => (
+        <mesh key={i} position={pos} castShadow>
+          <boxGeometry args={[Math.max(0.18, (x1 - x0) / 11), 0.02, 0.05]} />
+          <meshStandardMaterial color="#c4a35a" metalness={0.52} roughness={0.38} />
+        </mesh>
       ))}
-      {/* Allée / séparateur central si grande rangée */}
-      {seatCount >= 12 && (
-        <mesh position={[0, h + 0.02, 0.1]} receiveShadow>
-          <boxGeometry args={[0.45, 0.02, depth * 0.65]} />
-          <meshStandardMaterial color="#e7e5e4" roughness={0.7} />
+      {aisleGap > 0 && (
+        <mesh position={[0, h + 0.03, rowArcZ(0, spacing, curveF) + 0.28]} receiveShadow>
+          <boxGeometry args={[aisleGap * 0.92, 0.018, RISER_TREAD_M * 0.78]} />
+          <meshStandardMaterial color="#d6c7a8" roughness={0.82} />
         </mesh>
       )}
+      {h > 0.28 && ([-1, 1] as const).map((side) => {
+        const x = side === -1 ? x0 + 0.06 : x1 - 0.06;
+        const z = rowArcZ(x, spacing, curveF);
+        return (
+          <group key={side} position={[x, 0, z]}>
+            <mesh position={[0, h + 0.38, 0]} castShadow>
+              <cylinderGeometry args={[0.018, 0.02, 0.76, 10]} />
+              <meshStandardMaterial color="#b8a48a" metalness={0.62} roughness={0.28} />
+            </mesh>
+            <mesh position={[0, h + 0.74, 0.22]} rotation={[0.18, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.014, 0.014, 0.7, 8]} />
+              <meshStandardMaterial color="#e8d9b8" metalness={0.7} roughness={0.22} />
+            </mesh>
+          </group>
+        );
+      })}
     </group>
   );
 }

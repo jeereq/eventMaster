@@ -206,7 +206,7 @@ function ThumbPreview({
                 transform: `translate(-50%, -50%) scale(0.45) rotate(${item.rotation ?? 0}deg)`,
               }}
             >
-              {Array.from({ length: Math.min(item.seatCount, 6) }).map((_, i) => (
+              {Array.from({ length: Math.min(item.seatCount, 10) }).map((_, i) => (
                 <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
               ))}
             </div>
@@ -289,8 +289,8 @@ function FlatShowcasePreview({
           );
         }
         if (item.kind === 'row') {
-          const count = Math.min(item.seatCount, 24);
-          const curveVal = item.curve ?? 0;
+          const count = Math.min(item.seatCount, 48);
+          const curveVal = Math.abs(item.curve ?? 0) > 1.5 ? (item.curve ?? 0) / 100 : (item.curve ?? 0);
           const half = (count - 1) / 2;
           const hasAisle = !!item.aisleSplit;
           const midIdx = Math.floor(count / 2);
@@ -308,8 +308,8 @@ function FlatShowcasePreview({
             >
               {Array.from({ length: count }).map((_, i) => {
                 const offset = half > 0 ? (i - half) / half : 0;
-                const arcY = Math.abs(curveVal) * (offset * offset) * 0.4;
-                const chairRot = curveVal * offset * 0.6;
+                const arcY = Math.abs(curveVal) * (offset * offset) * 28;
+                const chairRot = curveVal * offset * 36;
 
                 return (
                   <div

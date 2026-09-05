@@ -58,6 +58,7 @@ import {
   CatalogueAisle,
 } from '@/components/CatalogueAmbiance';
 import { RowSeatsLOD } from '@/components/RowSeatsLOD';
+import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import {
@@ -2093,7 +2094,7 @@ function SceneContent({
         }
         if (item.kind === 'row') {
           const [wx, wz] = pctToWorld(item.x, item.y, widthM, heightM);
-          const count = Math.min(item.seatCount, 24);
+          const count = clampRowSeatCount(item.seatCount);
           const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
           const elevation = Math.max(
             item.elevationM ?? (item.tier > 0 ? item.tier * 0.38 : 0),
@@ -2127,6 +2128,8 @@ function SceneContent({
                   spacing={spacing}
                   elevation={elevation}
                   curve={curve}
+                  aisleSplit={item.aisleSplit === true}
+                  aisleWidthPct={item.aisleWidthPct}
                   selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
                 />
               ) : null}
@@ -2151,6 +2154,8 @@ function SceneContent({
                     selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
                     lod={qualitySettings.rowChairLod}
                     castShadow={qualitySettings.rowChairShadows}
+                    aisleSplit={item.aisleSplit === true}
+                    aisleWidthPct={item.aisleWidthPct}
                   />
                 );
               })()}
