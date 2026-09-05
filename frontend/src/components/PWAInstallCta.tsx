@@ -96,8 +96,7 @@ export default function PWAInstallCta({
   if (!show) return null;
 
   if (variant === 'bar') {
-    if (!mounted) return null;
-    return createPortal(
+    const bar = (
       <div
         className="md:hidden fixed inset-x-0 z-[45] bottom-[var(--em-site-bottom-nav)] border-t border-primary/25 bg-primary-solid text-primary-foreground"
         role="region"
@@ -125,9 +124,10 @@ export default function PWAInstallCta({
             className="absolute bottom-full inset-x-3 mb-2"
           />
         ) : null}
-      </div>,
-      document.body,
+      </div>
     );
+    if (!mounted) return bar;
+    return createPortal(bar, document.body);
   }
 
   if (variant === 'footer') {

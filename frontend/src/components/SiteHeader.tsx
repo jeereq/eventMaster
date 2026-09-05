@@ -34,6 +34,12 @@ const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/contact', label: 'Contact' },
 ];
 
+const LEGAL_LINKS: SiteHeaderLink[] = [
+  { href: '/faq', label: 'FAQ' },
+  { href: '/terms', label: 'Conditions d’utilisation' },
+  { href: '/privacy', label: 'Confidentialité' },
+];
+
 export default function SiteHeader({
   variant = 'landing',
   className,
@@ -76,7 +82,7 @@ export default function SiteHeader({
       return pathname === '/activite' || pathname.startsWith('/activite/');
     }
     if (href === '/contact') {
-      return pathname === '/contact' || pathname === '/faq';
+      return pathname === '/contact';
     }
     if (href.startsWith('/#') && pathname === '/') {
       const hash = href.replace('/', '');
@@ -250,6 +256,32 @@ export default function SiteHeader({
                 );
               })}
             </div>
+
+            {variant !== 'minimal' ? (
+              <div className="pt-2 border-t border-border/60 space-y-1">
+                <p className="px-3 pb-1 text-xs font-semibold text-muted">Infos & légal</p>
+                {LEGAL_LINKS.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        'flex items-center justify-between min-h-11 px-3 py-2.5 rounded-xl text-sm font-semibold transition touch-manipulation',
+                        active
+                          ? 'bg-primary/10 text-primary border border-primary/20'
+                          : 'text-muted hover:text-foreground hover:bg-surface-muted/50',
+                      )}
+                    >
+                      <span>{item.label}</span>
+                      {active ? <span className="w-1.5 h-1.5 rounded-full bg-primary" /> : null}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
 
             {showInstall ? (
               <Button

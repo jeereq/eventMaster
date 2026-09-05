@@ -105,9 +105,7 @@ export default function SiteMobileBottomBar({
     }
   };
 
-  if (!mounted) return null;
-
-  return createPortal(
+  const nav = (
     <nav
       aria-label="Navigation mobile principale"
       className={cn(
@@ -160,7 +158,9 @@ export default function SiteMobileBottomBar({
           );
         })}
       </div>
-    </nav>,
-    document.body,
+    </nav>
   );
+
+  if (!mounted) return nav;
+  return createPortal(nav, document.body);
 }

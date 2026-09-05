@@ -243,9 +243,7 @@ export default function DashboardMobileBottomBar({
     });
   }, [role, access, workspace, accountKind, isClientAccount]);
 
-  if (!mounted) return null;
-
-  return createPortal(
+  const nav = (
     <nav
       aria-label="Navigation principale mobile"
       className="em-dash-bottom-nav md:hidden bg-surface/92 backdrop-blur-xl border-t border-border shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 px-1.5"
@@ -284,7 +282,7 @@ export default function DashboardMobileBottomBar({
                 >
                   <Icon className="w-[19px] h-[19px]" />
                 </div>
-                <span className="text-[10px] tracking-tight leading-none truncate max-w-full">
+                <span className="text-xs tracking-tight leading-none truncate max-w-full">
                   {mobileMenuOpen ? 'Fermer' : item.name}
                 </span>
               </button>
@@ -320,14 +318,16 @@ export default function DashboardMobileBottomBar({
                   <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
                 )}
               </div>
-              <span className="text-[10px] tracking-tight leading-none truncate max-w-full">
+              <span className="text-xs tracking-tight leading-none truncate max-w-full">
                 {item.name}
               </span>
             </Link>
           );
         })}
       </div>
-    </nav>,
-    document.body,
+    </nav>
   );
+
+  if (!mounted) return nav;
+  return createPortal(nav, document.body);
 }

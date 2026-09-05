@@ -53,11 +53,7 @@ export default function MobileSplashScreen() {
       /* private mode */
     }
 
-    if (prefersReducedMotion()) {
-      markSeen();
-      return;
-    }
-
+    const quiet = prefersReducedMotion();
     setVisible(true);
     const started = Date.now();
     const previousOverflow = document.body.style.overflow;
@@ -77,6 +73,12 @@ export default function MobileSplashScreen() {
       leaveStarted = true;
       window.clearTimeout(waitTimer);
       window.clearTimeout(maxTimer);
+      if (quiet) {
+        setVisible(false);
+        restore();
+        markSeen();
+        return;
+      }
       setLeaving(true);
       leaveTimer = window.setTimeout(() => {
         setVisible(false);
@@ -183,7 +185,7 @@ export default function MobileSplashScreen() {
           ) : null}
         </div>
         <span
-          className="mt-1 w-7 h-7 rounded-full border-2 border-primary/30 border-t-primary animate-spin motion-reduce:animate-none"
+          className="mt-1 w-7 h-7 rounded-full border-2 border-primary/30 border-t-primary animate-spin motion-reduce:hidden"
           aria-hidden
         />
         <button
