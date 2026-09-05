@@ -617,9 +617,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  }
  >
  <TourProvider>
- <SupportSessionBanner />
+      <div className="h-dvh max-h-dvh min-h-0 overflow-hidden flex flex-col bg-background text-foreground">
+      <SupportSessionBanner />
       <div
-        className="min-h-screen flex flex-col md:flex-row bg-background text-foreground"
+        className="flex-1 min-h-0 flex flex-col md:flex-row"
         style={{ ['--em-sidebar-width' as string]: sidebarCollapsed ? '4.5rem' : '16rem' }}
       >
         {/* Overlay mobile */}
@@ -673,7 +674,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className={cn(
             'fixed inset-y-0 left-0 z-[70] w-[min(86vw,20rem)] bg-sidebar border-r border-border shadow-2xl',
             'flex flex-col transition-[width,transform] duration-200 ease-in-out',
-            'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:max-w-none md:z-30 md:shadow-none',
+            'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-full md:max-w-none md:z-30 md:shadow-none',
             mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
             sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
           )}
@@ -871,7 +872,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </aside>
 
       {/* Contenu principal */}
-      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto overscroll-none bg-background flex flex-col em-dashboard-glow-bg">
+      <main id="main-content" className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-background flex flex-col em-dashboard-glow-bg">
         <DashboardTopBar
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={toggleSidebarCollapsed}
@@ -902,6 +903,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ViewCustomizerEdgeHandle />
       <ViewCustomizerDrawer />
       <ProductTourOverlay />
+    </div>
     </div>
   </TourProvider>
  </Suspense>
