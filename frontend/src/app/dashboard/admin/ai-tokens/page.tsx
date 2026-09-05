@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Coins, Loader2 } from 'lucide-react';
+import { Coins, Eye, Loader2 } from 'lucide-react';
+import AdminFinanceDetailsModal, { type AdminTokenDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -32,8 +33,10 @@ interface LedgerRow {
   moneyKind?: 'revenue' | 'non_revenue' | 'mixed';
   relatedId: string | null;
   deviceId: string | null;
+  userId?: string | null;
   userName: string | null;
   userEmail: string | null;
+  tenantId?: string | null;
   tenantName: string | null;
   createdAt: string;
 }
@@ -151,6 +154,7 @@ export default function AdminAiTokensPage() {
   const [grantCount, setGrantCount] = useState('10');
   const [grantBusy, setGrantBusy] = useState(false);
   const [grantMessage, setGrantMessage] = useState('');
+  const [selected, setSelected] = useState<AdminTokenDetail | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -551,11 +555,16 @@ export default function AdminAiTokensPage() {
                 <th className="px-3 py-2.5 font-semibold">Argent</th>
                 <th className="px-3 py-2.5 font-semibold">Qui</th>
                 <th className="px-3 py-2.5 font-semibold">Où</th>
+                <th className="px-3 py-2.5 font-semibold"><span className="sr-only">Détail</span></th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((row) => (
-                <tr key={row.id} className="border-b border-border/70 last:border-0">
+                <tr
+                  key={row.id}
+                  className="border-b border-border/70 last:border-0 cursor-pointer hover:bg-surface-muted"
+                  onClick={() => setSelected(row)}
+                >
                   <td className="px-3 py-2.5 text-muted whitespace-nowrap">{formatWhen(row.createdAt)}</td>
                   <td className="px-3 py-2.5">{actionBadge(row.action, row.actionLabel)}</td>
                   <td className={cn(
@@ -571,12 +580,31 @@ export default function AdminAiTokensPage() {
                     <div className="text-xs text-muted truncate max-w-[16rem]">{row.userEmail || row.deviceId || '—'}</div>
                   </td>
                   <td className="px-3 py-2.5 text-muted">{row.sourceLabel}</td>
+                  <td className="px-3 py-2.5">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelected(row);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary min-h-11"
+                    >
+                      <Eye className="w-3.5 h-3.5" aria-hidden />
+                      Détail
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <AdminFinanceDetailsModal
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        token={selected}
+      />
 
       {data && data.total > pageSize ? (
         <Pagination

@@ -29,27 +29,29 @@ export function PlanViewToggle({
       <button
         type="button"
         onClick={() => onChange('2d')}
+        aria-pressed={value === '2d'}
         className={cn(
-          'inline-flex items-center gap-1 min-h-9 px-2.5 rounded-[var(--radius-button)] text-[10px] font-semibold transition',
+          'inline-flex items-center justify-center gap-1 min-h-11 min-w-[44px] px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           value === '2d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
         )}
       >
-        <LayoutGrid className="w-3 h-3" />
+        <LayoutGrid className="w-3.5 h-3.5" aria-hidden />
         2D
       </button>
       <button
         type="button"
         onClick={() => onChange('3d')}
         disabled={disabled3d}
+        aria-pressed={value === '3d'}
         className={cn(
-          'inline-flex items-center gap-1 min-h-9 px-2.5 rounded-[var(--radius-button)] text-[10px] font-semibold transition',
+          'inline-flex items-center justify-center gap-1 min-h-11 min-w-[44px] px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           disabled3d && 'opacity-40 cursor-not-allowed',
           !disabled3d && (value === '3d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground'),
         )}
       >
-        <Box className="w-3 h-3" />
+        <Box className="w-3.5 h-3.5" aria-hidden />
         3D
       </button>
     </div>

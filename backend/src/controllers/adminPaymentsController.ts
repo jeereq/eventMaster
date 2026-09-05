@@ -148,6 +148,15 @@ export type PaymentAttemptRow = {
   createdAt: string;
   updatedAt: string | null;
   paidAt: string | null;
+  entityId?: string | null;
+  eventTitle?: string | null;
+  eventSlug?: string | null;
+  quantity?: number | null;
+  tokensCount?: number | null;
+  requestedPlan?: string | null;
+  tenantName?: string | null;
+  proofOfPayment?: string | null;
+  rawStatus?: string | null;
 };
 
 const STATUS_LABEL: Record<PaymentAttemptStatus, string> = {
@@ -279,6 +288,11 @@ async function collectAttempts(opts: {
       createdAt: row.createdAt.toISOString(),
       updatedAt: null,
       paidAt: row.paidAt?.toISOString() || null,
+      entityId: row.id,
+      eventTitle: row.event?.title || null,
+      eventSlug: row.event?.slug || null,
+      quantity: row.quantity,
+      rawStatus: row.status,
     });
   }
 
@@ -309,6 +323,9 @@ async function collectAttempts(opts: {
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       paidAt: row.paidAt?.toISOString() || null,
+      entityId: row.id,
+      tokensCount: row.tokensCount,
+      rawStatus: row.status,
     });
   }
 
@@ -341,6 +358,11 @@ async function collectAttempts(opts: {
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       paidAt: row.paidAt?.toISOString() || null,
+      entityId: row.id,
+      requestedPlan: row.requestedPlan,
+      tenantName: row.tenant?.name || null,
+      proofOfPayment: row.proofOfPayment,
+      rawStatus: row.status,
     });
   }
 

@@ -3213,6 +3213,39 @@ function DashboardPageContent() {
                                     </div>
                                   </div>
 
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Managers org.</label>
+                                      <input
+                                        type="number"
+                                        value={plan.maxOrgManagers ?? 1}
+                                        onChange={(e) => {
+                                          const updatedPlans = { ...adminSettings.plans };
+                                          updatedPlans[planKey] = { ...plan, maxOrgManagers: parseInt(e.target.value) || 0 };
+                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                        }}
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Éditeur salle</label>
+                                      <select
+                                        value={plan.roomEditorLevel || 'basic'}
+                                        onChange={(e) => {
+                                          const updatedPlans = { ...adminSettings.plans };
+                                          updatedPlans[planKey] = { ...plan, roomEditorLevel: e.target.value };
+                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                        }}
+                                        className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition min-h-11"
+                                      >
+                                        <option value="basic">Essentiel · 8 tables</option>
+                                        <option value="standard">Business · 16 tables</option>
+                                        <option value="advanced">Premium · 36 tables</option>
+                                        <option value="complete">Complet · 80 tables</option>
+                                      </select>
+                                    </div>
+                                  </div>
+
                                   <div className="flex flex-wrap items-center gap-4 pt-5">
                                     <div className="flex items-center gap-2">
                                       <input
@@ -3244,6 +3277,70 @@ function DashboardPageContent() {
                                       />
                                       <label htmlFor={`custom-rsvp-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         Champs RSVP
+                                      </label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`protocol-qr-${planKey}`}
+                                        checked={plan.protocolQr !== false}
+                                        onChange={(e) => {
+                                          const updatedPlans = { ...adminSettings.plans };
+                                          updatedPlans[planKey] = { ...plan, protocolQr: e.target.checked };
+                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                        }}
+                                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                                      />
+                                      <label htmlFor={`protocol-qr-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                        QR protocole
+                                      </label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`mockup-ocr-${planKey}`}
+                                        checked={Boolean(plan.mockupOcr)}
+                                        onChange={(e) => {
+                                          const updatedPlans = { ...adminSettings.plans };
+                                          updatedPlans[planKey] = { ...plan, mockupOcr: e.target.checked };
+                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                        }}
+                                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                                      />
+                                      <label htmlFor={`mockup-ocr-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                        OCR maquette
+                                      </label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`themes-fixtures-${planKey}`}
+                                        checked={plan.roomThemesFixtures !== false}
+                                        onChange={(e) => {
+                                          const updatedPlans = { ...adminSettings.plans };
+                                          updatedPlans[planKey] = { ...plan, roomThemesFixtures: e.target.checked };
+                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                        }}
+                                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                                      />
+                                      <label htmlFor={`themes-fixtures-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                        Thèmes & décors
+                                      </label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        id={`admin-reports-${planKey}`}
+                                        checked={Boolean(plan.adminReports)}
+                                        onChange={(e) => {
+                                          const updatedPlans = { ...adminSettings.plans };
+                                          updatedPlans[planKey] = { ...plan, adminReports: e.target.checked };
+                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                        }}
+                                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                                      />
+                                      <label htmlFor={`admin-reports-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                        Rapports admin
                                       </label>
                                     </div>
                                   </div>

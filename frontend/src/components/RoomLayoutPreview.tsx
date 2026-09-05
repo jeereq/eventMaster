@@ -470,7 +470,7 @@ export default function RoomLayoutPreview({
       {quality === 'thumb' ? (
         <ThumbPreview blueprint={blueprint} className={className} />
       ) : (
-        <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-[#1a1410]', canvasClass, className)}>
+        <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-foreground', canvasClass, className)}>
           {useWebGL ? (
             <WebGLPreviewCanvas
               webglBlueprint={webglBlueprint}
@@ -485,7 +485,7 @@ export default function RoomLayoutPreview({
           )}
           {!mounted && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-3">
-              <span className="rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm">
+              <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-[10px] font-semibold text-background backdrop-blur-sm">
                 Chargement 3D…
               </span>
             </div>
@@ -494,7 +494,7 @@ export default function RoomLayoutPreview({
             <button
               type="button"
               onClick={() => setExpanded(true)}
-              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 min-h-[44px] text-[11px] font-bold text-white backdrop-blur-sm border border-white/15 active:scale-[0.98] transition"
+              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 rounded-full bg-foreground/80 px-3 py-2 min-h-[44px] text-[11px] font-bold text-background backdrop-blur-sm border border-background/20 active:scale-[0.98] transition"
               aria-label="Agrandir la vue 3D"
             >
               <Maximize2 className="w-4 h-4 shrink-0" />
@@ -518,22 +518,22 @@ export default function RoomLayoutPreview({
 
       {expanded && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[250] flex flex-col bg-[#0c0a09]"
+          className="fixed inset-0 z-[250] flex flex-col bg-foreground"
           role="dialog"
           aria-modal="true"
           aria-label="Vue 3D plein écran"
         >
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-background/15 pt-[max(0.5rem,env(safe-area-inset-top))]">
             <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
-              <p className="text-[10px] text-white/60 tabular-nums">
+              <p className="text-xs font-bold text-background truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
+              <p className="text-[10px] text-background/60 tabular-nums">
                 {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
               </p>
             </div>
             <button
               type="button"
               onClick={() => setExpanded(false)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 min-h-[44px] min-w-[44px] text-[11px] font-bold text-white border border-white/15 shrink-0"
+              className="inline-flex items-center gap-1.5 rounded-full bg-background/10 px-3 py-2 min-h-[44px] min-w-[44px] text-[11px] font-bold text-background border border-background/20 shrink-0"
               aria-label="Réduire la vue 3D"
             >
               <Minimize2 className="w-4 h-4" />
@@ -548,8 +548,8 @@ export default function RoomLayoutPreview({
               className="rounded-none"
             />
           </div>
-          <p className="text-[10px] text-white/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            Glissez pour orbiter · pincez pour zoomer
+          <p className="text-[10px] text-background/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            Glissez ou flèches pour orbiter · pincez ou +/− pour zoomer
           </p>
         </div>,
         document.body,

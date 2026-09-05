@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, Eye, Loader2, Wallet } from 'lucide-react';
+import AdminFinanceDetailsModal, { type AdminPaymentDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -40,6 +41,15 @@ interface PaymentAttemptRow {
   createdAt: string;
   updatedAt: string | null;
   paidAt: string | null;
+  entityId?: string | null;
+  eventTitle?: string | null;
+  eventSlug?: string | null;
+  quantity?: number | null;
+  tokensCount?: number | null;
+  requestedPlan?: string | null;
+  tenantName?: string | null;
+  proofOfPayment?: string | null;
+  rawStatus?: string | null;
 }
 
 interface OverviewBucket {
@@ -174,6 +184,7 @@ export default function AdminPaymentsPage() {
   const [error, setError] = useState('');
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [list, setList] = useState<ListResponse | null>(null);
+  const [selected, setSelected] = useState<AdminPaymentDetail | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -533,36 +544,52 @@ export default function AdminPaymentsPage() {
       ) : (
         <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
           {list.items.map((row) => (
-            <li key={row.id} className="px-4 py-3.5 space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                {statusBadge(row.status)}
-                <Badge variant="default">{row.kindLabel}</Badge>
-                <span className="text-[10px] text-muted">{row.channelLabel}</span>
-                {row.paymentProvider ? (
-                  <span className="text-[10px] text-muted">{row.paymentProvider}</span>
-                ) : null}
-                <span className="text-[10px] text-muted ml-auto">{formatWhen(row.createdAt)}</span>
-              </div>
-              <p className="text-sm font-semibold text-foreground">{row.summary}</p>
-              <p className="text-xs text-muted">
-                <span className={cn('font-semibold text-foreground')}>{formatFc(row.amountFc)}</span>
-                {row.payerName || row.payerEmail ? ` · ${row.payerName || row.payerEmail}` : ''}
-                {row.payerPhone ? ` · ${row.payerPhone}` : ''}
-              </p>
-              <p className="text-[11px] text-muted font-mono truncate">
-                {[
-                  row.reference ? `réf. ${row.reference}` : null,
-                  row.flexPayOrderNumber ? `order ${row.flexPayOrderNumber}` : null,
-                  row.flexPayProviderReference ? `op. ${row.flexPayProviderReference}` : null,
-                  row.paidAt ? `payé ${formatWhen(row.paidAt)}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </p>
+            <li key={row.id}>
+              <button
+                type="button"
+                onClick={() => setSelected(row)}
+                className="w-full text-left px-4 py-3.5 space-y-1.5 hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  {statusBadge(row.status)}
+                  <Badge variant="default">{row.kindLabel}</Badge>
+                  <span className="text-[10px] text-muted">{row.channelLabel}</span>
+                  {row.paymentProvider ? (
+                    <span className="text-[10px] text-muted">{row.paymentProvider}</span>
+                  ) : null}
+                  <span className="text-[10px] text-muted ml-auto">{formatWhen(row.createdAt)}</span>
+                </div>
+                <p className="text-sm font-semibold text-foreground">{row.summary}</p>
+                <p className="text-xs text-muted">
+                  <span className={cn('font-semibold text-foreground')}>{formatFc(row.amountFc)}</span>
+                  {row.payerName || row.payerEmail ? ` · ${row.payerName || row.payerEmail}` : ''}
+                  {row.payerPhone ? ` · ${row.payerPhone}` : ''}
+                </p>
+                <p className="text-[11px] text-muted font-mono truncate">
+                  {[
+                    row.reference ? `réf. ${row.reference}` : null,
+                    row.flexPayOrderNumber ? `order ${row.flexPayOrderNumber}` : null,
+                    row.flexPayProviderReference ? `op. ${row.flexPayProviderReference}` : null,
+                    row.paidAt ? `payé ${formatWhen(row.paidAt)}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                  <Eye className="w-3.5 h-3.5" aria-hidden />
+                  Voir le détail
+                </span>
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      <AdminFinanceDetailsModal
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        payment={selected}
+      />
 
       {(list?.total ?? 0) > 0 && (
         <Pagination

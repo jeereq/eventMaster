@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useMemo, useRef, useCallback, useEffect, forwardRef, useImperativeHandle, memo } from 'react';
+import React, { Suspense, useMemo, useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle, memo } from 'react';
 import { Canvas, ThreeEvent, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows, Environment, Sky, Stars } from '@react-three/drei';
 import * as THREE from 'three';
@@ -1998,12 +1998,14 @@ function SceneContent({
   walkthroughActive = false,
   onWalkthroughProgress,
   onWalkthroughComplete,
+  orbitControlsRef,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
   captureApiRef?: React.MutableRefObject<RoomWebGLCaptureApi | null>;
   presentationMode?: boolean;
   hideLabels?: boolean;
+  orbitControlsRef?: React.Ref<unknown>;
 }) {
   const widthM = blueprint.canvas.widthM;
   const heightM = blueprint.canvas.heightM;
@@ -2454,6 +2456,7 @@ function SceneContent({
       />
 
       <OrbitControls
+        ref={orbitControlsRef as never}
         key={stackView ? `stack-${stories.length}-${focusY.toFixed(1)}` : 'floor'}
         enablePan={!wallEditMode && !lockOrbit && !dragTarget && !presentationMode && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragTarget && !walkthroughActive) || (presentationMode && !walkthroughActive)}
@@ -2511,7 +2514,21 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   );
   const captureApiRef = useRef<RoomWebGLCaptureApi | null>(null);
   const viewerRootRef = useRef<HTMLDivElement | null>(null);
+  const orbitControlsRef = useRef<{
+    getAzimuthalAngle: () => number;
+    setAzimuthalAngle: (v: number) => void;
+    getPolarAngle: () => number;
+    setPolarAngle: (v: number) => void;
+    getDistance: () => number;
+    minDistance: number;
+    maxDistance: number;
+    object: { position: THREE.Vector3; updateProjectionMatrix?: () => void };
+    target: THREE.Vector3;
+    update: () => void;
+  } | null>(null);
+  const [inView, setInView] = useState(true);
   const sceneLabel = useMemo(() => describeRoomScene(blueprint), [blueprint]);
+  const freezeFrames = paused || !inView;
 
   useEffect(() => {
     const node = viewerRootRef.current;
@@ -2522,10 +2539,20 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     node.addEventListener('wheel', stopPageScroll, { passive: true });
     node.addEventListener('touchmove', stopPageScroll, { passive: true });
     node.addEventListener('pointerdown', stopPageScroll);
+    const io = typeof IntersectionObserver === 'undefined'
+      ? null
+      : new IntersectionObserver(
+        ([entry]) => {
+          setInView(Boolean(entry?.isIntersecting && (entry.intersectionRatio ?? 0) > 0.04));
+        },
+        { threshold: [0, 0.04, 0.2] },
+      );
+    io?.observe(node);
     return () => {
       node.removeEventListener('wheel', stopPageScroll);
       node.removeEventListener('touchmove', stopPageScroll);
       node.removeEventListener('pointerdown', stopPageScroll);
+      io?.disconnect();
     };
   }, []);
 
@@ -2537,7 +2564,40 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     <div
       ref={viewerRootRef}
       role="img"
-      aria-label={sceneLabel}
+      tabIndex={0}
+      aria-label={`${sceneLabel}. Flèches pour orbiter, plus et moins pour zoomer.`}
+      onKeyDown={(event) => {
+        const controls = orbitControlsRef.current;
+        if (!controls || orbitLocked) return;
+        const yaw = 0.12;
+        const pitch = 0.08;
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          controls.setAzimuthalAngle(controls.getAzimuthalAngle() + yaw);
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          controls.setAzimuthalAngle(controls.getAzimuthalAngle() - yaw);
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          controls.setPolarAngle(Math.max(0.12, controls.getPolarAngle() - pitch));
+        } else if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          controls.setPolarAngle(Math.min(Math.PI / 2.05, controls.getPolarAngle() + pitch));
+        } else if (event.key === '+' || event.key === '=') {
+          event.preventDefault();
+          const next = Math.max(controls.minDistance, controls.getDistance() * 0.9);
+          const dir = controls.object.position.clone().sub(controls.target).normalize();
+          controls.object.position.copy(controls.target.clone().add(dir.multiplyScalar(next)));
+        } else if (event.key === '-' || event.key === '_') {
+          event.preventDefault();
+          const next = Math.min(controls.maxDistance, controls.getDistance() * 1.1);
+          const dir = controls.object.position.clone().sub(controls.target).normalize();
+          controls.object.position.copy(controls.target.clone().add(dir.multiplyScalar(next)));
+        } else {
+          return;
+        }
+        controls.update();
+      }}
       className={cn(
         'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground touch-none overscroll-none',
         className,
@@ -2546,7 +2606,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       <Canvas
         shadows
         style={{ touchAction: 'none' }}
-        frameloop={paused ? 'never' : 'always'}
+        frameloop={freezeFrames ? 'never' : 'always'}
         dpr={qualitySettings.dpr}
         gl={{
           antialias: true,
@@ -2583,6 +2643,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             walkthroughActive={walkthroughActive}
             onWalkthroughProgress={onWalkthroughProgress}
             onWalkthroughComplete={onWalkthroughComplete}
+            orbitControlsRef={orbitControlsRef}
           />
         </Suspense>
       </Canvas>

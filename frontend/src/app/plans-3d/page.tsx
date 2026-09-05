@@ -158,31 +158,33 @@ export default function Plans3DPage() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <div className="inline-flex items-center rounded-lg border border-border bg-surface-muted p-0.5 text-xs">
+              <div className="inline-flex items-center rounded-lg border border-border bg-surface-muted p-0.5 text-xs" role="group" aria-label="Vue du plan">
                 <button
                   type="button"
                   onClick={() => setForce2d(false)}
+                  aria-pressed={!force2d}
                   className={cn(
-                    'px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1.5',
+                    'px-3 min-h-11 rounded-md font-semibold transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     !force2d
                       ? 'bg-surface text-primary shadow-xs font-bold'
                       : 'text-muted hover:text-foreground',
                   )}
                 >
-                  <Box className="w-3.5 h-3.5" />
+                  <Box className="w-3.5 h-3.5" aria-hidden />
                   <span>Vue 3D</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setForce2d(true)}
+                  aria-pressed={force2d}
                   className={cn(
-                    'px-2.5 py-1 rounded-md font-semibold transition flex items-center gap-1.5',
+                    'px-3 min-h-11 rounded-md font-semibold transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     force2d
                       ? 'bg-surface text-primary shadow-xs font-bold'
                       : 'text-muted hover:text-foreground',
                   )}
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <LayoutGrid className="w-3.5 h-3.5" aria-hidden />
                   <span>Plan 2D</span>
                 </button>
               </div>
@@ -217,7 +219,7 @@ export default function Plans3DPage() {
 
             {/* Barre flottante d'indicateurs de capacité */}
             <div className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 flex items-center justify-between pointer-events-none">
-              <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 text-white text-xs">
+              <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 bg-foreground/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-background/20 text-background text-xs">
                 {stats.seats > 0 && (
                   <span className="flex items-center gap-1 font-semibold tabular-nums">
                     <Users className="w-3.5 h-3.5 text-emerald-400" />
@@ -225,16 +227,16 @@ export default function Plans3DPage() {
                   </span>
                 )}
                 {stats.tables > 0 && (
-                  <span className="hidden sm:flex items-center gap-1 text-white/80 tabular-nums">
+                  <span className="hidden sm:flex items-center gap-1 text-background/80 tabular-nums">
                     <LayoutGrid className="w-3 h-3 text-amber-400" />
                     <span>{stats.tables} tables</span>
                   </span>
                 )}
-                <span className="hidden sm:inline text-white/40">·</span>
-                <span className="text-white/70 text-[11px]">100% dans le navigateur</span>
+                <span className="hidden sm:inline text-background/40">·</span>
+                <span className="text-background/70 text-[11px]">100% dans le navigateur</span>
               </div>
 
-              <div className="pointer-events-auto text-[11px] text-white/80 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 hidden sm:block">
+              <div className="pointer-events-auto text-[11px] text-background/80 bg-foreground/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/15 hidden sm:block">
                 Astuce : Cliquez et glissez pour explorer à 360°
               </div>
             </div>
@@ -261,8 +263,9 @@ export default function Plans3DPage() {
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
+                  aria-pressed={selectedCategory === cat.id}
                   className={cn(
-                    'px-3 py-1 rounded-full text-xs font-semibold transition shrink-0 border focus-visible:outline-none',
+                    'px-3 min-h-11 rounded-full text-xs font-semibold transition shrink-0 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     selectedCategory === cat.id
                       ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                       : 'bg-surface border-border text-muted hover:text-foreground hover:bg-surface-muted',
@@ -281,10 +284,13 @@ export default function Plans3DPage() {
               const isSelected = selectedTemplateId === tpl.id;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={tpl.id}
+                  aria-pressed={isSelected}
                   className={cn(
-                    'group rounded-xl border p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer text-left',
+                    'group rounded-xl border p-4 flex flex-col justify-between transition-all duration-200 text-left w-full',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     isSelected
                       ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
                       : 'border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs',
@@ -319,21 +325,12 @@ export default function Plans3DPage() {
                     <span className="text-[11px] font-semibold text-muted">
                       {tpl.outlineShape === 'circle' ? 'Salle circulaire' : 'Salle rectangulaire'}
                     </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStudioBlueprint(null);
-                        setSelectedTemplateId(tpl.id);
-                        window.scrollTo({ top: 120, behavior: 'smooth' });
-                      }}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                    >
-                      <Eye className="w-3 h-3" />
+                    <span className="text-xs font-semibold text-primary inline-flex items-center gap-1">
+                      <Eye className="w-3 h-3" aria-hidden />
                       <span>Voir en 3D</span>
-                    </button>
+                    </span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
