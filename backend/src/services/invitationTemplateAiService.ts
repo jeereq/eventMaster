@@ -925,12 +925,12 @@ function getNanoBananaModel(): string {
   return (
     process.env.NANO_BANANA_MODEL ||
     process.env.GEMINI_IMAGE_MODEL ||
-    'gemini-3.1-flash-image'
+    'gemini-3-pro-image'
   );
 }
 
 /**
- * Génération et composition d'invitation avec Nano Banana (Google Gemini Image : gemini-3.1-flash-image).
+ * Génération et composition d'invitation avec Nano Banana Pro (Gemini 3 Pro Image : gemini-3-pro-image).
  * Prend en charge la préservation native de l'identité et cohérence de personnage (character consistency)
  * avec jusqu'à 4 photos de référence et un ratio portrait vertical 9:16 pour carte de prestige.
  */
@@ -1104,7 +1104,7 @@ ${imagePrompt}`;
 }
 
 /**
- * 1) Nano Banana (Google Gemini Image 3.1 Flash Image) si GEMINI_API_KEY / NANO_BANANA_API_KEY configurée
+ * 1) Nano Banana Pro (Gemini 3 Pro Image) si GEMINI_API_KEY / NANO_BANANA_API_KEY configurée
  * 2) GPT-5.6 Luna (Responses + image_generation)
  * 3) Images API edits sur la 1re référence
  * 4) Images API generate classique
@@ -1116,7 +1116,7 @@ async function createNewInvitationImage(
   tenantId: string | null | undefined,
   options?: { hasPeople?: boolean; embedText?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
-  // 1) Priorité demandée : Nano Banana (Gemini 3.1 Flash Image)
+  // 1) Priorité demandée : Nano Banana Pro (Gemini 3 Pro Image)
   const nanoKey = getNanoBananaApiKey();
   if (nanoKey) {
     try {
