@@ -25,18 +25,18 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
  <div className="px-3 py-2 border-b border-border flex items-center gap-2 bg-white">
  <History className="w-4 h-4 text-primary" />
  <p className="text-xs font-bold text-foreground uppercase tracking-wider">Journal des actions</p>
- <span className="ml-auto text-[10px] font-bold text-muted">{actions.length}</span>
+ <span className="ml-auto text-xs font-bold text-muted">{actions.length}</span>
  </div>
  <ul className="max-h-48 overflow-y-auto divide-y divide-border">
  {actions.length === 0 ? (
- <li className="px-3 py-4 text-xs text-muted italic text-center">Aucune action enregistrée.</li>
+ <li className="px-3 py-4 text-xs text-muted italic text-center">Aucune action enregistrée — chaque geste sera conservé avec le plan.</li>
  ) : (
  actions.map((a) => (
  <li key={a.id} className="px-3 py-2 flex items-start gap-2 text-[11px]">
  <span className="mt-0.5 shrink-0">{kindIcons[a.kind]}</span>
  <div className="min-w-0 flex-1">
  <p className="text-foreground leading-snug">{a.message}</p>
- <p className="text-[9px] text-muted mt-0.5">
+ <p className="text-xs text-muted mt-0.5">
  {new Date(a.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
  </p>
  </div>

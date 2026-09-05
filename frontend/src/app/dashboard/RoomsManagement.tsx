@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useId, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -55,6 +55,13 @@ import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import { getQuotaLockMessage, getQuotaActionMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
+import {
+  clearRoomLayoutDraft,
+  readRoomLayoutDraft,
+  writeRoomLayoutDraft,
+  WIZARD_DRAFT_KEY,
+} from '@/lib/roomLayoutDraft';
+import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
@@ -312,6 +319,23 @@ export default function RoomsManagement() {
   const [editPane, setEditPane] = useState<'identite' | 'elements'>('identite');
   const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
+  const [wizardDraftSavedAt, setWizardDraftSavedAt] = useState<string | null>(null);
+  const [wizardDraftRestored, setWizardDraftRestored] = useState(false);
+  const [editSaveStatus, setEditSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [editSavedAt, setEditSavedAt] = useState<string | null>(null);
+  const editDirtyRef = useRef(false);
+  const editSessionRef = useRef(0);
+  const editGenRef = useRef(0);
+  const editSnapshotRef = useRef<{
+    room: RoomItem | null;
+    blueprint: RoomLayoutBlueprint | null;
+    meta: { name: string; floor: string; location: string; description: string };
+  }>({ room: null, blueprint: null, meta: { name: '', floor: '', location: '', description: '' } });
+
+  const formatDraftClock = (iso: string | null) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  };
 
   const [assignRoomId, setAssignRoomId] = useState<string | null>(null);
   const [assignUserId, setAssignUserId] = useState('');
@@ -383,8 +407,23 @@ export default function RoomsManagement() {
     setRoomsPage(1);
   }, [roomQuery, filterRoomType, filterVisibility, filterCity, roomsPageSize]);
 
+  const stampLayoutAction = (blueprint: RoomLayoutBlueprint, message: string) => ({
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      layoutActions: prependLayoutAction(
+        sanitizeLayoutActions(blueprint.metadata.layoutActions),
+        message,
+        'template',
+      ),
+    },
+  });
+
   const regenerateBlueprint = () => {
-    setBlueprintDraft((prev) => buildWizardBlueprint(roomType, layoutParams, prev));
+    setBlueprintDraft((prev) => stampLayoutAction(
+      buildWizardBlueprint(roomType, layoutParams, prev),
+      'Plan régénéré depuis les paramètres',
+    ));
   };
 
   const resetWizard = () => {
@@ -401,6 +440,8 @@ export default function RoomsManagement() {
     setConfirmDiscard(false);
     setFarthestStep(1);
     setNameAttempted(false);
+    setWizardDraftRestored(false);
+    setWizardDraftSavedAt(null);
   };
 
   const closeWizard = () => {
@@ -421,16 +462,42 @@ export default function RoomsManagement() {
     closeWizard();
   };
 
+  const startFreshWizard = () => {
+    resetWizard();
+    const initialType = allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE';
+    setBlueprintDraft(buildWizardBlueprint(initialType, defaultParams[initialType], null));
+  };
+
   const openWizard = () => {
     if (roomsAtLimit) {
       setError(getQuotaActionMessage('rooms', planQuota, tenant?.plan));
       return;
     }
-    resetWizard();
-    const initialType = allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE';
-    setBlueprintDraft(buildWizardBlueprint(initialType, defaultParams[initialType], null));
     setError('');
-    setShowWizard(true);
+    void (async () => {
+      const draft = await readRoomLayoutDraft(tenant?.id, WIZARD_DRAFT_KEY);
+      if (draft?.blueprint) {
+        const w = draft.wizard;
+        setName(w?.name ?? '');
+        setDescription(w?.description ?? '');
+        setFloor(w?.floor ?? '');
+        setLocation(w?.location ?? '');
+        if (w?.roomType) setRoomType(w.roomType);
+        if (w?.layoutParams) setLayoutParams(w.layoutParams);
+        setWizardStep(w?.wizardStep && w.wizardStep >= 1 && w.wizardStep <= 3 ? w.wizardStep : 1);
+        setWizardPlanTab(w?.wizardPlanTab ?? 'structure');
+        setFarthestStep(w?.farthestStep ?? w?.wizardStep ?? 1);
+        setNameAttempted(false);
+        setConfirmDiscard(false);
+        setBlueprintDraft(refreshBlueprintMetadata(draft.blueprint));
+        setWizardDraftRestored(true);
+        setWizardDraftSavedAt(draft.savedAt);
+        setShowWizard(true);
+        return;
+      }
+      startFreshWizard();
+      setShowWizard(true);
+    })();
   };
 
   const goToStep = (step: number) => {
@@ -471,6 +538,128 @@ export default function RoomsManagement() {
     load();
   }, []);
 
+  editSnapshotRef.current = { room: editingRoom, blueprint: editBlueprint, meta: editMeta };
+
+  useEffect(() => {
+    if (!showWizard || !blueprintDraft || !tenant?.id) return;
+    const timer = window.setTimeout(() => {
+      void writeRoomLayoutDraft({
+        tenantId: tenant.id,
+        roomKey: WIZARD_DRAFT_KEY,
+        blueprint: blueprintDraft,
+        wizard: {
+          name,
+          description,
+          floor,
+          location,
+          roomType,
+          layoutParams,
+          wizardStep,
+          wizardPlanTab,
+          farthestStep,
+        },
+      }).then((draft) => setWizardDraftSavedAt(draft.savedAt));
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [
+    showWizard,
+    blueprintDraft,
+    name,
+    description,
+    floor,
+    location,
+    roomType,
+    layoutParams,
+    wizardStep,
+    wizardPlanTab,
+    farthestStep,
+    tenant?.id,
+  ]);
+
+  useEffect(() => {
+    if (!editingRoom || !editBlueprint || !tenant?.id || !editDirtyRef.current) return;
+    const roomId = editingRoom.id;
+    const tenantId = tenant.id;
+    const localTimer = window.setTimeout(() => {
+      const snap = editSnapshotRef.current;
+      if (!snap.blueprint || !snap.room) return;
+      void writeRoomLayoutDraft({
+        tenantId,
+        roomKey: roomId,
+        blueprint: snap.blueprint,
+        editMeta: snap.meta,
+        pendingServerSync: true,
+      });
+    }, 350);
+    const serverTimer = window.setTimeout(() => {
+      const snap = editSnapshotRef.current;
+      if (!snap.blueprint || !snap.room || snap.room.id !== roomId) return;
+      const gen = editGenRef.current;
+      setEditSaveStatus('saving');
+      void api.put(`/rooms/${roomId}`, {
+        name: snap.meta.name.trim() || snap.room.name,
+        description: snap.meta.description.trim() || undefined,
+        floor: snap.meta.floor.trim() || undefined,
+        location: snap.meta.location.trim() || undefined,
+        layoutBlueprint: snap.blueprint,
+        roomType: snap.blueprint.roomType,
+      }).then((updated: RoomItem) => {
+        if (editGenRef.current === gen) editDirtyRef.current = false;
+        setEditSaveStatus(editGenRef.current === gen ? 'saved' : 'saving');
+        setEditSavedAt(new Date().toISOString());
+        setRooms((prev) => prev.map((item) => (
+          item.id === roomId
+            ? {
+              ...item,
+              ...updated,
+              venueListing: updated.venueListing ?? item.venueListing,
+              staff: updated.staff ?? item.staff,
+            }
+            : item
+        )));
+        setEditingRoom((current) => (
+          current && current.id === roomId
+            ? {
+              ...current,
+              ...updated,
+              venueListing: updated.venueListing ?? current.venueListing,
+              staff: updated.staff ?? current.staff,
+            }
+            : current
+        ));
+        return writeRoomLayoutDraft({
+          tenantId,
+          roomKey: roomId,
+          blueprint: snap.blueprint!,
+          editMeta: snap.meta,
+          pendingServerSync: false,
+        });
+      }).catch((err: { message?: string }) => {
+        setEditSaveStatus('error');
+        setError(err.message || 'Le dernier changement n’a pas pu être enregistré sur le serveur.');
+      });
+    }, 1400);
+    return () => {
+      window.clearTimeout(localTimer);
+      window.clearTimeout(serverTimer);
+    };
+  }, [editingRoom, editBlueprint, editMeta, tenant?.id]);
+
+  const markEditDirty = () => {
+    editGenRef.current += 1;
+    editDirtyRef.current = true;
+  };
+
+  const closeEditLayout = () => {
+    editSessionRef.current += 1;
+    setEditingRoom(null);
+    setEditBlueprint(null);
+    setEditNameAttempted(false);
+    setEditPane('identite');
+    setEditElementsReady(false);
+    setEditSaveStatus('idle');
+  };
+
   const updateParam = <K extends keyof LayoutParams>(key: K, value: LayoutParams[K]) => {
     setLayoutParams((prev) => ({ ...prev, [key]: value }));
     if (CANVAS_PARAM_KEYS.has(key) && typeof value === 'number' && Number.isFinite(value) && value > 0) {
@@ -504,6 +693,7 @@ export default function RoomsManagement() {
         layoutBlueprint: blueprintDraft ?? undefined,
       });
       setSuccess('Salle créée avec son plan.');
+      await clearRoomLayoutDraft(tenant?.id, WIZARD_DRAFT_KEY);
       closeWizard();
       await load();
       await refreshPlanFeatures();
@@ -519,6 +709,7 @@ export default function RoomsManagement() {
     setError('');
     try {
       await api.delete(`/rooms/${room.id}`);
+      await clearRoomLayoutDraft(tenant?.id, room.id);
       setSuccess(`« ${room.name} » a été supprimée.`);
       setRoomToDelete(null);
       await load();
@@ -549,10 +740,10 @@ export default function RoomsManagement() {
         roomType: editBlueprint.roomType,
       });
       setSuccess('Plan de salle enregistré.');
-      setEditingRoom(null);
-      setEditBlueprint(null);
-      setEditPane('identite');
-      setEditElementsReady(false);
+      await clearRoomLayoutDraft(tenant?.id, editingRoom.id);
+      editDirtyRef.current = false;
+      setEditSaveStatus('saved');
+      closeEditLayout();
       await load();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la sauvegarde du plan.');
@@ -650,11 +841,29 @@ export default function RoomsManagement() {
       location: room.location || '',
       description: room.description || '',
     });
-    setEditBlueprint(
-      bp
-        ? refreshBlueprintMetadata({ ...bp })
-        : refreshBlueprintMetadata(generateRoomBlueprint(room.roomType || 'SIMPLE')),
-    );
+    const serverBlueprint = bp
+      ? refreshBlueprintMetadata({ ...bp })
+      : refreshBlueprintMetadata(generateRoomBlueprint(room.roomType || 'SIMPLE'));
+    setEditBlueprint(serverBlueprint);
+    editDirtyRef.current = false;
+    setEditSaveStatus('idle');
+    setEditSavedAt(null);
+    const session = ++editSessionRef.current;
+    void (async () => {
+      const draft = await readRoomLayoutDraft(tenant?.id, room.id);
+      if (editSessionRef.current !== session) return;
+      if (!draft?.pendingServerSync || !draft.blueprint) return;
+      setEditMeta(draft.editMeta ?? {
+        name: room.name,
+        floor: room.floor || '',
+        location: room.location || '',
+        description: room.description || '',
+      });
+      setEditBlueprint(refreshBlueprintMetadata(draft.blueprint));
+      editDirtyRef.current = true;
+      setEditSaveStatus('error');
+      setEditSavedAt(draft.savedAt);
+    })();
   };
 
   const handleAssignStaff = async (roomId: string) => {
@@ -1047,7 +1256,13 @@ export default function RoomsManagement() {
         size={wizardStep === 3 && wizardPlanTab === 'editeur' ? 'full' : wizardStep === 3 ? 'lg' : 'lg'}
         className={wizardStep === 3 && wizardPlanTab === 'editeur' ? 'h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl' : undefined}
         footer={
-          <div className="flex w-full justify-between gap-2">
+          <div className="flex w-full justify-between gap-2 items-center">
+            <p className="text-xs text-muted min-w-0 truncate" role="status">
+              {wizardDraftSavedAt
+                ? `Brouillon enregistré · ${formatDraftClock(wizardDraftSavedAt)}`
+                : 'Chaque action est enregistrée sur cet appareil.'}
+            </p>
+            <div className="flex gap-2 shrink-0">
             <Button
               type="button"
               variant="secondary"
@@ -1092,6 +1307,7 @@ export default function RoomsManagement() {
                 Créer la salle
               </Button>
             )}
+            </div>
           </div>
         }
       >
@@ -1101,14 +1317,33 @@ export default function RoomsManagement() {
           </Alert>
         )}
         {confirmDiscard && (
-          <Alert variant="warning" title="Fermer sans créer ?" className="mb-4">
-            <p>Le nom, le type et le plan de cette salle ne seront pas enregistrés.</p>
+          <Alert variant="warning" title="Fermer le brouillon ?" className="mb-4">
+            <p>Chaque action reste enregistrée sur cet appareil. Vous pourrez reprendre ce plan à la prochaine création.</p>
             <div className="flex flex-wrap gap-2 mt-3">
               <Button type="button" size="sm" variant="secondary" onClick={() => setConfirmDiscard(false)}>
                 Continuer l’édition
               </Button>
               <Button type="button" size="sm" variant="danger" onClick={closeWizard}>
-                Fermer sans créer
+                Fermer — le brouillon est conservé
+              </Button>
+            </div>
+          </Alert>
+        )}
+        {wizardDraftRestored && showWizard && (
+          <Alert variant="info" title="Brouillon restauré" className="mb-4">
+            <p>Vos dernières actions ont été reprises. Rien n’a été perdu.</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  void clearRoomLayoutDraft(tenant?.id, WIZARD_DRAFT_KEY).then(() => {
+                    startFreshWizard();
+                  });
+                }}
+              >
+                Recommencer à zéro
               </Button>
             </div>
           </Alert>
@@ -1909,14 +2144,24 @@ export default function RoomsManagement() {
 
       <Modal
         open={Boolean(editingRoom && editBlueprint)}
-        onClose={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); setEditPane('identite'); setEditElementsReady(false); }}
+        onClose={closeEditLayout}
         title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan'}
-        description="Identité d’abord, puis les éléments de la salle."
+        description="Identité d’abord, puis les éléments de la salle. Chaque action est enregistrée."
         size={editPane === 'elements' ? 'full' : 'lg'}
         footer={
-          <div className="flex justify-end gap-2 w-full">
-            <Button type="button" variant="secondary" size="sm" onClick={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); setEditPane('identite'); setEditElementsReady(false); }}>
-              Annuler
+          <div className="flex justify-between items-center gap-2 w-full">
+            <p className="text-xs text-muted min-w-0 truncate" role="status">
+              {editSaveStatus === 'saving'
+                ? 'Enregistrement en cours…'
+                : editSaveStatus === 'error'
+                  ? 'Brouillon conservé — nouvel essai automatique.'
+                  : editSavedAt
+                    ? `Enregistré · ${formatDraftClock(editSavedAt)}`
+                    : 'Chaque action est enregistrée automatiquement.'}
+            </p>
+            <div className="flex gap-2 shrink-0">
+            <Button type="button" variant="secondary" size="sm" onClick={closeEditLayout}>
+              Fermer
             </Button>
             <Button
               type="button"
@@ -1928,6 +2173,7 @@ export default function RoomsManagement() {
             >
               Enregistrer la salle
             </Button>
+            </div>
           </div>
         }
       >
@@ -1999,6 +2245,7 @@ export default function RoomsManagement() {
                 value={editMeta.name}
                 error={editNameAttempted && !editMeta.name.trim() ? 'Indiquez le nom de la salle pour enregistrer.' : undefined}
                 onChange={(e) => {
+                  markEditDirty();
                   setEditMeta((m) => ({ ...m, name: e.target.value }));
                   if (e.target.value.trim()) setEditNameAttempted(false);
                 }}
@@ -2007,14 +2254,20 @@ export default function RoomsManagement() {
               <Input
                 label="Étage / Aile"
                 value={editMeta.floor}
-                onChange={(e) => setEditMeta((m) => ({ ...m, floor: e.target.value }))}
+                onChange={(e) => {
+                  markEditDirty();
+                  setEditMeta((m) => ({ ...m, floor: e.target.value }));
+                }}
                 className="text-base sm:text-sm min-h-11"
               />
               <div className="sm:col-span-2">
                 <Input
                   label="Emplacement"
                   value={editMeta.location}
-                  onChange={(e) => setEditMeta((m) => ({ ...m, location: e.target.value }))}
+                  onChange={(e) => {
+                    markEditDirty();
+                    setEditMeta((m) => ({ ...m, location: e.target.value }));
+                  }}
                   className="text-base sm:text-sm min-h-11"
                 />
               </div>
@@ -2025,7 +2278,10 @@ export default function RoomsManagement() {
                 <textarea
                   id={editNotesFieldId}
                   value={editMeta.description}
-                  onChange={(e) => setEditMeta((m) => ({ ...m, description: e.target.value }))}
+                  onChange={(e) => {
+                    markEditDirty();
+                    setEditMeta((m) => ({ ...m, description: e.target.value }));
+                  }}
                   rows={3}
                   className={fieldClass}
                 />
@@ -2053,6 +2309,7 @@ export default function RoomsManagement() {
                     `copy-${source.id}`,
                     source.name,
                   );
+                  markEditDirty();
                   setEditBlueprint(applyRoomAmbiencePreset(editBlueprint, preset));
                 }}
               >
@@ -2067,12 +2324,19 @@ export default function RoomsManagement() {
             {editElementsReady ? (
             <RoomLayoutEditor
               blueprint={editBlueprint}
-              onChange={setEditBlueprint}
+              onChange={(next) => {
+                markEditDirty();
+                setEditBlueprint(next);
+              }}
               allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
               editorLevel={planFeatures?.roomEditorLevel}
               paused={editPane !== 'elements'}
               onRegenerate={() => {
-                setEditBlueprint(refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)));
+                markEditDirty();
+                setEditBlueprint(stampLayoutAction(
+                  refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)),
+                  'Plan régénéré depuis les paramètres',
+                ));
               }}
             />
             ) : null}

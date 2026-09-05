@@ -534,6 +534,8 @@ export interface RoomLayoutBlueprint {
     stackView?: boolean;
     /** Liaisons verticales explicites (escalier / ascenseur). */
     verticalLinks?: import('@/lib/roomBuildingUtils').VerticalLink[];
+    /** Journal des actions d’édition, persisté avec le plan. */
+    layoutActions?: import('@/lib/layoutActionLog').LayoutActionEntry[];
   };
 }
 

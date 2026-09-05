@@ -138,19 +138,14 @@ export default function PromptModelSelector({
           const justCopied = copiedId === model.id;
 
           return (
-            <div
+            <button
               key={model.id}
-              role="button"
-              tabIndex={disabled ? -1 : 0}
+              type="button"
+              disabled={disabled}
+              aria-pressed={isSelected}
               onClick={() => handleSelect(model)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleSelect(model);
-                }
-              }}
               className={cn(
-                'group p-2.5 sm:p-3 rounded-xl border transition-all text-left cursor-pointer touch-manipulation flex flex-col justify-between space-y-2',
+                'group min-h-11 p-2.5 sm:p-3 rounded-xl border transition-all text-left touch-manipulation flex flex-col justify-between space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 isSelected
                   ? 'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40'
                   : 'border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/60',
@@ -198,7 +193,7 @@ export default function PromptModelSelector({
                   )}
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

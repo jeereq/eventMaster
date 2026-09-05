@@ -153,7 +153,7 @@ import {
   type AlignMode,
   type LayoutSelectionItem,
 } from '@/lib/roomSelectionUtils';
-import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
+import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry } from '@/lib/layoutActionLog';
 import { readImageFile } from '@/lib/imageCropUtils';
 import {
   applyRoomTheme,
@@ -338,7 +338,7 @@ export default function RoomLayoutEditor({
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [actionLog, setActionLog] = useState<LayoutActionEntry[]>([]);
+  const actionLog = sanitizeLayoutActions(blueprint.metadata.layoutActions);
   const [cropTarget, setCropTarget] = useState<CropTarget>(null);
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
@@ -405,39 +405,66 @@ export default function RoomLayoutEditor({
     syncHistoryFlags();
   }, [syncHistoryFlags]);
 
-  const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
-    setActionLog((prev) => prependLayoutAction(prev, message, kind));
+  const latestBlueprintRef = useRef(blueprint);
+  latestBlueprintRef.current = blueprint;
+
+  const withLoggedAction = useCallback((
+    next: RoomLayoutBlueprint,
+    action?: { message: string; kind?: LayoutActionEntry['kind'] },
+  ): RoomLayoutBlueprint => {
+    const prepared = ensureBlueprintDefaults(next);
+    if (!action) return prepared;
+    return {
+      ...prepared,
+      metadata: {
+        ...prepared.metadata,
+        layoutActions: prependLayoutAction(
+          sanitizeLayoutActions(latestBlueprintRef.current.metadata.layoutActions),
+          action.message,
+          action.kind ?? 'info',
+        ),
+      },
+    };
   }, []);
+
+  const emitBlueprint = useCallback((next: RoomLayoutBlueprint) => {
+    const prepared = refreshBlueprintMetadata(ensureBlueprintDefaults(next));
+    latestBlueprintRef.current = prepared;
+    onChange(prepared);
+  }, [onChange]);
+
+  const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
+    skipHistoryRef.current = true;
+    emitBlueprint(withLoggedAction(latestBlueprintRef.current, { message, kind }));
+    skipHistoryRef.current = false;
+  }, [emitBlueprint, withLoggedAction]);
 
   const updateBlueprint = (next: RoomLayoutBlueprint, action?: { message: string; kind?: LayoutActionEntry['kind'] }) => {
     if (!skipHistoryRef.current) {
-      pushHistory(blueprint);
+      pushHistory(latestBlueprintRef.current);
     }
-    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
-    if (action) log(action.message, action.kind);
+    emitBlueprint(withLoggedAction(next, action));
   };
 
   const undo = useCallback(() => {
     const prev = pastRef.current.pop();
     if (!prev) return;
-    futureRef.current = [...futureRef.current, structuredClone(blueprint)];
+    futureRef.current = [...futureRef.current, structuredClone(latestBlueprintRef.current)];
     skipHistoryRef.current = true;
-    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(prev)));
+    emitBlueprint(withLoggedAction(prev, { message: 'Annuler (Ctrl+Z)', kind: 'info' }));
     skipHistoryRef.current = false;
     syncHistoryFlags();
-    log('Annuler (Ctrl+Z)', 'info');
-  }, [blueprint, log, onChange, syncHistoryFlags]);
+  }, [emitBlueprint, syncHistoryFlags, withLoggedAction]);
 
   const redo = useCallback(() => {
     const next = futureRef.current.pop();
     if (!next) return;
-    pastRef.current = [...pastRef.current, structuredClone(blueprint)];
+    pastRef.current = [...pastRef.current, structuredClone(latestBlueprintRef.current)];
     skipHistoryRef.current = true;
-    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
+    emitBlueprint(withLoggedAction(next, { message: 'Rétablir (Ctrl+Y)', kind: 'info' }));
     skipHistoryRef.current = false;
     syncHistoryFlags();
-    log('Rétablir (Ctrl+Y)', 'info');
-  }, [blueprint, log, onChange, syncHistoryFlags]);
+  }, [emitBlueprint, syncHistoryFlags, withLoggedAction]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -583,23 +610,21 @@ export default function RoomLayoutEditor({
       if (box) {
         const dx = x - box.x;
         const dy = y - box.y;
-        onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(
-          moveLayoutSelectionByDelta(blueprint, moveSet, dx, dy),
-        )));
+        emitBlueprint(moveLayoutSelectionByDelta(blueprint, moveSet, dx, dy));
       }
     } else if (kind === 'fixture') {
-      onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
+      emitBlueprint({
         ...blueprint,
         fixtures: blueprint.fixtures.map((f) => (f.id === id ? { ...f, x, y } : f)),
-      })));
+      });
     } else {
-      onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
+      emitBlueprint({
         ...blueprint,
         furniture: blueprint.furniture.map((f) => (f.id === id ? { ...f, x, y } : f)),
-      })));
+      });
     }
     skipHistoryRef.current = false;
-  }, [blueprint, caps.canSnapGrid, onChange, pushHistory, readOnly, selection]);
+  }, [blueprint, caps.canSnapGrid, emitBlueprint, pushHistory, readOnly, selection]);
 
   const handleWebGLMoveEnd = useCallback(() => {
     if (dragHistPushedRef.current) {
@@ -1004,15 +1029,11 @@ export default function RoomLayoutEditor({
     const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId);
     const next = applyRoomTemplate(templateId, tplParams, blueprint, { keepStyle: keepTemplateStyle });
     if (!next) return;
-    pushHistory(blueprint);
-    skipHistoryRef.current = true;
-    onChange(next);
-    skipHistoryRef.current = false;
     const seats = next.metadata.totalSeats;
-    log(
-      `Modèle « ${tpl?.name} » généré${seats ? ` — ${seats} places` : ''}`,
-      'template',
-    );
+    updateBlueprint(next, {
+      message: `Modèle « ${tpl?.name} » généré${seats ? ` — ${seats} places` : ''}`,
+      kind: 'template',
+    });
     setSelection([]);
   };
 
@@ -1028,12 +1049,8 @@ export default function RoomLayoutEditor({
   const applyCustomTemplate = (templateId: string) => {
     const next = applySavedRoomTemplate(blueprint, templateId, { keepStyle: keepTemplateStyle });
     if (!next) return;
-    pushHistory(blueprint);
-    skipHistoryRef.current = true;
-    onChange(next);
-    skipHistoryRef.current = false;
     const name = blueprint.metadata.customTemplates?.find((t) => t.id === templateId)?.name ?? 'perso.';
-    log(`Modèle « ${name} » appliqué`, 'template');
+    updateBlueprint(next, { message: `Modèle « ${name} » appliqué`, kind: 'template' });
     setSelection([]);
   };
 
@@ -1577,7 +1594,7 @@ export default function RoomLayoutEditor({
               <button type="button" onClick={rotateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
                 <RotateCw className="w-3.5 h-3.5" aria-hidden /> Tourner 90°
               </button>
-              <button type="button" onClick={deleteSelected} className={cn(EDITOR_TOOL, 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100')}>
+              <button type="button" onClick={deleteSelected} className={cn(EDITOR_TOOL, 'border-border bg-surface-muted text-foreground hover:bg-surface')}>
                 <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer
               </button>
             </div>
@@ -4459,7 +4476,7 @@ export default function RoomLayoutEditor({
         <Redo2 className="w-3.5 h-3.5" aria-hidden /> Rétablir
       </button>
       {onRegenerate && (
-        <button type="button" onClick={() => { onRegenerate(); log('Plan régénéré depuis les paramètres', 'template'); }} className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}>
+        <button type="button" onClick={() => { onRegenerate(); }} className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}>
           <RefreshCw className="w-3.5 h-3.5" aria-hidden /> Régénérer
         </button>
       )}
