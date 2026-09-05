@@ -9,11 +9,19 @@ import {
   parseUtcDayStart,
 } from '../services/aiTokenUsageQuery';
 
-export type AiTokenActionFilter = 'budget_simulation' | 'invitation_compose' | 'recharge';
+export type AiTokenActionFilter = 'budget_simulation' | 'invitation_compose' | 'room_plan_from_photo' | 'recharge';
+
+const ACTION_IDS: AiTokenActionFilter[] = [
+  'budget_simulation',
+  'invitation_compose',
+  'room_plan_from_photo',
+  'recharge',
+];
 
 const ACTION_LABEL: Record<AiTokenActionFilter, string> = {
   budget_simulation: 'Simulation budget',
   invitation_compose: 'Invitation IA',
+  room_plan_from_photo: 'Plan de salle IA',
   recharge: 'Recharge',
 };
 
@@ -34,7 +42,7 @@ const POOL_LABEL: Record<string, string> = {
 
 function parseAction(value: unknown): AiTokenActionFilter | 'all' {
   const raw = String(value || '').trim();
-  if (raw === 'budget_simulation' || raw === 'invitation_compose' || raw === 'recharge') return raw;
+  if (ACTION_IDS.includes(raw as AiTokenActionFilter)) return raw as AiTokenActionFilter;
   return 'all';
 }
 
@@ -86,7 +94,7 @@ function serializeRow(row: {
     tenant: { id: string; name: string } | null;
   } | null;
 }) {
-  const action = (['budget_simulation', 'invitation_compose', 'recharge'].includes(row.action)
+  const action = (ACTION_IDS.includes(row.action as AiTokenActionFilter)
     ? row.action
     : 'budget_simulation') as AiTokenActionFilter;
   return {
@@ -165,7 +173,7 @@ export async function getAdminAiTokenUsage(req: AuthenticatedRequest, res: Respo
     let consumed = 0;
     let credited = 0;
     const byAction = grouped.map((row) => {
-      const action = (['budget_simulation', 'invitation_compose', 'recharge'].includes(row.action)
+      const action = (ACTION_IDS.includes(row.action as AiTokenActionFilter)
         ? row.action
         : 'budget_simulation') as AiTokenActionFilter;
       const delta = row._sum.tokensDelta || 0;

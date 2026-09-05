@@ -13,6 +13,7 @@ describe('resolveLedgerAction', () => {
     assert.equal(resolveLedgerAction(undefined), 'budget_simulation');
     assert.equal(resolveLedgerAction(null), 'budget_simulation');
     assert.equal(resolveLedgerAction('invitation_compose'), 'invitation_compose');
+    assert.equal(resolveLedgerAction('room_plan_from_photo'), 'room_plan_from_photo');
     assert.equal(resolveLedgerAction('recharge'), 'recharge');
   });
 });

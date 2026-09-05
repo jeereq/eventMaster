@@ -6,6 +6,7 @@ import { resolveLedgerAction, type AiTokenAction } from './aiTokenUsageQuery';
 export const AI_FREE_TRIALS_MAX = 4;
 export const AI_SIMULATION_TOKEN_COST = 1;
 export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
+export const AI_ROOM_PLAN_TOKEN_COST = 3;
 
 export type { AiTokenAction };
 export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'unknown';

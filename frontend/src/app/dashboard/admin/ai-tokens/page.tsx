@@ -15,7 +15,7 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import { cn } from '@/lib/cn';
 
-type TokenAction = 'budget_simulation' | 'invitation_compose' | 'recharge';
+type TokenAction = 'budget_simulation' | 'invitation_compose' | 'room_plan_from_photo' | 'recharge';
 
 interface LedgerRow {
   id: string;
@@ -103,7 +103,7 @@ function formatWhen(iso: string): string {
 
 function actionBadge(action: TokenAction, label: string) {
   if (action === 'recharge') return <Badge variant="success">{label}</Badge>;
-  if (action === 'invitation_compose') return <Badge variant="default">{label}</Badge>;
+  if (action === 'invitation_compose' || action === 'room_plan_from_photo') return <Badge variant="default">{label}</Badge>;
   return <Badge variant="warning">{label}</Badge>;
 }
 
@@ -344,6 +344,7 @@ export default function AdminAiTokensPage() {
                   { id: 'all', label: 'Toutes' },
                   { id: 'budget_simulation', label: 'Simulation budget' },
                   { id: 'invitation_compose', label: 'Invitation IA' },
+                  { id: 'room_plan_from_photo', label: 'Plan de salle IA' },
                   { id: 'recharge', label: 'Recharge' },
                 ]}
                 value={action}

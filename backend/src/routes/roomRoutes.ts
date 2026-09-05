@@ -8,6 +8,7 @@ import {
   assignRoomStaff,
   removeRoomStaff,
   previewRoomLayout,
+  analyzeRoomPlanFromPhoto,
 } from '../controllers/roomController';
 import {
   listSavedAmbiences,
@@ -34,6 +35,7 @@ router.post('/ambiences/sync', syncSavedAmbiences);
 router.post('/ambiences', createSavedAmbience);
 router.delete('/ambiences/:ambienceId', deleteSavedAmbience);
 router.post('/preview-layout', previewRoomLayout);
+router.post('/ai/from-photo', analyzeRoomPlanFromPhoto);
 router.post('/', createRoom);
 router.put('/:roomId', updateRoom);
 router.delete('/:roomId', deleteRoom);

@@ -155,6 +155,12 @@ import {
 } from '@/lib/roomSelectionUtils';
 import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry } from '@/lib/layoutActionLog';
 import { readImageFile } from '@/lib/imageCropUtils';
+import { uploadImageFile } from '@/lib/cloudinaryUpload';
+import {
+  AI_ROOM_PLAN_TOKEN_COST,
+  analyzeRoomPlanFromPhoto,
+  applyRoomPlanVisionDraft,
+} from '@/lib/roomPlanAi';
 import {
   applyRoomTheme,
   getRoomTheme,
@@ -340,6 +346,10 @@ export default function RoomLayoutEditor({
   const [isExpanded, setIsExpanded] = useState(false);
   const actionLog = sanitizeLayoutActions(blueprint.metadata.layoutActions);
   const [cropTarget, setCropTarget] = useState<CropTarget>(null);
+  const [aiPlanReading, setAiPlanReading] = useState(false);
+  const [aiPlanError, setAiPlanError] = useState('');
+  const [aiPlanWarnings, setAiPlanWarnings] = useState<string[]>([]);
+  const aiPlanFileRef = useRef<HTMLInputElement>(null);
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
   const [keepThemeFloor, setKeepThemeFloor] = useState(false);
@@ -1141,6 +1151,69 @@ export default function RoomLayoutEditor({
         floorImageFit: 'cover',
       },
     }, { message: 'Plan de salle importé depuis l’image', kind: 'settings' });
+  };
+
+  const resolvePlanImageUrl = async (file: File): Promise<string> => {
+    try {
+      const uploaded = await uploadImageFile(file);
+      if (uploaded?.url) return uploaded.url;
+    } catch {
+      /* data URL en secours si l’upload cloud n’est pas disponible */
+    }
+    return readImageFile(file);
+  };
+
+  const readRoomPlanWithAi = async (file?: File) => {
+    if (readOnly || aiPlanReading) return;
+    setAiPlanError('');
+    setAiPlanWarnings([]);
+    let imageUrl = blueprint.metadata.floorImageUrl;
+    if (file) {
+      imageUrl = await resolvePlanImageUrl(file);
+      updateBlueprint({
+        ...latestBlueprintRef.current,
+        metadata: {
+          ...latestBlueprintRef.current.metadata,
+          floorImageUrl: imageUrl,
+          floorType: 'custom',
+          floorImageFit: 'cover',
+        },
+      }, { message: 'Plan de salle importé depuis l’image', kind: 'settings' });
+    }
+    if (!imageUrl) {
+      setAiPlanError('Importez d’abord une photo ou un scan du plan.');
+      aiPlanFileRef.current?.click();
+      return;
+    }
+    setAiPlanReading(true);
+    try {
+      const result = await analyzeRoomPlanFromPhoto({
+        imageUrl,
+        roomType: latestBlueprintRef.current.roomType,
+        widthM: latestBlueprintRef.current.canvas.widthM,
+        heightM: latestBlueprintRef.current.canvas.heightM,
+      });
+      const applied = applyRoomPlanVisionDraft(latestBlueprintRef.current, result.draft, caps, { imageUrl });
+      updateBlueprint(applied.blueprint, {
+        message: `Plan lu par l’IA (${applied.selection.length} éléments, ${Math.round((result.draft.confidence || 0) * 100)} %)`,
+        kind: 'template',
+      });
+      setSelection(applied.selection);
+      setAiPlanWarnings(applied.warnings);
+      if (applied.selection.length === 0) {
+        log('Aucun objet posé — le plan reste un repère visuel. Placez les tables à la main.', 'info');
+      } else {
+        log('Objets IA sélectionnés — déplacez, tournez ou supprimez avant d’enregistrer.', 'info');
+      }
+    } catch (err) {
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Impossible de lire le plan avec l’IA.';
+      setAiPlanError(message);
+      log(message, 'info');
+    } finally {
+      setAiPlanReading(false);
+    }
   };
 
   const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
@@ -2400,6 +2473,67 @@ export default function RoomLayoutEditor({
                         }}
                       />
                     </label>
+                    <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-3">
+                      <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
+                        Lire le plan avec l’IA
+                      </p>
+                      <p className={EDITOR_HINT}>
+                        L’IA pose uniquement ce qui est visible (tables, rangées, scène, allées). Vérifiez ensuite — {AI_ROOM_PLAN_TOKEN_COST} jetons.
+                      </p>
+                      <input
+                        ref={aiPlanFileRef}
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) await readRoomPlanWithAi(file);
+                          e.target.value = '';
+                        }}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={readOnly || aiPlanReading}
+                          onClick={() => {
+                            if (blueprint.metadata.floorImageUrl) {
+                              void readRoomPlanWithAi();
+                              return;
+                            }
+                            aiPlanFileRef.current?.click();
+                          }}
+                          className={cn(EDITOR_PANEL_BTN, 'bg-primary text-primary-foreground border-primary')}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                          {aiPlanReading
+                            ? 'Lecture en cours…'
+                            : blueprint.metadata.floorImageUrl
+                              ? 'Lire cette image'
+                              : 'Choisir une photo'}
+                        </button>
+                        {blueprint.metadata.floorImageUrl ? (
+                          <button
+                            type="button"
+                            disabled={readOnly || aiPlanReading}
+                            onClick={() => aiPlanFileRef.current?.click()}
+                            className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
+                          >
+                            Autre photo
+                          </button>
+                        ) : null}
+                      </div>
+                      {aiPlanError ? <Alert variant="error">{aiPlanError}</Alert> : null}
+                      {aiPlanWarnings.length > 0 ? (
+                        <Alert variant="warning" title="À vérifier">
+                          <ul className="list-disc pl-4 space-y-1 text-sm">
+                            {aiPlanWarnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        </Alert>
+                      ) : null}
+                    </div>
                     <label className="block text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Texture de sol (mosaïque)
@@ -4673,6 +4807,24 @@ export default function RoomLayoutEditor({
             }}
           />
         </label>
+      ) : null}
+      {caps.canCustomImages ? (
+        <button
+          type="button"
+          disabled={readOnly || aiPlanReading}
+          onClick={() => {
+            if (blueprint.metadata.floorImageUrl) {
+              void readRoomPlanWithAi();
+              return;
+            }
+            aiPlanFileRef.current?.click();
+          }}
+          className={cn(EDITOR_TOOL, aiPlanReading ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title={`Lire le plan visible avec l’IA (${AI_ROOM_PLAN_TOKEN_COST} jetons)`}
+        >
+          <Sparkles className="w-3.5 h-3.5" aria-hidden />
+          {aiPlanReading ? 'Lecture IA…' : 'Lire avec l’IA'}
+        </button>
       ) : null}
       <button type="button" onClick={clearWalls} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Sans murs</button>
       {caps.fixtureKinds.includes('door') ? (
