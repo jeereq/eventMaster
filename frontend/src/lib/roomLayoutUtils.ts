@@ -1,6 +1,6 @@
-import { seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
+import { rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
 
-export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent } from '@/lib/roomAmphitheaterGeom';
+export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
 
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
 export type ChairType =
@@ -45,7 +45,7 @@ export type SeatMaterial =
   | 'rattan';
 export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
-export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts';
+export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts' | 'couvertStyle';
 
 export type RoomOutlineShape =
   | 'rectangle'
@@ -246,6 +246,9 @@ export interface RoomWallOpening {
   /** Paillasson devant la porte. */
   hasMat?: boolean;
   matColor?: string;
+  /** Rideaux (fenêtres). */
+  hasCurtains?: boolean;
+  curtainColor?: string;
 }
 
 export interface RoomWallSegment {
@@ -351,6 +354,10 @@ export interface RoomLayoutBlueprint {
     /** Paillasson d’accueil pour porte / entrée. */
     hasMat?: boolean;
     matColor?: string;
+    /** Essence / finition du vantail (portes fixture). */
+    openingMaterial?: OpeningMaterial;
+    frameColor?: string;
+    couvertStyle?: 'classic' | 'gold' | 'festive';
     /** Style d’allée centrale / tapis d’honneur (Pinterest). */
     aisleStyle?: AisleStyle;
     /** Bordure dorée / satinée sur l’allée. */
@@ -388,6 +395,8 @@ export interface RoomLayoutBlueprint {
         tableImageUrl?: string;
         /** Nappe / couverts sur la table. */
         hasCouverts?: boolean;
+        /** classic | gold | festive */
+        couvertStyle?: 'classic' | 'gold' | 'festive';
         x: number;
         y: number;
         locked?: boolean;
@@ -918,6 +927,7 @@ export function generateAmphitheaterRows(options: {
   centerX?: number;
   startY?: number;
   aisleSplit?: boolean;
+  groupId?: string;
 }): Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> {
   const {
     style = 'modernFan',
@@ -928,6 +938,7 @@ export function generateAmphitheaterRows(options: {
     seatMaterial = 'velvet',
     centerX = 50,
     aisleSplit = true,
+    groupId = makeLayoutId('amphi'),
   } = options;
 
   const focusY = 12;
@@ -974,6 +985,7 @@ export function generateAmphitheaterRows(options: {
       focusY,
       showSeatNumbers: true,
       amphitheaterStyle: style,
+      groupId,
     });
   };
 
@@ -2519,6 +2531,7 @@ export function applyTableStyleToAll(
       tableSurface: fields.includes('tableSurface') ? source.tableSurface : item.tableSurface,
       capacity: fields.includes('capacity') ? source.capacity : item.capacity,
       hasCouverts: fields.includes('hasCouverts') ? source.hasCouverts : item.hasCouverts,
+      couvertStyle: fields.includes('couvertStyle') ? source.couvertStyle : item.couvertStyle,
     };
   });
   return refreshBlueprintMetadata({ ...blueprint, furniture });
@@ -3183,7 +3196,14 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
         y: item.y,
         seats,
         locked: true,
-        rowMeta: { tier: item.tier, curve: item.curve ?? 0 },
+        rowMeta: {
+          tier: item.tier,
+          curve: item.curve ?? 0,
+          rowName: item.rowName || item.label,
+          seatCodes: Array.from({ length: item.seatCount }, (_, i) =>
+            rowSeatCode(item.rowName || item.label, i),
+          ),
+        },
       };
     });
 

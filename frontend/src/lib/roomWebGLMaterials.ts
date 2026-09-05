@@ -855,7 +855,7 @@ export function getDoorMaterialProps(
   return {
     color: color ?? '#6b4423',
     map: wood.map,
-    roughness: 0.55,
+    roughness: 0.52,
     metalness: 0.08,
   };
 }

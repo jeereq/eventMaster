@@ -529,6 +529,30 @@ export default function RoomWallEditorPanel({
                     />
                   </label>
                 </div>
+                {op.kind === 'window' && (
+                  <div className="space-y-1.5 pt-1 border-t border-border/60">
+                    <label className="flex items-center gap-2 text-[9px] text-muted cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={op.hasCurtains === true}
+                        onChange={(e) => updateOpening(selected.id, op.id, { hasCurtains: e.target.checked })}
+                        className="rounded border-border"
+                      />
+                      Rideaux
+                    </label>
+                    {op.hasCurtains && (
+                      <label className="text-[9px] space-y-0.5 block">
+                        <span className="text-muted">Couleur rideaux</span>
+                        <input
+                          type="color"
+                          value={op.curtainColor ?? '#7f1d1d'}
+                          onChange={(e) => updateOpening(selected.id, op.id, { curtainColor: e.target.value })}
+                          className="w-full h-7 rounded border cursor-pointer"
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
                 {op.kind === 'door' && (
                   <div className="space-y-1.5 pt-1 border-t border-border/60">
                     <label className="flex items-center gap-2 text-[9px] text-muted cursor-pointer">
@@ -556,7 +580,7 @@ export default function RoomWallEditorPanel({
                 <p className="text-[9px] text-muted leading-snug">
                   {op.kind === 'door'
                     ? 'Porte : largeur / hauteur / matériau (bois, vitre…) et tapis devant.'
-                    : 'Fenêtre : allège = hauteur du bas ; baie / française / arche pour le style.'}
+                    : 'Fenêtre : allège, style, verre, et rideaux optionnels.'}
                 </p>
               </div>
             ))}

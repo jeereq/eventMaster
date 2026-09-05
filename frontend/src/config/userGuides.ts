@@ -219,7 +219,6 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Facturation & plan', href: '/dashboard/billing' },
-      { label: 'Versements commerciaux', href: '/dashboard/billing/payouts' },
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
@@ -287,12 +286,12 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'org-payouts',
-        title: 'Verser les commissions de vos commerciaux',
+        title: 'Commerciaux de l’organisation',
         content:
-          '1. Virement hors plateforme vers le commercial.\n2. Versements commerciaux → dossier dû.\n3. Preuve + motif (≥ 8 caractères) → Marquer versée.',
+          'Les versements de commissions org. ne sont plus gérés dans EventMaster. Invitez un commercial depuis Équipe pour le parrainage ; ne suivez plus de file de versement ici.',
         links: [
-          { label: 'Versements commerciaux', href: '/dashboard/billing/payouts' },
           { label: 'Équipe', href: '/dashboard/team' },
+          { label: 'Facturation', href: '/dashboard/billing' },
         ],
       },
       {

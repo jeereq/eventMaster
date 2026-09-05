@@ -2,7 +2,7 @@ type AmphitheaterStyle = 'modernFan' | 'romanSemiCircle' | 'tieredSteps' | 'hors
 
 /** Coefficient historique utilisé par le poseur 3D (localZ = factor × t² × k). */
 export const ROW_ARC_Z_K = 0.08;
-export const ROW_SEAT_MAX = 48;
+export const ROW_SEAT_MAX = 60;
 const LEGACY_CURVE_FACTOR_MAX = 1.5;
 
 /**
@@ -68,6 +68,13 @@ export function computeRowSeatPose(
 export function seatsGrownForTier(style: AmphitheaterStyle, baseSeats: number, tierIndex: number): number {
   const grow = style === 'romanSemiCircle' ? 3 : style === 'tieredSteps' ? 0 : 2;
   return baseSeats + tierIndex * grow;
+}
+
+export function rowSeatCode(rowName: string | undefined | null, index: number): string {
+  const raw = String(rowName || 'A').trim();
+  const token = raw.replace(/^rang(ée)?\s+/i, '').split(/\s+/)[0] || 'A';
+  const prefix = token.slice(0, 4).toUpperCase();
+  return `${prefix}${index + 1}`;
 }
 
 export function estimateAmphitheaterSeats(

@@ -7,7 +7,8 @@ import {
   resolveChandelierType,
   type ChandelierType,
 } from '@/lib/roomCeilingUtils';
-import type { DoorStyle, AisleStyle, ChandelierFixtureStyle } from '@/lib/roomLayoutUtils';
+import type { DoorStyle, AisleStyle, ChandelierFixtureStyle, OpeningMaterial } from '@/lib/roomLayoutUtils';
+import { getDoorMaterialProps } from '@/lib/roomWebGLMaterials';
 
 function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
   return (
@@ -442,6 +443,8 @@ export function CatalogueDoor({
   hasMat = true,
   matColor,
   color,
+  openingMaterial,
+  frameColor,
   selected = false,
 }: {
   w: number;
@@ -452,8 +455,16 @@ export function CatalogueDoor({
   hasMat?: boolean;
   matColor?: string;
   color?: string;
+  openingMaterial?: OpeningMaterial;
+  frameColor?: string;
   selected?: boolean;
 }) {
+  const doorMat = useMemo(
+    () => getDoorMaterialProps(openingMaterial, color),
+    [openingMaterial, color],
+  );
+  const leafColor = selected ? '#c7d2fe' : (color ?? doorMat.color);
+  const jambColor = frameColor ?? leafColor;
   const frameThickness = 0.08;
   const doorThick = 0.045;
   const frameW = Math.max(0.9, w);
@@ -478,26 +489,29 @@ export function CatalogueDoor({
         <mesh position={[-frameW / 2 + frameThickness / 2, 0, 0]} castShadow receiveShadow>
           <boxGeometry args={[frameThickness, frameH, frameThickness * 1.5]} />
           <meshStandardMaterial
-            color={selected ? '#c7d2fe' : color ?? (style === 'barnDoor' ? '#3e2723' : '#ffffff')}
-            roughness={0.4}
-            metalness={style === 'grandPortal' ? 0.3 : 0.05}
+            color={selected ? '#c7d2fe' : jambColor}
+            map={doorMat.map}
+            roughness={doorMat.roughness}
+            metalness={doorMat.metalness}
           />
         </mesh>
         {/* Montant droit */}
         <mesh position={[frameW / 2 - frameThickness / 2, 0, 0]} castShadow receiveShadow>
           <boxGeometry args={[frameThickness, frameH, frameThickness * 1.5]} />
           <meshStandardMaterial
-            color={selected ? '#c7d2fe' : color ?? (style === 'barnDoor' ? '#3e2723' : '#ffffff')}
-            roughness={0.4}
-            metalness={style === 'grandPortal' ? 0.3 : 0.05}
+            color={selected ? '#c7d2fe' : jambColor}
+            map={doorMat.map}
+            roughness={doorMat.roughness}
+            metalness={doorMat.metalness}
           />
         </mesh>
         {/* Linteau haut */}
         <mesh position={[0, frameH / 2 - frameThickness / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[frameW, frameThickness, frameThickness * 1.5]} />
           <meshStandardMaterial
-            color={selected ? '#c7d2fe' : color ?? (style === 'barnDoor' ? '#3e2723' : '#ffffff')}
-            roughness={0.4}
+            color={selected ? '#c7d2fe' : jambColor}
+            map={doorMat.map}
+            roughness={doorMat.roughness}
           />
         </mesh>
 
@@ -743,6 +757,8 @@ export function CatalogueChandelierFixture({
                         transparent
                         roughness={0.05}
                         metalness={0.1}
+                        emissive={lightColor}
+                        emissiveIntensity={0.18 * Math.max(0.4, lightIntensity)}
                       />
                     </mesh>
                   );
@@ -949,8 +965,8 @@ export function CatalogueAisle({
                             ? '#18181b'
                             : '#881337'
           }
-          roughness={isMirror ? 0.08 : isLed ? 0.2 : 0.85}
-          metalness={isMirror ? 0.75 : isDamask ? 0.35 : 0.05}
+          roughness={isMirror ? 0.08 : isLed ? 0.2 : isWood ? 0.62 : 0.94}
+          metalness={isMirror ? 0.75 : isDamask ? 0.35 : 0.04}
         />
       </mesh>
 

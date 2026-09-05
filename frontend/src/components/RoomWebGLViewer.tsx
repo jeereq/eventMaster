@@ -21,6 +21,7 @@ import {
   type DoorStyle,
   type AisleStyle,
   type ChandelierFixtureStyle,
+  type OpeningMaterial,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
@@ -967,8 +968,32 @@ function OpeningMesh({
           )}
           <mesh castShadow>
             <boxGeometry args={[w * 0.88, (arch ? leafH : h) * 0.88, 0.035]} />
-            <meshStandardMaterial {...glassProps} />
+            <meshPhysicalMaterial
+              color={leafColor}
+              transparent
+              opacity={0.38}
+              roughness={0.04}
+              metalness={0.12}
+              transmission={0.72}
+            />
           </mesh>
+          {opening.hasCurtains && (
+            <>
+              {([-1, 1] as const).map((side) => (
+                <mesh
+                  key={side}
+                  position={[side * w * 0.28, 0, leafZ + 0.05]}
+                  castShadow
+                >
+                  <boxGeometry args={[w * 0.34, (arch ? leafH : h) * 0.92, 0.03]} />
+                  <meshStandardMaterial
+                    color={opening.curtainColor ?? '#7f1d1d'}
+                    roughness={0.88}
+                  />
+                </mesh>
+              ))}
+            </>
+          )}
           {arch && (
             <mesh position={[0, -h / 2 + leafH + archR * 0.3, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
               <cylinderGeometry args={[archR * 0.92, archR * 0.92, 0.04, 18, 1, false, 0, Math.PI]} />
@@ -1137,6 +1162,46 @@ function RealisticChair(props: {
   return <CatalogueChair {...props} />;
 }
 
+function PlaceSetting({
+  style = 'classic',
+  position,
+  rotationY,
+}: {
+  style?: 'classic' | 'gold' | 'festive';
+  position: [number, number, number];
+  rotationY: number;
+}) {
+  const plate = style === 'gold' ? '#f3e6c4' : style === 'festive' ? '#f8e7ee' : '#f8fafc';
+  const rim = style === 'gold' ? '#c4a35a' : style === 'festive' ? '#be185d' : '#e2e8f0';
+  const metal = style === 'gold' ? '#d4af37' : '#cbd5e1';
+  const glass = style === 'festive' ? '#fda4af' : '#f1f5f9';
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <mesh>
+        <cylinderGeometry args={[0.068, 0.074, 0.012, 22]} />
+        <meshStandardMaterial color={plate} metalness={style === 'gold' ? 0.45 : 0.22} roughness={style === 'gold' ? 0.18 : 0.28} />
+      </mesh>
+      <mesh position={[0, 0.008, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.004, 20]} />
+        <meshStandardMaterial color={rim} metalness={style === 'gold' ? 0.7 : 0.15} roughness={0.28} />
+      </mesh>
+      <mesh position={[0.09, 0.012, 0.01]} rotation={[0, 0, 0.18]}>
+        <boxGeometry args={[0.12, 0.004, 0.011]} />
+        <meshStandardMaterial color={metal} metalness={0.88} roughness={0.14} />
+      </mesh>
+      <mesh position={[-0.09, 0.012, -0.01]} rotation={[0, 0, -0.16]}>
+        <boxGeometry args={[0.11, 0.004, 0.013]} />
+        <meshStandardMaterial color={metal} metalness={0.82} roughness={0.18} />
+      </mesh>
+      <mesh position={[0.015, 0.024, 0.08]}>
+        <cylinderGeometry args={[0.018, 0.014, 0.042, 12]} />
+        <meshPhysicalMaterial color={glass} transparent opacity={0.5} roughness={0.04} metalness={0.2} transmission={0.55} />
+      </mesh>
+    </group>
+  );
+}
+
 function TableMesh({
   xPct,
   yPct,
@@ -1151,6 +1216,7 @@ function TableMesh({
   tableImageUrl,
   tableSurface,
   hasCouverts = false,
+  couvertStyle = 'classic',
   attachedChairs = true,
   rotation,
   elevationM = 0,
@@ -1175,6 +1241,7 @@ function TableMesh({
   tableImageUrl?: string;
   tableSurface?: import('@/lib/roomLayoutUtils').TableSurfaceStyle;
   hasCouverts?: boolean;
+  couvertStyle?: 'classic' | 'gold' | 'festive';
   attachedChairs?: boolean;
   rotation?: number;
   elevationM?: number;
@@ -1225,33 +1292,16 @@ function TableMesh({
         mat={mat}
         selected={selected}
       />
-      {/* Couverts / assiettes */}
       {hasCouverts && Array.from({ length: Math.min(capacity, 10) }).map((_, i) => {
         const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
         const r = Math.max(size[0], size[1]) * 0.28;
         return (
-          <group key={`c-${i}`} position={[Math.cos(a) * r, topY + 0.055, Math.sin(a) * r]} rotation={[0, -a, 0]}>
-            <mesh>
-              <cylinderGeometry args={[0.065, 0.07, 0.012, 20]} />
-              <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.25} />
-            </mesh>
-            <mesh position={[0, 0.01, 0]}>
-              <cylinderGeometry args={[0.035, 0.035, 0.008, 16]} />
-              <meshStandardMaterial color="#e2e8f0" metalness={0.15} roughness={0.3} />
-            </mesh>
-            <mesh position={[0.09, 0.012, 0]} rotation={[0, 0, 0.15]}>
-              <boxGeometry args={[0.11, 0.004, 0.012]} />
-              <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.15} />
-            </mesh>
-            <mesh position={[-0.09, 0.012, 0]} rotation={[0, 0, -0.15]}>
-              <boxGeometry args={[0.1, 0.004, 0.014]} />
-              <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
-            </mesh>
-            <mesh position={[0.02, 0.02, 0.08]}>
-              <cylinderGeometry args={[0.018, 0.015, 0.04, 10]} />
-              <meshStandardMaterial color="#f1f5f9" transparent opacity={0.55} roughness={0.05} metalness={0.3} />
-            </mesh>
-          </group>
+          <PlaceSetting
+            key={`c-${i}`}
+            style={couvertStyle}
+            position={[Math.cos(a) * r, topY + 0.055, Math.sin(a) * r]}
+            rotationY={-a}
+          />
         );
       })}
       {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
@@ -1496,6 +1546,8 @@ function FixtureMesh({
   doorSwing,
   hasMat,
   matColor,
+  openingMaterial,
+  frameColor,
   aisleStyle,
   hasGoldBorder,
   hasSideLanterns,
@@ -1533,6 +1585,8 @@ function FixtureMesh({
   doorSwing?: 'left' | 'right' | 'double' | 'sliding' | 'arch';
   hasMat?: boolean;
   matColor?: string;
+  openingMaterial?: OpeningMaterial;
+  frameColor?: string;
   aisleStyle?: AisleStyle;
   hasGoldBorder?: boolean;
   hasSideLanterns?: boolean;
@@ -1683,6 +1737,8 @@ function FixtureMesh({
           hasMat={hasMat ?? true}
           matColor={matColor}
           color={baseColor}
+          openingMaterial={openingMaterial}
+          frameColor={frameColor}
           selected={selected}
         />
       ) : kind === 'chandelier' ? (
@@ -2019,6 +2075,8 @@ function SceneContent({
             doorSwing={f.doorSwing}
             hasMat={f.hasMat}
             matColor={f.matColor}
+            openingMaterial={f.openingMaterial}
+            frameColor={f.frameColor}
             aisleStyle={f.aisleStyle}
             hasGoldBorder={f.hasGoldBorder}
             hasSideLanterns={f.hasSideLanterns}
@@ -2156,6 +2214,8 @@ function SceneContent({
                     castShadow={qualitySettings.rowChairShadows}
                     aisleSplit={item.aisleSplit === true}
                     aisleWidthPct={item.aisleWidthPct}
+                    showSeatNumbers={item.showSeatNumbers !== false}
+                    rowName={item.rowName || item.label}
                   />
                 );
               })()}
@@ -2186,6 +2246,7 @@ function SceneContent({
             tableImageUrl={item.tableImageUrl}
             tableSurface={item.tableSurface ?? blueprint.metadata.defaultTableSurface}
             hasCouverts={item.hasCouverts}
+            couvertStyle={item.couvertStyle}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}
             elevationM={surface?.elevationM ?? 0}

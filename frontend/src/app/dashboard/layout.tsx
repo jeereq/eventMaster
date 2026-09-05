@@ -129,7 +129,6 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Statistiques: 'RSVP, check-in, tâches et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
- 'Versements commerciaux': 'Commissions de vos commerciaux org., hors plateforme',
  Notifications: 'Alertes tâches, devis, factures et réservations',
  'Journal d’audit': 'Actions Super Admin et Commercial',
  Catalogue: 'Fiches, demandes et réservations publiques',
@@ -308,9 +307,6 @@ function buildDashboardNav(opts: {
  const billingItems: NavItem[] = [
   ...(access?.canViewBilling
    ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
-   : []),
-  ...(access?.canViewBilling && commercialNetwork
-   ? [{ name: 'Versements commerciaux', href: '/dashboard/billing/payouts', tourId: 'nav-org-payouts', icon: Wallet }]
    : []),
   ...(access?.canViewInvoices
    ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]

@@ -82,7 +82,6 @@ export function buildOrgNavTourIds(
   if (workspace?.showAnalytics) tabs.push({ tourId: 'nav-analytics-org' });
   if (workspace?.showTemplates) tabs.push({ tourId: 'nav-templates', route: '/dashboard/templates' });
   if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
-  if (access?.canViewBilling) tabs.push({ tourId: 'nav-org-payouts' });
   if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
   tabs.push({ tourId: 'nav-guide' }, { tourId: 'nav-profile' });
   return tabs;

@@ -97,6 +97,8 @@ import {
   type AisleStyle,
   type ChandelierFixtureStyle,
   type AmphitheaterStyle,
+  type OpeningMaterial,
+  openingMaterialLabels,
 } from '@/lib/roomLayoutUtils';
 import {
   copyAmbienceShareLink,
@@ -656,6 +658,40 @@ export default function RoomLayoutEditor({
     setSelection([{ kind: 'table', id: copy.id }]);
   };
 
+  const duplicateSelectedFixture = () => {
+    if (!selectedFixture) return;
+    const copy = {
+      ...createBlueprintFixture(selectedFixture.kind),
+      ...selectedFixture,
+      id: createBlueprintFixture(selectedFixture.kind).id,
+      x: Math.min(90, selectedFixture.x + 5),
+      y: Math.min(90, selectedFixture.y + 5),
+      label: selectedFixture.label ? `${selectedFixture.label} (copie)` : selectedFixture.label,
+    };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, copy] },
+      { message: `${copy.label || copy.kind} dupliqué`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: copy.id }]);
+  };
+
+  const duplicateSelectedChair = () => {
+    const item = blueprint.furniture.find((f) => f.kind === 'chair' && f.id === selected?.id);
+    if (!item || item.kind !== 'chair') return;
+    const copy = {
+      ...item,
+      id: createBlueprintChair(1, { chairType: item.chairType }).id,
+      x: Math.min(90, item.x + 4),
+      y: Math.min(90, item.y + 4),
+      label: item.label ? `${item.label} (copie)` : item.label,
+    };
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, copy] },
+      { message: 'Siège dupliqué', kind: 'add' },
+    );
+    setSelection([{ kind: 'chair', id: copy.id }]);
+  };
+
   const addRow = () => {
     if (!caps.canAddRows) {
       log('Les rangées ne sont pas incluses dans votre forfait', 'info');
@@ -761,6 +797,7 @@ export default function RoomLayoutEditor({
 
   const addAmphitheaterQuick = () => {
     const activeStoryId = resolveActiveStoryId(blueprint);
+    const groupId = `amphi_${Date.now().toString(36)}`;
     const rows = generateAmphitheaterRows({
       style: amphiStyle,
       tierCount: amphiTiers,
@@ -769,6 +806,7 @@ export default function RoomLayoutEditor({
       chairStyle: amphiChairStyle,
       seatMaterial: amphiSeatMaterial,
       aisleSplit: amphiAisleSplit,
+      groupId,
     }).map((r) => ({ ...r, storyId: activeStoryId }));
 
     const hasStage = blueprint.fixtures.some((f) => f.kind === 'stage' || f.kind === 'podium');
@@ -782,6 +820,7 @@ export default function RoomLayoutEditor({
           h: 10,
           label: 'Scène',
           storyId: activeStoryId,
+          groupId,
         }];
 
     updateBlueprint(
@@ -3005,6 +3044,30 @@ export default function RoomLayoutEditor({
                   </label>
                 </div>
 
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-foreground">Finition vantail</span>
+                    <select
+                      value={selectedFixture.openingMaterial ?? 'wood'}
+                      onChange={(e) => updateFixture(selectedFixture.id, { openingMaterial: e.target.value as OpeningMaterial }, 'Finition porte')}
+                      className={EDITOR_FIELD}
+                    >
+                      {(Object.keys(openingMaterialLabels) as OpeningMaterial[]).map((mat) => (
+                        <option key={mat} value={mat}>{openingMaterialLabels[mat]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-semibold text-foreground">Couleur huisserie</span>
+                    <input
+                      type="color"
+                      value={selectedFixture.frameColor ?? '#3f2a1a'}
+                      onChange={(e) => updateFixture(selectedFixture.id, { frameColor: e.target.value })}
+                      className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
+                    />
+                  </label>
+                </div>
+
                 <div className="flex items-center justify-between gap-2 p-2 rounded bg-surface border border-border">
                   <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
@@ -3500,6 +3563,23 @@ export default function RoomLayoutEditor({
               </>
             )}
 
+            <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={duplicateSelectedFixture}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                <Copy className="w-3 h-3" /> Dupliquer
+              </button>
+              <button
+                type="button"
+                onClick={() => updateFixture(selectedFixture.id, { rotation: ((selectedFixture.rotation ?? 0) + 90) % 360 }, 'Rotation +90°')}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                Tourner 90°
+              </button>
+            </div>
+
             {canHaveImage && (
               <div className="space-y-2 pt-2 border-t border-border">
                 <p className="text-xs font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image personnalisée</p>
@@ -3588,6 +3668,20 @@ export default function RoomLayoutEditor({
               />
               Afficher assiettes & couverts
             </label>
+            {selectedFurniture.hasCouverts === true && (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Style de service</span>
+                <select
+                  value={selectedFurniture.couvertStyle ?? 'classic'}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { couvertStyle: e.target.value as 'classic' | 'gold' | 'festive' }, 'Style couverts')}
+                  className={EDITOR_FIELD}
+                >
+                  <option value="classic">Porcelaine classique</option>
+                  <option value="gold">Or & liseré</option>
+                  <option value="festive">Festif (verre teinté)</option>
+                </select>
+              </label>
+            )}
             {(() => {
               const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
               if (!surface) {
@@ -3727,6 +3821,13 @@ export default function RoomLayoutEditor({
                   className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Places
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['hasCouverts', 'couvertStyle']), { message: 'Couverts appliqués à toutes les tables', kind: 'edit' })}
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
+                >
+                  Couverts
                 </button>
               </div>
             </div>
@@ -4035,6 +4136,22 @@ export default function RoomLayoutEditor({
               </label>
             ) : null}
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={duplicateSelectedChair}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                <Copy className="w-3 h-3" /> Dupliquer
+              </button>
+              <button
+                type="button"
+                onClick={() => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + 90) % 360 }, 'Rotation +90°')}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                Tourner 90°
+              </button>
+            </div>
             {(() => {
               const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
               if (!surface) {

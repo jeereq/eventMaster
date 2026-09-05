@@ -2,11 +2,12 @@
 
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { Html } from '@react-three/drei';
 import type { ChairType, ChairStyle, SeatMaterial } from '@/lib/roomLayoutUtils';
 import { resolveChairVisual } from '@/lib/roomWebGLMaterials';
 import { CatalogueChair } from '@/components/CatalogueFurnitureMeshes';
 import type { RenderQualitySettings } from '@/lib/roomRenderQuality';
-import { computeRowSeatPose } from '@/lib/roomAmphitheaterGeom';
+import { computeRowSeatPose, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
 
 type Lod = RenderQualitySettings['rowChairLod'];
 
@@ -26,6 +27,8 @@ export function RowSeatsLOD({
   castShadow,
   aisleSplit,
   aisleWidthPct,
+  showSeatNumbers,
+  rowName,
 }: {
   count: number;
   spacing: number;
@@ -42,6 +45,8 @@ export function RowSeatsLOD({
   castShadow: boolean;
   aisleSplit?: boolean;
   aisleWidthPct?: number;
+  showSeatNumbers?: boolean;
+  rowName?: string;
 }) {
   const visual = useMemo(
     () => resolveChairVisual(chairType, chairStyle, seatMaterial),
@@ -76,9 +81,28 @@ export function RowSeatsLOD({
     if (backRef.current) backRef.current.instanceMatrix.needsUpdate = true;
   }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct]);
 
+  const numbers = showSeatNumbers
+    ? Array.from({ length: count }).map((_, i) => {
+        const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+        return (
+          <Html
+            key={`n-${i}`}
+            center
+            distanceFactor={8}
+            style={{ pointerEvents: 'none' }}
+            position={[p.localX, p.y + 0.94, p.localZ]}
+          >
+            <span className="block min-w-[1.25rem] rounded bg-stone-900/80 px-1 py-px text-center text-[8px] font-semibold tabular-nums text-amber-100 shadow-sm">
+              {rowSeatCode(rowName, i)}
+            </span>
+          </Html>
+        );
+      })
+    : null;
+
   if (lod === 'full') {
     return (
-      <>
+      <group>
         {Array.from({ length: count }).map((_, i) => {
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           return (
@@ -94,13 +118,14 @@ export function RowSeatsLOD({
             />
           );
         })}
-      </>
+        {numbers}
+      </group>
     );
   }
 
   if (lod === 'simple') {
     return (
-      <>
+      <group>
         {Array.from({ length: count }).map((_, i) => {
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           return (
@@ -122,11 +147,11 @@ export function RowSeatsLOD({
             </group>
           );
         })}
-      </>
+        {numbers}
+      </group>
     );
   }
 
-  // instanced
   return (
     <group>
       <instancedMesh ref={seatRef} args={[undefined, undefined, count]} castShadow={castShadow}>
@@ -137,6 +162,7 @@ export function RowSeatsLOD({
         <boxGeometry args={[0.38, 0.4, 0.06]} />
         <meshStandardMaterial color={color} roughness={0.85} />
       </instancedMesh>
+      {numbers}
     </group>
   );
 }
