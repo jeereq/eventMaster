@@ -447,6 +447,9 @@ export function applyStyleToSelection(
         ...(patch.material !== undefined ? { material: patch.material } : {}),
       };
     }
+    if (f.kind === 'chair' && patch.locked !== undefined) {
+      return { ...f, locked: patch.locked };
+    }
     return f;
   });
   const fixtures = blueprint.fixtures.map((f) => {

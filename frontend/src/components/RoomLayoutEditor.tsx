@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -44,6 +44,8 @@ import {
   parseAmbienceImport,
   recordAmbienceHistory,
   applyTableStyleToAll,
+  applyFixtureStyleToSameKind,
+  fixtureStyleFamilyLabel,
   captureRoomAmbienceFromBlueprint,
   autoArrangeTables,
   arrangeDensityLabels,
@@ -138,10 +140,13 @@ import {
 import {
   alignLayoutSelection,
   alignModeLabels,
+  duplicateLayoutSelection,
   expandSelectionWithGroups,
+  flipLayoutSelection,
   getSelectionBounds,
   groupLayoutSelection,
   moveLayoutSelectionByDelta,
+  rotateLayoutSelection,
   selectionKey,
   toggleSelectionItem,
   ungroupLayoutSelection,
@@ -513,6 +518,51 @@ export default function RoomLayoutEditor({
     });
   }, [blueprint, readOnly, selection]);
 
+  const duplicateSelection = useCallback(() => {
+    if (readOnly || selection.length === 0) return;
+    if (!caps.canDuplicate) {
+      log('La duplication n’est pas incluse dans votre forfait', 'info');
+      return;
+    }
+    const tablesToAdd = selection.filter((s) => s.kind === 'table').length;
+    const rowsToAdd = selection.filter((s) => s.kind === 'row').length;
+    const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
+    const rowCount = blueprint.furniture.filter((f) => f.kind === 'row').length;
+    if (tablesToAdd && tableCount + tablesToAdd > caps.maxTables) {
+      log(`Limite de ${caps.maxTables} tables atteinte (${caps.label})`, 'info');
+      return;
+    }
+    if (rowsToAdd && rowCount + rowsToAdd > caps.maxRows) {
+      log(`Limite de ${caps.maxRows} rangées atteinte (${caps.label})`, 'info');
+      return;
+    }
+    const result = duplicateLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection));
+    if (result.selection.length === 0) return;
+    updateBlueprint(result.blueprint, {
+      message: result.selection.length > 1
+        ? `${result.selection.length} éléments dupliqués`
+        : 'Élément dupliqué',
+      kind: 'add',
+    });
+    setSelection(result.selection);
+  }, [blueprint, caps.canDuplicate, caps.label, caps.maxRows, caps.maxTables, log, readOnly, selection]);
+
+  const rotateSelection = useCallback(() => {
+    if (readOnly || selection.length === 0) return;
+    updateBlueprint(rotateLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection)), {
+      message: 'Sélection tournée de 90°',
+      kind: 'edit',
+    });
+  }, [blueprint, readOnly, selection]);
+
+  const flipSelection = useCallback((axis: 'horizontal' | 'vertical') => {
+    if (readOnly || selection.length === 0) return;
+    updateBlueprint(flipLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection), axis), {
+      message: axis === 'horizontal' ? 'Sélection miroir horizontal' : 'Sélection miroir vertical',
+      kind: 'edit',
+    });
+  }, [blueprint, readOnly, selection]);
+
   const handleWebGLMove = useCallback((kind: SelectableKind, id: string, xPct: number, yPct: number) => {
     if (readOnly) return;
     if (!dragHistPushedRef.current) {
@@ -595,6 +645,11 @@ export default function RoomLayoutEditor({
         return;
       }
       if (!mod) return;
+      if (key === 'd') {
+        e.preventDefault();
+        duplicateSelection();
+        return;
+      }
       if (key === 'g' && !e.shiftKey && selection.length >= 2) {
         e.preventDefault();
         groupSelection();
@@ -614,7 +669,7 @@ export default function RoomLayoutEditor({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, selection, blueprint.furniture, blueprint.fixtures, groupSelection, ungroupSelection]);
+  }, [readOnly, selection, blueprint.furniture, blueprint.fixtures, groupSelection, ungroupSelection, duplicateSelection]);
 
   const addTable = () => {
     const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
@@ -633,64 +688,9 @@ export default function RoomLayoutEditor({
     setSelection([{ kind: 'table', id: table.id }]);
   };
 
-  const duplicateSelectedTable = () => {
-    if (!caps.canDuplicate) {
-      log('La duplication n’est pas incluse dans votre forfait', 'info');
-      return;
-    }
-    const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
-    if (tableCount >= caps.maxTables) {
-      log(`Limite de ${caps.maxTables} tables atteinte (${caps.label})`, 'info');
-      return;
-    }
-    const item = blueprint.furniture.find((f) => f.kind === 'table' && f.id === selected?.id);
-    if (!item || item.kind !== 'table') return;
-    const count = blueprint.furniture.filter((f) => f.kind === 'table').length + 1;
-    const copy = {
-      ...item,
-      id: createBlueprintTable(count).id,
-      name: `${item.name} (copie)`,
-      x: Math.min(90, item.x + 6),
-      y: Math.min(90, item.y + 6),
-      locked: false,
-    };
-    updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, copy] }, { message: `Table « ${copy.name} » dupliquée`, kind: 'add' });
-    setSelection([{ kind: 'table', id: copy.id }]);
-  };
-
-  const duplicateSelectedFixture = () => {
-    if (!selectedFixture) return;
-    const copy = {
-      ...createBlueprintFixture(selectedFixture.kind),
-      ...selectedFixture,
-      id: createBlueprintFixture(selectedFixture.kind).id,
-      x: Math.min(90, selectedFixture.x + 5),
-      y: Math.min(90, selectedFixture.y + 5),
-      label: selectedFixture.label ? `${selectedFixture.label} (copie)` : selectedFixture.label,
-    };
-    updateBlueprint(
-      { ...blueprint, fixtures: [...blueprint.fixtures, copy] },
-      { message: `${copy.label || copy.kind} dupliqué`, kind: 'add' },
-    );
-    setSelection([{ kind: 'fixture', id: copy.id }]);
-  };
-
-  const duplicateSelectedChair = () => {
-    const item = blueprint.furniture.find((f) => f.kind === 'chair' && f.id === selected?.id);
-    if (!item || item.kind !== 'chair') return;
-    const copy = {
-      ...item,
-      id: createBlueprintChair(1, { chairType: item.chairType }).id,
-      x: Math.min(90, item.x + 4),
-      y: Math.min(90, item.y + 4),
-      label: item.label ? `${item.label} (copie)` : item.label,
-    };
-    updateBlueprint(
-      { ...blueprint, furniture: [...blueprint.furniture, copy] },
-      { message: 'Siège dupliqué', kind: 'add' },
-    );
-    setSelection([{ kind: 'chair', id: copy.id }]);
-  };
+  const duplicateSelectedTable = duplicateSelection;
+  const duplicateSelectedFixture = duplicateSelection;
+  const duplicateSelectedChair = duplicateSelection;
 
   const addRow = () => {
     if (!caps.canAddRows) {
@@ -1565,8 +1565,25 @@ export default function RoomLayoutEditor({
             </p>
             <p className="text-xs text-muted">
               Shift+clic pour ajouter / retirer · Échap pour tout désélectionner
+              {caps.canDuplicate ? ' · Cmd/Ctrl+D pour dupliquer' : ''}
               {caps.canAlign ? ' · Cmd/Ctrl+G pour grouper' : ''}
             </p>
+            <div className="grid grid-cols-2 gap-2">
+              {caps.canDuplicate ? (
+                <button type="button" onClick={duplicateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+                  <Copy className="w-3.5 h-3.5" aria-hidden /> Dupliquer le groupe
+                </button>
+              ) : null}
+              <button type="button" onClick={rotateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+                <RotateCw className="w-3.5 h-3.5" aria-hidden /> Tourner 90°
+              </button>
+              <button type="button" onClick={() => flipSelection('horizontal')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+                <FlipHorizontal2 className="w-3.5 h-3.5" aria-hidden /> Miroir H
+              </button>
+              <button type="button" onClick={() => flipSelection('vertical')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+                <FlipVertical2 className="w-3.5 h-3.5" aria-hidden /> Miroir V
+              </button>
+            </div>
             {caps.canAlign ? (
               <>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -3566,17 +3583,27 @@ export default function RoomLayoutEditor({
             <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-border">
               <button
                 type="button"
-                onClick={duplicateSelectedFixture}
+                onClick={duplicateSelection}
                 className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
               >
                 <Copy className="w-3 h-3" /> Dupliquer
               </button>
               <button
                 type="button"
-                onClick={() => updateFixture(selectedFixture.id, { rotation: ((selectedFixture.rotation ?? 0) + 90) % 360 }, 'Rotation +90°')}
+                onClick={rotateSelection}
                 className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
               >
-                Tourner 90°
+                <RotateCw className="w-3 h-3" /> Tourner 90°
+              </button>
+              <button
+                type="button"
+                onClick={() => updateBlueprint(
+                  applyFixtureStyleToSameKind(blueprint, selectedFixture.id),
+                  { message: `Style appliqué aux autres ${fixtureStyleFamilyLabel(selectedFixture.kind)}`, kind: 'edit' },
+                )}
+                className={cn(EDITOR_PANEL_BTN, 'col-span-2 border-primary/30 bg-primary/10 text-primary')}
+              >
+                Appliquer aux autres {fixtureStyleFamilyLabel(selectedFixture.kind)}
               </button>
             </div>
 
@@ -3957,6 +3984,22 @@ export default function RoomLayoutEditor({
               </div>
             </div>
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={duplicateSelection}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                <Copy className="w-3 h-3" /> Dupliquer
+              </button>
+              <button
+                type="button"
+                onClick={rotateSelection}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                <RotateCw className="w-3 h-3" /> Tourner 90°
+              </button>
+            </div>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -4084,6 +4127,22 @@ export default function RoomLayoutEditor({
               <p className={EDITOR_HINT}>La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
             </div>
             <p className={EDITOR_HINT}>Glissez aussi la zone dans la vue 3D.</p>
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={duplicateSelection}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                <Copy className="w-3 h-3" /> Dupliquer
+              </button>
+              <button
+                type="button"
+                onClick={rotateSelection}
+                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+              >
+                <RotateCw className="w-3 h-3" /> Tourner 90°
+              </button>
+            </div>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>

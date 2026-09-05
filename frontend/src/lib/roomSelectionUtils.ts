@@ -326,6 +326,220 @@ export function ungroupLayoutSelection(
   });
 }
 
+const DUPLICATE_OFFSET_PCT = 6;
+
+function copyLabel(value: string | undefined, fallback: string) {
+  const base = value?.trim() || fallback;
+  return base.endsWith('(copie)') ? base : `${base} (copie)`;
+}
+
+function nextFurnitureId(kind: LayoutSelectableKind) {
+  if (kind === 'table') return makeLayoutId('table');
+  if (kind === 'row') return makeLayoutId('row');
+  if (kind === 'chair') return makeLayoutId('chair');
+  if (kind === 'zone') return makeLayoutId('zone');
+  return makeLayoutId(kind);
+}
+
+export type DuplicateLayoutResult = {
+  blueprint: RoomLayoutBlueprint;
+  selection: LayoutSelectionItem[];
+};
+
+/** Duplique la sélection (tables, sièges, rangées, zones, fixtures) en conservant le groupe. */
+export function duplicateLayoutSelection(
+  blueprint: RoomLayoutBlueprint,
+  selection: LayoutSelectionItem[],
+  options?: { offsetPct?: number },
+): DuplicateLayoutResult {
+  const offset = options?.offsetPct ?? DUPLICATE_OFFSET_PCT;
+  const items = selection.filter((s) => s.kind !== 'wall');
+  if (items.length === 0) return { blueprint, selection };
+
+  const keepGroup = items.length > 1 || items.some((item) => getSelectionBounds(blueprint, item)?.groupId);
+  const newGroupId = keepGroup ? makeLayoutId('group') : undefined;
+  const nextFurniture = [...blueprint.furniture];
+  const nextFixtures = [...blueprint.fixtures];
+  const copied: LayoutSelectionItem[] = [];
+
+  for (const item of items) {
+    if (item.kind === 'fixture') {
+      const source = blueprint.fixtures.find((f) => f.id === item.id);
+      if (!source) continue;
+      const id = makeLayoutId('fixture');
+      nextFixtures.push({
+        ...source,
+        id,
+        x: clamp(source.x + offset, 1, Math.max(1, 99 - source.w)),
+        y: clamp(source.y + offset, 1, Math.max(1, 99 - source.h)),
+        label: copyLabel(source.label, source.kind),
+        groupId: newGroupId,
+      });
+      copied.push({ kind: 'fixture', id });
+      continue;
+    }
+
+    const source = blueprint.furniture.find((f) => f.id === item.id);
+    if (!source) continue;
+    const id = nextFurnitureId(item.kind);
+    if (source.kind === 'table') {
+      nextFurniture.push({
+        ...source,
+        id,
+        name: copyLabel(source.name, 'Table'),
+        x: clamp(source.x + offset, 1, 99),
+        y: clamp(source.y + offset, 1, 99),
+        locked: false,
+        groupId: newGroupId,
+      });
+    } else if (source.kind === 'row') {
+      nextFurniture.push({
+        ...source,
+        id,
+        label: copyLabel(source.label, 'Rangée'),
+        rowName: source.rowName ? copyLabel(source.rowName, source.rowName) : source.rowName,
+        x: clamp(source.x + offset, 1, 99),
+        y: clamp(source.y + offset, 1, 99),
+        groupId: newGroupId,
+      });
+    } else if (source.kind === 'chair') {
+      nextFurniture.push({
+        ...source,
+        id,
+        label: source.label ? copyLabel(source.label, 'Siège') : source.label,
+        x: clamp(source.x + offset, 1, 99),
+        y: clamp(source.y + offset, 1, 99),
+        locked: false,
+        groupId: newGroupId,
+      });
+    } else if (source.kind === 'zone') {
+      nextFurniture.push({
+        ...source,
+        id,
+        label: copyLabel(source.label, 'Zone'),
+        x: clamp(source.x + offset, 1, Math.max(1, 99 - source.w)),
+        y: clamp(source.y + offset, 1, Math.max(1, 99 - source.h)),
+        groupId: newGroupId,
+      });
+    }
+    copied.push({ kind: item.kind, id });
+  }
+
+  if (copied.length === 0) return { blueprint, selection };
+
+  return {
+    blueprint: refreshBlueprintMetadata({
+      ...blueprint,
+      furniture: nextFurniture,
+      fixtures: nextFixtures,
+    }),
+    selection: copied,
+  };
+}
+
+function selectionCentroid(boxes: LayoutBounds[]) {
+  const xs = boxes.map(cxOf);
+  const ys = boxes.map(cyOf);
+  return {
+    x: xs.reduce((sum, n) => sum + n, 0) / boxes.length,
+    y: ys.reduce((sum, n) => sum + n, 0) / boxes.length,
+  };
+}
+
+function applyBoxTransform(
+  blueprint: RoomLayoutBlueprint,
+  box: LayoutBounds,
+  nextCenter: { x: number; y: number },
+  nextSize?: { w: number; h: number },
+  extraRotation = 0,
+): RoomLayoutBlueprint {
+  const w = nextSize?.w ?? box.w;
+  const h = nextSize?.h ?? box.h;
+  const x = box.isCenter ? nextCenter.x : nextCenter.x - w / 2;
+  const y = box.isCenter ? nextCenter.y : nextCenter.y - h / 2;
+  let next = applyPosition(blueprint, { kind: box.kind, id: box.id }, { x, y });
+  if (box.kind === 'fixture' && nextSize) {
+    next = {
+      ...next,
+      fixtures: next.fixtures.map((f) => (f.id === box.id ? { ...f, w, h } : f)),
+    };
+  }
+  if (box.kind === 'zone' && nextSize) {
+    next = {
+      ...next,
+      furniture: next.furniture.map((f) =>
+        f.id === box.id && f.kind === 'zone' ? { ...f, w, h } : f,
+      ),
+    };
+  }
+  if (extraRotation) {
+    const addRot = (current?: number) => ((current ?? 0) + extraRotation + 360) % 360;
+    if (box.kind === 'fixture') {
+      next = {
+        ...next,
+        fixtures: next.fixtures.map((f) => (f.id === box.id ? { ...f, rotation: addRot(f.rotation) } : f)),
+      };
+    } else {
+      next = {
+        ...next,
+        furniture: next.furniture.map((f) => (f.id === box.id ? { ...f, rotation: addRot(f.rotation) } : f)),
+      };
+    }
+  }
+  return next;
+}
+
+/** Tourne la sélection de 90° autour de son centre (sens horaire). */
+export function rotateLayoutSelection(
+  blueprint: RoomLayoutBlueprint,
+  selection: LayoutSelectionItem[],
+): RoomLayoutBlueprint {
+  const boxes = selection
+    .map((s) => getSelectionBounds(blueprint, s))
+    .filter((b): b is LayoutBounds => Boolean(b));
+  if (boxes.length === 0) return blueprint;
+  const origin = selectionCentroid(boxes);
+  let next = blueprint;
+  for (const box of boxes) {
+    const dx = cxOf(box) - origin.x;
+    const dy = cyOf(box) - origin.y;
+    const swapSize = !box.isCenter;
+    next = applyBoxTransform(
+      next,
+      box,
+      { x: origin.x - dy, y: origin.y + dx },
+      swapSize ? { w: box.h, h: box.w } : undefined,
+      90,
+    );
+  }
+  return refreshBlueprintMetadata(next);
+}
+
+export type FlipAxis = 'horizontal' | 'vertical';
+
+/** Miroir de la sélection autour de son centre. */
+export function flipLayoutSelection(
+  blueprint: RoomLayoutBlueprint,
+  selection: LayoutSelectionItem[],
+  axis: FlipAxis,
+): RoomLayoutBlueprint {
+  const boxes = selection
+    .map((s) => getSelectionBounds(blueprint, s))
+    .filter((b): b is LayoutBounds => Boolean(b));
+  if (boxes.length === 0) return blueprint;
+  const origin = selectionCentroid(boxes);
+  let next = blueprint;
+  for (const box of boxes) {
+    const cx = cxOf(box);
+    const cy = cyOf(box);
+    const nextCenter = axis === 'horizontal'
+      ? { x: origin.x * 2 - cx, y: cy }
+      : { x: cx, y: origin.y * 2 - cy };
+    next = applyBoxTransform(next, box, nextCenter, undefined, 0);
+  }
+  return refreshBlueprintMetadata(next);
+}
+
 export function selectionKey(s: LayoutSelectionItem) {
   return `${s.kind}:${s.id}`;
 }

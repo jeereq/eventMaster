@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-05T13:30:00.000Z",
+  "title": "Design System: EventMaster",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Émeraude de banquet",
+        "canonical": "#059669",
+        "tonalRamp": ["#022c22", "#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#6ee7b7", "#d1fae5"]
+      },
+      "primary-solid": {
+        "role": "primary",
+        "displayName": "Émeraude solide (AA)",
+        "canonical": "#047857",
+        "tonalRamp": ["#022c22", "#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#a7f3d0"]
+      },
+      "brand-accent": {
+        "role": "primary",
+        "displayName": "Émeraude vive",
+        "canonical": "#10b981",
+        "tonalRamp": ["#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#6ee7b7", "#d1fae5"]
+      },
+      "festive-accent": {
+        "role": "secondary",
+        "displayName": "Ambre Kinshasa",
+        "canonical": "#d97706",
+        "tonalRamp": ["#451a03", "#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a"]
+      },
+      "festive-on-stage": {
+        "role": "secondary",
+        "displayName": "Or de rampe",
+        "canonical": "#fbbf24",
+        "tonalRamp": ["#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#fef3c7"]
+      },
+      "stage": {
+        "role": "tertiary",
+        "displayName": "Ardoise de scène",
+        "canonical": "#171614",
+        "tonalRamp": ["#0c0b0a", "#121110", "#171614", "#221f1c", "#3f3a34", "#6b645c", "#c4b8a8", "#f7f4ef"]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Papier de travail",
+        "canonical": "#f6f7f8",
+        "tonalRamp": ["#1e1f21", "#2a2b2d", "#6d6e6f", "#a2a0a2", "#e8e8e9", "#ededee", "#f3f5f2", "#f6f7f8"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Encre graphite",
+        "canonical": "#1e1f21",
+        "tonalRamp": ["#111213", "#1e1f21", "#2a2b2d", "#3e3f42", "#6d6e6f", "#a2a0a2", "#ededee", "#f5f5f5"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Porcelaine",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#2a2b2d", "#323437", "#ededee", "#f0f1f3", "#f3f5f2", "#f6f7f8", "#fafafa", "#ffffff"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Légende",
+        "canonical": "#6d6e6f",
+        "tonalRamp": ["#1e1f21", "#3e3f42", "#6d6e6f", "#8a8b8c", "#a2a0a2", "#c8c8c9", "#e8e8e9", "#f6f7f8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero et titres de célébration (Fraunces)." },
+      "headline": { "displayName": "Headline", "purpose": "Sections landing et en-têtes de page." },
+      "title": { "displayName": "Title", "purpose": "Titres de cartes et actions primaires (Inter)." },
+      "body": { "displayName": "Body", "purpose": "Lecture produit ; racine 15px, champs mobile 16px." },
+      "label": { "displayName": "Label", "purpose": "Labels, chips, meta — minimum 12px." }
+    },
+    "shadows": [
+      {
+        "name": "filet",
+        "value": "0 0 0 1px rgba(0, 0, 0, 0.04)",
+        "purpose": "Cartes, docks et toggles au repos — trait, pas lift."
+      },
+      {
+        "name": "hud-landing",
+        "value": "0 8px 30px -8px rgba(0, 0, 0, 0.06)",
+        "purpose": "Cartes persona / preuve Celebrate uniquement."
+      },
+      {
+        "name": "hud-landing-hover",
+        "value": "0 16px 40px -12px color-mix(in srgb, var(--primary) 25%, transparent)",
+        "purpose": "Lift HUD au hover (translateY -2px)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "ease",
+        "purpose": "Transitions d’état boutons / champs (120–150ms)."
+      },
+      {
+        "name": "ease-hud",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Cartes HUD Celebrate (250ms)."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.98)",
+        "purpose": "Active des boutons ; annulé si prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "767px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "CTA plein émeraude solide, 44px, texte blanc.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Créer l’invitation</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 14px; background: var(--primary-solid, #047857); color: var(--primary-foreground, #fff); border: none; border-radius: var(--radius-button, 0.5rem); font-family: inherit; font-size: 0.875rem; font-weight: 500; letter-spacing: -0.02em; cursor: pointer; transition: background 120ms ease, transform 120ms ease; } .ds-btn-primary:hover { background: var(--primary-solid-hover, #065f46); } .ds-btn-primary:focus-visible { outline: 2px solid var(--primary, #059669); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Action secondaire : surface + filet.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Voir le plan</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 14px; background: var(--surface, #fff); color: var(--foreground, #1e1f21); border: 1px solid var(--border, #e8e8e9); border-radius: var(--radius-button, 0.5rem); font-family: inherit; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background 120ms ease; } .ds-btn-secondary:hover { background: var(--card-hover, #fafafa); } .ds-btn-secondary:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary, #059669) 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Action tertiaire, texte muted.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Annuler</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 14px; background: transparent; color: var(--muted, #6d6e6f); border: none; border-radius: var(--radius-button, 0.5rem); font-family: inherit; font-size: 0.875rem; font-weight: 500; cursor: pointer; } .ds-btn-ghost:hover { background: var(--surface-muted, #ededee); color: var(--foreground, #1e1f21); } .ds-btn-ghost:focus-visible { outline: 2px solid color-mix(in srgb, var(--primary, #059669) 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Champ 44px, fond muted, focus émeraude.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Téléphone</span><input class=\"ds-field-input\" type=\"tel\" placeholder=\"+243 …\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; font-family: inherit; } .ds-field-label { font-size: 0.75rem; font-weight: 600; color: var(--muted, #6d6e6f); } .ds-field-input { min-height: 44px; padding: 10px 14px; background: var(--surface-muted, #ededee); color: var(--foreground, #1e1f21); border: 1px solid var(--border, #e8e8e9); border-radius: var(--radius-button, 0.5rem); font-size: 16px; } .ds-field-input::placeholder { color: var(--muted, #6d6e6f); } .ds-field-input:focus { outline: none; border-color: var(--primary, #059669); box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary, #059669) 25%, transparent); }"
+    },
+    {
+      "name": "Work Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Carte plate dashboard : surface, filet 1px, coins 8px.",
+      "html": "<article class=\"ds-card\"><h3 class=\"ds-card-title\">Plan de table</h3><p class=\"ds-card-body\">12 tables · 96 places · amphithéâtre A–F</p></article>",
+      "css": ".ds-card { background: var(--surface, #fff); color: var(--foreground, #1e1f21); border: 1px solid var(--border, #e8e8e9); border-radius: var(--radius-card, 0.5rem); box-shadow: var(--shadow-soft, 0 0 0 1px rgba(0,0,0,0.04)); padding: 20px; font-family: inherit; } .ds-card-title { margin: 0 0 4px; font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; } .ds-card-body { margin: 0; font-size: 0.875rem; color: var(--muted, #6d6e6f); line-height: 1.5; }"
+    },
+    {
+      "name": "Primary Chip",
+      "kind": "chip",
+      "refersTo": "chip-primary",
+      "description": "Pastille émeraude pour statut / filtre actif.",
+      "html": "<span class=\"ds-chip-primary\">Publiée</span>",
+      "css": ".ds-chip-primary { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; background: color-mix(in srgb, var(--primary, #059669) 10%, transparent); color: var(--primary, #059669); border: 1px solid color-mix(in srgb, var(--primary, #059669) 20%, transparent); font-size: 0.75rem; font-weight: 600; font-family: inherit; }"
+    },
+    {
+      "name": "Festive Chip",
+      "kind": "chip",
+      "refersTo": "chip-festive",
+      "description": "Pastille ambre Kinshasa — Celebrate et métiers.",
+      "html": "<span class=\"ds-chip-festive\">Prestataire</span>",
+      "css": ".ds-chip-festive { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; background: color-mix(in srgb, var(--festive-accent, #d97706) 14%, transparent); color: var(--festive-accent, #d97706); border: 1px solid color-mix(in srgb, var(--festive-accent, #d97706) 22%, transparent); font-size: 0.75rem; font-weight: 600; font-family: inherit; }"
+    },
+    {
+      "name": "Stage Panel",
+      "kind": "custom",
+      "refersTo": "stage-panel",
+      "description": "Bandeau inversé : ardoise, halos émeraude/ambre, texte ivoire.",
+      "html": "<section class=\"ds-stage\"><p class=\"ds-stage-kicker\">Vue 3D</p><h3 class=\"ds-stage-title\">Salle · 8 tables · 64 places</h3><button class=\"ds-stage-cta\" type=\"button\">Ouvrir l’éditeur</button></section>",
+      "css": ".ds-stage { position: relative; overflow: hidden; padding: 24px; border-radius: var(--radius-card, 0.5rem); background: radial-gradient(ellipse at 82% -10%, color-mix(in srgb, var(--primary, #059669) 28%, transparent), transparent 52%), radial-gradient(ellipse at 12% 110%, color-mix(in srgb, var(--festive-accent, #d97706) 22%, transparent), transparent 48%), var(--stage, #171614); color: var(--stage-foreground, #f7f4ef); font-family: inherit; } .ds-stage-kicker { margin: 0 0 6px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--festive-on-stage, #fbbf24); } .ds-stage-title { margin: 0 0 16px; font-family: Fraunces, Georgia, serif; font-size: 1.25rem; font-weight: 600; letter-spacing: -0.025em; } .ds-stage-cta { min-height: 44px; padding: 8px 14px; border: 0; border-radius: var(--radius-button, 0.5rem); background: var(--primary-solid, #047857); color: #fff; font-weight: 500; cursor: pointer; } .ds-stage-cta:hover { background: var(--primary-solid-hover, #065f46); } .ds-stage-cta:focus-visible { outline: 2px solid var(--festive-on-stage, #fbbf24); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "L'Atelier de Célébration",
+    "overview": "EventMaster se lit comme un atelier de réception : on y compose des invitations, on y dresse des salles en 2D/3D, on y envoie le RSVP WhatsApp et on y scanne le jour J. Le système est prestigieux et chaleureux, jamais froid. L’émeraude mène l’action ; l’ambre Kinshasa réchauffe la fête ; l’ardoise de scène inversée porte les moments de preuve (bandeau 3D, CTA inversé, chrome WebGL).\n\nUn seul système, deux humeurs. Work (dashboard, éditeurs, admin) reste scanable, émeraude et neutre. Celebrate (landing, RSVP, auth) laisse l’ambre et la scène respirer davantage — mêmes jetons, température plus haute. Le document décrit cette dualité ; il ne crée pas deux marques.\n\nLa fête est visible sans basculer dans le SaaS gris stérile. Anti-références confirmées : dashboard clinique sans chaleur, néon événementiel, glassmorphism généralisé, ombres théâtrales sur toute l’UI.",
+    "keyCharacteristics": [
+      "Fraunces pour les titres de célébration ; Inter pour l’interface et les chiffres.",
+      "Surfaces plates au repos ; matière réservée à la scène, au 3D et aux CTA inversés.",
+      "Cibles tactiles 44px, glanceability en 2 secondes, ton prestigieux et direct.",
+      "Jetons CSS (--primary, --festive-accent, --stage) : jamais d’hex de chrome dans le produit."
+    ],
+    "rules": [
+      {
+        "name": "The Dual Accent Rule",
+        "body": "L’émeraude mène l’action. L’ambre mène la fête. Jamais les deux à parts égales sur le même bloc : un accent conduit, l’autre orne.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Moods Rule",
+        "body": "Work et Celebrate partagent les mêmes jetons. Celebrate réchauffe l’ambre et la scène ; Work reste émeraude et neutre. Ne pas inventer une troisième palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The Fraunces Occasion Rule",
+        "body": "Fraunces n’habille que l’occasion (hero, invitation, titre de fête). L’éditeur, les tableaux et les formulaires restent en Inter.",
+        "section": "typography"
+      },
+      {
+        "name": "The Stage Material Rule",
+        "body": "La matière (halos, ardoise, or de rampe) appartient à la scène et au 3D. Le reste de l’app reste plat et tonal.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do conduire chaque bloc par un seul accent (émeraude *ou* ambre).",
+      "Do utiliser --primary-solid pour tout fond de bouton / pastille à texte blanc.",
+      "Do garder Fraunces pour l’occasion et Inter pour l’outil.",
+      "Do viser 44px et text-xs (12px) minimum sur le texte utile.",
+      "Do tokeniser le chrome (bg-foreground, bg-stage) ; laisser les matériaux 3D en hex locaux."
+    ],
+    "donts": [
+      "Don't habiller le dashboard Work comme une landing Celebrate (ambre partout, scènes inversées en fond de page).",
+      "Don't poser des ombres théâtrales ou du will-change permanent sur les items de plan.",
+      "Don't descendre sous 12px pour un label d’éditeur, ni remplacer un <button> par un div role=\"button\".",
+      "Don't inventer une troisième palette (or marketing, slate Tailwind, hex de chrome).",
+      "Don't réutiliser --primary clair comme fond de texte blanc en dark mode."
+    ]
+  }
+}

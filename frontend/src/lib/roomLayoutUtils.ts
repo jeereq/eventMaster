@@ -2537,6 +2537,110 @@ export function applyTableStyleToAll(
   return refreshBlueprintMetadata({ ...blueprint, furniture });
 }
 
+function fixtureStyleFamily(kind: RoomLayoutBlueprint['fixtures'][number]['kind']) {
+  if (kind === 'door' || kind === 'entrance') return 'door';
+  if (kind === 'aisle' || kind === 'carpet') return 'aisle';
+  if (kind === 'pillar' || kind === 'column') return 'column';
+  if (kind === 'stage' || kind === 'podium') return 'stage';
+  return kind;
+}
+
+const FIXTURE_STYLE_FAMILY_LABELS: Record<string, string> = {
+  door: 'portes & entrées',
+  aisle: 'allées & tapis',
+  chandelier: 'lustres',
+  column: 'colonnes',
+  stage: 'scènes & podiums',
+  flower: 'compositions florales',
+  buffet: 'buffets',
+};
+
+export function fixtureStyleFamilyLabel(kind: RoomLayoutBlueprint['fixtures'][number]['kind']) {
+  return FIXTURE_STYLE_FAMILY_LABELS[fixtureStyleFamily(kind)] ?? 'éléments du même type';
+}
+
+/** Recopie le style d’un fixture d’environnement vers les autres du même type. */
+export function applyFixtureStyleToSameKind(
+  blueprint: RoomLayoutBlueprint,
+  sourceId: string,
+): RoomLayoutBlueprint {
+  const source = blueprint.fixtures.find((item) => item.id === sourceId);
+  if (!source) return blueprint;
+  const family = fixtureStyleFamily(source.kind);
+  const fixtures = blueprint.fixtures.map((item) => {
+    if (item.id === sourceId || fixtureStyleFamily(item.kind) !== family) return item;
+    if (family === 'door') {
+      return {
+        ...item,
+        doorStyle: source.doorStyle,
+        doorSwing: source.doorSwing,
+        color: source.color,
+        openingMaterial: source.openingMaterial,
+        frameColor: source.frameColor,
+        hasMat: source.hasMat,
+        matColor: source.matColor,
+      };
+    }
+    if (family === 'aisle') {
+      return {
+        ...item,
+        aisleStyle: source.aisleStyle,
+        color: source.color,
+        material: source.material,
+        hasGoldBorder: source.hasGoldBorder,
+        hasSideLanterns: source.hasSideLanterns,
+        hasPetals: source.hasPetals,
+      };
+    }
+    if (family === 'chandelier') {
+      return {
+        ...item,
+        chandelierStyle: source.chandelierStyle,
+        color: source.color,
+        lightWarmth: source.lightWarmth,
+        lightIntensity: source.lightIntensity,
+        lightRadius: source.lightRadius,
+      };
+    }
+    if (family === 'column') {
+      return {
+        ...item,
+        columnShape: source.columnShape,
+        color: source.color,
+        material: source.material,
+      };
+    }
+    if (family === 'stage') {
+      return {
+        ...item,
+        color: source.color,
+        material: source.material,
+        heightM: source.heightM,
+        steps: source.steps,
+      };
+    }
+    if (family === 'flower') {
+      return {
+        ...item,
+        flowerType: source.flowerType,
+        flowerColor: source.flowerColor,
+      };
+    }
+    if (family === 'buffet') {
+      return {
+        ...item,
+        hasCouverts: source.hasCouverts,
+        buffetStyle: source.buffetStyle,
+        couvertStyle: source.couvertStyle,
+        color: source.color,
+        material: source.material,
+      };
+    }
+    return { ...item, color: source.color, material: source.material };
+  });
+  return refreshBlueprintMetadata({ ...blueprint, fixtures });
+}
+
 export const roomOutlineLabels: Record<RoomOutlineShape, string> = {
   rectangle: 'Rectangle',
   square: 'Carré',
