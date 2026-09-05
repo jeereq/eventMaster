@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { applyServerAllowance, getOrCreateDeviceId, type AiAllowance } from '@/lib/aiTokens';
+import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
 import type { RoomEditorCapabilities } from '@/lib/roomEditorAccess';
 import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 import {
@@ -21,7 +21,7 @@ import {
   type ZoneKind,
 } from '@/lib/roomLayoutUtils';
 
-export const AI_ROOM_PLAN_TOKEN_COST = 3;
+export { AI_ROOM_PLAN_TOKEN_COST };
 export const AI_ROOM_IMPORT_GROUP_ID = 'ai-import';
 
 export type RoomPlanVisionView = 'top' | 'perspective' | 'unclear';

@@ -15,6 +15,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { useAuth } from '@/context/AuthContext';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 import LandingMedia from '@/components/landing/LandingMedia';
 import { cn } from '@/lib/cn';
@@ -102,7 +103,11 @@ const GALLERY_ITEMS: GalleryItem[] = [
 
 export default function LandingVisualBanner() {
   const revealRef = useLandingReveal<HTMLElement>();
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const budgetHref = user
+    ? '/dashboard/catalogue?tab=plan&planView=ai'
+    : '/#simulateur-ia';
 
   const filteredItems = activeCategory === 'all'
     ? GALLERY_ITEMS
@@ -222,12 +227,14 @@ export default function LandingVisualBanner() {
                     </Link>
 
                     <Link
-                      href="/#simulateur-ia"
+                      href={budgetHref}
                       className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold inline-flex items-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      title="Estimer un budget avec 3 formules IA"
+                      title={user
+                        ? 'Ouvrir le simulateur budget dans le tableau de bord (1 jeton)'
+                        : 'Estimer un budget avec 3 formules IA (1 jeton)'}
                     >
                       <Wand2 className="w-3.5 h-3.5" />
-                      <span>Estimer mon budget IA</span>
+                      <span>Estimer mon budget · 1 jeton</span>
                     </Link>
                   </div>
                 </div>

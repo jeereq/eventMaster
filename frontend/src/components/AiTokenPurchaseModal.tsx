@@ -18,6 +18,7 @@ import {
   AI_TOKEN_MIN_COUNT,
   AI_TOKEN_PACK_SIZE,
   AI_TOKEN_PACK_PRICE_FC,
+  aiTokenCostLegend,
   calculateTokensForAmount,
   calculateNextTokenAmount,
   addPurchasedAiTokens,
@@ -304,7 +305,7 @@ export default function AiTokenPurchaseModal({
               <strong className="text-foreground">
                 +{checkoutTokens} jeton{checkoutTokens === 1 ? '' : 's'} IA
               </strong>{' '}
-              crédités — invitations ou simulation budget.
+              crédités — budget, invitation ou plan de salle.
             </p>
           </div>
           <Button type="button" variant="primary" onClick={handleModalClose} fullWidth>
@@ -395,8 +396,7 @@ export default function AiTokenPurchaseModal({
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground">Recharge proportionnelle</p>
                   <p className="text-[11px] text-muted">
-                    {formatFc(AI_TOKEN_PACK_PRICE_FC)} = {AI_TOKEN_PACK_SIZE} jetons · 1 jeton = 1
-                    simulation · 2 jetons = 1 invitation
+                    {formatFc(AI_TOKEN_PACK_PRICE_FC)} = {AI_TOKEN_PACK_SIZE} jetons · {aiTokenCostLegend()}
                   </p>
                 </div>
               </div>

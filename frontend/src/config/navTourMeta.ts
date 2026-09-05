@@ -88,7 +88,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-ai-tokens': {
     title: 'Jetons IA',
     description:
-      'Journal des jetons : simulation budget (1), invitation (2), recharge. Totaux par action, restes gratuits et payés, détail par utilisateur.',
+      'Journal des jetons : budget (1), invitation (2), plan de salle (3), recharge. Totaux par action, restes gratuits et payés, détail par utilisateur.',
     route: '/dashboard/admin/ai-tokens',
   },
   'nav-settings': {

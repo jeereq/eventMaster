@@ -4,7 +4,7 @@ import React from 'react';
 import { Coins, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
-import { AI_TOKEN_PACK_PRICE_FC, AI_TOKEN_PACK_SIZE, type AiAllowance } from '@/lib/aiTokens';
+import { AI_TOKEN_PACK_PRICE_FC, AI_TOKEN_PACK_SIZE, aiTokenCostLegend, type AiAllowance } from '@/lib/aiTokens';
 
 /**
  * Détermine si au moins 60% des jetons ont été utilisés.
@@ -81,7 +81,7 @@ export default function AiSimulationCounter({
               {remaining} jeton{remaining > 1 ? 's' : ''} IA restant{remaining > 1 ? 's' : ''}
             </p>
             <p className="text-[11px] text-muted">
-              Invitations ou simulation · {allowance.freeRemaining}/{max} essais gratuits
+              Budget, invitation ou plan · {allowance.freeRemaining}/{max} essais gratuits
               {bonus > 0 ? ` · +${bonus} bonus` : ''}
             </p>
             <div
@@ -133,7 +133,7 @@ export default function AiSimulationCounter({
           <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
           {empty
             ? 'Plus de crédit. Rechargez pour les invitations IA ou le simulateur.'
-            : '1 jeton = 1 simulation budget · 2 jetons = 1 invitation IA.'}
+            : `${aiTokenCostLegend()}.`}
         </p>
       ) : null}
     </div>

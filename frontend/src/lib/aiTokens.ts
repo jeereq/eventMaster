@@ -10,6 +10,12 @@ export const AI_TOKEN_PACK_PRICE_FC = 2500;
 export const AI_SIMULATION_TOKEN_COST = 1;
 /** 2 jetons = 1 génération d’invitation (image). */
 export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
+/** 3 jetons = 1 lecture de plan de salle depuis une photo. */
+export const AI_ROOM_PLAN_TOKEN_COST = 3;
+
+export function aiTokenCostLegend(): string {
+  return `${AI_SIMULATION_TOKEN_COST} jeton = budget · ${AI_INVITATION_COMPOSE_TOKEN_COST} = invitation · ${AI_ROOM_PLAN_TOKEN_COST} = plan de salle`;
+}
 
 export function canAffordAiAction(allowance: Pick<AiAllowance, 'totalRemaining'>, cost: number): boolean {
   return allowance.totalRemaining >= Math.max(1, cost);
