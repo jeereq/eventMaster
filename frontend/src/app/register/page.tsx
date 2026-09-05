@@ -49,6 +49,12 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 import { formatFc, LANDING_PLANS } from '@/config/landingPricing';
+import {
+  DEFAULT_WELCOME_AI_GRANTS,
+  formatWelcomeGrantAmount,
+  sanitizeWelcomeAiGrants,
+  type WelcomeGrantRules,
+} from '@/lib/welcomeAiGrants';
 import { LANDING_SLOGAN } from '@/lib/landingProfiles';
 import { cn } from '@/lib/cn';
 
@@ -530,6 +536,7 @@ function welcomeSignupGrantLabel(
   accountKind: TenantAccountKind,
   intent: string | null,
   plan: string | null,
+  rules: WelcomeGrantRules = DEFAULT_WELCOME_AI_GRANTS,
 ): string {
   const planKey = (plan || '').toUpperCase();
   if (
@@ -538,15 +545,20 @@ function welcomeSignupGrantLabel(
     accountKind === 'BOTH' ||
     CATALOG_PLAN_KEYS.has(planKey)
   ) {
-    return '10 jetons IA';
+    return formatWelcomeGrantAmount(rules.catalog, formatFc);
   }
   if (ENTERPRISE_PLAN_KEYS.has(planKey)) {
-    return `${formatFc(50_000)} de jetons IA`;
+    const later = formatWelcomeGrantAmount(rules.enterprise, formatFc);
+    const now = rules.b2b.moment === 'signup' ? formatWelcomeGrantAmount(rules.b2b, formatFc) : null;
+    if (rules.enterprise.moment === 'plan_activation' && now) {
+      return `${now} à l’ouverture, puis ${later} à l’activation du forfait payant`;
+    }
+    return later;
   }
-  if (accountKind === 'BOTH' || intent === 'pro' || planKey === 'STANDARD' || planKey.startsWith('PREMIUM_')) {
-    return `${formatFc(20_000)} de jetons IA`;
+  if (intent === 'pro' || planKey === 'STANDARD' || planKey.startsWith('PREMIUM_')) {
+    return formatWelcomeGrantAmount(rules.b2b, formatFc);
   }
-  return `${formatFc(10_000)} de jetons IA`;
+  return formatWelcomeGrantAmount(rules.b2c, formatFc);
 }
 
 function RegisterPageContent() {
@@ -893,7 +905,7 @@ function RegisterPageContent() {
               )}
 
               <p className="text-xs text-muted leading-relaxed">
-                À l’ouverture, ce compte reçoit <strong className="text-foreground">{welcomeSignupGrantLabel(accountKind, intentParam, planParam)}</strong>
+                À l’ouverture, ce compte reçoit <strong className="text-foreground">{welcomeSignupGrantLabel(accountKind, intentParam, planParam, sanitizeWelcomeAiGrants(site.welcomeAiGrants))}</strong>
                 {accountKind !== 'CLIENT' ? (
                   <>
                     . Les managers partagent ce solde ; un compte protocole reçoit 4 jetons à la création.

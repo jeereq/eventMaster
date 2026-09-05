@@ -225,6 +225,7 @@ export async function register(req: Request, res: Response) {
         accountKind,
         intent: typeof rawIntent === 'string' ? rawIntent : null,
         planKey: pendingPlan,
+        moment: 'signup',
       });
       welcomeTokens = {
         granted: !grant.skipped,

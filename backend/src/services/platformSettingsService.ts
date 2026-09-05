@@ -9,6 +9,11 @@ import {
   sanitizeAiTokenMinPurchaseCdf,
   sanitizeAiTokenPriceCdf,
 } from './aiTokenPricing';
+import {
+  DEFAULT_WELCOME_GRANT_RULES,
+  sanitizeWelcomeGrantRules,
+  type WelcomeGrantRules,
+} from './welcomeAiTokensPolicy';
 
 const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
 const PLATFORM_CONFIG_ID = 'default';
@@ -80,6 +85,8 @@ export interface PlatformSettings {
   aiTokenPriceCdf: number;
   /** Montant minimum d’achat de jetons en FC. */
   aiTokenMinPurchaseCdf: number;
+  /** Offres de jetons IA par type de compte et moment de crédit. */
+  welcomeAiGrants: WelcomeGrantRules;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -118,6 +125,7 @@ export interface PublicSiteConfig {
   authOtpChannels: AuthOtpChannels;
   aiTokenPriceCdf: number;
   aiTokenMinPurchaseCdf: number;
+  welcomeAiGrants: WelcomeGrantRules;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -162,6 +170,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   authOtpChannels: 'BOTH',
   aiTokenPriceCdf: DEFAULT_AI_TOKEN_PRICE_CDF,
   aiTokenMinPurchaseCdf: DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
+  welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -316,6 +325,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
       settings.aiTokenMinPurchaseCdf,
       sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     ),
+    welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
   };
 }
 
@@ -343,6 +353,7 @@ function buildNextSettings(
   next.authOtpChannels = sanitizeAuthOtpChannels(next.authOtpChannels);
   next.aiTokenPriceCdf = sanitizeAiTokenPriceCdf(next.aiTokenPriceCdf);
   next.aiTokenMinPurchaseCdf = sanitizeAiTokenMinPurchaseCdf(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
+  next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -451,6 +462,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
       settings.aiTokenMinPurchaseCdf,
       sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     ),
+    welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
   };
 }
 

@@ -11,6 +11,17 @@ import {
   MARKETPLACE_GPS_CITIES,
   PLATFORM_CITY_CATALOG,
 } from '@/lib/platformCities';
+import {
+  DEFAULT_WELCOME_AI_GRANTS,
+  WELCOME_GRANT_KEYS,
+  WELCOME_GRANT_LABELS,
+  WELCOME_MOMENT_LABELS,
+  WELCOME_MOMENTS_BY_KEY,
+  sanitizeWelcomeAiGrants,
+  type WelcomeGrantKey,
+  type WelcomeGrantMoment,
+  type WelcomeGrantUnit,
+} from '@/lib/welcomeAiGrants';
 
 export type AdminPlatformSettingsValues = Record<string, unknown> & {
   platformName?: string;
@@ -31,6 +42,7 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   usdExchangeRateCdf?: number;
   aiTokenPriceCdf?: number;
   aiTokenMinPurchaseCdf?: number;
+  welcomeAiGrants?: typeof DEFAULT_WELCOME_AI_GRANTS;
   enabledCities?: string[];
   authOtpChannels?: 'EMAIL' | 'WHATSAPP' | 'BOTH';
   supportEmail?: string;
@@ -403,6 +415,11 @@ export default function AdminPlatformSettings({
                   {Math.floor(Number(value.aiTokenMinPurchaseCdf || 2500) / Number(value.aiTokenPriceCdf || 416)) > 1 ? 's' : ''} pour{' '}
                   {Number(value.aiTokenMinPurchaseCdf || 2500).toLocaleString('fr-FR')} FC.
                 </p>
+                <WelcomeAiGrantsEditor
+                  value={sanitizeWelcomeAiGrants(value.welcomeAiGrants)}
+                  priceCdf={Number(value.aiTokenPriceCdf || 416)}
+                  onChange={(welcomeAiGrants) => patch({ welcomeAiGrants })}
+                />
             </div>
           </div>
         )}
@@ -779,5 +796,107 @@ export default function AdminPlatformSettings({
         </p>
       </Modal>
     </>
+  );
+}
+
+function WelcomeAiGrantsEditor({
+  value,
+  priceCdf,
+  onChange,
+}: {
+  value: typeof DEFAULT_WELCOME_AI_GRANTS;
+  priceCdf: number;
+  onChange: (next: typeof DEFAULT_WELCOME_AI_GRANTS) => void;
+}) {
+  const patchRow = (key: WelcomeGrantKey, partial: Partial<(typeof value)[WelcomeGrantKey]>) => {
+    const nextRule = { ...value[key], ...partial };
+    if (nextRule.moment === 'never') nextRule.enabled = false;
+    onChange({ ...value, [key]: nextRule });
+  };
+
+  return (
+    <div className="space-y-3 pt-2">
+      <p className="text-xs font-semibold text-foreground">Offres de bienvenue</p>
+      <p className="text-xs text-muted -mt-1">
+        Montant et moment par type de compte. Un changement ne s’applique qu’aux prochains crédits.
+        L’entreprise est créditée à l’activation du forfait payant par défaut.
+      </p>
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-xs min-w-[640px]">
+          <thead className="bg-surface-muted text-muted">
+            <tr>
+              <th className="text-left font-semibold px-3 py-2">Audience</th>
+              <th className="text-left font-semibold px-3 py-2">Actif</th>
+              <th className="text-left font-semibold px-3 py-2">Montant</th>
+              <th className="text-left font-semibold px-3 py-2">Unité</th>
+              <th className="text-left font-semibold px-3 py-2">Moment</th>
+            </tr>
+          </thead>
+          <tbody>
+            {WELCOME_GRANT_KEYS.map((key) => {
+              const rule = value[key];
+              const tokensApprox =
+                rule.unit === 'fc' && priceCdf > 0
+                  ? Math.max(0, Math.floor(rule.amount / priceCdf))
+                  : rule.amount;
+              return (
+                <tr key={key} className="border-t border-border">
+                  <td className="px-3 py-2">
+                    <p className="font-semibold text-foreground">{WELCOME_GRANT_LABELS[key]}</p>
+                    <p className="text-[11px] text-muted">
+                      {rule.unit === 'fc' && rule.amount > 0
+                        ? `≈ ${tokensApprox} jeton${tokensApprox > 1 ? 's' : ''} au tarif actuel`
+                        : WELCOME_MOMENT_LABELS[rule.moment]}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={rule.enabled && rule.moment !== 'never'}
+                      onChange={(e) => patchRow(key, { enabled: e.target.checked })}
+                      disabled={rule.moment === 'never'}
+                      className="accent-primary"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      min={0}
+                      step={rule.unit === 'fc' ? 1000 : 1}
+                      value={rule.amount}
+                      onChange={(e) => patchRow(key, { amount: Math.max(0, Number(e.target.value) || 0) })}
+                      className={cn(fieldClass, 'py-1.5')}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      value={rule.unit}
+                      onChange={(e) => patchRow(key, { unit: e.target.value as WelcomeGrantUnit })}
+                      className={cn(fieldClass, 'py-1.5')}
+                    >
+                      <option value="fc">FC</option>
+                      <option value="tokens">Jetons</option>
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      value={rule.moment}
+                      onChange={(e) => patchRow(key, { moment: e.target.value as WelcomeGrantMoment })}
+                      className={cn(fieldClass, 'py-1.5')}
+                    >
+                      {WELCOME_MOMENTS_BY_KEY[key].map((moment) => (
+                        <option key={moment} value={moment}>
+                          {WELCOME_MOMENT_LABELS[moment]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

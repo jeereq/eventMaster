@@ -183,16 +183,15 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       invitedToTeam: true,
     });
 
-    if (orgRole === 'PROTOCOL') {
-      try {
-        await grantWelcomeAiTokens({
-          userId: newUser.id,
-          tenantId,
-          orgRole: 'PROTOCOL',
-        });
-      } catch (grantError) {
-        console.error('[team] welcome protocol AI tokens:', grantError);
-      }
+    try {
+      await grantWelcomeAiTokens({
+        userId: newUser.id,
+        tenantId,
+        orgRole,
+        moment: 'team_create',
+      });
+    } catch (grantError) {
+      console.error('[team] welcome AI tokens:', grantError);
     }
 
     const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';

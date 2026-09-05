@@ -5,6 +5,11 @@ import { SITE_CONTACT } from '@/config/siteContent';
 import { applyBrandToDocument } from '@/lib/brandTheme';
 import { resolveUsdExchangeRateCdf, sanitizeEnabledCities } from '@/lib/platformCities';
 import { sanitizeAuthOtpChannels, type AuthOtpChannels } from '@/lib/authOtpChannels';
+import {
+  DEFAULT_WELCOME_AI_GRANTS,
+  sanitizeWelcomeAiGrants,
+  type WelcomeGrantRules,
+} from '@/lib/welcomeAiGrants';
 
 export interface PublicSiteConfig {
   platformName: string;
@@ -38,6 +43,7 @@ export interface PublicSiteConfig {
   authOtpChannels: AuthOtpChannels;
   aiTokenPriceCdf: number;
   aiTokenMinPurchaseCdf: number;
+  welcomeAiGrants: WelcomeGrantRules;
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -73,6 +79,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   authOtpChannels: 'BOTH',
   aiTokenPriceCdf: 416,
   aiTokenMinPurchaseCdf: 2500,
+  welcomeAiGrants: DEFAULT_WELCOME_AI_GRANTS,
 };
 
 interface PlatformSiteContextValue {
@@ -108,6 +115,7 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
         aiTokenMinPurchaseCdf: Number(data.aiTokenMinPurchaseCdf) > 0
           ? Math.round(Number(data.aiTokenMinPurchaseCdf))
           : DEFAULT_PUBLIC_SITE.aiTokenMinPurchaseCdf,
+        welcomeAiGrants: sanitizeWelcomeAiGrants(data.welcomeAiGrants),
       };
       setSite(next);
 

@@ -13,8 +13,7 @@ import {
 } from './tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from './invoiceService';
 import { notifySubscriptionPayment } from './paymentTraceService';
-import { grantEnterpriseWelcomeUpgrade } from './welcomeAiTokens';
-import { isEnterprisePlanKey } from './welcomeAiTokensPolicy';
+import { grantWelcomeAtPlanActivation } from './welcomeAiTokens';
 
 function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -140,12 +139,13 @@ export async function activateSubscriptionRequest(
     }).catch((err) => console.error('[Subscription] notify payment:', err));
   }
 
-  if (isEnterprisePlanKey(request.requestedPlan) && request.tenant.managerId) {
-    void grantEnterpriseWelcomeUpgrade({
+  if (request.tenant.managerId) {
+    void grantWelcomeAtPlanActivation({
       userId: request.tenant.managerId,
       tenantId: request.tenantId,
       planKey: request.requestedPlan,
-    }).catch((err) => console.error('[Subscription] welcome entreprise:', err));
+      accountKind: request.tenant.accountKind,
+    }).catch((err) => console.error('[Subscription] welcome forfait payant:', err));
   }
 
   void (async () => {

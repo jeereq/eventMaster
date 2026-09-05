@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { resolvePendingSignupPlan } from '../config/plansConfig.ts';
 import {
+  DEFAULT_WELCOME_GRANT_RULES,
   resolveWelcomeOffer,
   welcomeTokenValueFc,
   WELCOME_TOKEN_VALUE_B2B_FC,
@@ -24,27 +25,28 @@ describe('welcomeAiTokens', () => {
     assert.equal(welcomeTokenValueFc('B2B'), WELCOME_TOKEN_VALUE_B2B_FC);
   });
 
-  it('offre 50 000 FC aux forfaits entreprise', () => {
+  it('classe le forfait entreprise et le crédite à l’activation, pas à l’inscription', () => {
     assert.equal(resolveWelcomeOffer({ planKey: 'ENTERPRISE_1' }).key, 'enterprise');
-    assert.equal(resolveWelcomeOffer({ planKey: 'ENTERPRISE_2' }).valueFc, WELCOME_TOKEN_VALUE_ENTERPRISE_FC);
-    assert.equal(resolveWelcomeOffer({ planKey: 'ENTERPRISE_3' }).valueFc, WELCOME_TOKEN_VALUE_ENTERPRISE_FC);
+    assert.equal(resolveWelcomeOffer({ planKey: 'ENTERPRISE_1' }).moment, 'plan_activation');
+    assert.equal(
+      resolveWelcomeOffer({ planKey: 'ENTERPRISE_1', accountKind: 'ORGANIZER' }, { moment: 'signup' }).key,
+      'b2b',
+    );
+    assert.equal(
+      resolveWelcomeOffer({ planKey: 'ENTERPRISE_1' }, { moment: 'plan_activation' }).key,
+      'enterprise',
+    );
     assert.equal(welcomeTokenValueFc('ENTERPRISE'), WELCOME_TOKEN_VALUE_ENTERPRISE_FC);
   });
 
   it('offre 10 jetons aux comptes venue, catalog, service et client', () => {
-    assert.deepEqual(resolveWelcomeOffer({ accountKind: 'CLIENT' }), {
-      key: 'catalog',
-      tokens: WELCOME_TOKENS_CATALOG_FAMILY,
-      valueFc: 0,
-      shareWithOrg: true,
-      fixedTokens: true,
-    });
+    const client = resolveWelcomeOffer({ accountKind: 'CLIENT' });
+    assert.equal(client.key, 'catalog');
+    assert.equal(client.tokens, WELCOME_TOKENS_CATALOG_FAMILY);
+    assert.equal(client.moment, 'signup');
     assert.equal(resolveWelcomeOffer({ accountKind: 'VENDOR' }).tokens, WELCOME_TOKENS_CATALOG_FAMILY);
     assert.equal(resolveWelcomeOffer({ planKey: 'VENUE' }).tokens, WELCOME_TOKENS_CATALOG_FAMILY);
-    assert.equal(resolveWelcomeOffer({ planKey: 'SERVICE' }).tokens, WELCOME_TOKENS_CATALOG_FAMILY);
-    assert.equal(resolveWelcomeOffer({ planKey: 'CATALOG' }).tokens, WELCOME_TOKENS_CATALOG_FAMILY);
     assert.equal(resolveWelcomeOffer({ accountKind: 'BOTH' }).tokens, WELCOME_TOKENS_CATALOG_FAMILY);
-    assert.equal(resolveWelcomeOffer({ accountKind: 'BOTH', planKey: 'CATALOG' }).tokens, WELCOME_TOKENS_CATALOG_FAMILY);
   });
 
   it('mémorise le forfait seulement s’il correspond au type de compte', () => {
@@ -61,15 +63,26 @@ describe('welcomeAiTokens', () => {
     );
   });
 
-  it('n’offre rien au manager (inclus dans le pot de l’organisation)', () => {
+  it('n’offre rien au manager par défaut', () => {
     assert.equal(resolveWelcomeOffer({ orgRole: 'MANAGER', intent: 'pro' }).key, 'none');
-    assert.equal(resolveWelcomeOffer({ orgRole: 'MANAGER', accountKind: 'VENDOR' }).tokens, 0);
+    assert.equal(
+      resolveWelcomeOffer({ orgRole: 'MANAGER' }, { moment: 'team_create' }).key,
+      'none',
+    );
   });
 
-  it('offre 4 jetons au protocole à la création du compte', () => {
-    const offer = resolveWelcomeOffer({ orgRole: 'PROTOCOL', accountKind: 'ORGANIZER' });
+  it('offre 4 jetons au protocole à la création d’équipe', () => {
+    const offer = resolveWelcomeOffer({ orgRole: 'PROTOCOL' }, { moment: 'team_create' });
     assert.equal(offer.key, 'protocol');
     assert.equal(offer.tokens, WELCOME_TOKENS_PROTOCOL);
-    assert.equal(offer.shareWithOrg, false);
+    assert.equal(offer.moment, 'team_create');
+  });
+
+  it('respecte un montant et un moment configurés', () => {
+    const rules = {
+      ...DEFAULT_WELCOME_GRANT_RULES,
+      catalog: { enabled: true, amount: 25, unit: 'tokens' as const, moment: 'signup' as const },
+    };
+    assert.equal(resolveWelcomeOffer({ accountKind: 'VENDOR' }, { rules }).tokens, 25);
   });
 });
