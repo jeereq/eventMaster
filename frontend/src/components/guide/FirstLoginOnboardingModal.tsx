@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Building2,
   Sparkles,
@@ -26,12 +26,18 @@ import {
 } from '@/lib/marketplace';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import {
+  clearRegisterVendorIntent,
+  type VendorRegisterTrack,
+} from '@/lib/registerVendorIntent';
 
 interface FirstLoginOnboardingModalProps {
   open: boolean;
   onClose: () => void;
   onComplete: () => void;
   tenantName?: string | null;
+  track?: VendorRegisterTrack | null;
+  initialCategory?: ServiceCategory | null;
 }
 
 export default function FirstLoginOnboardingModal({
@@ -39,7 +45,11 @@ export default function FirstLoginOnboardingModal({
   onClose,
   onComplete,
   tenantName,
+  track = 'service',
+  initialCategory,
 }: FirstLoginOnboardingModalProps) {
+  const isVenue = track === 'venue';
+  const lastStep = isVenue ? 2 : 3;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -50,7 +60,13 @@ export default function FirstLoginOnboardingModal({
   const [commune, setCommune] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
 
-  const [category, setCategory] = useState<ServiceCategory>('CATERING');
+  const [category, setCategory] = useState<ServiceCategory>(initialCategory || 'CATERING');
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialCategory) setCategory(initialCategory);
+    if (tenantName) setDisplayName((current) => current || tenantName);
+  }, [initialCategory, tenantName, open]);
   const [title, setTitle] = useState('');
   const [travels, setTravels] = useState(true);
   const [coverageRadiusKm, setCoverageRadiusKm] = useState('25');
@@ -63,7 +79,9 @@ export default function FirstLoginOnboardingModal({
     e.preventDefault();
     setError('');
     if (!displayName.trim()) {
-      setError('Veuillez renseigner le nom commercial ou de votre enseigne.');
+      setError(isVenue
+        ? 'Veuillez renseigner le nom de la salle ou du complexe.'
+        : 'Veuillez renseigner le nom commercial ou de votre enseigne.');
       return;
     }
     setStep(2);
@@ -96,14 +114,19 @@ export default function FirstLoginOnboardingModal({
         city,
         commune,
         neighborhood,
-        category,
-        title: title.trim() || `Prestation ${SERVICE_CATEGORY_LABELS[category] || ''}`,
-        travels,
-        coverageRadiusKm: cleanRadius,
-        priceFromFc: cleanPrice,
-        priceUnit,
-        description: description.trim() || null,
+        ...(isVenue
+          ? {}
+          : {
+              category,
+              title: title.trim() || `Prestation ${SERVICE_CATEGORY_LABELS[category] || ''}`,
+              travels,
+              coverageRadiusKm: cleanRadius,
+              priceFromFc: cleanPrice,
+              priceUnit,
+              description: description.trim() || null,
+            }),
       });
+      clearRegisterVendorIntent();
       onComplete();
     } catch (err: unknown) {
       console.error('Erreur enregistrement onboarding:', err);
@@ -119,20 +142,30 @@ export default function FirstLoginOnboardingModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Configuration rapide de votre vitrine"
-      description={`Étape ${step} sur 3 — ${
-        step === 1 ? 'Identité & Localisation' : step === 2 ? 'Votre Spécialité' : 'Tarification de base'
-      }`}
+      title={isVenue ? 'Préparer la fiche de votre salle' : 'Configuration rapide de votre vitrine'}
+      description={
+        isVenue
+          ? `Étape ${step} sur ${lastStep} — ${step === 1 ? 'Identité & localisation' : 'Prochaine action'}`
+          : `Étape ${step} sur ${lastStep} — ${
+              step === 1 ? 'Identité & localisation' : step === 2 ? 'Votre métier' : 'Tarification de base'
+            }`
+      }
       size="md"
     >
       <div className="space-y-4 pt-1">
         {/* Barre de progression des étapes */}
         <div className="flex items-center justify-between gap-2 pb-2 border-b border-border">
-          {[
-            { id: 1, label: 'Profil', icon: Building2 },
-            { id: 2, label: 'Activité', icon: Tag },
-            { id: 3, label: 'Offre', icon: DollarSign },
-          ].map((s) => {
+          {(isVenue
+            ? [
+                { id: 1, label: 'Salle', icon: Building2 },
+                { id: 2, label: 'Suite', icon: Compass },
+              ]
+            : [
+                { id: 1, label: 'Profil', icon: Building2 },
+                { id: 2, label: 'Métier', icon: Tag },
+                { id: 3, label: 'Offre', icon: DollarSign },
+              ]
+          ).map((s) => {
             const Icon = s.icon;
             const isDone = step > s.id;
             const isCurrent = step === s.id;
@@ -155,7 +188,7 @@ export default function FirstLoginOnboardingModal({
                     {s.label}
                   </p>
                 </div>
-                {s.id < 3 && <div className="h-[2px] flex-1 bg-border/60 mx-1 rounded" />}
+                {s.id < lastStep && <div className="h-[2px] flex-1 bg-border/60 mx-1 rounded" />}
               </div>
             );
           })}
@@ -169,7 +202,9 @@ export default function FirstLoginOnboardingModal({
             <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 flex items-start gap-2.5 text-xs text-muted">
               <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p>
-                Ces informations apparaîtront sur votre profil public pour permettre aux organisateurs de vous identifier et de vous trouver facilement.
+                {isVenue
+                  ? 'Le nom et la ville de votre salle permettent aux organisateurs de vous trouver dans le catalogue.'
+                  : 'Ces informations apparaîtront sur votre profil public pour permettre aux organisateurs de vous identifier et de vous trouver facilement.'}
               </p>
             </div>
 
@@ -178,7 +213,7 @@ export default function FirstLoginOnboardingModal({
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Ex: Élite Traiteur & Déco"
+              placeholder={isVenue ? 'Ex: Domaine Royal / Salle Prestige' : 'Ex: Élite Traiteur & Déco'}
               leftIcon={<Building2 className="w-4 h-4" />}
             />
 
@@ -211,8 +246,28 @@ export default function FirstLoginOnboardingModal({
           </form>
         )}
 
+        {step === 2 && isVenue && (
+          <form onSubmit={handleFinalSubmit} className="space-y-3.5">
+            <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 text-xs text-muted leading-relaxed">
+              Ensuite, créez le plan 2D/3D de votre salle : tables, capacité et visite virtuelle. Les organisateurs réservent à partir de cette vitrine.
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-border">
+              <Button type="button" variant="secondary" onClick={() => setStep(1)} leftIcon={<ChevronLeft className="w-4 h-4" />}>
+                Précédent
+              </Button>
+              <Button
+                type="submit"
+                loading={saving}
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
+                Enregistrer et ouvrir l’éditeur
+              </Button>
+            </div>
+          </form>
+        )}
+
         {/* ─── ÉTAPE 2 : DOMAINE & MOBILITÉ ─── */}
-        {step === 2 && (
+        {step === 2 && !isVenue && (
           <form onSubmit={handleNextStep2} className="space-y-3.5">
             <label className="block">
               <span className="block text-xs font-medium text-muted mb-1.5">

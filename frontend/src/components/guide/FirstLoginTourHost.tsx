@@ -17,6 +17,7 @@ import {
   setVendorOnboardingStatus,
   shouldAutoOfferFirstTour,
 } from '@/lib/firstLoginTour';
+import { readRegisterVendorIntent } from '@/lib/registerVendorIntent';
 import FirstLoginOnboardingModal from './FirstLoginOnboardingModal';
 
 export default function FirstLoginTourHost() {
@@ -126,12 +127,16 @@ export default function FirstLoginTourHost() {
     window.setTimeout(() => startTour(resolved.guideId, access, tourOpts), 80);
   };
 
+  const vendorIntent = readRegisterVendorIntent();
+
   const handleOnboardingComplete = () => {
     if (user?.id) {
       setVendorOnboardingStatus(user.id, true);
     }
     setOnboardingOpen(false);
-    // Enchaîner sur la proposition de visite guidée
+    if (vendorIntent?.track === 'venue' && !pathname.startsWith('/dashboard/rooms')) {
+      router.replace('/dashboard/rooms');
+    }
     setFirstTourStatus(user!.id, 'pending');
     setOfferOpen(true);
   };
@@ -150,6 +155,8 @@ export default function FirstLoginTourHost() {
         onClose={handleOnboardingClose}
         onComplete={handleOnboardingComplete}
         tenantName={tenant?.name}
+        track={vendorIntent?.track ?? 'service'}
+        initialCategory={vendorIntent?.category}
       />
 
       {offerOpen && (

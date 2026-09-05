@@ -13,7 +13,6 @@ import {
   Building2,
   Phone,
   MessageSquare,
-  UserCheck,
   ScanLine,
   LayoutGrid,
   Wallet,
@@ -46,9 +45,27 @@ import {
 } from '@/lib/authOtpChannels';
 import { interpolateRates } from '@/lib/platformRates';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
-import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import {
+  ACCOUNT_KIND_DESCRIPTIONS,
+  ACCOUNT_KIND_LABELS,
+  SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_LABELS,
+  type ServiceCategory,
+  type TenantAccountKind,
+} from '@/lib/marketplace';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 import { formatFc, LANDING_PLANS } from '@/config/landingPricing';
+import RegisterReferralGate from '@/components/register/RegisterReferralGate';
+import RegisterServiceSpecialty from '@/components/register/RegisterServiceSpecialty';
+import RegisterVendorTrackPicker from '@/components/register/RegisterVendorTrackPicker';
+import {
+  planForVendorTrack,
+  resolveVendorTrackFromParams,
+  saveRegisterVendorIntent,
+  serviceGroupForCategory,
+  type VendorRegisterTrack,
+  type VendorServiceGroup,
+} from '@/lib/registerVendorIntent';
 import {
   DEFAULT_WELCOME_AI_GRANTS,
   formatWelcomeGrantAmount,
@@ -260,7 +277,7 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
     goalTag: 'Espace Propriétaire',
     goalIcon: Building2,
     defaultAccountKind: 'VENDOR',
-    defaultNextPath: '/dashboard/catalogue',
+    defaultNextPath: '/dashboard/rooms',
     submitButtonLabel: 'Référencer mon établissement',
     orgLabel: 'Nom de la salle ou complexe',
     orgPlaceholder: 'Ex: Domaine Royal / Complexe Grand Duc',
@@ -275,20 +292,20 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
     badge: 'Prestataire Pro',
     heroTitle: 'Mettez en valeur vos prestations événementielles',
     heroDescription:
-      'Proposez vos services de traiteur, décoration, sonorisation, DJ ou photo aux organisateurs de votre région.',
-    goalTitle: 'Objectif : Référencement Prestataire',
-    goalSubtitle: 'Publiez votre catalogue de services et recevez des commandes de particuliers et entreprises.',
+      'Choisissez votre métier, publiez une offre claire, puis recevez des devis d’organisateurs près de chez vous.',
+    goalTitle: 'Objectif : Fiche prestataire',
+    goalSubtitle: 'Métier → vitrine → devis. Une seule offre pour commencer, le catalogue ensuite.',
     goalTag: 'Prestataire Événementiel',
     goalIcon: Store,
     defaultAccountKind: 'VENDOR',
-    defaultNextPath: '/dashboard/catalogue',
+    defaultNextPath: '/dashboard/marketplace',
     submitButtonLabel: 'Créer ma fiche prestataire',
     orgLabel: 'Nom de l’enseigne ou entreprise',
     orgPlaceholder: 'Ex: Prestige Traiteur / Sonorisation Pro Kin',
     features: [
-      { step: 1, icon: Store, title: 'Catalogue de formules', desc: 'Mettez en avant vos packs, menus et forfaits avec tarifs transparents.' },
-      { step: 2, icon: Mail, title: 'Devis instantanés', desc: 'Recevez les demandes ciblées selon votre zone géographique.' },
-      { step: 3, icon: CalendarCheck, title: 'Zéro commission cachée', desc: 'Conservez vos marges directes sur vos prestations.' },
+      { step: 1, icon: Store, title: 'Choisir le métier', desc: 'Prestation (traiteur, photo, DJ…) ou location de matériel.' },
+      { step: 2, icon: Mail, title: 'Publier une offre', desc: 'Tarif de départ, zone et photos — visible par les organisateurs.' },
+      { step: 3, icon: CalendarCheck, title: 'Répondre aux devis', desc: 'Demande, date, acompte. Sans commission plateforme.' },
     ],
   },
   quotes: {
@@ -487,6 +504,7 @@ function resolveActionConfig(
   intent: string | null,
   accountKind: TenantAccountKind,
   isClientFlow: boolean,
+  plan: string | null,
 ): RegistrationActionConfig {
   if (action && REGISTRATION_ACTION_CONFIGS[action]) {
     return REGISTRATION_ACTION_CONFIGS[action];
@@ -494,6 +512,12 @@ function resolveActionConfig(
   if (action === 'venues' || action === 'packs') {
     return REGISTRATION_ACTION_CONFIGS.seeker;
   }
+  if (action === 'ai_recommendation' || action === 'rentals') {
+    return REGISTRATION_ACTION_CONFIGS.services;
+  }
+  const planKey = (plan || '').toUpperCase();
+  if (planKey === 'VENUE') return REGISTRATION_ACTION_CONFIGS.venue;
+  if (planKey === 'SERVICE') return REGISTRATION_ACTION_CONFIGS.services;
   if (intent && REGISTRATION_ACTION_CONFIGS[intent]) {
     return REGISTRATION_ACTION_CONFIGS[intent];
   }
@@ -582,7 +606,11 @@ function RegisterPageContent() {
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [referralFromLink, setReferralFromLink] = useState(false);
+  const [referralChoice, setReferralChoice] = useState<'yes' | 'no' | null>(null);
   const [accountKind, setAccountKind] = useState<TenantAccountKind>('ORGANIZER');
+  const [vendorTrack, setVendorTrack] = useState<VendorRegisterTrack | null>(null);
+  const [serviceGroup, setServiceGroup] = useState<VendorServiceGroup | null>(null);
+  const [serviceCategory, setServiceCategory] = useState<ServiceCategory | null>(null);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -603,23 +631,48 @@ function RegisterPageContent() {
     if (fromUrl) {
       setReferralCode(fromUrl);
       setReferralFromLink(true);
+      setReferralChoice('yes');
     }
     const kind = searchParams.get('kind');
     if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'BOTH' || kind === 'ORGANIZER') {
       setAccountKind(kind);
-    } else if (actionParam === 'venue' || actionParam === 'services' || actionParam === 'quotes' || intentParam === 'vendor') {
+    } else if (actionParam === 'venue' || actionParam === 'services' || actionParam === 'quotes' || actionParam === 'rentals' || actionParam === 'ai_recommendation' || intentParam === 'vendor') {
       setAccountKind('VENDOR');
     } else if (actionParam === 'venues' || actionParam === 'packs' || intentParam === 'seeker') {
       setAccountKind('CLIENT');
     } else if (actionParam || intentParam === 'personal' || intentParam === 'pro') {
       setAccountKind('ORGANIZER');
     }
-  }, [searchParams, actionParam, intentParam]);
+
+    const track = resolveVendorTrackFromParams({ action: actionParam, plan: planParam });
+    setVendorTrack(track);
+    if (actionParam === 'rentals') {
+      setServiceGroup('rental');
+    }
+    const categoryParam = searchParams.get('category');
+    if (categoryParam && (SERVICE_CATEGORIES as string[]).includes(categoryParam)) {
+      const category = categoryParam as ServiceCategory;
+      setServiceCategory(category);
+      setServiceGroup(serviceGroupForCategory(category));
+    }
+  }, [searchParams, actionParam, intentParam, planParam]);
+
+  const effectiveAction = vendorTrack === 'venue'
+    ? 'venue'
+    : vendorTrack === 'service'
+      ? 'services'
+      : actionParam;
 
   // Résolution de la configuration éditoriale contextuelle
   const config = useMemo(() => {
-    return resolveActionConfig(actionParam, intentParam, accountKind, isClientFlow);
-  }, [actionParam, intentParam, accountKind, isClientFlow]);
+    return resolveActionConfig(effectiveAction, intentParam, accountKind, isClientFlow, planParam);
+  }, [effectiveAction, intentParam, accountKind, isClientFlow, planParam]);
+
+  const vendorPlanLocked = planParam === 'VENUE' || planParam === 'SERVICE' || planParam === 'CATALOG';
+  const needsVendorTrack = accountKind === 'VENDOR';
+  const showVendorChooser = needsVendorTrack && !vendorTrack;
+  const showServiceSpecialty = needsVendorTrack && vendorTrack === 'service' && !serviceCategory;
+  const showAccountForm = !showVendorChooser && !showServiceSpecialty;
 
   // Résolution des détails du forfait éventuel
   const matchedPlan = useMemo(() => {
@@ -662,10 +715,28 @@ function RegisterPageContent() {
       const e164 = composeE164(phoneCountryCode, phoneNational) || undefined;
       const orgName = accountKind === 'CLIENT' ? name.trim() : tenantName.trim();
       if (accountKind !== 'CLIENT' && !orgName) {
-        setError('Le nom de l’organisation ou établissement est obligatoire.');
+        setError(vendorTrack === 'venue'
+          ? 'Le nom de la salle ou du complexe est obligatoire.'
+          : vendorTrack === 'service'
+            ? 'Le nom de l’enseigne est obligatoire.'
+            : 'Le nom de l’organisation ou établissement est obligatoire.');
         setLoading(false);
         return;
       }
+
+      if (accountKind === 'VENDOR' && vendorTrack) {
+        saveRegisterVendorIntent({
+          track: vendorTrack,
+          serviceGroup: serviceCategory ? serviceGroupForCategory(serviceCategory) : serviceGroup || undefined,
+          category: serviceCategory || undefined,
+        });
+      }
+
+      const resolvedPlan = accountKind === 'VENDOR' && vendorTrack
+        ? planForVendorTrack(vendorTrack, planParam)
+        : planParam || undefined;
+      const shouldSendReferral = referralChoice === 'yes' || referralFromLink;
+      const referralToSend = shouldSendReferral ? (referralCode.trim() || undefined) : undefined;
 
       const res = await register(
         email,
@@ -676,12 +747,12 @@ function RegisterPageContent() {
         verificationMethod,
         acceptTerms,
         acceptPrivacy,
-        referralCode || undefined,
+        referralToSend,
         phoneCountryCode,
         phoneNational,
         accountKind,
         intentParam || undefined,
-        planParam || undefined,
+        resolvedPlan,
       );
 
       if (res.requiresVerification && res.email) {
@@ -763,7 +834,7 @@ function RegisterPageContent() {
           </div>
         ) : (
           <>
-            {/* ─── BANDEAU CONTEXTUEL D'INTENTION D'ACTION COMPACT ─── */}
+            {showAccountForm && (
             <div className="mb-3.5 p-2.5 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-[color:var(--festive-accent-soft)]/20 to-primary/5 border border-primary/20 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-md bg-primary/20 text-primary flex items-center justify-center shrink-0">
@@ -797,15 +868,47 @@ function RegisterPageContent() {
                 </span>
               </div>
             </div>
+            )}
 
+            {error && <Alert variant="error" className="mb-3 py-2 text-xs">{error}</Alert>}
+
+            {showVendorChooser && (
+              <RegisterVendorTrackPicker onSelect={setVendorTrack} />
+            )}
+
+            {showServiceSpecialty && (
+              <RegisterServiceSpecialty
+                group={serviceGroup}
+                category={serviceCategory}
+                onGroup={(group) => {
+                  setServiceGroup(group);
+                  setServiceCategory(null);
+                }}
+                onCategory={setServiceCategory}
+                onBack={() => {
+                  if (!vendorPlanLocked) {
+                    setVendorTrack(null);
+                  }
+                  setServiceGroup(actionParam === 'rentals' ? 'rental' : null);
+                  setServiceCategory(null);
+                }}
+              />
+            )}
+
+            {showAccountForm && (
+            <>
             {/* En-tête formulaire compact */}
             <div className="text-left mb-3">
               <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
                 {accountKind === 'CLIENT'
                   ? 'Créer mon compte client'
-                  : accountKind === 'VENDOR'
-                    ? 'Créer mon compte professionnel'
-                    : 'Créer mon espace organisateur'}
+                  : vendorTrack === 'venue'
+                    ? 'Créer mon compte salle'
+                    : vendorTrack === 'service'
+                      ? 'Créer mon compte prestataire'
+                      : accountKind === 'VENDOR'
+                        ? 'Créer mon compte professionnel'
+                        : 'Créer mon espace organisateur'}
               </h2>
               <p className="mt-0.5 text-xs text-muted">
                 Déjà inscrit ?{' '}
@@ -816,32 +919,40 @@ function RegisterPageContent() {
                   Connectez-vous
                 </Link>
               </p>
+              {vendorTrack === 'service' && serviceCategory && (
+                <button
+                  type="button"
+                  onClick={() => setServiceCategory(null)}
+                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:underline"
+                >
+                  Métier : {SERVICE_CATEGORY_LABELS[serviceCategory]} — modifier
+                </button>
+              )}
+              {vendorTrack === 'venue' && !vendorPlanLocked && (
+                <button
+                  type="button"
+                  onClick={() => setVendorTrack(null)}
+                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:underline"
+                >
+                  Je suis plutôt prestataire
+                </button>
+              )}
             </div>
-
-            {error && <Alert variant="error" className="mb-3 py-2 text-xs">{error}</Alert>}
-
-            {referralFromLink && referralCode && (
-              <div className="mb-3 flex items-start gap-2.5 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-xs">
-                <UserCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-emerald-800 dark:text-emerald-300">Parrainage actif</p>
-                  <p className="text-emerald-700 dark:text-emerald-400 text-[11px] mt-0.5">
-                    Code commercial appliqué : <span className="font-mono font-bold">{referralCode}</span>
-                  </p>
-                </div>
-              </div>
-            )}
 
             <form className="space-y-3" onSubmit={handleSubmit}>
               {/* ─── SÉLECTION DU TYPE DE COMPTE COMPACTE ─── */}
-              {hasExplicitAction ? (
+              {hasExplicitAction || vendorTrack ? (
                 <div className="p-2 rounded-[var(--radius-card)] bg-surface-muted/70 border border-border flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
                       <GoalIcon className="w-3.5 h-3.5" />
                     </div>
                     <span className="font-semibold text-foreground truncate text-xs">
-                      {ACCOUNT_KIND_LABELS[accountKind]}
+                      {vendorTrack === 'venue'
+                        ? 'Compte salle'
+                        : vendorTrack === 'service'
+                          ? 'Compte prestataire'
+                          : ACCOUNT_KIND_LABELS[accountKind]}
                     </span>
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1 py-0.2 rounded shrink-0">
                       Offre liée
@@ -879,7 +990,17 @@ function RegisterPageContent() {
                                 name="accountKind"
                                 className="accent-primary"
                                 checked={isSelected}
-                                onChange={() => setAccountKind(kind)}
+                                onChange={() => {
+                                  setAccountKind(kind);
+                                  if (kind !== 'VENDOR') {
+                                    setVendorTrack(null);
+                                    setServiceGroup(null);
+                                    setServiceCategory(null);
+                                  } else if (!resolveVendorTrackFromParams({ action: actionParam, plan: planParam })) {
+                                    setVendorTrack(null);
+                                    setServiceCategory(null);
+                                  }
+                                }}
                               />
                               {ACCOUNT_KIND_LABELS[kind]}
                             </span>
@@ -959,27 +1080,28 @@ function RegisterPageContent() {
                 />
               </div>
 
-              {/* ─── MOT DE PASSE & CODE PARRAINAGE (2 COLONNES) ─── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <Input
-                  label="Mot de passe"
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  leftIcon={<Lock className="w-4 h-4" />}
-                />
+              <Input
+                label="Mot de passe"
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                leftIcon={<Lock className="w-4 h-4" />}
+              />
 
-                <Input
-                  label="Code parrainage (optionnel)"
-                  id="referralCode"
-                  value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                  placeholder="EM-XXXX-XXXX"
-                />
-              </div>
+              <RegisterReferralGate
+                choice={referralChoice}
+                onChoice={(next) => {
+                  setReferralChoice(next);
+                  setReferralFromLink(false);
+                  if (next === 'no') setReferralCode('');
+                }}
+                code={referralCode}
+                onCodeChange={setReferralCode}
+                fromLink={referralFromLink}
+              />
 
               {/* ─── CHOIX DE MÉTHODE DE VALIDATION OTP ─── */}
               {canChooseOtpChannel ? (
@@ -1133,6 +1255,8 @@ function RegisterPageContent() {
                 </p>
               </div>
             </form>
+            </>
+            )}
           </>
         )}
       </Card>

@@ -112,7 +112,7 @@ export const ACCOUNT_KIND_FILTER_LABELS: Record<TenantAccountKind, string> = {
 
 export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Créer, inviter, accueillir. Modèles, plan de table, QR.',
-  VENDOR: 'Publier une fiche, recevoir des devis, bloquer les dates.',
+  VENDOR: 'Salle à réserver, ou métier de service (traiteur, photo, location…).',
   BOTH: 'Organiser et publier, dans le même compte.',
   CLIENT: 'Chercher, composer un pack, demander un devis. Gratuit.',
 };

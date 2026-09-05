@@ -244,7 +244,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     clickHrefs: ['/tarifs', '#editeur', '#salles'],
     sectionId: 'editeur',
     exploreCta: { href: '/tarifs', label: 'Voir les forfaits' },
-    cta: { href: '/register?kind=VENDOR&intent=vendor', label: 'Publier ma vitrine professionnelle' },
+    cta: { href: '/register?kind=VENDOR&intent=vendor', label: 'Publier ma salle ou mes prestations' },
     registerHint: 'Visibilité qualifiée, devis directs sans commission plateforme.',
     results: [
       { icon: LayoutGrid, label: 'Vitrine avec visite 3D' },
