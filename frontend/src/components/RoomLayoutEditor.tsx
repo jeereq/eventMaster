@@ -1568,112 +1568,128 @@ export default function RoomLayoutEditor({
               {caps.canDuplicate ? ' · Cmd/Ctrl+D pour dupliquer' : ''}
               {caps.canAlign ? ' · Cmd/Ctrl+G pour grouper' : ''}
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {caps.canDuplicate ? (
                 <button type="button" onClick={duplicateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
-                  <Copy className="w-3.5 h-3.5" aria-hidden /> Dupliquer le groupe
+                  <Copy className="w-3.5 h-3.5" aria-hidden /> Dupliquer
                 </button>
               ) : null}
               <button type="button" onClick={rotateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
                 <RotateCw className="w-3.5 h-3.5" aria-hidden /> Tourner 90°
               </button>
-              <button type="button" onClick={() => flipSelection('horizontal')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
-                <FlipHorizontal2 className="w-3.5 h-3.5" aria-hidden /> Miroir H
-              </button>
-              <button type="button" onClick={() => flipSelection('vertical')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
-                <FlipVertical2 className="w-3.5 h-3.5" aria-hidden /> Miroir V
+              <button type="button" onClick={deleteSelected} className={cn(EDITOR_TOOL, 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100')}>
+                <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer
               </button>
             </div>
-            {caps.canAlign ? (
-              <>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {([
-                    ['left', AlignLeft],
-                    ['centerX', AlignCenter],
-                    ['right', AlignRight],
-                    ['distributeX', BetweenHorizontalStart],
-                    ['top', AlignStartVertical],
-                    ['centerY', AlignCenterVertical],
-                    ['bottom', AlignEndVertical],
-                    ['distributeY', BetweenVerticalStart],
-                  ] as const).map(([mode, Icon]) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      title={alignModeLabels[mode]}
-                      aria-label={alignModeLabels[mode]}
-                      onClick={() => applyAlign(mode)}
-                      className={cn(EDITOR_TOOL_ICON, 'w-full')}
-                    >
-                      <Icon className="w-3.5 h-3.5" aria-hidden />
-                    </button>
-                  ))}
+            <details className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40">
+              <summary className="min-h-11 px-3 flex items-center justify-between gap-2 text-sm font-semibold text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                Aligner, miroir & groupe
+                <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted" aria-hidden />
+              </summary>
+              <div className="px-3 pb-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => flipSelection('horizontal')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+                    <FlipHorizontal2 className="w-3.5 h-3.5" aria-hidden /> Miroir H
+                  </button>
+                  <button type="button" onClick={() => flipSelection('vertical')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+                    <FlipVertical2 className="w-3.5 h-3.5" aria-hidden /> Miroir V
+                  </button>
                 </div>
+                {caps.canAlign ? (
+                  <>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {([
+                        ['left', AlignLeft],
+                        ['centerX', AlignCenter],
+                        ['right', AlignRight],
+                        ['distributeX', BetweenHorizontalStart],
+                        ['top', AlignStartVertical],
+                        ['centerY', AlignCenterVertical],
+                        ['bottom', AlignEndVertical],
+                        ['distributeY', BetweenVerticalStart],
+                      ] as const).map(([mode, Icon]) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          title={alignModeLabels[mode]}
+                          aria-label={alignModeLabels[mode]}
+                          onClick={() => applyAlign(mode)}
+                          className={cn(EDITOR_TOOL_ICON, 'w-full')}
+                        >
+                          <Icon className="w-3.5 h-3.5" aria-hidden />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={groupSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}>
+                        <Group className="w-3.5 h-3.5" aria-hidden /> Grouper
+                      </button>
+                      <button type="button" onClick={ungroupSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}>
+                        <Ungroup className="w-3.5 h-3.5" aria-hidden /> Dégrouper
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </details>
+            <details className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40">
+              <summary className="min-h-11 px-3 flex items-center justify-between gap-2 text-sm font-semibold text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                Déplacer & style
+                <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted" aria-hidden />
+              </summary>
+              <div className="px-3 pb-3 space-y-2">
+                <p className={EDITOR_HEADING}>Déplacer le groupe</p>
+                <div className="grid grid-cols-3 gap-1 place-items-center max-w-[140px] mx-auto">
+                  <span />
+                  <button type="button" aria-label="Déplacer le groupe vers le haut" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, -3), { message: 'Groupe déplacé ↑', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowUp className="w-4 h-4" aria-hidden /></button>
+                  <span />
+                  <button type="button" aria-label="Déplacer le groupe vers la gauche" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, -3, 0), { message: 'Groupe déplacé ←', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowLeft className="w-4 h-4" aria-hidden /></button>
+                  <button type="button" aria-label="Déplacer le groupe vers le bas" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, 3), { message: 'Groupe déplacé ↓', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowDown className="w-4 h-4" aria-hidden /></button>
+                  <button type="button" aria-label="Déplacer le groupe vers la droite" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 3, 0), { message: 'Groupe déplacé →', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowRight className="w-4 h-4" aria-hidden /></button>
+                </div>
+                <p className={cn(EDITOR_HEADING, 'pt-1')}>Style du groupe</p>
+                <label className="flex items-center gap-2 text-xs">
+                  <span className="text-muted font-semibold">Couleur</span>
+                  <input
+                    type="color"
+                    value={groupStyleColor}
+                    onChange={(e) => setGroupStyleColor(e.target.value)}
+                    className="min-h-11 min-w-11 rounded border border-border cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBlueprint(
+                        applyStyleToSelection(blueprint, selection, {
+                          tableColor: groupStyleColor,
+                          color: groupStyleColor,
+                        }),
+                        { message: 'Style appliqué à la sélection', kind: 'edit' },
+                      );
+                    }}
+                    className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY, 'flex-1')}
+                  >
+                    Appliquer
+                  </button>
+                </label>
                 <div className="flex gap-2">
-                  <button type="button" onClick={groupSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}>
-                    <Group className="w-3.5 h-3.5" aria-hidden /> Grouper
+                  <button
+                    type="button"
+                    onClick={() => updateBlueprint(applyStyleToSelection(blueprint, selection, { locked: true }), { message: 'Groupe verrouillé', kind: 'edit' })}
+                    className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}
+                  >
+                    <Lock className="w-3.5 h-3.5" aria-hidden /> Verrouiller
                   </button>
-                  <button type="button" onClick={ungroupSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}>
-                    <Ungroup className="w-3.5 h-3.5" aria-hidden /> Dégrouper
+                  <button
+                    type="button"
+                    onClick={() => updateBlueprint(applyStyleToSelection(blueprint, selection, { locked: false }), { message: 'Groupe déverrouillé', kind: 'edit' })}
+                    className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}
+                  >
+                    <Unlock className="w-3.5 h-3.5" aria-hidden /> Déverrouiller
                   </button>
                 </div>
-              </>
-            ) : null}
-            <button type="button" onClick={deleteSelected} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'w-full')}>
-              <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer la sélection
-            </button>
-            <div className="pt-2 border-t border-border space-y-2">
-              <p className={EDITOR_HEADING}>Déplacer le groupe</p>
-              <div className="grid grid-cols-3 gap-1 place-items-center max-w-[140px] mx-auto">
-                <span />
-                <button type="button" aria-label="Déplacer le groupe vers le haut" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, -3), { message: 'Groupe déplacé ↑', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowUp className="w-4 h-4" aria-hidden /></button>
-                <span />
-                <button type="button" aria-label="Déplacer le groupe vers la gauche" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, -3, 0), { message: 'Groupe déplacé ←', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowLeft className="w-4 h-4" aria-hidden /></button>
-                <button type="button" aria-label="Déplacer le groupe vers le bas" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, 3), { message: 'Groupe déplacé ↓', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowDown className="w-4 h-4" aria-hidden /></button>
-                <button type="button" aria-label="Déplacer le groupe vers la droite" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 3, 0), { message: 'Groupe déplacé →', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowRight className="w-4 h-4" aria-hidden /></button>
               </div>
-              <p className={cn(EDITOR_HEADING, 'pt-1')}>Style du groupe</p>
-              <label className="flex items-center gap-2 text-xs">
-                <span className="text-muted font-semibold">Couleur</span>
-                <input
-                  type="color"
-                  value={groupStyleColor}
-                  onChange={(e) => setGroupStyleColor(e.target.value)}
-                  className="h-8 w-12 rounded border border-border cursor-pointer"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    updateBlueprint(
-                      applyStyleToSelection(blueprint, selection, {
-                        tableColor: groupStyleColor,
-                        color: groupStyleColor,
-                      }),
-                      { message: 'Style appliqué à la sélection', kind: 'edit' },
-                    );
-                  }}
-                  className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY, 'flex-1')}
-                >
-                  Appliquer
-                </button>
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateBlueprint(applyStyleToSelection(blueprint, selection, { locked: true }), { message: 'Groupe verrouillé', kind: 'edit' })}
-                  className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}
-                >
-                  <Lock className="w-3.5 h-3.5" aria-hidden /> Verrouiller
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateBlueprint(applyStyleToSelection(blueprint, selection, { locked: false }), { message: 'Groupe déverrouillé', kind: 'edit' })}
-                  className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}
-                >
-                  <Unlock className="w-3.5 h-3.5" aria-hidden /> Déverrouiller
-                </button>
-              </div>
-            </div>
+            </details>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -1743,7 +1759,7 @@ export default function RoomLayoutEditor({
                             <span className="flex items-center gap-1.5">
                               <span className="w-3 h-3 rounded-full border shrink-0" style={{ background: theme.accentColor, borderColor: theme.roomOutline.stroke }} />
                               {theme.name}
-                              {theme.isCustom && <span className="text-[8px] text-primary font-normal">perso.</span>}
+                              {theme.isCustom && <span className="text-xs text-primary font-normal">perso.</span>}
                             </span>
                             <span className="font-normal text-muted block mt-0.5 line-clamp-1">{theme.description}</span>
                           </button>

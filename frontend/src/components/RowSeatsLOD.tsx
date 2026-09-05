@@ -81,24 +81,44 @@ export function RowSeatsLOD({
     if (backRef.current) backRef.current.instanceMatrix.needsUpdate = true;
   }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct]);
 
-  const numbers = showSeatNumbers && selected
-    ? Array.from({ length: count }).map((_, i) => {
-        const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
-        return (
-          <Html
-            key={`n-${i}`}
-            center
-            distanceFactor={8}
-            style={{ pointerEvents: 'none' }}
-            position={[p.localX, p.y + 0.94, p.localZ]}
-          >
-            <span className="block min-w-[1.75rem] rounded bg-foreground/85 px-1.5 py-0.5 text-center text-xs font-semibold tabular-nums text-background shadow-sm">
-              {rowSeatCode(rowName, i)}
-            </span>
-          </Html>
-        );
-      })
-    : null;
+  const numberLabel = useMemo(() => {
+    if (!showSeatNumbers || !selected || count < 1) return null;
+    const first = computeRowSeatPose(0, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+    const last = computeRowSeatPose(count - 1, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+    const mid = {
+      x: (first.localX + last.localX) / 2,
+      y: Math.max(first.y, last.y) + 0.98,
+      z: (first.localZ + last.localZ) / 2,
+    };
+    const start = rowSeatCode(rowName, 0);
+    const end = rowSeatCode(rowName, count - 1);
+    return { mid, text: count === 1 ? start : `${start} – ${end}` };
+  }, [
+    showSeatNumbers,
+    selected,
+    count,
+    spacing,
+    curve,
+    elevation,
+    focusLocal.x,
+    focusLocal.z,
+    aisleSplit,
+    aisleWidthPct,
+    rowName,
+  ]);
+
+  const numbers = numberLabel ? (
+    <Html
+      center
+      distanceFactor={10}
+      style={{ pointerEvents: 'none' }}
+      position={[numberLabel.mid.x, numberLabel.mid.y, numberLabel.mid.z]}
+    >
+      <span className="block rounded bg-foreground/85 px-2 py-1 text-center text-xs font-semibold tabular-nums text-background shadow-sm">
+        {numberLabel.text}
+      </span>
+    </Html>
+  ) : null;
 
   if (lod === 'full') {
     return (

@@ -1343,7 +1343,7 @@ function TableMesh({
       })}
       {selected && !hideLabels && (
         <Html center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
-          <div className="px-2 py-0.5 rounded-md bg-primary text-white text-[10px] font-bold whitespace-nowrap shadow">
+          <div className="px-2 py-1 rounded-md bg-primary-solid text-primary-foreground text-xs font-bold whitespace-nowrap shadow-sm">
             {name} · {capacity} pl.
           </div>
         </Html>
@@ -1430,7 +1430,7 @@ function ZoneMesh({
       </mesh>
       {!hideLabels && (
         <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
-          <span className="text-[10px] font-bold text-white bg-black/55 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
+          <span className="text-xs font-bold text-background bg-foreground/85 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
         </Html>
       )}
     </group>
@@ -1500,7 +1500,7 @@ function FreeChairMesh({
       />
       {selected && !hideLabels && (
         <Html center distanceFactor={9} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
-          <span className="text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded">{label || 'Chaise'}</span>
+          <span className="text-xs font-bold bg-primary-solid text-primary-foreground px-1.5 py-0.5 rounded">{label || 'Chaise'}</span>
         </Html>
       )}
     </group>
@@ -1832,7 +1832,7 @@ function FixtureMesh({
       )}
       {(selected || label) && !hideLabels && (
         <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, height + 0.35, 0]}>
-          <span className="text-[9px] font-bold bg-black/65 text-white px-1.5 py-0.5 rounded">
+          <span className="text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded">
             {label || kind}
           </span>
         </Html>
@@ -2243,7 +2243,7 @@ function SceneContent({
               })()}
               {!hideLabels && (
                 <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
-                  <span className="text-[9px] font-bold bg-white/90 px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
+                  <span className="text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
                 </Html>
               )}
             </group>
@@ -2421,19 +2421,19 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       </Canvas>
       {walkthroughActive ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
-          <div className="rounded-md bg-black/60 px-2.5 py-1.5 text-[10px] font-bold text-amber-50 backdrop-blur-sm">
+          <div className="rounded-md bg-foreground/85 px-2.5 py-1.5 text-xs font-bold text-background">
             Visite guidée · entrée par la porte
           </div>
         </div>
       ) : presentationMode ? (
         <div className="pointer-events-none absolute bottom-2 left-2">
-          <div className="rounded-md bg-black/40 px-2 py-1 text-[9px] font-bold text-amber-100/90 backdrop-blur-sm">
+          <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
             Présentation · orbit automatique
           </div>
         </div>
       ) : qualitySettings.showHints ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
-          <div className="rounded-md bg-black/55 px-2 py-1 text-[9px] font-medium text-white/85 backdrop-blur-sm">
+          <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
             {previewMode
               ? 'Rendu 3D réaliste · molette = zoom · glisser = orbit'
               : orbitLocked
@@ -2441,14 +2441,14 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
                 : 'Orbit libre · activez « Caméra bloquée » pour placer le mobilier sur les surfaces'}
           </div>
           {previewMode ? (
-            <div className="rounded-md bg-black/45 px-2 py-1 text-[9px] font-bold text-amber-100/90 backdrop-blur-sm">
+            <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
               {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
             </div>
           ) : null}
         </div>
       ) : (
         <div className="pointer-events-none absolute bottom-2 right-2">
-          <div className="rounded-md bg-black/40 px-2 py-1 text-[9px] font-bold text-white/80 backdrop-blur-sm">
+          <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
             Showcase · {renderQualityLabelsSafe(qualitySettings.quality)}
           </div>
         </div>

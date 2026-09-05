@@ -189,25 +189,18 @@ export default function ModelesPage() {
                   className="group rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-lg hover:border-primary/40 transition-all duration-300 p-3 flex flex-col justify-between"
                 >
                   <div className="space-y-3">
-                    <div
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
                       onClick={() => setModalTemplate(template)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setModalTemplate(template);
-                        }
-                      }}
-                      className="block w-full text-left rounded-lg overflow-hidden relative group/preview cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      title={`Aperçu du modèle ${template.name}`}
+                      className="block w-full text-left rounded-lg overflow-hidden relative group/preview focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      aria-label={`Aperçu du modèle ${template.name}`}
                     >
                       <LandingInvitationPreview template={template} compact className="!max-h-[200px]" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 backdrop-blur-2xs">
                         <Eye className="w-4 h-4" />
                         <span>Aperçu interactif</span>
                       </div>
-                    </div>
+                    </button>
 
                     <div className="space-y-1">
                       <div className="flex items-center justify-between gap-1">
