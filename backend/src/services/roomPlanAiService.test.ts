@@ -105,6 +105,29 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.items[1]?.aisleStyle, 'royalRed');
   });
 
+  it('reconnaît arche, cloison, table arc et scène demi-lune', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'perspective',
+      appearance: { imageRole: 'photo', roofStyle: 'tentSwag', floorType: 'herbe' },
+      items: [
+        { kind: 'table', x: 20, y: 30, shape: 'arc', seats: 10, chairStyle: 'ovalBack', hasCenterpiece: true },
+        { kind: 'arch', x: 40, y: 8, w: 24, h: 12 },
+        { kind: 'partition', x: 28, y: 40, w: 36, h: 14 },
+        { kind: 'stage', x: 36, y: 6, w: 28, h: 12, stageShape: 'semiCircle' },
+        { kind: 'row', x: 20, y: 50, seats: 10, chairStyle: 'louis' },
+      ],
+    }, { widthM: 22, heightM: 28 });
+
+    assert.equal(draft.appearance.roofStyle, 'tentSwag');
+    assert.equal(draft.items[0]?.shape, 'arc');
+    assert.equal(draft.items[0]?.hasCenterpiece, true);
+    assert.equal(draft.items[0]?.chairStyle, 'ovalBack');
+    assert.equal(draft.items[1]?.kind, 'arch');
+    assert.equal(draft.items[2]?.kind, 'partition');
+    assert.equal(draft.items[3]?.stageShape, 'semiCircle');
+    assert.equal(draft.items[4]?.chairStyle, 'louis');
+  });
+
   it('traite une photo comme imageRole photo par défaut', () => {
     const draft = parseRoomPlanVisionDraft({
       view: 'perspective',
