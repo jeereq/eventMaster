@@ -236,7 +236,24 @@ function DiscloseChevron({ open }: { open: boolean }) {
   );
 }
 
-type EditorToolGroupId = 'history' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene';
+type EditorToolGroupId = 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene';
+
+function ToolbarCluster({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 min-w-0 py-0.5 pl-2.5 border-l-2 border-border">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted shrink-0 w-full sm:w-auto">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
 
 function EditorToolGroup({
   id,
@@ -293,6 +310,8 @@ interface RoomLayoutEditorProps {
   allowThemesFixtures?: boolean;
   /** Niveau d’éditeur selon le forfait (basic / standard / advanced / complete). */
   editorLevel?: string | null;
+  /** Coupe le rendu 3D sans démonter l’éditeur (historique conservé). */
+  paused?: boolean;
 }
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
@@ -304,6 +323,7 @@ export default function RoomLayoutEditor({
   readOnly = false,
   allowThemesFixtures = true,
   editorLevel = 'complete',
+  paused = false,
 }: RoomLayoutEditorProps) {
   const { user, tenant } = useAuth();
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
@@ -1422,6 +1442,7 @@ export default function RoomLayoutEditor({
       walkthroughActive={walkthroughActive}
       onWalkthroughProgress={handleWalkthroughProgress}
       onWalkthroughComplete={handleWalkthroughComplete}
+      paused={paused}
       className={className}
     />
   );
@@ -1485,7 +1506,7 @@ export default function RoomLayoutEditor({
               <BoxSelect className="w-4 h-4" />
               {selection.length} éléments sélectionnés
             </p>
-            <p className="text-[10px] text-muted">
+            <p className="text-xs text-muted">
               Shift+clic pour ajouter / retirer · Échap pour tout désélectionner
               {caps.canAlign ? ' · Cmd/Ctrl+G pour grouper' : ''}
             </p>
@@ -3121,7 +3142,7 @@ export default function RoomLayoutEditor({
                     <p className="text-[11px] font-semibold text-foreground mt-1">{formatStairSummary(def)}</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded border border-border bg-surface px-2 py-1.5">
                       <p className="font-bold uppercase text-muted">Départ</p>
                       <p className="font-semibold text-foreground mt-0.5">{def.fromLabel}</p>
@@ -4000,7 +4021,7 @@ export default function RoomLayoutEditor({
               const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
               if (!surface) {
                 return (
-                  <p className="text-[10px] text-muted">Glissez le siège sur une moquette, piste ou podium pour le poser dessus.</p>
+                  <p className="text-xs text-muted">Glissez le siège sur une moquette, piste ou podium pour le poser dessus.</p>
                 );
               }
               return (
@@ -4009,7 +4030,7 @@ export default function RoomLayoutEditor({
                 </Alert>
               );
             })()}
-            <p className="text-[10px] text-muted">Glissez la chaise librement dans la vue 3D.</p>
+            <p className="text-xs text-muted">Glissez la chaise librement dans la vue 3D.</p>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -4170,7 +4191,8 @@ export default function RoomLayoutEditor({
   );
 
   const toolbar = !readOnly && (
-    <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Outils du plan">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start" role="toolbar" aria-label="Outils du plan">
+      <ToolbarCluster label="Caméra">
       <button
         type="button"
         onClick={() => setLockOrbit((v) => !v)}
@@ -4205,13 +4227,9 @@ export default function RoomLayoutEditor({
         <DoorOpen className="w-3.5 h-3.5" aria-hidden />
         {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
       </button>
-      <span className="hidden sm:block h-6 w-px bg-border mx-0.5" aria-hidden />
-      <EditorToolGroup
-        id="history"
-        label="Historique"
-        openId={toolbarGroup}
-        onToggle={toggleToolbarGroup}
-      >
+      </ToolbarCluster>
+
+      <ToolbarCluster label="Éditer">
       <button
         type="button"
         onClick={undo}
@@ -4240,8 +4258,9 @@ export default function RoomLayoutEditor({
           <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer{selection.length > 1 ? ` (${selection.length})` : ''}
         </button>
       )}
-      </EditorToolGroup>
+      </ToolbarCluster>
 
+      <ToolbarCluster label="Réglages">
       <EditorToolGroup
         id="view"
         label="Vue"
@@ -4352,7 +4371,9 @@ export default function RoomLayoutEditor({
         Nuit LED
       </button>
       </EditorToolGroup>
+      </ToolbarCluster>
 
+      <ToolbarCluster label="Ajouter">
       <EditorToolGroup
         id="furniture"
         label="Mobilier"
@@ -4478,7 +4499,7 @@ export default function RoomLayoutEditor({
 
       <EditorToolGroup
         id="scene"
-        label="Scène et décor"
+        label="Décor"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
@@ -4517,6 +4538,7 @@ export default function RoomLayoutEditor({
         </button>
       ) : null}
       </EditorToolGroup>
+      </ToolbarCluster>
     </div>
   );
 
@@ -4531,7 +4553,7 @@ export default function RoomLayoutEditor({
                 <Sparkles className="w-4 h-4 text-primary" aria-hidden />
                 Générateur d’Amphithéâtre & Gradins Étagés
               </h4>
-              <p className="text-[10px] text-muted">
+              <p className="text-xs text-muted">
                 Disposition fluide en arcs concentriques avec élévation et allée centrale de passage
               </p>
             </div>
@@ -4634,7 +4656,7 @@ export default function RoomLayoutEditor({
                 <DoorOpen className="w-4 h-4 text-primary" aria-hidden />
                 Styles de Portes & Entrées (Inspiration Pinterest)
               </h4>
-              <p className="text-[10px] text-muted">
+              <p className="text-xs text-muted">
                 Portails royaux, doubles portes françaises à croisillons, portes de grange et sas VIP
               </p>
             </div>
@@ -4666,7 +4688,7 @@ export default function RoomLayoutEditor({
               >
                 <div>
                   <p className="text-xs font-bold text-foreground">{label}</p>
-                  <p className="text-[10px] text-muted mt-0.5">{hint}</p>
+                  <p className="text-xs text-muted mt-0.5">{hint}</p>
                 </div>
                 <span className="text-xs font-bold text-primary mt-2">
                   + Placer
@@ -4686,7 +4708,7 @@ export default function RoomLayoutEditor({
                 <Sparkles className="w-4 h-4 text-primary" aria-hidden />
                 Lustres & Suspensions Décoratives (Inspiration Pinterest)
               </h4>
-              <p className="text-[10px] text-muted">
+              <p className="text-xs text-muted">
                 Cascades de cristal scintillantes, suspensions rotin pampa, halos dorés et couronnes florales
               </p>
             </div>
@@ -4718,7 +4740,7 @@ export default function RoomLayoutEditor({
               >
                 <div>
                   <p className="text-xs font-bold text-foreground">{label}</p>
-                  <p className="text-[10px] text-muted mt-0.5">{hint}</p>
+                  <p className="text-xs text-muted mt-0.5">{hint}</p>
                 </div>
                 <span className="text-xs font-bold text-primary mt-2">
                   + Suspendre
@@ -4738,7 +4760,7 @@ export default function RoomLayoutEditor({
                 <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
                 Allées d’Honneur & Tapis de Cérémonie (Inspiration Pinterest)
               </h4>
-              <p className="text-[10px] text-muted">
+              <p className="text-xs text-muted">
                 Tapis rouge royal avec ganse or, allée miroir blanc, lin poudré & pétales, plancher chêne
               </p>
             </div>
@@ -4771,7 +4793,7 @@ export default function RoomLayoutEditor({
               >
                 <div>
                   <p className="text-xs font-bold text-foreground">{label}</p>
-                  <p className="text-[10px] text-muted mt-0.5">{hint}</p>
+                  <p className="text-xs text-muted mt-0.5">{hint}</p>
                 </div>
                 <span className="text-xs font-bold text-primary mt-1.5">
                   + Poser
@@ -4837,7 +4859,7 @@ export default function RoomLayoutEditor({
               className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
             />
           </label>
-          <p className="text-[10px] text-muted self-center">
+          <p className="text-xs text-muted self-center">
             = {chairGroups * rowsPerGroup} rangées · {chairGroups * rowsPerGroup * seatsPerRow} places
           </p>
           <button
@@ -4924,7 +4946,7 @@ export default function RoomLayoutEditor({
   const activeStory = stories.find((s) => s.id === resolveActiveStoryId(blueprint));
   const storyBar = (
     <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50">
-      <span className="text-[10px] font-bold uppercase tracking-wide text-muted shrink-0">Étage</span>
+      <span className="text-xs font-bold uppercase tracking-wide text-muted shrink-0">Étage</span>
       <div className="flex flex-wrap gap-1">
         {stories.map((story) => (
           <button
@@ -4991,7 +5013,7 @@ export default function RoomLayoutEditor({
         <Eye className="w-3.5 h-3.5" aria-hidden />
         {blueprint.metadata.stackView ? 'Empilés · ON' : 'Empiler'}
       </button>
-      <p className="text-[10px] text-muted w-full sm:w-auto sm:ml-1">
+      <p className="text-xs text-muted w-full sm:w-auto sm:ml-1">
         {blueprint.metadata.stackView
           ? 'Étages empilés en 3D'
           : `Édition : ${activeStory?.label ?? 'RDC'}`}

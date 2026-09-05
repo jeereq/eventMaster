@@ -102,6 +102,8 @@ interface RoomWebGLViewerProps {
   walkthroughActive?: boolean;
   onWalkthroughProgress?: (label: string, progress01: number) => void;
   onWalkthroughComplete?: () => void;
+  /** Coupe la boucle de rendu (onglet Identité, panneau masqué). */
+  paused?: boolean;
 }
 
 function pctToWorld(xPct: number, yPct: number, widthM: number, heightM: number): [number, number] {
@@ -2252,6 +2254,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   walkthroughActive = false,
   onWalkthroughProgress,
   onWalkthroughComplete,
+  paused = false,
 }, ref) {
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
   const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
@@ -2286,6 +2289,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     >
       <Canvas
         shadows
+        frameloop={paused ? 'never' : 'always'}
         dpr={qualitySettings.dpr}
         gl={{
           antialias: true,

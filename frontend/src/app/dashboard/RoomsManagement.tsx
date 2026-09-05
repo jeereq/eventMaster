@@ -309,6 +309,8 @@ export default function RoomsManagement() {
   const [viewingRoom, setViewingRoom] = useState<RoomItem | null>(null);
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '' });
+  const [editPane, setEditPane] = useState<'identite' | 'elements'>('identite');
+  const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
 
   const [assignRoomId, setAssignRoomId] = useState<string | null>(null);
@@ -532,6 +534,7 @@ export default function RoomsManagement() {
     if (!editingRoom || !editBlueprint) return;
     if (!editMeta.name.trim()) {
       setEditNameAttempted(true);
+      setEditPane('identite');
       return;
     }
     setSavingLayout(true);
@@ -548,6 +551,8 @@ export default function RoomsManagement() {
       setSuccess('Plan de salle enregistré.');
       setEditingRoom(null);
       setEditBlueprint(null);
+      setEditPane('identite');
+      setEditElementsReady(false);
       await load();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la sauvegarde du plan.');
@@ -636,6 +641,8 @@ export default function RoomsManagement() {
   const openEditLayout = (room: RoomItem) => {
     const bp = room.layoutBlueprint as RoomLayoutBlueprint | null;
     setEditNameAttempted(false);
+    setEditPane('identite');
+    setEditElementsReady(false);
     setEditingRoom(room);
     setEditMeta({
       name: room.name,
@@ -1692,7 +1699,7 @@ export default function RoomsManagement() {
                       <span>{metaLine}</span>
                     ) : (
                       <div className="space-y-0.5">
-                        <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide text-primary">
+                        <span className="inline-flex text-xs font-semibold uppercase tracking-wide text-primary">
                           {roomTypeLabels[room.roomType || 'SIMPLE']}
                         </span>
                         <p>{metaLine}</p>
@@ -1721,7 +1728,7 @@ export default function RoomsManagement() {
                   actions={actions}
                 >
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" /> Staff ({room.staff.length})
                     </p>
                     {room.staff.length === 0 ? (
@@ -1736,7 +1743,7 @@ export default function RoomsManagement() {
                             <span className="font-medium text-foreground">
                               {s.user.name || s.user.email}
                             </span>
-                            <span className="ml-1.5 text-[10px] font-semibold uppercase text-primary">
+                            <span className="ml-1.5 text-xs font-semibold uppercase text-primary">
                               {roleLabels[s.staffRole]}
                             </span>
                           </div>
@@ -1850,17 +1857,17 @@ export default function RoomsManagement() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-[10px] font-bold uppercase text-muted">Type</p>
+                <p className="text-xs font-bold uppercase text-muted">Type</p>
                 <p className="font-semibold text-foreground">{roomTypeLabels[viewingRoom.roomType || 'SIMPLE']}</p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-[10px] font-bold uppercase text-muted">Capacité</p>
+                <p className="text-xs font-bold uppercase text-muted">Capacité</p>
                 <p className="font-semibold text-foreground">
                   {viewingRoom.layoutBlueprint?.metadata?.totalSeats || viewingRoom.capacity || '—'} places
                 </p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-[10px] font-bold uppercase text-muted">Dimensions</p>
+                <p className="text-xs font-bold uppercase text-muted">Dimensions</p>
                 <p className="font-semibold text-foreground">
                   {viewingRoom.layoutBlueprint
                     ? `${viewingRoom.layoutBlueprint.canvas.widthM}×${viewingRoom.layoutBlueprint.canvas.heightM} m`
@@ -1868,7 +1875,7 @@ export default function RoomsManagement() {
                 </p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-[10px] font-bold uppercase text-muted">Staff</p>
+                <p className="text-xs font-bold uppercase text-muted">Staff</p>
                 <p className="font-semibold text-foreground">{viewingRoom.staff.length}</p>
               </div>
             </div>
@@ -1885,13 +1892,13 @@ export default function RoomsManagement() {
             </div>
             {viewingRoom.staff.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" /> Staff
                 </p>
                 {viewingRoom.staff.map((s) => (
                   <div key={s.id} className="flex items-center justify-between text-xs bg-surface-muted rounded-[var(--radius-button)] px-2.5 py-1.5">
                     <span className="font-medium text-foreground">{s.user.name || s.user.email}</span>
-                    <span className="text-[10px] font-semibold uppercase text-primary">{roleLabels[s.staffRole]}</span>
+                    <span className="text-xs font-semibold uppercase text-primary">{roleLabels[s.staffRole]}</span>
                   </div>
                 ))}
               </div>
@@ -1902,13 +1909,13 @@ export default function RoomsManagement() {
 
       <Modal
         open={Boolean(editingRoom && editBlueprint)}
-        onClose={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); }}
+        onClose={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); setEditPane('identite'); setEditElementsReady(false); }}
         title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan'}
-        description="Modifiez le nom, la description et le plan."
-        size="full"
+        description="Identité d’abord, puis les éléments de la salle."
+        size={editPane === 'elements' ? 'full' : 'lg'}
         footer={
           <div className="flex justify-end gap-2 w-full">
-            <Button type="button" variant="secondary" size="sm" onClick={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); }}>
+            <Button type="button" variant="secondary" size="sm" onClick={() => { setEditingRoom(null); setEditBlueprint(null); setEditNameAttempted(false); setEditPane('identite'); setEditElementsReady(false); }}>
               Annuler
             </Button>
             <Button
@@ -1929,6 +1936,62 @@ export default function RoomsManagement() {
             {error && editingRoom && (
               <Alert variant="error">{error}</Alert>
             )}
+            <div
+              role="tablist"
+              aria-label="Édition de la salle"
+              className="flex gap-1.5 overflow-x-auto pb-1"
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                e.preventDefault();
+                const tabs = ['identite', 'elements'] as const;
+                const i = tabs.indexOf(editPane);
+                const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+                setEditPane(next);
+                if (next === 'elements') setEditElementsReady(true);
+                window.requestAnimationFrame(() => {
+                  document.getElementById(`edit-tab-${next}`)?.focus();
+                });
+              }}
+            >
+              {([
+                { id: 'identite' as const, label: 'Identité' },
+                { id: 'elements' as const, label: 'Éléments de la salle' },
+              ]).map((tab) => {
+                const selected = editPane === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    id={`edit-tab-${tab.id}`}
+                    aria-selected={selected}
+                    aria-controls={`edit-panel-${tab.id}`}
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => {
+                      setEditPane(tab.id);
+                      if (tab.id === 'elements') setEditElementsReady(true);
+                    }}
+                    className={cn(
+                      'shrink-0 min-h-11 px-4 rounded-full text-sm font-medium border transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      selected
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-surface border-border text-muted hover:bg-surface-muted',
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              role="tabpanel"
+              id="edit-panel-identite"
+              aria-labelledby="edit-tab-identite"
+              hidden={editPane !== 'identite'}
+              className="space-y-3"
+            >
+            <p className="text-sm text-muted">Nom et emplacement visibles pour l’équipe et le catalogue.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Nom de la salle"
@@ -1968,6 +2031,15 @@ export default function RoomsManagement() {
                 />
               </div>
             </div>
+            </div>
+            <div
+              role="tabpanel"
+              id="edit-panel-elements"
+              aria-labelledby="edit-tab-elements"
+              hidden={editPane !== 'elements'}
+              className="space-y-3"
+            >
+            <p className="text-sm text-muted">Tables, murs, étages et décor — sans changer le nom de la salle.</p>
             {rooms.filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint).length > 0 ? (
               <ParamSelect
                 label="Copier le style depuis une autre salle"
@@ -1992,15 +2064,19 @@ export default function RoomsManagement() {
                   ))}
               </ParamSelect>
             ) : null}
+            {editElementsReady ? (
             <RoomLayoutEditor
               blueprint={editBlueprint}
               onChange={setEditBlueprint}
               allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
               editorLevel={planFeatures?.roomEditorLevel}
+              paused={editPane !== 'elements'}
               onRegenerate={() => {
                 setEditBlueprint(refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)));
               }}
             />
+            ) : null}
+            </div>
           </div>
         )}
       </Modal>
