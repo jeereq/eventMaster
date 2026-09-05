@@ -449,10 +449,6 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       generateBackground,
       embedText,
     });
-    const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
-      action: 'invitation_compose',
-      source: 'studio',
-    });
     const historyId = await persistTemplateCompose({
       userId: req.user.id,
       deviceId,
@@ -461,6 +457,11 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       referenceUrls: imageUrls,
       content: result.content,
       stage: result.stage,
+    });
+    const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
+      action: 'invitation_compose',
+      source: 'studio',
+      relatedId: historyId,
     });
 
     return res.json({
@@ -510,10 +511,6 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       generateBackground,
       embedText,
     });
-    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, {
-      action: 'invitation_compose',
-      source: user?.id ? 'studio' : 'landing',
-    });
     const historyId = await persistTemplateCompose({
       userId: user?.id || null,
       deviceId,
@@ -522,6 +519,11 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       referenceUrls: imageUrls,
       content: result.content,
       stage: result.stage,
+    });
+    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, {
+      action: 'invitation_compose',
+      source: user?.id ? 'studio' : 'landing',
+      relatedId: historyId,
     });
 
     return res.json({

@@ -255,11 +255,12 @@ async function runEventPlanAi(
   const userId = (req as AuthenticatedRequest).user?.id || null;
   await requireAiSimulationCredit(deviceId, userId);
   const result = await simulateEventPlanAi(rateLimitKey, body);
+  const historyId = await persistSimulation(req, result, source);
   const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_SIMULATION_TOKEN_COST, {
     action: 'budget_simulation',
     source,
+    relatedId: historyId,
   });
-  const historyId = await persistSimulation(req, result, source);
   return { ...result, historyId, remaining: allowance.totalRemaining, allowance };
 }
 

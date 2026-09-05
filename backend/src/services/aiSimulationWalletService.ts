@@ -1,33 +1,45 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { calculateTokensForAmount, AI_TOKEN_MIN_COUNT } from './aiTokenFlexPayService';
+import { resolveLedgerAction, type AiTokenAction } from './aiTokenUsageQuery';
 
 export const AI_FREE_TRIALS_MAX = 4;
 export const AI_SIMULATION_TOKEN_COST = 1;
 export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 
-export type AiTokenAction = 'budget_simulation' | 'invitation_compose' | 'recharge';
+export type { AiTokenAction };
 export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'unknown';
 export type AiTokenPool = 'free' | 'bonus' | 'mixed' | 'paid';
 
 export type AiTokenLedgerMeta = {
-  action: AiTokenAction;
+  action?: AiTokenAction;
   source?: AiTokenLedgerSource;
   relatedId?: string | null;
 };
 
-async function recordAiTokenLedger(entry: {
-  userId?: string | null;
-  deviceId?: string | null;
-  action: AiTokenAction;
-  source?: string;
-  tokensDelta: number;
-  tokensFromFree?: number;
-  tokensFromBonus?: number;
-  pool: AiTokenPool;
-  relatedId?: string | null;
-}) {
+type LedgerWriter = Prisma.TransactionClient;
+
+function isUniqueConstraint(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
+}
+
+async function writeAiTokenLedger(
+  tx: LedgerWriter,
+  entry: {
+    userId?: string | null;
+    deviceId?: string | null;
+    action: AiTokenAction;
+    source?: string;
+    tokensDelta: number;
+    tokensFromFree?: number;
+    tokensFromBonus?: number;
+    pool: AiTokenPool;
+    relatedId?: string | null;
+    ignoreDuplicate?: boolean;
+  },
+) {
   try {
-    await prisma.aiTokenLedger.create({
+    await tx.aiTokenLedger.create({
       data: {
         userId: entry.userId?.trim() || null,
         deviceId: entry.deviceId?.trim() || null,
@@ -41,8 +53,21 @@ async function recordAiTokenLedger(entry: {
       },
     });
   } catch (err) {
-    console.warn('[aiWallet] ledger write failed:', (err as Error)?.message);
+    if (entry.ignoreDuplicate && isUniqueConstraint(err)) return;
+    throw err;
   }
+}
+
+async function lockWalletByDevice(tx: LedgerWriter, deviceId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM "AiSimulationWallet" WHERE "deviceId" = ${deviceId} FOR UPDATE`,
+  );
+  if (rows[0]) {
+    return tx.aiSimulationWallet.findUniqueOrThrow({ where: { id: rows[0].id } });
+  }
+  return tx.aiSimulationWallet.create({
+    data: { deviceId },
+  });
 }
 
 export type AiWalletAllowance = {
@@ -263,40 +288,60 @@ export async function consumeAiSimulationCredit(
   meta?: AiTokenLedgerMeta,
 ): Promise<AiWalletAllowance> {
   const need = Math.max(1, Math.round(count));
-  const { wallet, paid } = await ensureAiSimulationWallet(deviceId, userId);
-  const freeRemaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed);
-  const bonus = Math.max(0, wallet.bonusTokens);
-  const remaining = freeRemaining + bonus;
-  if (remaining < need) {
-    fail(402, insufficientCreditMessage(need, remaining));
-  }
+  const action = resolveLedgerAction(meta?.action);
+  const cleanDevice = deviceId.trim();
+  await ensureAiSimulationWallet(cleanDevice, userId);
+  const paid = await paidSummary(cleanDevice, userId);
 
-  const fromBonus = Math.min(need, bonus);
-  const fromFree = need - fromBonus;
+  const updated = await prisma.$transaction(async (tx) => {
+    const wallet = await lockWalletByDevice(tx, cleanDevice);
+    const freeRemaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed);
+    const bonus = Math.max(0, wallet.bonusTokens);
+    const remaining = freeRemaining + bonus;
+    if (remaining < need) {
+      fail(402, insufficientCreditMessage(need, remaining));
+    }
 
-  const updated = await prisma.aiSimulationWallet.update({
-    where: { id: wallet.id },
-    data: {
-      bonusTokens: bonus - fromBonus,
-      freeTrialsUsed: Math.min(AI_FREE_TRIALS_MAX, wallet.freeTrialsUsed + fromFree),
-    },
-  });
+    const fromBonus = Math.min(need, bonus);
+    const fromFree = need - fromBonus;
+    const next = await tx.aiSimulationWallet.update({
+      where: { id: wallet.id },
+      data: {
+        bonusTokens: bonus - fromBonus,
+        freeTrialsUsed: Math.min(AI_FREE_TRIALS_MAX, wallet.freeTrialsUsed + fromFree),
+      },
+    });
 
-  const pool: AiTokenPool =
-    fromFree > 0 && fromBonus > 0 ? 'mixed' : fromBonus > 0 ? 'bonus' : 'free';
-  await recordAiTokenLedger({
-    userId,
-    deviceId,
-    action: meta?.action || (need > 1 ? 'invitation_compose' : 'budget_simulation'),
-    source: meta?.source || 'unknown',
-    tokensDelta: -need,
-    tokensFromFree: fromFree,
-    tokensFromBonus: fromBonus,
-    pool,
-    relatedId: meta?.relatedId,
+    const pool: AiTokenPool =
+      fromFree > 0 && fromBonus > 0 ? 'mixed' : fromBonus > 0 ? 'bonus' : 'free';
+    await writeAiTokenLedger(tx, {
+      userId,
+      deviceId: cleanDevice,
+      action,
+      source: meta?.source || 'unknown',
+      tokensDelta: -need,
+      tokensFromFree: fromFree,
+      tokensFromBonus: fromBonus,
+      pool,
+      relatedId: meta?.relatedId,
+    });
+    return next;
   });
 
   return serialize(updated, paid);
+}
+
+function tokensToCredit(order: {
+  tokensCount?: number | null;
+  amountFc?: number | null;
+}) {
+  const tokensToAdd =
+    order.tokensCount && order.tokensCount > 0
+      ? order.tokensCount
+      : order.amountFc
+        ? calculateTokensForAmount(order.amountFc)
+        : AI_TOKEN_MIN_COUNT;
+  return Math.max(1, tokensToAdd);
 }
 
 export async function creditPaidAiTokenOrder(order: {
@@ -308,39 +353,40 @@ export async function creditPaidAiTokenOrder(order: {
 }) {
   const deviceId = order.deviceId?.trim();
   if (!deviceId) return;
-  const { wallet, paid } = await ensureAiSimulationWallet(deviceId, order.userId);
-  const credited = parseCredited(wallet.creditedOrderIds);
-  if (credited.includes(order.id)) return serialize(wallet, paid);
+  await ensureAiSimulationWallet(deviceId, order.userId);
+  const paid = await paidSummary(deviceId, order.userId);
+  const added = tokensToCredit(order);
 
-  const tokensToAdd =
-    order.tokensCount && order.tokensCount > 0
-      ? order.tokensCount
-      : order.amountFc
-        ? calculateTokensForAmount(order.amountFc)
-        : AI_TOKEN_MIN_COUNT;
+  const wallet = await prisma.$transaction(async (tx) => {
+    const locked = await lockWalletByDevice(tx, deviceId);
+    const credited = parseCredited(locked.creditedOrderIds);
 
-  const added = Math.max(1, tokensToAdd);
-  const updated = await prisma.aiSimulationWallet.update({
-    where: { id: wallet.id },
-    data: {
-      bonusTokens: wallet.bonusTokens + added,
-      creditedOrderIds: [...credited, order.id],
-    },
+    await writeAiTokenLedger(tx, {
+      userId: order.userId,
+      deviceId,
+      action: 'recharge',
+      source: 'flexpay',
+      tokensDelta: added,
+      tokensFromBonus: added,
+      pool: 'paid',
+      relatedId: order.id,
+      ignoreDuplicate: true,
+    });
+
+    if (credited.includes(order.id)) {
+      return locked;
+    }
+
+    return tx.aiSimulationWallet.update({
+      where: { id: locked.id },
+      data: {
+        bonusTokens: locked.bonusTokens + added,
+        creditedOrderIds: [...credited, order.id],
+      },
+    });
   });
-  await recordAiTokenLedger({
-    userId: order.userId,
-    deviceId,
-    action: 'recharge',
-    source: 'flexpay',
-    tokensDelta: added,
-    tokensFromBonus: added,
-    pool: 'paid',
-    relatedId: order.id,
-  });
-  return serialize(updated, {
-    totalPaidTokens: paid.totalPaidTokens + added,
-    paidOrdersCount: paid.paidOrdersCount + 1,
-  });
+
+  return serialize(wallet, paid);
 }
 
 export async function claimAiSimulationWallet(userId: string, deviceId: string) {

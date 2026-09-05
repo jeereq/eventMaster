@@ -41,6 +41,8 @@ interface UsageResponse {
     moves: number;
     consumed: number;
     credited: number;
+  };
+  stock: {
     remaining: number;
     remainingFree: number;
     remainingBonus: number;
@@ -169,6 +171,7 @@ export default function AdminAiTokensPage() {
   }, [qInput]);
 
   const totals = data?.totals;
+  const stock = data?.stock;
   const datePresetLabel = ({
     all: 'Toutes',
     today: 'Aujourd’hui',
@@ -213,28 +216,41 @@ export default function AdminAiTokensPage() {
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
-        {[
-          { label: 'Consommés', value: totals?.consumed ?? 0 },
-          { label: 'Rechargés', value: totals?.credited ?? 0 },
-          { label: 'Restants', value: totals?.remaining ?? 0 },
-          { label: 'Mouvements', value: totals?.moves ?? 0 },
-        ].map((card) => (
-          <div key={card.label} className="bg-surface px-4 py-3">
-            <div className="text-lg font-semibold text-foreground tabular-nums">{card.value}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
-          </div>
-        ))}
+      <div>
+        <p className="text-xs uppercase tracking-wider text-muted mb-2">Période filtrée</p>
+        <div className="grid grid-cols-3 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+          {[
+            { label: 'Consommés', value: totals?.consumed ?? 0 },
+            { label: 'Rechargés', value: totals?.credited ?? 0 },
+            { label: 'Mouvements', value: totals?.moves ?? 0 },
+          ].map((card) => (
+            <div key={card.label} className="bg-surface px-4 py-3">
+              <div className="text-lg font-semibold text-foreground tabular-nums">{card.value}</div>
+              <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
-        <div className="bg-surface px-4 py-3">
-          <div className="text-lg font-semibold text-foreground tabular-nums">{totals?.remainingFree ?? 0}</div>
-          <div className="text-xs uppercase tracking-wider text-muted">Essais gratuits restants</div>
-        </div>
-        <div className="bg-surface px-4 py-3">
-          <div className="text-lg font-semibold text-foreground tabular-nums">{totals?.remainingBonus ?? 0}</div>
-          <div className="text-xs uppercase tracking-wider text-muted">Jetons payés restants</div>
+      <div>
+        <p className="text-xs uppercase tracking-wider text-muted mb-2">Stock plateforme (tous wallets)</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+          <div className="bg-surface px-4 py-3">
+            <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remaining ?? 0}</div>
+            <div className="text-xs uppercase tracking-wider text-muted">Restants</div>
+          </div>
+          <div className="bg-surface px-4 py-3">
+            <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remainingFree ?? 0}</div>
+            <div className="text-xs uppercase tracking-wider text-muted">Essais gratuits</div>
+          </div>
+          <div className="bg-surface px-4 py-3">
+            <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remainingBonus ?? 0}</div>
+            <div className="text-xs uppercase tracking-wider text-muted">Jetons payés</div>
+          </div>
+          <div className="bg-surface px-4 py-3">
+            <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.wallets ?? 0}</div>
+            <div className="text-xs uppercase tracking-wider text-muted">Wallets</div>
+          </div>
         </div>
       </div>
 
@@ -277,7 +293,7 @@ export default function AdminAiTokensPage() {
 
       {data?.byDay.length ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">30 derniers jours</h2>
+          <h2 className="text-sm font-semibold text-foreground">Par jour (même filtre)</h2>
           <div className="overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface">
             <table className="w-full text-sm">
               <thead>

@@ -1205,6 +1205,7 @@ model AiTokenLedger {
   relatedId        String?
   createdAt        DateTime @default(now())
 
+  @@unique([action, relatedId])
   @@index([createdAt])
   @@index([action, createdAt])
   @@index([userId, createdAt])

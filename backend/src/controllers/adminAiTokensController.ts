@@ -3,6 +3,11 @@ import { Prisma } from '@prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { AI_FREE_TRIALS_MAX } from '../services/aiSimulationWalletService';
+import {
+  bucketLedgerByUtcDay,
+  parseUtcDayEnd,
+  parseUtcDayStart,
+} from '../services/aiTokenUsageQuery';
 
 export type AiTokenActionFilter = 'budget_simulation' | 'invitation_compose' | 'recharge';
 
@@ -37,17 +42,10 @@ function dateRange(req: AuthenticatedRequest): { gte?: Date; lte?: Date } | unde
   const from = typeof req.query.from === 'string' ? req.query.from.trim() : '';
   const to = typeof req.query.to === 'string' ? req.query.to.trim() : '';
   const range: { gte?: Date; lte?: Date } = {};
-  if (from) {
-    const d = new Date(from);
-    if (!Number.isNaN(d.getTime())) range.gte = d;
-  }
-  if (to) {
-    const d = new Date(to);
-    if (!Number.isNaN(d.getTime())) {
-      d.setHours(23, 59, 59, 999);
-      range.lte = d;
-    }
-  }
+  const start = from ? parseUtcDayStart(from) : undefined;
+  const end = to ? parseUtcDayEnd(to) : undefined;
+  if (start) range.gte = start;
+  if (end) range.lte = end;
   return range.gte || range.lte ? range : undefined;
 }
 
@@ -113,13 +111,34 @@ function serializeRow(row: {
   };
 }
 
+async function platformStock() {
+  const [bonusAgg, freeRows] = await Promise.all([
+    prisma.aiSimulationWallet.aggregate({
+      _sum: { bonusTokens: true },
+      _count: { _all: true },
+    }),
+    prisma.$queryRaw<Array<{ remaining_free: bigint | number }>>`
+      SELECT COALESCE(SUM(GREATEST(0, ${AI_FREE_TRIALS_MAX} - "freeTrialsUsed")), 0) AS remaining_free
+      FROM "AiSimulationWallet"
+    `,
+  ]);
+  const remainingBonus = Math.max(0, bonusAgg._sum.bonusTokens || 0);
+  const remainingFree = Math.max(0, Number(freeRows[0]?.remaining_free || 0));
+  return {
+    remaining: remainingFree + remainingBonus,
+    remainingFree,
+    remainingBonus,
+    wallets: bonusAgg._count._all,
+  };
+}
+
 export async function getAdminAiTokenUsage(req: AuthenticatedRequest, res: Response) {
   try {
     const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
     const pageSize = Math.min(Math.max(parseInt(String(req.query.limit || '20'), 10) || 20, 1), 100);
     const where = buildWhere(req);
 
-    const [total, items, grouped, wallets, dayRows] = await Promise.all([
+    const [total, items, grouped, stock, daySource] = await Promise.all([
       prisma.aiTokenLedger.count({ where }),
       prisma.aiTokenLedger.findMany({
         where,
@@ -136,20 +155,11 @@ export async function getAdminAiTokenUsage(req: AuthenticatedRequest, res: Respo
         _count: { _all: true },
         _sum: { tokensDelta: true, tokensFromFree: true, tokensFromBonus: true },
       }),
-      prisma.aiSimulationWallet.findMany({
-        select: { freeTrialsUsed: true, bonusTokens: true },
+      platformStock(),
+      prisma.aiTokenLedger.findMany({
+        where,
+        select: { createdAt: true, tokensDelta: true },
       }),
-      prisma.$queryRaw<Array<{ day: Date; consumed: bigint; credited: bigint; moves: bigint }>>`
-        SELECT
-          DATE_TRUNC('day', "createdAt") AS day,
-          COALESCE(SUM(CASE WHEN "tokensDelta" < 0 THEN -"tokensDelta" ELSE 0 END), 0) AS consumed,
-          COALESCE(SUM(CASE WHEN "tokensDelta" > 0 THEN "tokensDelta" ELSE 0 END), 0) AS credited,
-          COUNT(*) AS moves
-        FROM "AiTokenLedger"
-        WHERE "createdAt" >= NOW() - INTERVAL '30 days'
-        GROUP BY 1
-        ORDER BY 1 ASC
-      `.catch(() => []),
     ]);
 
     let consumed = 0;
@@ -170,29 +180,15 @@ export async function getAdminAiTokenUsage(req: AuthenticatedRequest, res: Respo
       };
     });
 
-    const remainingBonus = wallets.reduce((sum, w) => sum + Math.max(0, w.bonusTokens), 0);
-    const remainingFree = wallets.reduce(
-      (sum, w) => sum + Math.max(0, AI_FREE_TRIALS_MAX - w.freeTrialsUsed),
-      0,
-    );
-
     return res.json({
       totals: {
         moves: total,
         consumed,
         credited,
-        remaining: remainingFree + remainingBonus,
-        remainingFree,
-        remainingBonus,
-        wallets: wallets.length,
       },
+      stock,
       byAction,
-      byDay: dayRows.map((row) => ({
-        day: row.day instanceof Date ? row.day.toISOString().slice(0, 10) : String(row.day).slice(0, 10),
-        consumed: Number(row.consumed || 0),
-        credited: Number(row.credited || 0),
-        moves: Number(row.moves || 0),
-      })),
+      byDay: bucketLedgerByUtcDay(daySource),
       items: items.map(serializeRow),
       total,
       page,

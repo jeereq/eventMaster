@@ -10,7 +10,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "seed": "prisma db seed",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-strip-types --test src/services/aiTokenUsageQuery.test.ts",
     "test:cloudinary": "ts-node -P tsconfig.scripts.json scripts/testCloudinary.ts",
     "migrate:template-images": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts",
     "migrate:template-images:dry": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts --dry-run",
