@@ -921,16 +921,24 @@ function getNanoBananaApiKey(): string | null {
   return key.trim() || null;
 }
 
-function getNanoBananaModel(): string {
-  return (
-    process.env.NANO_BANANA_MODEL ||
-    process.env.GEMINI_IMAGE_MODEL ||
-    'gemini-3-pro-image'
-  );
+const NANO_BANANA_PRO = 'gemini-3-pro-image';
+const NANO_BANANA_FLASH = 'gemini-3.1-flash-image';
+
+function getNanoBananaProModel(): string {
+  return process.env.NANO_BANANA_MODEL || process.env.GEMINI_IMAGE_MODEL || NANO_BANANA_PRO;
+}
+
+function getNanoBananaFlashModel(): string {
+  return process.env.NANO_BANANA_FLASH_MODEL || NANO_BANANA_FLASH;
+}
+
+/** Pro d’abord, puis Nano Banana 2 (Flash), sans doublon si les IDs sont identiques. */
+function getNanoBananaModelChain(): string[] {
+  return [...new Set([getNanoBananaProModel(), getNanoBananaFlashModel()])];
 }
 
 /**
- * Génération et composition d'invitation avec Nano Banana Pro (Gemini 3 Pro Image : gemini-3-pro-image).
+ * Génération et composition d'invitation avec Nano Banana (Pro ou Flash, selon `model`).
  * Prend en charge la préservation native de l'identité et cohérence de personnage (character consistency)
  * avec jusqu'à 4 photos de référence et un ratio portrait vertical 9:16 pour carte de prestige.
  */
@@ -940,8 +948,8 @@ async function generateImageWithNanoBanana(
   referenceUrls: string[],
   tenantId: string | null | undefined,
   options?: { hasPeople?: boolean; embedText?: boolean },
+  model: string = getNanoBananaProModel(),
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
-  const model = getNanoBananaModel();
   const hasRefs = referenceUrls.length > 0;
   const hasPeople = Boolean(options?.hasPeople);
 
@@ -1104,10 +1112,11 @@ ${imagePrompt}`;
 }
 
 /**
- * 1) Nano Banana Pro (Gemini 3 Pro Image) si GEMINI_API_KEY / NANO_BANANA_API_KEY configurée
- * 2) GPT-5.6 Luna (Responses + image_generation)
- * 3) Images API edits sur la 1re référence
- * 4) Images API generate classique
+ * 1) Nano Banana Pro (gemini-3-pro-image)
+ * 2) Nano Banana 2 / Flash (gemini-3.1-flash-image)
+ * 3) GPT-5.6 Luna (Responses + image_generation)
+ * 4) Images API edits sur la 1re référence
+ * 5) Images API generate classique
  */
 async function createNewInvitationImage(
   key: string,
@@ -1116,17 +1125,28 @@ async function createNewInvitationImage(
   tenantId: string | null | undefined,
   options?: { hasPeople?: boolean; embedText?: boolean },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
-  // 1) Priorité demandée : Nano Banana Pro (Gemini 3 Pro Image)
   const nanoKey = getNanoBananaApiKey();
   if (nanoKey) {
-    try {
-      console.log(`[invitationTemplateAi] Generating with Nano Banana (${getNanoBananaModel()})...`);
-      return await generateImageWithNanoBanana(nanoKey, imagePrompt, imageUrls, tenantId, options);
-    } catch (nanoErr) {
-      console.warn(
-        '[invitationTemplateAi] Nano Banana generation failed, falling back to Luna/OpenAI:',
-        (nanoErr as Error)?.message,
-      );
+    const chain = getNanoBananaModelChain();
+    for (let i = 0; i < chain.length; i++) {
+      const model = chain[i];
+      const next = chain[i + 1];
+      try {
+        console.log(`[invitationTemplateAi] Generating with Nano Banana (${model})...`);
+        return await generateImageWithNanoBanana(
+          nanoKey,
+          imagePrompt,
+          imageUrls,
+          tenantId,
+          options,
+          model,
+        );
+      } catch (nanoErr) {
+        console.warn(
+          `[invitationTemplateAi] Nano Banana (${model}) failed, falling back to ${next || 'Luna/OpenAI'}:`,
+          (nanoErr as Error)?.message,
+        );
+      }
     }
   }
 
