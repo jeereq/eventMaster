@@ -34,7 +34,7 @@ export const AI_ROOM_PLAN_DRAFT_KEY = 'em_ai_room_plan_draft';
 export const ROOM_PLAN_BRIEF_MIN = 8;
 
 export const ROOM_PLAN_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
-export const ROOM_PLAN_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
+export const ROOM_PLAN_PHOTO_MAX_BYTES = 8 * 1024 * 1024;
 const ROOM_PLAN_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const ROOM_PLAN_PHOTO_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
 
@@ -46,7 +46,7 @@ export function roomPlanPhotoError(file: File): string | null {
     return 'Utilisez une photo JPEG, PNG ou WebP. Les fichiers HEIC ne sont pas lus.';
   }
   if (file.size > ROOM_PLAN_PHOTO_MAX_BYTES) {
-    return `« ${file.name} » dépasse 10 Mo. Compressez l’image ou choisissez-en une autre.`;
+    return `« ${file.name} » dépasse 8 Mo. Compressez l’image ou choisissez-en une autre.`;
   }
   return null;
 }
@@ -78,7 +78,9 @@ export type RoomPlanVisionItemKind =
   | 'fountain'
   | 'gazebo'
   | 'djBooth'
-  | 'screen';
+  | 'screen'
+  | 'corridor'
+  | 'perimeter';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -147,10 +149,11 @@ export type RoomPlanAiDraft = {
   roomType?: RoomLayoutBlueprint['roomType'];
   widthM?: number;
   heightM?: number;
+  imageUrl?: string;
   savedAt: string;
 };
 
-function fileToDataUrl(file: File): Promise<string> {
+export function roomPlanFileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ''));
@@ -181,6 +184,8 @@ const FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
   'gazebo',
   'djBooth',
   'screen',
+  'corridor',
+  'perimeter',
 ]);
 
 const OUTLINE_SHAPES = new Set<RoomOutlineShape>([
@@ -254,7 +259,9 @@ const DEFAULT_FOOTPRINT: Record<string, { w: number; h: number }> = {
 
 const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   tables: 'table',
-  chairs: 'row',
+  chairs: 'chair',
+  chaises: 'chair',
+  chaise: 'chair',
   rangee: 'row',
   rangees: 'row',
   banquettes: 'row',
@@ -269,6 +276,11 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   guirlandes: 'stringLight',
   scene: 'stage',
   allee: 'aisle',
+  corridor: 'corridor',
+  couloir: 'corridor',
+  hallway: 'corridor',
+  perimeter: 'perimeter',
+  perimetre: 'perimeter',
   porte: 'door',
   entree: 'entrance',
   ecran: 'screen',
@@ -303,10 +315,18 @@ const ZONE_FALLBACK_FIXTURES = new Set<RoomPlanVisionItemKind>([
   'screen',
   'flower',
   'pedestal',
+  'corridor',
 ]);
 
 const CANVAS_MIN_M = 5;
 const CANVAS_MAX_M = 80;
+const CANVAS_KEEP_RELATIVE_DELTA = 0.15;
+const CANVAS_KEEP_CONFIDENCE_BELOW = 0.6;
+const IMPORTED_CHAIR_PER_ROW = 6;
+const IMPORTED_CHAIR_FLOOR = 8;
+const SEAT_ROW_SPAN_MIN = 16;
+const SEAT_ROW_DEPTH_MAX = 10;
+const SEAT_CHAIR_SPAN_MAX = 12;
 
 function clampPct(value: number): number {
   return Math.min(100, Math.max(0, Math.round(value * 10) / 10));
@@ -350,12 +370,35 @@ function aliasKey(value: string): string {
     .replace(/[^a-z0-9]+/g, '');
 }
 
+function looksLikeSeatRow(item: RoomPlanVisionItem): boolean {
+  const w = item.w ?? DEFAULT_FOOTPRINT.chair.w;
+  const h = item.h ?? DEFAULT_FOOTPRINT.chair.h;
+  return Math.max(w, h) >= SEAT_ROW_SPAN_MIN && Math.min(w, h) <= SEAT_ROW_DEPTH_MAX;
+}
+
+function looksLikeIsolatedChair(item: RoomPlanVisionItem): boolean {
+  if (item.w == null || item.h == null) return false;
+  return Math.max(item.w, item.h) < SEAT_CHAIR_SPAN_MAX && Math.min(item.w, item.h) < SEAT_CHAIR_SPAN_MAX;
+}
+
 function resolveImportedKind(item: RoomPlanVisionItem): RoomPlanVisionItemKind {
-  if (FIXTURE_KINDS.has(item.kind as RoomLayoutBlueprint['fixtures'][number]['kind'])) return item.kind;
-  if (item.kind === 'table' || item.kind === 'row' || item.kind === 'chair' || item.kind === 'zone') {
-    return item.kind;
+  let kind = item.kind;
+  if (
+    !FIXTURE_KINDS.has(kind as RoomLayoutBlueprint['fixtures'][number]['kind'])
+    && kind !== 'table'
+    && kind !== 'row'
+    && kind !== 'chair'
+    && kind !== 'zone'
+  ) {
+    kind = VISION_KIND_ALIASES[aliasKey(kind)] ?? kind;
   }
-  return VISION_KIND_ALIASES[aliasKey(item.kind)] ?? item.kind;
+  if (kind === 'chair' && looksLikeSeatRow(item)) return 'row';
+  if (kind === 'row' && looksLikeIsolatedChair(item)) return 'chair';
+  return kind;
+}
+
+function maxImportedChairs(caps: RoomEditorCapabilities): number {
+  return Math.max(IMPORTED_CHAIR_FLOOR, caps.maxRows * IMPORTED_CHAIR_PER_ROW + caps.maxTables);
 }
 
 function resolveZoneKind(item: RoomPlanVisionItem, fallback?: ZoneKind): ZoneKind | undefined {
@@ -392,15 +435,26 @@ function inferTableShape(item: RoomPlanVisionItem, allowed: TableShape[]): Table
   return allowed[0] ?? 'round';
 }
 
+function shouldKeepUserCanvasAxis(currentM: number, draftM: number, confidence: number): boolean {
+  if (confidence < CANVAS_KEEP_CONFIDENCE_BELOW) return true;
+  const delta = Math.abs(draftM - currentM) / Math.max(currentM, 1);
+  return delta <= CANVAS_KEEP_RELATIVE_DELTA;
+}
+
 function applyDraftCanvas(
   current: RoomLayoutBlueprint['canvas'],
   draft: RoomPlanVisionDraft,
 ): RoomLayoutBlueprint['canvas'] {
   const widthM = Number.isFinite(draft.canvas?.widthM) ? draft.canvas.widthM : current.widthM;
   const heightM = Number.isFinite(draft.canvas?.heightM) ? draft.canvas.heightM : current.heightM;
+  const confidence = Number.isFinite(draft.confidence) ? draft.confidence : 0;
   return {
-    widthM: Math.min(CANVAS_MAX_M, Math.max(CANVAS_MIN_M, widthM)),
-    heightM: Math.min(CANVAS_MAX_M, Math.max(CANVAS_MIN_M, heightM)),
+    widthM: shouldKeepUserCanvasAxis(current.widthM, widthM, confidence)
+      ? current.widthM
+      : Math.min(CANVAS_MAX_M, Math.max(CANVAS_MIN_M, widthM)),
+    heightM: shouldKeepUserCanvasAxis(current.heightM, heightM, confidence)
+      ? current.heightM
+      : Math.min(CANVAS_MAX_M, Math.max(CANVAS_MIN_M, heightM)),
   };
 }
 
@@ -420,6 +474,8 @@ function fixtureAsZoneLabel(kind: RoomPlanVisionItemKind, label?: string): strin
     screen: 'Écran',
     flower: 'Fleurs',
     pedestal: 'Piédestal',
+    corridor: 'Couloir',
+    perimeter: 'Périmètre',
   };
   return names[kind] ?? 'Zone';
 }
@@ -502,6 +558,40 @@ function neutralizeAisle(
     hasSideLanterns: item.hasSideLanterns === true,
     hasPetals: item.hasPetals === true,
   };
+}
+
+function createNeutralFixtureForImport(
+  kind: RoomLayoutBlueprint['fixtures'][number]['kind'],
+): RoomLayoutBlueprint['fixtures'][number] {
+  const created = createBlueprintFixture(kind);
+  if (kind === 'door' || kind === 'entrance') {
+    return {
+      ...created,
+      doorStyle: kind === 'entrance' ? 'double' : 'single',
+      doorSwing: kind === 'entrance' ? 'double' : 'left',
+      hasMat: false,
+      matColor: undefined,
+    };
+  }
+  if (kind === 'aisle' || kind === 'corridor') {
+    return {
+      ...created,
+      aisleStyle: undefined,
+      hasGoldBorder: false,
+      hasSideLanterns: false,
+      hasPetals: false,
+      color: '#78716c',
+    };
+  }
+  if (kind === 'chandelier') {
+    return {
+      ...created,
+      chandelierStyle: 'modernMinimal',
+      lightWarmth: 'neutral',
+      color: '#a8a29e',
+    };
+  }
+  return created;
 }
 
 function applyFixtureLook(
@@ -607,7 +697,7 @@ export async function composeRoomPlanWithAiPublic(input: {
   heightM: number;
 }): Promise<RoomPlanAiResult> {
   const deviceId = getOrCreateDeviceId();
-  const imageDataUrl = input.file ? await fileToDataUrl(input.file) : undefined;
+  const imageDataUrl = input.file ? await roomPlanFileToDataUrl(input.file) : undefined;
   const data = await api.post('/public/rooms/ai/compose', {
     deviceId,
     brief: input.brief,
@@ -630,7 +720,18 @@ export function saveRoomPlanAiDraft(draft: RoomPlanVisionDraft, extra: Omit<Room
   try {
     sessionStorage.setItem(AI_ROOM_PLAN_DRAFT_KEY, JSON.stringify(payload));
   } catch {
-    /* quota / private mode */
+    if (!extra.imageUrl) return;
+    try {
+      const withoutImage = { ...extra };
+      delete withoutImage.imageUrl;
+      sessionStorage.setItem(AI_ROOM_PLAN_DRAFT_KEY, JSON.stringify({
+        draft,
+        ...withoutImage,
+        savedAt: payload.savedAt,
+      }));
+    } catch {
+      /* quota / private mode */
+    }
   }
 }
 
@@ -659,9 +760,10 @@ export function clearRoomPlanAiDraft() {
 export function previewRoomPlanDraft(
   draft: RoomPlanVisionDraft,
   roomType: RoomLayoutBlueprint['roomType'] = 'BANQUET',
+  options: { imageUrl?: string } = {},
 ): { blueprint: RoomLayoutBlueprint; warnings: string[] } {
   const seed = emptyRoomPlanSeed(roomType, draft.canvas.widthM, draft.canvas.heightM);
-  return applyRoomPlanVisionDraft(seed, draft, roomEditorCapabilities('complete'));
+  return applyRoomPlanVisionDraft(seed, draft, roomEditorCapabilities('complete'), options);
 }
 
 export function applyRoomPlanVisionDraft(
@@ -671,6 +773,12 @@ export function applyRoomPlanVisionDraft(
   options: { imageUrl?: string } = {},
 ): { blueprint: RoomLayoutBlueprint; warnings: string[]; selection: LayoutSelectionItem[] } {
   const warnings = [...(draft.warnings || [])];
+  const existingCount = (current.furniture?.length ?? 0) + (current.fixtures?.length ?? 0);
+  if (existingCount > 0) {
+    warnings.push(
+      `L’import remplace ${existingCount} élément${existingCount > 1 ? 's' : ''} existant${existingCount > 1 ? 's' : ''}.`,
+    );
+  }
   const appearance = draft.appearance;
   const chairType = defaultChairType(current.roomType);
   const storyId = current.metadata.activeStoryId;
@@ -718,7 +826,7 @@ export function applyRoomPlanVisionDraft(
         warnings.push(`« ${item.label || kind} » ignoré — non inclus dans votre forfait.`);
         continue;
       }
-      const created = applyFixtureLook(createBlueprintFixture(fixtureKind), item);
+      const created = applyFixtureLook(createNeutralFixtureForImport(fixtureKind), item);
       const box = itemFootprint(item, { w: created.w, h: created.h });
       const fixture = {
         ...created,
@@ -798,6 +906,11 @@ export function applyRoomPlanVisionDraft(
     }
 
     if (kind === 'chair') {
+      const chairCap = maxImportedChairs(caps);
+      if (chairCount >= chairCap) {
+        warnings.push(`Limite de ${chairCap} chaises isolées — les suivantes sont ignorées.`);
+        continue;
+      }
       chairCount += 1;
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.chair);
       const chair = {
@@ -840,7 +953,10 @@ export function applyRoomPlanVisionDraft(
       };
       furniture.push(zone);
       selection.push({ kind: 'zone', id: zone.id });
+      continue;
     }
+
+    warnings.push(`« ${item.label || kind} » non reconnu — non importé.`);
   }
 
   const outlineShape = OUTLINE_SHAPES.has(draft.outline.shape as RoomOutlineShape)

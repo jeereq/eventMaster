@@ -375,6 +375,7 @@ export default function RoomLayoutEditor({
   const [aiPlanError, setAiPlanError] = useState('');
   const [aiPlanWarnings, setAiPlanWarnings] = useState<string[]>([]);
   const [retryPlanPhoto, setRetryPlanPhoto] = useState<File | null>(null);
+  const [aiPlanBrief, setAiPlanBrief] = useState('');
   const [planPath, setPlanPath] = useState<PlanCreationPathId>(focusPlanImport ? 'photo' : 'manual');
   const [studioOpen, setStudioOpen] = useState(false);
   const aiPlanFileRef = useRef<HTMLInputElement>(null);
@@ -1240,7 +1241,7 @@ export default function RoomLayoutEditor({
       imageUrl = await resolvePlanImageUrl(file);
     }
     if (!imageUrl) {
-      setAiPlanError('Choisissez une photo JPEG, PNG ou WebP de la salle (10 Mo max).');
+      setAiPlanError('Choisissez une photo JPEG, PNG ou WebP de la salle (8 Mo max).');
       aiPlanFileRef.current?.click();
       return false;
     }
@@ -1251,6 +1252,7 @@ export default function RoomLayoutEditor({
         roomType: latestBlueprintRef.current.roomType,
         widthM: latestBlueprintRef.current.canvas.widthM,
         heightM: latestBlueprintRef.current.canvas.heightM,
+        brief: aiPlanBrief.trim() || undefined,
       });
       const applied = applyRoomPlanVisionDraft(latestBlueprintRef.current, result.draft, caps, { imageUrl });
       updateBlueprint(applied.blueprint, {
@@ -1941,8 +1943,20 @@ export default function RoomLayoutEditor({
                         Lire le plan avec l’IA
                       </p>
                       <p className={cn('text-sm leading-snug', planPath === 'photo' ? 'text-foreground' : 'text-muted')}>
-                        L’IA détecte le mobilier visible et l’importe. JPEG / PNG / WebP, 10 Mo. Vérifiez les positions ensuite.
+                        L’IA détecte le mobilier visible et l’importe. JPEG / PNG / WebP, 8 Mo. Vérifiez les positions ensuite.
                       </p>
+                      <label className="block space-y-1">
+                        <span className="text-sm font-medium text-foreground">Contexte (optionnel)</span>
+                        <textarea
+                          value={aiPlanBrief}
+                          onChange={(event) => setAiPlanBrief(event.target.value)}
+                          disabled={readOnly || aiPlanReading}
+                          rows={2}
+                          maxLength={400}
+                          placeholder="Mariage, 80 convives, piste au centre…"
+                          className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm resize-y min-h-11"
+                        />
+                      </label>
                       {aiPlanReading ? (
                         <p role="status" aria-live="polite" className="text-sm text-foreground">
                           Lecture du plan en cours…
@@ -5787,11 +5801,12 @@ export default function RoomLayoutEditor({
         onClose={() => setStudioOpen(false)}
         current={blueprint}
         caps={caps}
-        onApplied={({ blueprint: next, warnings }) => {
+        onApplied={({ blueprint: next, warnings, selection: nextSelection }) => {
           updateBlueprint(next, {
             message: `Studio IA (${next.furniture.length + next.fixtures.length} éléments)`,
             kind: 'template',
           });
+          setSelection(nextSelection);
           setAiPlanWarnings(warnings);
           setAiPlanError('');
           log(
@@ -5840,7 +5855,7 @@ export default function RoomLayoutEditor({
         </p>
       ) : (
         <p className="text-sm text-foreground leading-snug">
-          {aiPlanError || 'JPEG, PNG ou WebP, 10 Mo max. L’IA analyse la photo et importe les éléments visibles.'}
+          {aiPlanError || 'JPEG, PNG ou WebP, 8 Mo max. L’IA analyse la photo et importe les éléments visibles.'}
         </p>
       )}
       <div className="flex flex-wrap gap-2">

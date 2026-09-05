@@ -26,6 +26,7 @@ import {
   ROOM_PLAN_PHOTO_ACCEPT,
   composeRoomPlanWithAiPublic,
   previewRoomPlanDraft,
+  roomPlanFileToDataUrl,
   roomPlanPhotoError,
   saveRoomPlanAiDraft,
   type RoomPlanVisionDraft,
@@ -72,11 +73,12 @@ export default function LandingRoomPlanAiStudio({
   const [allowance, setAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [lastImageUrl, setLastImageUrl] = useState<string>();
 
   const preview = useMemo(() => {
     if (!draft) return null;
-    return previewRoomPlanDraft(draft, roomType);
-  }, [draft, roomType]);
+    return previewRoomPlanDraft(draft, roomType, { imageUrl: lastImageUrl });
+  }, [draft, roomType, lastImageUrl]);
 
   const setPhoto = (next: File | null) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -115,6 +117,7 @@ export default function LandingRoomPlanAiStudio({
     setError('');
     setBusy(true);
     try {
+      const imageUrl = file ? await roomPlanFileToDataUrl(file) : undefined;
       const result = await composeRoomPlanWithAiPublic({
         brief: prompt.trim(),
         file,
@@ -123,9 +126,10 @@ export default function LandingRoomPlanAiStudio({
         heightM: 16,
       });
       setDraft(result.draft);
+      setLastImageUrl(imageUrl);
       setAllowance(getAiSimulationAllowance());
-      saveRoomPlanAiDraft(result.draft, { prompt: prompt.trim(), roomType, widthM: 20, heightM: 16 });
-      const applied = previewRoomPlanDraft(result.draft, roomType);
+      saveRoomPlanAiDraft(result.draft, { prompt: prompt.trim(), roomType, widthM: 20, heightM: 16, imageUrl });
+      const applied = previewRoomPlanDraft(result.draft, roomType, { imageUrl });
       onBlueprintChange?.(applied.blueprint);
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };
@@ -141,7 +145,7 @@ export default function LandingRoomPlanAiStudio({
   };
 
   const openEditor = () => {
-    if (draft) saveRoomPlanAiDraft(draft, { prompt: prompt.trim(), roomType, widthM: 20, heightM: 16 });
+    if (draft) saveRoomPlanAiDraft(draft, { prompt: prompt.trim(), roomType, widthM: 20, heightM: 16, imageUrl: lastImageUrl });
     if (user) {
       router.push('/dashboard/rooms?aiDraft=1');
       return;
@@ -305,7 +309,7 @@ export default function LandingRoomPlanAiStudio({
                 <p className="text-sm font-bold text-foreground">
                   {intent === 'photo' ? 'Photo de la salle' : 'Photo optionnelle'}
                 </p>
-                <p className="text-xs text-muted mt-0.5">JPEG, PNG ou WebP, 10 Mo max.</p>
+                <p className="text-xs text-muted mt-0.5">JPEG, PNG ou WebP, 8 Mo max.</p>
               </button>
 
               {previewUrl ? (

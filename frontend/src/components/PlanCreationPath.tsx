@@ -113,7 +113,7 @@ export default function PlanCreationPath({
               <span className="truncate">Choisir une photo de la salle</span>
             </p>
             <p className={cn('text-sm mt-1 leading-snug break-words', value === 'photo' ? 'text-foreground' : 'text-muted')}>
-              L’IA analyse la photo, déduit tables, rangées et décor, puis les pose sur le plan. JPEG, PNG ou WebP, 10 Mo max. {AI_ROOM_PLAN_TOKEN_COST} jetons.
+              L’IA analyse la photo, déduit tables, rangées et décor, puis les pose sur le plan. JPEG, PNG ou WebP, 8 Mo max. {AI_ROOM_PLAN_TOKEN_COST} jetons.
             </p>
           </button>
         </div>

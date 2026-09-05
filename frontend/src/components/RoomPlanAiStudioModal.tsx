@@ -17,6 +17,7 @@ import {
   type RoomPlanVisionDraft,
 } from '@/lib/roomPlanAi';
 import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
+import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 import type { RoomPlanPromptModel } from '@/config/roomPlanPromptModels';
 import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
@@ -49,6 +50,7 @@ export default function RoomPlanAiStudioModal({
     blueprint: RoomLayoutBlueprint;
     warnings: string[];
     draft: RoomPlanVisionDraft;
+    selection: LayoutSelectionItem[];
   }) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -114,7 +116,12 @@ export default function RoomPlanAiStudioModal({
         heightM: current.canvas.heightM,
       });
       const applied = applyRoomPlanVisionDraft(current, result.draft, caps, { imageUrl });
-      onApplied({ blueprint: applied.blueprint, warnings: applied.warnings, draft: result.draft });
+      onApplied({
+        blueprint: applied.blueprint,
+        warnings: applied.warnings,
+        draft: result.draft,
+        selection: applied.selection,
+      });
       onClose();
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };

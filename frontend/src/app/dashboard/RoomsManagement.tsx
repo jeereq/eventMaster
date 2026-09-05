@@ -537,6 +537,7 @@ export default function RoomsManagement() {
       emptyRoomPlanSeed(type, stored.widthM ?? 20, stored.heightM ?? 16),
       stored.draft,
       caps,
+      { imageUrl: stored.imageUrl },
     );
     resetWizard();
     setRoomType(type);

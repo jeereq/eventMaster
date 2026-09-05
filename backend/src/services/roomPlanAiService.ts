@@ -82,6 +82,8 @@ const ITEM_KINDS = new Set([
   'gazebo',
   'djBooth',
   'screen',
+  'corridor',
+  'perimeter',
 ]);
 
 /** Vocabulaire courant renvoyé par les modèles vision → kind EventMaster. */
@@ -111,7 +113,9 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   bleacher: 'row',
   bleachers: 'row',
   theaterseats: 'row',
-  chairs: 'row',
+  chairs: 'chair',
+  chaises: 'chair',
+  chaise: 'chair',
   rangee: 'row',
   rangees: 'row',
   gradin: 'row',
@@ -140,6 +144,11 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   allee: 'aisle',
   runner: 'aisle',
   carpetrunner: 'aisle',
+  corridor: 'corridor',
+  couloir: 'corridor',
+  hallway: 'corridor',
+  perimeter: 'perimeter',
+  perimetre: 'perimeter',
   door: 'door',
   porte: 'door',
   entrance: 'entrance',
@@ -261,6 +270,29 @@ export function normalizeRoomPlanVisionKind(raw: unknown): RoomPlanVisionItemKin
   return KIND_ALIASES[key] ?? KIND_ALIASES[key.replace(/s$/, '')];
 }
 
+const SEAT_ROW_SPAN_MIN = 16;
+const SEAT_ROW_DEPTH_MAX = 10;
+const SEAT_CHAIR_SPAN_MAX = 12;
+
+/** Rangée longue et étroite → row ; petit footprint → chaise isolée. */
+export function refineSeatKindFromFootprint(
+  kind: RoomPlanVisionItemKind,
+  w?: number,
+  h?: number,
+): RoomPlanVisionItemKind {
+  if (kind !== 'chair' && kind !== 'row') return kind;
+  if (w == null || h == null) return kind;
+  const span = Math.max(w, h);
+  const depth = Math.min(w, h);
+  if (kind === 'chair' && span >= SEAT_ROW_SPAN_MIN && depth <= SEAT_ROW_DEPTH_MAX) {
+    return 'row';
+  }
+  if (kind === 'row' && span < SEAT_CHAIR_SPAN_MAX && depth < SEAT_CHAIR_SPAN_MAX) {
+    return 'chair';
+  }
+  return kind;
+}
+
 function resolveTableShape(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
   if (TABLE_SHAPES.has(raw)) return raw;
@@ -318,7 +350,9 @@ export type RoomPlanVisionItemKind =
   | 'fountain'
   | 'gazebo'
   | 'djBooth'
-  | 'screen';
+  | 'screen'
+  | 'corridor'
+  | 'perimeter';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -579,15 +613,18 @@ export function parseRoomPlanVisionDraft(
     }
     if (!entry || typeof entry !== 'object') continue;
     const row = entry as Record<string, unknown>;
-    const kind = normalizeRoomPlanVisionKind(row.kind);
-    if (!kind) continue;
+    const kindRaw = normalizeRoomPlanVisionKind(row.kind);
+    if (!kindRaw) continue;
+    const w = row.w != null ? clampPct(row.w, 10) : undefined;
+    const h = row.h != null ? clampPct(row.h, 8) : undefined;
+    const kind = refineSeatKindFromFootprint(kindRaw, w, h);
     const item: RoomPlanVisionItem = {
       kind,
       x: clampPct(row.x, 50),
       y: clampPct(row.y, 50),
     };
-    if (row.w != null) item.w = clampPct(row.w, 10);
-    if (row.h != null) item.h = clampPct(row.h, 8);
+    if (w != null) item.w = w;
+    if (h != null) item.h = h;
     if (row.rotation != null) item.rotation = Math.round(clamp(asNumber(row.rotation, 0), -180, 180));
     const shape = resolveTableShape(row.shape)
       ?? (kind === 'table' && typeof row.kind === 'string' ? resolveTableShape(row.kind) : undefined);
@@ -717,7 +754,7 @@ Champs JSON obligatoires :
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -745,8 +782,10 @@ Règles appearance :
 
 Règles items (déduction autorisée) :
 - table = chaque table isolée. seats = chaises / couverts visibles autour, sinon estime d’après le diamètre (cocktail 2, ronde 8, longue 10–14). shape d’après la silhouette. hasCenterpiece=true si vase ou bouquet central.
-- row = chaque rangée de chaises alignées (théâtre, banquettes, gradin). Une rangée visible = un item. chairs autour d’une table → seats de la table, pas des row.
-- chair = fauteuil / tabouret isolé seulement.
+- row = chaque rangée de chaises alignées (théâtre, banquettes, gradin). Une rangée visible = un item.
+- chair = fauteuil / tabouret isolé seulement (pas autour d’une table).
+- Les chaises autour d’une table = seats de cette table, jamais des items chair ou row séparés.
+- corridor = couloir / circulation visible. perimeter = bande périphérique seulement si elle se voit.
 - zone = piste de danse, VIP, buffet au sol, grande moquette. zoneKind obligatoire. color + material si la surface se voit.
 - aisle = tapis / allée au sol. aisleStyle seulement si le tapis correspond vraiment. hasPetals / hasSideLanterns seulement s’ils sont visibles.
 - stage / podium / djBooth / screen / buffet / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo : dès qu’ils se voient, pose-les.
@@ -785,7 +824,7 @@ Le schéma JSON est le même que pour une lecture photo :
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",

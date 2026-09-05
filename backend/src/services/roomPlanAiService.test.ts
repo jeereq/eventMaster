@@ -4,6 +4,7 @@ import {
   composeRoomPlanFromBrief,
   normalizeRoomPlanImageUrl,
   normalizeRoomPlanVisionKind,
+  refineSeatKindFromFootprint,
   parseHexColor,
   parseModelJson,
   parseRoomPlanVisionDraft,
@@ -68,20 +69,30 @@ describe('parseRoomPlanVisionDraft', () => {
       items: [
         { kind: 'tables', x: 20, y: 24, w: 10, h: 10, shape: 'ronde' },
         { kind: 'chairs', x: 18, y: 60, w: 28, h: 6 },
+        { kind: 'chairs', x: 70, y: 20, w: 4, h: 4 },
         { kind: 'dancefloor', x: 40, y: 40, w: 22, h: 18 },
         { kind: 'dj', x: 42, y: 6, w: 16, h: 8 },
         { kind: 'lights', x: 12, y: 12, w: 70, h: 70 },
+        { kind: 'corridor', x: 46, y: 20, w: 8, h: 50 },
         { kind: 'spaceship', x: 10, y: 10 },
       ],
     }, { widthM: 22, heightM: 18 });
 
     assert.deepEqual(draft.items.map((item) => item.kind), [
-      'table', 'row', 'zone', 'djBooth', 'stringLight',
+      'table', 'row', 'chair', 'zone', 'djBooth', 'stringLight', 'corridor',
     ]);
     assert.equal(draft.items[0]?.shape, 'round');
     assert.equal(draft.items[0]?.seats, 8);
     assert.equal(draft.items[1]?.seats, 12);
-    assert.equal(draft.items[2]?.zoneKind, 'dance');
+    assert.equal(draft.items[2]?.kind, 'chair');
+    assert.equal(draft.items[3]?.zoneKind, 'dance');
+  });
+
+  it('affine chairs : bande longue → rangée, petit footprint → chaise', () => {
+    assert.equal(refineSeatKindFromFootprint('chair', 28, 6), 'row');
+    assert.equal(refineSeatKindFromFootprint('chair', 4, 4), 'chair');
+    assert.equal(refineSeatKindFromFootprint('row', 4, 4), 'chair');
+    assert.equal(refineSeatKindFromFootprint('row', 28, 6), 'row');
   });
 
   it('conserve couleurs, matières et bbox haut-gauche', () => {
