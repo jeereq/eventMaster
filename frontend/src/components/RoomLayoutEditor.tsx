@@ -66,6 +66,10 @@ import {
   createBlueprintChair,
   composeArcRing,
   createBlueprintFixture,
+  placeFixtureWithClearance,
+  placeCenteredItemWithClearance,
+  findClearLayoutSlot,
+  estimateTableFootprint,
   createBlueprintRow,
   createBlueprintTable,
   createBlueprintZone,
@@ -772,10 +776,15 @@ export default function RoomLayoutEditor({
     const count = tableCount + 1;
     const defaultChair: ChairType =
       blueprint.roomType === 'CONFERENCE' || blueprint.roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET';
-    const table = {
-      ...createBlueprintTable(count, { chairType: defaultChair, shape: caps.tableShapes[0] }),
-      storyId: resolveActiveStoryId(blueprint),
-    };
+    const table = placeCenteredItemWithClearance(
+      blueprint,
+      {
+        ...createBlueprintTable(count, { chairType: defaultChair, shape: caps.tableShapes[0] }),
+        storyId: resolveActiveStoryId(blueprint),
+      },
+      estimateTableFootprint(caps.tableShapes[0], 8),
+      'table',
+    );
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, table] }, { message: `Table « ${table.name} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'table', id: table.id }]);
   };
@@ -819,7 +828,13 @@ export default function RoomLayoutEditor({
       return;
     }
     const count = rowCount + 1;
-    const row = { ...createBlueprintRow(count), storyId: resolveActiveStoryId(blueprint) };
+    const draftRow = { ...createBlueprintRow(count), storyId: resolveActiveStoryId(blueprint) };
+    const row = placeCenteredItemWithClearance(
+      blueprint,
+      draftRow,
+      { w: Math.min(40, Math.max(8, draftRow.seatCount * 2.2)), h: 5 },
+      'row',
+    );
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, row] }, { message: `Rangée « ${row.label} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'row', id: row.id }]);
   };
@@ -873,24 +888,37 @@ export default function RoomLayoutEditor({
       return;
     }
     const count = blueprint.furniture.filter((f) => f.kind === 'zone').length + 1;
-    const zone = {
+    const draftZone = {
       ...createBlueprintZone(label, count, opts),
       storyId: resolveActiveStoryId(blueprint),
     };
+    const zoneSlot = findClearLayoutSlot(blueprint, {
+      w: draftZone.w,
+      h: draftZone.h,
+      preferred: { x: draftZone.x, y: draftZone.y },
+      storyId: draftZone.storyId,
+      kind: 'zone',
+    });
+    const zone = { ...draftZone, x: zoneSlot.x, y: zoneSlot.y };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, zone] }, { message: `Zone « ${zone.label} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'zone', id: zone.id }]);
   };
 
   const addFreeChair = () => {
     const count = blueprint.furniture.filter((f) => f.kind === 'chair').length + 1;
-    const chair = {
-      ...createBlueprintChair(count, {
-      chairType: 'ARMCHAIR',
-      chairStyle: 'lounge',
-      seatMaterial: 'velvet',
-    }),
-      storyId: resolveActiveStoryId(blueprint),
-    };
+    const chair = placeCenteredItemWithClearance(
+      blueprint,
+      {
+        ...createBlueprintChair(count, {
+          chairType: 'ARMCHAIR',
+          chairStyle: 'lounge',
+          seatMaterial: 'velvet',
+        }),
+        storyId: resolveActiveStoryId(blueprint),
+      },
+      { w: 3, h: 3 },
+      'chair',
+    );
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, chair] }, { message: 'Fauteuil ajouté', kind: 'add' });
     setSelection([{ kind: 'chair', id: chair.id }]);
   };
@@ -900,7 +928,10 @@ export default function RoomLayoutEditor({
       addZone('Moquette', { zoneKind: 'carpet', material: 'carpet' });
       return;
     }
-    const fixture = createBlueprintFixture('carpet');
+    const fixture = placeFixtureWithClearance(blueprint, {
+      ...createBlueprintFixture('carpet'),
+      storyId: resolveActiveStoryId(blueprint),
+    });
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: 'Moquette ajoutée', kind: 'add' });
     setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
@@ -952,12 +983,12 @@ export default function RoomLayoutEditor({
   };
 
   const addChandelierFixture = (style: ChandelierFixtureStyle = quickChandelierStyle) => {
-    const fixture = {
+    const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture('chandelier'),
       chandelierStyle: style,
       label: chandelierFixtureStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
-    };
+    });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `Lustre « ${fixture.label} » ajouté`, kind: 'add' },
@@ -968,12 +999,12 @@ export default function RoomLayoutEditor({
 
   const addDoorFixture = (style: DoorStyle = quickDoorStyle) => {
     const isGrand = style === 'grandPortal';
-    const fixture = {
+    const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture(isGrand ? 'entrance' : 'door'),
       doorStyle: style,
       label: doorStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
-    };
+    });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `Porte « ${fixture.label} » ajoutée`, kind: 'add' },
@@ -983,12 +1014,12 @@ export default function RoomLayoutEditor({
   };
 
   const addAisleCustomStyle = (style: AisleStyle = quickAisleStyle) => {
-    const fixture = {
+    const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture('aisle'),
       aisleStyle: style,
       label: aisleStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
-    };
+    });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `Allée « ${fixture.label} » ajoutée`, kind: 'add' },
@@ -1003,13 +1034,13 @@ export default function RoomLayoutEditor({
       return;
     }
     const preset = podiumStylePresets[style];
-    const fixture = {
+    const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture('podium'),
       ...preset,
       podiumStyle: style,
       label: podiumStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
-    };
+    });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `Podium « ${fixture.label} » ajouté`, kind: 'add' },
@@ -1024,12 +1055,12 @@ export default function RoomLayoutEditor({
       return;
     }
     const preset = instrumentStylePresets[style];
-    const fixture = {
+    const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture('instrument'),
       ...preset,
       instrumentStyle: style,
       storyId: resolveActiveStoryId(blueprint),
-    };
+    });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `${fixture.label} ajouté — placez-le sur un podium`, kind: 'add' },
@@ -1044,12 +1075,12 @@ export default function RoomLayoutEditor({
       return;
     }
     const preset = barStylePresets[style];
-    const fixture = {
+    const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture('bar'),
       ...preset,
       barStyle: style,
       storyId: resolveActiveStoryId(blueprint),
-    };
+    });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `Bar « ${fixture.label} » ajouté`, kind: 'add' },
@@ -1063,10 +1094,10 @@ export default function RoomLayoutEditor({
       log('Cet élément n’est pas inclus dans votre forfait', 'info');
       return;
     }
-    const fixture = {
+    const fixture = placeFixtureWithClearance(blueprint, {
       ...createBlueprintFixture(kind),
       storyId: resolveActiveStoryId(blueprint),
-    };
+    });
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: `${fixture.label || kind} ajouté`, kind: 'add' });
     setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
@@ -1077,7 +1108,10 @@ export default function RoomLayoutEditor({
       return;
     }
     const n = blueprint.fixtures.filter((f) => f.kind === 'corridor').length + 1;
-    const fixture = { ...createCorridorFixture(n), storyId: resolveActiveStoryId(blueprint) };
+    const fixture = placeFixtureWithClearance(blueprint, {
+      ...createCorridorFixture(n),
+      storyId: resolveActiveStoryId(blueprint),
+    });
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `${fixture.label} ajouté`, kind: 'add' },

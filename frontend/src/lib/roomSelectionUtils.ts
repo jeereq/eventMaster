@@ -1,5 +1,12 @@
 import type { RoomLayoutBlueprint, TableShape } from '@/lib/roomLayoutUtils';
-import { makeLayoutId, refreshBlueprintMetadata } from '@/lib/roomLayoutUtils';
+import {
+  estimateTableFootprint,
+  findClearLayoutSlot,
+  makeLayoutId,
+  placeCenteredItemWithClearance,
+  placeFixtureWithClearance,
+  refreshBlueprintMetadata,
+} from '@/lib/roomLayoutUtils';
 import {
   alignedPositions,
   clusterIndices,
@@ -398,14 +405,17 @@ export function duplicateLayoutSelection(
       const source = blueprint.fixtures.find((f) => f.id === item.id);
       if (!source) continue;
       const id = makeLayoutId('fixture');
-      nextFixtures.push({
+      const draft = {
         ...source,
         id,
         x: clamp(source.x + offset, 1, Math.max(1, 99 - source.w)),
         y: clamp(source.y + offset, 1, Math.max(1, 99 - source.h)),
         label: copyLabel(source.label, source.kind),
         groupId: newGroupId,
-      });
+      };
+      nextFixtures.push(
+        placeFixtureWithClearance({ ...blueprint, furniture: nextFurniture, fixtures: nextFixtures }, draft),
+      );
       copied.push({ kind: 'fixture', id });
       continue;
     }
@@ -414,44 +424,76 @@ export function duplicateLayoutSelection(
     if (!source) continue;
     const id = nextFurnitureId(item.kind);
     if (source.kind === 'table') {
-      nextFurniture.push({
-        ...source,
-        id,
-        name: copyLabel(source.name, 'Table'),
-        x: clamp(source.x + offset, 1, 99),
-        y: clamp(source.y + offset, 1, 99),
-        locked: false,
-        groupId: newGroupId,
-      });
+      nextFurniture.push(
+        placeCenteredItemWithClearance(
+          { ...blueprint, furniture: nextFurniture, fixtures: nextFixtures },
+          {
+            ...source,
+            id,
+            name: copyLabel(source.name, 'Table'),
+            x: clamp(source.x + offset, 1, 99),
+            y: clamp(source.y + offset, 1, 99),
+            locked: false,
+            groupId: newGroupId,
+          },
+          estimateTableFootprint(source.shape, source.capacity),
+          'table',
+        ),
+      );
     } else if (source.kind === 'row') {
-      nextFurniture.push({
-        ...source,
-        id,
-        label: copyLabel(source.label, 'Rangée'),
-        rowName: source.rowName ? copyLabel(source.rowName, source.rowName) : source.rowName,
-        x: clamp(source.x + offset, 1, 99),
-        y: clamp(source.y + offset, 1, 99),
-        groupId: newGroupId,
-      });
+      nextFurniture.push(
+        placeCenteredItemWithClearance(
+          { ...blueprint, furniture: nextFurniture, fixtures: nextFixtures },
+          {
+            ...source,
+            id,
+            label: copyLabel(source.label, 'Rangée'),
+            rowName: source.rowName ? copyLabel(source.rowName, source.rowName) : source.rowName,
+            x: clamp(source.x + offset, 1, 99),
+            y: clamp(source.y + offset, 1, 99),
+            groupId: newGroupId,
+          },
+          { w: Math.min(40, Math.max(8, source.seatCount * 2.2)), h: 5 },
+          'row',
+        ),
+      );
     } else if (source.kind === 'chair') {
-      nextFurniture.push({
-        ...source,
-        id,
-        label: source.label ? copyLabel(source.label, 'Siège') : source.label,
-        x: clamp(source.x + offset, 1, 99),
-        y: clamp(source.y + offset, 1, 99),
-        locked: false,
-        groupId: newGroupId,
-      });
+      nextFurniture.push(
+        placeCenteredItemWithClearance(
+          { ...blueprint, furniture: nextFurniture, fixtures: nextFixtures },
+          {
+            ...source,
+            id,
+            label: source.label ? copyLabel(source.label, 'Siège') : source.label,
+            x: clamp(source.x + offset, 1, 99),
+            y: clamp(source.y + offset, 1, 99),
+            locked: false,
+            groupId: newGroupId,
+          },
+          { w: 3, h: 3 },
+          'chair',
+        ),
+      );
     } else if (source.kind === 'zone') {
-      nextFurniture.push({
+      const draft = {
         ...source,
         id,
         label: copyLabel(source.label, 'Zone'),
         x: clamp(source.x + offset, 1, Math.max(1, 99 - source.w)),
         y: clamp(source.y + offset, 1, Math.max(1, 99 - source.h)),
         groupId: newGroupId,
-      });
+      };
+      const slot = findClearLayoutSlot(
+        { ...blueprint, furniture: nextFurniture, fixtures: nextFixtures },
+        {
+          w: draft.w,
+          h: draft.h,
+          preferred: { x: draft.x, y: draft.y },
+          storyId: draft.storyId,
+          kind: 'zone',
+        },
+      );
+      nextFurniture.push({ ...draft, x: slot.x, y: slot.y });
     }
     copied.push({ kind: item.kind, id });
   }

@@ -680,7 +680,7 @@ export function createBlueprintRow(
     chairType: defaults.chairType ?? 'THEATER',
     tier: defaults.tier ?? 0,
     x: defaults.x ?? 50,
-    y: defaults.y ?? 20 + index * 8,
+    y: defaults.y ?? 18 + index * 10,
     ...(defaults.groupId ? { groupId: defaults.groupId } : {}),
     ...(defaults.curve != null ? { curve: defaults.curve } : {}),
   };
@@ -728,7 +728,7 @@ export function createChairRowGroups(opts: {
   let rowIdx = start;
   for (let g = 0; g < groups; g += 1) {
     const groupId = makeLayoutId('grp');
-    const xBase = groups === 1 ? 50 : 22 + (g / Math.max(1, groups - 1)) * 56;
+    const xBase = groups === 1 ? 50 : 18 + (g / Math.max(1, groups - 1)) * 64;
     for (let r = 0; r < rowsPer; r += 1) {
       rows.push(
         createBlueprintRow(rowIdx, {
@@ -736,7 +736,7 @@ export function createChairRowGroups(opts: {
           chairType: opts.chairType ?? 'THEATER',
           tier: r,
           x: xBase,
-          y: 22 + r * 7,
+          y: 20 + r * 9.5,
           label: groups > 1 ? `Groupe ${g + 1} · R${r + 1}` : `Rangée ${rowIdx}`,
           groupId,
         }),
@@ -1036,6 +1036,154 @@ export function createBlueprintFixture(
   };
 }
 
+/** Marge de circulation entre deux empreintes au sol (en % du plan). */
+export const LAYOUT_CLEARANCE_PCT = 3.5;
+
+const LAYOUT_SOFT_SURFACE_KINDS = new Set<RoomFixtureKind>([
+  'aisle',
+  'carpet',
+  'corridor',
+  'perimeter',
+  'decal',
+  'stringLight',
+  'chandelier',
+]);
+const LAYOUT_RAISED_KINDS = new Set<string>(['podium', 'stage']);
+const LAYOUT_STACKABLE_KINDS = new Set<string>(['instrument', 'bar', 'table', 'chair']);
+
+type LayoutBox = { x: number; y: number; w: number; h: number };
+
+function sameLayoutStory(a?: string, b?: string) {
+  return !a || !b || a === b;
+}
+
+function layoutBoxesOverlap(a: LayoutBox, b: LayoutBox, gap: number) {
+  return a.x < b.x + b.w + gap && a.x + a.w + gap > b.x && a.y < b.y + b.h + gap && a.y + a.h + gap > b.y;
+}
+
+export function estimateTableFootprint(shape: TableShape | undefined, capacity: number): { w: number; h: number } {
+  if (shape === 'cocktail' || shape === 'highTop') return { w: 5, h: 5 };
+  if (shape === 'rectangular' || shape === 'arc') {
+    const w = capacity >= 14 ? 16 : capacity >= 10 ? 13 : 10;
+    return { w, h: 7 };
+  }
+  const span = Math.max(6, Math.min(14, 5 + capacity * 0.55));
+  return { w: span, h: span };
+}
+
+function furnitureLayoutBox(item: RoomLayoutBlueprint['furniture'][number]): LayoutBox | null {
+  if (item.kind === 'zone') {
+    if (item.zoneKind === 'dance' || item.zoneKind === 'carpet') return null;
+    return { x: item.x, y: item.y, w: item.w, h: item.h };
+  }
+  if (item.kind === 'table') {
+    const size = estimateTableFootprint(item.shape, item.capacity);
+    return { x: item.x - size.w / 2, y: item.y - size.h / 2, w: size.w, h: size.h };
+  }
+  if (item.kind === 'row') {
+    const w = Math.min(40, Math.max(8, item.seatCount * 2.2));
+    return { x: item.x - w / 2, y: item.y - 2.5, w, h: 5 };
+  }
+  if (item.kind === 'chair') {
+    return { x: item.x - 1.5, y: item.y - 1.5, w: 3, h: 3 };
+  }
+  return null;
+}
+
+function collectOccupiedLayoutBoxes(
+  blueprint: RoomLayoutBlueprint,
+  incomingKind: string,
+  storyId?: string,
+): LayoutBox[] {
+  const boxes: LayoutBox[] = [];
+  for (const fixture of blueprint.fixtures) {
+    if (!sameLayoutStory(fixture.storyId, storyId)) continue;
+    if (LAYOUT_SOFT_SURFACE_KINDS.has(fixture.kind)) continue;
+    if (LAYOUT_RAISED_KINDS.has(fixture.kind) && LAYOUT_STACKABLE_KINDS.has(incomingKind)) continue;
+    boxes.push({ x: fixture.x, y: fixture.y, w: fixture.w, h: fixture.h });
+  }
+  for (const item of blueprint.furniture) {
+    if (!sameLayoutStory(item.storyId, storyId)) continue;
+    const box = furnitureLayoutBox(item);
+    if (box) boxes.push(box);
+  }
+  return boxes;
+}
+
+export function findClearLayoutSlot(
+  blueprint: RoomLayoutBlueprint,
+  opts: {
+    w: number;
+    h: number;
+    preferred: { x: number; y: number };
+    storyId?: string;
+    kind: string;
+    gapPct?: number;
+  },
+): { x: number; y: number } {
+  const gap = opts.gapPct ?? LAYOUT_CLEARANCE_PCT;
+  const w = Math.max(2, Math.min(96, opts.w));
+  const h = Math.max(2, Math.min(96, opts.h));
+  const occupied = collectOccupiedLayoutBoxes(blueprint, opts.kind, opts.storyId);
+  const clampSlot = (x: number, y: number) => ({
+    x: Math.max(2, Math.min(98 - w, x)),
+    y: Math.max(2, Math.min(98 - h, y)),
+  });
+  const isFree = (x: number, y: number) => {
+    const box = { x, y, w, h };
+    return occupied.every((other) => !layoutBoxesOverlap(box, other, gap));
+  };
+
+  const first = clampSlot(opts.preferred.x, opts.preferred.y);
+  if (isFree(first.x, first.y)) return first;
+
+  const step = Math.max(3.5, Math.min(w, h, 8) * 0.65);
+  for (let ring = 1; ring <= 14; ring += 1) {
+    for (let dx = -ring; dx <= ring; dx += 1) {
+      for (let dy = -ring; dy <= ring; dy += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+        const next = clampSlot(opts.preferred.x + dx * step, opts.preferred.y + dy * step);
+        if (isFree(next.x, next.y)) return next;
+      }
+    }
+  }
+  return first;
+}
+
+export function placeFixtureWithClearance(
+  blueprint: RoomLayoutBlueprint,
+  fixture: RoomLayoutBlueprint['fixtures'][number],
+): RoomLayoutBlueprint['fixtures'][number] {
+  const slot = findClearLayoutSlot(blueprint, {
+    w: fixture.w,
+    h: fixture.h,
+    preferred: { x: fixture.x, y: fixture.y },
+    storyId: fixture.storyId,
+    kind: fixture.kind,
+  });
+  return { ...fixture, x: Math.round(slot.x * 10) / 10, y: Math.round(slot.y * 10) / 10 };
+}
+
+export function placeCenteredItemWithClearance<T extends { x: number; y: number; storyId?: string }>(
+  blueprint: RoomLayoutBlueprint,
+  item: T,
+  size: { w: number; h: number },
+  kind: string,
+): T {
+  const slot = findClearLayoutSlot(blueprint, {
+    w: size.w,
+    h: size.h,
+    preferred: { x: item.x - size.w / 2, y: item.y - size.h / 2 },
+    storyId: item.storyId,
+    kind,
+  });
+  return {
+    ...item,
+    x: Math.round((slot.x + size.w / 2) * 10) / 10,
+    y: Math.round((slot.y + size.h / 2) * 10) / 10,
+  };
+}
+
 /** Place des tables en arc autour d’un centre (cercle / demi-cercle). */
 export function composeArcRing(opts: {
   centerX?: number;
@@ -1050,7 +1198,7 @@ export function composeArcRing(opts: {
   tableColor?: string;
 }): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }>[] {
   const count = Math.max(2, Math.min(12, Math.round(opts.segmentCount ?? 6)));
-  const radius = opts.radiusPct ?? 22;
+  const radius = opts.radiusPct ?? 26;
   const cx = opts.centerX ?? 50;
   const cy = opts.centerY ?? 52;
   const sweep = opts.sweepDeg ?? 360;
@@ -4627,9 +4775,15 @@ export const arrangeDensityLabels: Record<ArrangeDensity, string> = {
 };
 
 function densityMargin(density: ArrangeDensity): number {
-  if (density === 'compact') return 7;
-  if (density === 'ample') return 16;
-  return 11;
+  if (density === 'compact') return 9;
+  if (density === 'ample') return 20;
+  return 14;
+}
+
+function densityItemGap(density: ArrangeDensity): number {
+  if (density === 'compact') return 3;
+  if (density === 'ample') return 7;
+  return 5;
 }
 
 function usableTableBounds(blueprint: RoomLayoutBlueprint, density: ArrangeDensity) {
@@ -4642,7 +4796,7 @@ function usableTableBounds(blueprint: RoomLayoutBlueprint, density: ArrangeDensi
   for (const fixture of blueprint.fixtures) {
     if (fixture.kind === 'stage' || fixture.kind === 'podium' || fixture.kind === 'entrance') {
       const edge = fixture.y + fixture.h;
-      if (edge < 45) top = Math.max(top, edge + m * 0.6);
+      if (edge < 45) top = Math.max(top, edge + m);
     }
   }
   if (right - left < 16) {
@@ -4660,15 +4814,19 @@ function arrangePositions(
   count: number,
   preset: TableArrangePreset,
   bounds: ReturnType<typeof usableTableBounds>,
+  cell: { w: number; h: number; gap: number },
 ): Array<{ x: number; y: number }> {
   if (count <= 0) return [];
   const { left, right, top, bottom, width, height } = bounds;
   const cx = (left + right) / 2;
   const cy = (top + bottom) / 2;
+  const inset = Math.min(width, height) * 0.06 + cell.gap * 0.4;
 
   if (preset === 'circle') {
-    const rx = width * 0.36;
-    const ry = height * 0.34;
+    const minSep = Math.max(cell.w + cell.gap, cell.h + cell.gap);
+    const neededR = count > 1 ? (minSep * count) / (2 * Math.PI) : 0;
+    const rx = Math.min(width * 0.34, Math.max(width * 0.22, neededR));
+    const ry = Math.min(height * 0.32, Math.max(height * 0.2, neededR * 0.9));
     return Array.from({ length: count }, (_, i) => {
       const a = (i / count) * Math.PI * 2 - Math.PI / 2;
       return { x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry };
@@ -4681,16 +4839,16 @@ function arrangePositions(
     const positions: Array<{ x: number; y: number }> = [];
     for (let i = 0; i < side && positions.length < count; i++) {
       const t = side === 1 ? 0.5 : i / (side - 1);
-      positions.push({ x: left + width * 0.08, y: top + height * (0.12 + t * 0.76) });
+      positions.push({ x: left + inset, y: top + height * (0.12 + t * 0.76) });
     }
     const along = Math.max(bottomCount, 0);
     for (let i = 0; i < along && positions.length < count; i++) {
       const t = along === 1 ? 0.5 : (i + 1) / (along + 1);
-      positions.push({ x: left + width * t, y: bottom - height * 0.08 });
+      positions.push({ x: left + width * t, y: bottom - inset });
     }
     for (let i = 0; i < side && positions.length < count; i++) {
       const t = side === 1 ? 0.5 : 1 - i / (side - 1);
-      positions.push({ x: right - width * 0.08, y: top + height * (0.12 + t * 0.76) });
+      positions.push({ x: right - inset, y: top + height * (0.12 + t * 0.76) });
     }
     return positions.slice(0, count);
   }
@@ -4698,8 +4856,8 @@ function arrangePositions(
   if (preset === 'banquet') {
     const leftCount = Math.ceil(count / 2);
     const rightCount = count - leftCount;
-    const lx = left + width * 0.28;
-    const rx = left + width * 0.72;
+    const lx = left + width * 0.26;
+    const rx = left + width * 0.74;
     const col = (n: number, x: number) =>
       Array.from({ length: n }, (_, i) => {
         const t = n === 1 ? 0.5 : (i + 0.5) / n;
@@ -4720,14 +4878,21 @@ function arrangePositions(
     });
   }
 
-  const cols = Math.max(1, Math.ceil(Math.sqrt(count * (width / Math.max(height, 1)))));
+  const pitchX = cell.w + cell.gap;
+  const pitchY = cell.h + cell.gap;
+  const cols = Math.max(1, Math.min(count, Math.floor((width + cell.gap) / pitchX) || 1));
   const rows = Math.ceil(count / cols);
+  const usedW = cols * cell.w + (cols - 1) * cell.gap;
+  const usedH = rows * cell.h + (rows - 1) * cell.gap;
+  const originX = left + Math.max(0, (width - usedW) / 2);
+  const originY = top + Math.max(0, (height - usedH) / 2);
   return Array.from({ length: count }, (_, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
-    const x = left + ((col + 0.5) / cols) * width;
-    const y = top + ((row + 0.5) / rows) * height;
-    return { x, y };
+    return {
+      x: originX + col * pitchX + cell.w / 2,
+      y: originY + row * pitchY + cell.h / 2,
+    };
   });
 }
 
@@ -4740,7 +4905,19 @@ export function autoArrangeTables(
   const movable = tables.filter((item) => !item.locked);
   if (movable.length === 0) return blueprint;
   const bounds = usableTableBounds(blueprint, density);
-  const positions = arrangePositions(movable.length, preset, bounds);
+  const avg = movable.reduce(
+    (acc, table) => {
+      const size = estimateTableFootprint(table.shape, table.capacity);
+      return { w: acc.w + size.w, h: acc.h + size.h };
+    },
+    { w: 0, h: 0 },
+  );
+  const cell = {
+    w: Math.max(6, avg.w / movable.length),
+    h: Math.max(6, avg.h / movable.length),
+    gap: densityItemGap(density),
+  };
+  const positions = arrangePositions(movable.length, preset, bounds, cell);
   let cursor = 0;
   const furniture = blueprint.furniture.map((item) => {
     if (item.kind !== 'table' || item.locked) return item;

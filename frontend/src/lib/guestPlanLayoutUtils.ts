@@ -12,7 +12,7 @@ export interface PlanTablePoint {
 /** Résout les chevauchements par séparation itérative (positions d'affichage uniquement) */
 export function resolveGuestTablePositions(
   tables: PlanTablePoint[],
-  minDistancePct = 9,
+  minDistancePct = 12,
   iterations = 24,
 ): Map<string, { x: number; y: number }> {
   const positions = new Map(tables.map((t) => [t.id, { x: t.x, y: t.y }]));
