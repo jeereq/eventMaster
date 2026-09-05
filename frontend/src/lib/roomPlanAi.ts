@@ -1070,7 +1070,6 @@ export function applyRoomPlanVisionDraft(
   const canvas = applyDraftCanvas(current.canvas, draft);
   const roof = resolveImportedRoof(appearance, current, tentSeen);
   const chandelierFixtures = fixtures.filter((fixture) => fixture.kind === 'chandelier');
-  const tentSized = roof.roofStyle === 'tentSwag' || current.roomType === 'TENT' || tentSeen;
 
   const aligned = tidyImportedFloorLayout(ensureBlueprintDefaults({
     ...current,
