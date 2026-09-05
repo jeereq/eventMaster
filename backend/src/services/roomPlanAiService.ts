@@ -417,7 +417,13 @@ function fail(status: number, message: string): never {
   throw error;
 }
 
-const GEMINI_PLAN_MODEL_DEFAULT = 'gemini-2.5-pro';
+const GEMINI_PLAN_MODEL_DEFAULT = 'gemini-3.1-pro-preview';
+const GEMINI_RETIRED_PLAN_MODELS = new Set([
+  'gemini-2.5-pro',
+  'gemini-2.5-pro-preview',
+  'gemini-2.0-pro',
+  'gemini-1.5-pro',
+]);
 const GEMINI_IMAGE_FETCH_MAX_BYTES = 8 * 1024 * 1024;
 
 function requireGeminiKey(): string {
@@ -435,7 +441,10 @@ function requireGeminiKey(): string {
 }
 
 function getGeminiPlanModel(): string {
-  return (process.env.GEMINI_PLAN_MODEL || process.env.GEMINI_MODEL || GEMINI_PLAN_MODEL_DEFAULT).trim();
+  const raw = (process.env.GEMINI_PLAN_MODEL || process.env.GEMINI_MODEL || GEMINI_PLAN_MODEL_DEFAULT).trim();
+  const model = raw.replace(/^models\//, '');
+  if (!model || GEMINI_RETIRED_PLAN_MODELS.has(model)) return GEMINI_PLAN_MODEL_DEFAULT;
+  return model;
 }
 
 function parseDataImage(url: string): { mimeType: string; base64: string } | null {
