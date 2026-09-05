@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
@@ -223,6 +224,11 @@ export default function DashboardMobileBottomBar({
 }: DashboardMobileBottomBarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fallbackTab = role === 'SUPER_ADMIN' ? 'overview' : 'tenants';
   const currentTab = searchParams.get('tab') || fallbackTab;
@@ -237,10 +243,12 @@ export default function DashboardMobileBottomBar({
     });
   }, [role, access, workspace, accountKind, isClientAccount]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <nav
       aria-label="Navigation principale mobile"
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/92 backdrop-blur-xl border-t border-border shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 px-1.5 transition-transform"
+      className="em-dash-bottom-nav md:hidden bg-surface/92 backdrop-blur-xl border-t border-border shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 px-1.5"
     >
       <div
         className="grid gap-1 items-center max-w-lg mx-auto"
@@ -319,6 +327,7 @@ export default function DashboardMobileBottomBar({
           );
         })}
       </div>
-    </nav>
+    </nav>,
+    document.body,
   );
 }

@@ -379,6 +379,18 @@ html[data-mood="celebrate"] .font-display {
   padding-bottom: calc(var(--em-site-bottom-nav) + var(--em-site-install-bar) + 0.5rem);
 }
 
+/* Ancré au viewport, pas au flex parent — sinon iOS / Safari décroche le `fixed`. */
+.em-site-bottom-nav,
+.em-dash-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 100vw;
+  z-index: 40;
+}
+
 @media (max-width: 767px) {
   :root {
     --em-site-header: calc(3rem + env(safe-area-inset-top, 0px));

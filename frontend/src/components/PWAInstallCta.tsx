@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { Download, Share, Smartphone, X } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -78,6 +79,11 @@ export default function PWAInstallCta({
   const hiddenRoute = HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   const show = visible && !hiddenRoute;
   const closeHelp = () => setHelp(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (variant !== 'bar' || !show) return;
@@ -90,7 +96,8 @@ export default function PWAInstallCta({
   if (!show) return null;
 
   if (variant === 'bar') {
-    return (
+    if (!mounted) return null;
+    return createPortal(
       <div
         className="md:hidden fixed inset-x-0 z-[45] bottom-[var(--em-site-bottom-nav)] border-t border-primary/25 bg-primary-solid text-primary-foreground"
         role="region"
@@ -118,7 +125,8 @@ export default function PWAInstallCta({
             className="absolute bottom-full inset-x-3 mb-2"
           />
         ) : null}
-      </div>
+      </div>,
+      document.body,
     );
   }
 

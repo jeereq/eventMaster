@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Store, Rss, LayoutGrid, FileText } from 'lucide-react';
@@ -76,6 +77,7 @@ export default function SiteMobileBottomBar({
 }) {
   const pathname = usePathname();
   const [currentHash, setCurrentHash] = useState('');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const handleHash = () => {
@@ -85,6 +87,7 @@ export default function SiteMobileBottomBar({
     };
     handleHash();
     window.addEventListener('hashchange', handleHash);
+    setMounted(true);
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
@@ -102,11 +105,13 @@ export default function SiteMobileBottomBar({
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <nav
       aria-label="Navigation mobile principale"
       className={cn(
-        'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 dark:bg-background/95 backdrop-blur-xl border-t border-border/80 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))] transition-transform',
+        'em-site-bottom-nav md:hidden bg-surface/95 dark:bg-background/95 backdrop-blur-xl border-t border-border/80 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]',
         className,
       )}
     >
@@ -155,6 +160,7 @@ export default function SiteMobileBottomBar({
           );
         })}
       </div>
-    </nav>
+    </nav>,
+    document.body,
   );
 }

@@ -173,7 +173,7 @@ export default function MobileSplashScreen() {
           <img src="/icon.svg" alt="" width={36} height={36} className="w-9 h-9" />
         </span>
         <div className="space-y-1.5 w-full">
-          <p id={titleId} className="text-xl font-bold tracking-tight text-foreground leading-tight break-words">
+          <p id={titleId} className="text-xl font-display font-semibold tracking-tight text-foreground leading-tight break-words">
             {name}
           </p>
           {site.platformTagline ? (
