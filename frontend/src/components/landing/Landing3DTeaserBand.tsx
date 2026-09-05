@@ -32,13 +32,13 @@ export default function Landing3DTeaserBand() {
               </p>
 
               {/* 4 points clés en capsules compactes */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] sm:text-xs text-stage-foreground/90 font-medium">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs text-stage-foreground/90 font-medium">
                 <div className="flex items-center gap-1.5">
-                  <LayoutGrid className="w-3.5 h-3.5 text-brand-accent shrink-0" />
+                  <LayoutGrid className="w-3.5 h-3.5 text-festive-on-stage shrink-0" />
                   <span>Plan 2D coté</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <Eye className="w-3.5 h-3.5 text-festive-on-stage shrink-0" />
                   <span>Visite 3D 360°</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -46,7 +46,7 @@ export default function Landing3DTeaserBand() {
                   <span>Placement VIP</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <ScanLine className="w-3.5 h-3.5 text-festive-accent shrink-0" />
+                  <ScanLine className="w-3.5 h-3.5 text-festive-on-stage shrink-0" />
                   <span>Accueil QR</span>
                 </div>
               </div>
@@ -67,7 +67,7 @@ export default function Landing3DTeaserBand() {
                 href={editorUrl}
                 size="lg"
                 variant="secondary"
-                className="w-full justify-center bg-white/10 text-white hover:bg-white/20 border-white/20 text-xs sm:text-sm font-semibold"
+                className="w-full justify-center bg-stage-foreground/10 text-stage-foreground hover:bg-stage-foreground/20 border-stage-foreground/20 text-xs sm:text-sm font-semibold"
               >
                 Ouvrir l’éditeur
               </Button>

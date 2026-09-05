@@ -196,11 +196,11 @@ export default function LandingHeroPreview({
         {/* En-tête de la console d'actions directes */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-border/80 pb-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-primary-solid animate-pulse motion-reduce:animate-none shrink-0" />
             <h3 className="text-sm font-bold text-foreground">
               Actions directes disponibles
             </h3>
-            <span className="text-[10px] font-semibold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
+            <span className="text-xs font-semibold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
               Accès immédiat
             </span>
           </div>
@@ -246,12 +246,12 @@ export default function LandingHeroPreview({
                         {act.title}
                       </span>
                     </div>
-                    <span className="text-[9px] sm:text-[10px] font-semibold text-muted px-1.5 sm:px-2 py-0.5 rounded bg-surface border border-border shrink-0">
+                    <span className="text-xs font-semibold text-muted px-1.5 sm:px-2 py-0.5 rounded bg-surface border border-border shrink-0">
                       {act.badge}
                     </span>
                   </div>
 
-                  <p className="text-[11px] sm:text-xs text-muted leading-relaxed line-clamp-3">
+                  <p className="text-xs text-muted leading-relaxed line-clamp-3">
                     {act.description}
                   </p>
                 </div>
@@ -275,7 +275,7 @@ export default function LandingHeroPreview({
         </div>
 
         {/* Note de réassurance sous la grille */}
-        <div className="pt-2 border-t border-border/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+        <div className="pt-2 border-t border-border/80 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>Zéro installation requise · Fonctionne à 100% dans votre navigateur</span>

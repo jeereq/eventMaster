@@ -201,11 +201,10 @@ export default function LandingAiSimulationShowcase() {
             </span>
           </p>
 
-          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2" role="tablist" aria-label="Mode de vue simulateur">
+          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2" role="group" aria-label="Mode de vue simulateur">
             <button
               type="button"
-              role="tab"
-              aria-selected={viewMode === 'presets'}
+              aria-pressed={viewMode === 'presets'}
               onClick={() => setViewMode('presets')}
               className={cn(
                 'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
@@ -218,8 +217,7 @@ export default function LandingAiSimulationShowcase() {
             </button>
             <button
               type="button"
-              role="tab"
-              aria-selected={viewMode === 'live'}
+              aria-pressed={viewMode === 'live'}
               onClick={() => setViewMode('live')}
               className={cn(
                 'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
@@ -228,10 +226,10 @@ export default function LandingAiSimulationShowcase() {
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <Wand2 className="w-3.5 h-3.5 text-amber-400" />
+              <Wand2 className="w-3.5 h-3.5 text-festive-accent" />
               <span>Tester mon événement en direct</span>
               {isAiSimulationThresholdReached(allowance) ? (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold tabular-nums">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-bold tabular-nums">
                   {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} budget IA
                 </span>
               ) : null}
@@ -245,15 +243,14 @@ export default function LandingAiSimulationShowcase() {
               <p className="text-xs font-bold text-foreground">
                 Choisissez un projet type, puis générez de vrais packs catalogue.
               </p>
-              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1" role="tablist" aria-label="Projets types">
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap -mx-1 px-1" role="group" aria-label="Projets types">
                 {visibleScenarios.map((scenario) => {
                   const isSelected = scenario.id === selectedScenarioId;
                   return (
                     <button
                       key={scenario.id}
                       type="button"
-                      role="tab"
-                      aria-selected={isSelected}
+                      aria-pressed={isSelected}
                       onClick={() => setSelectedScenarioId(scenario.id)}
                       className={cn(
                         'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
@@ -280,27 +277,27 @@ export default function LandingAiSimulationShowcase() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
                 <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
                   <div>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground inline-block mb-1">
+                    <span className="text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground inline-block mb-1">
                       Projet type
                     </span>
                     <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
                   </div>
                   <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-lg border border-festive-accent/30 backdrop-blur-sm self-start sm:self-auto flex items-baseline gap-1.5">
                     <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
-                    <span className="text-[11px] text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
+                    <span className="text-xs text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
                   </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3.5 sm:p-4 text-xs">
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
+                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
                     <Heart className="w-3.5 h-3.5 text-primary" /> Type d’événement
                   </span>
                   <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
+                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
                     <MapPin className="w-3.5 h-3.5 text-primary" /> Ville & Commune
                   </span>
                   <p className="font-bold text-foreground truncate">
@@ -310,18 +307,18 @@ export default function LandingAiSimulationShowcase() {
                   </p>
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
+                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
                     <Users className="w-3.5 h-3.5 text-primary" /> Nombre d’invités
                   </span>
                   <p className="font-bold text-foreground">{activeScenario.guests} personnes</p>
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted flex items-center gap-1 font-medium">
-                    <DollarSign className="w-3.5 h-3.5 text-festive-accent" /> Budget alloué ($ / FC)
+                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                    <DollarSign className="w-3.5 h-3.5 text-primary" /> Budget alloué ($ / FC)
                   </span>
                   <p className="font-bold text-primary flex items-baseline gap-1">
                     <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
-                    <span className="text-[11px] font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
+                    <span className="text-xs font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
                   </p>
                 </div>
               </div>

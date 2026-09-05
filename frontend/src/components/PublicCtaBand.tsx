@@ -10,12 +10,7 @@ export type PublicCtaHighlight = {
   label: string;
 };
 
-const HIGHLIGHT_ICON_TONES = [
-  'text-brand-accent',
-  'text-primary',
-  'text-festive-on-stage',
-  'text-festive-accent',
-] as const;
+const HIGHLIGHT_ICON_TONE = 'text-festive-on-stage';
 
 export default function PublicCtaBand({
   title,
@@ -49,14 +44,12 @@ export default function PublicCtaBand({
                 {description}
               </p>
               {highlights?.length ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] sm:text-xs text-stage-foreground/90 font-medium">
-                  {highlights.map((item, index) => {
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs text-stage-foreground/90 font-medium">
+                  {highlights.map((item) => {
                     const Icon = item.icon;
                     return (
                       <div key={item.label} className="flex items-center gap-1.5">
-                        <Icon
-                          className={`w-3.5 h-3.5 shrink-0 ${HIGHLIGHT_ICON_TONES[index % HIGHLIGHT_ICON_TONES.length]}`}
-                        />
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${HIGHLIGHT_ICON_TONE}`} />
                         <span>{item.label}</span>
                       </div>
                     );
@@ -84,7 +77,7 @@ export default function PublicCtaBand({
                       href={secondaryHref}
                       size="lg"
                       variant="secondary"
-                      className="w-full justify-center bg-white/10 text-white hover:bg-white/20 border-white/20 text-xs sm:text-sm font-semibold"
+                      className="w-full justify-center bg-stage-foreground/10 text-stage-foreground hover:bg-stage-foreground/20 border-stage-foreground/20 text-xs sm:text-sm font-semibold"
                     >
                       {secondaryLabel}
                     </Button>

@@ -128,15 +128,14 @@ export default function LandingVisualBanner() {
           </h2>
 
           <p className="text-sm sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
-            Découvrez en images les plus beaux espaces, décors et prestations en RDC.
+            Inspirations visuelles pour vos réceptions en RDC — le catalogue réel est juste en dessous.
           </p>
 
           {/* Filtres de catégories rapides */}
-          <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 pt-2" role="tablist" aria-label="Filtrer par catégorie">
+          <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 pt-2" role="group" aria-label="Filtrer par catégorie">
             <button
               type="button"
-              role="tab"
-              aria-selected={activeCategory === 'all'}
+              aria-pressed={activeCategory === 'all'}
               onClick={() => setActiveCategory('all')}
               className={cn(
                 'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0 inline-flex items-center justify-center',
@@ -151,8 +150,7 @@ export default function LandingVisualBanner() {
               <button
                 key={item.id}
                 type="button"
-                role="tab"
-                aria-selected={activeCategory === item.id}
+                aria-pressed={activeCategory === item.id}
                 onClick={() => setActiveCategory(item.id)}
                 className={cn(
                   'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0 inline-flex items-center justify-center',
@@ -188,7 +186,7 @@ export default function LandingVisualBanner() {
 
                   {/* Badge flottant en haut */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-sm">
+                    <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm">
                       <Icon className="w-3.5 h-3.5 text-festive-on-stage" />
                       {item.badge}
                     </span>
@@ -196,7 +194,7 @@ export default function LandingVisualBanner() {
 
                   {/* Titre et localisation incrustés en bas de l'image */}
                   <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-festive-on-stage block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-festive-on-stage block">
                       {item.category}
                     </span>
                     <h3 className="text-base font-bold text-white drop-shadow-sm line-clamp-1">
@@ -208,7 +206,7 @@ export default function LandingVisualBanner() {
                 {/* Contenu et Call to action */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-1 text-[11px] text-muted font-medium">
+                    <div className="flex items-center gap-1 text-xs text-muted font-medium">
                       <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                       <span className="truncate">{item.location}</span>
                     </div>
@@ -254,7 +252,7 @@ export default function LandingVisualBanner() {
                 Des prestataires et salles certifiés sur toute la République Démocratique du Congo
               </p>
               <p className="text-xs text-muted">
-                Photos réelles, tarifs transparents en CDF et devis direct sans frais d’intermédiaire.
+                Inspirations visuelles, tarifs transparents en CDF et devis direct sans frais d’intermédiaire.
               </p>
             </div>
           </div>

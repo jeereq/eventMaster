@@ -10,28 +10,10 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
-import { Button, Skeleton } from '@/components/ui';
+import LandingLazyMount, { LandingSectionFallback } from '@/components/landing/LandingLazyMount';
+import { Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { ArrowRight } from 'lucide-react';
-
-// Chargement différé des sections sous la ligne de flottaison
-function LandingSectionFallback({ label }: { label: string }) {
-  return (
-    <div className="page-container py-14 sm:py-20" role="status" aria-live="polite">
-      <span className="sr-only">{label}</span>
-      <div className="max-w-xl mx-auto space-y-3">
-        <Skeleton className="h-5 w-36 mx-auto rounded-full" />
-        <Skeleton className="h-8 w-4/5 mx-auto" />
-        <Skeleton className="h-4 w-full max-w-md mx-auto" />
-      </div>
-      <div className="mt-10 grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <Skeleton className="aspect-[16/10] rounded-[var(--radius-card)]" />
-        <Skeleton className="aspect-[16/10] rounded-[var(--radius-card)]" />
-        <Skeleton className="hidden lg:block aspect-[16/10] rounded-[var(--radius-card)]" />
-      </div>
-    </div>
-  );
-}
 
 const LandingAiSimulationShowcase = dynamic(
   () => import('@/components/landing/LandingAiSimulationShowcase'),
@@ -58,10 +40,16 @@ export default function Home() {
 
       <main id="main-content" className="flex-1 flex flex-col">
         <LandingHeroStreamlined />
-        <LandingVisualBanner />
-        <LandingVitrineSection />
+        <LandingLazyMount label="Chargement des inspirations…">
+          <LandingVisualBanner />
+        </LandingLazyMount>
+        <LandingLazyMount label="Chargement de la vitrine…">
+          <LandingVitrineSection />
+        </LandingLazyMount>
         <Landing3DTeaserBand />
-        <LandingAiSimulationShowcase />
+        <LandingLazyMount label="Chargement du simulateur IA…">
+          <LandingAiSimulationShowcase />
+        </LandingLazyMount>
         <FaqSection
           subtitle="Tout ce que vous devez savoir pour organiser votre événement en toute sérénité."
         />
@@ -89,7 +77,7 @@ export default function Home() {
                   href="/marketplace"
                   size="lg"
                   variant="secondary"
-                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 text-sm font-semibold"
+                  className="bg-stage-foreground/10 text-stage-foreground hover:bg-stage-foreground/20 border-stage-foreground/20 text-sm font-semibold"
                 >
                   Explorer le marketplace
                 </Button>

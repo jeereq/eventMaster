@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -51,6 +51,8 @@ export default function SiteHeader({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState('');
   const { visible: showInstall, install, busy: installBusy } = usePwaInstall();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -63,16 +65,48 @@ export default function SiteHeader({
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileMenuOpen(false);
+    const drawer = drawerRef.current;
+    const getFocusable = () => {
+      if (!drawer) return [];
+      return Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.getClientRects().length > 0);
     };
+
+    const first = getFocusable()[0];
+    first?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const items = getFocusable();
+      if (items.length === 0) return;
+      const firstItem = items[0];
+      const lastItem = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === firstItem) {
+        event.preventDefault();
+        lastItem.focus();
+      } else if (!event.shiftKey && document.activeElement === lastItem) {
+        event.preventDefault();
+        firstItem.focus();
+      }
+    };
+
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      menuButtonRef.current?.focus();
+    };
   }, [mobileMenuOpen]);
 
   const links = variant === 'minimal' ? [] : PUBLIC_LINKS;
   const iconBtn =
-    'p-2.5 sm:p-2 min-w-[44px] min-h-[44px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer';
+    'p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer';
 
   const isLinkActive = (href: string) => {
     if (href === '/marketplace') {
@@ -121,7 +155,7 @@ export default function SiteHeader({
           {links.map((item) => {
             const active = isLinkActive(item.href);
             const itemClass = cn(
-              'px-3.5 py-1.5 text-xs font-semibold transition rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'inline-flex items-center min-h-11 px-3.5 text-xs font-semibold transition rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               active
                 ? 'text-primary bg-surface dark:bg-surface shadow-xs border border-primary/20 font-bold'
                 : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-surface-muted',
@@ -161,7 +195,8 @@ export default function SiteHeader({
             type="button"
             onClick={toggleTheme}
             className={iconBtn}
-            aria-label="Changer de thème"
+            aria-pressed={theme === 'dark'}
+            aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
             title={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
           >
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -189,7 +224,7 @@ export default function SiteHeader({
             <div className="hidden md:flex items-center gap-2 ml-1">
               <Link
                 href="/login"
-                className="text-xs font-semibold text-muted hover:text-foreground px-2 py-1.5 rounded-md transition hover:bg-surface-muted"
+                className="inline-flex items-center min-h-11 text-xs font-semibold text-muted hover:text-foreground px-3 rounded-md transition hover:bg-surface-muted"
               >
                 Connexion
               </Link>
@@ -202,6 +237,7 @@ export default function SiteHeader({
           )}
 
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className={cn(iconBtn, 'md:hidden')}
@@ -216,6 +252,7 @@ export default function SiteHeader({
 
       {/* Tiroir de navigation mobile HUD */}
       <div
+        ref={drawerRef}
         id="site-mobile-nav"
         hidden={!mobileMenuOpen}
         className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-xl shadow-xl"

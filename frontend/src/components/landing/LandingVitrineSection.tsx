@@ -66,7 +66,7 @@ export default function LandingVitrineSection() {
 
   const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : 'event';
 
-  const load = useCallback(async (filters: EntityFilters, search: string) => {
+  const load = useCallback(async (filters: EntityFilters, search: string, entityTab: VitrineTab) => {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       setCatalogError('Vous semblez hors ligne. Vérifiez votre connexion Internet puis réessayez.');
       setLoadingCatalog(false);
@@ -75,43 +75,37 @@ export default function LandingVitrineSection() {
     setLoadingCatalog(true);
     setCatalogError('');
     try {
-      const venueParams = new URLSearchParams();
-      const serviceParams = new URLSearchParams();
-      const eventParams = new URLSearchParams();
-      if (search.trim()) {
-        venueParams.set('q', search.trim());
-        serviceParams.set('q', search.trim());
-        eventParams.set('q', search.trim());
+      const params = new URLSearchParams();
+      if (search.trim()) params.set('q', search.trim());
+      appendCatalogueGeoParams(params, filters);
+
+      if (entityTab === 'venues') {
+        appendCatalogueEntityParams(params, { ...filters, kind: 'venue' }, 'venue');
+        const venuesRes = await api.get(`/public/venues?${params.toString()}`);
+        setVenues(venuesRes.venues || []);
+      } else if (entityTab === 'services' || entityTab === 'rentals') {
+        appendCatalogueEntityParams(params, filters, 'service');
+        const servicesRes = await fetchPublicServicesForCatalogue(params, 'all');
+        setServices(servicesRes);
+      } else {
+        appendCatalogueEntityParams(params, { ...filters, kind: 'event' }, 'event');
+        const eventsRes = await api.get(`/public/events?${params.toString()}`);
+        setEvents(eventsRes.events || []);
       }
-      appendCatalogueGeoParams(venueParams, filters);
-      appendCatalogueGeoParams(serviceParams, filters);
-      appendCatalogueGeoParams(eventParams, filters);
-      appendCatalogueEntityParams(venueParams, { ...filters, kind: 'venue' }, 'venue');
-      appendCatalogueEntityParams(serviceParams, filters, 'service');
-      appendCatalogueEntityParams(eventParams, { ...filters, kind: 'event' }, 'event');
-      const [venuesRes, servicesRes, eventsRes] = await Promise.allSettled([
-        api.get(`/public/venues?${venueParams.toString()}`),
-        fetchPublicServicesForCatalogue(serviceParams, 'all'),
-        api.get(`/public/events?${eventParams.toString()}`),
-      ]);
-      setVenues(venuesRes.status === 'fulfilled' ? venuesRes.value.venues || [] : []);
-      setServices(servicesRes.status === 'fulfilled' ? servicesRes.value : []);
-      setEvents(eventsRes.status === 'fulfilled' ? eventsRes.value.events || [] : []);
-      const failed = [venuesRes, eventsRes].filter((result) => result.status === 'rejected').length;
-      if (failed === 2) {
-        setCatalogError('Impossible de charger le catalogue. Vérifiez votre connexion, puis réessayez.');
-      } else if (failed === 1) {
-        setCatalogError('Une partie du catalogue n’a pas pu être chargée. Réessayez.');
-      }
+    } catch {
+      if (entityTab === 'venues') setVenues([]);
+      if (entityTab === 'services' || entityTab === 'rentals') setServices([]);
+      if (entityTab === 'events') setEvents([]);
+      setCatalogError('Impossible de charger le catalogue. Vérifiez votre connexion, puis réessayez.');
     } finally {
       setLoadingCatalog(false);
     }
   }, []);
 
   useEffect(() => {
-    const t = window.setTimeout(() => load(applied, query), 280);
+    const t = window.setTimeout(() => load(applied, query, tab), 280);
     return () => window.clearTimeout(t);
-  }, [applied, query, load]);
+  }, [applied, query, tab, load]);
 
   useEffect(() => {
     const applyHash = () => {
@@ -324,7 +318,7 @@ export default function LandingVitrineSection() {
             </div>
             <div>
               <p className="text-xs font-bold text-foreground">Besoin d’un pack complet selon votre budget ?</p>
-              <p className="text-[11px] text-muted hidden sm:block">
+              <p className="text-xs text-muted hidden sm:block">
                 Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.
               </p>
             </div>
@@ -351,20 +345,21 @@ export default function LandingVitrineSection() {
               variant="secondary"
               className="shrink-0"
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-              onClick={() => void load(applied, query)}
+              onClick={() => void load(applied, query, tab)}
             >
               Réessayer
             </Button>
           </div>
         ) : null}
 
-        <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 md:justify-start" role="tablist" aria-label="Catégories du catalogue">
+        <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 md:justify-start" role="group" aria-label="Catégories du catalogue">
           {tabs.map(({ id, label, icon: Icon, hash }) => (
             <button
               key={id}
+              id={`vitrine-tab-${id}`}
               type="button"
-              role="tab"
-              aria-selected={tab === id}
+              aria-pressed={tab === id}
+              aria-controls={`vitrine-panel-${id}`}
               onClick={() => selectTab(id, hash)}
               className={cn(
                 'min-h-11 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0',
@@ -380,7 +375,14 @@ export default function LandingVitrineSection() {
         </div>
 
         {tab === 'venues' && (
-          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
+          <div
+            id="vitrine-panel-venues"
+            className="space-y-4"
+            role="region"
+            aria-labelledby="vitrine-tab-venues"
+            aria-busy={loadingCatalog}
+            aria-live="polite"
+          >
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -411,7 +413,14 @@ export default function LandingVitrineSection() {
         )}
 
         {tab === 'services' && (
-          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
+          <div
+            id="vitrine-panel-services"
+            className="space-y-4"
+            role="region"
+            aria-labelledby="vitrine-tab-services"
+            aria-busy={loadingCatalog}
+            aria-live="polite"
+          >
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -442,7 +451,14 @@ export default function LandingVitrineSection() {
         )}
 
         {tab === 'rentals' && (
-          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
+          <div
+            id="vitrine-panel-rentals"
+            className="space-y-4"
+            role="region"
+            aria-labelledby="vitrine-tab-rentals"
+            aria-busy={loadingCatalog}
+            aria-live="polite"
+          >
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -473,7 +489,14 @@ export default function LandingVitrineSection() {
         )}
 
         {tab === 'events' && (
-          <div className="space-y-4" role="tabpanel" aria-busy={loadingCatalog} aria-live="polite">
+          <div
+            id="vitrine-panel-events"
+            className="space-y-4"
+            role="region"
+            aria-labelledby="vitrine-tab-events"
+            aria-busy={loadingCatalog}
+            aria-live="polite"
+          >
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />

@@ -96,7 +96,7 @@ export default function LandingHeroStreamlined() {
             </div>
           ) : null}
 
-          <div className="pt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted">
+          <div className="pt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted">
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{cityLabel}</span>
@@ -162,7 +162,7 @@ export default function LandingHeroStreamlined() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-black/20 pointer-events-none" />
 
                     <div className="relative z-10 flex items-start justify-between gap-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-black/55 backdrop-blur-md border border-white/20 text-white">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-black/55 backdrop-blur-md border border-white/20 text-white">
                         <Icon className="w-3 h-3 text-primary" />
                         <span className="truncate max-w-[5.5rem] sm:max-w-[9rem]">{item.eyebrow}</span>
                       </span>
@@ -187,7 +187,7 @@ export default function LandingHeroStreamlined() {
                       >
                         {item.label}
                       </span>
-                      <p className="hidden sm:block text-[11px] sm:text-xs text-white/80 leading-relaxed line-clamp-2">
+                      <p className="hidden sm:block text-xs text-white/80 leading-relaxed line-clamp-2">
                         {item.intro}
                       </p>
                     </div>
@@ -208,7 +208,7 @@ export default function LandingHeroStreamlined() {
         >
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div className="min-w-0 space-y-1">
-              <p className="text-[11px] font-semibold text-primary">{profile.targetAudience}</p>
+              <p className="text-xs font-semibold text-primary">{profile.targetAudience}</p>
               <h3 id="landing-profile-title" className="em-landing-heading text-base sm:text-lg text-foreground">
                 {profile.title}
               </h3>
@@ -228,7 +228,7 @@ export default function LandingHeroStreamlined() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[11px] text-muted">
+          <div className="flex items-center gap-1.5 text-xs text-muted">
             <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>{profile.registerHint}</span>
           </div>
