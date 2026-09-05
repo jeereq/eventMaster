@@ -527,7 +527,7 @@ export default function LandingInvitationAiGenerator({
                 <h2 id={`${id}-title`} className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                   Studio IA — Créateur & Clonage d’invitations
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   Réalisme 35mm
                 </span>
               </div>
@@ -571,7 +571,7 @@ export default function LandingInvitationAiGenerator({
                     <h2 id={`${id}-title`} className="text-base sm:text-xl font-bold text-foreground tracking-tight">
                       Studio IA
                     </h2>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                       Déroulé
                     </span>
                   </div>
@@ -623,7 +623,7 @@ export default function LandingInvitationAiGenerator({
                     key={step.id}
                     aria-current={isCurrent ? 'step' : undefined}
                     className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition',
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition',
                       done && !isCurrent
                         ? 'bg-primary/15 border-primary/30 text-primary'
                         : isCurrent
@@ -633,7 +633,7 @@ export default function LandingInvitationAiGenerator({
                   >
                     <span
                       className={cn(
-                        'w-4 h-4 rounded-full inline-flex items-center justify-center text-[9px]',
+                        'w-4 h-4 rounded-full inline-flex items-center justify-center text-xs',
                         done || isCurrent ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
                       )}
                     >
@@ -714,7 +714,7 @@ export default function LandingInvitationAiGenerator({
               <History className="w-3.5 h-3.5" />
               <span>Historique</span>
               {(history.length > 0 || actionHistory.length > 0) && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-primary/20 text-foreground ml-0.5 font-bold">
+                <span className="text-xs px-1.5 py-0.2 rounded-full bg-primary/20 text-foreground ml-0.5 font-bold">
                   {history.length}
                 </span>
               )}
@@ -785,7 +785,7 @@ export default function LandingInvitationAiGenerator({
                           e.stopPropagation();
                           removeFile(i);
                         }}
-                        className="absolute top-0.5 right-0.5 min-w-8 min-h-8 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs"
+                        className="absolute top-0.5 right-0.5 min-w-11 min-h-11 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs"
                         aria-label={`Retirer l’image ${i + 1}`}
                       >
                         <XCircle className="w-3.5 h-3.5" aria-hidden />
@@ -824,7 +824,7 @@ export default function LandingInvitationAiGenerator({
                       <Redo2 className="w-3 h-3" />
                       <span className="hidden sm:inline">Rétablir</span>
                     </button>
-                    <span className="text-[10px] text-muted tabular-nums ml-1" aria-live="polite">
+                    <span className="text-xs text-muted tabular-nums ml-1" aria-live="polite">
                       {prompt.trim().length}/1500
                     </span>
                   </div>
@@ -1046,7 +1046,7 @@ export default function LandingInvitationAiGenerator({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-foreground">{act.label}</span>
-                            <span className="text-[10px] text-muted font-mono">{act.time}</span>
+                            <span className="text-xs text-muted font-mono">{act.time}</span>
                           </div>
                           {act.detail && (
                             <p className="text-[11px] text-muted line-clamp-1 mt-0.5">{act.detail}</p>
@@ -1060,7 +1060,7 @@ export default function LandingInvitationAiGenerator({
                               updatePromptWithHistory(act.snapshotPrompt!, 'Rétablissement depuis action');
                               setFormTab('form');
                             }}
-                            className="shrink-0 text-[10px] font-bold text-primary hover:underline px-2 py-1 rounded bg-primary/10 border border-primary/20"
+                            className="shrink-0 text-xs font-bold text-primary hover:underline px-2 py-1 rounded bg-primary/10 border border-primary/20"
                             title="Rétablir ce prompt dans le formulaire"
                           >
                             Rétablir
@@ -1078,7 +1078,7 @@ export default function LandingInvitationAiGenerator({
         {/* Preview rail */}
         <aside
           ref={resultRef}
-          className="bg-surface-muted/35 p-4 sm:p-6 flex flex-col min-h-[32rem] xl:min-h-[min(80vh,48rem)]"
+          className="bg-surface-muted/35 p-4 sm:p-6 flex flex-col xl:min-h-[min(80vh,48rem)]"
           aria-live="polite"
         >
           <div className="flex items-center justify-between gap-2 mb-3">
@@ -1094,7 +1094,7 @@ export default function LandingInvitationAiGenerator({
                     type="button"
                     onClick={() => void handleDownloadGenerated()}
                     disabled={downloading}
-                    className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-9 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs disabled:opacity-60"
+                    className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-11 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs disabled:opacity-60"
                     title="Télécharger l’image générée"
                   >
                     {downloading ? (
@@ -1108,7 +1108,7 @@ export default function LandingInvitationAiGenerator({
                 <button
                   type="button"
                   onClick={() => setLightboxOpen(true)}
-                  className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-9 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs"
+                  className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-11 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs"
                   title="Voir l'image cover entière sans aucun texte ni recadrage"
                 >
                   <ZoomIn className="w-3.5 h-3.5 text-primary" aria-hidden />
@@ -1117,7 +1117,7 @@ export default function LandingInvitationAiGenerator({
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
-                  className="text-xs font-bold text-primary inline-flex items-center gap-1 min-h-9 px-2.5 rounded-lg border border-primary/20 bg-primary/10 hover:bg-primary/20 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  className="text-xs font-bold text-primary inline-flex items-center gap-1 min-h-11 px-2.5 rounded-lg border border-primary/20 bg-primary/10 hover:bg-primary/20 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <Maximize2 className="w-3.5 h-3.5" aria-hidden />
                   Agrandir
@@ -1140,7 +1140,7 @@ export default function LandingInvitationAiGenerator({
                   aria-selected={previewTab === 'card'}
                   onClick={() => setPreviewTab('card')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'card'
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
@@ -1155,7 +1155,7 @@ export default function LandingInvitationAiGenerator({
                   aria-selected={previewTab === 'artwork'}
                   onClick={() => setPreviewTab('artwork')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'artwork'
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
@@ -1170,7 +1170,7 @@ export default function LandingInvitationAiGenerator({
                   aria-selected={previewTab === 'details'}
                   onClick={() => setPreviewTab('details')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'details'
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
@@ -1190,7 +1190,7 @@ export default function LandingInvitationAiGenerator({
                       type="button"
                       onClick={() => setCoverFitMode('cover')}
                       className={cn(
-                        'px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer',
+                        'min-h-11 px-3 rounded text-xs font-semibold transition cursor-pointer',
                         coverFitMode === 'cover' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
                       )}
                     >
@@ -1200,7 +1200,7 @@ export default function LandingInvitationAiGenerator({
                       type="button"
                       onClick={() => setCoverFitMode('contain')}
                       className={cn(
-                        'px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer',
+                        'min-h-11 px-3 rounded text-xs font-semibold transition cursor-pointer',
                         coverFitMode === 'contain' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
                       )}
                       title="Affiche 100% de l'image originale sans aucune découpe"
@@ -1252,10 +1252,10 @@ export default function LandingInvitationAiGenerator({
                   {palette && palette.length > 0 && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                        <span className="text-xs font-bold text-muted uppercase tracking-wider">
                           Palette harmonique détectée
                         </span>
-                        <span className="text-[10px] text-muted">Cliquez pour copier</span>
+                        <span className="text-xs text-muted">Cliquez pour copier</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {palette.map((swatch) => {
@@ -1273,7 +1273,7 @@ export default function LandingInvitationAiGenerator({
                                 style={{ backgroundColor: swatch.color }}
                               />
                               <span className="capitalize text-[11px]">{swatch.key}</span>
-                              <span className="text-[10px] font-mono text-muted group-hover:text-foreground">
+                              <span className="text-xs font-mono text-muted group-hover:text-foreground">
                                 {isCopied ? '✓ Copié' : swatch.color}
                               </span>
                             </button>
@@ -1285,7 +1285,7 @@ export default function LandingInvitationAiGenerator({
 
                   {elements.length > 0 && (
                     <div className="space-y-1.5 pt-2 border-t border-border/60">
-                      <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">
                         Éléments d’invitation générés ({elements.length})
                       </span>
                       <ul className="space-y-1 max-h-32 overflow-y-auto overscroll-contain pr-1">

@@ -917,7 +917,7 @@ export default function TemplatesPage() {
  <span className="flex items-center gap-2 flex-wrap">
  <span className="text-sm font-bold text-foreground">{mode.title}</span>
  {mode.badge && (
- <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted text-muted">
+ <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted text-muted">
  {mode.badge}
  </span>
  )}
@@ -1189,7 +1189,7 @@ export default function TemplatesPage() {
  </div>
 
  <div>
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Images optionnelles (1–4)</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Images optionnelles (1–4)</label>
  <input
  ref={aiComposeInputRef}
  type="file"
@@ -1229,7 +1229,7 @@ export default function TemplatesPage() {
  </div>
 
  <div>
- <label htmlFor="ai-compose-prompt" className="text-[10px] font-bold text-muted uppercase tracking-wider">
+ <label htmlFor="ai-compose-prompt" className="text-xs font-bold text-muted uppercase tracking-wider">
  Brief style ou demande de clonage
  </label>
  <textarea
@@ -2011,10 +2011,10 @@ export default function TemplatesPage() {
  <div className="flex items-center gap-2 min-w-0">
  <span className={`w-2 h-2 rounded-full shrink-0 ${isCurrent ? 'bg-primary' : 'bg-muted/50'}`} />
  <span className="truncate">{entry.label}</span>
- <span className="text-[10px] text-muted font-mono">{entry.time}</span>
+ <span className="text-xs text-muted font-mono">{entry.time}</span>
  </div>
  {isCurrent ? (
- <span className="text-[10px] font-bold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20">
+ <span className="text-xs font-bold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20">
  Actuel
  </span>
  ) : (
@@ -2062,17 +2062,17 @@ export default function TemplatesPage() {
  aria-label="Nom du modèle"
  />
  {draftSavedAt && (
- <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap" title="Modifications locales non encore enregistrées">
+ <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap" title="Modifications locales non encore enregistrées">
  Brouillon
  </span>
  )}
  </div>
  {templateName.length >= 100 && (
- <p className="text-[10px] text-muted mt-0.5">{templateName.length}/120 caractères</p>
+ <p className="text-xs text-muted mt-0.5">{templateName.length}/120 caractères</p>
  )}
  <div className="mt-1">
  {fromAdminConsole ? (
- <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
+ <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
  <Globe className="w-3 h-3" />
  Catalogue Super Admin
  </span>
@@ -2093,13 +2093,13 @@ export default function TemplatesPage() {
  {rsvpReportingIssues.length > 0 ? (
  <p
  role="status"
- className="w-full sm:w-auto text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 max-w-xs sm:text-right"
+ className="w-full sm:w-auto text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 max-w-xs sm:text-right"
  title={rsvpReportingIssues[0]}
  >
  Formulaire RSVP à finaliser
  </p>
  ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
- <p role="status" className="w-full sm:w-auto text-[10px] font-semibold text-primary sm:text-right">
+ <p role="status" className="w-full sm:w-auto text-xs font-semibold text-primary sm:text-right">
  Formulaire RSVP prêt
  </p>
  ) : null}
@@ -2134,7 +2134,7 @@ export default function TemplatesPage() {
  <History className="w-3.5 h-3.5 text-primary" />
  <span className="hidden md:inline">Historique</span>
  {studioHistory.length > 0 && (
- <span className="text-[10px] font-mono px-1 rounded bg-surface-muted text-foreground">
+ <span className="text-xs font-mono px-1 rounded bg-surface-muted text-foreground">
  {studioHistoryIndex + 1}/{studioHistory.length}
  </span>
  )}
@@ -2196,7 +2196,7 @@ export default function TemplatesPage() {
  </div>
  {user?.role === 'SUPER_ADMIN' && (
  <div className="flex flex-wrap items-center gap-2 pl-14">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider" htmlFor="template-scope">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider" htmlFor="template-scope">
  Visible pour
  </label>
  <select
@@ -2314,7 +2314,7 @@ export default function TemplatesPage() {
  <h3 className="text-xs font-bold text-foreground tracking-tight">
  Créer avec l’IA
  </h3>
- <p className="text-[10px] text-muted leading-relaxed mt-0.5">
+ <p className="text-xs text-muted leading-relaxed mt-0.5">
  Analysez vos images, décrivez le style : l’IA crée une nouvelle invitation éditable ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons).
  </p>
  </div>
@@ -2328,7 +2328,7 @@ export default function TemplatesPage() {
  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
  </button>
- <p className="text-[9px] text-muted text-center">
+ <p className="text-xs text-muted text-center">
  Jetons partagés avec la simulation budget
  </p>
  </div>
@@ -2340,12 +2340,12 @@ export default function TemplatesPage() {
  <Sparkles className="w-3.5 h-3.5" />
  Importer une image
  </h3>
- <p className="text-[10px] text-muted leading-relaxed">
+ <p className="text-xs text-muted leading-relaxed">
  Crée une palette à partir de votre maquette
  {canUseMockupOcr ? '. La détection de texte est disponible en Premium 2+.' : '.'}
  </p>
  {ocrProgress !== null && (
- <p className="text-[10px] text-primary font-bold">Détection du texte… {ocrProgress}%</p>
+ <p className="text-xs text-primary font-bold">Détection du texte… {ocrProgress}%</p>
  )}
  <input
  ref={mockupEditorInputRef}
@@ -2386,7 +2386,7 @@ export default function TemplatesPage() {
  key={key}
  type="button"
  onClick={() => applyPaletteSlot(key)}
- className="inline-flex items-center gap-1 text-[9px] font-bold text-muted hover:opacity-80 transition"
+ className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:opacity-80 transition"
  title={`Appliquer ${labels[key]} (${importedPalette[key]})`}
  >
  <span
@@ -2412,7 +2412,7 @@ export default function TemplatesPage() {
  }),
  );
  }}
- className="text-[10px] font-bold text-primary hover:underline"
+ className="text-xs font-bold text-primary hover:underline"
  >
  Appliquer l&apos;accent aux titres
  </button>
@@ -2423,7 +2423,7 @@ export default function TemplatesPage() {
  setBgColor(importedPalette.background);
  setBgType('color');
  }}
- className="text-[10px] font-bold text-primary hover:underline"
+ className="text-xs font-bold text-primary hover:underline"
  >
  Appliquer le fond à la carte
  </button>
@@ -2438,7 +2438,7 @@ export default function TemplatesPage() {
  type="button"
  onClick={() => convertToFlowLayout()}
  title="Les éléments se placent les uns sous les autres"
- className={`py-2 rounded-xl text-[10px] font-bold border transition ${
+ className={`py-2 rounded-xl text-xs font-bold border transition ${
  layoutMode === 'flow'
  ? 'border-primary bg-primary/10 text-primary'
  : 'border-border text-muted hover:bg-surface-muted'
@@ -2450,7 +2450,7 @@ export default function TemplatesPage() {
  type="button"
  onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
  title="Glissez-déposez librement sur la carte"
- className={`py-2 rounded-xl text-[10px] font-bold border transition ${
+ className={`py-2 rounded-xl text-xs font-bold border transition ${
  layoutMode === 'free'
  ? 'border-primary bg-primary/10 text-primary'
  : 'border-border text-muted hover:bg-surface-muted'
@@ -2508,7 +2508,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setShowDecorTools((v) => !v)}
- className="w-full text-[10px] font-bold text-muted hover:text-primary py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
+ className="w-full text-xs font-bold text-muted hover:text-primary py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
  >
  {showDecorTools ? 'Masquer les formes décoratives' : 'Ajouter une courbe ou un triangle'}
  </button>
@@ -2621,7 +2621,7 @@ export default function TemplatesPage() {
  />
  ))}
  </div>
- <span className="text-[10px] font-bold text-foreground block leading-tight">{theme.name}</span>
+ <span className="text-xs font-bold text-foreground block leading-tight">{theme.name}</span>
  </button>
  ))}
  </div>
@@ -2629,7 +2629,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setShowAllThemes((v) => !v)}
- className="w-full text-[10px] font-bold text-primary hover:underline py-1"
+ className="w-full text-xs font-bold text-primary hover:underline py-1"
  >
  {showAllThemes ? 'Moins de thèmes' : `Tous les thèmes (${invitationColorThemes(tenant?.branding).length})`}
  </button>
@@ -2650,13 +2650,13 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => applyCurrentFontTheme(true)}
- className="w-full text-[10px] font-bold text-primary hover:bg-primary/5 py-1.5 rounded-lg transition"
+ className="w-full text-xs font-bold text-primary hover:bg-primary/5 py-1.5 rounded-lg transition"
  >
  Appliquer aux textes de la carte
  </button>
  </div>
 
- <p className="text-[10px] text-muted leading-relaxed rounded-xl bg-surface-muted border border-border px-3 py-2">
+ <p className="text-xs text-muted leading-relaxed rounded-xl bg-surface-muted border border-border px-3 py-2">
  Pour le fond, le cadre et le format : désélectionnez un élément, puis utilisez le panneau de droite.
  </p>
  </>
@@ -2665,7 +2665,7 @@ export default function TemplatesPage() {
 
  {/* Center Canvas Preview */}
  <div className="order-1 lg:order-2 min-w-0 space-y-3">
- <p className="text-center text-[10px] text-muted font-semibold tabular-nums">
+ <p className="text-center text-xs text-muted font-semibold tabular-nums">
  {canvasWidth} × {canvasHeight} px
  {canvasSizePreset !== 'custom' ? ` · ${CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset}` : ' · Personnalisé'}
  {showGuestPreview ? ' · Aperçu variables invité' : ''}
@@ -3136,7 +3136,7 @@ export default function TemplatesPage() {
  >
  {showGuestPreview ? substitutePreviewVars(el.text) : el.text}
  {el.buttonLink && (
- <span className="text-[10px] opacity-80" title={`Lien : ${el.buttonLink}`}>🔗</span>
+ <span className="text-xs opacity-80" title={`Lien : ${el.buttonLink}`}>🔗</span>
  )}
  </button>
  </div>
@@ -3203,7 +3203,7 @@ export default function TemplatesPage() {
  <Image className="w-8 h-8 text-muted" />
  )}
  <span className="text-xs font-semibold">{el.text}</span>
- <span className="text-[10px] text-primary font-bold">Cliquez pour importer</span>
+ <span className="text-xs text-primary font-bold">Cliquez pour importer</span>
  </label>
  )}
  </div>
@@ -3297,7 +3297,7 @@ export default function TemplatesPage() {
  <div className="space-y-3 border-t border-b border-border/60 py-3 text-left">
  {el.rsvpFields.map((field) => (
  <div key={field.id} className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">
  {field.label} {field.required && <span className="text-rose-500">*</span>}
  </label>
  {field.type === 'text' && (
@@ -3308,7 +3308,7 @@ export default function TemplatesPage() {
  {field.type === 'select' && (
  <div className="w-full px-3 py-1.5 bg-white border border-border rounded-lg text-xs text-muted flex justify-between items-center">
  <span>{field.options ? field.options.split(',')[0].trim() : 'Option 1'}</span>
- <span className="text-[10px] text-muted">▼</span>
+ <span className="text-xs text-muted">▼</span>
  </div>
  )}
  {field.type === 'checkbox' && (
@@ -3338,7 +3338,7 @@ export default function TemplatesPage() {
 
  {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
  <div className="w-full space-y-3" style={{ maxWidth: 'min(100%, 42rem)' }}>
- <p className="text-center text-[10px] font-bold uppercase tracking-wider text-primary">
+ <p className="text-center text-xs font-bold uppercase tracking-wider text-primary">
  Formulaire RSVP sous la carte
  </p>
  {canvasElements
@@ -3356,11 +3356,11 @@ export default function TemplatesPage() {
  >
  <div className="text-xs font-bold text-primary text-center mb-3">{el.text || 'Confirmer votre présence'}</div>
  <div className="grid grid-cols-2 gap-2 mb-3">
- <div className="py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-[10px] font-bold text-emerald-700 text-center">Oui</div>
- <div className="py-2 rounded-xl border border-border text-[10px] font-bold text-muted text-center">Non</div>
+ <div className="py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 text-center">Oui</div>
+ <div className="py-2 rounded-xl border border-border text-xs font-bold text-muted text-center">Non</div>
  </div>
  {el.rsvpFields && el.rsvpFields.length > 0 && (
- <p className="text-[9px] text-muted text-center">
+ <p className="text-xs text-muted text-center">
  {el.rsvpFields.length} champ{el.rsvpFields.length > 1 ? 's' : ''} personnalisé{el.rsvpFields.length > 1 ? 's' : ''}
  </p>
  )}
@@ -3384,7 +3384,7 @@ export default function TemplatesPage() {
  setSelectedElementId(null);
  setStudioRail('style');
  }}
- className="text-[10px] font-bold text-primary hover:text-primary bg-primary/10 px-2 py-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ className="text-xs font-bold text-primary hover:text-primary bg-primary/10 px-2 py-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  Style de la carte
  </button>
@@ -3396,7 +3396,7 @@ export default function TemplatesPage() {
  role="tab"
  aria-selected={!propsAdvanced}
  onClick={() => setPropsAdvanced(false)}
- className={`py-1.5 rounded-lg text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ className={`py-1.5 rounded-lg text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  !propsAdvanced ? 'bg-surface text-foreground shadow-sm' : 'text-muted'
  }`}
  >
@@ -3407,7 +3407,7 @@ export default function TemplatesPage() {
  role="tab"
  aria-selected={propsAdvanced}
  onClick={() => setPropsAdvanced(true)}
- className={`py-1.5 rounded-lg text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ className={`py-1.5 rounded-lg text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  propsAdvanced ? 'bg-surface text-foreground shadow-sm' : 'text-muted'
  }`}
  >
@@ -3425,7 +3425,7 @@ export default function TemplatesPage() {
  "Texte"}
  </label>
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'text' && (
- <span className="text-[9px] text-primary font-bold uppercase tracking-wider">
+ <span className="text-xs text-primary font-bold uppercase tracking-wider">
  {'{{firstName}}'}
  </span>
  )}
@@ -3626,7 +3626,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={handleEnsureReportingRsvpFields}
- className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  title="Ajoute les champs menu, accompagnant et nombre de personnes s’ils manquent"
  >
  Compléter stats
@@ -3808,7 +3808,7 @@ export default function TemplatesPage() {
  )}
 
  <div className="space-y-1">
- <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Palette rapide</span>
+ <span className="text-xs font-bold text-muted uppercase tracking-wider">Palette rapide</span>
  <div className="flex flex-wrap gap-1.5">
  {[
  { hex: '#c5a059', name: 'Or' },
@@ -3841,14 +3841,14 @@ export default function TemplatesPage() {
  <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
  <Palette className="w-4 h-4 text-primary" /> Style de la carte
  </h3>
- <p className="text-[10px] text-muted mt-1">
+ <p className="text-xs text-muted mt-1">
  Les thèmes et la typographie se règlent dans l&apos;onglet Style à gauche.
  </p>
  </div>
 
  {user?.role === 'SUPER_ADMIN' && !selectedTenantId && (
  <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/5">
- <h4 className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+ <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
  <Globe className="w-3.5 h-3.5" />
  Page d&apos;accueil publique
  </h4>
@@ -3866,7 +3866,7 @@ export default function TemplatesPage() {
  </button>
  </label>
  <div className="space-y-1.5">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Catégorie sur la page d&apos;accueil</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie sur la page d&apos;accueil</label>
  <select
  value={landingCategory}
  onChange={(e) => setLandingCategory(e.target.value as 'private' | 'corporate' | 'casual')}
@@ -3878,7 +3878,7 @@ export default function TemplatesPage() {
  </select>
  </div>
  <div className="space-y-1.5">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Accroche (visiteurs)</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Accroche (visiteurs)</label>
  <textarea
  value={landingDescription}
  onChange={(e) => setLandingDescription(e.target.value)}
@@ -3887,19 +3887,19 @@ export default function TemplatesPage() {
  placeholder="Ex. : Tons pastel et typographie élégante pour un mariage."
  className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-primary resize-none leading-relaxed"
  />
- <p className="text-[9px] text-muted text-right">{landingDescription.length}/220</p>
+ <p className="text-xs text-muted text-right">{landingDescription.length}/220</p>
  </div>
  </div>
  )}
 
  {/* Canvas dimensions */}
  <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
- <h4 className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+ <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
  <Layout className="w-3.5 h-3.5" />
  Taille du modèle
  </h4>
  <div className="space-y-1.5">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
  <select
  value={canvasSizePreset}
  onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
@@ -3913,7 +3913,7 @@ export default function TemplatesPage() {
  </div>
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Largeur (px)</label>
+ <label className="text-xs font-bold text-muted uppercase">Largeur (px)</label>
  <input
  type="number"
  min={280}
@@ -3927,7 +3927,7 @@ export default function TemplatesPage() {
  />
  </div>
  <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Hauteur min. (px)</label>
+ <label className="text-xs font-bold text-muted uppercase">Hauteur min. (px)</label>
  <input
  type="number"
  min={400}
@@ -3941,7 +3941,7 @@ export default function TemplatesPage() {
  />
  </div>
  </div>
- <p className="text-[9px] text-muted leading-relaxed">
+ <p className="text-xs text-muted leading-relaxed">
  Utilisée pour l&apos;aperçu, l&apos;invitation RSVP et les cartes du catalogue.
  </p>
  </div>
@@ -3959,7 +3959,7 @@ export default function TemplatesPage() {
  key={type.id}
  type="button"
  onClick={() => setBgType(type.id as any)}
- className={`py-1.5 border rounded-lg text-[10px] font-bold transition ${bgType === type.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:bg-surface-muted'}`}
+ className={`py-1.5 border rounded-lg text-xs font-bold transition ${bgType === type.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:bg-surface-muted'}`}
  >
  {type.label}
  </button>
@@ -3990,7 +3990,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setStyleAdvancedOpen((v) => !v)}
- className="text-[10px] font-bold text-primary hover:underline"
+ className="text-xs font-bold text-primary hover:underline"
  >
  {styleAdvancedOpen ? 'Masquer les fonds recommandés' : 'Fonds recommandés'}
  </button>

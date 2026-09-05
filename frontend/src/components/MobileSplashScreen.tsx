@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 
@@ -23,15 +23,26 @@ function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function markSeen() {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, '1');
+  } catch {
+    /* private mode */
+  }
+}
+
 /**
  * Splash d’accueil mobile / PWA — une fois par session.
- * Marque lisible, zone sûre (encoche), possible de passer.
+ * Dialogue modal : focus piégé, Passer coupe le délai.
  */
 export default function MobileSplashScreen() {
   const { site } = usePlatformSite();
+  const titleId = useId();
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const finishRef = useRef<() => void>(() => {});
+  const rootRef = useRef<HTMLDivElement>(null);
+  const skipRef = useRef<HTMLButtonElement>(null);
+  const dismissNowRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -43,69 +54,106 @@ export default function MobileSplashScreen() {
     }
 
     if (prefersReducedMotion()) {
-      try {
-        sessionStorage.setItem(STORAGE_KEY, '1');
-      } catch {
-        /* ignore */
-      }
+      markSeen();
       return;
     }
 
     setVisible(true);
     const started = Date.now();
-    let closed = false;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    const finish = () => {
-      if (closed) return;
-      closed = true;
-      const elapsed = Date.now() - started;
-      const wait = Math.max(0, MIN_SHOW_MS - elapsed);
-      window.setTimeout(() => {
-        setLeaving(true);
-        window.setTimeout(() => {
-          setVisible(false);
-          document.body.style.overflow = previousOverflow;
-          try {
-            sessionStorage.setItem(STORAGE_KEY, '1');
-          } catch {
-            /* ignore */
-          }
-        }, 280);
-      }, wait);
-    };
-    finishRef.current = finish;
+    let waitTimer = 0;
+    let leaveTimer = 0;
+    let maxTimer = 0;
+    let leaveStarted = false;
 
-    const maxTimer = window.setTimeout(finish, MAX_SHOW_MS);
+    const restore = () => {
+      document.body.style.overflow = previousOverflow;
+    };
+
+    const startLeave = () => {
+      if (leaveStarted) return;
+      leaveStarted = true;
+      window.clearTimeout(waitTimer);
+      window.clearTimeout(maxTimer);
+      setLeaving(true);
+      leaveTimer = window.setTimeout(() => {
+        setVisible(false);
+        restore();
+        markSeen();
+      }, 280);
+    };
+
+    const finishAuto = () => {
+      if (leaveStarted) return;
+      const wait = Math.max(0, MIN_SHOW_MS - (Date.now() - started));
+      waitTimer = window.setTimeout(startLeave, wait);
+    };
+
+    dismissNowRef.current = () => {
+      window.clearTimeout(waitTimer);
+      window.clearTimeout(maxTimer);
+      startLeave();
+    };
+
+    maxTimer = window.setTimeout(finishAuto, MAX_SHOW_MS);
     if (document.readyState === 'complete') {
-      finish();
+      finishAuto();
     } else {
-      window.addEventListener('load', finish, { once: true });
+      window.addEventListener('load', finishAuto, { once: true });
     }
 
     return () => {
-      closed = true;
+      leaveStarted = true;
+      window.clearTimeout(waitTimer);
+      window.clearTimeout(leaveTimer);
       window.clearTimeout(maxTimer);
-      window.removeEventListener('load', finish);
-      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('load', finishAuto);
+      restore();
     };
   }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    skipRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        dismissNowRef.current();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      event.preventDefault();
+      skipRef.current?.focus();
+    };
+
+    const onFocusIn = (event: FocusEvent) => {
+      const root = rootRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      skipRef.current?.focus();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('focusin', onFocusIn);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('focusin', onFocusIn);
+    };
+  }, [visible]);
 
   if (!visible) return null;
 
   const name = site.platformName || 'EventMaster';
 
-  const dismissNow = () => {
-    finishRef.current();
-  };
-
   return (
     <div
-      role="status"
-      aria-live="polite"
+      ref={rootRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       aria-busy={!leaving}
-      aria-label={`Chargement ${name}`}
       className={cn(
         'fixed inset-0 z-[10050] flex flex-col items-center justify-center',
         'bg-[radial-gradient(120%_80%_at_50%_18%,color-mix(in_oklab,var(--primary)_32%,transparent),transparent_58%),var(--background)]',
@@ -125,7 +173,7 @@ export default function MobileSplashScreen() {
           <img src="/icon.svg" alt="" width={36} height={36} className="w-9 h-9" />
         </span>
         <div className="space-y-1.5 w-full">
-          <p className="text-xl font-bold tracking-tight text-foreground leading-tight break-words">
+          <p id={titleId} className="text-xl font-bold tracking-tight text-foreground leading-tight break-words">
             {name}
           </p>
           {site.platformTagline ? (
@@ -139,8 +187,9 @@ export default function MobileSplashScreen() {
           aria-hidden
         />
         <button
+          ref={skipRef}
           type="button"
-          onClick={dismissNow}
+          onClick={() => dismissNowRef.current()}
           className="mt-2 min-h-11 px-4 rounded-[var(--radius-button)] text-sm font-medium text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           Passer
