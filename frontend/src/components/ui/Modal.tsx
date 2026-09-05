@@ -91,10 +91,12 @@ export default function Modal({
   useEffect(() => {
     if (!open || !mounted) return;
     openModalCount += 1;
-    setStackDepth(openModalCount);
+    const myDepth = openModalCount;
+    setStackDepth(myDepth);
     openedAtRef.current = Date.now();
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (e: KeyboardEvent) => {
+      if (openModalCount !== myDepth) return;
       if (dismissible && e.key === 'Escape') {
         requestClose();
         return;

@@ -49,6 +49,16 @@ const VENUE_PARAM_AMENITIES = VENUE_AMENITIES.filter((item) =>
   ['parking', 'ac', 'generator', 'garden', 'sound', 'wifi', 'stage', 'security'].includes(item.id),
 );
 
+const FIELD_LABEL = 'text-xs font-semibold text-muted';
+const CHIP =
+  'inline-flex items-center justify-center min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition whitespace-nowrap shrink-0 sm:shrink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+function chipTone(active: boolean) {
+  return active
+    ? 'bg-primary text-primary-foreground border-primary'
+    : 'border-border text-muted hover:text-foreground';
+}
+
 export type EventPrepAiDefaults = {
   eventType?: ListingEventTypeId;
   city?: string;
@@ -405,7 +415,7 @@ export default function EventPrepAiSimulator({
               Simulation IA
             </h3>
             <p className="text-xs text-muted leading-relaxed">
-              Décrivez votre événement : l’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs</strong> — économique, équilibré, confort.
+              Décrivez votre événement : l’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs budget</strong> — économique, équilibré, confort. Ce n’est pas un plan de salle.
             </p>
           </div>
           <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)} className="shrink-0">
@@ -428,7 +438,7 @@ export default function EventPrepAiSimulator({
             aria-selected={activeTab === 'create'}
             onClick={() => setActiveTab('create')}
             className={cn(
-              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               activeTab === 'create'
                 ? 'bg-surface text-foreground shadow-xs border border-border/70'
                 : 'text-muted hover:text-foreground hover:bg-surface/50',
@@ -443,7 +453,7 @@ export default function EventPrepAiSimulator({
             aria-selected={activeTab === 'history'}
             onClick={() => setActiveTab('history')}
             className={cn(
-              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               activeTab === 'history'
                 ? 'bg-surface text-foreground shadow-xs border border-border/70'
                 : 'text-muted hover:text-foreground hover:bg-surface/50',
@@ -453,7 +463,7 @@ export default function EventPrepAiSimulator({
             <span>Historiques</span>
             {history.length > 0 && (
               <span className={cn(
-                'ml-1 px-1.5 py-0.2 text-[10px] rounded-full font-bold tabular-nums',
+                'ml-1 px-1.5 py-0.5 text-xs rounded-full font-bold tabular-nums',
                 activeTab === 'history' ? 'bg-primary/10 text-primary' : 'bg-surface border border-border text-muted',
               )}>
                 {history.length}
@@ -512,7 +522,7 @@ export default function EventPrepAiSimulator({
           {open ? (
         <div className="space-y-3">
           <label className="space-y-1 block">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Décrivez votre événement</span>
+            <span className={FIELD_LABEL}>Décrivez votre événement</span>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -529,8 +539,8 @@ export default function EventPrepAiSimulator({
                 type="button"
                 onClick={() => setEventType(item.id)}
                 className={cn(
-                  'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition whitespace-nowrap shrink-0 sm:shrink',
-                  eventType === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                  CHIP,
+                  chipTone(eventType === item.id),
                 )}
               >
                 {item.label}
@@ -540,7 +550,7 @@ export default function EventPrepAiSimulator({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Ville</span>
+              <span className={FIELD_LABEL}>Ville</span>
               <select
                 value={city}
                 onChange={(e) => {
@@ -556,7 +566,7 @@ export default function EventPrepAiSimulator({
               </select>
             </label>
             <label className="space-y-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Commune</span>
+              <span className={FIELD_LABEL}>Commune</span>
               <select
                 value={commune}
                 onChange={(e) => setCommune(e.target.value)}
@@ -609,22 +619,22 @@ export default function EventPrepAiSimulator({
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-3 text-xs font-medium text-foreground">
-            <label className="inline-flex items-center gap-1.5">
-              <input type="checkbox" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
+            <label className="inline-flex items-center gap-2 min-h-11">
+              <input type="checkbox" className="size-4 accent-primary" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
               Salle
             </label>
-            <label className="inline-flex items-center gap-1.5">
-              <input type="checkbox" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
+            <label className="inline-flex items-center gap-2 min-h-11">
+              <input type="checkbox" className="size-4 accent-primary" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
               Prestataires
             </label>
-            <label className="inline-flex items-center gap-1.5">
-              <input type="checkbox" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
+            <label className="inline-flex items-center gap-2 min-h-11">
+              <input type="checkbox" className="size-4 accent-primary" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
               Matériel & Équipements
             </label>
             {defaults?.keepVenueSlug ? (
-              <label className="inline-flex items-center gap-1.5">
-                <input type="checkbox" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
+              <label className="inline-flex items-center gap-2 min-h-11">
+                <input type="checkbox" className="size-4 accent-primary" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
                 Garder la salle déjà retenue
               </label>
             ) : null}
@@ -634,7 +644,7 @@ export default function EventPrepAiSimulator({
             <button
               type="button"
               onClick={() => setAdvancedOpen((value) => !value)}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold text-foreground"
+              className="w-full flex items-center justify-between gap-2 min-h-11 px-3 py-2 text-left text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Plus de paramètres
               <ChevronDown className={cn('w-4 h-4 text-muted transition', advancedOpen && 'rotate-180')} />
@@ -642,17 +652,14 @@ export default function EventPrepAiSimulator({
             {advancedOpen ? (
               <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Ambiance</p>
+                  <p className={FIELD_LABEL}>Ambiance</p>
                   <div className="flex flex-wrap gap-1.5">
                     {AI_AMBIANCES.map((item) => (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => toggleChip(item.id, ambiance, setAmbiance)}
-                        className={cn(
-                          'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
-                          ambiance === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                        )}
+                        className={cn(CHIP, chipTone(ambiance === item.id))}
                       >
                         {item.label}
                       </button>
@@ -661,17 +668,14 @@ export default function EventPrepAiSimulator({
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Moment</p>
+                    <p className={FIELD_LABEL}>Moment</p>
                     <div className="flex flex-wrap gap-1.5">
                       {AI_MOMENTS.map((item) => (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => toggleChip(item.id, moment, setMoment)}
-                          className={cn(
-                            'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
-                            moment === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                          )}
+                          className={cn(CHIP, chipTone(moment === item.id))}
                         >
                           {item.label}
                         </button>
@@ -679,17 +683,14 @@ export default function EventPrepAiSimulator({
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Lieu</p>
+                    <p className={FIELD_LABEL}>Lieu</p>
                     <div className="flex flex-wrap gap-1.5">
                       {AI_SETTINGS.map((item) => (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => toggleChip(item.id, setting, setSetting)}
-                          className={cn(
-                            'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
-                            setting === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                          )}
+                          className={cn(CHIP, chipTone(setting === item.id))}
                         >
                           {item.label}
                         </button>
@@ -721,7 +722,7 @@ export default function EventPrepAiSimulator({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Prestations souhaitées</p>
+                  <p className={FIELD_LABEL}>Prestations souhaitées</p>
                   <div className="flex flex-wrap gap-1.5">
                     {categoryChoices.map((id) => {
                       const active = wantedCategories.includes(id);
@@ -732,10 +733,7 @@ export default function EventPrepAiSimulator({
                           onClick={() => setWantedCategories((prev) =>
                             prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
                           )}
-                          className={cn(
-                            'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
-                            active ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                          )}
+                          className={cn(CHIP, chipTone(active))}
                         >
                           {SERVICE_CATEGORY_LABELS[id]}
                         </button>
@@ -745,7 +743,7 @@ export default function EventPrepAiSimulator({
                 </div>
                 {includeVenue ? (
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Équipements salle</p>
+                    <p className={FIELD_LABEL}>Équipements salle</p>
                     <div className="flex flex-wrap gap-1.5">
                       {VENUE_PARAM_AMENITIES.map((item) => {
                         const active = venueAmenities.includes(item.id);
@@ -756,10 +754,7 @@ export default function EventPrepAiSimulator({
                             onClick={() => setVenueAmenities((prev) =>
                               prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id],
                             )}
-                            className={cn(
-                              'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border',
-                              active ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
-                            )}
+                            className={cn(CHIP, chipTone(active))}
                           >
                             {item.label}
                           </button>
@@ -848,10 +843,10 @@ export default function EventPrepAiSimulator({
                 >
                   <div className="space-y-1 w-full">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface border border-border text-foreground">
+                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-surface border border-border text-foreground">
                         {pack.label}
                       </span>
-                      <span className="text-[10px] font-semibold text-primary">Éléments</span>
+                      <span className="text-xs font-semibold text-primary">Éléments</span>
                     </div>
                     {pack.summary ? (
                       <p className="text-xs font-bold text-foreground leading-snug mt-1">{pack.summary}</p>
@@ -865,11 +860,11 @@ export default function EventPrepAiSimulator({
                     <p className="text-base font-black text-foreground tabular-nums">
                       {formatFc(pack.estimatedTotalFc)}
                     </p>
-                    <p className="text-[10px] text-muted">
+                    <p className="text-xs text-muted">
                       {pack.venue ? '1 salle' : 'Sans salle'} + {pack.services.length} prestataire{pack.services.length > 1 ? 's' : ''}
                     </p>
                     {packLeftover != null ? (
-                      <p className={cn('text-[10px] font-semibold mt-0.5', packLeftover >= 0 ? 'text-emerald-600' : 'text-amber-700 dark:text-amber-300')}>
+                      <p className={cn('text-xs font-semibold mt-0.5', packLeftover >= 0 ? 'text-primary' : 'text-festive-accent')}>
                         {packLeftover >= 0
                           ? `Reste ${formatFc(packLeftover)} vs budget`
                           : `Dépassement ${formatFc(Math.abs(packLeftover))}`}

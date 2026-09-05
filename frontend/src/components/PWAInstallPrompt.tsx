@@ -70,7 +70,7 @@ export default function PWAInstallPrompt({
         type="button"
         onClick={dismiss}
         className={`absolute top-2 right-2 inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] transition ${
-          isGuest ? 'hover:bg-surface-muted text-muted' : 'hover:bg-white/10'
+          isGuest ? 'hover:bg-surface-muted text-muted' : 'hover:bg-primary-foreground/10'
         }`}
         aria-label="Fermer"
       >

@@ -742,7 +742,7 @@ export default function EventPrepPanel({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
           <p className="text-sm text-muted">
-            Choisissez comment simuler (par critères ou avec l’IA), puis composez la solution finale pour les devis.
+            Choisissez comment composer le pack budget (par critères ou avec l’IA), puis retenez-le pour les devis. Le plan de salle se crée à part.
             {dateKey ? ` Date : ${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}.` : ''}
           </p>
         </div>
@@ -1021,7 +1021,7 @@ export default function EventPrepPanel({
             <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             {view === 'final'
               ? 'Cette solution alimente les devis, réservations et tâches générées.'
-              : 'Ces retenus appartiennent à cette simulation. Composez la solution finale dans l’onglet dédié.'}
+              : 'Ces retenus appartiennent à cette simulation. Composez le pack budget final dans l’onglet dédié.'}
           </p>
         ) : null}
       </Card>
@@ -1315,7 +1315,7 @@ function PrepFinalComposer({
   return (
     <Card>
       <CardHeader
-        title="Composer la solution finale"
+        title="Composer le pack budget final"
         description="Reprenez toute une simulation, ou mélangez salle et prestataires des deux vues."
       />
       {empty ? (
@@ -1395,7 +1395,7 @@ function PrepFinalComposer({
           ) : null}
 
           <Button type="button" onClick={applyMix}>
-            Appliquer ce mix à la solution finale
+            Appliquer ce mix au pack budget final
           </Button>
         </div>
       )}

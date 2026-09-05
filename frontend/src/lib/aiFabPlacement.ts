@@ -111,10 +111,10 @@ export function resolveAiFabPlacement(input: {
   if (onRooms && input.canUseRooms) {
     return {
       mood: 'work',
-      label: 'Lire un plan',
+      label: 'Plan de salle',
       subtitle: `${AI_ROOM_PLAN_TOKEN_COST} jetons · photo → salle`,
       ariaLabel: 'Lire un plan de salle avec l’IA',
-      title: `Créer le plan à la main ou depuis une photo · ${AI_ROOM_PLAN_TOKEN_COST} jetons`,
+      title: `Créer le plan de salle à la main ou depuis une photo · ${AI_ROOM_PLAN_TOKEN_COST} jetons`,
       click: 'open',
       modalTitle: 'Plan de salle IA',
       modalDescription: `Nouvelle salle : « Depuis une photo » ou « À la main ». L’IA reprend ce qui est visible. ${aiTokenCostLegend()}.`,

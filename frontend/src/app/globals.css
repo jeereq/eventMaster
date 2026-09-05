@@ -405,9 +405,7 @@ html[data-mood="celebrate"] .font-display {
     overscroll-behavior-y: contain;
   }
 
-  html[data-pwa-install="ask"] {
-    --em-site-install-bar: 3rem;
-  }
+  /* L’invitation d’install est une puce flottante, pas une barre pleine largeur. */
 }
 
 @media (min-width: 768px) {

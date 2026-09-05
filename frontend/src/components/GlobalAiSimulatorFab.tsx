@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Building2, Mail, Sparkles, Wand2 } from 'lucide-react';
 import { Modal } from '@/components/ui';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
@@ -27,6 +27,7 @@ const LISTING_DETAIL = /^\/marketplace\/(salles|prestataires|evenements)\/[^/]+/
 export default function GlobalAiSimulatorFab() {
   const pathname = usePathname() || '/';
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { user, tenant, planFeatures } = useAuth();
   const [open, setOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
@@ -75,12 +76,12 @@ export default function GlobalAiSimulatorFab() {
     if (placement.click === 'scroll' && placement.scrollId) {
       if (scrollToPageSection(placement.scrollId)) return;
       if (placement.href) {
-        window.location.assign(placement.href);
+        router.push(placement.href);
         return;
       }
     }
     if (placement.click === 'href' && placement.href) {
-      window.location.assign(placement.href);
+      router.push(placement.href);
       return;
     }
     setOpen(true);
@@ -106,7 +107,7 @@ export default function GlobalAiSimulatorFab() {
         <span
           className={cn(
             'w-8 h-8 rounded-full flex items-center justify-center shrink-0',
-            placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-white/15',
+            placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-primary-foreground/15',
           )}
         >
           <Icon className="w-4 h-4" aria-hidden />
@@ -126,7 +127,7 @@ export default function GlobalAiSimulatorFab() {
           <span
             className={cn(
               'text-xs font-black tabular-nums px-1.5 py-0.5 rounded-full shrink-0',
-              placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-white/20',
+              placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-primary-foreground/20',
             )}
           >
             {allowance.totalRemaining}
@@ -146,7 +147,7 @@ export default function GlobalAiSimulatorFab() {
             <ShortcutCard
               href={placement.catalogueHref}
               icon={Wand2}
-              title="Budget"
+              title="Pack budget"
               detail={`${AI_SIMULATION_TOKEN_COST} jeton · 3 formules`}
               active={placement.highlight === 'budget'}
               onNavigate={() => setOpen(false)}
