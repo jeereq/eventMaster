@@ -7,6 +7,12 @@ import {
   AisleStyle,
   DoorStyle,
   ChandelierFixtureStyle,
+  type BarStyle,
+  type InstrumentStyle,
+  type PodiumStyle,
+  barStyleLabels,
+  instrumentStyleLabels,
+  podiumStyleLabels,
 } from '@/lib/roomLayoutUtils';
 import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
@@ -41,6 +47,8 @@ export default function FixtureRenderer({
   const isGazebo = fixture.kind === 'gazebo';
   const isDjBooth = fixture.kind === 'djBooth';
   const isScreen = fixture.kind === 'screen';
+  const isInstrument = fixture.kind === 'instrument';
+  const isBar = fixture.kind === 'bar';
   const isAisle = fixture.kind === 'aisle';
   const isCarpet = fixture.kind === 'carpet';
   const isDoor = fixture.kind === 'door' || fixture.kind === 'entrance';
@@ -501,6 +509,113 @@ export default function FixtureRenderer({
               {fixture.label}
             </span>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (isInstrument) {
+    const style: InstrumentStyle = fixture.instrumentStyle ?? 'piano';
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-md border-2 border-zinc-700 bg-zinc-900 text-zinc-100 flex flex-col items-center justify-center overflow-hidden shadow-xs">
+          {style === 'piano' ? (
+            <div className="w-[78%] h-[58%] rounded-[40%_40%_18%_18%] bg-zinc-950 border border-zinc-500 relative">
+              <span className="absolute bottom-0 inset-x-[12%] h-[22%] bg-zinc-100 rounded-sm" />
+            </div>
+          ) : style === 'keyboard' ? (
+            <div className="w-[86%] h-[28%] rounded-sm bg-zinc-800 border border-zinc-500">
+              <div className="h-full w-full bg-[repeating-linear-gradient(90deg,#f8fafc_0_3px,#171717_3px_5px)] opacity-80 rounded-sm" />
+            </div>
+          ) : style === 'drums' ? (
+            <div className="relative w-[70%] h-[70%]">
+              <span className="absolute inset-[18%] rounded-full border-4 border-sky-800 bg-sky-950" />
+              <span className="absolute top-0 right-1 w-4 h-4 rounded-full border border-amber-300 bg-amber-200/70" />
+            </div>
+          ) : style === 'micStand' ? (
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="w-2 h-2 rounded-full bg-zinc-200" />
+              <span className="w-px h-5 bg-zinc-400" />
+              <span className="w-3 h-1 rounded-full bg-zinc-600" />
+            </div>
+          ) : (
+            <div className={`w-[42%] ${style === 'amp' || style === 'speaker' ? 'h-[55%] rounded-sm' : 'h-[70%] rounded-[40%_40%_22%_22%]'} bg-rose-950 border border-zinc-500`} />
+          )}
+          {showLabel ? (
+            <span className="absolute bottom-0.5 text-[7px] font-black uppercase tracking-wide text-zinc-200">
+              {fixture.label || instrumentStyleLabels[style]}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (isBar) {
+    const style: BarStyle = fixture.barStyle ?? 'cocktail';
+    const bottleColors =
+      style === 'wine' ? ['#7f1d1d', '#450a0a', '#3f1d1d'] :
+      style === 'champagne' ? ['#ca8a04', '#a16207', '#854d0e'] :
+      style === 'beer' ? ['#b45309', '#92400e'] :
+      style === 'coffee' ? ['#292524', '#44403c'] :
+      style === 'whiskey' ? ['#9a3412', '#7c2d12'] :
+      ['#14532d', '#7f1d1d', '#1e3a5f', '#854d0e'];
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-md border-2 border-amber-800/50 bg-gradient-to-b from-amber-100 to-amber-200 overflow-hidden flex flex-col">
+          <div className="flex justify-around items-end px-1 pt-0.5 h-[42%]">
+            {bottleColors.concat(bottleColors).slice(0, 7).map((c, i) => (
+              <span key={i} className="w-[7%] rounded-t-sm border border-black/20" style={{ height: i % 2 ? '88%' : '70%', background: c }} />
+            ))}
+          </div>
+          <div className="flex-1 border-t border-amber-900/20 bg-amber-50/80 flex items-end justify-around px-1 pb-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <span
+                key={i}
+                className={`w-[9%] border border-sky-300/60 bg-sky-100/70 ${style === 'wine' || style === 'champagne' || style === 'cocktail' ? 'h-[38%] rounded-b-full' : 'h-[32%] rounded-sm'}`}
+              />
+            ))}
+          </div>
+          {showLabel ? (
+            <span className="absolute inset-x-0 bottom-0.5 text-center text-[7px] font-black uppercase tracking-wide text-amber-950">
+              {fixture.label || barStyleLabels[style]}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (isStage && fixture.kind === 'podium') {
+    const style: PodiumStyle = fixture.podiumStyle ?? 'speaker';
+    const round = style === 'circular' || style === 'couple';
+    const podiumTint = !hasImage && fixture.material ? ZONE_MATERIAL_COLORS[fixture.material] : undefined;
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div
+          className={`relative w-full h-full border-2 border-orange-400 ${getFixtureClass('podium')} overflow-hidden flex items-center justify-center ${round ? 'rounded-full' : style === 'runway' ? 'rounded-sm' : 'rounded-lg'}`}
+          style={{
+            backgroundColor: podiumTint,
+            ...imageStyle,
+          }}
+        >
+          {style === 'runway' ? <span className="absolute inset-y-1 left-0.5 w-0.5 bg-pink-400" /> : null}
+          {style === 'runway' ? <span className="absolute inset-y-1 right-0.5 w-0.5 bg-pink-400" /> : null}
+          {style === 'bandRiser' ? (
+            <div className="absolute inset-1 flex gap-0.5">
+              <span className="flex-1 bg-orange-300/70 rounded-sm" />
+              <span className="flex-1 bg-orange-400/80 rounded-sm" />
+              <span className="flex-1 bg-orange-500/80 rounded-sm" />
+            </div>
+          ) : null}
+          {style === 'lectern' || style === 'speaker' ? (
+            <span className="absolute w-[28%] h-[42%] rounded-sm bg-stone-800/80 border border-stone-600" />
+          ) : null}
+          {showLabel ? (
+            <span className="relative z-10 text-[8px] font-black uppercase tracking-wide px-1">
+              {fixture.label || podiumStyleLabels[style]}
+            </span>
+          ) : null}
         </div>
       </div>
     );

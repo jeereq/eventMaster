@@ -49,7 +49,58 @@ export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle' | 'lon
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
 export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts' | 'couvertStyle' | 'hasCenterpiece' | 'centerpieceStyle';
 export type StageShape = 'rect' | 'semiCircle';
+/** Variantes d’estrade événementielle (orateur, couple, passerelle…). */
+export type PodiumStyle =
+  | 'speaker'
+  | 'lectern'
+  | 'couple'
+  | 'circular'
+  | 'runway'
+  | 'bandRiser'
+  | 'honor'
+  | 'steps';
+/** Instruments de concert posables au sol ou sur un podium. */
+export type InstrumentStyle =
+  | 'piano'
+  | 'keyboard'
+  | 'drums'
+  | 'guitar'
+  | 'bass'
+  | 'micStand'
+  | 'sax'
+  | 'violin'
+  | 'amp'
+  | 'speaker';
+/** Comptoir de bar et verrerie associée. */
+export type BarStyle = 'cocktail' | 'wine' | 'champagne' | 'beer' | 'coffee' | 'whiskey';
 export type RoofStyle = 'flat' | 'tentSwag' | 'gabled' | 'coffered';
+export type RoomFixtureKind =
+  | 'stage'
+  | 'podium'
+  | 'aisle'
+  | 'corridor'
+  | 'entrance'
+  | 'door'
+  | 'chandelier'
+  | 'pillar'
+  | 'perimeter'
+  | 'column'
+  | 'flower'
+  | 'carpet'
+  | 'buffet'
+  | 'stairs'
+  | 'balcony'
+  | 'arch'
+  | 'partition'
+  | 'decal'
+  | 'pedestal'
+  | 'stringLight'
+  | 'fountain'
+  | 'gazebo'
+  | 'djBooth'
+  | 'screen'
+  | 'instrument'
+  | 'bar';
 export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
 export type CenterpieceStyle = 'floral' | 'greeneryRunner' | 'candleCluster';
@@ -324,7 +375,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs' | 'balcony' | 'arch' | 'partition' | 'decal' | 'pedestal' | 'stringLight' | 'fountain' | 'gazebo' | 'djBooth' | 'screen';
+    kind: RoomFixtureKind;
     x: number;
     y: number;
     w: number;
@@ -343,6 +394,12 @@ export interface RoomLayoutBlueprint {
     heightM?: number;
     /** Empreinte de la scène : rectangle ou demi-lune. */
     stageShape?: StageShape;
+    /** Variante de podium (orateur, couple, passerelle…). */
+    podiumStyle?: PodiumStyle;
+    /** Instrument de concert (piano, batterie, micro…). */
+    instrumentStyle?: InstrumentStyle;
+    /** Type de bar (cocktail, vin, champagne…). */
+    barStyle?: BarStyle;
     /** Podium / escalier : nombre de marches. */
     steps?: number;
     /** Buffet : afficher assiettes / couverts. */
@@ -872,7 +929,7 @@ export function createBlueprintFixture(
 ): RoomLayoutBlueprint['fixtures'][number] {
   const defaults: Record<string, { x: number; y: number; w: number; h: number; label: string }> = {
     stage: { x: 25, y: 4, w: 50, h: 8, label: 'Scène' },
-    podium: { x: 40, y: 6, w: 20, h: 10, label: 'Podium' },
+    podium: { x: 40, y: 6, w: podiumStylePresets.speaker.w, h: podiumStylePresets.speaker.h, label: 'Podium orateur' },
     aisle: { x: 46, y: 14, w: 8, h: 72, label: 'Allée d’honneur' },
     door: { x: 45, y: 1, w: 10, h: 5, label: 'Porte' },
     chandelier: { x: 50, y: 45, w: 8, h: 8, label: 'Lustre' },
@@ -895,6 +952,8 @@ export function createBlueprintFixture(
     gazebo: { x: 36, y: 36, w: 28, h: 28, label: 'Gloriette' },
     djBooth: { x: 36, y: 4, w: 28, h: 10, label: 'Régie DJ' },
     screen: { x: 38, y: 4, w: 24, h: 6, label: 'Écran' },
+    instrument: { x: 44, y: 10, w: 8, h: 6, label: 'Piano à queue' },
+    bar: { x: 8, y: 68, w: 28, h: 10, label: 'Bar cocktail' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -919,6 +978,8 @@ export function createBlueprintFixture(
       kind === 'gazebo' ? '#f8fafc' :
       kind === 'djBooth' ? '#1c1917' :
       kind === 'screen' ? '#0f172a' :
+      kind === 'instrument' ? '#1c1917' :
+      kind === 'bar' ? '#4a3728' :
       undefined,
     flowerType: kind === 'arch' || kind === 'pedestal' ? 'rose' as FlowerType : kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'arch' || kind === 'pedestal' ? '#f4e8e4' : kind === 'flower' ? '#e11d48' : undefined,
@@ -926,7 +987,7 @@ export function createBlueprintFixture(
       kind === 'carpet' ? 'carpet' :
       kind === 'aisle' ? 'carpet' :
       kind === 'stage' || kind === 'podium' ? 'wood' :
-      kind === 'buffet' ? 'wood' :
+      kind === 'buffet' || kind === 'bar' ? 'wood' :
       kind === 'stairs' ? 'wood' :
       kind === 'balcony' ? 'concrete' :
       undefined,
@@ -945,6 +1006,8 @@ export function createBlueprintFixture(
       kind === 'gazebo' ? 3.2 :
       kind === 'djBooth' ? 1.1 :
       kind === 'screen' ? 2.4 :
+      kind === 'instrument' ? 0.95 :
+      kind === 'bar' ? 1.15 :
       undefined,
     steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
@@ -965,6 +1028,9 @@ export function createBlueprintFixture(
     lightWarmth: kind === 'chandelier' ? 'gold' : undefined,
     lightIntensity: kind === 'chandelier' ? 85 : undefined,
     stageShape: kind === 'stage' ? 'rect' : undefined,
+    podiumStyle: kind === 'podium' ? 'speaker' : undefined,
+    instrumentStyle: kind === 'instrument' ? 'piano' : undefined,
+    barStyle: kind === 'bar' ? 'cocktail' : undefined,
     decalKind: kind === 'decal' ? 'rose' : undefined,
     pedestalStyle: kind === 'pedestal' ? 'squareWhite' : undefined,
   };
@@ -3293,6 +3359,8 @@ const FIXTURE_STYLE_FAMILY_LABELS: Record<string, string> = {
   stage: 'scènes & podiums',
   flower: 'compositions florales',
   buffet: 'buffets',
+  instrument: 'instruments',
+  bar: 'bars',
 };
 
 export function fixtureStyleFamilyLabel(kind: RoomLayoutBlueprint['fixtures'][number]['kind']) {
@@ -3357,6 +3425,23 @@ export function applyFixtureStyleToSameKind(
         material: source.material,
         heightM: source.heightM,
         steps: source.steps,
+        podiumStyle: source.podiumStyle,
+        stageShape: source.stageShape,
+      };
+    }
+    if (family === 'instrument') {
+      return {
+        ...item,
+        instrumentStyle: source.instrumentStyle,
+        color: source.color,
+      };
+    }
+    if (family === 'bar') {
+      return {
+        ...item,
+        barStyle: source.barStyle,
+        color: source.color,
+        material: source.material,
       };
     }
     if (family === 'flower') {
@@ -4307,6 +4392,105 @@ export const stageShapeLabels: Record<StageShape, string> = {
   semiCircle: 'Demi-lune',
 };
 
+export const podiumStyleLabels: Record<PodiumStyle, string> = {
+  speaker: 'Orateur / MC',
+  lectern: 'Pupitre',
+  couple: 'Couple (mariage)',
+  circular: 'Circulaire',
+  runway: 'Passerelle / catwalk',
+  bandRiser: 'Estrade groupe',
+  honor: 'Table d’honneur',
+  steps: 'Gradin court',
+};
+
+export const podiumStyleHints: Record<PodiumStyle, string> = {
+  speaker: 'Estrade + pupitre pour discours',
+  lectern: 'Pupitre compact, conférence',
+  couple: 'Plateforme ronde pour les mariés',
+  circular: 'Podium rond 360°',
+  runway: 'Passerelle longue, défilé',
+  bandRiser: 'Plateaux étagés pour le groupe',
+  honor: 'Estrade basse table d’honneur',
+  steps: 'Quelques marches face public',
+};
+
+export const podiumStylePresets: Record<PodiumStyle, { w: number; h: number; heightM: number; steps: number }> = {
+  speaker: { w: 14, h: 10, heightM: 0.55, steps: 2 },
+  lectern: { w: 8, h: 6, heightM: 0.32, steps: 1 },
+  couple: { w: 16, h: 14, heightM: 0.5, steps: 2 },
+  circular: { w: 16, h: 16, heightM: 0.5, steps: 2 },
+  runway: { w: 12, h: 42, heightM: 0.38, steps: 2 },
+  bandRiser: { w: 34, h: 14, heightM: 0.72, steps: 3 },
+  honor: { w: 26, h: 10, heightM: 0.42, steps: 2 },
+  steps: { w: 22, h: 12, heightM: 0.85, steps: 4 },
+};
+
+export const instrumentStyleLabels: Record<InstrumentStyle, string> = {
+  piano: 'Piano à queue',
+  keyboard: 'Clavier / synthé',
+  drums: 'Batterie',
+  guitar: 'Guitare',
+  bass: 'Basse',
+  micStand: 'Pied de micro',
+  sax: 'Saxophone',
+  violin: 'Violon',
+  amp: 'Ampli',
+  speaker: 'Enceinte de scène',
+};
+
+export const instrumentStyleHints: Record<InstrumentStyle, string> = {
+  piano: 'Piano à queue, à poser sur scène',
+  keyboard: 'Clavier sur pied',
+  drums: 'Kit batterie concert',
+  guitar: 'Guitare sur stand',
+  bass: 'Basse électrique',
+  micStand: 'Micro + pied',
+  sax: 'Saxophone sur support',
+  violin: 'Violon + pupitre',
+  amp: 'Ampli combo',
+  speaker: 'Retour / enceinte PA',
+};
+
+export const instrumentStylePresets: Record<InstrumentStyle, { w: number; h: number; label: string }> = {
+  piano: { w: 10, h: 6, label: 'Piano à queue' },
+  keyboard: { w: 8, h: 4, label: 'Clavier' },
+  drums: { w: 8, h: 8, label: 'Batterie' },
+  guitar: { w: 4, h: 6, label: 'Guitare' },
+  bass: { w: 4, h: 7, label: 'Basse' },
+  micStand: { w: 3, h: 3, label: 'Micro' },
+  sax: { w: 3, h: 4, label: 'Saxophone' },
+  violin: { w: 3, h: 4, label: 'Violon' },
+  amp: { w: 4, h: 4, label: 'Ampli' },
+  speaker: { w: 4, h: 4, label: 'Enceinte' },
+};
+
+export const barStyleLabels: Record<BarStyle, string> = {
+  cocktail: 'Bar cocktail',
+  wine: 'Bar à vins',
+  champagne: 'Bar champagne',
+  beer: 'Bar bières',
+  coffee: 'Coffee bar',
+  whiskey: 'Bar whisky',
+};
+
+export const barStyleHints: Record<BarStyle, string> = {
+  cocktail: 'Shakers, verres à cocktail, bouteilles colorées',
+  wine: 'Bouteilles couchées + verres à pied',
+  champagne: 'Seau à glace et flûtes',
+  beer: 'Tireuses et chopes',
+  coffee: 'Machine espresso et tasses',
+  whiskey: 'Carafes, tumblers, étagère ambrée',
+};
+
+export const barStylePresets: Record<BarStyle, { w: number; h: number; label: string; color: string }> = {
+  cocktail: { w: 28, h: 10, label: 'Bar cocktail', color: '#4a3728' },
+  wine: { w: 26, h: 10, label: 'Bar à vins', color: '#3f2a22' },
+  champagne: { w: 24, h: 10, label: 'Bar champagne', color: '#5c4a32' },
+  beer: { w: 26, h: 10, label: 'Bar bières', color: '#5b4030' },
+  coffee: { w: 22, h: 9, label: 'Coffee bar', color: '#2c2118' },
+  whiskey: { w: 24, h: 10, label: 'Bar whisky', color: '#3b2416' },
+};
+
 export const roofStyleLabels: Record<RoofStyle, string> = {
   flat: 'Plat',
   tentSwag: 'Tente drapée',
@@ -4406,6 +4590,10 @@ export function getFixtureClass(kind: string): string {
       return 'bg-zinc-100 border-zinc-400 text-zinc-800';
     case 'screen':
       return 'bg-zinc-900 border-zinc-600 text-zinc-100';
+    case 'instrument':
+      return 'bg-zinc-800 border-zinc-500 text-zinc-100';
+    case 'bar':
+      return 'bg-amber-50 border-amber-700/50 text-amber-950';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:

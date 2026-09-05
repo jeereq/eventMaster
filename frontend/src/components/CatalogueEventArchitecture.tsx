@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { ZoneKind, ZoneMaterial } from '@/lib/roomLayoutUtils';
+import type { PodiumStyle, ZoneKind, ZoneMaterial } from '@/lib/roomLayoutUtils';
 import { getStairWoodMap, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
 import { rowArcZ, rowCurveFactor, rowSeatLocalX } from '@/lib/roomAmphitheaterGeom';
 
@@ -159,6 +159,7 @@ export function EventStage({
   selected,
   kind,
   shape = 'rect',
+  podiumStyle,
 }: {
   w: number;
   d: number;
@@ -169,10 +170,72 @@ export function EventStage({
   selected: boolean;
   kind: 'stage' | 'podium';
   shape?: 'rect' | 'semiCircle';
+  podiumStyle?: PodiumStyle;
 }) {
   const stepCount = Math.max(1, Math.min(4, steps));
   const isStage = kind === 'stage';
   const radius = Math.max(w, d) * 0.5;
+  const style = podiumStyle ?? 'speaker';
+  const isCircular = kind === 'podium' && style === 'circular';
+  const isCouple = kind === 'podium' && style === 'couple';
+  const isRunway = kind === 'podium' && style === 'runway';
+  const isBand = kind === 'podium' && style === 'bandRiser';
+  const showLectern = kind === 'podium' && (style === 'speaker' || style === 'lectern');
+  const wood = selected ? '#c7d2fe' : map ? '#ffffff' : baseColor;
+
+  if (isCircular || isCouple) {
+    const r = Math.min(w, d) * 0.5;
+    return (
+      <group>
+        <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[r, r * 1.02, height, 36]} />
+          <meshStandardMaterial color={wood} map={map ?? undefined} roughness={0.45} metalness={0.06} />
+        </mesh>
+        <mesh position={[0, height + 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[r * 0.96, 36]} />
+          <meshStandardMaterial color={selected ? '#e0e7ff' : '#f8fafc'} roughness={0.5} />
+        </mesh>
+        {isCouple ? (
+          <>
+            {([-0.22, 0.22] as const).map((side) => (
+              <mesh key={side} position={[side * r, height + 0.08, r * 0.15]} castShadow>
+                <sphereGeometry args={[0.08, 10, 10]} />
+                <meshStandardMaterial color="#f4a4b8" roughness={0.65} />
+              </mesh>
+            ))}
+            <mesh position={[0, height + 0.06, 0]} castShadow>
+              <torusGeometry args={[0.16, 0.018, 8, 20]} />
+              <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.25} />
+            </mesh>
+          </>
+        ) : null}
+        <mesh position={[0, 0.05, r + 0.03]}>
+          <boxGeometry args={[r * 1.2, 0.03, 0.03]} />
+          <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={0.55} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (isBand) {
+    return (
+      <group>
+        {([-0.33, 0, 0.33] as const).map((side, i) => {
+          const riserH = height * (0.55 + i * 0.22);
+          return (
+            <mesh key={side} position={[side * w * 0.34, riserH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w * 0.3, riserH, d * (0.72 + i * 0.08)]} />
+              <meshStandardMaterial color={wood} map={map ?? undefined} roughness={0.5} metalness={0.08} />
+            </mesh>
+          );
+        })}
+        <mesh position={[0, 0.05, d * 0.5 + 0.04]}>
+          <boxGeometry args={[w * 0.92, 0.03, 0.03]} />
+          <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={0.55} />
+        </mesh>
+      </group>
+    );
+  }
 
   if (shape === 'semiCircle') {
     return (
@@ -265,6 +328,42 @@ export function EventStage({
           <meshStandardMaterial color="#450a0a" roughness={0.9} metalness={0.02} />
         </mesh>
       )}
+      {isRunway ? (
+        <>
+          {([-0.48, 0.48] as const).map((side) => (
+            <mesh key={side} position={[side * w, 0.05, 0]}>
+              <boxGeometry args={[0.04, 0.03, d * 0.96]} />
+              <meshStandardMaterial color="#f472b6" emissive="#ec4899" emissiveIntensity={0.7} />
+            </mesh>
+          ))}
+        </>
+      ) : null}
+      {showLectern ? (
+        <group position={[0, height, style === 'lectern' ? 0 : -d * 0.12]}>
+          <mesh position={[0, 0.55, 0]} castShadow>
+            <boxGeometry args={[0.52, 1.05, 0.28]} />
+            <meshStandardMaterial color={selected ? '#c7d2fe' : '#3f2a1d'} roughness={0.45} />
+          </mesh>
+          <mesh position={[0, 1.12, 0.12]} rotation={[-0.35, 0, 0]} castShadow>
+            <boxGeometry args={[0.62, 0.04, 0.38]} />
+            <meshStandardMaterial color="#1c1917" roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 1.42, 0.02]} castShadow>
+            <cylinderGeometry args={[0.012, 0.012, 0.42, 8]} />
+            <meshStandardMaterial color="#d4d4d8" metalness={0.7} roughness={0.25} />
+          </mesh>
+          <mesh position={[0, 1.64, 0.04]} rotation={[0.4, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.018, 0.03, 0.08, 10]} />
+            <meshStandardMaterial color="#171717" roughness={0.4} />
+          </mesh>
+        </group>
+      ) : null}
+      {kind === 'podium' && style === 'honor' ? (
+        <mesh position={[0, height + 0.38, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w * 0.72, 0.72, d * 0.42]} />
+          <meshStandardMaterial color="#f5f0e8" roughness={0.4} />
+        </mesh>
+      ) : null}
     </group>
   );
 }

@@ -140,6 +140,8 @@ const FLOOR_FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kin
   'screen',
   'fountain',
   'gazebo',
+  'instrument',
+  'bar',
 ]);
 
 function applyPosition(

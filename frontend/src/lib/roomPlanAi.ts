@@ -79,6 +79,8 @@ export type RoomPlanVisionItemKind =
   | 'gazebo'
   | 'djBooth'
   | 'screen'
+  | 'instrument'
+  | 'bar'
   | 'corridor'
   | 'perimeter';
 
@@ -105,6 +107,9 @@ export interface RoomPlanVisionItem {
   stageShape?: string;
   decalKind?: string;
   pedestalStyle?: string;
+  podiumStyle?: string;
+  instrumentStyle?: string;
+  barStyle?: string;
   anchor?: 'box' | 'center';
 }
 
@@ -185,6 +190,8 @@ const FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
   'gazebo',
   'djBooth',
   'screen',
+  'instrument',
+  'bar',
   'corridor',
   'perimeter',
 ]);
@@ -300,6 +307,11 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   tent: 'gazebo',
   tente: 'gazebo',
   chapiteau: 'gazebo',
+  piano: 'instrument',
+  batterie: 'instrument',
+  instrument: 'instrument',
+  bar: 'bar',
+  comptoir: 'bar',
 };
 
 const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
@@ -327,6 +339,8 @@ const ZONE_FALLBACK_FIXTURES = new Set<RoomPlanVisionItemKind>([
   'gazebo',
   'djBooth',
   'screen',
+  'instrument',
+  'bar',
   'flower',
   'pedestal',
   'corridor',
@@ -491,6 +505,8 @@ function fixtureAsZoneLabel(kind: RoomPlanVisionItemKind, label?: string): strin
     gazebo: 'Gloriette',
     djBooth: 'Régie DJ',
     screen: 'Écran',
+    instrument: 'Instrument',
+    bar: 'Bar',
     flower: 'Fleurs',
     pedestal: 'Piédestal',
     corridor: 'Couloir',
@@ -668,6 +684,30 @@ function applyFixtureLook(
   }
   if ((item.kind === 'stage' || item.kind === 'podium') && (item.stageShape === 'semiCircle' || item.shape === 'semiCircle')) {
     next = { ...next, stageShape: 'semiCircle' };
+  }
+  if (item.kind === 'podium' && item.podiumStyle) {
+    const allowed: RoomLayoutBlueprint['fixtures'][number]['podiumStyle'][] = [
+      'speaker', 'lectern', 'couple', 'circular', 'runway', 'bandRiser', 'honor', 'steps',
+    ];
+    if (allowed.includes(item.podiumStyle as typeof allowed[number])) {
+      next = { ...next, podiumStyle: item.podiumStyle as typeof allowed[number] };
+    }
+  }
+  if (item.kind === 'instrument' && item.instrumentStyle) {
+    const allowed: RoomLayoutBlueprint['fixtures'][number]['instrumentStyle'][] = [
+      'piano', 'keyboard', 'drums', 'guitar', 'bass', 'micStand', 'sax', 'violin', 'amp', 'speaker',
+    ];
+    if (allowed.includes(item.instrumentStyle as typeof allowed[number])) {
+      next = { ...next, instrumentStyle: item.instrumentStyle as typeof allowed[number] };
+    }
+  }
+  if (item.kind === 'bar' && item.barStyle) {
+    const allowed: RoomLayoutBlueprint['fixtures'][number]['barStyle'][] = [
+      'cocktail', 'wine', 'champagne', 'beer', 'coffee', 'whiskey',
+    ];
+    if (allowed.includes(item.barStyle as typeof allowed[number])) {
+      next = { ...next, barStyle: item.barStyle as typeof allowed[number] };
+    }
   }
   if (item.kind === 'chandelier' && item.color && !looksGold(item.color)) {
     next = { ...next, lightWarmth: 'neutral', color: item.color };

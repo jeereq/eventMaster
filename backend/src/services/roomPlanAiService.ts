@@ -84,6 +84,8 @@ const ITEM_KINDS = new Set([
   'gazebo',
   'djBooth',
   'screen',
+  'instrument',
+  'bar',
   'corridor',
   'perimeter',
 ]);
@@ -142,6 +144,15 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   podium: 'podium',
   lectern: 'podium',
   speaker: 'podium',
+  piano: 'instrument',
+  keyboard: 'instrument',
+  drums: 'instrument',
+  batterie: 'instrument',
+  guitar: 'instrument',
+  instrument: 'instrument',
+  bar: 'bar',
+  comptoir: 'bar',
+  winebar: 'bar',
   aisle: 'aisle',
   allee: 'aisle',
   runner: 'aisle',
@@ -355,6 +366,8 @@ export type RoomPlanVisionItemKind =
   | 'gazebo'
   | 'djBooth'
   | 'screen'
+  | 'instrument'
+  | 'bar'
   | 'corridor'
   | 'perimeter';
 
@@ -382,6 +395,9 @@ export interface RoomPlanVisionItem {
   stageShape?: string;
   decalKind?: string;
   pedestalStyle?: string;
+  podiumStyle?: string;
+  instrumentStyle?: string;
+  barStyle?: string;
   anchor?: 'box' | 'center';
 }
 
@@ -700,7 +716,7 @@ Champs JSON obligatoires :
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -715,7 +731,10 @@ Champs JSON obligatoires :
     "hasPetals": true,
     "hasSideLanterns": true,
     "decalKind": "rose"|"butterfly",
-    "pedestalStyle": "squareWhite"|"columnGold"
+    "pedestalStyle": "squareWhite"|"columnGold",
+    "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
+    "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"
   }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,
@@ -739,7 +758,7 @@ Règles items (déduction autorisée) :
 - corridor = couloir / circulation visible. perimeter = bande périphérique seulement si elle se voit.
 - zone = piste de danse, VIP, buffet au sol, grande moquette. zoneKind obligatoire. color + material si la surface se voit.
 - aisle = tapis / allée au sol. aisleStyle seulement si le tapis correspond vraiment. hasPetals / hasSideLanterns seulement s’ils sont visibles.
-- stage / podium / djBooth / screen / buffet / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo : dès qu’ils se voient, pose-les.
+- stage / podium / djBooth / screen / buffet / bar / instrument / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo : dès qu’ils se voient, pose-les. Instruments (piano, batterie, micros) SUR le podium s’ils y sont. Bar + bouteilles/verres si un comptoir se voit.
 - door / entrance : seulement si clairement une ouverture d’accès (sinon walls.doors).
 - walls : uniquement les murs / ouvertures VISIBLES. Tableau vide si tu n’es pas sûr — n’invente pas de portes.
 - Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, du plus certain au moins certain. Préfère trop d’objets réels plutôt qu’un items[].
@@ -760,7 +779,7 @@ Interdit (placement) :
 Logique de composition (dans cet ordre) :
 1) Murs + portes. Au moins une entrée principale (kind=door + entrance) sur un petit côté, dégagée, souvent face à la table d’honneur ou à la scène. Une issue de service (buffet / cuisine) sur un autre mur si banquet. Pose walls[] avec doors aux bonnes positions (0–1 le long du segment).
 2) Axe de cérémonie. Allée (aisle) depuis la porte principale vers le point focal (table d’honneur, autel, scène). Elle peut être légèrement courbe ou décentrée — pas un trait au milieu par défaut.
-3) Point focal. Scène et/ou podium : fond de salle, face aux convives, stageShape adapté (rect banquet, semiCircle cérémonie). Le podium (orateur, couple, MC) est DEVANT la scène, décalé ou centré selon le brief — jamais collé dans un coin au hasard.
+3) Point focal. Scène et/ou podium : fond de salle, face aux convives, stageShape adapté (rect banquet, semiCircle cérémonie). podiumStyle selon le brief (speaker / lectern discours, couple mariage, runway défilé, bandRiser concert, honor table d’honneur). Le podium est DEVANT la scène — jamais collé dans un coin au hasard. Concert : instruments (piano, batterie, micros) POSÉS SUR le podium. Cocktail / gala : un bar (barStyle cocktail|wine|champagne|beer|coffee|whiskey) sur un côté, pas au milieu de l’allée.
 4) Tables. Banquet / mariage : tables RONDES (shape=round, seats 8–10) en quinconce / nid d’abeille, pas en rangées d’école. Table d’honneur ovale ou rectangulaire au fond, plus large, face à la porte. Cocktail : highTop / cocktail en îlots de 3–4, pas une file. Conseil : une seule table longue. hasCenterpiece=true sur chaque table ronde de banquet.
 5) Piste / DJ / écran. Piste (zone dance) comme un plateau composé (souvent près de la scène, pas un carré résiduel). DJ et écran ancrés à la scène, pas au milieu des tables.
 6) Fleurs. Compositions aux seuils (entrée, arche), aux coins d’allée, autour de la table d’honneur et 2–4 jardinières (flower) — jamais une rangée identique le long d’un mur.
@@ -792,7 +811,7 @@ Schéma JSON :
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -803,7 +822,10 @@ Schéma JSON :
     "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
     "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack",
     "seatMaterial": "velvet"|"wood"|"fabric"|"leather"|"plastic"|"linen",
-    "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet"
+    "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet",
+    "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
+    "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"
   }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,

@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -86,6 +86,15 @@ import {
   tableArrangeLabels,
   tableShapeLabels,
   stageShapeLabels,
+  podiumStyleLabels,
+  podiumStyleHints,
+  podiumStylePresets,
+  instrumentStyleLabels,
+  instrumentStyleHints,
+  instrumentStylePresets,
+  barStyleLabels,
+  barStyleHints,
+  barStylePresets,
   roofStyleLabels,
   centerpieceStyleLabels,
   wallsFromRoomOutline,
@@ -96,6 +105,9 @@ import {
   type SeatMaterial,
   type TableArrangePreset,
   type StageShape,
+  type PodiumStyle,
+  type InstrumentStyle,
+  type BarStyle,
   type RoofStyle,
   type TableSurfaceStyle,
   type ZoneKind,
@@ -392,7 +404,7 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars'>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
@@ -972,6 +984,67 @@ export default function RoomLayoutEditor({
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
       { message: `Allée « ${fixture.label} » ajoutée`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+    setQuickCreate(null);
+  };
+
+  const addPodiumFixture = (style: PodiumStyle) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('podium')) {
+      log('Les podiums ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const preset = podiumStylePresets[style];
+    const fixture = {
+      ...createBlueprintFixture('podium'),
+      ...preset,
+      podiumStyle: style,
+      label: podiumStyleLabels[style],
+      storyId: resolveActiveStoryId(blueprint),
+    };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `Podium « ${fixture.label} » ajouté`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+    setQuickCreate(null);
+  };
+
+  const addInstrumentFixture = (style: InstrumentStyle) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('instrument')) {
+      log('Les instruments ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const preset = instrumentStylePresets[style];
+    const fixture = {
+      ...createBlueprintFixture('instrument'),
+      ...preset,
+      instrumentStyle: style,
+      storyId: resolveActiveStoryId(blueprint),
+    };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `${fixture.label} ajouté — placez-le sur un podium`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+    setQuickCreate(null);
+  };
+
+  const addBarFixture = (style: BarStyle) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('bar')) {
+      log('Les bars ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const preset = barStylePresets[style];
+    const fixture = {
+      ...createBlueprintFixture('bar'),
+      ...preset,
+      barStyle: style,
+      storyId: resolveActiveStoryId(blueprint),
+    };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `Bar « ${fixture.label} » ajouté`, kind: 'add' },
     );
     setSelection([{ kind: 'fixture', id: fixture.id }]);
     setQuickCreate(null);
@@ -3306,6 +3379,8 @@ export default function RoomLayoutEditor({
     if (selectedFixture) {
       const isColumn = selectedFixture.kind === 'pillar' || selectedFixture.kind === 'column';
       const isPodium = selectedFixture.kind === 'podium';
+      const isInstrument = selectedFixture.kind === 'instrument';
+      const isBar = selectedFixture.kind === 'bar';
       const isStage = selectedFixture.kind === 'stage' || isPodium;
       const isFlower = selectedFixture.kind === 'flower';
       const isArch = selectedFixture.kind === 'arch';
@@ -3315,6 +3390,13 @@ export default function RoomLayoutEditor({
       const isBuffet = selectedFixture.kind === 'buffet';
       const isStairs = selectedFixture.kind === 'stairs';
       const isBalcony = selectedFixture.kind === 'balcony';
+      const raisedSurface = (isInstrument || isBar)
+        ? resolveFurnitureSurfaceAt(
+            blueprint,
+            selectedFixture.x + selectedFixture.w / 2,
+            selectedFixture.y + selectedFixture.h / 2,
+          )
+        : null;
       const isDoor = selectedFixture.kind === 'door' || selectedFixture.kind === 'entrance';
       const isAisle = selectedFixture.kind === 'aisle' || selectedFixture.kind === 'carpet';
       const isChandelier = selectedFixture.kind === 'chandelier';
@@ -3338,6 +3420,10 @@ export default function RoomLayoutEditor({
                           ? 'Buffet'
                           : isPodium
                             ? 'Podium'
+                            : isInstrument
+                              ? 'Instrument'
+                              : isBar
+                                ? 'Bar'
                             : isArch
                               ? 'Arche florale'
                               : isPartition
@@ -3368,6 +3454,13 @@ export default function RoomLayoutEditor({
                 <input type="number" min={1} max={100} value={Math.round(selectedFixture.h)} onChange={(e) => updateFixture(selectedFixture.id, { h: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
               </label>
             </div>
+            {raisedSurface && (raisedSurface.kind === 'podium' || raisedSurface.kind === 'stage') ? (
+              <p className="text-xs text-muted">
+                Posé sur « {raisedSurface.label} » ({raisedSurface.elevationM.toFixed(2)} m)
+              </p>
+            ) : isInstrument ? (
+              <p className="text-xs text-muted">Glissez-le sur un podium ou une scène pour le surélever.</p>
+            ) : null}
 
             {/* ───────── PORTES & ENTRÉES D’ACCUEIL ───────── */}
             {isDoor && (
@@ -3817,6 +3910,22 @@ export default function RoomLayoutEditor({
             {isPodium && (
               <>
                 <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Type de podium</span>
+                  <select
+                    value={selectedFixture.podiumStyle ?? 'speaker'}
+                    onChange={(e) => {
+                      const style = e.target.value as PodiumStyle;
+                      updateFixture(selectedFixture.id, { podiumStyle: style, label: podiumStyleLabels[style] }, `Podium : ${podiumStyleLabels[style]}`);
+                    }}
+                    className={EDITOR_FIELD}
+                  >
+                    {(Object.keys(podiumStyleLabels) as PodiumStyle[]).map((style) => (
+                      <option key={style} value={style}>{podiumStyleLabels[style]}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-muted">{podiumStyleHints[(selectedFixture.podiumStyle ?? 'speaker') as PodiumStyle]}</span>
+                </label>
+                <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Hauteur podium (m)</span>
                   <input
                     type="number"
@@ -3844,6 +3953,48 @@ export default function RoomLayoutEditor({
                   <input type="color" value={selectedFixture.color ?? '#b45309'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} aria-label="Couleur de l’élément" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
                 </label>
               </>
+            )}
+
+            {isInstrument && (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Instrument</span>
+                <select
+                  value={selectedFixture.instrumentStyle ?? 'piano'}
+                  onChange={(e) => {
+                    const style = e.target.value as InstrumentStyle;
+                    const preset = instrumentStylePresets[style];
+                    updateFixture(selectedFixture.id, { instrumentStyle: style, label: preset.label }, instrumentStyleLabels[style]);
+                  }}
+                  className={EDITOR_FIELD}
+                >
+                  {(Object.keys(instrumentStyleLabels) as InstrumentStyle[]).map((style) => (
+                    <option key={style} value={style}>{instrumentStyleLabels[style]}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-muted">
+                  {instrumentStyleHints[(selectedFixture.instrumentStyle ?? 'piano') as InstrumentStyle]} — posez-le sur un podium pour le surélever.
+                </span>
+              </label>
+            )}
+
+            {isBar && (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Type de bar</span>
+                <select
+                  value={selectedFixture.barStyle ?? 'cocktail'}
+                  onChange={(e) => {
+                    const style = e.target.value as BarStyle;
+                    const preset = barStylePresets[style];
+                    updateFixture(selectedFixture.id, { barStyle: style, label: preset.label, color: preset.color }, barStyleLabels[style]);
+                  }}
+                  className={EDITOR_FIELD}
+                >
+                  {(Object.keys(barStyleLabels) as BarStyle[]).map((style) => (
+                    <option key={style} value={style}>{barStyleLabels[style]}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-muted">{barStyleHints[(selectedFixture.barStyle ?? 'cocktail') as BarStyle]}</span>
+              </label>
             )}
 
             {isBuffet && (
@@ -5201,7 +5352,34 @@ export default function RoomLayoutEditor({
         <button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button>
       ) : null}
       {caps.fixtureKinds.includes('podium') ? (
-        <button type="button" onClick={() => addFixture('podium')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Podium</button>
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'podiums' ? null : 'podiums')}
+          className={cn(EDITOR_TOOL, quickCreate === 'podiums' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title="Orateur, couple, passerelle, estrade groupe"
+        >
+          Podiums…
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('instrument') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'instruments' ? null : 'instruments')}
+          className={cn(EDITOR_TOOL, quickCreate === 'instruments' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title="Piano, batterie, micros — posables sur un podium"
+        >
+          <Music2 className="w-3.5 h-3.5" aria-hidden /> Instruments…
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('bar') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'bars' ? null : 'bars')}
+          className={cn(EDITOR_TOOL, quickCreate === 'bars' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title="Bar cocktail, vins, champagne, bières"
+        >
+          <Wine className="w-3.5 h-3.5" aria-hidden /> Bars…
+        </button>
       ) : null}
       {caps.fixtureKinds.includes('chandelier') ? (
         <button
@@ -5583,6 +5761,87 @@ export default function RoomLayoutEditor({
           </div>
         </div>
       )}
+      {quickCreate === 'podiums' && (
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground">Podiums événementiels</h4>
+              <p className="text-xs text-muted">Orateur, couple, passerelle, estrade de groupe ou table d’honneur.</p>
+            </div>
+            <button type="button" onClick={() => setQuickCreate(null)} className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}>
+              Fermer
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+            {(Object.keys(podiumStyleLabels) as PodiumStyle[]).map((style) => (
+              <button key={style} type="button" onClick={() => addPodiumFixture(style)} className={EDITOR_PICK}>
+                <div>
+                  <p className="text-xs font-bold text-foreground">{podiumStyleLabels[style]}</p>
+                  <p className="text-xs text-muted mt-0.5">{podiumStyleHints[style]}</p>
+                </div>
+                <span className="text-xs font-bold text-primary mt-2">+ Placer</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {quickCreate === 'instruments' && (
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Music2 className="w-4 h-4 text-primary" aria-hidden />
+                Instruments de concert
+              </h4>
+              <p className="text-xs text-muted">Placez-les sur un podium ou une scène : ils se surélèvent automatiquement.</p>
+            </div>
+            <button type="button" onClick={() => setQuickCreate(null)} className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}>
+              Fermer
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+            {(Object.keys(instrumentStyleLabels) as InstrumentStyle[]).map((style) => (
+              <button key={style} type="button" onClick={() => addInstrumentFixture(style)} className={EDITOR_PICK}>
+                <div>
+                  <p className="text-xs font-bold text-foreground">{instrumentStyleLabels[style]}</p>
+                  <p className="text-xs text-muted mt-0.5">{instrumentStyleHints[style]}</p>
+                </div>
+                <span className="text-xs font-bold text-primary mt-2">+ Poser</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {quickCreate === 'bars' && (
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Wine className="w-4 h-4 text-primary" aria-hidden />
+                Bars & verrerie
+              </h4>
+              <p className="text-xs text-muted">Bouteilles et verres adaptés au service : cocktail, vin, champagne, bière, café, whisky.</p>
+            </div>
+            <button type="button" onClick={() => setQuickCreate(null)} className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}>
+              Fermer
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {(Object.keys(barStyleLabels) as BarStyle[]).map((style) => (
+              <button key={style} type="button" onClick={() => addBarFixture(style)} className={EDITOR_PICK}>
+                <div>
+                  <p className="text-xs font-bold text-foreground">{barStyleLabels[style]}</p>
+                  <p className="text-xs text-muted mt-0.5">{barStyleHints[style]}</p>
+                </div>
+                <span className="text-xs font-bold text-primary mt-2">+ Installer</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {quickCreate === 'chairs' && (
         <>
           <label className="text-xs font-semibold text-foreground space-y-1">

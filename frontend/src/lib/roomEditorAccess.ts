@@ -27,7 +27,7 @@ export type RoomEditorCapabilities = {
   /** Qualité showcase + mode présentation. */
   canShowcaseRender: boolean;
   tableShapes: TableShape[];
-  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet' | 'stairs' | 'balcony' | 'arch' | 'partition' | 'decal' | 'pedestal' | 'stringLight' | 'fountain' | 'gazebo' | 'djBooth' | 'screen'>;
+  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet' | 'stairs' | 'balcony' | 'arch' | 'partition' | 'decal' | 'pedestal' | 'stringLight' | 'fountain' | 'gazebo' | 'djBooth' | 'screen' | 'instrument' | 'bar'>;
 };
 
 const LEVEL_ORDER: RoomEditorLevel[] = ['basic', 'standard', 'advanced', 'complete'];
@@ -107,7 +107,7 @@ export function roomEditorCapabilities(
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
       canPlanFromPhoto: true,
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'screen']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'screen', 'instrument', 'bar']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   } else if (parsed === 'complete') {
@@ -134,7 +134,7 @@ export function roomEditorCapabilities(
       canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'fountain', 'gazebo', 'djBooth', 'screen']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'fountain', 'gazebo', 'djBooth', 'screen', 'instrument', 'bar']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   }

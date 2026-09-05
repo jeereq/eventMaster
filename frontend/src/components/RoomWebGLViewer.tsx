@@ -22,6 +22,9 @@ import {
   type AisleStyle,
   type ChandelierFixtureStyle,
   type OpeningMaterial,
+  type PodiumStyle,
+  type InstrumentStyle,
+  type BarStyle,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
@@ -75,6 +78,7 @@ import {
   ScreenMesh,
   GabledStageRoof,
 } from '@/components/roomCelebrationMeshes';
+import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiumBarMeshes';
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
@@ -1672,6 +1676,10 @@ function FixtureMesh({
   decalKind,
   pedestalStyle,
   stageRoof,
+  podiumStyle,
+  instrumentStyle,
+  barStyle,
+  surfaceElevationM = 0,
   widthM,
   roomDepthM,
   selected,
@@ -1715,6 +1723,10 @@ function FixtureMesh({
   decalKind?: 'rose' | 'butterfly' | 'custom' | 'path';
   pedestalStyle?: 'squareWhite' | 'columnGold';
   stageRoof?: 'none' | 'gabled';
+  podiumStyle?: PodiumStyle;
+  instrumentStyle?: InstrumentStyle;
+  barStyle?: BarStyle;
+  surfaceElevationM?: number;
   widthM: number;
   roomDepthM: number;
   selected: boolean;
@@ -1742,6 +1754,8 @@ function FixtureMesh({
     kind === 'gazebo' ? Math.max(2.4, podiumHeightM ?? 3.2) :
     kind === 'djBooth' ? 1.1 :
     kind === 'screen' ? Math.max(1.4, podiumHeightM ?? 2.4) :
+    kind === 'instrument' ? Math.max(0.7, podiumHeightM ?? 0.95) :
+    kind === 'bar' ? Math.max(0.95, podiumHeightM ?? 1.15) :
     kind === 'decal' ? 0.02 :
     kind === 'carpet' ? 0.06 :
     kind === 'buffet' ? 0.9 :
@@ -1752,7 +1766,7 @@ function FixtureMesh({
   const map = useMemo(() => {
     if (imageUrl) return resolveChairMap(imageUrl);
     if (kind === 'carpet') return resolveZoneMaterialMap(material ?? 'carpet').map;
-    if (kind === 'buffet') return resolveZoneMaterialMap(material ?? 'wood').map;
+    if (kind === 'buffet' || kind === 'bar') return resolveZoneMaterialMap(material ?? 'wood').map;
     if (kind === 'stage' || kind === 'podium' || kind === 'stairs') return resolveZoneMaterialMap(material ?? 'wood').map;
     if (kind === 'column' || kind === 'pillar') return getWallTexture('stone').map;
     if (kind === 'perimeter') return getWallTexture('concrete').map;
@@ -1769,6 +1783,10 @@ function FixtureMesh({
         ? '#d6d3d1'
       : kind === 'buffet'
         ? '#8b6914'
+      : kind === 'bar'
+        ? '#4a3728'
+      : kind === 'instrument'
+        ? '#171717'
         : kind === 'flower' || kind === 'arch' || kind === 'pedestal'
           ? '#f4e8e4'
         : kind === 'partition' || kind === 'decal'
@@ -1785,7 +1803,7 @@ function FixtureMesh({
 
   return (
     <group
-      position={[cx, 0, cz]}
+      position={[cx, surfaceElevationM, cz]}
       onClick={(e) => {
         if (!pickable) return;
         e.stopPropagation();
@@ -1839,6 +1857,17 @@ function FixtureMesh({
         <FountainMesh color={baseColor} selected={selected} />
       ) : kind === 'gazebo' ? (
         <GazeboMesh w={w} d={d} heightM={height} selected={selected} />
+      ) : kind === 'instrument' ? (
+        <ConcertInstrumentMesh style={instrumentStyle ?? 'piano'} selected={selected} />
+      ) : kind === 'bar' ? (
+        <EventBarMesh
+          w={w}
+          d={d}
+          height={height}
+          style={barStyle ?? 'cocktail'}
+          color={color ?? baseColor}
+          selected={selected}
+        />
       ) : kind === 'djBooth' ? (
         <DjBoothMesh w={w} d={d} color={color ?? '#1c1917'} selected={selected} />
       ) : kind === 'screen' ? (
@@ -1855,6 +1884,7 @@ function FixtureMesh({
             selected={selected}
             kind={kind === 'podium' ? 'podium' : 'stage'}
             shape={stageShape ?? 'rect'}
+            podiumStyle={podiumStyle}
           />
           {stageRoof === 'gabled' ? (
             <GabledStageRoof w={w} d={d} heightM={Math.max(2.2, height + 2)} selected={selected} />
@@ -2218,6 +2248,10 @@ function SceneContent({
           ? surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)
           : true;
         const canDragFixture = !readOnly && !wallEditMode && (!isSurfaceFixture || surfacePickable);
+        const sitsOnRaisedSurface = f.kind === 'instrument' || f.kind === 'bar';
+        const raisedSurface = sitsOnRaisedSurface
+          ? resolveFurnitureSurfaceAt(blueprint, f.x + f.w / 2, f.y + f.h / 2)
+          : null;
         return (
           <group key={f.id} position={[0, worldElevationForStory(blueprint, f.storyId), 0]}>
           <FixtureMesh
@@ -2255,6 +2289,10 @@ function SceneContent({
             decalKind={f.decalKind}
             pedestalStyle={f.pedestalStyle}
             stageRoof={f.stageRoof}
+            podiumStyle={f.podiumStyle}
+            instrumentStyle={f.instrumentStyle}
+            barStyle={f.barStyle}
+            surfaceElevationM={raisedSurface?.elevationM ?? 0}
             widthM={widthM}
             roomDepthM={heightM}
             selected={selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
