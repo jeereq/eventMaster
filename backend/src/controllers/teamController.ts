@@ -15,6 +15,7 @@ import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
 import { resolvePhoneFields } from '../utils/phone';
 import { assertAuthOtpMethodAllowed, resolveAuthOtpMethod } from '../services/platformSettingsService';
+import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
 
 const userSelect = {
   id: true,
@@ -181,6 +182,18 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       method,
       invitedToTeam: true,
     });
+
+    if (orgRole === 'PROTOCOL') {
+      try {
+        await grantWelcomeAiTokens({
+          userId: newUser.id,
+          tenantId,
+          orgRole: 'PROTOCOL',
+        });
+      } catch (grantError) {
+        console.error('[team] welcome protocol AI tokens:', grantError);
+      }
+    }
 
     const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
 

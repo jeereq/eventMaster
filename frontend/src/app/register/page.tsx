@@ -523,6 +523,27 @@ export default function RegisterPage() {
   );
 }
 
+const ENTERPRISE_PLAN_KEYS = new Set(['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3']);
+const CATALOG_PLAN_KEYS = new Set(['VENUE', 'SERVICE', 'CATALOG']);
+
+function welcomeSignupGrantLabel(
+  accountKind: TenantAccountKind,
+  intent: string | null,
+  plan: string | null,
+): string {
+  const planKey = (plan || '').toUpperCase();
+  if (accountKind === 'CLIENT' || accountKind === 'VENDOR' || CATALOG_PLAN_KEYS.has(planKey)) {
+    return '10 jetons IA';
+  }
+  if (ENTERPRISE_PLAN_KEYS.has(planKey)) {
+    return `${formatFc(50_000)} de jetons IA`;
+  }
+  if (accountKind === 'BOTH' || intent === 'pro' || planKey === 'STANDARD' || planKey.startsWith('PREMIUM_')) {
+    return `${formatFc(20_000)} de jetons IA`;
+  }
+  return `${formatFc(10_000)} de jetons IA`;
+}
+
 function RegisterPageContent() {
   const { register } = useAuth();
   const { site, ready } = usePlatformSite();
@@ -646,6 +667,7 @@ function RegisterPageContent() {
         phoneNational,
         accountKind,
         intentParam || undefined,
+        planParam || undefined,
       );
 
       if (res.requiresVerification && res.email) {
@@ -881,11 +903,14 @@ function RegisterPageContent() {
               )}
 
               <p className="text-xs text-muted leading-relaxed">
-                À l’ouverture, {accountKind === 'VENDOR' || accountKind === 'BOTH' || intentParam === 'pro' ? 'un compte B2B' : 'un compte B2C'} reçoit des jetons IA d’une valeur de{' '}
-                <strong className="text-foreground">
-                  {formatFc(accountKind === 'VENDOR' || accountKind === 'BOTH' || intentParam === 'pro' ? 20_000 : 10_000)}
-                </strong>
-                .
+                À l’ouverture, ce compte reçoit <strong className="text-foreground">{welcomeSignupGrantLabel(accountKind, intentParam, planParam)}</strong>
+                {accountKind !== 'CLIENT' ? (
+                  <>
+                    . Les managers partagent ce solde ; un compte protocole reçoit 4 jetons à la création.
+                  </>
+                ) : (
+                  <>.</>
+                )}
               </p>
 
               {/* ─── IDENTITÉ ET ORGANISATION (2 COLONNES) ─── */}

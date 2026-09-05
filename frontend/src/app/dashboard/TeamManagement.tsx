@@ -50,13 +50,13 @@ const ROLE_OPTIONS = [
   {
     id: 'MANAGER' as const,
     label: 'Manager',
-    description: 'Gère salles, équipe et événements.',
+    description: 'Gère salles, équipe et événements. Inclus dans les jetons IA de l’organisation.',
     icon: Shield,
   },
   {
     id: 'PROTOCOL' as const,
     label: 'Protocole',
-    description: 'Accueil, check-in et suivi invités.',
+    description: 'Accueil, check-in et suivi invités. Reçoit 4 jetons IA à la création.',
     icon: Briefcase,
   },
   {

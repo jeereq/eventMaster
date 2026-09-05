@@ -116,6 +116,7 @@ interface AuthContextType {
     nationalNumber?: string,
     accountKind?: TenantAccountKind,
     intent?: string,
+    plan?: string,
   ) => Promise<RegisterResult>;
   verifyOtp: (email: string, otp: string, options?: { next?: string | null }) => Promise<void>;
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
@@ -290,6 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     nationalNumber?: string,
     accountKind?: TenantAccountKind,
     intent?: string,
+    plan?: string,
   ) => {
     setLoading(true);
     try {
@@ -307,6 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         referralCode,
         accountKind,
         intent,
+        plan,
       });
       setLoading(false);
       return {

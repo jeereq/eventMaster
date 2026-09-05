@@ -4,9 +4,14 @@ import { calculateTokensForAmount, currentAiTokenPricing } from './aiTokenFlexPa
 import { resolveLedgerAction, type AiTokenAction } from './aiTokenUsageQuery';
 
 export const USER_GRANT_DEVICE_PREFIX = 'user-grant:';
+export const TENANT_GRANT_DEVICE_PREFIX = 'tenant-grant:';
 
 export function userGrantDeviceId(userId: string): string {
   return `${USER_GRANT_DEVICE_PREFIX}${userId}`;
+}
+
+export function tenantGrantDeviceId(tenantId: string): string {
+  return `${TENANT_GRANT_DEVICE_PREFIX}${tenantId.trim()}`;
 }
 
 export function isUnlimitedAiTokenUser(user?: { role?: string; impersonatedBy?: string } | null): boolean {
@@ -310,12 +315,45 @@ async function absorbUserGrantWallet(
   return updated;
 }
 
+async function orgShareDeviceIdForUser(userId?: string | null): Promise<string | null> {
+  if (!userId) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { tenantId: true, orgRole: true },
+  });
+  if (!user?.tenantId) return null;
+  if (user.orgRole === 'PROTOCOL') return null;
+  return tenantGrantDeviceId(user.tenantId);
+}
+
+async function orgGrantedRemaining(deviceId: string | null): Promise<number> {
+  if (!deviceId) return 0;
+  const wallet = await prisma.aiSimulationWallet.findUnique({
+    where: { deviceId },
+    select: { grantedTokens: true },
+  });
+  return Math.max(0, wallet?.grantedTokens ?? 0);
+}
+
+function withOrgGranted(allowance: AiWalletAllowance, orgGranted: number): AiWalletAllowance {
+  if (orgGranted <= 0) return allowance;
+  const grantedTokens = allowance.grantedTokens + orgGranted;
+  const totalRemaining = allowance.totalRemaining + orgGranted;
+  return {
+    ...allowance,
+    grantedTokens,
+    totalRemaining,
+    canSimulate: allowance.unlimited || totalRemaining > 0,
+  };
+}
+
 export async function grantAiTokensToUser(input: {
   userId: string;
   tokensCount: number;
   adminUserId: string;
   relatedId?: string;
   source?: string;
+  deviceId?: string;
 }) {
   const userId = input.userId.trim();
   const tokensCount = Math.max(1, Math.round(input.tokensCount));
@@ -327,7 +365,7 @@ export async function grantAiTokensToUser(input: {
   });
   if (!user) fail(404, 'Utilisateur introuvable.');
 
-  const deviceId = userGrantDeviceId(userId);
+  const deviceId = input.deviceId?.trim() || userGrantDeviceId(userId);
   const relatedId = input.relatedId?.trim() || `grant_${userId}_${Date.now()}`;
   const paid = await paidSummary(deviceId, userId);
 
@@ -374,7 +412,10 @@ export async function getAiSimulationWalletAllowance(
   userId?: string | null,
 ): Promise<AiWalletAllowance> {
   const { wallet, paid } = await ensureAiSimulationWallet(deviceId, userId);
-  return serialize(wallet, paid);
+  const allowance = serialize(wallet, paid);
+  const orgDevice = await orgShareDeviceIdForUser(userId);
+  if (!orgDevice || orgDevice === wallet.deviceId) return allowance;
+  return withOrgGranted(allowance, await orgGrantedRemaining(orgDevice));
 }
 
 function insufficientCreditMessage(need: number, remaining: number) {
@@ -423,8 +464,21 @@ export async function consumeAiSimulationCredit(
   await ensureAiSimulationWallet(cleanDevice, userId);
   const paid = await paidSummary(cleanDevice, userId);
 
+  const orgDevice = await orgShareDeviceIdForUser(userId);
+  const shareOrg = Boolean(orgDevice && orgDevice !== cleanDevice);
+
   const updated = await prisma.$transaction(async (tx) => {
-    const wallet = await lockWalletByDevice(tx, cleanDevice);
+    const lockOrder = shareOrg && orgDevice
+      ? [orgDevice, cleanDevice].sort()
+      : [cleanDevice];
+    const locked = new Map<string, Awaited<ReturnType<typeof lockWalletByDevice>>>();
+    for (const id of lockOrder) {
+      locked.set(id, await lockWalletByDevice(tx, id));
+    }
+
+    const wallet = locked.get(cleanDevice)!;
+    const orgWallet = shareOrg && orgDevice ? locked.get(orgDevice) : undefined;
+
     if (meta?.unlimited) {
       await writeAiTokenLedger(tx, {
         userId,
@@ -435,21 +489,34 @@ export async function consumeAiSimulationCredit(
         pool: 'comp',
         relatedId: meta.relatedId,
       });
-      return wallet;
+      return { wallet, orgGrantedLeft: Math.max(0, orgWallet?.grantedTokens ?? 0) };
     }
 
     const freeRemaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed);
     const bonus = Math.max(0, wallet.bonusTokens);
     const granted = Math.max(0, wallet.grantedTokens ?? 0);
-    const remaining = freeRemaining + bonus + granted;
+    const orgGranted = Math.max(0, orgWallet?.grantedTokens ?? 0);
+    const remaining = freeRemaining + bonus + granted + orgGranted;
     if (remaining < need) {
       fail(402, insufficientCreditMessage(need, remaining));
     }
 
-    const fromBonus = Math.min(need, bonus);
-    const afterBonus = need - fromBonus;
-    const fromGranted = Math.min(afterBonus, granted);
-    const fromFree = afterBonus - fromGranted;
+    let left = need;
+    const fromOrg = Math.min(left, orgGranted);
+    left -= fromOrg;
+    const fromBonus = Math.min(left, bonus);
+    left -= fromBonus;
+    const fromGranted = Math.min(left, granted);
+    left -= fromGranted;
+    const fromFree = left;
+
+    if (orgWallet && fromOrg > 0) {
+      await tx.aiSimulationWallet.update({
+        where: { id: orgWallet.id },
+        data: { grantedTokens: orgGranted - fromOrg },
+      });
+    }
+
     const next = await tx.aiSimulationWallet.update({
       where: { id: wallet.id },
       data: {
@@ -467,14 +534,17 @@ export async function consumeAiSimulationCredit(
       tokensDelta: -need,
       tokensFromFree: fromFree,
       tokensFromBonus: fromBonus,
-      tokensFromGranted: fromGranted,
-      pool: consumePool(fromBonus, fromGranted, fromFree),
+      tokensFromGranted: fromGranted + fromOrg,
+      pool: consumePool(fromBonus, fromGranted + fromOrg, fromFree),
       relatedId: meta?.relatedId,
     });
-    return next;
+    return { wallet: next, orgGrantedLeft: orgGranted - fromOrg };
   });
 
-  return serialize(updated, paid, { unlimited: Boolean(meta?.unlimited) });
+  return withOrgGranted(
+    serialize(updated.wallet, paid, { unlimited: Boolean(meta?.unlimited) }),
+    updated.orgGrantedLeft,
+  );
 }
 
 function tokensToCredit(order: {

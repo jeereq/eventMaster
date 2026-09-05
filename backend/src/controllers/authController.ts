@@ -118,7 +118,7 @@ export async function register(req: Request, res: Response) {
       });
     }
 
-    const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind, intent: rawIntent } = req.body;
+    const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind, intent: rawIntent, plan: rawPlan } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name)' });
@@ -210,8 +210,10 @@ export async function register(req: Request, res: Response) {
     try {
       await grantWelcomeAiTokens({
         userId: result.user.id,
+        tenantId: result.tenant.id,
         accountKind,
         intent: typeof rawIntent === 'string' ? rawIntent : null,
+        planKey: typeof rawPlan === 'string' ? rawPlan : null,
       });
     } catch (grantError) {
       console.error('[register] welcome AI tokens:', grantError);
