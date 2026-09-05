@@ -31,20 +31,39 @@ const OPTIONS: Array<{
 export default function PlanCreationPath({
   value,
   onChange,
+  onPhotoFile,
   photoLocked = false,
   busy = false,
   heading = 'Créer le plan',
 }: {
   value?: PlanCreationPathId;
   onChange: (next: PlanCreationPathId) => void;
+  /** Ouvre le sélecteur de fichier sur « Depuis une photo ». */
+  onPhotoFile?: (file: File) => void;
   photoLocked?: boolean;
   busy?: boolean;
   heading?: string;
 }) {
   const headingId = React.useId();
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <section className="space-y-2 min-w-0" aria-labelledby={headingId} aria-busy={busy || undefined}>
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (!file) return;
+          onPhotoFile?.(file);
+          onChange('photo');
+        }}
+      />
       <h3 id={headingId} className="text-sm font-semibold text-foreground">
         {heading}
       </h3>
@@ -67,6 +86,10 @@ export default function PlanCreationPath({
               disabled={locked || busy}
               onClick={() => {
                 if (locked || busy) return;
+                if (option.id === 'photo') {
+                  photoInputRef.current?.click();
+                  return;
+                }
                 onChange(option.id);
               }}
               className={cn(

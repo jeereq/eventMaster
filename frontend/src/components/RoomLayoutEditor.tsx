@@ -340,6 +340,9 @@ interface RoomLayoutEditorProps {
   paused?: boolean;
   /** Ouvre le panneau d’import photo / lecture IA. */
   focusPlanImport?: boolean;
+  /** Photo déjà choisie (wizard) — lance la lecture IA au montage. */
+  seedPlanPhoto?: File | null;
+  onSeedPlanPhotoConsumed?: () => void;
 }
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
@@ -353,6 +356,8 @@ export default function RoomLayoutEditor({
   editorLevel = 'complete',
   paused = false,
   focusPlanImport = false,
+  seedPlanPhoto = null,
+  onSeedPlanPhotoConsumed,
 }: RoomLayoutEditorProps) {
   const { user, tenant } = useAuth();
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
@@ -493,11 +498,11 @@ export default function RoomLayoutEditor({
   }, [emitBlueprint, syncHistoryFlags, withLoggedAction]);
 
   useEffect(() => {
-    if (!focusPlanImport) return;
+    if (!focusPlanImport && !seedPlanPhoto) return;
     setPlanPath('photo');
     setAccordion('murs-sols');
     window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
-  }, [focusPlanImport]);
+  }, [focusPlanImport, seedPlanPhoto]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -1254,6 +1259,14 @@ export default function RoomLayoutEditor({
     }
   };
 
+  useEffect(() => {
+    if (!seedPlanPhoto || readOnly) return;
+    void readRoomPlanWithAi(seedPlanPhoto);
+    onSeedPlanPhotoConsumed?.();
+    // Une fois par fichier fourni par le wizard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedPlanPhoto]);
+
   const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const effectiveFloorType = blueprint.metadata.floorType ?? activeTheme.defaultFloorType;
   const availableThemes = listAvailableThemes(blueprint);
@@ -1831,10 +1844,14 @@ export default function RoomLayoutEditor({
             value={planPath}
             busy={aiPlanReading}
             photoLocked={!caps.canPlanFromPhoto}
+            onPhotoFile={(file) => {
+              void readRoomPlanWithAi(file);
+            }}
             onChange={(next) => {
               setPlanPath(next);
               if (next === 'photo') {
                 setAccordion('murs-sols');
+                setSelection([]);
                 window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
                 return;
               }
@@ -5035,19 +5052,7 @@ export default function RoomLayoutEditor({
           />
         </label>
       ) : null}
-      {caps.canCustomImages ? (
-        <>
-        <input
-          ref={aiPlanFileRef}
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (file) await readRoomPlanWithAi(file);
-            e.target.value = '';
-          }}
-        />
+      {caps.canPlanFromPhoto ? (
         <button
           type="button"
           disabled={readOnly || aiPlanReading}
@@ -5065,7 +5070,6 @@ export default function RoomLayoutEditor({
           <Sparkles className="w-3.5 h-3.5" aria-hidden />
           {aiPlanReading ? 'Lecture IA…' : 'Lire avec l’IA'}
         </button>
-        </>
       ) : null}
       <button type="button" onClick={clearWalls} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Sans murs</button>
       {caps.fixtureKinds.includes('door') ? (
@@ -5734,9 +5738,26 @@ export default function RoomLayoutEditor({
     />
   );
 
+  const aiPlanFileInput = caps.canPlanFromPhoto && !readOnly ? (
+    <input
+      ref={aiPlanFileRef}
+      type="file"
+      accept="image/*"
+      className="sr-only"
+      tabIndex={-1}
+      aria-hidden
+      onChange={async (e) => {
+        const file = e.target.files?.[0];
+        if (file) await readRoomPlanWithAi(file);
+        e.target.value = '';
+      }}
+    />
+  ) : null;
+
   if (isExpanded) {
     return (
       <>
+        {aiPlanFileInput}
         {ambiencePreviewModal}
         <ImageCropModal
           open={Boolean(cropTarget)}
@@ -5775,6 +5796,7 @@ export default function RoomLayoutEditor({
 
   return (
     <>
+      {aiPlanFileInput}
       {ambiencePreviewModal}
       <ImageCropModal
         open={Boolean(cropTarget)}

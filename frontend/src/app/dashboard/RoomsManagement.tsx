@@ -307,6 +307,7 @@ export default function RoomsManagement() {
   const [blueprintDraft, setBlueprintDraft] = useState<RoomLayoutBlueprint | null>(null);
   const [wizardPlanTab, setWizardPlanTab] = useState<WizardPlanTab>('structure');
   const [focusPlanImport, setFocusPlanImport] = useState(false);
+  const [pendingPlanPhoto, setPendingPlanPhoto] = useState<File | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [farthestStep, setFarthestStep] = useState(1);
   const [nameAttempted, setNameAttempted] = useState(false);
@@ -1545,6 +1546,7 @@ export default function RoomsManagement() {
               : []),
           ];
           const openManualPlan = () => {
+            setPendingPlanPhoto(null);
             setFocusPlanImport(false);
             setWizardPlanTab('editeur');
           };
@@ -1570,6 +1572,7 @@ export default function RoomsManagement() {
                     planFeatures?.roomEditorLevel,
                     planFeatures?.roomThemesFixtures === true,
                   ).canPlanFromPhoto}
+                  onPhotoFile={(file) => setPendingPlanPhoto(file)}
                   onChange={(next) => {
                     if (next === 'photo') {
                       openAiPlan();
@@ -1810,6 +1813,8 @@ export default function RoomsManagement() {
                     allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
                     editorLevel={planFeatures?.roomEditorLevel}
                     focusPlanImport={focusPlanImport}
+                    seedPlanPhoto={pendingPlanPhoto}
+                    onSeedPlanPhotoConsumed={() => setPendingPlanPhoto(null)}
                   />
                 ) : null}
               </div>
