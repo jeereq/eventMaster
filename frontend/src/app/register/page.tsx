@@ -539,12 +539,7 @@ function welcomeSignupGrantLabel(
   rules: WelcomeGrantRules = DEFAULT_WELCOME_AI_GRANTS,
 ): string {
   const planKey = (plan || '').toUpperCase();
-  if (
-    accountKind === 'CLIENT' ||
-    accountKind === 'VENDOR' ||
-    accountKind === 'BOTH' ||
-    CATALOG_PLAN_KEYS.has(planKey)
-  ) {
+  if (accountKind !== 'ORGANIZER' || CATALOG_PLAN_KEYS.has(planKey)) {
     return formatWelcomeGrantAmount(rules.catalog, formatFc);
   }
   if (ENTERPRISE_PLAN_KEYS.has(planKey)) {
