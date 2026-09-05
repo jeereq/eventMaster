@@ -49,7 +49,7 @@ import {
  ensureMandatoryRsvpFields,
  ensureMandatoryRsvpFieldsOnElements,
  validateRsvpFieldsForReporting,
- getCanvasStyle,
+ getStudioPreviewStyle,
 } from '@/lib/rsvpFormFields';
 import {
  INVITATION_GOOGLE_FONTS_HREF,
@@ -2267,7 +2267,7 @@ export default function TemplatesPage() {
  )}
 
  {/* Editor Workspace — canvas leads; denser sticky rails support */}
- <div className="grid grid-cols-1 lg:grid-cols-[minmax(14rem,16rem)_minmax(0,1fr)_minmax(15rem,18rem)] gap-4 lg:gap-5 items-start">
+ <div className="grid grid-cols-1 lg:grid-cols-[minmax(13rem,15rem)_minmax(0,1fr)_minmax(14rem,16rem)] gap-4 lg:gap-5 items-start">
  {/* Left Toolbox — Contenu | Style */}
  <aside className="order-2 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
  <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Outils du studio">
@@ -2677,7 +2677,7 @@ export default function TemplatesPage() {
  <div 
  style={{
  ...getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern),
- ...getCanvasStyle({ canvasSizePreset, canvasWidth, canvasHeight }),
+ ...getStudioPreviewStyle({ canvasSizePreset, canvasWidth, canvasHeight }),
  }}
  className={`border border-border p-8 shadow-md relative overflow-hidden transition-all duration-300 ${
  frameType === 'arch' ? 'rounded-t-[240px] border border-amber-200/60' : 'rounded-3xl'
@@ -3337,7 +3337,7 @@ export default function TemplatesPage() {
  </div>
 
  {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
- <div className="w-full space-y-3" style={{ maxWidth: `${canvasWidth}px` }}>
+ <div className="w-full space-y-3" style={{ maxWidth: 'min(100%, 42rem)' }}>
  <p className="text-center text-[10px] font-bold uppercase tracking-wider text-primary">
  Formulaire RSVP sous la carte
  </p>

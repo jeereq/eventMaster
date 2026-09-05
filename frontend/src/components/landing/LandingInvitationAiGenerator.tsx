@@ -648,7 +648,7 @@ export default function LandingInvitationAiGenerator({
 
           <div
             id={`${id}-body`}
-            className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] gap-0 xl:divide-x divide-border"
+            className="grid grid-cols-1 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] gap-0 xl:divide-x divide-border"
           >
         {/* Compose */}
         <div className="p-4 sm:p-6 space-y-4">
@@ -1078,7 +1078,7 @@ export default function LandingInvitationAiGenerator({
         {/* Preview rail */}
         <aside
           ref={resultRef}
-          className="bg-surface-muted/35 p-4 sm:p-6 flex flex-col min-h-[22rem] xl:min-h-full"
+          className="bg-surface-muted/35 p-4 sm:p-6 flex flex-col min-h-[32rem] xl:min-h-[min(80vh,48rem)]"
           aria-live="polite"
         >
           <div className="flex items-center justify-between gap-2 mb-3">
@@ -1220,7 +1220,7 @@ export default function LandingInvitationAiGenerator({
                     showCaption={false}
                     fitMode={coverFitMode}
                     aspectRatio="9/16"
-                    className="!w-full !max-w-[320px] sm:!max-w-[340px]"
+                    className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)]"
                   />
                 </div>
               )}
@@ -1234,7 +1234,7 @@ export default function LandingInvitationAiGenerator({
                     showCaption={!resultEmbedText}
                     fitMode={coverFitMode}
                     aspectRatio="9/16"
-                    className="!w-full !max-w-[320px] sm:!max-w-[340px]"
+                    className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)]"
                   />
                   <div className="px-2 py-1 text-center">
                     <p className="text-[11px] text-muted">
@@ -1441,7 +1441,7 @@ export default function LandingInvitationAiGenerator({
         onClose={() => setPreviewOpen(false)}
         title="Aperçu de votre invitation IA"
         description="Rendu proche de l’éditeur. Vous pourrez tout ajuster dans le studio."
-        size="lg"
+        size="xl"
         footer={
           <div className="flex w-full flex-col-reverse sm:flex-row gap-2 sm:justify-end">
             <Button type="button" variant="secondary" onClick={() => setPreviewOpen(false)}>
@@ -1503,7 +1503,7 @@ export default function LandingInvitationAiGenerator({
                 showCaption={previewTab === 'artwork' && !resultEmbedText}
                 fitMode={coverFitMode}
                 aspectRatio="9/16"
-                className="!max-h-[min(70vh,640px)] !max-w-[360px]"
+                className="!w-full !max-w-[min(100%,28rem)] sm:!max-w-[min(100%,32rem)] !max-h-[min(82vh,52rem)]"
               />
             </div>
           </div>

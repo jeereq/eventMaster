@@ -475,6 +475,20 @@ export function getCanvasStyle(global?: {
   };
 }
 
+/** Aperçu studio : plus large que le format logique, ratio conservé. */
+export function getStudioPreviewStyle(global?: {
+  canvasSizePreset?: CanvasSizePreset;
+  canvasWidth?: number;
+  canvasHeight?: number;
+}): { width: string; maxWidth: string; aspectRatio: string } {
+  const { width, height } = getCanvasDimensions(global);
+  return {
+    width: '100%',
+    maxWidth: 'min(100%, 42rem)',
+    aspectRatio: `${width} / ${height}`,
+  };
+}
+
 export function parseFieldOptions(options?: string): string[] {
   if (!options) return [];
   return options.split(',').map((o) => o.trim()).filter(Boolean);

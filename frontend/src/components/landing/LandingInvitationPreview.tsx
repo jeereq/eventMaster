@@ -397,7 +397,7 @@ export default function LandingInvitationPreview({
           : isCompact
             ? 'min-h-[180px] max-h-[240px] p-3'
             : is916
-              ? 'w-full max-w-[340px] sm:max-w-[360px] mx-auto aspect-[9/16] justify-end'
+              ? 'w-full max-w-[min(100%,28rem)] sm:max-w-[min(100%,32rem)] mx-auto aspect-[9/16] justify-end'
               : 'p-6 sm:p-8 min-h-[280px] max-h-[min(520px,70vh)]',
         className,
       )}

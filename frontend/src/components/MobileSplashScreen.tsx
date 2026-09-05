@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { PartyPopper } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 
 const STORAGE_KEY = 'em_mobile_splash_seen_v1';
-const MIN_SHOW_MS = 900;
-const MAX_SHOW_MS = 1600;
+const MIN_SHOW_MS = 1100;
+const MAX_SHOW_MS = 2000;
 
 function isMobileViewport() {
   if (typeof window === 'undefined') return false;
@@ -25,13 +24,14 @@ function prefersReducedMotion() {
 }
 
 /**
- * Splash d’accueil mobile / PWA — affiché une fois par session.
- * Nom de plateforme volontairement compact.
+ * Splash d’accueil mobile / PWA — une fois par session.
+ * Marque lisible, zone sûre (encoche), possible de passer.
  */
 export default function MobileSplashScreen() {
   const { site } = usePlatformSite();
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const finishRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -42,7 +42,6 @@ export default function MobileSplashScreen() {
       /* private mode */
     }
 
-    // Reduced motion : marque comme vu sans bloquer l’interface.
     if (prefersReducedMotion()) {
       try {
         sessionStorage.setItem(STORAGE_KEY, '1');
@@ -73,9 +72,10 @@ export default function MobileSplashScreen() {
           } catch {
             /* ignore */
           }
-        }, 320);
+        }, 280);
       }, wait);
     };
+    finishRef.current = finish;
 
     const maxTimer = window.setTimeout(finish, MAX_SHOW_MS);
     if (document.readyState === 'complete') {
@@ -96,41 +96,55 @@ export default function MobileSplashScreen() {
 
   const name = site.platformName || 'EventMaster';
 
+  const dismissNow = () => {
+    finishRef.current();
+  };
+
   return (
     <div
       role="status"
       aria-live="polite"
       aria-busy={!leaving}
       aria-label={`Chargement ${name}`}
-      inert={!leaving ? true : undefined}
       className={cn(
-        'fixed inset-0 z-[10050] flex flex-col items-center justify-center md:hidden',
-        'bg-[radial-gradient(120%_80%_at_50%_20%,color-mix(in_oklab,var(--primary)_28%,transparent),transparent_55%),var(--background)]',
+        'fixed inset-0 z-[10050] flex flex-col items-center justify-center',
+        'bg-[radial-gradient(120%_80%_at_50%_18%,color-mix(in_oklab,var(--primary)_32%,transparent),transparent_58%),var(--background)]',
+        'px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]',
         'transition-opacity duration-300 ease-out motion-reduce:transition-none',
         leaving ? 'opacity-0 pointer-events-none' : 'opacity-100',
       )}
     >
       <div
         className={cn(
-          'flex flex-col items-center gap-3 px-6 text-center transition duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none',
+          'flex flex-col items-center gap-4 w-full max-w-[20rem] text-center transition duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none',
           leaving ? 'scale-[0.98] opacity-0' : 'scale-100 opacity-100',
         )}
       >
-        <span className="w-12 h-12 rounded-2xl bg-primary-solid text-primary-foreground shadow-sm flex items-center justify-center">
-          <PartyPopper className="w-5 h-5" aria-hidden />
+        <span className="w-16 h-16 rounded-[1.25rem] bg-primary-solid text-primary-foreground shadow-md flex items-center justify-center overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element -- marque PWA, pas de hop next/image */}
+          <img src="/icon.svg" alt="" width={36} height={36} className="w-9 h-9" />
         </span>
-        <p className="text-sm font-bold tracking-tight text-foreground leading-none max-w-[14rem] truncate">
-          {name}
-        </p>
-        {site.platformTagline ? (
-          <p className="text-[10px] font-medium text-muted leading-snug max-w-[16rem] line-clamp-2 break-words">
-            {site.platformTagline}
+        <div className="space-y-1.5 w-full">
+          <p className="text-xl font-bold tracking-tight text-foreground leading-tight break-words">
+            {name}
           </p>
-        ) : null}
+          {site.platformTagline ? (
+            <p className="text-xs font-medium text-muted leading-snug break-words">
+              {site.platformTagline}
+            </p>
+          ) : null}
+        </div>
         <span
-          className="mt-3 w-5 h-5 rounded-full border-2 border-primary/30 border-t-primary animate-spin motion-reduce:animate-none"
+          className="mt-1 w-7 h-7 rounded-full border-2 border-primary/30 border-t-primary animate-spin motion-reduce:animate-none"
           aria-hidden
         />
+        <button
+          type="button"
+          onClick={dismissNow}
+          className="mt-2 min-h-11 px-4 rounded-[var(--radius-button)] text-sm font-medium text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          Passer
+        </button>
       </div>
     </div>
   );

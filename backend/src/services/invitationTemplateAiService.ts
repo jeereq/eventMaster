@@ -75,8 +75,8 @@ Schéma exact :
     "composition": "layout / cadrage observé",
     "hasPeople": true | false,
     "peopleCount": 0,
-    "peopleFaces": "none | per person: age range if visible, precise face shape, EYES (iris color, eyelid crease, gaze, catchlights), SMILE (closed/half/teeth, dimples, lip asymmetry, cupid bow), CHEEKS (volume, apple, nasolabial softness), brows, nose, jawline, distinctive marks — OBSERVED only, never beautified",
-    "faceLandmarks": "none | detailed likeness landmarks: bone structure, eye spacing & slant, exact smile geometry, natural cheek plumpness, facial hair lines, scars/moles — sufficient to guarantee 100% identity lock without slimming or symmetrizing",
+    "peopleFaces": "none | PERSON 1 / PERSON 2 (label left-to-right): sex if visible, apparent age, face shape, EYES (iris color, crease, gaze, catchlights), SMILE (closed/half/teeth, dimples, lip asymmetry), CHEEKS, brows, nose, jaw, marks — OBSERVED pixels only, never idealized",
+    "faceLandmarks": "none | lock list: bone structure, eye spacing & slant, smile geometry, cheek volume, facial hair, scars/moles — enough to refuse lookalikes; if a trait is unclear write unclear",
     "skinTones": "none | precise observed skin tone(s) per person (e.g. rich warm mahogany Fitzpatrick VI, golden warm caramel, deep ebony) — STRICT FIDELITY, NEVER lighten or shift tone",
     "hairStyles": "none | hair length, texture (4C curls, precise taper fade, braids bun, dreadlocks), hairline OBSERVED per person",
     "clothingStyles": "none | garment cuts, fabrics (wax pagne, tailored tux, royal satin, embroidery), colors, accessories OBSERVED — preserve faithfully",
@@ -116,20 +116,19 @@ Schéma exact :
       "imageUrl": "https://..."
     }
   ],
-  "backgroundPrompt": "English prompt. If card clone: specify CLONED INVITATION CARD LAYOUT with exact borders/textures. If people: start with IDENTITY LOCK + face inventory from refs, THEN USER BRIEF for décor only. If no people: USER BRIEF then décor."
+  "backgroundPrompt": "English décor-only notes. If card clone: cloned borders/textures. If people: USER BRIEF (décor) only — do not rewrite faces. If no people: USER BRIEF then décor."
 }
 
 Règles brief :
 - Si copie/clonage de carte : backgroundPrompt DOIT intégrer la réplication des bordures, dorures et fonds de la carte de référence.
-- S’il y a des personnes : backgroundPrompt DOIT commencer par "IDENTITY LOCK & PHOTOREALISM:" (anglais) — les photos de référence sont l'unique source de vérité pour l'identité faciale ; puis "FACE INVENTORY:" (traits anatomiques observés, carnation, coiffure) ; puis "USER BRIEF:" (décor/ambiance d'invitation seulement).
+- S’il y a des personnes : backgroundPrompt = DÉCOR SEULEMENT (papier, floraux, lumière, cadre). N’y décris PAS les visages — l’identité vient des pixels des photos. Commence par "USER BRIEF (décor):".
 - S’il n’y a PAS de personnes : commence par "USER BRIEF:" puis décor somptueux sans présence humaine.
 - Applique chaque besoin du brief pour le décor (ambiance, couleurs, fioritures, sobriété, luxe, floral).
 - Si le brief et les refs divergent : brief = décor & ambiance ; refs = visages / peau / cheveux / habits (sauf demande EXPLICITE contraire sur habits/cheveux).
 
 Règles personnes (non négociables) :
-- Si hasPeople=true : LOCK d’identité absolu — même personne(s) que sur les photos, ressemblance photographique stricte à 100%.
-- Interdit : stock models, « couple générique », embellissement IA, lissage excessif, blanchiment de peau, changement d’âge/ethnie/traits, morphing, autre visage « proche ».
-- peopleFaces + faceLandmarks doivent être assez détaillés pour verrouiller la géométrie du visage.
+- Si hasPeople=true : les PIXELS des photos = vérité. peopleFaces / faceLandmarks = liste de verrouillage, pas un brief de « joli visage ».
+- Interdit : lookalike, célébrité, stock model, embellissement, lissage, blanchiment, autre âge/ethnie, sourire inventé.
 - Si hasPeople=false : aucune personne, aucun visage, aucune silhouette. Décor uniquement.
 
 Règles layout :
@@ -245,9 +244,9 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
     ? v.colors.filter((c): c is string => typeof c === 'string').slice(0, 8)
     : [];
   const peopleFaces =
-    typeof v.peopleFaces === 'string' ? v.peopleFaces.slice(0, 700) : '';
+    typeof v.peopleFaces === 'string' ? v.peopleFaces.slice(0, 1400) : '';
   const faceLandmarks =
-    typeof v.faceLandmarks === 'string' ? v.faceLandmarks.slice(0, 700) : '';
+    typeof v.faceLandmarks === 'string' ? v.faceLandmarks.slice(0, 1400) : '';
   const skinTones =
     typeof v.skinTones === 'string' ? v.skinTones.slice(0, 400) : '';
   const hairStyles =
@@ -305,7 +304,7 @@ const FACE_POLICY_NO_PEOPLE =
   'FACE POLICY: Prefer decorative artwork. If any person still appears, they MUST follow the RDC representation default: Black African men and/or women only — never Caucasian stock models.';
 
 const FACE_POLICY_KEEP_PEOPLE =
-  'IDENTITY LOCK & ULTRA-REALISM (HIGHEST PRIORITY): The attached reference photo(s) are the ABSOLUTE GROUND TRUTH for who appears. Copy each person\'s exact facial identity — bone structure, eyes, brows, nose, lips, jaw, natural skin tone (rich melanin / bronze / caramel / mahogany / deep ebony undertones intact with natural skin pores, realistic subsurface scattering — NEVER lighten, bleach, or change ethnicity), age appearance, expression, hairstyle (braids, fade, locs, afro, curls, smooth bun) and attire. Authentic 35mm photograph aesthetic with natural depth of field and warm ambient celebration lighting. MICRO-FEATURES (DO NOT BEAUTIFY): EYES — exact iris color, eyelid crease, lash density, sclera, catchlight position and gaze; never enlarge or doll-eye. SMILE / MOUTH — copy the exact smile (closed, half, teeth, dimples, lip asymmetry, cupid\'s bow); do not widen, straighten, or invent a grin. CHEEKS — preserve natural cheek volume, apple of the cheek, nasolabial softness and any plumpness; do not slim, contour, or flatten. STRICTLY FORBIDDEN: plastic AI skin smoothing, airbrushing, beauty filter, CGI/3D render look, doll-like faces, symmetrized "pretty" face, face swap, age alteration, ethnicity shift, skin tone correction, anime/illustration face, or "lookalike" substitute. Only the luxury background, invitation card border, lighting ambiance, and florals may follow the user brief.';
+  'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
 
 function buildImagePrompt(
   userPrompt: string,
@@ -321,9 +320,8 @@ function buildImagePrompt(
   );
 
   const parts: string[] = [
-    'Create ONE luxury vertical print-ready invitation card artwork (portrait orientation 1024x1536 / 9:16).',
-    'PHOTOGRAPHIC REALISM REQUIREMENT: Hyper-realistic 35mm fine-grain photography aesthetic, natural skin micro-textures with visible pores, realistic lighting highlights on melanin skin tones, organic fabric drape (wax, satin, velvet, lace), authentic warm ambient event lighting (candles, chandeliers, golden hour). STRICTLY PROHIBIT 3D CGI plastic rendering, cartoonish styling, doll-like faces, or airbrushed beauty smoothing.',
-    'PROPORTIONAL & AUTHENTIC COMPOSITION (NO OVER-REDESIGN): Keep the visual clean, organic, and photographically balanced. Do NOT add artificial cluttered borders, excessive gaudy graphic stickers, fake 3D digital elements, or heavy opaque banners. Maintain natural photographic proportions (aspect ratio 9:16) with generous negative space so the subjects and the real setting remain the centerpiece.',
+    'Create ONE vertical print-ready invitation artwork (9:16, 1024x1536).',
+    'Photoreal 35mm: natural pores, real fabric drape. No CGI, cartoon, or airbrushed beauty faces.',
   ];
 
   if (isClone) {
@@ -336,32 +334,27 @@ function buildImagePrompt(
 
   if (hasPeople) {
     parts.push(
-      '=== STRICT IDENTITY LOCK (ABSOLUTE PRIORITY OVER DÉCOR) ===',
-      'The reference image(s) show REAL PEOPLE whose faces MUST be reproduced with 100% photographic likeness and zero alteration.',
       FACE_POLICY_KEEP_PEOPLE,
+      `People count (must match refs): ${analysis?.peopleCount ?? 1}. Same people, same relative placement.`,
     );
     if (analysis) {
-      parts.push(`People count: ${analysis.peopleCount}`);
       if (analysis.peopleFaces && analysis.peopleFaces !== 'none') {
-        parts.push(`Face inventory (match exactly): ${analysis.peopleFaces}`);
+        parts.push(`FACE INVENTORY (lock, do not beautify): ${analysis.peopleFaces}`);
       }
       if (analysis.faceLandmarks && analysis.faceLandmarks !== 'none') {
-        parts.push(`Likeness landmarks (match exactly): ${analysis.faceLandmarks}`);
+        parts.push(`LANDMARKS (lock): ${analysis.faceLandmarks}`);
       }
       if (analysis.skinTones && analysis.skinTones !== 'none') {
-        parts.push(`Skin tones (exact, NEVER lighten): ${analysis.skinTones}`);
+        parts.push(`Skin (never lighten): ${analysis.skinTones}`);
       }
       if (analysis.hairStyles && analysis.hairStyles !== 'none') {
-        parts.push(`Hair (exact texture & styling): ${analysis.hairStyles}`);
+        parts.push(`Hair: ${analysis.hairStyles}`);
       }
       if (analysis.clothingStyles && analysis.clothingStyles !== 'none') {
-        parts.push(`Clothing (exact styling & fabrics): ${analysis.clothingStyles}`);
+        parts.push(`Clothes: ${analysis.clothingStyles}`);
       }
     }
-    parts.push(
-      '=== DÉCOR & AMBIANCE (secondary — build luxury invitation setting around the subjects) ===',
-      brief,
-    );
+    parts.push('USER BRIEF (décor / card only — never rewrite faces):', brief);
   } else {
     parts.push(
       'FIDELITY RULE: No reference faces. If the brief implies hosts, a couple or guests, depict Black African men and/or women only.',
@@ -385,7 +378,7 @@ function buildImagePrompt(
     parts.push(`Must change (brief only — never faces unless explicit): ${analysis.briefMustChange.join('; ')}`);
   }
 
-  parts.push(`Design execution notes: ${backgroundPrompt.slice(0, 1400)}`);
+  parts.push(`Décor notes: ${backgroundPrompt.slice(0, hasPeople ? 700 : 1400)}`);
 
   if (analysis) {
     if (analysis.style) parts.push(`Reference décor style: ${analysis.style}`);
@@ -408,7 +401,7 @@ function buildImagePrompt(
       'No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).',
     );
   }
-  return parts.join('\n').slice(0, 5000);
+  return parts.join('\n').slice(0, hasPeople ? 4200 : 5000);
 }
 
 function structureSystemPrompt(embedText: boolean): string {
@@ -440,11 +433,11 @@ ${prompt.slice(0, 1500)}
 ${hasRefs ? '' : 'AUCUNE IMAGE DE RÉFÉRENCE : compose uniquement à partir du brief (décor + textes). hasPeople=false.'}
 
 Tâches (fidélité stricte — PRIORITÉ VISAGES) :
-1) S’il y a des personnes : inventaire facial DÉTAILLÉ (peopleFaces + faceLandmarks) — yeux (iris, regard, reflets), sourire exact, volume des joues, teinte de peau, cheveux, habits. Ne déduis rien d’invisible. Ne « préttifie » pas.
+1) S’il y a des personnes : inventaire facial OBSERVÉ (peopleFaces + faceLandmarks) — une fiche par personne, gauche → droite. Yeux, sourire exact, joues, peau, cheveux, habits. Ne déduis rien d’invisible. Ne « préttifie » pas.
 2) Liste briefNeeds = besoins EXPLICITEMENT écrits ; briefMustKeep / briefMustChange (décor vs personnes).
 3) Renseigne hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
 4) Produis le JSON (structure éditeur + backgroundPrompt).
-5) backgroundPrompt : si personnes → commence par "IDENTITY LOCK:" + "FACE INVENTORY:" puis "USER BRIEF:" (décor seulement). Sinon → "USER BRIEF:" puis décor.
+5) backgroundPrompt : si personnes → DÉCOR UNIQUEMENT ("USER BRIEF (décor):"). L’identité faciale ne doit PAS être réécrite dans ce champ. Sinon → "USER BRIEF:" puis décor.
 ${options?.embedText ? '6) INCRUSTER le texte du brief (noms, date, lieu) dans backgroundPrompt comme typographie d’invitation.' : ''}`,
     },
     ...imageUrls.slice(0, 4).map((url) => ({
@@ -640,14 +633,7 @@ async function generateImageWithGpt56Luna(
 
   // Refs d’abord quand il y a des personnes : ancre mieux l’identité faciale.
   const identityPreamble = hasPeople
-    ? `CRITICAL MANDATE - STRICT IDENTITY LOCK & HYPER-REALISM:
-The following reference image(s) show REAL PEOPLE. When you invoke the image_generation tool:
-1. 100% PHOTOGRAPHIC FACIAL LIKENESS: Maintain complete photographic likeness and exact facial identity of each subject.
-2. RAW 35MM REALISM: True-to-life organic skin texture with fine visible pores, natural melanin undertones (rich caramel, bronze, mahogany, deep ebony) with natural soft highlights, authentic eye reflections, natural hair strand textures, and authentic clothing fabrics (wax, satin, velvet, lace).
-3. MICRO-FEATURES (DO NOT BEAUTIFY): Copy the exact eyes (iris, crease, lashes, sclera, catchlight, gaze — never doll-eye), the exact smile (closed/half/teeth, dimples, lip asymmetry — do not invent a grin), and natural cheek volume (apple, nasolabial softness — do not slim or contour).
-4. STRICTLY FORBIDDEN: Airbrushed beauty filters, plastic skin, doll-like faces, CGI 3D looks, face swapping, or ethnicity/age shifting.
-5. INVITATION CLONING: If a reference card is provided or requested, faithfully replicate its layout, arches, borders, and decorative filigree.
-6. Seamlessly integrate the original subject(s) into the luxury vertical invitation card artwork requested in the brief.\n\n${imagePrompt}`
+    ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
     : imagePrompt;
 
   const content: Array<Record<string, unknown>> = hasPeople
@@ -662,9 +648,9 @@ The following reference image(s) show REAL PEOPLE. When you invoke the image_gen
           text: `${identityPreamble}
 
 OUTPUT RULES (faces first):
-- Edit/compose from the reference image(s) above — keep the SAME faces, not lookalikes.
 - ${faceBlock}
-- Brief controls décor/ambiance only; never restyle or replace faces to match décor.
+- Same person count and left-to-right order as the references.
+- Brief = décor / card only.
 - ${textRule}`,
         },
       ]
@@ -694,6 +680,7 @@ OUTPUT RULES:
         action: imageAction,
         size: '1024x1536',
         quality: imageQuality,
+        ...(hasPeople && refDataUrls.length ? { input_fidelity: 'high' } : {}),
       },
     ],
     input: [{ role: 'user', content }],
@@ -723,6 +710,27 @@ OUTPUT RULES:
           type: 'image_generation',
           action: imageAction,
           size: 'auto',
+          quality: imageQuality,
+          ...(hasPeople && refDataUrls.length ? { input_fidelity: 'high' } : {}),
+        },
+      ];
+      response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...body, tools: retryTools }),
+      });
+      payload = (await response.json().catch(() => ({}))) as typeof payload;
+    }
+
+    if (!response.ok && /fidelity/i.test(String(payload.error?.message || ''))) {
+      const retryTools = [
+        {
+          type: 'image_generation',
+          action: imageAction,
+          size: '1024x1536',
           quality: imageQuality,
         },
       ];
@@ -868,7 +876,7 @@ async function generateBackgroundFromReference(
   const imageBytes = await downloadImageAsPngBuffer(referenceUrl);
   const form = new FormData();
   form.append('model', editModel);
-  form.append('prompt', imagePrompt.slice(0, 1000));
+  form.append('prompt', imagePrompt.slice(0, 3200));
   form.append('n', '1');
   form.append('size', '1024x1024');
   if (isDallEModel(editModel)) {
@@ -958,26 +966,11 @@ async function generateImageWithNanoBanana(
   }
 
   const promptText = hasPeople
-    ? `CRITICAL MANDATE - NANO BANANA CHARACTER CONSISTENCY & ULTRA-REALISM:
-The attached reference photo(s) depict REAL PEOPLE who must appear on this luxury vertical invitation card.
-1. ABSOLUTE FACIAL & CHARACTER FIDELITY: Maintain 100% photographic facial likeness and identity of each person.
-2. RAW 35mm PHOTOGRAPHY: Hyper-realistic photo quality, natural skin micro-texture, visible pores, lifelike melanin undertones (NEVER lighten, bleach, or change ethnicity), authentic eye catchlights, natural hair strand textures, realistic fabrics (wax, satin, velvet, lace).
-3. MICRO-FEATURES: Copy the exact smile, eye geometry/gaze, and natural cheek plumpness — never beautify or slim the face.
-4. INVITATION CARD CLONING: If an invitation card sample was provided in the references, faithfully replicate its layout, ornamental borders, arches, paper textures, and aesthetic harmony.
-5. PROPORTIONAL COMPOSITION & NO OVER-REDESIGN: Avoid gaudy digital overlays, heavy artificial graphics, fake 3D stickers, or clutter. Let the authentic human subjects and luxury venue shine with clean, proportional 9:16 portrait spatial hierarchy.
-6. STRICTLY FORBIDDEN: Generic models, airbrushed plastic skin, face swap, doll-like features, 3D CGI look, or altered bone structure.
-7. COMPOSITION: Seamlessly integrate the original subject(s) into the luxury vertical 9:16 invitation card artwork.
-${options?.embedText ? '8. EMBEDDED TEXT: Render sharp invitation typography from the brief on the card, never over faces.' : ''}
-
+    ? `Use the attached photos as identity. Keep the SAME faces — pixels win. Do not beautify or replace with lookalikes.
+${options?.embedText ? 'Embed invitation typography from the brief; never cover faces.\n' : ''}
 ${imagePrompt}`
-    : `CRITICAL MANDATE - NANO BANANA LUXURY INVITATION ARTWORK & CARD CLONING:
-Generate a breathtaking, ultra-high-definition vertical 9:16 luxury invitation artwork.
-- REALISTIC TEXTURES: Fine luxury paper grain, metallic gold foil embossing, soft dimensional depth, natural floral arrangements.
-- INVITATION CLONING: If reference images contain an existing invitation card, faithfully reproduce its framing, ornaments, color scheme, and aesthetic composition.
-- NO OVER-REDESIGN: Clean, refined, high-end photographic print aesthetic without cheap digital artifacts or gaudy fake 3D overlays. Maintain balanced proportional sizes.
-- REPRESENTATION: If any people appear, they MUST be Black African men and/or women (natural melanin). Never invent Caucasian / white stock-model faces.
-${options?.embedText ? '- EMBEDDED TEXT: Render sharp invitation typography from the brief (names, date, venue) as part of the artwork.' : ''}
-
+    : `Vertical 9:16 luxury invitation. Photoreal paper and florals. If people appear, Black African hosts only — never Caucasian stock faces.
+${options?.embedText ? 'Embed invitation typography from the brief.\n' : ''}
 ${imagePrompt}`;
 
   const controller = new AbortController();
@@ -987,9 +980,7 @@ ${imagePrompt}`;
     let b64: string | null = null;
 
     // Tentative 1 : Google Interactions API (API native de Nano Banana avec support format portrait 9:16)
-    const interactionInput: Array<{ type: string; text?: string; data?: string; mime_type?: string }> = [
-      { type: 'text', text: promptText },
-    ];
+    const interactionInput: Array<{ type: string; text?: string; data?: string; mime_type?: string }> = [];
     for (const img of refImages) {
       interactionInput.push({
         type: 'image',
@@ -997,6 +988,7 @@ ${imagePrompt}`;
         mime_type: img.mimeType,
       });
     }
+    interactionInput.push({ type: 'text', text: promptText });
 
     const interactionPayload = {
       model,
@@ -1044,9 +1036,7 @@ ${imagePrompt}`;
 
     // Tentative 2 : Standard generateContent API avec responseModalities IMAGE si Interactions n'a pas renvoyé de b64
     if (!b64) {
-      const generateParts: Array<Record<string, unknown>> = [
-        { text: promptText },
-      ];
+      const generateParts: Array<Record<string, unknown>> = [];
       for (const img of refImages) {
         generateParts.push({
           inline_data: {
@@ -1055,6 +1045,7 @@ ${imagePrompt}`;
           },
         });
       }
+      generateParts.push({ text: promptText });
 
       const generateRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
