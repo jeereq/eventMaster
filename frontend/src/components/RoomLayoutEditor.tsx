@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Pencil,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -326,6 +326,8 @@ interface RoomLayoutEditorProps {
   editorLevel?: string | null;
   /** Coupe le rendu 3D sans démonter l’éditeur (historique conservé). */
   paused?: boolean;
+  /** Ouvre le panneau d’import photo / lecture IA. */
+  focusPlanImport?: boolean;
 }
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
@@ -338,6 +340,7 @@ export default function RoomLayoutEditor({
   allowThemesFixtures = true,
   editorLevel = 'complete',
   paused = false,
+  focusPlanImport = false,
 }: RoomLayoutEditorProps) {
   const { user, tenant } = useAuth();
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
@@ -475,6 +478,14 @@ export default function RoomLayoutEditor({
     skipHistoryRef.current = false;
     syncHistoryFlags();
   }, [emitBlueprint, syncHistoryFlags, withLoggedAction]);
+
+  useEffect(() => {
+    if (!focusPlanImport) return;
+    setAccordion('murs-sols');
+    window.requestAnimationFrame(() => {
+      document.getElementById('plan-import-ia')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }, [focusPlanImport]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -1170,15 +1181,6 @@ export default function RoomLayoutEditor({
     let imageUrl = blueprint.metadata.floorImageUrl;
     if (file) {
       imageUrl = await resolvePlanImageUrl(file);
-      updateBlueprint({
-        ...latestBlueprintRef.current,
-        metadata: {
-          ...latestBlueprintRef.current.metadata,
-          floorImageUrl: imageUrl,
-          floorType: 'custom',
-          floorImageFit: 'cover',
-        },
-      }, { message: 'Plan de salle importé depuis l’image', kind: 'settings' });
     }
     if (!imageUrl) {
       setAiPlanError('Importez d’abord une photo ou un scan du plan.');
@@ -1789,6 +1791,55 @@ export default function RoomLayoutEditor({
     if (!selected) {
       return (
         <div className="space-y-4">
+          <section className="space-y-2" aria-labelledby="plan-creation-heading">
+            <h3 id="plan-creation-heading" className="text-sm font-semibold text-foreground">
+              Comment créer le plan
+            </h3>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAccordion(accordion === 'murs-sols' ? 'batiment' : accordion)}
+                className={cn(
+                  'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  'border-border bg-surface hover:bg-surface-muted',
+                )}
+              >
+                <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-primary" aria-hidden />
+                  À la main
+                </p>
+                <p className="text-xs text-muted mt-1 leading-snug">
+                  Placez tables, murs et décor avec les outils. Rien n’est inventé.
+                </p>
+              </button>
+              <button
+                type="button"
+                disabled={readOnly || !caps.canCustomImages}
+                onClick={() => {
+                  setAccordion('murs-sols');
+                  window.requestAnimationFrame(() => {
+                    document.getElementById('plan-import-ia')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  });
+                }}
+                className={cn(
+                  'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  focusPlanImport
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/25'
+                    : 'border-border bg-surface hover:bg-surface-muted',
+                )}
+              >
+                <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" aria-hidden />
+                  Depuis une photo
+                </p>
+                <p className="text-xs text-muted mt-1 leading-snug">
+                  L’IA pose uniquement ce qui est visible — emplacements, couleurs, matières. {AI_ROOM_PLAN_TOKEN_COST} jetons.
+                </p>
+              </button>
+            </div>
+          </section>
           {!caps.canThemes ? (
             <Alert variant="warning" title={`Forfait ${caps.label}`}>
               <p>{caps.description}</p>
@@ -1812,6 +1863,64 @@ export default function RoomLayoutEditor({
               
               {accordion === 'murs-sols' && (
                 <div className="p-4 bg-surface space-y-5 border-t border-border">
+                  {caps.canCustomImages ? (
+                    <div
+                      id="plan-import-ia"
+                      className={cn(
+                        'space-y-2 rounded-[var(--radius-card)] border p-3',
+                        focusPlanImport ? 'border-primary bg-primary/5' : 'border-border bg-surface-muted/40',
+                      )}
+                    >
+                      <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
+                        Lire le plan avec l’IA
+                      </p>
+                      <p className={EDITOR_HINT}>
+                        Photo vue du dessus ou scan : l’IA reprend emplacements, couleurs et matières visibles — sans inventer d’or, de portes ou de pétales. {AI_ROOM_PLAN_TOKEN_COST} jetons.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={readOnly || aiPlanReading}
+                          onClick={() => {
+                            if (blueprint.metadata.floorImageUrl) {
+                              void readRoomPlanWithAi();
+                              return;
+                            }
+                            aiPlanFileRef.current?.click();
+                          }}
+                          className={cn(EDITOR_PANEL_BTN, 'bg-primary text-primary-foreground border-primary')}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                          {aiPlanReading
+                            ? 'Lecture en cours…'
+                            : blueprint.metadata.floorImageUrl
+                              ? 'Lire cette image'
+                              : 'Choisir une photo'}
+                        </button>
+                        {blueprint.metadata.floorImageUrl ? (
+                          <button
+                            type="button"
+                            disabled={readOnly || aiPlanReading}
+                            onClick={() => aiPlanFileRef.current?.click()}
+                            className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
+                          >
+                            Autre photo
+                          </button>
+                        ) : null}
+                      </div>
+                      {aiPlanError ? <Alert variant="error">{aiPlanError}</Alert> : null}
+                      {aiPlanWarnings.length > 0 ? (
+                        <Alert variant="warning" title="À vérifier">
+                          <ul className="list-disc pl-4 space-y-1 text-sm">
+                            {aiPlanWarnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        </Alert>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="space-y-3">
                     <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
                 <label className="flex items-center gap-2 min-h-11 text-sm text-muted cursor-pointer">
@@ -2473,67 +2582,6 @@ export default function RoomLayoutEditor({
                         }}
                       />
                     </label>
-                    <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-3">
-                      <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
-                        Lire le plan avec l’IA
-                      </p>
-                      <p className={EDITOR_HINT}>
-                        L’IA pose uniquement ce qui est visible (tables, rangées, scène, allées). Vérifiez ensuite — {AI_ROOM_PLAN_TOKEN_COST} jetons.
-                      </p>
-                      <input
-                        ref={aiPlanFileRef}
-                        type="file"
-                        accept="image/*"
-                        className="sr-only"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) await readRoomPlanWithAi(file);
-                          e.target.value = '';
-                        }}
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          disabled={readOnly || aiPlanReading}
-                          onClick={() => {
-                            if (blueprint.metadata.floorImageUrl) {
-                              void readRoomPlanWithAi();
-                              return;
-                            }
-                            aiPlanFileRef.current?.click();
-                          }}
-                          className={cn(EDITOR_PANEL_BTN, 'bg-primary text-primary-foreground border-primary')}
-                        >
-                          <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                          {aiPlanReading
-                            ? 'Lecture en cours…'
-                            : blueprint.metadata.floorImageUrl
-                              ? 'Lire cette image'
-                              : 'Choisir une photo'}
-                        </button>
-                        {blueprint.metadata.floorImageUrl ? (
-                          <button
-                            type="button"
-                            disabled={readOnly || aiPlanReading}
-                            onClick={() => aiPlanFileRef.current?.click()}
-                            className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
-                          >
-                            Autre photo
-                          </button>
-                        ) : null}
-                      </div>
-                      {aiPlanError ? <Alert variant="error">{aiPlanError}</Alert> : null}
-                      {aiPlanWarnings.length > 0 ? (
-                        <Alert variant="warning" title="À vérifier">
-                          <ul className="list-disc pl-4 space-y-1 text-sm">
-                            {aiPlanWarnings.map((warning) => (
-                              <li key={warning}>{warning}</li>
-                            ))}
-                          </ul>
-                        </Alert>
-                      ) : null}
-                    </div>
                     <label className="block text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Texture de sol (mosaïque)
@@ -4809,6 +4857,18 @@ export default function RoomLayoutEditor({
         </label>
       ) : null}
       {caps.canCustomImages ? (
+        <>
+        <input
+          ref={aiPlanFileRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (file) await readRoomPlanWithAi(file);
+            e.target.value = '';
+          }}
+        />
         <button
           type="button"
           disabled={readOnly || aiPlanReading}
@@ -4825,6 +4885,7 @@ export default function RoomLayoutEditor({
           <Sparkles className="w-3.5 h-3.5" aria-hidden />
           {aiPlanReading ? 'Lecture IA…' : 'Lire avec l’IA'}
         </button>
+        </>
       ) : null}
       <button type="button" onClick={clearWalls} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Sans murs</button>
       {caps.fixtureKinds.includes('door') ? (

@@ -182,8 +182,8 @@ export default function GlobalAiSimulatorFab() {
 
           {placement.highlight === 'room' ? (
             <p className="text-sm text-muted leading-relaxed rounded-[var(--radius-card)] border border-border bg-surface-muted/60 px-3.5 py-3">
-              Dans l’éditeur : importez la photo, puis <strong className="text-foreground">Lire avec l’IA</strong>.
-              Seul ce qui est visible est posé. Vérifiez avant d’enregistrer.
+              À la création d’une salle, choisissez <strong className="text-foreground">Depuis une photo</strong> ou <strong className="text-foreground">À la main</strong>.
+              L’IA reprend emplacements, couleurs et matières visibles — sans inventer de décor.
             </p>
           ) : null}
 

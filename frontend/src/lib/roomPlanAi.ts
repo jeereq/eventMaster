@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
 import type { RoomEditorCapabilities } from '@/lib/roomEditorAccess';
 import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
+import type { FloorType } from '@/lib/roomThemeUtils';
 import {
   createBlueprintChair,
   createBlueprintFixture,
@@ -14,11 +15,17 @@ import {
   ensureBlueprintDefaults,
   refreshBlueprintMetadata,
   wallsFromRoomOutline,
+  type AisleStyle,
+  type ChairStyle,
   type ChairType,
   type RoomLayoutBlueprint,
   type RoomOutlineShape,
+  type SeatMaterial,
   type TableShape,
+  type TableSurfaceStyle,
+  type WallTextureStyle,
   type ZoneKind,
+  type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
 
 export { AI_ROOM_PLAN_TOKEN_COST };
@@ -55,12 +62,30 @@ export interface RoomPlanVisionItem {
   shape?: string;
   label?: string;
   zoneKind?: string;
+  color?: string;
+  surface?: string;
+  material?: string;
+  chairStyle?: string;
+  seatMaterial?: string;
+  aisleStyle?: string;
+  anchor?: 'box' | 'center';
+}
+
+export interface RoomPlanVisionAppearance {
+  imageRole: 'plan' | 'photo' | 'texture';
+  floorType?: string;
+  floorColor?: string;
+  wallTexture?: string;
+  wallColor?: string;
+  tableSurface?: string;
+  tableColor?: string;
 }
 
 export interface RoomPlanVisionDraft {
   view: RoomPlanVisionView;
   canvas: { widthM: number; heightM: number };
   outline: { shape: string; x: number; y: number; w: number; h: number };
+  appearance?: RoomPlanVisionAppearance;
   items: RoomPlanVisionItem[];
   walls: Array<{
     start: { x: number; y: number };
@@ -107,6 +132,139 @@ const OUTLINE_SHAPES = new Set<RoomOutlineShape>([
   'stadium',
 ]);
 
+const TABLE_SURFACES = new Set<TableSurfaceStyle>([
+  'wood', 'linen', 'walnut', 'marble', 'darkWood', 'whiteLacquer', 'glass',
+]);
+const ZONE_MATERIALS = new Set<ZoneMaterial>([
+  'wood', 'carpet', 'vinyl', 'led', 'marble', 'concrete', 'parquet', 'epoxy',
+]);
+const WALL_TEXTURES = new Set<WallTextureStyle>([
+  'plaster', 'brick', 'wood', 'concrete', 'wallpaper', 'stone',
+  'tadelakt', 'travertine', 'metroTile', 'woodPanel',
+]);
+const CHAIR_STYLES = new Set<ChairStyle>([
+  'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback',
+]);
+const SEAT_MATERIALS = new Set<SeatMaterial>([
+  'velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen',
+]);
+const AISLE_STYLES = new Set<AisleStyle>([
+  'royalRed', 'whiteMirror', 'botanicalRunner', 'rusticWood', 'damaskGold', 'ledRunway', 'blackVelvet',
+]);
+
+const FLOOR_ALIASES: Record<string, FloorType> = {
+  parquet: 'parquet',
+  wood: 'bois',
+  bois: 'bois',
+  marble: 'marbre',
+  marbre: 'marbre',
+  carpet: 'moquette',
+  moquette: 'moquette',
+  tile: 'carrelage',
+  carrelage: 'carrelage',
+  concrete: 'beton',
+  beton: 'beton',
+  grass: 'herbe',
+  herbe: 'herbe',
+  checker: 'damier',
+  damier: 'damier',
+  terrazzo: 'terrazzo',
+  sand: 'sable',
+  sable: 'sable',
+  brick: 'brique',
+  brique: 'brique',
+  stone: 'pierre',
+  pierre: 'pierre',
+  epoxy: 'epoxy',
+};
+
+const DEFAULT_FOOTPRINT: Record<string, { w: number; h: number }> = {
+  table: { w: 10, h: 10 },
+  row: { w: 28, h: 6 },
+  chair: { w: 3, h: 3 },
+  zone: { w: 26, h: 16 },
+};
+
+function clampPct(value: number): number {
+  return Math.min(100, Math.max(0, Math.round(value * 10) / 10));
+}
+
+function asTableSurface(value: string | undefined): TableSurfaceStyle | undefined {
+  return value && TABLE_SURFACES.has(value as TableSurfaceStyle) ? value as TableSurfaceStyle : undefined;
+}
+
+function asZoneMaterial(value: string | undefined): ZoneMaterial | undefined {
+  return value && ZONE_MATERIALS.has(value as ZoneMaterial) ? value as ZoneMaterial : undefined;
+}
+
+function asWallTexture(value: string | undefined): WallTextureStyle | undefined {
+  return value && WALL_TEXTURES.has(value as WallTextureStyle) ? value as WallTextureStyle : undefined;
+}
+
+function asChairStyle(value: string | undefined): ChairStyle | undefined {
+  return value && CHAIR_STYLES.has(value as ChairStyle) ? value as ChairStyle : undefined;
+}
+
+function asSeatMaterial(value: string | undefined): SeatMaterial | undefined {
+  return value && SEAT_MATERIALS.has(value as SeatMaterial) ? value as SeatMaterial : undefined;
+}
+
+function asAisleStyle(value: string | undefined): AisleStyle | undefined {
+  return value && AISLE_STYLES.has(value as AisleStyle) ? value as AisleStyle : undefined;
+}
+
+function asFloorType(value: string | undefined): FloorType | undefined {
+  if (!value) return undefined;
+  return FLOOR_ALIASES[value] ?? FLOOR_ALIASES[value.toLowerCase()];
+}
+
+function looksGold(color?: string): boolean {
+  if (!color) return false;
+  const hex = color.replace('#', '');
+  if (hex.length !== 6) return false;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return r > 150 && g > 110 && b < 120 && r - b > 40;
+}
+
+function looksRed(color?: string): boolean {
+  if (!color) return false;
+  const hex = color.replace('#', '');
+  if (hex.length !== 6) return false;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return r > 110 && r > g + 30 && r > b + 30;
+}
+
+/** Empreinte : l’IA envoie le coin haut-gauche (box), l’éditeur tables/chaises/rangées utilise le centre. */
+export function itemFootprint(
+  item: Pick<RoomPlanVisionItem, 'x' | 'y' | 'w' | 'h' | 'anchor'>,
+  fallback: { w: number; h: number },
+): { x: number; y: number; cx: number; cy: number; w: number; h: number } {
+  const w = item.w ?? fallback.w;
+  const h = item.h ?? fallback.h;
+  if (item.anchor === 'center') {
+    return {
+      x: clampPct(item.x - w / 2),
+      y: clampPct(item.y - h / 2),
+      cx: clampPct(item.x),
+      cy: clampPct(item.y),
+      w,
+      h,
+    };
+  }
+  return {
+    x: clampPct(item.x),
+    y: clampPct(item.y),
+    cx: clampPct(item.x + w / 2),
+    cy: clampPct(item.y + h / 2),
+    w,
+    h,
+  };
+}
+
 function defaultChairType(roomType: RoomLayoutBlueprint['roomType']): ChairType {
   return roomType === 'CONFERENCE' || roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET';
 }
@@ -114,6 +272,55 @@ function defaultChairType(roomType: RoomLayoutBlueprint['roomType']): ChairType 
 function asTableShape(value: string | undefined, allowed: TableShape[]): TableShape {
   if (value && (allowed as string[]).includes(value)) return value as TableShape;
   return allowed[0] ?? 'round';
+}
+
+function resolveImageRole(draft: RoomPlanVisionDraft): RoomPlanVisionAppearance['imageRole'] {
+  if (draft.appearance?.imageRole) return draft.appearance.imageRole;
+  return draft.view === 'top' ? 'plan' : 'photo';
+}
+
+function neutralizeAisle(
+  fixture: RoomLayoutBlueprint['fixtures'][number],
+  item: RoomPlanVisionItem,
+): RoomLayoutBlueprint['fixtures'][number] {
+  const style = asAisleStyle(item.aisleStyle);
+  const color = item.color;
+  const inferred = style
+    ?? (looksRed(color) ? 'royalRed' : looksGold(color) ? 'damaskGold' : undefined);
+  return {
+    ...fixture,
+    aisleStyle: inferred,
+    color: color ?? (inferred === 'royalRed' ? '#991b1b' : inferred === 'damaskGold' ? '#c4a06a' : '#78716c'),
+    material: asZoneMaterial(item.material) ?? 'carpet',
+    hasGoldBorder: inferred === 'damaskGold' || looksGold(color),
+    hasSideLanterns: false,
+    hasPetals: false,
+  };
+}
+
+function applyFixtureLook(
+  created: RoomLayoutBlueprint['fixtures'][number],
+  item: RoomPlanVisionItem,
+): RoomLayoutBlueprint['fixtures'][number] {
+  const material = asZoneMaterial(item.material);
+  let next: RoomLayoutBlueprint['fixtures'][number] = {
+    ...created,
+    color: item.color ?? created.color,
+    material: material ?? created.material,
+  };
+  if (item.kind === 'aisle') {
+    next = neutralizeAisle(next, item);
+  }
+  if (item.kind === 'flower' && item.color) {
+    next = { ...next, flowerColor: item.color };
+  }
+  if (item.kind === 'chandelier' && item.color && !looksGold(item.color)) {
+    next = { ...next, lightWarmth: 'neutral', color: item.color };
+  }
+  if ((item.kind === 'door' || item.kind === 'entrance') && !item.color) {
+    next = { ...next, hasMat: false, matColor: undefined };
+  }
+  return next;
 }
 
 export async function analyzeRoomPlanFromPhoto(input: {
@@ -143,11 +350,14 @@ export function applyRoomPlanVisionDraft(
   options: { imageUrl?: string } = {},
 ): { blueprint: RoomLayoutBlueprint; warnings: string[]; selection: LayoutSelectionItem[] } {
   const warnings = [...(draft.warnings || [])];
+  const appearance = draft.appearance;
   const chairType = defaultChairType(current.roomType);
   const storyId = current.metadata.activeStoryId;
   const furniture: RoomLayoutBlueprint['furniture'] = [];
   const fixtures: RoomLayoutBlueprint['fixtures'] = [];
   const selection: LayoutSelectionItem[] = [];
+  const defaultSurface = asTableSurface(appearance?.tableSurface);
+  const defaultTableColor = appearance?.tableColor;
 
   let tableCount = 0;
   let rowCount = 0;
@@ -159,14 +369,17 @@ export function applyRoomPlanVisionDraft(
       const kind = item.kind as RoomLayoutBlueprint['fixtures'][number]['kind'];
       const allowed = caps.canFixtures && caps.fixtureKinds.includes(kind as RoomEditorCapabilities['fixtureKinds'][number]);
       if (!allowed && kind === 'carpet' && caps.canZones) {
+        const box = itemFootprint(item, DEFAULT_FOOTPRINT.zone);
         const zone = {
           ...createBlueprintZone(item.label || 'Moquette', zoneCount + 1, {
             zoneKind: 'carpet',
-            w: item.w,
-            h: item.h,
+            material: asZoneMaterial(item.material) ?? 'carpet',
+            color: item.color,
+            w: box.w,
+            h: box.h,
           }),
-          x: item.x,
-          y: item.y,
+          x: box.x,
+          y: box.y,
           rotation: item.rotation,
           groupId: AI_ROOM_IMPORT_GROUP_ID,
           storyId,
@@ -180,13 +393,14 @@ export function applyRoomPlanVisionDraft(
         warnings.push(`« ${item.label || kind} » ignoré — non inclus dans votre forfait.`);
         continue;
       }
-      const created = createBlueprintFixture(kind);
+      const created = applyFixtureLook(createBlueprintFixture(kind), item);
+      const box = itemFootprint(item, { w: created.w, h: created.h });
       const fixture = {
         ...created,
-        x: item.x,
-        y: item.y,
-        w: item.w ?? created.w,
-        h: item.h ?? created.h,
+        x: box.x,
+        y: box.y,
+        w: box.w,
+        h: box.h,
         rotation: item.rotation,
         label: item.label || created.label,
         groupId: AI_ROOM_IMPORT_GROUP_ID,
@@ -203,6 +417,7 @@ export function applyRoomPlanVisionDraft(
         continue;
       }
       tableCount += 1;
+      const box = itemFootprint(item, DEFAULT_FOOTPRINT.table);
       const table = {
         ...createBlueprintTable(tableCount, {
           shape: asTableShape(item.shape, caps.tableShapes),
@@ -210,9 +425,13 @@ export function applyRoomPlanVisionDraft(
           chairType,
         }),
         name: item.label || `Table ${tableCount}`,
-        x: item.x,
-        y: item.y,
+        x: box.cx,
+        y: box.cy,
         rotation: item.rotation,
+        tableColor: item.color ?? defaultTableColor,
+        tableSurface: asTableSurface(item.surface) ?? defaultSurface,
+        ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
+        ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
         groupId: AI_ROOM_IMPORT_GROUP_ID,
         storyId,
       };
@@ -231,16 +450,19 @@ export function applyRoomPlanVisionDraft(
         continue;
       }
       rowCount += 1;
+      const box = itemFootprint(item, DEFAULT_FOOTPRINT.row);
       const row = {
         ...createBlueprintRow(rowCount, {
           seatCount: item.seats ?? 10,
           chairType,
-          x: item.x,
-          y: item.y,
+          x: box.cx,
+          y: box.cy,
           label: item.label,
           groupId: AI_ROOM_IMPORT_GROUP_ID,
         }),
         rotation: item.rotation,
+        ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
+        ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
         storyId,
       };
       furniture.push(row);
@@ -250,13 +472,16 @@ export function applyRoomPlanVisionDraft(
 
     if (item.kind === 'chair') {
       chairCount += 1;
+      const box = itemFootprint(item, DEFAULT_FOOTPRINT.chair);
       const chair = {
         ...createBlueprintChair(chairCount, {
           chairType,
-          x: item.x,
-          y: item.y,
+          x: box.cx,
+          y: box.cy,
           rotation: item.rotation,
         }),
+        ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
+        ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
         groupId: AI_ROOM_IMPORT_GROUP_ID,
         storyId,
       };
@@ -271,14 +496,17 @@ export function applyRoomPlanVisionDraft(
         continue;
       }
       zoneCount += 1;
+      const box = itemFootprint(item, DEFAULT_FOOTPRINT.zone);
       const zone = {
         ...createBlueprintZone(item.label || 'Zone', zoneCount, {
           zoneKind: (item.zoneKind as ZoneKind | undefined),
-          w: item.w,
-          h: item.h,
+          material: asZoneMaterial(item.material),
+          color: item.color,
+          w: box.w,
+          h: box.h,
         }),
-        x: item.x,
-        y: item.y,
+        x: box.x,
+        y: box.y,
         rotation: item.rotation,
         groupId: AI_ROOM_IMPORT_GROUP_ID,
         storyId,
@@ -302,12 +530,16 @@ export function applyRoomPlanVisionDraft(
     }
     : (current.roomOutline ?? defaultRoomOutline('rectangle'));
 
+  const wallTexture = asWallTexture(appearance?.wallTexture);
+  const wallColor = appearance?.wallColor;
   let walls = current.walls;
   if (draft.walls.length > 0) {
     walls = draft.walls.map((wall) => {
       const segment = createWallSegment({
         start: wall.start,
         end: wall.end,
+        texture: wallTexture ?? current.walls[0]?.texture ?? 'plaster',
+        color: wallColor,
         openings: [
           ...wall.doors.map((t) => createWallOpening('door', { t, style: 'double' })),
           ...wall.windows.map((t) => createWallOpening('window', { t })),
@@ -317,7 +549,26 @@ export function applyRoomPlanVisionDraft(
     });
     walls.forEach((wall) => selection.push({ kind: 'wall', id: wall.id }));
   } else if (caps.canChangeOutline) {
-    walls = wallsFromRoomOutline(outline, { withEntrance: true }).map((wall) => ({ ...wall, storyId }));
+    walls = wallsFromRoomOutline(outline, {
+      withEntrance: false,
+      texture: wallTexture ?? current.walls[0]?.texture ?? 'plaster',
+    }).map((wall) => ({ ...wall, color: wallColor, storyId }));
+    warnings.push('Aucun mur visible sur la photo — contour sans porte ni fenêtre inventées.');
+  } else if (wallTexture || wallColor) {
+    walls = current.walls.map((wall) => ({
+      ...wall,
+      texture: wallTexture ?? wall.texture,
+      color: wallColor ?? wall.color,
+    }));
+  }
+
+  const imageRole = resolveImageRole(draft);
+  const observedFloor = asFloorType(appearance?.floorType);
+  const usePlanCover = Boolean(options.imageUrl) && imageRole === 'plan' && draft.view !== 'perspective';
+  const useFloorTile = Boolean(options.imageUrl) && imageRole === 'texture';
+
+  if (draft.view === 'perspective' || imageRole === 'photo') {
+    warnings.push('Photo en perspective : le sol reprend la matière et la couleur vues, sans étirer l’image.');
   }
 
   const next = ensureBlueprintDefaults({
@@ -329,9 +580,19 @@ export function applyRoomPlanVisionDraft(
     canvas: current.canvas,
     metadata: {
       ...current.metadata,
-      floorImageUrl: options.imageUrl || current.metadata.floorImageUrl,
-      floorType: options.imageUrl || current.metadata.floorImageUrl ? 'custom' : current.metadata.floorType,
-      floorImageFit: options.imageUrl || current.metadata.floorImageUrl ? 'cover' : current.metadata.floorImageFit,
+      defaultTableColor: defaultTableColor ?? current.metadata.defaultTableColor,
+      defaultTableSurface: defaultSurface ?? current.metadata.defaultTableSurface,
+      wallPaintColor: wallColor ?? current.metadata.wallPaintColor,
+      floorColor: appearance?.floorColor ?? current.metadata.floorColor,
+      floorImageUrl: usePlanCover || useFloorTile
+        ? options.imageUrl
+        : imageRole === 'photo'
+          ? undefined
+          : current.metadata.floorImageUrl,
+      floorType: usePlanCover || useFloorTile
+        ? 'custom'
+        : observedFloor ?? current.metadata.floorType,
+      floorImageFit: usePlanCover ? 'cover' : useFloorTile ? 'tile' : current.metadata.floorImageFit,
     },
   });
 

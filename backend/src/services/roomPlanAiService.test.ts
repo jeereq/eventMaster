@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeRoomPlanImageUrl,
+  parseHexColor,
   parseRoomPlanVisionDraft,
   ROOM_PLAN_VISION_ITEM_MAX,
 } from './roomPlanAiService.ts';
@@ -57,6 +58,61 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.canvas.widthM, 20);
   });
 
+  it('conserve couleurs, matières et bbox haut-gauche', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      appearance: {
+        imageRole: 'plan',
+        floorType: 'parquet',
+        floorColor: '#c4a06a',
+        wallTexture: 'brick',
+        wallColor: 'cream',
+        tableSurface: 'linen',
+        tableColor: '#fff',
+      },
+      items: [{
+        kind: 'table',
+        x: 12,
+        y: 20,
+        w: 10,
+        h: 10,
+        color: '#8b1c1c',
+        surface: 'linen',
+        chairStyle: 'chiavari',
+        seatMaterial: 'velvet',
+        anchor: 'box',
+      }, {
+        kind: 'aisle',
+        x: 46,
+        y: 14,
+        w: 8,
+        h: 70,
+        color: '#991b1b',
+        aisleStyle: 'royalRed',
+      }],
+    }, { widthM: 20, heightM: 16 });
+
+    assert.equal(draft.appearance.imageRole, 'plan');
+    assert.equal(draft.appearance.floorType, 'parquet');
+    assert.equal(draft.appearance.floorColor, '#c4a06a');
+    assert.equal(draft.appearance.wallTexture, 'brick');
+    assert.equal(draft.appearance.wallColor, '#f5f0e8');
+    assert.equal(draft.appearance.tableColor, '#ffffff');
+    assert.equal(draft.items[0]?.color, '#8b1c1c');
+    assert.equal(draft.items[0]?.surface, 'linen');
+    assert.equal(draft.items[0]?.chairStyle, 'chiavari');
+    assert.equal(draft.items[0]?.anchor, 'box');
+    assert.equal(draft.items[1]?.aisleStyle, 'royalRed');
+  });
+
+  it('traite une photo comme imageRole photo par défaut', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'perspective',
+      items: [],
+    }, { widthM: 18, heightM: 14 });
+    assert.equal(draft.appearance.imageRole, 'photo');
+  });
+
   it('plafonne le nombre d’objets', () => {
     const items = Array.from({ length: ROOM_PLAN_VISION_ITEM_MAX + 5 }, (_, i) => ({
       kind: 'table',
@@ -66,5 +122,14 @@ describe('parseRoomPlanVisionDraft', () => {
     const draft = parseRoomPlanVisionDraft({ items }, { widthM: 20, heightM: 15 });
     assert.equal(draft.items.length, ROOM_PLAN_VISION_ITEM_MAX);
     assert.ok(draft.warnings.some((w) => w.includes(String(ROOM_PLAN_VISION_ITEM_MAX))));
+  });
+});
+
+describe('parseHexColor', () => {
+  it('normalise hex court, long et noms courants', () => {
+    assert.equal(parseHexColor('#fff'), '#ffffff');
+    assert.equal(parseHexColor('c4a06a'), '#c4a06a');
+    assert.equal(parseHexColor('gold'), '#c4a06a');
+    assert.equal(parseHexColor('not-a-color'), undefined);
   });
 });

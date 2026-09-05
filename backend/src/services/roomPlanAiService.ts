@@ -25,6 +25,36 @@ const OUTLINE_SHAPES = new Set([
 ]);
 const TABLE_SHAPES = new Set(['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop']);
 const ZONE_KINDS = new Set(['dance', 'vip', 'buffet', 'carpet', 'custom']);
+const FLOOR_TYPES = new Set([
+  'parquet', 'marbre', 'moquette', 'carrelage', 'beton', 'herbe',
+  'damier', 'terrazzo', 'sable', 'brique', 'bois', 'pierre', 'epoxy',
+]);
+const TABLE_SURFACES = new Set(['wood', 'linen', 'walnut', 'marble', 'darkWood', 'whiteLacquer', 'glass']);
+const ZONE_MATERIALS = new Set(['wood', 'carpet', 'vinyl', 'led', 'marble', 'concrete', 'parquet', 'epoxy']);
+const WALL_TEXTURES = new Set([
+  'plaster', 'brick', 'wood', 'concrete', 'wallpaper', 'stone',
+  'tadelakt', 'travertine', 'metroTile', 'woodPanel',
+]);
+const CHAIR_STYLES = new Set(['classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback']);
+const SEAT_MATERIALS = new Set(['velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen']);
+const AISLE_STYLES = new Set([
+  'royalRed', 'whiteMirror', 'botanicalRunner', 'rusticWood', 'damaskGold', 'ledRunway', 'blackVelvet',
+]);
+const NAMED_COLORS: Record<string, string> = {
+  red: '#9b1c1c',
+  burgundy: '#7f1d1d',
+  gold: '#c4a06a',
+  cream: '#f5f0e8',
+  ivory: '#f8f4ec',
+  white: '#f4f4f5',
+  black: '#1c1917',
+  wood: '#8b6914',
+  walnut: '#5c3d1e',
+  green: '#3f6b4a',
+  blue: '#1e3a5f',
+  grey: '#78716c',
+  gray: '#78716c',
+};
 const ITEM_KINDS = new Set([
   'table',
   'row',
@@ -66,6 +96,7 @@ export type RoomPlanVisionItemKind =
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
+  /** Coin haut-gauche de l’empreinte (0–100), sauf si `anchor` = center. */
   x: number;
   y: number;
   w?: number;
@@ -75,6 +106,13 @@ export interface RoomPlanVisionItem {
   shape?: string;
   label?: string;
   zoneKind?: string;
+  color?: string;
+  surface?: string;
+  material?: string;
+  chairStyle?: string;
+  seatMaterial?: string;
+  aisleStyle?: string;
+  anchor?: 'box' | 'center';
 }
 
 export interface RoomPlanVisionWall {
@@ -84,10 +122,21 @@ export interface RoomPlanVisionWall {
   windows: number[];
 }
 
+export interface RoomPlanVisionAppearance {
+  imageRole: 'plan' | 'photo' | 'texture';
+  floorType?: string;
+  floorColor?: string;
+  wallTexture?: string;
+  wallColor?: string;
+  tableSurface?: string;
+  tableColor?: string;
+}
+
 export interface RoomPlanVisionDraft {
   view: RoomPlanVisionView;
   canvas: { widthM: number; heightM: number };
   outline: { shape: string; x: number; y: number; w: number; h: number };
+  appearance: RoomPlanVisionAppearance;
   items: RoomPlanVisionItem[];
   walls: RoomPlanVisionWall[];
   confidence: number;
@@ -162,6 +211,44 @@ function asString(value: unknown, max = 80): string | undefined {
   return trimmed.slice(0, max);
 }
 
+export function parseHexColor(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const raw = value.trim().toLowerCase();
+  if (NAMED_COLORS[raw]) return NAMED_COLORS[raw];
+  const hex = raw.startsWith('#') ? raw.slice(1) : raw;
+  if (/^[0-9a-f]{3}$/.test(hex)) {
+    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+  }
+  if (/^[0-9a-f]{6}$/.test(hex)) return `#${hex}`;
+  if (/^[0-9a-f]{8}$/.test(hex)) return `#${hex.slice(0, 6)}`;
+  return undefined;
+}
+
+function asKnown(value: unknown, allowed: Set<string>): string | undefined {
+  return typeof value === 'string' && allowed.has(value) ? value : undefined;
+}
+
+function parseAppearance(raw: unknown, view: RoomPlanVisionView): RoomPlanVisionAppearance {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const role = source.imageRole === 'plan' || source.imageRole === 'photo' || source.imageRole === 'texture'
+    ? source.imageRole
+    : view === 'top' ? 'plan' : 'photo';
+  const appearance: RoomPlanVisionAppearance = { imageRole: role };
+  const floorType = asKnown(source.floorType, FLOOR_TYPES);
+  if (floorType) appearance.floorType = floorType;
+  const floorColor = parseHexColor(source.floorColor);
+  if (floorColor) appearance.floorColor = floorColor;
+  const wallTexture = asKnown(source.wallTexture, WALL_TEXTURES);
+  if (wallTexture) appearance.wallTexture = wallTexture;
+  const wallColor = parseHexColor(source.wallColor);
+  if (wallColor) appearance.wallColor = wallColor;
+  const tableSurface = asKnown(source.tableSurface, TABLE_SURFACES);
+  if (tableSurface) appearance.tableSurface = tableSurface;
+  const tableColor = parseHexColor(source.tableColor);
+  if (tableColor) appearance.tableColor = tableColor;
+  return appearance;
+}
+
 function asRatioList(value: unknown, max = 4): number[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -216,6 +303,19 @@ export function parseRoomPlanVisionDraft(
     const label = asString(row.label, 40);
     if (label) item.label = label;
     if (typeof row.zoneKind === 'string' && ZONE_KINDS.has(row.zoneKind)) item.zoneKind = row.zoneKind;
+    const color = parseHexColor(row.color);
+    if (color) item.color = color;
+    const surface = asKnown(row.surface, TABLE_SURFACES);
+    if (surface) item.surface = surface;
+    const material = asKnown(row.material, ZONE_MATERIALS);
+    if (material) item.material = material;
+    const chairStyle = asKnown(row.chairStyle, CHAIR_STYLES);
+    if (chairStyle) item.chairStyle = chairStyle;
+    const seatMaterial = asKnown(row.seatMaterial, SEAT_MATERIALS);
+    if (seatMaterial) item.seatMaterial = seatMaterial;
+    const aisleStyle = asKnown(row.aisleStyle, AISLE_STYLES);
+    if (aisleStyle) item.aisleStyle = aisleStyle;
+    if (row.anchor === 'center' || row.anchor === 'box') item.anchor = row.anchor;
     items.push(item);
   }
 
@@ -259,6 +359,7 @@ export function parseRoomPlanVisionDraft(
       w: clampPct(outlineRaw.w, 90),
       h: clampPct(outlineRaw.h, 90),
     },
+    appearance: parseAppearance(source.appearance, view),
     items,
     walls,
     confidence: Math.round(clamp(asNumber(source.confidence, 0.4), 0, 1) * 100) / 100,
@@ -272,32 +373,61 @@ Tu ANALYSES UNIQUEMENT la photo fournie, puis tu produis UNIQUEMENT un JSON vali
 
 Vérité visuelle (non négociable) :
 - DÉTECTE uniquement ce qui est RÉELLEMENT VISIBLE. Ne déduis pas, n’invente pas, n’idéalise pas.
-- Interdit : inventer des tables, rangées, sièges, une scène, un amphithéâtre ou un fer à cheval « parce que ça ressemble ».
+- Interdit : inventer des tables, rangées, sièges, une scène, des murs, des portes, un amphithéâtre ou un fer à cheval « parce que ça ressemble ».
+- Interdit : inventer or, pétales, lanternes, lustre cristal ou allée rouge royal s’ils ne sont pas visibles.
 - Si un détail est flou, coupé ou indiscernable : omets-le et ajoute un warning.
 - N’invente jamais de numéros de sièges.
 
 Repère :
 - Le rectangle de la salle = 0–100 % (origine haut-gauche, y vers le bas), comme un plan 2D vu du dessus.
-- Photo verticale / scan / PDF : view="top".
-- Photo en perspective : view="perspective", confidence plus basse, approxime le rectangle au sol.
+- Pour CHAQUE item : x,y = coin HAUT-GAUCHE de l’empreinte au sol, w et h = largeur et hauteur en % (anchor="box").
+- Photo verticale / scan / PDF : view="top", appearance.imageRole="plan".
+- Photo en perspective : view="perspective", appearance.imageRole="photo", confidence plus basse.
+- Photo d’un parquet / carrelage sans mobilier : appearance.imageRole="texture".
 
 Champs JSON obligatoires :
 {
   "view": "top" | "perspective" | "unclear",
   "canvas": { "widthM": number, "heightM": number },
   "outline": { "shape": "rectangle"|"square"|"circle"|"ellipse"|"lShape"|"uShape"|"hexagon"|"octagon"|"trapezoid"|"stadium", "x":0-100, "y":0-100, "w":0-100, "h":0-100 },
-  "items": [{ "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower", "x":0-100, "y":0-100, "w"?:0-100, "h"?:0-100, "rotation"?:-180-180, "seats"?:number, "shape"?: "round"|"rectangular"|"square"|"oval", "label"?: string, "zoneKind"?: "dance"|"vip"|"buffet"|"carpet"|"custom" }],
+  "appearance": {
+    "imageRole": "plan"|"photo"|"texture",
+    "floorType": "parquet"|"marbre"|"moquette"|"carrelage"|"beton"|"herbe"|"damier"|"terrazzo"|"sable"|"brique"|"bois"|"pierre"|"epoxy",
+    "floorColor": "#rrggbb",
+    "wallTexture": "plaster"|"brick"|"wood"|"concrete"|"wallpaper"|"stone"|"tadelakt"|"travertine"|"metroTile"|"woodPanel",
+    "wallColor": "#rrggbb",
+    "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
+    "tableColor": "#rrggbb"
+  },
+  "items": [{
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower",
+    "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
+    "rotation":-180-180, "seats":number,
+    "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop",
+    "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom",
+    "color": "#rrggbb", "surface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
+    "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
+    "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback",
+    "seatMaterial": "velvet"|"wood"|"fabric"|"leather"|"plastic"|"linen",
+    "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet"
+  }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,
   "warnings": ["..."]
 }
 
+Règles appearance :
+- floorType / floorColor / wallTexture / wallColor : seulement si clairement visibles.
+- Couleurs en hex (#rrggbb) d’après la teinte observée, pas une couleur de thème EventMaster.
+
 Règles items :
-- table = table isolée (x,y = centre). seats = couverts visibles ou lisibles, sinon omets seats.
-- row = rangée de chaises alignées (pas une table ronde).
+- table = table isolée. seats = couverts visibles ou lisibles, sinon omets seats. color + surface = nappe / plateau vus.
+- row = rangée de chaises alignées (pas une table ronde). chairStyle + seatMaterial si visibles.
 - chair = fauteuil isolé seulement, pas les chaises collées à une table.
-- zone = piste, VIP, buffet au sol, moquette large.
-- door / entrance : seulement si clairement une ouverture d’accès (sinon mets-la dans walls.doors).
+- zone = piste, VIP, buffet au sol, moquette large. color + material obligatoires si la surface se voit.
+- aisle : aisleStyle seulement si le tapis correspond vraiment (rouge royal, bois, LED…). Sinon color hex seule.
+- door / entrance : seulement si clairement une ouverture d’accès (sinon walls.doors).
+- walls : uniquement les murs / ouvertures VISIBLES. Tableau vide si tu n’es pas sûr — n’invente pas de portes.
 - Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, du plus certain au moins certain.
 
 Si la photo n’est pas un plan de salle, view="unclear", items=[], warnings explicites.`;
