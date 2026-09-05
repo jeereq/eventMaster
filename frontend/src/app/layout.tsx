@@ -13,6 +13,7 @@ import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import BrandFaviconSync from "@/components/BrandFaviconSync";
 import GlobalAiSimulatorFab from "@/components/GlobalAiSimulatorFab";
 import MobileSplashScreen from "@/components/MobileSplashScreen";
+import NavigationProgressBar from "@/components/NavigationProgressBar";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
@@ -113,6 +114,9 @@ export default function RootLayout({
                   <PWARegister />
                   <MobileSplashScreen />
                   <MaintenanceOverlay />
+                  <Suspense fallback={null}>
+                    <NavigationProgressBar />
+                  </Suspense>
                   <Suspense fallback={null}>
                     {children}
                   </Suspense>

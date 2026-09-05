@@ -390,13 +390,6 @@ export default function LandingInvitationAiGenerator({
     setConfirmOpen(true);
   };
 
-  const cancelGenerate = () => {
-    generationSeq.current += 1;
-    setBusy(false);
-    setStage(null);
-    setActiveStep(0);
-  };
-
   const handleGenerate = async () => {
     if (busy) return;
     if (prompt.trim().length < 8) {
@@ -1380,7 +1373,6 @@ export default function LandingInvitationAiGenerator({
         embedText={embedText}
         hasReferences={files.length > 0}
         stageHint={stage}
-        onCancel={cancelGenerate}
       />
     </section>
   );

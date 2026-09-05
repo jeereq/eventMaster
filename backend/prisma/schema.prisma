@@ -232,6 +232,7 @@ model User {
   aiSimulationRuns      AiSimulationRun[]
   aiSimulationWallets   AiSimulationWallet[]
   aiTemplateComposeRuns AiTemplateComposeRun[]
+  aiRoomPlanComposeRuns AiRoomPlanComposeRun[]
   aiTokenLedgers        AiTokenLedger[]
 }
 
@@ -1182,6 +1183,25 @@ model AiTemplateComposeRun {
   content          Json
   stage            Json?
   createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([deviceId, createdAt])
+}
+
+/** Historique des générations de plans de salle IA (studio + /plans-3d). */
+model AiRoomPlanComposeRun {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId  String?
+  source    String
+  prompt    String?
+  imageUrl  String?
+  roomType  String?
+  widthM    Float?
+  heightM   Float?
+  draft     Json
+  createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([deviceId, createdAt])

@@ -10,6 +10,7 @@ import { safeAppPath } from '@/lib/safeAppPath';
 import { appendFirstTourQuery } from '@/lib/firstLoginTour';
 import { claimAiSimulationHistory } from '@/lib/aiSimulationHistory';
 import { claimAiTemplateComposeHistory } from '@/lib/aiTemplateComposeHistory';
+import { claimAiRoomPlanComposeHistory } from '@/lib/aiRoomPlanComposeHistory';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -259,6 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       void claimAiSimulationHistory();
       void claimAiTemplateComposeHistory();
+      void claimAiRoomPlanComposeHistory();
 
       router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null));
     } catch (error: any) {
@@ -336,6 +338,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       void claimAiSimulationHistory();
       void claimAiTemplateComposeHistory();
+      void claimAiRoomPlanComposeHistory();
       const dest = safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null);
       router.push(safeAppPath(options?.next) ? dest : appendFirstTourQuery(dest));
     } catch (error) {

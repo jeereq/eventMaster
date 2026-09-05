@@ -33,6 +33,22 @@ const ROOM_PLAN_STEPS: AiProcessStep[] = [
   { id: 'finish', label: 'Finition du plan' },
 ];
 
+const STEP_INTERVAL_MS = 2800;
+const PROGRESS_TICK_MS = 400;
+const PROGRESS_START = 10;
+const PROGRESS_CAP = 92;
+
+export function nextAiLoaderStepIndex(current: number, stepCount: number): number {
+  if (stepCount <= 0) return 0;
+  return Math.min(current + 1, stepCount - 1);
+}
+
+export function nextAiLoaderProgress(current: number): number {
+  if (current >= PROGRESS_CAP) return current;
+  const remaining = PROGRESS_CAP - current;
+  return Math.min(PROGRESS_CAP, current + Math.max(1.2, remaining * 0.09));
+}
+
 export function AiProcessFullscreenLoader({
   active,
   eyebrow,
@@ -41,7 +57,6 @@ export function AiProcessFullscreenLoader({
   steps,
   stageHint,
   icon: Icon = Sparkles,
-  onCancel,
 }: {
   active: boolean;
   eyebrow: string;
@@ -50,25 +65,36 @@ export function AiProcessFullscreenLoader({
   steps: AiProcessStep[];
   stageHint?: string | null;
   icon?: LucideIcon;
-  onCancel?: () => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!active) {
       setStepIndex(0);
+      setProgress(0);
       return;
     }
+    setProgress(PROGRESS_START);
     const reduced =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) return;
-    const timer = window.setInterval(() => {
-      setStepIndex((i) => (i + 1) % steps.length);
-    }, 2800);
-    return () => window.clearInterval(timer);
+    if (reduced) {
+      setStepIndex(Math.max(0, steps.length - 1));
+      setProgress(PROGRESS_CAP);
+      return;
+    }
+    const stepTimer = window.setInterval(() => {
+      setStepIndex((index) => nextAiLoaderStepIndex(index, steps.length));
+    }, STEP_INTERVAL_MS);
+    const progressTimer = window.setInterval(() => {
+      setProgress((value) => nextAiLoaderProgress(value));
+    }, PROGRESS_TICK_MS);
+    return () => {
+      window.clearInterval(stepTimer);
+      window.clearInterval(progressTimer);
+    };
   }, [active, steps.length]);
 
   useEffect(() => {
@@ -82,57 +108,39 @@ export function AiProcessFullscreenLoader({
 
   useEffect(() => {
     if (!active) return;
-    cancelRef.current?.focus();
+    rootRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && onCancel) {
+      if (event.key === 'Escape') {
         event.preventDefault();
-        onCancel();
+        event.stopPropagation();
         return;
       }
       if (event.key !== 'Tab') return;
       const root = rootRef.current;
       if (!root) return;
-      const focusable = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((el) => el.getClientRects().length > 0);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const current = document.activeElement as HTMLElement | null;
-      if (event.shiftKey) {
-        if (!current || current === first || !root.contains(current)) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (!current || current === last || !root.contains(current)) {
-        event.preventDefault();
-        first.focus();
-      }
+      event.preventDefault();
+      root.focus();
     };
 
     const onFocusIn = (event: FocusEvent) => {
       const root = rootRef.current;
       if (!root || root.contains(event.target as Node)) return;
-      (cancelRef.current ?? root).focus();
+      root.focus();
     };
 
-    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', onKeyDown, true);
     document.addEventListener('focusin', onFocusIn);
     return () => {
-      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('focusin', onFocusIn);
     };
-  }, [active, onCancel]);
+  }, [active]);
 
   if (!active) return null;
 
   const current = steps[stepIndex] || steps[0];
+  const shownProgress = Math.round(progress);
 
   return (
     <div
@@ -175,6 +183,23 @@ export function AiProcessFullscreenLoader({
         </p>
         {footnote ? <p className="mt-1 text-xs text-white/45">{footnote}</p> : null}
 
+        <div className="mt-5 space-y-1.5">
+          <div
+            className="h-1.5 overflow-hidden rounded-full bg-white/10"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={shownProgress}
+            aria-label="Progression de la génération"
+          >
+            <div
+              className="h-full rounded-full bg-primary-solid transition-[width] duration-500 ease-out"
+              style={{ width: `${shownProgress}%` }}
+            />
+          </div>
+          <p className="text-xs text-white/45 tabular-nums">{shownProgress} %</p>
+        </div>
+
         <ol className="mt-6 space-y-2 text-left" aria-label="Étapes en cours">
           {steps.map((step, index) => {
             const isCurrent = index === stepIndex;
@@ -216,16 +241,7 @@ export function AiProcessFullscreenLoader({
           })}
         </ol>
 
-        {onCancel ? (
-          <button
-            ref={cancelRef}
-            type="button"
-            onClick={onCancel}
-            className="mt-6 min-h-11 px-5 rounded-xl border border-white/20 bg-white/8 text-sm font-semibold text-white hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-          >
-            Annuler
-          </button>
-        ) : null}
+        <p className="mt-6 text-xs text-white/40">La génération continue jusqu’à la fin. Merci de patienter.</p>
       </div>
     </div>
   );
@@ -236,13 +252,11 @@ export default function AiComposeFullscreenLoader({
   embedText = false,
   hasReferences = false,
   stageHint,
-  onCancel,
 }: {
   active: boolean;
   embedText?: boolean;
   hasReferences?: boolean;
   stageHint?: string | null;
-  onCancel?: () => void;
 }) {
   const steps = COMPOSE_STEPS.map((step) => {
     if (step.id === 'faces' && !hasReferences) {
@@ -261,7 +275,6 @@ export default function AiComposeFullscreenLoader({
       title="Votre carte se prépare"
       stageHint={stageHint}
       steps={steps}
-      onCancel={onCancel}
       footnote={
         hasReferences
           ? 'Les regards, le sourire et le volume des joues restent fidèles aux photos.'
@@ -294,12 +307,10 @@ export function AiRoomPlanFullscreenLoader({
   active,
   hasPhoto = false,
   stageHint,
-  onCancel,
 }: {
   active: boolean;
   hasPhoto?: boolean;
   stageHint?: string | null;
-  onCancel?: () => void;
 }) {
   const steps = hasPhoto
     ? ROOM_PLAN_STEPS
@@ -311,7 +322,6 @@ export function AiRoomPlanFullscreenLoader({
       title="Le studio compose votre plan"
       stageHint={stageHint}
       steps={steps}
-      onCancel={onCancel}
       footnote={
         hasPhoto
           ? 'Les tables, rangées et zones visibles sont déduites de la photo et du brief.'

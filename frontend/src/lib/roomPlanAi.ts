@@ -138,6 +138,7 @@ export interface RoomPlanVisionDraft {
 
 export type RoomPlanAiResult = {
   draft: RoomPlanVisionDraft;
+  historyId?: string | null;
   remaining?: number;
   allowance?: Partial<AiAllowance>;
   tokenCost?: number;

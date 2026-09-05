@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
@@ -31,13 +31,20 @@ import {
   saveRoomPlanAiDraft,
   type RoomPlanVisionDraft,
 } from '@/lib/roomPlanAi';
-import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
+import type { RoomLayoutBlueprint, RoomType } from '@/lib/roomLayoutUtils';
 import type { RoomPlanPromptModel } from '@/config/roomPlanPromptModels';
 import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
+import AiRoomPlanComposeHistoryList from '@/components/AiRoomPlanComposeHistoryList';
+import {
+  fetchAiRoomPlanComposeHistory,
+  type AiRoomPlanComposeHistoryItem,
+} from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+
+const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
@@ -74,6 +81,16 @@ export default function LandingRoomPlanAiStudio({
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [lastImageUrl, setLastImageUrl] = useState<string>();
+  const [history, setHistory] = useState<AiRoomPlanComposeHistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetchAiRoomPlanComposeHistory().then(setHistory);
+  }, []);
+
+  const asRoomType = (value?: string | null): RoomType => (
+    value && ROOM_TYPES.includes(value as RoomType) ? (value as RoomType) : 'BANQUET'
+  );
 
   const preview = useMemo(() => {
     if (!draft) return null;
@@ -127,8 +144,10 @@ export default function LandingRoomPlanAiStudio({
       });
       setDraft(result.draft);
       setLastImageUrl(imageUrl);
+      setActiveHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
       setAllowance(getAiSimulationAllowance());
       saveRoomPlanAiDraft(result.draft, { prompt: prompt.trim(), roomType, widthM: 20, heightM: 16, imageUrl });
+      void fetchAiRoomPlanComposeHistory().then(setHistory);
       const applied = previewRoomPlanDraft(result.draft, roomType, { imageUrl });
       onBlueprintChange?.(applied.blueprint);
     } catch (err: unknown) {
@@ -155,6 +174,26 @@ export default function LandingRoomPlanAiStudio({
     );
   };
 
+  const openHistoryItem = (item: AiRoomPlanComposeHistoryItem) => {
+    if (busy) return;
+    const nextType = asRoomType(item.roomType);
+    const imageUrl = item.imageUrl || undefined;
+    setDraft(item.draft);
+    setLastImageUrl(imageUrl);
+    setActiveHistoryId(item.id);
+    setRoomType(nextType);
+    if (item.prompt) setPrompt(item.prompt);
+    setExpanded(true);
+    saveRoomPlanAiDraft(item.draft, {
+      prompt: item.prompt || '',
+      roomType: nextType,
+      widthM: item.widthM || 20,
+      heightM: item.heightM || 16,
+      imageUrl,
+    });
+    onBlueprintChange?.(previewRoomPlanDraft(item.draft, nextType, { imageUrl }).blueprint);
+  };
+
   const applyPreset = (model: RoomPlanPromptModel) => {
     setPrompt(model.prompt);
     setRoomType(model.roomType);
@@ -172,6 +211,7 @@ export default function LandingRoomPlanAiStudio({
       )}
     >
       {!expanded ? (
+        <div>
         <button
           type="button"
           aria-expanded={false}
@@ -203,6 +243,17 @@ export default function LandingRoomPlanAiStudio({
             </span>
           </div>
         </button>
+        {history.length > 0 ? (
+          <div className="px-4 sm:px-6 pb-4">
+            <AiRoomPlanComposeHistoryList
+              items={history}
+              activeId={activeHistoryId}
+              onOpen={openHistoryItem}
+              listClassName="max-h-56"
+            />
+          </div>
+        ) : null}
+        </div>
       ) : (
         <div>
           <div className="px-5 sm:px-7 pt-5 pb-4 border-b border-border bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
@@ -357,6 +408,13 @@ export default function LandingRoomPlanAiStudio({
               >
                 {busy ? 'Composition…' : `Générer (${AI_ROOM_PLAN_TOKEN_COST} jetons)`}
               </Button>
+
+              <AiRoomPlanComposeHistoryList
+                items={history}
+                activeId={activeHistoryId}
+                onOpen={openHistoryItem}
+                listClassName="max-h-64 sm:max-h-72"
+              />
             </div>
 
             <div className="p-4 sm:p-6 space-y-3 bg-stage/40 min-h-[320px]">

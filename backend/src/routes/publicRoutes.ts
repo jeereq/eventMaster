@@ -45,7 +45,12 @@ import {
   getPublicAiTemplateCompose,
   claimPublicAiTemplateComposes,
 } from '../controllers/templateController';
-import { publicComposeRoomPlan } from '../controllers/roomController';
+import {
+  publicComposeRoomPlan,
+  listPublicAiRoomPlanComposes,
+  getPublicAiRoomPlanCompose,
+  claimPublicAiRoomPlanComposes,
+} from '../controllers/roomController';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -134,6 +139,9 @@ router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
 router.post('/event-plan-ai', optionalAuth, publicPlanEventAi);
 router.post('/templates/ai/compose', optionalAuth, publicComposeTemplateWithAi);
 router.post('/rooms/ai/compose', optionalAuth, publicComposeRoomPlan);
+router.get('/rooms/ai/history', optionalAuth, listPublicAiRoomPlanComposes);
+router.get('/rooms/ai/history/:id', optionalAuth, getPublicAiRoomPlanCompose);
+router.post('/rooms/ai/history/claim', requireAuth, claimPublicAiRoomPlanComposes);
 router.get('/templates/ai/history', optionalAuth, listPublicAiTemplateComposes);
 router.get('/templates/ai/history/:id', optionalAuth, getPublicAiTemplateCompose);
 router.post('/templates/ai/history/claim', requireAuth, claimPublicAiTemplateComposes);

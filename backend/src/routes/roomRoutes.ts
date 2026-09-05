@@ -10,6 +10,7 @@ import {
   previewRoomLayout,
   analyzeRoomPlanFromPhoto,
   composeRoomPlan,
+  listAiRoomPlanComposes,
 } from '../controllers/roomController';
 import {
   listSavedAmbiences,
@@ -36,6 +37,7 @@ router.post('/ambiences/sync', syncSavedAmbiences);
 router.post('/ambiences', createSavedAmbience);
 router.delete('/ambiences/:ambienceId', deleteSavedAmbience);
 router.post('/preview-layout', previewRoomLayout);
+router.get('/ai/history', listAiRoomPlanComposes);
 router.post('/ai/from-photo', analyzeRoomPlanFromPhoto);
 router.post('/ai/compose', composeRoomPlan);
 router.post('/', createRoom);

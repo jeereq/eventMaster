@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { MarketplaceBookingStatus } from '@prisma/client';
@@ -28,6 +28,34 @@ import {
   normalizeRoomPlanImageUrl,
   rateLimitRoomPlanAi,
 } from '../services/roomPlanAiService';
+import {
+  saveAiRoomPlanComposeRun,
+  listAiRoomPlanComposeRuns,
+  getAiRoomPlanComposeRun,
+  claimDeviceRoomPlanComposeRuns,
+  type AiRoomPlanComposeSource,
+  type RoomPlanComposeDraft,
+} from '../services/aiRoomPlanComposeHistoryService';
+
+async function persistRoomPlanCompose(opts: {
+  userId?: string | null;
+  deviceId?: string | null;
+  source: AiRoomPlanComposeSource;
+  prompt?: string | null;
+  imageUrl?: string | null;
+  roomType?: string | null;
+  widthM?: number | null;
+  heightM?: number | null;
+  draft: RoomPlanComposeDraft;
+}) {
+  try {
+    const saved = await saveAiRoomPlanComposeRun(opts);
+    return saved?.id || null;
+  } catch (err) {
+    console.error('[AiRoomPlanCompose] persist:', err);
+    return null;
+  }
+}
 
 const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 
@@ -417,13 +445,26 @@ export async function analyzeRoomPlanFromPhoto(req: AuthenticatedRequest, res: R
       heightM,
       brief,
     });
+    const historyId = await persistRoomPlanCompose({
+      userId,
+      deviceId,
+      source: 'studio',
+      prompt: brief,
+      imageUrl,
+      roomType,
+      widthM,
+      heightM,
+      draft,
+    });
     const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, {
       action: 'room_plan_from_photo',
       source: 'dashboard',
+      relatedId: historyId,
     });
 
     return res.json({
       draft,
+      historyId,
       remaining: allowance.totalRemaining,
       allowance,
       tokenCost: AI_ROOM_PLAN_TOKEN_COST,
@@ -486,13 +527,26 @@ export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) 
     rateLimitRoomPlanAi(userId);
     await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST);
     const draft = await composeRoomPlanAi(input);
+    const historyId = await persistRoomPlanCompose({
+      userId,
+      deviceId,
+      source: 'studio',
+      prompt: input.brief,
+      imageUrl: input.imageUrl,
+      roomType: input.roomType,
+      widthM: input.widthM,
+      heightM: input.heightM,
+      draft,
+    });
     const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, {
       action: 'room_plan_from_photo',
       source: 'studio',
+      relatedId: historyId,
     });
 
     return res.json({
       draft,
+      historyId,
       remaining: allowance.totalRemaining,
       allowance,
       tokenCost: AI_ROOM_PLAN_TOKEN_COST,
@@ -525,13 +579,26 @@ export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Resp
     rateLimitRoomPlanAi(rateKey);
     await requireAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST);
     const draft = await composeRoomPlanAi(input);
+    const historyId = await persistRoomPlanCompose({
+      userId: user?.id || null,
+      deviceId,
+      source: user?.id ? 'studio' : 'landing',
+      prompt: input.brief,
+      imageUrl: input.imageUrl,
+      roomType: input.roomType,
+      widthM: input.widthM,
+      heightM: input.heightM,
+      draft,
+    });
     const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, {
       action: 'room_plan_from_photo',
       source: user?.id ? 'studio' : 'landing',
+      relatedId: historyId,
     });
 
     return res.json({
       draft,
+      historyId,
       remaining: allowance.totalRemaining,
       allowance,
       tokenCost: AI_ROOM_PLAN_TOKEN_COST,
@@ -543,5 +610,70 @@ export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Resp
     }
     console.error('publicComposeRoomPlan:', error);
     return res.status(500).json({ error: 'Impossible de composer le plan de salle.' });
+  }
+}
+
+/** GET /public/rooms/ai/history?deviceId= — historique générations plan de salle */
+export async function listPublicAiRoomPlanComposes(req: Request, res: Response) {
+  try {
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const userId = (req as AuthenticatedRequest).user?.id || null;
+    const items = await listAiRoomPlanComposeRuns({ userId, deviceId, limit: 20 });
+    return res.json({ items });
+  } catch (error: unknown) {
+    console.error('listPublicAiRoomPlanComposes:', error);
+    return res.status(500).json({ error: 'Impossible de charger l’historique des plans.' });
+  }
+}
+
+/** GET /rooms/ai/history — studio authentifié */
+export async function listAiRoomPlanComposes(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const items = await listAiRoomPlanComposeRuns({
+      userId: req.user.id,
+      deviceId,
+      limit: 20,
+    });
+    return res.json({ items });
+  } catch (error: unknown) {
+    console.error('listAiRoomPlanComposes:', error);
+    return res.status(500).json({ error: 'Impossible de charger l’historique des plans.' });
+  }
+}
+
+/** GET /public/rooms/ai/history/:id */
+export async function getPublicAiRoomPlanCompose(req: Request, res: Response) {
+  try {
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : '';
+    const userId = (req as AuthenticatedRequest).user?.id || null;
+    const item = await getAiRoomPlanComposeRun({ id, userId, deviceId });
+    if (!item) return res.status(404).json({ error: 'Génération introuvable.' });
+    return res.json({ item });
+  } catch (error: unknown) {
+    console.error('getPublicAiRoomPlanCompose:', error);
+    return res.status(500).json({ error: 'Impossible de charger cette génération.' });
+  }
+}
+
+/** POST /public/rooms/ai/history/claim — rattache l’historique device au compte */
+export async function claimPublicAiRoomPlanComposes(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+    const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
+    const result = await claimDeviceRoomPlanComposeRuns(req.user.id, deviceId);
+    const items = await listAiRoomPlanComposeRuns({
+      userId: req.user.id,
+      deviceId,
+      limit: 20,
+    });
+    return res.json({ ...result, items });
+  } catch (error: unknown) {
+    console.error('claimPublicAiRoomPlanComposes:', error);
+    return res.status(500).json({ error: 'Impossible de rattacher l’historique à votre compte.' });
   }
 }

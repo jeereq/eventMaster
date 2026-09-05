@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, Upload, Wand2, XCircle } from 'lucide-react';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
@@ -20,6 +20,11 @@ import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 import type { RoomPlanPromptModel } from '@/config/roomPlanPromptModels';
 import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
+import AiRoomPlanComposeHistoryList from '@/components/AiRoomPlanComposeHistoryList';
+import {
+  fetchAiRoomPlanComposeHistoryStudio,
+  type AiRoomPlanComposeHistoryItem,
+} from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button, Modal } from '@/components/ui';
@@ -61,6 +66,13 @@ export default function RoomPlanAiStudioModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
+  const [history, setHistory] = useState<AiRoomPlanComposeHistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    void fetchAiRoomPlanComposeHistoryStudio().then(setHistory);
+  }, [open]);
 
   const setPhoto = (next: File | null) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -122,6 +134,8 @@ export default function RoomPlanAiStudioModal({
         draft: result.draft,
         selection: applied.selection,
       });
+      setActiveHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
+      void fetchAiRoomPlanComposeHistoryStudio().then(setHistory);
       onClose();
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };
@@ -132,6 +146,22 @@ export default function RoomPlanAiStudioModal({
     } finally {
       setBusy(false);
     }
+  };
+
+  const openHistoryItem = (item: AiRoomPlanComposeHistoryItem) => {
+    if (busy) return;
+    const applied = applyRoomPlanVisionDraft(current, item.draft, caps, {
+      imageUrl: item.imageUrl || undefined,
+    });
+    setActiveHistoryId(item.id);
+    if (item.prompt) setPrompt(item.prompt);
+    onApplied({
+      blueprint: applied.blueprint,
+      warnings: applied.warnings,
+      draft: item.draft,
+      selection: applied.selection,
+    });
+    onClose();
   };
 
   const applyPreset = (model: RoomPlanPromptModel) => {
@@ -231,6 +261,13 @@ export default function RoomPlanAiStudioModal({
           </label>
 
           <RoomPlanPromptSelector onSelect={applyPreset} selectedPrompt={prompt} disabled={busy} />
+
+          <AiRoomPlanComposeHistoryList
+            items={history}
+            activeId={activeHistoryId}
+            onOpen={openHistoryItem}
+            listClassName="max-h-48"
+          />
 
           {error ? <Alert variant="error">{error}</Alert> : null}
 
