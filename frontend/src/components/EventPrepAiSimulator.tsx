@@ -17,6 +17,7 @@ import {
   AI_ALLOWANCE_CHANGED,
   consumeAiSimulation,
   getAiSimulationAllowance,
+  aiTokenBalanceLabel,
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
@@ -778,7 +779,7 @@ export default function EventPrepAiSimulator({
             disabled={!allowance.canSimulate && !loading}
           >
             {allowance.canSimulate
-              ? `Lancer la simulation (${allowance.totalRemaining} restante${allowance.totalRemaining > 1 ? 's' : ''})`
+              ? `Lancer la simulation (${allowance.unlimited ? 'illimité' : `${aiTokenBalanceLabel(allowance)} restante${allowance.totalRemaining > 1 ? 's' : ''}`})`
               : 'Recharger pour simuler'}
           </Button>
         </div>

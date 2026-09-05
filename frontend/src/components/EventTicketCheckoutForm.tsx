@@ -15,7 +15,8 @@ import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventPr
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
 import { normalizeTicketPricingMode } from '@/lib/ticketPricing';
 import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
-import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
+import PaymentAccountPicker from '@/components/PaymentAccountPicker';
+import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 
 type SeatRow = {
   tableId: string;
@@ -166,8 +167,9 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     return map;
   }, [pricingZones]);
 
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mobile'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mobile'>('mobile');
   const [mmPhone, setMmPhone] = useState('');
+  const [operator, setOperator] = useState<FlexPayMobileOperatorId>('orange');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +211,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         quantity: seatMode ? selectedSeats.length : quantity,
         ...(event.paid ? { paymentMethod } : {}),
         ...(event.paid && paymentMethod === 'mobile'
-          ? { phone: rawMobilePhone }
+          ? { phone: rawMobilePhone, operator }
           : {}),
         ...(seatMode && selectedSeats.length > 0 ? { seats: selectedSeats } : {}),
         ...(zonePricing && !seatMode && selectedZoneId ? { pricingZoneId: selectedZoneId } : {}),
@@ -486,46 +488,16 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           )}
 
           {event.paid && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-foreground">Mode de paiement</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    paymentMethod === 'card' ? 'bg-primary text-white border-primary shadow-xs' : 'border-border text-muted hover:text-foreground hover:bg-surface-muted'
-                  }`}
-                >
-                  Visa / Mastercard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('mobile')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    paymentMethod === 'mobile' ? 'bg-primary text-white border-primary shadow-xs' : 'border-border text-muted hover:text-foreground hover:bg-surface-muted'
-                  }`}
-                >
-                  Mobile Money (Orange, M-Pesa, Airtel)
-                </button>
-              </div>
-              {paymentMethod === 'mobile' && (
-                <>
-                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px] text-muted">
-                    <span className="font-semibold text-foreground">Opérateurs :</span>
-                    <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 font-bold text-[10px] border border-orange-500/20">Orange Money</span>
-                    <span className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 font-bold text-[10px] border border-red-500/20">M-Pesa</span>
-                    <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 font-bold text-[10px] border border-rose-500/20">Airtel</span>
-                  </div>
-                  <Input
-                    label="Numéro Mobile Money (ex: 24389XXXXXXX)"
-                    value={mmPhone}
-                    onChange={(e) => setMmPhone(e.target.value)}
-                    placeholder="24389XXXXXXX"
-                  />
-                </>
-              )}
-              <p className="text-xs text-muted">Total : {formatFc(totalFc)}</p>
-            </div>
+            <PaymentAccountPicker
+              method={paymentMethod}
+              onMethodChange={setPaymentMethod}
+              operator={operator}
+              onOperatorChange={setOperator}
+              phone={mmPhone}
+              onPhoneChange={setMmPhone}
+              amountFc={totalFc}
+              amountHint="Montant du billet prélevé"
+            />
           )}
           <Button type="submit" loading={busy} fullWidth className="min-h-11">
             {event.paid ? 'Payer et réserver' : 'Confirmer l’inscription'}

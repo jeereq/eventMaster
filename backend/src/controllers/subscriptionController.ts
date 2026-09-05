@@ -476,7 +476,7 @@ export async function checkoutSubscriptionFlexPay(req: AuthenticatedRequest, res
       });
     }
 
-    const { requestedPlan, durationDays, paymentMethod, phone } = req.body || {};
+    const { requestedPlan, durationDays, paymentMethod, phone, operator } = req.body || {};
     const method = paymentMethod === 'mobile' ? 'mobile' : 'card';
 
     if (!requestedPlan || !PAID_PLAN_KEYS.includes(requestedPlan)) {
@@ -523,6 +523,7 @@ export async function checkoutSubscriptionFlexPay(req: AuthenticatedRequest, res
         approvedAmount: amountFc,
         paymentProvider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
         flexPayReference: null,
+        flexPayChannel: method === 'mobile' && operator ? String(operator).trim().toLowerCase() : null,
       },
     });
 
@@ -587,6 +588,13 @@ export async function retrySubscriptionFlexPay(req: AuthenticatedRequest, res: R
       request.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card';
     const method = rawMethod === 'mobile' || rawMethod === 'card' ? rawMethod : fallback;
     const phone = req.body?.phone ?? null;
+    const operator = typeof req.body?.operator === 'string' ? req.body.operator.trim().toLowerCase() : '';
+    if (method === 'mobile' && operator) {
+      await prisma.subscriptionRequest.update({
+        where: { id: request.id },
+        data: { flexPayChannel: operator },
+      });
+    }
 
     try {
       const result = await initiateFlexPaySessionForRequest({

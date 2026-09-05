@@ -9,12 +9,13 @@ import {
   ShieldCheck,
   Smartphone,
 } from 'lucide-react';
-import { Modal, Button, Input } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 import { api } from '@/lib/api';
-import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
+import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 import type { BillingCycle, PlanId } from '@/config/landingPricing';
 import { durationDaysForPlan } from '@/config/landingPricing';
 import PaymentPendingView from '@/components/PaymentPendingView';
+import PaymentAccountPicker from '@/components/PaymentAccountPicker';
 
 export type FlexPayMethod = 'mobile' | 'card';
 
@@ -47,7 +48,7 @@ export default function SubscriptionFlexPayModal({
 }) {
   const [step, setStep] = useState<CheckoutStep>('form');
   const [paymentMethod, setPaymentMethod] = useState<FlexPayMethod>(initialMethod);
-  const [operator, setOperator] = useState<'orange' | 'mpesa' | 'airtel'>('orange');
+  const [operator, setOperator] = useState<FlexPayMobileOperatorId>('orange');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -203,82 +204,16 @@ export default function SubscriptionFlexPayModal({
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-bold text-foreground">Moyen de paiement</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('mobile')}
-                className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  paymentMethod === 'mobile'
-                    ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                    : 'border-border bg-surface text-muted hover:text-foreground'
-                }`}
-              >
-                <Smartphone className="w-5 h-5" />
-                Mobile Money
-                <span className="text-[10px] font-medium opacity-80">Orange · M-Pesa · Airtel</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('card')}
-                className={`p-3 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  paymentMethod === 'card'
-                    ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                    : 'border-border bg-surface text-muted hover:text-foreground'
-                }`}
-              >
-                <CreditCard className="w-5 h-5" />
-                Visa / Mastercard
-                <span className="text-[10px] font-medium opacity-80">Paiement par carte</span>
-              </button>
-            </div>
-          </div>
-
-          {paymentMethod === 'mobile' && (
-            <div className="space-y-3 pt-1 animate-fade-in">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {[
-                  { id: 'orange' as const, label: 'Orange Money', color: 'text-orange-600 bg-orange-500/10 border-orange-500/30' },
-                  { id: 'mpesa' as const, label: 'M-Pesa', color: 'text-red-600 bg-red-500/10 border-red-500/30' },
-                  { id: 'airtel' as const, label: 'Airtel Money', color: 'text-rose-600 bg-rose-500/10 border-rose-500/30' },
-                ].map((op) => (
-                  <button
-                    key={op.id}
-                    type="button"
-                    onClick={() => setOperator(op.id)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer touch-manipulation ${
-                      operator === op.id ? op.color : 'border-border bg-surface text-muted opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    {op.label}
-                  </button>
-                ))}
-              </div>
-              <Input
-                label="Numéro Mobile Money"
-                required
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Ex. 24389XXXXXXX ou 089XXXXXXX"
-                leftIcon={<Smartphone className="w-4 h-4" />}
-                hint={`Paiement ${FLEXPAY_MOBILE_OPERATORS_LABEL}. Validez le PIN sur votre téléphone.`}
-              />
-            </div>
-          )}
-
-          {paymentMethod === 'card' && (
-            <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 text-xs animate-fade-in">
-              <p className="font-semibold text-foreground flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-primary" />
-                Paiement sécurisé par carte
-              </p>
-              <p className="text-[11px] text-muted">
-                Vous serez redirigé vers FlexPay pour payer en Francs Congolais (Visa ou Mastercard).
-              </p>
-            </div>
-          )}
+          <PaymentAccountPicker
+            method={paymentMethod}
+            onMethodChange={setPaymentMethod}
+            operator={operator}
+            onOperatorChange={setOperator}
+            phone={phone}
+            onPhoneChange={setPhone}
+            amountFc={parseInt(priceLabel.replace(/\D/g, ''), 10) || undefined}
+            amountHint="Montant du forfait prélevé"
+          />
 
           {error ? (
             <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center gap-2">

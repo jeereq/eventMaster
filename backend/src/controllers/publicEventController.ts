@@ -482,6 +482,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
           await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
           return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
         }
+        const operator = String(req.body?.operator || '').trim().toLowerCase() || null;
         const apiBase = getPublicApiBaseUrl();
         const reference = buildFlexPayReference('tk', order.id);
         try {
@@ -498,6 +499,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
               paymentProvider: 'flexpay_mobile',
               flexPayOrderNumber: flex.orderNumber,
               flexPayReference: reference,
+              flexPayChannel: operator,
             },
           });
           return res.json({

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
 import { AuthenticatedRequest, signUserToken } from '../middleware/auth';
 import { formatTenantResponse, parseAccountKind } from '../utils/tenantAccess';
+import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
 import { isPlanAllowedForAccountKind } from '../config/plansConfig';
 import { PlanType } from '@prisma/client';
 import { recordUserLegalAcceptance } from '../services/legalService';
@@ -117,7 +118,7 @@ export async function register(req: Request, res: Response) {
       });
     }
 
-    const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind } = req.body;
+    const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind, intent: rawIntent } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name)' });
@@ -205,6 +206,16 @@ export async function register(req: Request, res: Response) {
       ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || null,
       userAgent: (req.headers['user-agent'] as string) || null,
     });
+
+    try {
+      await grantWelcomeAiTokens({
+        userId: result.user.id,
+        accountKind,
+        intent: typeof rawIntent === 'string' ? rawIntent : null,
+      });
+    } catch (grantError) {
+      console.error('[register] welcome AI tokens:', grantError);
+    }
 
     const sentVia = await issueAndSendOtp({
       userId: result.user.id,

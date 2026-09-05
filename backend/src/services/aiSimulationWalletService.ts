@@ -19,7 +19,7 @@ export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 export const AI_ROOM_PLAN_TOKEN_COST = 3;
 
 export type { AiTokenAction };
-export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'admin' | 'support' | 'unknown';
+export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'admin' | 'support' | 'signup' | 'unknown';
 export type AiTokenPool = 'free' | 'bonus' | 'mixed' | 'paid' | 'granted' | 'comp';
 
 export type AiTokenLedgerMeta = {
@@ -314,6 +314,8 @@ export async function grantAiTokensToUser(input: {
   userId: string;
   tokensCount: number;
   adminUserId: string;
+  relatedId?: string;
+  source?: string;
 }) {
   const userId = input.userId.trim();
   const tokensCount = Math.max(1, Math.round(input.tokensCount));
@@ -326,8 +328,16 @@ export async function grantAiTokensToUser(input: {
   if (!user) fail(404, 'Utilisateur introuvable.');
 
   const deviceId = userGrantDeviceId(userId);
-  const relatedId = `grant_${userId}_${Date.now()}`;
+  const relatedId = input.relatedId?.trim() || `grant_${userId}_${Date.now()}`;
   const paid = await paidSummary(deviceId, userId);
+
+  if (input.relatedId?.trim()) {
+    const already = await prisma.aiTokenLedger.findFirst({
+      where: { action: 'grant', relatedId },
+      select: { id: true },
+    });
+    if (already) fail(409, 'Ces jetons ont déjà été offerts.');
+  }
 
   const wallet = await prisma.$transaction(async (tx) => {
     const locked = await lockWalletByDevice(tx, deviceId);
@@ -342,11 +352,12 @@ export async function grantAiTokensToUser(input: {
       userId,
       deviceId,
       action: 'grant',
-      source: 'admin',
+      source: input.source?.trim() || 'admin',
       tokensDelta: tokensCount,
       tokensFromGranted: tokensCount,
       pool: 'granted',
       relatedId,
+      ignoreDuplicate: true,
     });
     return next;
   });

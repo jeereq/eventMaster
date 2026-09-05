@@ -23,6 +23,7 @@ import {
  getAiSimulationAllowance,
  syncDeviceAiTokensWithBackend,
  canAffordAiAction,
+ aiTokenBalanceLabel,
  AI_INVITATION_COMPOSE_TOKEN_COST,
  type AiAllowance,
 } from '@/lib/aiTokens';
@@ -1175,7 +1176,7 @@ export default function TemplatesPage() {
  <div className="flex items-center justify-between gap-2 text-[11px]">
  <span className="inline-flex items-center gap-1.5 font-bold text-muted">
  <Coins className="w-3.5 h-3.5" />
- {aiAllowance.totalRemaining} jeton{aiAllowance.totalRemaining === 1 ? '' : 's'} restant{aiAllowance.totalRemaining === 1 ? '' : 's'}
+ {aiAllowance.unlimited ? 'Jetons illimités' : `${aiTokenBalanceLabel(aiAllowance)} jeton${aiAllowance.totalRemaining === 1 ? '' : 's'} restant${aiAllowance.totalRemaining === 1 ? '' : 's'}`}
  </span>
  {!canAffordAiAction(aiAllowance, AI_INVITATION_COMPOSE_TOKEN_COST) && (
  <button

@@ -48,7 +48,7 @@ import { interpolateRates } from '@/lib/platformRates';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
-import { LANDING_PLANS } from '@/config/landingPricing';
+import { formatFc, LANDING_PLANS } from '@/config/landingPricing';
 import { LANDING_SLOGAN } from '@/lib/landingProfiles';
 import { cn } from '@/lib/cn';
 
@@ -645,6 +645,7 @@ function RegisterPageContent() {
         phoneCountryCode,
         phoneNational,
         accountKind,
+        intentParam || undefined,
       );
 
       if (res.requiresVerification && res.email) {
@@ -878,6 +879,14 @@ function RegisterPageContent() {
                   </div>
                 </fieldset>
               )}
+
+              <p className="text-xs text-muted leading-relaxed">
+                À l’ouverture, {accountKind === 'VENDOR' || accountKind === 'BOTH' || intentParam === 'pro' ? 'un compte B2B' : 'un compte B2C'} reçoit des jetons IA d’une valeur de{' '}
+                <strong className="text-foreground">
+                  {formatFc(accountKind === 'VENDOR' || accountKind === 'BOTH' || intentParam === 'pro' ? 20_000 : 10_000)}
+                </strong>
+                .
+              </p>
 
               {/* ─── IDENTITÉ ET ORGANISATION (2 COLONNES) ─── */}
               <div className={cn('grid gap-2.5', accountKind === 'CLIENT' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>

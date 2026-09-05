@@ -25,6 +25,8 @@ import {
 } from '@/lib/aiTokens';
 import { api } from '@/lib/api';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import PaymentAccountPicker from '@/components/PaymentAccountPicker';
+import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 
 interface AiTokenPurchaseModalProps {
   open: boolean;
@@ -36,27 +38,6 @@ type CheckoutStep = 'form' | 'waiting_mobile' | 'success';
 
 const POLL_MAX = 30;
 
-const OPERATORS = [
-  {
-    id: 'orange' as const,
-    label: 'Orange Money',
-    selected:
-      'text-orange-800 dark:text-orange-200 bg-orange-500/15 border-orange-700/40 dark:border-orange-400/40',
-  },
-  {
-    id: 'mpesa' as const,
-    label: 'M-Pesa',
-    selected:
-      'text-red-800 dark:text-red-200 bg-red-500/15 border-red-700/40 dark:border-red-400/40',
-  },
-  {
-    id: 'airtel' as const,
-    label: 'Airtel Money',
-    selected:
-      'text-rose-800 dark:text-rose-200 bg-rose-500/15 border-rose-700/40 dark:border-rose-400/40',
-  },
-] as const;
-
 export default function AiTokenPurchaseModal({
   open,
   onClose,
@@ -67,7 +48,7 @@ export default function AiTokenPurchaseModal({
   const presets = aiTokenAmountPresets(pricing);
   const [step, setStep] = useState<CheckoutStep>('form');
   const [paymentMethod, setPaymentMethod] = useState<'mobile' | 'card'>('mobile');
-  const [operator, setOperator] = useState<'orange' | 'mpesa' | 'airtel'>('orange');
+  const [operator, setOperator] = useState<FlexPayMobileOperatorId>('orange');
   const [phone, setPhone] = useState('');
   const [amountInput, setAmountInput] = useState('');
   const [checkoutAmountFc, setCheckoutAmountFc] = useState(0);
@@ -470,91 +451,16 @@ export default function AiTokenPurchaseModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <p id="token-pay-label" className="block text-xs font-bold text-foreground">
-              Moyen de paiement
-            </p>
-            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="token-pay-label">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={paymentMethod === 'mobile'}
-                onClick={() => setPaymentMethod('mobile')}
-                className={`min-h-11 p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  paymentMethod === 'mobile'
-                    ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                    : 'border-border bg-surface text-muted hover:text-foreground'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" aria-hidden />
-                Mobile Money
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={paymentMethod === 'card'}
-                onClick={() => setPaymentMethod('card')}
-                className={`min-h-11 p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  paymentMethod === 'card'
-                    ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                    : 'border-border bg-surface text-muted hover:text-foreground'
-                }`}
-              >
-                <CreditCard className="w-3.5 h-3.5" aria-hidden />
-                Visa / Mastercard
-              </button>
-            </div>
-          </div>
-
-          {paymentMethod === 'mobile' && (
-            <div className="space-y-3 pt-1 animate-fade-in">
-              <p id="token-op-label" className="text-xs font-bold text-foreground">
-                Opérateur
-              </p>
-              <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-labelledby="token-op-label">
-                {OPERATORS.map((op) => (
-                  <button
-                    key={op.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={operator === op.id}
-                    onClick={() => setOperator(op.id)}
-                    className={`min-h-11 px-3 rounded-xl text-xs font-bold border transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-                      operator === op.id
-                        ? op.selected
-                        : 'border-border bg-surface text-muted hover:text-foreground hover:opacity-100'
-                    }`}
-                  >
-                    {op.label}
-                  </button>
-                ))}
-              </div>
-
-              <Input
-                label="Numéro de téléphone Mobile Money"
-                required
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Ex: 24389XXXXXXX ou 089XXXXXXX"
-                leftIcon={<Smartphone className="w-4 h-4" />}
-                hint="Vous recevrez une notification pour saisir votre code secret PIN."
-              />
-            </div>
-          )}
-
-          {paymentMethod === 'card' && (
-            <div className="p-3 rounded-xl bg-surface-muted border border-border space-y-1 text-xs animate-fade-in">
-              <p className="font-semibold text-foreground flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-primary" aria-hidden />
-                Paiement sécurisé par carte bancaire
-              </p>
-              <p className="text-[11px] text-muted">
-                Redirection vers FlexPay pour finaliser la transaction en francs congolais (FC).
-              </p>
-            </div>
-          )}
+          <PaymentAccountPicker
+            method={paymentMethod}
+            onMethodChange={setPaymentMethod}
+            operator={operator}
+            onOperatorChange={setOperator}
+            phone={phone}
+            onPhoneChange={setPhone}
+            amountFc={isValidAmount ? parsedAmount : pricing.minAmountCdf}
+            amountHint="Montant prélevé en francs congolais"
+          />
 
           {error ? (
             <div ref={errorRef} tabIndex={-1} className="outline-none">

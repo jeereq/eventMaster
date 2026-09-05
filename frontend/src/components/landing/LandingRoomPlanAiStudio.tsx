@@ -18,6 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
   canAffordAiAction,
+  aiTokenBalanceLabel,
   getAiSimulationAllowance,
   type AiAllowance,
 } from '@/lib/aiTokens';
@@ -235,7 +236,7 @@ export default function LandingRoomPlanAiStudio({
           <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums">
               <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
-              {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
+              {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
             </span>
             <span className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold">
               Ouvrir
@@ -274,7 +275,7 @@ export default function LandingRoomPlanAiStudio({
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums">
                   <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
-                  {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
+                  {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
                 </span>
                 <Button
                   type="button"

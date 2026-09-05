@@ -28,6 +28,7 @@ import {
   getAiSimulationAllowance,
   syncDeviceAiTokensWithBackend,
   canAffordAiAction,
+  aiTokenBalanceLabel,
   AI_INVITATION_COMPOSE_TOKEN_COST,
   type AiAllowance,
 } from '@/lib/aiTokens';
@@ -583,7 +584,7 @@ export default function LandingInvitationAiGenerator({
               title="Jetons IA disponibles"
             >
               <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
-              {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
+              {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
             </span>
             <span className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold">
               Ouvrir
@@ -621,7 +622,7 @@ export default function LandingInvitationAiGenerator({
                   title="Jetons IA disponibles (invitations ou simulation)"
                 >
                   <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
-                  {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
+                  {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
                 </span>
                 {!canAffordAiAction(allowance, AI_INVITATION_COMPOSE_TOKEN_COST) ? (
                   <Button type="button" size="sm" variant="secondary" onClick={() => setTokenModalOpen(true)}>

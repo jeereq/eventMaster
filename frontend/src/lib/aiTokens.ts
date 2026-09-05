@@ -50,6 +50,13 @@ export function canAffordAiAction(
   return allowance.totalRemaining >= Math.max(1, cost);
 }
 
+export function aiTokenBalanceLabel(
+  allowance: Pick<AiAllowance, 'totalRemaining' | 'unlimited'>,
+): string {
+  if (allowance.unlimited) return '∞';
+  return String(allowance.totalRemaining);
+}
+
 export function calculateTokensForAmount(
   amountFc: number,
   pricing: AiTokenPricing = resolveAiTokenPricing(),
