@@ -1090,8 +1090,6 @@ export function applyRoomPlanVisionDraft(
       floorImageFit: keepExistingFloor ? current.metadata.floorImageFit : undefined,
       roofStyle: roof.roofStyle,
       showRoof: roof.showRoof,
-      tentWidthM: tentSized ? canvas.widthM : current.metadata.tentWidthM,
-      tentLengthM: tentSized ? canvas.heightM : current.metadata.tentLengthM,
       curtainColor: appearance?.curtainColor ?? current.metadata.curtainColor,
       showCurtains: appearance?.curtainColor ? true : current.metadata.showCurtains,
       showChandeliers: chandelierFixtures.length > 0,
