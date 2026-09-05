@@ -4491,6 +4491,17 @@ export const barStylePresets: Record<BarStyle, { w: number; h: number; label: st
   whiskey: { w: 24, h: 10, label: 'Bar whisky', color: '#3b2416' },
 };
 
+/** Conserve un libellé perso ; n’écrase que s’il vaut encore le défaut précédent. */
+export function nextOwnedLabel(
+  current: string | undefined,
+  previousDefault: string,
+  nextDefault: string,
+): string {
+  const value = (current ?? '').trim();
+  if (!value || value === previousDefault) return nextDefault;
+  return value;
+}
+
 export const roofStyleLabels: Record<RoofStyle, string> = {
   flat: 'Plat',
   tentSwag: 'Tente drapée',

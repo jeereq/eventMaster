@@ -11,6 +11,21 @@ const BOTTLE_COLORS: Record<BarStyle, string[]> = {
   whiskey: ['#7c2d12', '#9a3412', '#451a03', '#b45309'],
 };
 
+const BAR_BOTTLE_MAX = 12;
+const BAR_GLASS_MAX = 10;
+const INSTRUMENT_NATIVE: Record<InstrumentStyle, { w: number; d: number }> = {
+  piano: { w: 1.55, d: 0.72 },
+  keyboard: { w: 1.15, d: 0.32 },
+  drums: { w: 0.86, d: 0.7 },
+  guitar: { w: 0.42, d: 0.38 },
+  bass: { w: 0.42, d: 0.4 },
+  micStand: { w: 0.28, d: 0.28 },
+  sax: { w: 0.32, d: 0.3 },
+  violin: { w: 0.28, d: 0.26 },
+  amp: { w: 0.55, d: 0.32 },
+  speaker: { w: 0.42, d: 0.28 },
+};
+
 const GLASS_TINT: Record<BarStyle, string> = {
   cocktail: '#e0f2fe',
   wine: '#fecaca',
@@ -32,7 +47,7 @@ function Mat({
   return <meshStandardMaterial color={color} roughness={roughness} metalness={metalness} />;
 }
 
-export function ConcertInstrumentMesh({
+function InstrumentGlyph({
   style,
   selected = false,
 }: {
@@ -227,6 +242,27 @@ export function ConcertInstrumentMesh({
   );
 }
 
+export function ConcertInstrumentMesh({
+  style,
+  selected = false,
+  w = 1.2,
+  d = 0.7,
+}: {
+  style: InstrumentStyle;
+  selected?: boolean;
+  w?: number;
+  d?: number;
+}) {
+  const native = INSTRUMENT_NATIVE[style];
+  const fit = Math.min(w / native.w, d / native.d);
+  const scale = Math.min(2.4, Math.max(0.45, fit));
+  return (
+    <group scale={[scale, scale, scale]}>
+      <InstrumentGlyph style={style} selected={selected} />
+    </group>
+  );
+}
+
 function BarBottle({
   x,
   z,
@@ -341,8 +377,8 @@ export function EventBarMesh({
   const body = selected ? '#c7d2fe' : color ?? '#4a3728';
   const topY = height;
   const bottles = BOTTLE_COLORS[style];
-  const bottleCount = Math.max(4, Math.round(w * 1.6));
-  const glassCount = Math.max(3, Math.round(w * 1.2));
+  const bottleCount = Math.min(BAR_BOTTLE_MAX, Math.max(4, Math.round(w * 1.6)));
+  const glassCount = Math.min(BAR_GLASS_MAX, Math.max(3, Math.round(w * 1.2)));
 
   return (
     <group>

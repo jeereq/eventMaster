@@ -77,7 +77,7 @@ import { cn } from '@/lib/cn';
 
 interface RegistrationActionConfig {
   key: string;
-  badge: string;
+    badge: string;
   heroTitle: string;
   heroDescription: string;
   goalTitle: string;
@@ -89,13 +89,13 @@ interface RegistrationActionConfig {
   submitButtonLabel: string;
   orgLabel: string;
   orgPlaceholder: string;
-  features: Array<{
-    step: number;
+    features: Array<{
+      step: number;
     icon: React.ComponentType<{ className?: string }>;
-    title: string;
-    desc: string;
-  }>;
-}
+      title: string;
+      desc: string;
+    }>;
+  }
 
 const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   room_editor: {
@@ -531,9 +531,9 @@ function resolveActionConfig(
 }
 
 export default function RegisterPage() {
-  return (
-    <Suspense
-      fallback={
+ return (
+ <Suspense
+ fallback={
         <AuthSplitLayout
           title="Chargement…"
           description=""
@@ -543,14 +543,14 @@ export default function RegisterPage() {
           maxWidthClassName="max-w-xl"
         >
           <Card padding="md" className="shadow-xl animate-pulse h-96">
-            <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
-          </Card>
-        </AuthSplitLayout>
-      }
-    >
-      <RegisterPageContent />
-    </Suspense>
-  );
+ <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
+ </Card>
+ </AuthSplitLayout>
+ }
+ >
+ <RegisterPageContent />
+ </Suspense>
+ );
 }
 
 const ENTERPRISE_PLAN_KEYS = new Set(['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3']);
@@ -581,12 +581,12 @@ function welcomeSignupGrantLabel(
 }
 
 function RegisterPageContent() {
-  const { register } = useAuth();
-  const { site, ready } = usePlatformSite();
+ const { register } = useAuth();
+ const { site, ready } = usePlatformSite();
   const authChannels = site.authOtpChannels;
   const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
-  const router = useRouter();
-  const searchParams = useSearchParams();
+ const router = useRouter();
+ const searchParams = useSearchParams();
 
   const nextParam = searchParams.get('next');
   const nextPath = safeAppPath(nextParam);
@@ -595,25 +595,25 @@ function RegisterPageContent() {
   const planParam = searchParams.get('plan');
   const templateIdParam = searchParams.get('templateId');
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [tenantName, setTenantName] = useState('');
-  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
-  const [phoneNational, setPhoneNational] = useState('');
+ const [email, setEmail] = useState('');
+ const [password, setPassword] = useState('');
+ const [name, setName] = useState('');
+ const [tenantName, setTenantName] = useState('');
+ const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+ const [phoneNational, setPhoneNational] = useState('');
   const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
-  const [referralCode, setReferralCode] = useState('');
-  const [referralFromLink, setReferralFromLink] = useState(false);
+ const [acceptTerms, setAcceptTerms] = useState(false);
+ const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+ const [referralCode, setReferralCode] = useState('');
+ const [referralFromLink, setReferralFromLink] = useState(false);
   const [referralChoice, setReferralChoice] = useState<'yes' | 'no' | null>(null);
-  const [accountKind, setAccountKind] = useState<TenantAccountKind>('ORGANIZER');
+ const [accountKind, setAccountKind] = useState<TenantAccountKind>('ORGANIZER');
   const [vendorTrack, setVendorTrack] = useState<VendorRegisterTrack | null>(null);
   const [serviceGroup, setServiceGroup] = useState<VendorServiceGroup | null>(null);
   const [serviceCategory, setServiceCategory] = useState<ServiceCategory | null>(null);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+ const [error, setError] = useState('');
+ const [successMessage, setSuccessMessage] = useState('');
+ const [loading, setLoading] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy'>('summary');
 
@@ -627,26 +627,26 @@ function RegisterPageContent() {
   }, [error]);
 
   const hasExplicitAction = Boolean(actionParam || intentParam || planParam || searchParams.get('kind'));
-  const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
+ const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
 
   // Détection et pré-sélection intelligente des paramètres URL
-  useEffect(() => {
-    const fromUrl = parseReferralFromSearchParams(searchParams);
-    if (fromUrl) {
-      setReferralCode(fromUrl);
-      setReferralFromLink(true);
+ useEffect(() => {
+   const fromUrl = parseReferralFromSearchParams(searchParams);
+   if (fromUrl) {
+     setReferralCode(fromUrl);
+     setReferralFromLink(true);
       setReferralChoice('yes');
-    }
-    const kind = searchParams.get('kind');
-    if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'BOTH' || kind === 'ORGANIZER') {
-      setAccountKind(kind);
+   }
+   const kind = searchParams.get('kind');
+   if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'BOTH' || kind === 'ORGANIZER') {
+     setAccountKind(kind);
     } else if (actionParam === 'venue' || actionParam === 'services' || actionParam === 'quotes' || actionParam === 'rentals' || actionParam === 'ai_recommendation' || intentParam === 'vendor') {
-      setAccountKind('VENDOR');
+     setAccountKind('VENDOR');
     } else if (actionParam === 'venues' || actionParam === 'packs' || intentParam === 'seeker') {
-      setAccountKind('CLIENT');
+     setAccountKind('CLIENT');
     } else if (actionParam || intentParam === 'personal' || intentParam === 'pro') {
-      setAccountKind('ORGANIZER');
-    }
+     setAccountKind('ORGANIZER');
+   }
 
     const track = resolveVendorTrackFromParams({ action: actionParam, plan: planParam });
     if (track) setVendorTrack(track);
@@ -696,9 +696,9 @@ function RegisterPageContent() {
     return config.defaultNextPath;
   }, [nextPath, templateIdParam, config, matchedPlan]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+ const handleSubmit = async (e: React.FormEvent) => {
+ e.preventDefault();
+ setError('');
 
     if (!acceptTerms || !acceptPrivacy) {
       setLegalModalTab(!acceptTerms ? 'terms' : 'privacy');
@@ -707,26 +707,26 @@ function RegisterPageContent() {
       return;
     }
 
-    setLoading(true);
+ setLoading(true);
 
-    if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
-      setError('Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.');
-      setLoading(false);
-      return;
-    }
+ if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
+ setError('Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.');
+ setLoading(false);
+ return;
+ }
 
-    try {
-      const e164 = composeE164(phoneCountryCode, phoneNational) || undefined;
-      const orgName = accountKind === 'CLIENT' ? name.trim() : tenantName.trim();
-      if (accountKind !== 'CLIENT' && !orgName) {
+ try {
+ const e164 = composeE164(phoneCountryCode, phoneNational) || undefined;
+ const orgName = accountKind === 'CLIENT' ? name.trim() : tenantName.trim();
+ if (accountKind !== 'CLIENT' && !orgName) {
         setError(vendorTrack === 'venue'
           ? 'Le nom de la salle ou du complexe est obligatoire.'
           : vendorTrack === 'service'
             ? 'Le nom de l’enseigne est obligatoire.'
             : 'Le nom de l’organisation ou établissement est obligatoire.');
-        setLoading(false);
-        return;
-      }
+ setLoading(false);
+ return;
+ }
 
       if (accountKind === 'VENDOR' && vendorTrack) {
         saveRegisterVendorIntent({
@@ -742,39 +742,39 @@ function RegisterPageContent() {
       const shouldSendReferral = referralChoice === 'yes' || referralFromLink;
       const referralToSend = shouldSendReferral ? (referralCode.trim() || undefined) : undefined;
 
-      const res = await register(
-        email,
-        password,
-        name,
-        orgName,
-        e164,
-        verificationMethod,
-        acceptTerms,
-        acceptPrivacy,
+ const res = await register(
+ email,
+ password,
+ name,
+ orgName,
+ e164,
+ verificationMethod,
+ acceptTerms,
+ acceptPrivacy,
         referralToSend,
-        phoneCountryCode,
-        phoneNational,
-        accountKind,
+ phoneCountryCode,
+ phoneNational,
+ accountKind,
         intentParam || undefined,
         resolvedPlan,
-      );
+ );
 
-      if (res.requiresVerification && res.email) {
+ if (res.requiresVerification && res.email) {
         const nextQ = targetNextPath ? `&next=${encodeURIComponent(targetNextPath)}` : '';
         const welcomeQ = res.welcomeTokens?.offer === 'error' ? '&welcome=failed' : '';
         router.push(
           `/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}${nextQ}${welcomeQ}`,
         );
-        return;
-      }
+ return;
+ }
 
-      setSuccessMessage(res.message);
-      setLoading(false);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la création du compte.');
-      setLoading(false);
-    }
-  };
+ setSuccessMessage(res.message);
+ setLoading(false);
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la création du compte.');
+ setLoading(false);
+ }
+ };
 
   const GoalIcon = config.goalIcon;
 
@@ -786,36 +786,36 @@ function RegisterPageContent() {
     }));
   }, [config.features, site]);
 
-  return (
-    <AuthSplitLayout
+ return (
+ <AuthSplitLayout
       title={config.heroTitle}
       description={interpolateRates(config.heroDescription, site)}
       features={layoutFeatures}
-      backHref="/"
-      backLabel="Retour au site"
+ backHref="/"
+ backLabel="Retour au site"
       maxWidthClassName="max-w-xl"
-    >
+ >
       <Card padding="md" className="border-border shadow-sm p-4 sm:p-5">
-        {ready && !site.allowRegistration ? (
-          <div className="text-center space-y-4 py-6">
+ {ready && !site.allowRegistration ? (
+ <div className="text-center space-y-4 py-6">
             <h2 className="text-xl font-semibold text-foreground">Inscriptions temporairement fermées</h2>
-            <p className="text-sm text-muted leading-relaxed">
+ <p className="text-sm text-muted leading-relaxed">
               Les nouvelles créations de compte sont temporairement suspendues. Contactez{' '}
-              <a href={`mailto:${site.supportEmail}`} className="font-semibold text-primary hover:underline">
-                {site.supportEmail}
-              </a>{' '}
-              pour ouvrir une organisation.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
-              <Link href="/contact">
-                <Button>Nous contacter</Button>
-              </Link>
+ <a href={`mailto:${site.supportEmail}`} className="font-semibold text-primary hover:underline">
+ {site.supportEmail}
+ </a>{' '}
+ pour ouvrir une organisation.
+ </p>
+ <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+ <Link href="/contact">
+ <Button>Nous contacter</Button>
+ </Link>
               <Link href={targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login'}>
-                <Button variant="secondary">Se connecter</Button>
-              </Link>
-            </div>
-          </div>
-        ) : successMessage ? (
+ <Button variant="secondary">Se connecter</Button>
+ </Link>
+ </div>
+ </div>
+ ) : successMessage ? (
           <div className="text-center space-y-4 py-2">
             <div className="inline-flex items-center justify-center bg-primary/15 p-3.5 rounded-full text-primary">
               {verificationMethod === 'WHATSAPP' ? (
@@ -823,21 +823,21 @@ function RegisterPageContent() {
               ) : (
                 <Mail className="w-8 h-8" />
               )}
-            </div>
-            <div>
+ </div>
+ <div>
               <h2 className="text-lg sm:text-xl font-bold text-foreground">
-                {verificationMethod === 'WHATSAPP' ? 'Vérifiez votre WhatsApp' : 'Vérifiez votre boîte mail'}
-              </h2>
+ {verificationMethod === 'WHATSAPP' ? 'Vérifiez votre WhatsApp' : 'Vérifiez votre boîte mail'}
+ </h2>
               <p className="text-xs sm:text-sm text-muted mt-1.5 leading-relaxed">{successMessage}</p>
-            </div>
+ </div>
             <Link href={targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login'}>
               <Button fullWidth>
                 Aller à la connexion
               </Button>
-            </Link>
-          </div>
-        ) : (
-          <>
+ </Link>
+ </div>
+ ) : (
+ <>
             {showAccountForm && (
             <div className="mb-3.5 p-2.5 rounded-[var(--radius-card)] bg-primary/8 border border-primary/20 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -863,16 +863,16 @@ function RegisterPageContent() {
                   <h2 className="text-xs font-bold text-foreground truncate mt-0.5">
                     {config.goalTitle}
                   </h2>
-                </div>
-              </div>
+ </div>
+ </div>
 
               <div className="hidden sm:flex items-center gap-2 text-xs text-muted shrink-0">
                 <span className="inline-flex items-center gap-1 text-primary font-medium">
                   <CheckCircle2 className="w-3 h-3" /> Sans carte
                 </span>
-              </div>
-            </div>
-            )}
+ </div>
+ </div>
+ )}
 
             {error && (
               <Alert variant="error" className="mb-3 py-2 text-xs" id="register-form-error">
@@ -944,8 +944,8 @@ function RegisterPageContent() {
                 >
                   Je suis plutôt prestataire
                 </button>
-              )}
-            </div>
+ )}
+ </div>
 
             <form className="space-y-3" onSubmit={handleSubmit}>
               {/* ─── SÉLECTION DU TYPE DE COMPTE COMPACTE ─── */}
@@ -982,8 +982,8 @@ function RegisterPageContent() {
                       const isRecommended = config.defaultAccountKind === kind;
 
                       return (
-                        <label
-                          key={kind}
+ <label
+ key={kind}
                           className={cn(
                             'flex flex-col justify-center gap-0.5 min-h-11 p-2.5 rounded-[var(--radius-card)] border text-xs cursor-pointer transition-all touch-manipulation',
                             isSelected
@@ -993,9 +993,9 @@ function RegisterPageContent() {
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-foreground flex items-center gap-1.5 text-xs">
-                              <input
-                                type="radio"
-                                name="accountKind"
+ <input
+ type="radio"
+ name="accountKind"
                                 className="accent-primary"
                                 checked={isSelected}
                                 onChange={() => {
@@ -1021,11 +1021,11 @@ function RegisterPageContent() {
                           <span className="font-normal text-xs text-muted leading-tight pl-5">
                             {ACCOUNT_KIND_DESCRIPTIONS[kind]}
                           </span>
-                        </label>
+ </label>
                       );
                     })}
-                  </div>
-                </fieldset>
+ </div>
+ </fieldset>
               )}
 
               <p className="text-xs text-muted leading-relaxed">
@@ -1076,19 +1076,19 @@ function RegisterPageContent() {
                   leftIcon={<Mail className="w-4 h-4" />}
                 />
 
-                <PhoneInput
-                  id="phone"
-                  label="Téléphone WhatsApp"
-                  countryCode={phoneCountryCode}
-                  national={phoneNational}
-                  onCountryCodeChange={setPhoneCountryCode}
-                  onNationalChange={setPhoneNational}
-                  required={verificationMethod === 'WHATSAPP'}
+ <PhoneInput
+ id="phone"
+ label="Téléphone WhatsApp"
+ countryCode={phoneCountryCode}
+ national={phoneNational}
+ onCountryCodeChange={setPhoneCountryCode}
+ onNationalChange={setPhoneNational}
+ required={verificationMethod === 'WHATSAPP'}
                   placeholder="812345678"
                 />
               </div>
 
-              <Input
+ <Input
                 label="Mot de passe"
                 id="password"
                 type="password"
@@ -1113,11 +1113,11 @@ function RegisterPageContent() {
 
               {/* ─── CHOIX DE MÉTHODE DE VALIDATION OTP ─── */}
               {canChooseOtpChannel ? (
-                <MethodToggle
+ <MethodToggle
                   label="Réception du code de confirmation"
-                  value={verificationMethod}
-                  onChange={setVerificationMethod}
-                  options={[
+ value={verificationMethod}
+ onChange={setVerificationMethod}
+ options={[
                     { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" /> },
                     { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
                   ]}
@@ -1178,8 +1178,8 @@ function RegisterPageContent() {
                       />
                       <span className="font-medium text-foreground truncate text-xs">
                         Conditions d’utilisation <span className="text-xs text-muted">v{TERMS_VERSION}</span>
-                      </span>
-                    </label>
+ </span>
+ </label>
 
                     <button
                       type="button"
@@ -1223,8 +1223,8 @@ function RegisterPageContent() {
                       />
                       <span className="font-medium text-foreground truncate text-xs">
                         Confidentialité <span className="text-xs text-muted">v{PRIVACY_VERSION}</span>
-                      </span>
-                    </label>
+ </span>
+ </label>
 
                     <button
                       type="button"
@@ -1243,7 +1243,7 @@ function RegisterPageContent() {
                     </button>
                   </div>
                 </div>
-              </div>
+ </div>
 
               {/* ─── BOUTON D'ACTION PRINCIPAL DYNAMIQUE ─── */}
               <div className="pt-1.5 space-y-1.5">
@@ -1255,19 +1255,19 @@ function RegisterPageContent() {
                   className="shadow-md shadow-primary/20 font-bold py-2.5"
                 >
                   {config.submitButtonLabel}
-                </Button>
+ </Button>
 
                 <p className="text-center text-xs text-muted flex items-center justify-center gap-1">
                   <Zap className="w-3 h-3 text-primary shrink-0" />
                   Accès débloqué immédiatement après validation du code
                 </p>
               </div>
-            </form>
+ </form>
             </>
             )}
-          </>
-        )}
-      </Card>
+ </>
+ )}
+ </Card>
 
       {/* ─── MODALE DE PRÉVISUALISATION ET VALIDATION LÉGALE FORCÉE ─── */}
       <LegalTermsPreviewModal
@@ -1282,6 +1282,6 @@ function RegisterPageContent() {
           setError('');
         }}
       />
-    </AuthSplitLayout>
-  );
+ </AuthSplitLayout>
+ );
 }

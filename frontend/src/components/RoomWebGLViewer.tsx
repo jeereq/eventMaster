@@ -1858,7 +1858,7 @@ function FixtureMesh({
       ) : kind === 'gazebo' ? (
         <GazeboMesh w={w} d={d} heightM={height} selected={selected} />
       ) : kind === 'instrument' ? (
-        <ConcertInstrumentMesh style={instrumentStyle ?? 'piano'} selected={selected} />
+        <ConcertInstrumentMesh style={instrumentStyle ?? 'piano'} w={w} d={d} selected={selected} />
       ) : kind === 'bar' ? (
         <EventBarMesh
           w={w}

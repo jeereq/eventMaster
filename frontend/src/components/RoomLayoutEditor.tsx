@@ -95,6 +95,7 @@ import {
   barStyleLabels,
   barStyleHints,
   barStylePresets,
+  nextOwnedLabel,
   roofStyleLabels,
   centerpieceStyleLabels,
   wallsFromRoomOutline,
@@ -269,6 +270,13 @@ const EDITOR_TOOL_ICON =
   'inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-foreground hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 const EDITOR_PICK =
   'min-h-11 p-2.5 rounded-[var(--radius-card)] border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-left transition flex flex-col justify-between';
+const QUICK_PANEL = {
+  podiums: { id: 'editor-quick-podiums', titleId: 'editor-quick-podiums-title' },
+  instruments: { id: 'editor-quick-instruments', titleId: 'editor-quick-instruments-title' },
+  bars: { id: 'editor-quick-bars', titleId: 'editor-quick-bars-title' },
+  chandeliers: { id: 'editor-quick-chandeliers', titleId: 'editor-quick-chandeliers-title' },
+  aisles: { id: 'editor-quick-aisles', titleId: 'editor-quick-aisles-title' },
+} as const;
 
 function DiscloseChevron({ open }: { open: boolean }) {
   return (
@@ -3915,7 +3923,13 @@ export default function RoomLayoutEditor({
                     value={selectedFixture.podiumStyle ?? 'speaker'}
                     onChange={(e) => {
                       const style = e.target.value as PodiumStyle;
-                      updateFixture(selectedFixture.id, { podiumStyle: style, label: podiumStyleLabels[style] }, `Podium : ${podiumStyleLabels[style]}`);
+                      const prev = selectedFixture.podiumStyle ?? 'speaker';
+                      const preset = podiumStylePresets[style];
+                      updateFixture(selectedFixture.id, {
+                        podiumStyle: style,
+                        ...preset,
+                        label: nextOwnedLabel(selectedFixture.label, podiumStyleLabels[prev], podiumStyleLabels[style]),
+                      }, `Podium : ${podiumStyleLabels[style]}`);
                     }}
                     className={EDITOR_FIELD}
                   >
@@ -3962,8 +3976,14 @@ export default function RoomLayoutEditor({
                   value={selectedFixture.instrumentStyle ?? 'piano'}
                   onChange={(e) => {
                     const style = e.target.value as InstrumentStyle;
+                    const prev = selectedFixture.instrumentStyle ?? 'piano';
                     const preset = instrumentStylePresets[style];
-                    updateFixture(selectedFixture.id, { instrumentStyle: style, label: preset.label }, instrumentStyleLabels[style]);
+                    updateFixture(selectedFixture.id, {
+                      instrumentStyle: style,
+                      w: preset.w,
+                      h: preset.h,
+                      label: nextOwnedLabel(selectedFixture.label, instrumentStylePresets[prev].label, preset.label),
+                    }, instrumentStyleLabels[style]);
                   }}
                   className={EDITOR_FIELD}
                 >
@@ -3984,8 +4004,17 @@ export default function RoomLayoutEditor({
                   value={selectedFixture.barStyle ?? 'cocktail'}
                   onChange={(e) => {
                     const style = e.target.value as BarStyle;
+                    const prev = selectedFixture.barStyle ?? 'cocktail';
                     const preset = barStylePresets[style];
-                    updateFixture(selectedFixture.id, { barStyle: style, label: preset.label, color: preset.color }, barStyleLabels[style]);
+                    const prevPreset = barStylePresets[prev];
+                    const keepColor = selectedFixture.color && selectedFixture.color !== prevPreset.color;
+                    updateFixture(selectedFixture.id, {
+                      barStyle: style,
+                      w: preset.w,
+                      h: preset.h,
+                      label: nextOwnedLabel(selectedFixture.label, prevPreset.label, preset.label),
+                      color: keepColor ? selectedFixture.color : preset.color,
+                    }, barStyleLabels[style]);
                   }}
                   className={EDITOR_FIELD}
                 >
@@ -5357,6 +5386,8 @@ export default function RoomLayoutEditor({
           onClick={() => setQuickCreate(quickCreate === 'podiums' ? null : 'podiums')}
           className={cn(EDITOR_TOOL, quickCreate === 'podiums' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Orateur, couple, passerelle, estrade groupe"
+          aria-expanded={quickCreate === 'podiums'}
+          aria-controls={QUICK_PANEL.podiums.id}
         >
           Podiums…
         </button>
@@ -5367,6 +5398,8 @@ export default function RoomLayoutEditor({
           onClick={() => setQuickCreate(quickCreate === 'instruments' ? null : 'instruments')}
           className={cn(EDITOR_TOOL, quickCreate === 'instruments' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Piano, batterie, micros — posables sur un podium"
+          aria-expanded={quickCreate === 'instruments'}
+          aria-controls={QUICK_PANEL.instruments.id}
         >
           <Music2 className="w-3.5 h-3.5" aria-hidden /> Instruments…
         </button>
@@ -5377,6 +5410,8 @@ export default function RoomLayoutEditor({
           onClick={() => setQuickCreate(quickCreate === 'bars' ? null : 'bars')}
           className={cn(EDITOR_TOOL, quickCreate === 'bars' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Bar cocktail, vins, champagne, bières"
+          aria-expanded={quickCreate === 'bars'}
+          aria-controls={QUICK_PANEL.bars.id}
         >
           <Wine className="w-3.5 h-3.5" aria-hidden /> Bars…
         </button>
@@ -5387,6 +5422,8 @@ export default function RoomLayoutEditor({
           onClick={() => setQuickCreate(quickCreate === 'chandeliers' ? null : 'chandeliers')}
           className={cn(EDITOR_TOOL, quickCreate === 'chandeliers' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Lustres de cristal, halos dorés, suspensions pampa"
+          aria-expanded={quickCreate === 'chandeliers'}
+          aria-controls={QUICK_PANEL.chandeliers.id}
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Lustres…
         </button>
@@ -5397,6 +5434,8 @@ export default function RoomLayoutEditor({
           onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
           className={cn(EDITOR_TOOL, quickCreate === 'aisles' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Tapis rouge royal, allée miroir blanc, lin & pétales"
+          aria-expanded={quickCreate === 'aisles'}
+          aria-controls={QUICK_PANEL.aisles.id}
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Allées VIP…
         </button>
@@ -5638,10 +5677,15 @@ export default function RoomLayoutEditor({
 
       {/* ───────── LUSTRES & SUSPENSIONS (PINTEREST) ───────── */}
       {quickCreate === 'chandeliers' && (
-        <div className="w-full space-y-3">
+        <div
+          id={QUICK_PANEL.chandeliers.id}
+          role="region"
+          aria-labelledby={QUICK_PANEL.chandeliers.titleId}
+          className="w-full space-y-3"
+        >
           <div className="flex items-center justify-between border-b border-border pb-2">
             <div>
-              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <h4 id={QUICK_PANEL.chandeliers.titleId} className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-primary" aria-hidden />
                 Lustres & Suspensions Décoratives (Inspiration Pinterest)
               </h4>
@@ -5658,7 +5702,7 @@ export default function RoomLayoutEditor({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
             {(
               [
                 ['crystalCascade', 'Cascade Cristal', 'Pampilles scintillantes'],
@@ -5690,10 +5734,15 @@ export default function RoomLayoutEditor({
 
       {/* ───────── ALLÉES & TAPIS DE PRESTIGE (PINTEREST) ───────── */}
       {quickCreate === 'aisles' && (
-        <div className="w-full space-y-3">
+        <div
+          id={QUICK_PANEL.aisles.id}
+          role="region"
+          aria-labelledby={QUICK_PANEL.aisles.titleId}
+          className="w-full space-y-3"
+        >
           <div className="flex items-center justify-between border-b border-border pb-2">
             <div>
-              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <h4 id={QUICK_PANEL.aisles.titleId} className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
                 Allées d’Honneur & Tapis de Cérémonie (Inspiration Pinterest)
               </h4>
@@ -5710,7 +5759,7 @@ export default function RoomLayoutEditor({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {(
               [
                 ['royalRed', 'Tapis Rouge Royal', 'Ganse or & velours'],
@@ -5762,22 +5811,27 @@ export default function RoomLayoutEditor({
         </div>
       )}
       {quickCreate === 'podiums' && (
-        <div className="w-full space-y-3">
+        <div
+          id={QUICK_PANEL.podiums.id}
+          role="region"
+          aria-labelledby={QUICK_PANEL.podiums.titleId}
+          className="w-full space-y-3"
+        >
           <div className="flex items-center justify-between border-b border-border pb-2">
             <div>
-              <h4 className="text-xs font-bold text-foreground">Podiums événementiels</h4>
+              <h4 id={QUICK_PANEL.podiums.titleId} className="text-xs font-bold text-foreground">Podiums événementiels</h4>
               <p className="text-xs text-muted">Orateur, couple, passerelle, estrade de groupe ou table d’honneur.</p>
             </div>
             <button type="button" onClick={() => setQuickCreate(null)} className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}>
               Fermer
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {(Object.keys(podiumStyleLabels) as PodiumStyle[]).map((style) => (
               <button key={style} type="button" onClick={() => addPodiumFixture(style)} className={EDITOR_PICK}>
                 <div>
                   <p className="text-xs font-bold text-foreground">{podiumStyleLabels[style]}</p>
-                  <p className="text-xs text-muted mt-0.5">{podiumStyleHints[style]}</p>
+                  <p className="text-xs text-muted mt-0.5 line-clamp-2">{podiumStyleHints[style]}</p>
                 </div>
                 <span className="text-xs font-bold text-primary mt-2">+ Placer</span>
               </button>
@@ -5787,10 +5841,15 @@ export default function RoomLayoutEditor({
       )}
 
       {quickCreate === 'instruments' && (
-        <div className="w-full space-y-3">
+        <div
+          id={QUICK_PANEL.instruments.id}
+          role="region"
+          aria-labelledby={QUICK_PANEL.instruments.titleId}
+          className="w-full space-y-3"
+        >
           <div className="flex items-center justify-between border-b border-border pb-2">
             <div>
-              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <h4 id={QUICK_PANEL.instruments.titleId} className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Music2 className="w-4 h-4 text-primary" aria-hidden />
                 Instruments de concert
               </h4>
@@ -5800,12 +5859,12 @@ export default function RoomLayoutEditor({
               Fermer
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {(Object.keys(instrumentStyleLabels) as InstrumentStyle[]).map((style) => (
               <button key={style} type="button" onClick={() => addInstrumentFixture(style)} className={EDITOR_PICK}>
                 <div>
                   <p className="text-xs font-bold text-foreground">{instrumentStyleLabels[style]}</p>
-                  <p className="text-xs text-muted mt-0.5">{instrumentStyleHints[style]}</p>
+                  <p className="text-xs text-muted mt-0.5 line-clamp-2">{instrumentStyleHints[style]}</p>
                 </div>
                 <span className="text-xs font-bold text-primary mt-2">+ Poser</span>
               </button>
@@ -5815,10 +5874,15 @@ export default function RoomLayoutEditor({
       )}
 
       {quickCreate === 'bars' && (
-        <div className="w-full space-y-3">
+        <div
+          id={QUICK_PANEL.bars.id}
+          role="region"
+          aria-labelledby={QUICK_PANEL.bars.titleId}
+          className="w-full space-y-3"
+        >
           <div className="flex items-center justify-between border-b border-border pb-2">
             <div>
-              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <h4 id={QUICK_PANEL.bars.titleId} className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Wine className="w-4 h-4 text-primary" aria-hidden />
                 Bars & verrerie
               </h4>
@@ -5828,12 +5892,12 @@ export default function RoomLayoutEditor({
               Fermer
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
             {(Object.keys(barStyleLabels) as BarStyle[]).map((style) => (
               <button key={style} type="button" onClick={() => addBarFixture(style)} className={EDITOR_PICK}>
                 <div>
                   <p className="text-xs font-bold text-foreground">{barStyleLabels[style]}</p>
-                  <p className="text-xs text-muted mt-0.5">{barStyleHints[style]}</p>
+                  <p className="text-xs text-muted mt-0.5 line-clamp-2">{barStyleHints[style]}</p>
                 </div>
                 <span className="text-xs font-bold text-primary mt-2">+ Installer</span>
               </button>

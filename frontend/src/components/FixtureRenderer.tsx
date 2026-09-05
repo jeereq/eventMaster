@@ -21,6 +21,85 @@ import { Sparkles, DoorOpen, ShieldAlert } from 'lucide-react';
 
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
 
+function InstrumentPlanGlyph({ style }: { style: InstrumentStyle }) {
+  if (style === 'piano') {
+    return (
+      <div className="w-[78%] h-[58%] rounded-[40%_40%_18%_18%] bg-zinc-950 border border-zinc-500 relative">
+        <span className="absolute bottom-0 inset-x-[12%] h-[22%] bg-zinc-100 rounded-sm" />
+      </div>
+    );
+  }
+  if (style === 'keyboard') {
+    return (
+      <div className="w-[86%] h-[28%] rounded-sm bg-zinc-800 border border-zinc-500">
+        <div className="h-full w-full bg-[repeating-linear-gradient(90deg,#f8fafc_0_3px,#171717_3px_5px)] opacity-80 rounded-sm" />
+      </div>
+    );
+  }
+  if (style === 'drums') {
+    return (
+      <div className="relative w-[70%] h-[70%]">
+        <span className="absolute inset-[18%] rounded-full border-4 border-sky-800 bg-sky-950" />
+        <span className="absolute top-0 right-1 w-4 h-4 rounded-full border border-amber-300 bg-amber-200/70" />
+      </div>
+    );
+  }
+  if (style === 'micStand') {
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="w-2 h-2 rounded-full bg-zinc-200" />
+        <span className="w-px h-5 bg-zinc-400" />
+        <span className="w-3 h-1 rounded-full bg-zinc-600" />
+      </div>
+    );
+  }
+  if (style === 'guitar') {
+    return (
+      <div className="relative w-[38%] h-[78%] flex flex-col items-center">
+        <span className="w-[28%] h-[38%] bg-stone-800 rounded-sm" />
+        <span className="w-full h-[62%] rounded-[45%] bg-rose-950 border border-rose-800" />
+      </div>
+    );
+  }
+  if (style === 'bass') {
+    return (
+      <div className="relative w-[34%] h-[82%] flex flex-col items-center">
+        <span className="w-[22%] h-[44%] bg-slate-800 rounded-sm" />
+        <span className="w-full h-[56%] rounded-[42%] bg-sky-950 border border-sky-800" />
+      </div>
+    );
+  }
+  if (style === 'sax') {
+    return (
+      <div className="relative w-[42%] h-[72%] rotate-12">
+        <span className="absolute inset-x-[35%] top-0 h-[55%] bg-amber-500 rounded-full" />
+        <span className="absolute bottom-0 left-[8%] w-[70%] h-[40%] rounded-full border-[5px] border-amber-500" />
+      </div>
+    );
+  }
+  if (style === 'violin') {
+    return (
+      <div className="relative w-[36%] h-[70%] flex flex-col items-center">
+        <span className="w-[22%] h-[32%] bg-amber-950 rounded-sm" />
+        <span className="w-full flex-1 rounded-[48%] bg-amber-900 border border-amber-700" />
+        <span className="absolute -right-1 top-2 w-px h-8 bg-stone-300 rotate-12" />
+      </div>
+    );
+  }
+  if (style === 'amp') {
+    return (
+      <div className="w-[48%] h-[58%] rounded-sm bg-zinc-800 border border-zinc-500 flex items-center justify-center">
+        <span className="w-[58%] h-[58%] rounded-full border-2 border-zinc-500" />
+      </div>
+    );
+  }
+  return (
+    <div className="w-[50%] h-[46%] rounded-sm bg-zinc-950 border border-zinc-500 rotate-12 flex items-center justify-center">
+      <span className="w-[70%] h-[62%] bg-zinc-700 rounded-sm" />
+    </div>
+  );
+}
+
 interface FixtureRendererProps {
   fixture: Fixture;
   className?: string;
@@ -519,30 +598,9 @@ export default function FixtureRenderer({
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div className="relative w-full h-full rounded-md border-2 border-zinc-700 bg-zinc-900 text-zinc-100 flex flex-col items-center justify-center overflow-hidden shadow-xs">
-          {style === 'piano' ? (
-            <div className="w-[78%] h-[58%] rounded-[40%_40%_18%_18%] bg-zinc-950 border border-zinc-500 relative">
-              <span className="absolute bottom-0 inset-x-[12%] h-[22%] bg-zinc-100 rounded-sm" />
-            </div>
-          ) : style === 'keyboard' ? (
-            <div className="w-[86%] h-[28%] rounded-sm bg-zinc-800 border border-zinc-500">
-              <div className="h-full w-full bg-[repeating-linear-gradient(90deg,#f8fafc_0_3px,#171717_3px_5px)] opacity-80 rounded-sm" />
-            </div>
-          ) : style === 'drums' ? (
-            <div className="relative w-[70%] h-[70%]">
-              <span className="absolute inset-[18%] rounded-full border-4 border-sky-800 bg-sky-950" />
-              <span className="absolute top-0 right-1 w-4 h-4 rounded-full border border-amber-300 bg-amber-200/70" />
-            </div>
-          ) : style === 'micStand' ? (
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="w-2 h-2 rounded-full bg-zinc-200" />
-              <span className="w-px h-5 bg-zinc-400" />
-              <span className="w-3 h-1 rounded-full bg-zinc-600" />
-            </div>
-          ) : (
-            <div className={`w-[42%] ${style === 'amp' || style === 'speaker' ? 'h-[55%] rounded-sm' : 'h-[70%] rounded-[40%_40%_22%_22%]'} bg-rose-950 border border-zinc-500`} />
-          )}
+          <InstrumentPlanGlyph style={style} />
           {showLabel ? (
-            <span className="absolute bottom-0.5 text-[7px] font-black uppercase tracking-wide text-zinc-200">
+            <span className="absolute bottom-0.5 text-[9px] font-black uppercase tracking-wide text-zinc-200">
               {fixture.label || instrumentStyleLabels[style]}
             </span>
           ) : null}
@@ -577,7 +635,7 @@ export default function FixtureRenderer({
             ))}
           </div>
           {showLabel ? (
-            <span className="absolute inset-x-0 bottom-0.5 text-center text-[7px] font-black uppercase tracking-wide text-amber-950">
+            <span className="absolute inset-x-0 bottom-0.5 text-center text-[9px] font-black uppercase tracking-wide text-amber-950">
               {fixture.label || barStyleLabels[style]}
             </span>
           ) : null}
@@ -612,7 +670,7 @@ export default function FixtureRenderer({
             <span className="absolute w-[28%] h-[42%] rounded-sm bg-stone-800/80 border border-stone-600" />
           ) : null}
           {showLabel ? (
-            <span className="relative z-10 text-[8px] font-black uppercase tracking-wide px-1">
+            <span className="relative z-10 text-[9px] font-black uppercase tracking-wide px-1">
               {fixture.label || podiumStyleLabels[style]}
             </span>
           ) : null}
