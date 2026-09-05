@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Pencil,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -156,6 +156,8 @@ import {
 import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry } from '@/lib/layoutActionLog';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
+import PlanCreationPath, { type PlanCreationPathId } from '@/components/PlanCreationPath';
+import { scrollToElementId } from '@/lib/prefersReducedMotion';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
   analyzeRoomPlanFromPhoto,
@@ -352,6 +354,7 @@ export default function RoomLayoutEditor({
   const [aiPlanReading, setAiPlanReading] = useState(false);
   const [aiPlanError, setAiPlanError] = useState('');
   const [aiPlanWarnings, setAiPlanWarnings] = useState<string[]>([]);
+  const [planPath, setPlanPath] = useState<PlanCreationPathId>(focusPlanImport ? 'photo' : 'manual');
   const aiPlanFileRef = useRef<HTMLInputElement>(null);
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
@@ -481,10 +484,9 @@ export default function RoomLayoutEditor({
 
   useEffect(() => {
     if (!focusPlanImport) return;
+    setPlanPath('photo');
     setAccordion('murs-sols');
-    window.requestAnimationFrame(() => {
-      document.getElementById('plan-import-ia')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
+    window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
   }, [focusPlanImport]);
 
   useEffect(() => {
@@ -1791,55 +1793,22 @@ export default function RoomLayoutEditor({
     if (!selected) {
       return (
         <div className="space-y-4">
-          <section className="space-y-2" aria-labelledby="plan-creation-heading">
-            <h3 id="plan-creation-heading" className="text-sm font-semibold text-foreground">
-              Comment créer le plan
-            </h3>
-            <div className="grid sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setAccordion(accordion === 'murs-sols' ? 'batiment' : accordion)}
-                className={cn(
-                  'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  'border-border bg-surface hover:bg-surface-muted',
-                )}
-              >
-                <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Pencil className="w-4 h-4 text-primary" aria-hidden />
-                  À la main
-                </p>
-                <p className="text-xs text-muted mt-1 leading-snug">
-                  Placez tables, murs et décor avec les outils. Rien n’est inventé.
-                </p>
-              </button>
-              <button
-                type="button"
-                disabled={readOnly || !caps.canCustomImages}
-                onClick={() => {
-                  setAccordion('murs-sols');
-                  window.requestAnimationFrame(() => {
-                    document.getElementById('plan-import-ia')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  });
-                }}
-                className={cn(
-                  'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  focusPlanImport
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary/25'
-                    : 'border-border bg-surface hover:bg-surface-muted',
-                )}
-              >
-                <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" aria-hidden />
-                  Depuis une photo
-                </p>
-                <p className="text-xs text-muted mt-1 leading-snug">
-                  L’IA pose uniquement ce qui est visible — emplacements, couleurs, matières. {AI_ROOM_PLAN_TOKEN_COST} jetons.
-                </p>
-              </button>
-            </div>
-          </section>
+          <PlanCreationPath
+            value={planPath}
+            busy={aiPlanReading}
+            photoLocked={!caps.canCustomImages}
+            onChange={(next) => {
+              setPlanPath(next);
+              if (next === 'photo') {
+                setAccordion('murs-sols');
+                window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
+                return;
+              }
+              setAccordion('');
+              setToolbarGroup('furniture');
+              setSelection([]);
+            }}
+          />
           {!caps.canThemes ? (
             <Alert variant="warning" title={`Forfait ${caps.label}`}>
               <p>{caps.description}</p>
@@ -1852,23 +1821,25 @@ export default function RoomLayoutEditor({
               <button
                 type="button"
                 aria-expanded={accordion === 'murs-sols'}
+                aria-controls="editor-panel-murs-sols"
                 className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs-sols' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
                 onClick={() => setAccordion(accordion === 'murs-sols' ? '' : 'murs-sols')}
               >
                 <span className="flex items-center gap-2">
-                  <Layers className="w-4 h-4" /> Environnement & Thèmes
+                  <Layers className="w-4 h-4" aria-hidden /> Environnement & Thèmes
                 </span>
                 <DiscloseChevron open={accordion === 'murs-sols'} />
               </button>
               
               {accordion === 'murs-sols' && (
-                <div className="p-4 bg-surface space-y-5 border-t border-border">
+                <div id="editor-panel-murs-sols" className="p-4 bg-surface space-y-5 border-t border-border">
                   {caps.canCustomImages ? (
                     <div
                       id="plan-import-ia"
+                      aria-busy={aiPlanReading || undefined}
                       className={cn(
                         'space-y-2 rounded-[var(--radius-card)] border p-3',
-                        focusPlanImport ? 'border-primary bg-primary/5' : 'border-border bg-surface-muted/40',
+                        planPath === 'photo' ? 'border-primary bg-primary/10' : 'border-border bg-surface',
                       )}
                     >
                       <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -1876,12 +1847,18 @@ export default function RoomLayoutEditor({
                         Lire le plan avec l’IA
                       </p>
                       <p className={EDITOR_HINT}>
-                        Photo vue du dessus ou scan : l’IA reprend emplacements, couleurs et matières visibles — sans inventer d’or, de portes ou de pétales. {AI_ROOM_PLAN_TOKEN_COST} jetons.
+                        Photo vue du dessus ou scan. Rien n’est inventé (or, portes, pétales).
                       </p>
+                      {aiPlanReading ? (
+                        <p role="status" aria-live="polite" className="text-sm text-foreground">
+                          Lecture du plan en cours…
+                        </p>
+                      ) : null}
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           disabled={readOnly || aiPlanReading}
+                          aria-busy={aiPlanReading || undefined}
                           onClick={() => {
                             if (blueprint.metadata.floorImageUrl) {
                               void readRoomPlanWithAi();
@@ -2632,16 +2609,17 @@ export default function RoomLayoutEditor({
             <button
               type="button"
               aria-expanded={accordion === 'batiment'}
+              aria-controls="editor-panel-batiment"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'batiment' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'batiment' ? '' : 'batiment')}
             >
               <span className="flex items-center gap-2">
-                <Layers className="w-4 h-4" /> Étages & vues
+                <Layers className="w-4 h-4" aria-hidden /> Étages & vues
               </span>
               <DiscloseChevron open={accordion === 'batiment'} />
             </button>
             {accordion === 'batiment' && (
-              <div className="p-4 bg-surface space-y-4 border-t border-border">
+              <div id="editor-panel-batiment" className="p-4 bg-surface space-y-4 border-t border-border">
                 <div className="space-y-2">
                   <p className={EDITOR_HEADING}>Modèle prêt à l’emploi</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -2929,17 +2907,18 @@ export default function RoomLayoutEditor({
             <button
               type="button"
               aria-expanded={accordion === 'outils'}
+              aria-controls="editor-panel-outils"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'outils' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'outils' ? '' : 'outils')}
             >
               <span className="flex items-center gap-2">
-                <LayoutGrid className="w-4 h-4" /> Agencement automatique
+                <LayoutGrid className="w-4 h-4" aria-hidden /> Agencement automatique
               </span>
               <DiscloseChevron open={accordion === 'outils'} />
             </button>
             
             {accordion === 'outils' && (
-              <div className="p-4 bg-surface space-y-4 border-t border-border">
+              <div id="editor-panel-outils" className="p-4 bg-surface space-y-4 border-t border-border">
                 <p className="text-sm text-muted leading-relaxed">
                   Répartit les tables déverrouillées dans la salle, en évitant la scène.
                 </p>
@@ -3005,6 +2984,7 @@ export default function RoomLayoutEditor({
             <button
               type="button"
               aria-expanded={accordion === 'murs'}
+              aria-controls="editor-panel-murs"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => {
                 const next = accordion === 'murs' ? '' : 'murs';
@@ -3013,12 +2993,12 @@ export default function RoomLayoutEditor({
               }}
             >
               <span className="flex items-center gap-2">
-                <BrickWall className="w-4 h-4" /> Murs, portes & fenêtres
+                <BrickWall className="w-4 h-4" aria-hidden /> Murs, portes & fenêtres
               </span>
               <DiscloseChevron open={accordion === 'murs'} />
             </button>
             {accordion === 'murs' && (
-              <div className="p-4 bg-surface space-y-3 border-t border-border">
+              <div id="editor-panel-murs" className="p-4 bg-surface space-y-3 border-t border-border">
                 <p className={EDITOR_HINT}>
                   Configurez la hauteur, l&apos;épaisseur, la texture des murs et le style des ouvertures. Cliquez un mur dans la vue 3D pour le sélectionner.
                 </p>
@@ -3055,17 +3035,18 @@ export default function RoomLayoutEditor({
             <button
               type="button"
               aria-expanded={accordion === 'config'}
+              aria-controls="editor-panel-config"
               className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'config' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
               onClick={() => setAccordion(accordion === 'config' ? '' : 'config')}
             >
               <span className="flex items-center gap-2">
-                <Ruler className="w-4 h-4" /> Configuration Globale
+                <Ruler className="w-4 h-4" aria-hidden /> Configuration Globale
               </span>
               <DiscloseChevron open={accordion === 'config'} />
             </button>
             
             {accordion === 'config' && (
-              <div className="p-4 bg-surface space-y-4 border-t border-border">
+              <div id="editor-panel-config" className="p-4 bg-surface space-y-4 border-t border-border">
                 <div className="space-y-2">
                   <p className="text-xs font-bold uppercase text-muted">Dimensions de la zone</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -4872,6 +4853,7 @@ export default function RoomLayoutEditor({
         <button
           type="button"
           disabled={readOnly || aiPlanReading}
+          aria-busy={aiPlanReading || undefined}
           onClick={() => {
             if (blueprint.metadata.floorImageUrl) {
               void readRoomPlanWithAi();

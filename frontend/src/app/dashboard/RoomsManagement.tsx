@@ -10,7 +10,7 @@ import { enabledMarketplaceCities } from '@/lib/platformCities';
 import {
   Building2, Plus, Trash2, Users, UserPlus, Check, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock, Lock, Eye, Pencil, ImagePlus,
+  Globe, GlobeLock, Lock, Eye,
 } from 'lucide-react';
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
@@ -62,7 +62,8 @@ import {
   WIZARD_DRAFT_KEY,
 } from '@/lib/roomLayoutDraft';
 import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
-import { AI_ROOM_PLAN_TOKEN_COST } from '@/lib/aiTokens';
+import PlanCreationPath from '@/components/PlanCreationPath';
+import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
@@ -319,7 +320,6 @@ export default function RoomsManagement() {
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '' });
   const [editPane, setEditPane] = useState<'identite' | 'elements'>('identite');
-  const [editFocusPlanImport, setEditFocusPlanImport] = useState(false);
   const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
   const [wizardDraftSavedAt, setWizardDraftSavedAt] = useState<string | null>(null);
@@ -661,7 +661,6 @@ export default function RoomsManagement() {
     setEditNameAttempted(false);
     setEditPane('identite');
     setEditElementsReady(false);
-    setEditFocusPlanImport(false);
     setEditSaveStatus('idle');
   };
 
@@ -839,7 +838,6 @@ export default function RoomsManagement() {
     setEditNameAttempted(false);
     setEditPane('identite');
     setEditElementsReady(false);
-    setEditFocusPlanImport(false);
     setEditingRoom(room);
     setEditMeta({
       name: room.name,
@@ -1257,8 +1255,8 @@ export default function RoomsManagement() {
             ? wizardPlanTab === 'editeur'
               ? focusPlanImport
                 ? 'Importez une photo : l’IA reprend ce qui est visible, puis créez la salle.'
-                : 'Ajustez le plan à la main, puis créez la salle.'
-              : 'Créez le plan à la main ou depuis une photo. Structure et capacité restent optionnels.'
+                : 'Placez le mobilier avec les outils, puis créez la salle.'
+              : 'Créez le plan à la main ou depuis une photo.'
             : 'Nommez la salle, choisissez le type, puis la structure — le plan reste modifiable.'
         }
         size={wizardStep === 3 && wizardPlanTab === 'editeur' ? 'full' : wizardStep === 3 ? 'lg' : 'lg'}
@@ -1566,50 +1564,19 @@ export default function RoomsManagement() {
           return (
             <div className="space-y-4">
               {wizardPlanTab !== 'editeur' ? (
-                <section className="space-y-2" aria-labelledby="wizard-plan-origin">
-                  <h3 id="wizard-plan-origin" className="text-sm font-semibold text-foreground">
-                    Créer le plan de salle
-                  </h3>
-                  <p className="text-xs text-muted">
-                    Choisissez d’abord comment poser le mobilier. Structure et capacité restent optionnels.
-                  </p>
-                  <div className="grid sm:grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={openManualPlan}
-                      className={cn(
-                        'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                        'border-border bg-surface-muted/40 hover:bg-surface-muted',
-                      )}
-                    >
-                      <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                        <Pencil className="w-4 h-4 text-primary" aria-hidden />
-                        À la main
-                      </p>
-                      <p className="text-xs text-muted mt-1 leading-snug">
-                        Ouvrez l’éditeur et placez tables, murs et décor vous-même.
-                      </p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openAiPlan}
-                      className={cn(
-                        'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                        'border-primary/40 bg-primary/5 hover:bg-primary/10',
-                      )}
-                    >
-                      <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                        <ImagePlus className="w-4 h-4 text-primary" aria-hidden />
-                        Depuis une photo
-                      </p>
-                      <p className="text-xs text-muted mt-1 leading-snug">
-                        L’IA lit le plan et reprend emplacements, couleurs et matières visibles. {AI_ROOM_PLAN_TOKEN_COST} jetons.
-                      </p>
-                    </button>
-                  </div>
-                </section>
+                <PlanCreationPath
+                  photoLocked={!roomEditorCapabilities(
+                    planFeatures?.roomEditorLevel,
+                    planFeatures?.roomThemesFixtures === true,
+                  ).canCustomImages}
+                  onChange={(next) => {
+                    if (next === 'photo') {
+                      openAiPlan();
+                      return;
+                    }
+                    openManualPlan();
+                  }}
+                />
               ) : null}
               {wizardPlanTab === 'editeur' ? (
                 <button
@@ -2362,46 +2329,6 @@ export default function RoomsManagement() {
               className="space-y-3"
             >
             <p className="text-sm text-muted">Tables, murs, étages et décor — sans changer le nom de la salle.</p>
-            <div className="grid sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setEditFocusPlanImport(false)}
-                className={cn(
-                  'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  !editFocusPlanImport
-                    ? 'border-border bg-surface-muted/40 ring-1 ring-border'
-                    : 'border-border bg-surface hover:bg-surface-muted',
-                )}
-              >
-                <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Pencil className="w-4 h-4 text-primary" aria-hidden />
-                  À la main
-                </p>
-                <p className="text-xs text-muted mt-1 leading-snug">
-                  Utilisez les outils de l’éditeur pour poser ou déplacer chaque élément.
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditFocusPlanImport(true)}
-                className={cn(
-                  'text-left p-3.5 rounded-[var(--radius-card)] border min-h-11 transition-colors',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  editFocusPlanImport
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary/25'
-                    : 'border-primary/40 bg-primary/5 hover:bg-primary/10',
-                )}
-              >
-                <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <ImagePlus className="w-4 h-4 text-primary" aria-hidden />
-                  Depuis une photo
-                </p>
-                <p className="text-xs text-muted mt-1 leading-snug">
-                  L’IA lit le plan et reprend emplacements, couleurs et matières visibles. {AI_ROOM_PLAN_TOKEN_COST} jetons.
-                </p>
-              </button>
-            </div>
             {rooms.filter((room) => room.id !== editingRoom?.id && room.layoutBlueprint).length > 0 ? (
               <ParamSelect
                 label="Copier le style depuis une autre salle"
@@ -2437,7 +2364,6 @@ export default function RoomsManagement() {
               allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
               editorLevel={planFeatures?.roomEditorLevel}
               paused={editPane !== 'elements'}
-              focusPlanImport={editFocusPlanImport}
               onRegenerate={() => {
                 markEditDirty();
                 setEditBlueprint(stampLayoutAction(

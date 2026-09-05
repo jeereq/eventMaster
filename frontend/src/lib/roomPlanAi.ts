@@ -532,13 +532,14 @@ export function applyRoomPlanVisionDraft(
 
   const wallTexture = asWallTexture(appearance?.wallTexture);
   const wallColor = appearance?.wallColor;
-  let walls = current.walls;
+  const existingWalls = current.walls ?? [];
+  let walls = existingWalls;
   if (draft.walls.length > 0) {
     walls = draft.walls.map((wall) => {
       const segment = createWallSegment({
         start: wall.start,
         end: wall.end,
-        texture: wallTexture ?? current.walls[0]?.texture ?? 'plaster',
+        texture: wallTexture ?? existingWalls[0]?.texture ?? 'plaster',
         color: wallColor,
         openings: [
           ...wall.doors.map((t) => createWallOpening('door', { t, style: 'double' })),
@@ -551,11 +552,11 @@ export function applyRoomPlanVisionDraft(
   } else if (caps.canChangeOutline) {
     walls = wallsFromRoomOutline(outline, {
       withEntrance: false,
-      texture: wallTexture ?? current.walls[0]?.texture ?? 'plaster',
+      texture: wallTexture ?? existingWalls[0]?.texture ?? 'plaster',
     }).map((wall) => ({ ...wall, color: wallColor, storyId }));
     warnings.push('Aucun mur visible sur la photo — contour sans porte ni fenêtre inventées.');
   } else if (wallTexture || wallColor) {
-    walls = current.walls.map((wall) => ({
+    walls = existingWalls.map((wall) => ({
       ...wall,
       texture: wallTexture ?? wall.texture,
       color: wallColor ?? wall.color,
