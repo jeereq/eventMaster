@@ -5,6 +5,7 @@ import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, serviceCategor
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
+import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 
 const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 const RATE_WINDOW_MS = 60_000;
@@ -282,10 +283,29 @@ async function loadCatalog(opts: {
   return { venues, services: [...trades, ...rentals] };
 }
 
+async function askPlannerJson(system: string, user: string): Promise<Record<string, unknown>> {
+  if (getGeminiApiKey()) {
+    try {
+      const parsed = await requestGeminiJson({
+        system,
+        userText: user,
+        temperature: 0.55,
+        timeoutMs: 45_000,
+        failMessage: 'Gemini n’a pas renvoyé de packs utilisables.',
+      });
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch (error) {
+      console.warn('[eventPlanAi] Gemini failed, falling back to OpenAI:', (error as Error)?.message);
+    }
+  }
+  return askOpenAi(system, user);
+}
+
 async function askOpenAi(system: string, user: string): Promise<Record<string, unknown>> {
   const key = String(process.env.OPENAI_API_KEY || '').trim();
   if (!key) {
-    // Si la clé OpenAI n'est pas définie sur le serveur, basculer proprement sur le moteur heuristique intelligent
     return { packages: [] };
   }
   const controller = new AbortController();
@@ -462,7 +482,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     catalog: compact,
   });
 
-  const ai = await askOpenAi(system, user);
+  const ai = await askPlannerJson(system, user);
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
   const hydrate = (

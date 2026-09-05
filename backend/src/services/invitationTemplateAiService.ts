@@ -1,6 +1,7 @@
 import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { uploadImageBuffer } from './cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
+import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 
 type HttpError = Error & { status?: number };
 
@@ -27,10 +28,14 @@ function rateLimit(userId: string) {
   bucket.count += 1;
 }
 
-function requireOpenAiKey(): string {
-  const key = String(process.env.OPENAI_API_KEY || '').trim();
-  if (!key) {
-    fail(503, 'La génération IA n’est pas configurée sur ce serveur (OPENAI_API_KEY manquante).');
+function getOpenAiKey(): string {
+  return String(process.env.OPENAI_API_KEY || '').trim();
+}
+
+function requireAiConfigured(): string {
+  const key = getOpenAiKey();
+  if (!getGeminiApiKey() && !key) {
+    fail(503, 'La génération IA n’est pas configurée (GEMINI_API_KEY ou OPENAI_API_KEY).');
   }
   return key;
 }
@@ -413,19 +418,8 @@ function structureSystemPrompt(embedText: boolean): string {
   );
 }
 
-async function visionStructure(
-  key: string,
-  prompt: string,
-  imageUrls: string[],
-  options?: { embedText?: boolean },
-): Promise<VisionResult> {
-  const visionModel =
-    process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
-  const hasRefs = imageUrls.length > 0;
-  const userContent: Array<Record<string, unknown>> = [
-    {
-      type: 'text',
-      text: `BRIEF UTILISATEUR (besoins exprimés — analyse-les sans inventer d’intentions) :
+function visionUserText(prompt: string, hasRefs: boolean, options?: { embedText?: boolean }): string {
+  return `BRIEF UTILISATEUR (besoins exprimés — analyse-les sans inventer d’intentions) :
 """
 ${prompt.slice(0, 1500)}
 """
@@ -438,7 +432,68 @@ Tâches (fidélité stricte — PRIORITÉ VISAGES) :
 3) Renseigne hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
 4) Produis le JSON (structure éditeur + backgroundPrompt).
 5) backgroundPrompt : si personnes → DÉCOR UNIQUEMENT ("USER BRIEF (décor):"). L’identité faciale ne doit PAS être réécrite dans ce champ. Sinon → "USER BRIEF:" puis décor.
-${options?.embedText ? '6) INCRUSTER le texte du brief (noms, date, lieu) dans backgroundPrompt comme typographie d’invitation.' : ''}`,
+${options?.embedText ? '6) INCRUSTER le texte du brief (noms, date, lieu) dans backgroundPrompt comme typographie d’invitation.' : ''}`;
+}
+
+function visionResultFromParsed(
+  parsed: Record<string, unknown>,
+  prompt: string,
+  hasRefs: boolean,
+  options?: { embedText?: boolean },
+): VisionResult {
+  const visualAnalysis = parseVisualAnalysis(parsed.visualAnalysis);
+  const faceClause = visualAnalysis?.hasPeople
+    ? FACE_POLICY_KEEP_PEOPLE
+    : FACE_POLICY_NO_PEOPLE;
+  const backgroundPrompt =
+    typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()
+      ? parsed.backgroundPrompt.trim().slice(0, 1800)
+      : `${hasRefs ? 'IDENTITY LOCK: Match people in the references exactly (faces, skin, hair, clothing, eyes, smile, cheeks). ' : ''}USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, ${options?.embedText ? 'embed invitation typography from the brief.' : 'no readable text.'}`;
+  return {
+    global: parsed.global,
+    elements: parsed.elements,
+    backgroundPrompt,
+    visualAnalysis,
+  };
+}
+
+async function visionStructure(
+  key: string,
+  prompt: string,
+  imageUrls: string[],
+  options?: { embedText?: boolean },
+): Promise<VisionResult> {
+  const hasRefs = imageUrls.length > 0;
+  if (getGeminiApiKey()) {
+    try {
+      const parsed = await requestGeminiJson({
+        system: structureSystemPrompt(Boolean(options?.embedText)),
+        userText: visionUserText(prompt, hasRefs, options),
+        imageUrls,
+        temperature: 0.2,
+        failMessage: 'Échec de l’analyse IA des images.',
+      });
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, options);
+      }
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Gemini structure failed, falling back to OpenAI:',
+        (error as Error)?.message,
+      );
+    }
+  }
+
+  if (!key) {
+    fail(503, 'La génération IA n’est pas configurée (GEMINI_API_KEY ou OPENAI_API_KEY).');
+  }
+
+  const visionModel =
+    process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+  const userContent: Array<Record<string, unknown>> = [
+    {
+      type: 'text',
+      text: visionUserText(prompt, hasRefs, options),
     },
     ...imageUrls.slice(0, 4).map((url) => ({
       type: 'image_url',
@@ -475,20 +530,7 @@ ${options?.embedText ? '6) INCRUSTER le texte du brief (noms, date, lieu) dans b
     }
     const raw = payload.choices?.[0]?.message?.content || '{}';
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const visualAnalysis = parseVisualAnalysis(parsed.visualAnalysis);
-    const faceClause = visualAnalysis?.hasPeople
-      ? FACE_POLICY_KEEP_PEOPLE
-      : FACE_POLICY_NO_PEOPLE;
-    const backgroundPrompt =
-      typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()
-        ? parsed.backgroundPrompt.trim().slice(0, 1800)
-        : `${hasRefs ? 'IDENTITY LOCK: Match people in the references exactly (faces, skin, hair, clothing, eyes, smile, cheeks). ' : ''}USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, ${options?.embedText ? 'embed invitation typography from the brief.' : 'no readable text.'}`;
-    return {
-      global: parsed.global,
-      elements: parsed.elements,
-      backgroundPrompt,
-      visualAnalysis,
-    };
+    return visionResultFromParsed(parsed, prompt, hasRefs, options);
   } catch (error) {
     if ((error as HttpError)?.status) throw error;
     fail(502, (error as Error)?.message || 'Impossible d’analyser les images avec l’IA.');
@@ -1150,6 +1192,10 @@ async function createNewInvitationImage(
     }
   }
 
+  if (!key) {
+    fail(502, 'Impossible de créer la nouvelle image (Nano Banana). Ajoutez OPENAI_API_KEY pour le repli.');
+  }
+
   // 2) GPT-5.6 Luna (Responses + image_generation)
   try {
     return await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
@@ -1223,7 +1269,7 @@ export async function composeInvitationTemplateAi(input: {
     .map((u) => u.trim())
     .slice(0, 4);
 
-  const key = requireOpenAiKey();
+  const key = requireAiConfigured();
   const structured = await visionStructure(key, prompt, imageUrls, { embedText });
   if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;

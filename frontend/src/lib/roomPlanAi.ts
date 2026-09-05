@@ -1,7 +1,7 @@
 import { api } from '@/lib/api';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
 import { roomEditorCapabilities, type RoomEditorCapabilities } from '@/lib/roomEditorAccess';
-import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
+import { tidyImportedFloorLayout, type LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import {
   createBlueprintChair,
@@ -813,7 +813,7 @@ export function applyRoomPlanVisionDraft(
           x: box.x,
           y: box.y,
           rotation: item.rotation,
-          groupId: AI_ROOM_IMPORT_GROUP_ID,
+          groupId: `${AI_ROOM_IMPORT_GROUP_ID}-zone`,
           storyId,
         };
         zoneCount += 1;
@@ -836,7 +836,7 @@ export function applyRoomPlanVisionDraft(
         h: box.h,
         rotation: item.rotation,
         label: item.label || created.label,
-        groupId: AI_ROOM_IMPORT_GROUP_ID,
+        groupId: `${AI_ROOM_IMPORT_GROUP_ID}-${fixtureKind}`,
         storyId,
       };
       fixtures.push(fixture);
@@ -867,7 +867,7 @@ export function applyRoomPlanVisionDraft(
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
         ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
         hasCenterpiece: item.hasCenterpiece === true,
-        groupId: AI_ROOM_IMPORT_GROUP_ID,
+        groupId: `${AI_ROOM_IMPORT_GROUP_ID}-table`,
         storyId,
       };
       furniture.push(table);
@@ -893,7 +893,7 @@ export function applyRoomPlanVisionDraft(
           x: box.cx,
           y: box.cy,
           label: item.label,
-          groupId: AI_ROOM_IMPORT_GROUP_ID,
+          groupId: `${AI_ROOM_IMPORT_GROUP_ID}-row`,
         }),
         rotation: item.rotation,
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
@@ -922,7 +922,7 @@ export function applyRoomPlanVisionDraft(
         }),
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
         ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
-        groupId: AI_ROOM_IMPORT_GROUP_ID,
+        groupId: `${AI_ROOM_IMPORT_GROUP_ID}-chair`,
         storyId,
       };
       furniture.push(chair);
@@ -948,7 +948,7 @@ export function applyRoomPlanVisionDraft(
         x: box.x,
         y: box.y,
         rotation: item.rotation,
-        groupId: AI_ROOM_IMPORT_GROUP_ID,
+        groupId: `${AI_ROOM_IMPORT_GROUP_ID}-zone`,
         storyId,
       };
       furniture.push(zone);
@@ -1015,7 +1015,7 @@ export function applyRoomPlanVisionDraft(
     warnings.push('Photo en perspective : le sol reprend la matière et la couleur vues, sans étirer l’image.');
   }
 
-  const next = ensureBlueprintDefaults({
+  const aligned = tidyImportedFloorLayout(ensureBlueprintDefaults({
     ...current,
     roomOutline: outline,
     walls,
@@ -1046,10 +1046,10 @@ export function applyRoomPlanVisionDraft(
       curtainColor: appearance?.curtainColor ?? current.metadata.curtainColor,
       showCurtains: appearance?.curtainColor ? true : current.metadata.showCurtains,
     },
-  });
+  }));
 
   return {
-    blueprint: refreshBlueprintMetadata(next),
+    blueprint: refreshBlueprintMetadata(aligned),
     warnings: warnings.filter((item, index, all) => all.indexOf(item) === index),
     selection,
   };

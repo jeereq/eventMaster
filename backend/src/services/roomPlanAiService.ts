@@ -1,3 +1,5 @@
+import { parseGeminiJson, requestGeminiJson } from './geminiJsonClient.ts';
+
 type HttpError = Error & { status?: number };
 
 export const ROOM_PLAN_AI_GROUP_ID = 'ai-import';
@@ -417,75 +419,8 @@ function fail(status: number, message: string): never {
   throw error;
 }
 
-const GEMINI_PLAN_MODEL_DEFAULT = 'gemini-3.1-pro-preview';
-const GEMINI_RETIRED_PLAN_MODELS = new Set([
-  'gemini-2.5-pro',
-  'gemini-2.5-pro-preview',
-  'gemini-2.0-pro',
-  'gemini-1.5-pro',
-]);
-const GEMINI_IMAGE_FETCH_MAX_BYTES = 8 * 1024 * 1024;
-
-function requireGeminiKey(): string {
-  const key = (
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.GOOGLE_AI_API_KEY ||
-    process.env.NANO_BANANA_API_KEY ||
-    ''
-  ).trim();
-  if (!key) {
-    fail(503, 'La lecture IA n’est pas configurée sur ce serveur (GEMINI_API_KEY manquante).');
-  }
-  return key;
-}
-
-function getGeminiPlanModel(): string {
-  const raw = (process.env.GEMINI_PLAN_MODEL || process.env.GEMINI_MODEL || GEMINI_PLAN_MODEL_DEFAULT).trim();
-  const model = raw.replace(/^models\//, '');
-  if (!model || GEMINI_RETIRED_PLAN_MODELS.has(model)) return GEMINI_PLAN_MODEL_DEFAULT;
-  return model;
-}
-
-function parseDataImage(url: string): { mimeType: string; base64: string } | null {
-  const match = url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s);
-  if (!match?.[1] || !match[2]) return null;
-  return { mimeType: match[1], base64: match[2] };
-}
-
-async function loadGeminiImagePart(imageUrl: string): Promise<{ inline_data: { mime_type: string; data: string } }> {
-  const embedded = parseDataImage(imageUrl);
-  if (embedded) {
-    return { inline_data: { mime_type: embedded.mimeType, data: embedded.base64 } };
-  }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
-  try {
-    const response = await fetch(imageUrl, { signal: controller.signal });
-    if (!response.ok) {
-      fail(502, 'Impossible de télécharger la photo de la salle pour l’analyse.');
-    }
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.byteLength < 80) {
-      fail(502, 'La photo de la salle est invalide ou trop petite.');
-    }
-    if (buffer.byteLength > GEMINI_IMAGE_FETCH_MAX_BYTES) {
-      fail(413, 'La photo est trop lourde pour l’analyse Gemini (max 8 Mo).');
-    }
-    const header = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-    const mimeType = header.startsWith('image/') ? header : 'image/jpeg';
-    return { inline_data: { mime_type: mimeType, data: buffer.toString('base64') } };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 export function parseModelJson(raw: string): unknown {
-  const trimmed = raw.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const jsonText = (fenced?.[1] || trimmed).trim();
-  return JSON.parse(jsonText);
+  return parseGeminiJson(raw);
 }
 
 export function rateLimitRoomPlanAi(userId: string) {
@@ -790,6 +725,7 @@ Règles appearance :
 - Couleurs en hex (#rrggbb) d’après la teinte observée, pas une couleur de thème EventMaster.
 
 Règles items (déduction autorisée) :
+- Aligne tables et rangées sur une grille : mêmes X en colonnes, mêmes Y en lignes. Évite les décalages de 1–2 %.
 - table = chaque table isolée. seats = chaises / couverts visibles autour, sinon estime d’après le diamètre (cocktail 2, ronde 8, longue 10–14). shape d’après la silhouette. hasCenterpiece=true si vase ou bouquet central.
 - row = chaque rangée de chaises alignées (théâtre, banquettes, gradin). Une rangée visible = un item.
 - chair = fauteuil / tabouret isolé seulement (pas autour d’une table).
@@ -851,7 +787,7 @@ Le schéma JSON est le même que pour une lecture photo :
   "warnings": ["..."]
 }
 
-Répartis le mobilier sans chevauchement. Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items.`;
+Répartis le mobilier sans chevauchement, aligné en lignes et colonnes régulières. Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items.`;
 }
 
 async function requestRoomPlanJson(input: {
@@ -863,62 +799,14 @@ async function requestRoomPlanJson(input: {
   heightM: number;
   failMessage: string;
 }): Promise<RoomPlanVisionDraft> {
-  const key = requireGeminiKey();
-  const model = getGeminiPlanModel();
-  const parts: Array<Record<string, unknown>> = [{ text: input.userText }];
-  if (input.imageUrl) {
-    parts.unshift(await loadGeminiImagePart(input.imageUrl));
-  }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90_000);
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
-      {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: input.system }] },
-          contents: [{ role: 'user', parts }],
-          generationConfig: {
-            temperature: input.temperature,
-            responseMimeType: 'application/json',
-          },
-        }),
-      },
-    );
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: { message?: string };
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
-        finishReason?: string;
-      }>;
-    };
-    if (!response.ok) {
-      fail(502, payload.error?.message || input.failMessage);
-    }
-    const raw = (payload.candidates?.[0]?.content?.parts || [])
-      .map((part) => part.text || '')
-      .join('')
-      .trim();
-    if (!raw) {
-      fail(502, input.failMessage);
-    }
-    let parsed: unknown = {};
-    try {
-      parsed = parseModelJson(raw);
-    } catch {
-      fail(502, 'L’IA a renvoyé un plan illisible. Réessayez avec un brief plus précis.');
-    }
-    return parseRoomPlanVisionDraft(parsed, { widthM: input.widthM, heightM: input.heightM });
-  } catch (error) {
-    if ((error as HttpError)?.status) throw error;
-    fail(502, (error as Error)?.message || input.failMessage);
-  } finally {
-    clearTimeout(timer);
-  }
+  const parsed = await requestGeminiJson({
+    system: input.system,
+    userText: input.userText,
+    imageUrls: input.imageUrl ? [input.imageUrl] : undefined,
+    temperature: input.temperature,
+    failMessage: input.failMessage,
+  });
+  return parseRoomPlanVisionDraft(parsed, { widthM: input.widthM, heightM: input.heightM });
 }
 
 export async function analyzeRoomPlanPhoto(input: {

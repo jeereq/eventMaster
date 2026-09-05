@@ -1,5 +1,18 @@
-import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
+import type { RoomLayoutBlueprint, TableShape } from '@/lib/roomLayoutUtils';
 import { makeLayoutId, refreshBlueprintMetadata } from '@/lib/roomLayoutUtils';
+import {
+  alignedPositions,
+  clusterIndices,
+  cxOf,
+  cyOf,
+  IMPORT_ALIGN_TOLERANCE,
+  IMPORT_SNAP_STEP,
+  median,
+  snapPct,
+  snapRotationDeg,
+  type AlignBox,
+  type AlignMode as SharedAlignMode,
+} from '@/lib/layoutAlignMath';
 
 export type LayoutSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'chair' | 'wall';
 
@@ -8,15 +21,7 @@ export type LayoutSelectionItem = {
   id: string;
 };
 
-export type AlignMode =
-  | 'left'
-  | 'right'
-  | 'centerX'
-  | 'top'
-  | 'bottom'
-  | 'centerY'
-  | 'distributeX'
-  | 'distributeY';
+export type AlignMode = SharedAlignMode;
 
 export type LayoutBounds = {
   kind: LayoutSelectableKind;
@@ -85,15 +90,18 @@ export function getSelectionBounds(
   }
 
   if (furn.kind === 'table' || furn.kind === 'chair' || furn.kind === 'row') {
-    const w = furn.kind === 'row' ? Math.min(furn.seatCount, 12) * 1.2 : 6;
-    const h = furn.kind === 'row' ? 4 : 6;
+    const size = furn.kind === 'table'
+      ? tableFootprint(furn.shape, furn.capacity)
+      : furn.kind === 'row'
+        ? rowFootprint(furn.seatCount)
+        : { w: 3, h: 3 };
     return {
       kind: furn.kind,
       id: furn.id,
       x: furn.x,
       y: furn.y,
-      w,
-      h,
+      w: size.w,
+      h: size.h,
       isCenter: true,
       groupId: furn.groupId,
     };
@@ -102,49 +110,37 @@ export function getSelectionBounds(
   return null;
 }
 
-function leftOf(b: LayoutBounds) {
-  return b.isCenter ? b.x - b.w / 2 : b.x;
-}
-function rightOf(b: LayoutBounds) {
-  return b.isCenter ? b.x + b.w / 2 : b.x + b.w;
-}
-function topOf(b: LayoutBounds) {
-  return b.isCenter ? b.y - b.h / 2 : b.y;
-}
-function bottomOf(b: LayoutBounds) {
-  return b.isCenter ? b.y + b.h / 2 : b.y + b.h;
-}
-function cxOf(b: LayoutBounds) {
-  return b.isCenter ? b.x : b.x + b.w / 2;
-}
-function cyOf(b: LayoutBounds) {
-  return b.isCenter ? b.y : b.y + b.h / 2;
+function tableFootprint(shape: TableShape | undefined, capacity: number): { w: number; h: number } {
+  if (shape === 'cocktail' || shape === 'highTop') return { w: 5, h: 5 };
+  if (shape === 'rectangular' || shape === 'arc') {
+    const w = capacity >= 14 ? 16 : capacity >= 10 ? 13 : 10;
+    return { w, h: 7 };
+  }
+  const span = Math.max(6, Math.min(14, 5 + capacity * 0.55));
+  return { w: span, h: span };
 }
 
-function setLeft(b: LayoutBounds, left: number): { x: number; y: number } {
-  if (b.isCenter) return { x: left + b.w / 2, y: b.y };
-  return { x: left, y: b.y };
+function rowFootprint(seatCount: number): { w: number; h: number } {
+  return { w: Math.min(40, Math.max(8, seatCount * 2.2)), h: 5 };
 }
-function setRight(b: LayoutBounds, right: number): { x: number; y: number } {
-  if (b.isCenter) return { x: right - b.w / 2, y: b.y };
-  return { x: right - b.w, y: b.y };
-}
-function setTop(b: LayoutBounds, top: number): { x: number; y: number } {
-  if (b.isCenter) return { x: b.x, y: top + b.h / 2 };
-  return { x: b.x, y: top };
-}
-function setBottom(b: LayoutBounds, bottom: number): { x: number; y: number } {
-  if (b.isCenter) return { x: b.x, y: bottom - b.h / 2 };
-  return { x: b.x, y: bottom - b.h };
-}
-function setCx(b: LayoutBounds, cx: number): { x: number; y: number } {
-  if (b.isCenter) return { x: cx, y: b.y };
-  return { x: cx - b.w / 2, y: b.y };
-}
-function setCy(b: LayoutBounds, cy: number): { x: number; y: number } {
-  if (b.isCenter) return { x: b.x, y: cy };
-  return { x: b.x, y: cy - b.h / 2 };
-}
+
+const FLOOR_FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
+  'aisle',
+  'carpet',
+  'stage',
+  'podium',
+  'buffet',
+  'corridor',
+  'decal',
+  'flower',
+  'arch',
+  'partition',
+  'pedestal',
+  'djBooth',
+  'screen',
+  'fountain',
+  'gazebo',
+]);
 
 function applyPosition(
   blueprint: RoomLayoutBlueprint,
@@ -174,47 +170,80 @@ export function alignLayoutSelection(
   const boxes = selection
     .map((s) => getSelectionBounds(blueprint, s))
     .filter((b): b is LayoutBounds => Boolean(b));
-  if (boxes.length < 2) return blueprint;
+  const moves = alignedPositions(boxes, mode);
+  if (moves.size === 0) return blueprint;
 
   let next = blueprint;
-
-  if (mode === 'distributeX' || mode === 'distributeY') {
-    const sorted = [...boxes].sort((a, b) =>
-      mode === 'distributeX' ? cxOf(a) - cxOf(b) : cyOf(a) - cyOf(b),
-    );
-    if (sorted.length < 3) {
-      // 2 éléments : pas de répartition, centrer entre eux suffit via align
-      return blueprint;
-    }
-    const first = sorted[0];
-    const last = sorted[sorted.length - 1];
-    const start = mode === 'distributeX' ? cxOf(first) : cyOf(first);
-    const end = mode === 'distributeX' ? cxOf(last) : cyOf(last);
-    const step = (end - start) / (sorted.length - 1);
-    sorted.forEach((b, i) => {
-      const target = start + step * i;
-      const pos = mode === 'distributeX' ? setCx(b, target) : setCy(b, target);
-      next = applyPosition(next, { kind: b.kind, id: b.id }, pos);
-    });
-    return refreshBlueprintMetadata(next);
+  for (const box of boxes) {
+    const pos = moves.get(box.id);
+    if (!pos) continue;
+    next = applyPosition(next, { kind: box.kind, id: box.id }, pos);
   }
+  return refreshBlueprintMetadata(next);
+}
 
-  const targetLeft = Math.min(...boxes.map(leftOf));
-  const targetRight = Math.max(...boxes.map(rightOf));
-  const targetTop = Math.min(...boxes.map(topOf));
-  const targetBottom = Math.max(...boxes.map(bottomOf));
-  const targetCx = (targetLeft + targetRight) / 2;
-  const targetCy = (targetTop + targetBottom) / 2;
+function toAlignBox(bounds: LayoutBounds): AlignBox {
+  return { id: bounds.id, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h, isCenter: bounds.isCenter };
+}
 
-  for (const b of boxes) {
-    let pos = { x: b.x, y: b.y };
-    if (mode === 'left') pos = setLeft(b, targetLeft);
-    if (mode === 'right') pos = setRight(b, targetRight);
-    if (mode === 'centerX') pos = setCx(b, targetCx);
-    if (mode === 'top') pos = setTop(b, targetTop);
-    if (mode === 'bottom') pos = setBottom(b, targetBottom);
-    if (mode === 'centerY') pos = setCy(b, targetCy);
-    next = applyPosition(next, { kind: b.kind, id: b.id }, pos);
+function snapFloorItemPosition<T extends { x: number; y: number; rotation?: number }>(item: T): T {
+  return {
+    ...item,
+    x: snapPct(item.x, IMPORT_SNAP_STEP),
+    y: snapPct(item.y, IMPORT_SNAP_STEP),
+    rotation: snapRotationDeg(item.rotation),
+  };
+}
+
+function applyClusterAxis(
+  blueprint: RoomLayoutBlueprint,
+  items: LayoutSelectionItem[],
+  axis: 'x' | 'y',
+): RoomLayoutBlueprint {
+  const boxes = items
+    .map((item) => getSelectionBounds(blueprint, item))
+    .filter((box): box is LayoutBounds => Boolean(box));
+  if (boxes.length < 2) return blueprint;
+  const values = boxes.map((box) => (axis === 'x' ? cxOf(toAlignBox(box)) : cyOf(toAlignBox(box))));
+  const groups = clusterIndices(values, IMPORT_ALIGN_TOLERANCE);
+  let next = blueprint;
+  for (const group of groups) {
+    if (group.length < 2) continue;
+    const target = snapPct(median(group.map((index) => values[index])), IMPORT_SNAP_STEP);
+    for (const index of group) {
+      const box = boxes[index];
+      const pos = axis === 'x'
+        ? { x: box.isCenter ? target : target - box.w / 2, y: box.y }
+        : { x: box.x, y: box.isCenter ? target : target - box.h / 2 };
+      next = applyPosition(next, { kind: box.kind, id: box.id }, pos);
+    }
+  }
+  return next;
+}
+
+/** Grille + alignement des éléments au sol après un import photo / studio IA. */
+export function tidyImportedFloorLayout(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  let next: RoomLayoutBlueprint = {
+    ...blueprint,
+    furniture: blueprint.furniture.map((item) => snapFloorItemPosition(item)),
+    fixtures: blueprint.fixtures.map((item) => (
+      FLOOR_FIXTURE_KINDS.has(item.kind) ? snapFloorItemPosition(item) : item
+    )),
+  };
+
+  const tables: LayoutSelectionItem[] = next.furniture
+    .filter((item) => item.kind === 'table')
+    .map((item) => ({ kind: 'table' as const, id: item.id }));
+  const rows: LayoutSelectionItem[] = next.furniture
+    .filter((item) => item.kind === 'row')
+    .map((item) => ({ kind: 'row' as const, id: item.id }));
+  const chairs: LayoutSelectionItem[] = next.furniture
+    .filter((item) => item.kind === 'chair')
+    .map((item) => ({ kind: 'chair' as const, id: item.id }));
+
+  for (const group of [tables, rows, chairs]) {
+    next = applyClusterAxis(next, group, 'y');
+    next = applyClusterAxis(next, group, 'x');
   }
 
   return refreshBlueprintMetadata(next);
