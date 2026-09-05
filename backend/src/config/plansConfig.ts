@@ -554,6 +554,19 @@ export function isPlanAllowedForAccountKind(planKey: string, kind?: string | nul
   return paidPlanKeysForAccountKind(kind).includes(normalized);
 }
 
+/** Forfait d’inscription à mémoriser (null si gratuit, inconnu ou incompatible avec le kind). */
+export function resolvePendingSignupPlan(
+  planKey?: string | null,
+  accountKind?: string | null,
+): PlanTypeKey | null {
+  if (!planKey || !String(planKey).trim()) return null;
+  const normalized = normalizePlanKey(planKey);
+  if (normalized === 'FREE') return null;
+  if (!PLAN_KEYS.includes(normalized)) return null;
+  if (!isPlanAllowedForAccountKind(normalized, accountKind)) return null;
+  return normalized;
+}
+
 /** Type de compte à poser quand un admin assigne un forfait. */
 export function accountKindForPlanAssignment(
   planKey: string,

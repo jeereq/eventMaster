@@ -13,6 +13,8 @@ import {
 } from './tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from './invoiceService';
 import { notifySubscriptionPayment } from './paymentTraceService';
+import { grantEnterpriseWelcomeUpgrade } from './welcomeAiTokens';
+import { isEnterprisePlanKey } from './welcomeAiTokensPolicy';
 
 function generateLicenseKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -37,6 +39,7 @@ export async function activateSubscriptionRequest(
           licenseActive: true,
           licenseExpiresAt: true,
           accountKind: true,
+          managerId: true,
         },
       },
     },
@@ -123,6 +126,7 @@ export async function activateSubscriptionRequest(
         licenseKey: newLicenseKey,
         licenseExpiryWarningFor: null,
         billingCycle: billingCycleFromDurationDays(durationDays),
+        pendingPlan: null,
       },
     }),
   ]);
@@ -134,6 +138,14 @@ export async function activateSubscriptionRequest(
       amountFc: pricing.finalAmount,
       plan: request.requestedPlan,
     }).catch((err) => console.error('[Subscription] notify payment:', err));
+  }
+
+  if (isEnterprisePlanKey(request.requestedPlan) && request.tenant.managerId) {
+    void grantEnterpriseWelcomeUpgrade({
+      userId: request.tenant.managerId,
+      tenantId: request.tenantId,
+      planKey: request.requestedPlan,
+    }).catch((err) => console.error('[Subscription] welcome entreprise:', err));
   }
 
   void (async () => {

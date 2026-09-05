@@ -183,16 +183,16 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   protocol: {
     key: 'protocol',
     badge: 'Scanner Protocole',
-    heroTitle: 'Contrôle d’accès Jour J & orientation rapide',
+    heroTitle: 'Ouvrez l’organisation, puis invitez le protocole',
     heroDescription:
-      'Scannez les pass QR de vos invités à l’entrée depuis votre smartphone pour une orientation fluide en 2 secondes.',
-    goalTitle: 'Objectif : Scanner Protocole & Accueil',
-    goalSubtitle: 'Activez le terminal de scan smartphone pour vos équipes d’accueil.',
-    goalTag: 'Accueil Jour J',
+      'Ce formulaire crée le compte propriétaire de l’organisation. Les agents protocole s’ajoutent ensuite dans Équipe (4 jetons IA chacun).',
+    goalTitle: 'Objectif : Organisation + desk protocole',
+    goalSubtitle: 'Créez d’abord l’espace organisateur, puis invitez vos agents d’accueil depuis Équipe.',
+    goalTag: 'Organisation',
     goalIcon: ScanLine,
     defaultAccountKind: 'ORGANIZER',
-    defaultNextPath: '/dashboard/protocol',
-    submitButtonLabel: 'Activer le scanner protocole',
+    defaultNextPath: '/dashboard/team',
+    submitButtonLabel: 'Créer l’organisation',
     orgLabel: 'Nom de l’organisation ou événement',
     orgPlaceholder: 'Ex: Desk Accueil / Festival 2026',
     features: [
@@ -532,7 +532,12 @@ function welcomeSignupGrantLabel(
   plan: string | null,
 ): string {
   const planKey = (plan || '').toUpperCase();
-  if (accountKind === 'CLIENT' || accountKind === 'VENDOR' || CATALOG_PLAN_KEYS.has(planKey)) {
+  if (
+    accountKind === 'CLIENT' ||
+    accountKind === 'VENDOR' ||
+    accountKind === 'BOTH' ||
+    CATALOG_PLAN_KEYS.has(planKey)
+  ) {
     return '10 jetons IA';
   }
   if (ENTERPRISE_PLAN_KEYS.has(planKey)) {
@@ -575,7 +580,6 @@ function RegisterPageContent() {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showMobileSteps, setShowMobileSteps] = useState(false);
-  const [showAllAccountKinds, setShowAllAccountKinds] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy'>('summary');
 
@@ -619,11 +623,14 @@ function RegisterPageContent() {
   // Destination intelligente de redirection après validation
   const targetNextPath = useMemo(() => {
     if (nextPath) return nextPath;
+    if (matchedPlan && matchedPlan.id !== 'FREE') {
+      return `/dashboard/billing?plan=${encodeURIComponent(matchedPlan.id)}`;
+    }
     if (templateIdParam && config.key === 'template') {
       return `/dashboard/templates?templateId=${encodeURIComponent(templateIdParam)}`;
     }
     return config.defaultNextPath;
-  }, [nextPath, templateIdParam, config]);
+  }, [nextPath, templateIdParam, config, matchedPlan]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -672,8 +679,9 @@ function RegisterPageContent() {
 
       if (res.requiresVerification && res.email) {
         const nextQ = targetNextPath ? `&next=${encodeURIComponent(targetNextPath)}` : '';
+        const welcomeQ = res.welcomeTokens?.offer === 'error' ? '&welcome=failed' : '';
         router.push(
-          `/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}${nextQ}`,
+          `/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}${nextQ}${welcomeQ}`,
         );
         return;
       }
@@ -819,7 +827,7 @@ function RegisterPageContent() {
 
             <form className="space-y-3" onSubmit={handleSubmit}>
               {/* ─── SÉLECTION DU TYPE DE COMPTE COMPACTE ─── */}
-              {hasExplicitAction && !showAllAccountKinds ? (
+              {hasExplicitAction ? (
                 <div className="p-2 rounded-[var(--radius-card)] bg-surface-muted/70 border border-border flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-6 h-6 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -829,17 +837,9 @@ function RegisterPageContent() {
                       {ACCOUNT_KIND_LABELS[accountKind]}
                     </span>
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1 py-0.2 rounded shrink-0">
-                      Actif
+                      Offre liée
                     </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowAllAccountKinds(true)}
-                    className="text-[11px] font-semibold text-primary hover:underline touch-manipulation shrink-0 px-1.5 py-0.5 rounded hover:bg-primary/5 cursor-pointer"
-                  >
-                    Changer
-                  </button>
                 </div>
               ) : (
                 <fieldset className="space-y-1 animate-fade-in">
@@ -847,17 +847,7 @@ function RegisterPageContent() {
                     <legend className="text-xs font-semibold text-foreground">
                       Type de compte souhaité
                     </legend>
-                    {hasExplicitAction ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowAllAccountKinds(false)}
-                        className="text-[10px] font-semibold text-primary hover:underline touch-manipulation cursor-pointer"
-                      >
-                        Garder le focus
-                      </button>
-                    ) : (
-                      <span className="text-[10px] text-muted">Modifiable plus tard</span>
-                    )}
+                    <span className="text-[10px] text-muted">Modifiable plus tard</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">

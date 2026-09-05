@@ -5,7 +5,7 @@ import { prisma } from '../db';
 import { AuthenticatedRequest, signUserToken } from '../middleware/auth';
 import { formatTenantResponse, parseAccountKind } from '../utils/tenantAccess';
 import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
-import { isPlanAllowedForAccountKind } from '../config/plansConfig';
+import { isPlanAllowedForAccountKind, resolvePendingSignupPlan } from '../config/plansConfig';
 import { PlanType } from '@prisma/client';
 import { recordUserLegalAcceptance } from '../services/legalService';
 import { resolveOrgAccess } from '../services/permissionsService';
@@ -161,6 +161,10 @@ export async function register(req: Request, res: Response) {
     }
 
     const accountKind = parseAccountKind(rawAccountKind);
+    const pendingPlan = resolvePendingSignupPlan(
+      typeof rawPlan === 'string' ? rawPlan : null,
+      accountKind,
+    );
     const resolvedTenantName = String(tenantName || '').trim() || (accountKind === 'CLIENT' ? String(name).trim() : '');
     if (!resolvedTenantName) {
       return res.status(400).json({ error: 'Le nom de l’organisation est obligatoire.' });
@@ -171,6 +175,7 @@ export async function register(req: Request, res: Response) {
         data: {
           name: resolvedTenantName,
           plan: 'FREE',
+          pendingPlan: pendingPlan ?? undefined,
           accountKind,
           referredByCommercialId,
           referredByOrgUserId,
@@ -207,16 +212,29 @@ export async function register(req: Request, res: Response) {
       userAgent: (req.headers['user-agent'] as string) || null,
     });
 
+    let welcomeTokens: {
+      granted: boolean;
+      offer: string;
+      tokensCount: number;
+      valueFc: number;
+    } = { granted: false, offer: 'none', tokensCount: 0, valueFc: 0 };
     try {
-      await grantWelcomeAiTokens({
+      const grant = await grantWelcomeAiTokens({
         userId: result.user.id,
         tenantId: result.tenant.id,
         accountKind,
         intent: typeof rawIntent === 'string' ? rawIntent : null,
-        planKey: typeof rawPlan === 'string' ? rawPlan : null,
+        planKey: pendingPlan,
       });
+      welcomeTokens = {
+        granted: !grant.skipped,
+        offer: grant.offer.key,
+        tokensCount: grant.tokensCount,
+        valueFc: grant.valueFc,
+      };
     } catch (grantError) {
       console.error('[register] welcome AI tokens:', grantError);
+      welcomeTokens = { granted: false, offer: 'error', tokensCount: 0, valueFc: 0 };
     }
 
     const sentVia = await issueAndSendOtp({
@@ -242,6 +260,7 @@ export async function register(req: Request, res: Response) {
       email: result.user.email,
       user: publicUser(result.user),
       tenant: formatTenantResponse(result.tenant),
+      welcomeTokens,
     });
   } catch (error: any) {
     console.error('Erreur lors de l\'inscription:', error);

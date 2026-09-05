@@ -24,6 +24,7 @@ function VerifyOtpForm() {
  const initialEmail = searchParams.get('email') || '';
  const initialMethod = resolveAuthOtpMethodFromSite(searchParams.get('method'), authChannels);
  const fromLogin = searchParams.get('from') === 'login';
+ const welcomeFailed = searchParams.get('welcome') === 'failed';
 
  const [email] = useState(initialEmail);
  const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(initialMethod);
@@ -147,6 +148,11 @@ function VerifyOtpForm() {
  </p>
  </div>
 
+ {welcomeFailed && (
+ <Alert variant="warning" className="mb-4">
+ Le compte est créé, mais l’offre de jetons IA n’a pas pu être créditée. Réessayez plus tard depuis le tableau de bord ou contactez le support.
+ </Alert>
+ )}
  {error && <Alert variant="error" className="mb-4">{error}</Alert>}
  {success && <Alert variant="success" className="mb-4">{success}</Alert>}
 

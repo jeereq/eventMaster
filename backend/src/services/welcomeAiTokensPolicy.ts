@@ -92,7 +92,12 @@ export function resolveWelcomeOffer(input: {
   const planKey = normalize(input.planKey);
   const intent = String(input.intent || '').trim().toLowerCase();
 
-  if (kind === 'CLIENT' || kind === 'VENDOR' || CATALOG_PLAN_KEYS.has(planKey)) {
+  if (
+    kind === 'CLIENT' ||
+    kind === 'VENDOR' ||
+    kind === 'BOTH' ||
+    CATALOG_PLAN_KEYS.has(planKey)
+  ) {
     return catalogOffer();
   }
 
@@ -117,6 +122,10 @@ export function resolveWelcomeAudience(input: {
   if (offer.key === 'enterprise') return 'ENTERPRISE';
   if (offer.key === 'b2b') return 'B2B';
   return 'B2C';
+}
+
+export function isEnterprisePlanKey(planKey?: string | null): boolean {
+  return ENTERPRISE_PLAN_KEYS.has(normalize(planKey));
 }
 
 export function welcomeTokenValueFc(audience: WelcomeAudience): number {

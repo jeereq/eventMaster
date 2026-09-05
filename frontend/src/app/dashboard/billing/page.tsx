@@ -189,6 +189,18 @@ function BillingPageInner() {
     [tenant?.accountKind],
   );
 
+  const focusPlan = (searchParams.get('plan') || tenant?.pendingPlan || '') as PlanId | '';
+  const pendingSignupPlan =
+    tenant?.plan === 'FREE' && focusPlan && focusPlan !== 'FREE' ? focusPlan : null;
+
+  useEffect(() => {
+    if (!pendingSignupPlan || loading) return;
+    document.getElementById(`plan-${pendingSignupPlan}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }, [pendingSignupPlan, loading]);
+
   const visibleTiers = useMemo(() => {
     const current = billing?.plan;
     return BILLING_TIERS.map((tier) => ({
@@ -295,6 +307,12 @@ function BillingPageInner() {
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
+      {pendingSignupPlan && (
+        <Alert variant="info">
+          Forfait choisi à l’inscription : <strong>{pendingSignupPlan}</strong>. Votre espace reste
+          en gratuit tant que l’abonnement n’est pas activé. Finalisez le paiement ci-dessous.
+        </Alert>
+      )}
 
       {isClientAccount && (
         <div className="rounded-3xl border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-surface to-surface-muted p-6 sm:p-8 space-y-5 shadow-md animate-fade-in">
@@ -464,12 +482,18 @@ function BillingPageInner() {
               .filter((p) => ids.includes(p.id))
               .map((plan) => {
                 const isCurrent = billing?.plan === plan.id;
+                const isFocused = pendingSignupPlan === plan.id;
                 const db = dynamicPlans?.[plan.id];
                 return (
                   <div
                     key={plan.id}
+                    id={`plan-${plan.id}`}
                     className={`relative flex flex-col rounded-[var(--radius-card)] border bg-surface p-6 ${
-                      isCurrent ? 'ring-2 ring-primary' : plan.highlighted ? 'border-primary shadow-lg' : 'border-border'
+                      isCurrent || isFocused
+                        ? 'ring-2 ring-primary'
+                        : plan.highlighted
+                          ? 'border-primary shadow-lg'
+                          : 'border-border'
                     }`}
                   >
                     {plan.badge && (
@@ -534,7 +558,7 @@ function BillingPageInner() {
                       }
                       onClick={() => handleUpgrade(plan.id)}
                       className={`w-full py-2.5 mt-5 font-semibold rounded-xl text-xs disabled:opacity-50 ${
-                        plan.highlighted || (isCurrent && plan.id !== 'FREE')
+                        plan.highlighted || isFocused || (isCurrent && plan.id !== 'FREE')
                           ? 'bg-primary text-white'
                           : 'bg-foreground text-background'
                       }`}

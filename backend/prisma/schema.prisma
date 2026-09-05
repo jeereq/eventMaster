@@ -132,6 +132,8 @@ model Tenant {
   id            String     @id @default(uuid())
   name          String
   plan          PlanType   @default(FREE)
+  /** Forfait visé à l’inscription ; le plan actif reste FREE tant que l’abonnement n’est pas payé. */
+  pendingPlan   PlanType?
   stripeCustId  String?
   licenseActive Boolean    @default(true)
   licenseExpiresAt DateTime?

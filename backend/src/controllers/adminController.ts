@@ -33,6 +33,8 @@ import {
 } from '../services/platformSettingsService';
 import { auditReq } from '../services/adminAuditService';
 import { adminPager, adminQueryString, adminSearch, listPayload, prismaAnd } from '../utils/adminPager';
+import { grantEnterpriseWelcomeUpgrade } from '../services/welcomeAiTokens';
+import { isEnterprisePlanKey } from '../services/welcomeAiTokensPolicy';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -547,6 +549,7 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
             : billingPayload?.extendLicense || billingPayload?.issueInvoice
               ? billingCycleFromDurationDays(durationDays)
               : undefined,
+        pendingPlan: newPlanKey === 'FREE' ? existing.pendingPlan : null,
       },
     });
 
@@ -605,6 +608,18 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
       billingResult?.commercialNotified.length
         ? ` Commerciaux informés : ${billingResult.commercialNotified.join(', ')}.`
         : '';
+
+    if (isEnterprisePlanKey(newPlanKey) && existing.managerId) {
+      try {
+        await grantEnterpriseWelcomeUpgrade({
+          userId: existing.managerId,
+          tenantId: id,
+          planKey: newPlanKey,
+        });
+      } catch (err) {
+        console.error('[admin] welcome entreprise:', err);
+      }
+    }
 
     await auditReq(req, {
       action: 'TENANT_UPDATE',

@@ -1,6 +1,8 @@
+import { prisma } from '../db';
 import { calculateTokensForAmount, currentAiTokenPricing } from './aiTokenFlexPayService';
 import { grantAiTokensToUser, tenantGrantDeviceId } from './aiSimulationWalletService';
 import {
+  isEnterprisePlanKey,
   resolveWelcomeAudience,
   resolveWelcomeOffer,
   welcomeTokenValueFc,
@@ -14,6 +16,7 @@ export {
   WELCOME_TOKEN_VALUE_ENTERPRISE_FC,
   WELCOME_TOKENS_CATALOG_FAMILY,
   WELCOME_TOKENS_PROTOCOL,
+  isEnterprisePlanKey,
   resolveWelcomeAudience,
   resolveWelcomeOffer,
   welcomeTokenValueFc,
@@ -34,6 +37,7 @@ export function welcomeTokensForOffer(offer: WelcomeOffer): number {
 export function welcomeGrantRelatedId(userId: string, offerKey = 'default'): string {
   const id = userId.trim();
   if (offerKey === 'protocol') return `welcome_protocol_${id}`;
+  if (offerKey === 'enterprise') return `welcome_enterprise_${id}`;
   return `welcome_${id}`;
 }
 
@@ -83,4 +87,54 @@ export async function grantWelcomeAiTokens(input: {
   }
 
   return { audience, offer, tokensCount, valueFc };
+}
+
+/** Complète l’offre entreprise (50 000 FC) à l’activation réelle du forfait. */
+export async function grantEnterpriseWelcomeUpgrade(input: {
+  userId: string;
+  tenantId: string;
+  planKey?: string | null;
+}): Promise<{ tokensCount: number; skipped?: boolean }> {
+  if (input.planKey && !isEnterprisePlanKey(input.planKey)) {
+    return { tokensCount: 0, skipped: true };
+  }
+
+  const ownerId = input.userId.trim();
+  const tenantId = input.tenantId.trim();
+  if (!ownerId || !tenantId) return { tokensCount: 0, skipped: true };
+
+  const enterpriseOffer = resolveWelcomeOffer({ planKey: 'ENTERPRISE_1', accountKind: 'ORGANIZER' });
+  const enterpriseTokens = welcomeTokensForOffer(enterpriseOffer);
+  const relatedId = welcomeGrantRelatedId(ownerId, 'enterprise');
+
+  const alreadyEnterprise = await prisma.aiTokenLedger.findFirst({
+    where: { action: 'grant', relatedId },
+    select: { id: true },
+  });
+  if (alreadyEnterprise) return { tokensCount: 0, skipped: true };
+
+  const prior = await prisma.aiTokenLedger.findFirst({
+    where: { action: 'grant', relatedId: welcomeGrantRelatedId(ownerId) },
+    select: { tokensDelta: true },
+  });
+  const already = Math.max(0, prior?.tokensDelta ?? 0);
+  const tokensCount = enterpriseTokens - already;
+  if (tokensCount <= 0) return { tokensCount: 0, skipped: true };
+
+  try {
+    await grantAiTokensToUser({
+      userId: ownerId,
+      tokensCount,
+      adminUserId: ownerId,
+      relatedId,
+      source: 'signup',
+      deviceId: tenantGrantDeviceId(tenantId),
+    });
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+    if (status === 409) return { tokensCount, skipped: true };
+    throw error;
+  }
+
+  return { tokensCount };
 }

@@ -49,6 +49,7 @@ interface Tenant {
   managerId?: string | null;
   branding?: TenantBranding;
   accountKind?: TenantAccountKind;
+  pendingPlan?: PlanId | null;
 }
 
 interface RegisterResult {
@@ -56,6 +57,12 @@ interface RegisterResult {
   requiresVerification?: boolean;
   email?: string;
   verificationMethod?: 'EMAIL' | 'WHATSAPP';
+  welcomeTokens?: {
+    granted: boolean;
+    offer: string;
+    tokensCount: number;
+    valueFc: number;
+  };
 }
 
 export interface PlanCapabilities {
@@ -317,6 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         requiresVerification: data.requiresVerification,
         email: data.email,
         verificationMethod: data.verificationMethod,
+        welcomeTokens: data.welcomeTokens,
       };
     } catch (error) {
       setLoading(false);
