@@ -5,6 +5,7 @@ import {
   normalizeRoomPlanImageUrl,
   normalizeRoomPlanVisionKind,
   parseHexColor,
+  parseModelJson,
   parseRoomPlanVisionDraft,
   ROOM_PLAN_VISION_ITEM_MAX,
 } from './roomPlanAiService.ts';
@@ -199,6 +200,13 @@ describe('composeRoomPlanFromBrief', () => {
       () => composeRoomPlanFromBrief({ brief: 'ok', widthM: 20, heightM: 16 }),
       { status: 400 },
     );
+  });
+});
+
+describe('parseModelJson', () => {
+  it('accepte un JSON nu ou entouré de fences markdown', () => {
+    assert.deepEqual(parseModelJson('{"view":"top"}'), { view: 'top' });
+    assert.deepEqual(parseModelJson('```json\n{"view":"perspective"}\n```'), { view: 'perspective' });
   });
 });
 

@@ -383,12 +383,66 @@ function fail(status: number, message: string): never {
   throw error;
 }
 
-function requireOpenAiKey(): string {
-  const key = String(process.env.OPENAI_API_KEY || '').trim();
+const GEMINI_PLAN_MODEL_DEFAULT = 'gemini-2.5-pro';
+const GEMINI_IMAGE_FETCH_MAX_BYTES = 8 * 1024 * 1024;
+
+function requireGeminiKey(): string {
+  const key = (
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.GOOGLE_AI_API_KEY ||
+    process.env.NANO_BANANA_API_KEY ||
+    ''
+  ).trim();
   if (!key) {
-    fail(503, 'La lecture IA n’est pas configurée sur ce serveur (OPENAI_API_KEY manquante).');
+    fail(503, 'La lecture IA n’est pas configurée sur ce serveur (GEMINI_API_KEY manquante).');
   }
   return key;
+}
+
+function getGeminiPlanModel(): string {
+  return (process.env.GEMINI_PLAN_MODEL || process.env.GEMINI_MODEL || GEMINI_PLAN_MODEL_DEFAULT).trim();
+}
+
+function parseDataImage(url: string): { mimeType: string; base64: string } | null {
+  const match = url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s);
+  if (!match?.[1] || !match[2]) return null;
+  return { mimeType: match[1], base64: match[2] };
+}
+
+async function loadGeminiImagePart(imageUrl: string): Promise<{ inline_data: { mime_type: string; data: string } }> {
+  const embedded = parseDataImage(imageUrl);
+  if (embedded) {
+    return { inline_data: { mime_type: embedded.mimeType, data: embedded.base64 } };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45_000);
+  try {
+    const response = await fetch(imageUrl, { signal: controller.signal });
+    if (!response.ok) {
+      fail(502, 'Impossible de télécharger la photo de la salle pour l’analyse.');
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.byteLength < 80) {
+      fail(502, 'La photo de la salle est invalide ou trop petite.');
+    }
+    if (buffer.byteLength > GEMINI_IMAGE_FETCH_MAX_BYTES) {
+      fail(413, 'La photo est trop lourde pour l’analyse Gemini (max 8 Mo).');
+    }
+    const header = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    const mimeType = header.startsWith('image/') ? header : 'image/jpeg';
+    return { inline_data: { mime_type: mimeType, data: buffer.toString('base64') } };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function parseModelJson(raw: string): unknown {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonText = (fenced?.[1] || trimmed).trim();
+  return JSON.parse(jsonText);
 }
 
 export function rateLimitRoomPlanAi(userId: string) {
@@ -629,7 +683,7 @@ export function parseRoomPlanVisionDraft(
 
 function systemPrompt(): string {
   return `Tu es l’analyste de plans de salle EventMaster (RDC).
-Tu ANALYSES la photo, tu DÉDUIS le mobilier visible, puis tu produis UNIQUEMENT un JSON valide (response_format json_object).
+Tu ANALYSES la photo, tu DÉDUIS le mobilier visible, puis tu produis UNIQUEMENT un JSON valide.
 
 Mission :
 - ÉNUMÈRE chaque élément visible (table, rangée, chaise isolée, piste, scène, allée, buffet, DJ, écran, colonne, fleurs, lustre, porte…).
@@ -705,7 +759,7 @@ Si la photo n’est pas une salle, view="unclear", items=[], warnings explicites
 
 function composeSystemPrompt(): string {
   return `Tu es l’architecte de plans de salle EventMaster (RDC).
-À partir du BRIEF, tu CONÇOIS un plan réaliste et tu produis UNIQUEMENT un JSON valide (response_format json_object).
+À partir du BRIEF, tu CONÇOIS un plan réaliste et tu produis UNIQUEMENT un JSON valide.
 
 Mission :
 - Place un agencement cohérent : chaque table, rangée, piste, scène, allée, buffet, DJ, colonne… est un item séparé.
@@ -761,44 +815,52 @@ async function requestRoomPlanJson(input: {
   heightM: number;
   failMessage: string;
 }): Promise<RoomPlanVisionDraft> {
-  const key = requireOpenAiKey();
-  const visionModel = process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
-  const userContent: Array<Record<string, unknown>> = [{ type: 'text', text: input.userText }];
+  const key = requireGeminiKey();
+  const model = getGeminiPlanModel();
+  const parts: Array<Record<string, unknown>> = [{ text: input.userText }];
   if (input.imageUrl) {
-    userContent.push({ type: 'image_url', image_url: { url: input.imageUrl, detail: 'high' } });
+    parts.unshift(await loadGeminiImagePart(input.imageUrl));
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 90_000);
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
+      {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: input.system }] },
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: input.temperature,
+            responseMimeType: 'application/json',
+          },
+        }),
       },
-      body: JSON.stringify({
-        model: visionModel,
-        temperature: input.temperature,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: input.system },
-          { role: 'user', content: userContent },
-        ],
-      }),
-    });
+    );
     const payload = (await response.json().catch(() => ({}))) as {
       error?: { message?: string };
-      choices?: Array<{ message?: { content?: string } }>;
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        finishReason?: string;
+      }>;
     };
     if (!response.ok) {
       fail(502, payload.error?.message || input.failMessage);
     }
-    const raw = payload.choices?.[0]?.message?.content || '{}';
+    const raw = (payload.candidates?.[0]?.content?.parts || [])
+      .map((part) => part.text || '')
+      .join('')
+      .trim();
+    if (!raw) {
+      fail(502, input.failMessage);
+    }
     let parsed: unknown = {};
     try {
-      parsed = JSON.parse(raw);
+      parsed = parseModelJson(raw);
     } catch {
       fail(502, 'L’IA a renvoyé un plan illisible. Réessayez avec un brief plus précis.');
     }
