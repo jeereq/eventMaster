@@ -157,6 +157,7 @@ function ClientMarketplaceInner() {
   const [tab, setTabState] = useState<HubTab>(urlTab);
   const [planView, setPlanViewState] = useState<PlanPrepView>(urlPlanView);
   const pendingTab = useRef<HubTab | null>(null);
+  const pendingPlanView = useRef<PlanPrepView | null>(null);
 
   useEffect(() => {
     if (pendingTab.current) {
@@ -167,6 +168,10 @@ function ClientMarketplaceInner() {
   }, [urlTab]);
 
   useEffect(() => {
+    if (pendingPlanView.current) {
+      if (urlPlanView === pendingPlanView.current) pendingPlanView.current = null;
+      return;
+    }
     setPlanViewState(urlPlanView);
   }, [urlPlanView]);
 
@@ -186,6 +191,7 @@ function ClientMarketplaceInner() {
   };
 
   const setPlanView = (next: PlanPrepView) => {
+    pendingPlanView.current = next;
     setPlanViewState(next);
     const params = new URLSearchParams(
       typeof window !== 'undefined' ? window.location.search : searchParams.toString(),

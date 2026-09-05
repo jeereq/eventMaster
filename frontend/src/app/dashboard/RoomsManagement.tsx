@@ -1565,10 +1565,11 @@ export default function RoomsManagement() {
             <div className="space-y-4">
               {wizardPlanTab !== 'editeur' ? (
                 <PlanCreationPath
+                  value={focusPlanImport ? 'photo' : 'manual'}
                   photoLocked={!roomEditorCapabilities(
                     planFeatures?.roomEditorLevel,
                     planFeatures?.roomThemesFixtures === true,
-                  ).canCustomImages}
+                  ).canPlanFromPhoto}
                   onChange={(next) => {
                     if (next === 'photo') {
                       openAiPlan();

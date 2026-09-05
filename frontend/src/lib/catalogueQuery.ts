@@ -270,12 +270,15 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
       const params = new URLSearchParams(qs);
       const liveSearch = typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : searchKey;
       const currentParams = new URLSearchParams(liveSearch);
-      const managed = new Set([...CATALOGUE_QUERY_KEYS, ...opts.extraKeys, 'hub', 'tab']);
+      const managed = new Set([...CATALOGUE_QUERY_KEYS, ...opts.extraKeys, 'hub', 'tab', 'planView']);
       for (const [key, value] of currentParams.entries()) {
         if (!managed.has(key) && value && !params.has(key)) params.set(key, value);
       }
       if (currentParams.get('hub') && !params.has('hub')) params.set('hub', currentParams.get('hub') || '');
       if (currentParams.get('tab') && !params.has('tab')) params.set('tab', currentParams.get('tab') || '');
+      if (currentParams.get('planView') && !params.has('planView')) {
+        params.set('planView', currentParams.get('planView') || '');
+      }
       const nextQs = params.toString();
       const href = nextQs ? `${pathname}?${nextQs}` : pathname;
       const current = liveSearch ? `${pathname}?${liveSearch}` : pathname;

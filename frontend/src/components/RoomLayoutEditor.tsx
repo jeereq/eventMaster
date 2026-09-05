@@ -1830,7 +1830,7 @@ export default function RoomLayoutEditor({
           <PlanCreationPath
             value={planPath}
             busy={aiPlanReading}
-            photoLocked={!caps.canCustomImages}
+            photoLocked={!caps.canPlanFromPhoto}
             onChange={(next) => {
               setPlanPath(next);
               if (next === 'photo') {
@@ -1867,7 +1867,7 @@ export default function RoomLayoutEditor({
               
               {accordion === 'murs-sols' && (
                 <div id="editor-panel-murs-sols" className="p-4 bg-surface space-y-5 border-t border-border">
-                  {caps.canCustomImages ? (
+                  {caps.canPlanFromPhoto ? (
                     <div
                       id="plan-import-ia"
                       aria-busy={aiPlanReading || undefined}

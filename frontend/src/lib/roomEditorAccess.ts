@@ -15,6 +15,8 @@ export type RoomEditorCapabilities = {
   canThemes: boolean;
   canFixtures: boolean;
   canCustomImages: boolean;
+  /** Lecture d’un plan depuis une photo (jetons IA), distincte des images perso. */
+  canPlanFromPhoto: boolean;
   canCustomTheme: boolean;
   canZones: boolean;
   canSnapGrid: boolean;
@@ -53,6 +55,7 @@ export function roomEditorCapabilities(
     canThemes: false,
     canFixtures: false,
     canCustomImages: false,
+    canPlanFromPhoto: false,
     canCustomTheme: false,
     canZones: false,
     canSnapGrid: false,
@@ -78,6 +81,7 @@ export function roomEditorCapabilities(
       canAutoAssign: true,
       canTemplates: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'arc'] as TableShape[],
+      canPlanFromPhoto: true,
       canFixtures: themesFixtures,
       fixtureKinds: themesFixtures ? ['entrance', 'door', 'aisle', 'corridor'] : [],
     } satisfies Partial<RoomEditorCapabilities>);
@@ -101,6 +105,7 @@ export function roomEditorCapabilities(
       canAlign: true,
       canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
+      canPlanFromPhoto: true,
       fixtureKinds: themesFixtures
         ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'screen']
         : [],
@@ -118,6 +123,7 @@ export function roomEditorCapabilities(
       canThemes: themesFixtures,
       canFixtures: themesFixtures,
       canCustomImages: themesFixtures,
+      canPlanFromPhoto: true,
       canCustomTheme: themesFixtures,
       canZones: true,
       canSnapGrid: true,
