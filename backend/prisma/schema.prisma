@@ -1142,6 +1142,8 @@ model AiSimulationWallet {
   user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   freeTrialsUsed    Int      @default(0)
   bonusTokens       Int      @default(0)
+  /** Jetons offerts par un Super Admin (sans paiement). */
+  grantedTokens     Int      @default(0)
   creditedOrderIds  Json     @default("[]")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -1218,10 +1220,11 @@ model AiTokenLedger {
   /** landing | dashboard | studio | flexpay */
   source           String   @default("unknown")
   tokensDelta      Int
-  tokensFromFree   Int      @default(0)
-  tokensFromBonus  Int      @default(0)
-  /** free | bonus | mixed | paid */
-  pool             String
+  tokensFromFree     Int      @default(0)
+  tokensFromBonus    Int      @default(0)
+  tokensFromGranted  Int      @default(0)
+  /** free | bonus | mixed | paid | granted | comp */
+  pool               String
   relatedId        String?
   createdAt        DateTime @default(now())
 

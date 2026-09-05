@@ -1,7 +1,17 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { calculateTokensForAmount, AI_TOKEN_MIN_COUNT } from './aiTokenFlexPayService';
+import { calculateTokensForAmount, currentAiTokenPricing } from './aiTokenFlexPayService';
 import { resolveLedgerAction, type AiTokenAction } from './aiTokenUsageQuery';
+
+export const USER_GRANT_DEVICE_PREFIX = 'user-grant:';
+
+export function userGrantDeviceId(userId: string): string {
+  return `${USER_GRANT_DEVICE_PREFIX}${userId}`;
+}
+
+export function isUnlimitedAiTokenUser(user?: { role?: string; impersonatedBy?: string } | null): boolean {
+  return user?.role === 'SUPER_ADMIN' || Boolean(user?.impersonatedBy);
+}
 
 export const AI_FREE_TRIALS_MAX = 4;
 export const AI_SIMULATION_TOKEN_COST = 1;
@@ -9,13 +19,14 @@ export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 export const AI_ROOM_PLAN_TOKEN_COST = 3;
 
 export type { AiTokenAction };
-export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'unknown';
-export type AiTokenPool = 'free' | 'bonus' | 'mixed' | 'paid';
+export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'admin' | 'support' | 'unknown';
+export type AiTokenPool = 'free' | 'bonus' | 'mixed' | 'paid' | 'granted' | 'comp';
 
 export type AiTokenLedgerMeta = {
   action?: AiTokenAction;
   source?: AiTokenLedgerSource;
   relatedId?: string | null;
+  unlimited?: boolean;
 };
 
 type LedgerWriter = Prisma.TransactionClient;
@@ -34,6 +45,7 @@ async function writeAiTokenLedger(
     tokensDelta: number;
     tokensFromFree?: number;
     tokensFromBonus?: number;
+    tokensFromGranted?: number;
     pool: AiTokenPool;
     relatedId?: string | null;
     ignoreDuplicate?: boolean;
@@ -49,6 +61,7 @@ async function writeAiTokenLedger(
         tokensDelta: entry.tokensDelta,
         tokensFromFree: Math.max(0, entry.tokensFromFree ?? 0),
         tokensFromBonus: Math.max(0, entry.tokensFromBonus ?? 0),
+        tokensFromGranted: Math.max(0, entry.tokensFromGranted ?? 0),
         pool: entry.pool,
         relatedId: entry.relatedId?.trim() || null,
       },
@@ -78,8 +91,10 @@ export type AiWalletAllowance = {
   freeTrialsMax: number;
   freeRemaining: number;
   bonusTokens: number;
+  grantedTokens: number;
   totalRemaining: number;
   canSimulate: boolean;
+  unlimited: boolean;
   totalPaidTokens: number;
   paidOrdersCount: number;
 };
@@ -103,13 +118,17 @@ function serialize(
     userId: string | null;
     freeTrialsUsed: number;
     bonusTokens: number;
+    grantedTokens?: number;
   },
   paid: { totalPaidTokens: number; paidOrdersCount: number },
+  opts?: { unlimited?: boolean },
 ): AiWalletAllowance {
   const freeTrialsUsed = Math.max(0, wallet.freeTrialsUsed);
   const bonusTokens = Math.max(0, wallet.bonusTokens);
+  const grantedTokens = Math.max(0, wallet.grantedTokens ?? 0);
   const freeRemaining = Math.max(0, AI_FREE_TRIALS_MAX - freeTrialsUsed);
-  const totalRemaining = freeRemaining + bonusTokens;
+  const totalRemaining = freeRemaining + bonusTokens + grantedTokens;
+  const unlimited = Boolean(opts?.unlimited);
   return {
     deviceId: wallet.deviceId,
     userId: wallet.userId,
@@ -117,8 +136,10 @@ function serialize(
     freeTrialsMax: AI_FREE_TRIALS_MAX,
     freeRemaining,
     bonusTokens,
+    grantedTokens,
     totalRemaining,
-    canSimulate: totalRemaining > 0,
+    canSimulate: unlimited || totalRemaining > 0,
+    unlimited,
     totalPaidTokens: paid.totalPaidTokens,
     paidOrdersCount: paid.paidOrdersCount,
   };
@@ -241,7 +262,9 @@ export async function ensureAiSimulationWallet(deviceId: string, userId?: string
         userId: userId || null,
       },
     });
-    return bootstrapNewWallet(wallet);
+    const boot = await bootstrapNewWallet(wallet);
+    const absorbed = await absorbUserGrantWallet(boot.wallet, userId);
+    return { wallet: absorbed, paid: boot.paid };
   }
   if (userId && !wallet.userId) {
     wallet = await prisma.aiSimulationWallet.update({
@@ -250,8 +273,89 @@ export async function ensureAiSimulationWallet(deviceId: string, userId?: string
     });
   }
 
-  const synced = await syncPaidCredits(wallet);
+  const absorbed = await absorbUserGrantWallet(wallet, userId);
+  const synced = await syncPaidCredits(absorbed);
   return synced;
+}
+
+async function absorbUserGrantWallet(
+  wallet: {
+    id: string;
+    deviceId: string;
+    userId: string | null;
+    freeTrialsUsed: number;
+    bonusTokens: number;
+    grantedTokens?: number;
+    creditedOrderIds: unknown;
+  },
+  userId?: string | null,
+) {
+  if (!userId) return wallet;
+  const grantDevice = userGrantDeviceId(userId);
+  if (wallet.deviceId === grantDevice) return wallet;
+  const grantWallet = await prisma.aiSimulationWallet.findUnique({ where: { deviceId: grantDevice } });
+  const pending = Math.max(0, grantWallet?.grantedTokens ?? 0);
+  if (!grantWallet || pending <= 0) return wallet;
+
+  const [updated] = await prisma.$transaction([
+    prisma.aiSimulationWallet.update({
+      where: { id: wallet.id },
+      data: { grantedTokens: Math.max(0, wallet.grantedTokens ?? 0) + pending, userId },
+    }),
+    prisma.aiSimulationWallet.update({
+      where: { id: grantWallet.id },
+      data: { grantedTokens: 0 },
+    }),
+  ]);
+  return updated;
+}
+
+export async function grantAiTokensToUser(input: {
+  userId: string;
+  tokensCount: number;
+  adminUserId: string;
+}) {
+  const userId = input.userId.trim();
+  const tokensCount = Math.max(1, Math.round(input.tokensCount));
+  if (!userId) fail(400, 'Utilisateur manquant.');
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true },
+  });
+  if (!user) fail(404, 'Utilisateur introuvable.');
+
+  const deviceId = userGrantDeviceId(userId);
+  const relatedId = `grant_${userId}_${Date.now()}`;
+  const paid = await paidSummary(deviceId, userId);
+
+  const wallet = await prisma.$transaction(async (tx) => {
+    const locked = await lockWalletByDevice(tx, deviceId);
+    const next = await tx.aiSimulationWallet.update({
+      where: { id: locked.id },
+      data: {
+        userId,
+        grantedTokens: Math.max(0, locked.grantedTokens ?? 0) + tokensCount,
+      },
+    });
+    await writeAiTokenLedger(tx, {
+      userId,
+      deviceId,
+      action: 'grant',
+      source: 'admin',
+      tokensDelta: tokensCount,
+      tokensFromGranted: tokensCount,
+      pool: 'granted',
+      relatedId,
+    });
+    return next;
+  });
+
+  return {
+    user,
+    tokensCount,
+    allowance: serialize(wallet, paid),
+  };
 }
 
 export async function getAiSimulationWalletAllowance(
@@ -263,23 +367,37 @@ export async function getAiSimulationWalletAllowance(
 }
 
 function insufficientCreditMessage(need: number, remaining: number) {
+  const pricing = currentAiTokenPricing();
+  const hint = `Rechargez dès ${pricing.minAmountCdf.toLocaleString('fr-FR')} FC pour ${pricing.minCount} jeton${pricing.minCount > 1 ? 's' : ''}.`;
   if (need > 1) {
-    return `Cette génération d’invitation consomme ${need} jetons. Solde insuffisant (${remaining}). Rechargez dès 2 500 FC pour 6 jetons.`;
+    return `Cette action consomme ${need} jetons. Solde insuffisant (${remaining}). ${hint}`;
   }
-  return 'Plus de jetons disponibles. Rechargez des jetons de recherche pour continuer (dès 2 500 FC pour 6 jetons).';
+  return `Plus de jetons disponibles. ${hint}`;
 }
 
 export async function requireAiSimulationCredit(
   deviceId: string,
   userId?: string | null,
   count = AI_SIMULATION_TOKEN_COST,
+  meta?: AiTokenLedgerMeta,
 ): Promise<AiWalletAllowance> {
   const need = Math.max(1, Math.round(count));
   const allowance = await getAiSimulationWalletAllowance(deviceId, userId);
+  if (meta?.unlimited) {
+    return { ...allowance, unlimited: true, canSimulate: true };
+  }
   if (allowance.totalRemaining < need) {
     fail(402, insufficientCreditMessage(need, allowance.totalRemaining));
   }
   return allowance;
+}
+
+function consumePool(fromBonus: number, fromGranted: number, fromFree: number): AiTokenPool {
+  const used = [fromBonus > 0, fromGranted > 0, fromFree > 0].filter(Boolean).length;
+  if (used > 1) return 'mixed';
+  if (fromGranted > 0) return 'granted';
+  if (fromBonus > 0) return 'bonus';
+  return 'free';
 }
 
 export async function consumeAiSimulationCredit(
@@ -296,25 +414,40 @@ export async function consumeAiSimulationCredit(
 
   const updated = await prisma.$transaction(async (tx) => {
     const wallet = await lockWalletByDevice(tx, cleanDevice);
+    if (meta?.unlimited) {
+      await writeAiTokenLedger(tx, {
+        userId,
+        deviceId: cleanDevice,
+        action,
+        source: meta.source || 'support',
+        tokensDelta: -need,
+        pool: 'comp',
+        relatedId: meta.relatedId,
+      });
+      return wallet;
+    }
+
     const freeRemaining = Math.max(0, AI_FREE_TRIALS_MAX - wallet.freeTrialsUsed);
     const bonus = Math.max(0, wallet.bonusTokens);
-    const remaining = freeRemaining + bonus;
+    const granted = Math.max(0, wallet.grantedTokens ?? 0);
+    const remaining = freeRemaining + bonus + granted;
     if (remaining < need) {
       fail(402, insufficientCreditMessage(need, remaining));
     }
 
     const fromBonus = Math.min(need, bonus);
-    const fromFree = need - fromBonus;
+    const afterBonus = need - fromBonus;
+    const fromGranted = Math.min(afterBonus, granted);
+    const fromFree = afterBonus - fromGranted;
     const next = await tx.aiSimulationWallet.update({
       where: { id: wallet.id },
       data: {
         bonusTokens: bonus - fromBonus,
+        grantedTokens: granted - fromGranted,
         freeTrialsUsed: Math.min(AI_FREE_TRIALS_MAX, wallet.freeTrialsUsed + fromFree),
       },
     });
 
-    const pool: AiTokenPool =
-      fromFree > 0 && fromBonus > 0 ? 'mixed' : fromBonus > 0 ? 'bonus' : 'free';
     await writeAiTokenLedger(tx, {
       userId,
       deviceId: cleanDevice,
@@ -323,13 +456,14 @@ export async function consumeAiSimulationCredit(
       tokensDelta: -need,
       tokensFromFree: fromFree,
       tokensFromBonus: fromBonus,
-      pool,
+      tokensFromGranted: fromGranted,
+      pool: consumePool(fromBonus, fromGranted, fromFree),
       relatedId: meta?.relatedId,
     });
     return next;
   });
 
-  return serialize(updated, paid);
+  return serialize(updated, paid, { unlimited: Boolean(meta?.unlimited) });
 }
 
 function tokensToCredit(order: {
@@ -341,7 +475,7 @@ function tokensToCredit(order: {
       ? order.tokensCount
       : order.amountFc
         ? calculateTokensForAmount(order.amountFc)
-        : AI_TOKEN_MIN_COUNT;
+        : currentAiTokenPricing().minCount;
   return Math.max(1, tokensToAdd);
 }
 

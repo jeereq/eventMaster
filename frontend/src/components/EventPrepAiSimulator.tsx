@@ -285,7 +285,7 @@ export default function EventPrepAiSimulator({
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
-      setError('Plus de simulations disponibles. Rechargez dès 2 500 FC (6 jetons de recherche) pour continuer.');
+      setError('Plus de simulations disponibles. Rechargez des jetons de recherche pour continuer.');
       publishAllowance(current);
       return;
     }

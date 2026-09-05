@@ -1,11 +1,13 @@
 export const MAX_FREE_TRIALS = 4;
-/** Référence tarifaire : 2 500 FC = 6 jetons de recherche. */
+export const DEFAULT_AI_TOKEN_PRICE_FC = 416;
+export const DEFAULT_AI_TOKEN_MIN_AMOUNT_FC = 2500;
+/** Référence tarifaire par défaut : 2 500 FC ≈ 6 jetons. */
 export const AI_TOKEN_BASE_COUNT = 6;
 export const AI_TOKEN_BASE_PRICE_FC = 2500;
-export const AI_TOKEN_MIN_AMOUNT_FC = 2500;
+export const AI_TOKEN_MIN_AMOUNT_FC = DEFAULT_AI_TOKEN_MIN_AMOUNT_FC;
 export const AI_TOKEN_MIN_COUNT = 6;
 export const AI_TOKEN_PACK_SIZE = 6;
-export const AI_TOKEN_PACK_PRICE_FC = 2500;
+export const AI_TOKEN_PACK_PRICE_FC = DEFAULT_AI_TOKEN_MIN_AMOUNT_FC;
 /** 1 jeton = 1 simulation budget. */
 export const AI_SIMULATION_TOKEN_COST = 1;
 /** 2 jetons = 1 génération d’invitation (image). */
@@ -13,47 +15,79 @@ export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 /** 3 jetons = 1 composition ou lecture de plan de salle. */
 export const AI_ROOM_PLAN_TOKEN_COST = 3;
 
+export type AiTokenPricing = {
+  priceCdf: number;
+  minAmountCdf: number;
+  minCount: number;
+};
+
+export function resolveAiTokenPricing(site?: {
+  aiTokenPriceCdf?: number;
+  aiTokenMinPurchaseCdf?: number;
+} | null): AiTokenPricing {
+  const priceCdf = Math.round(Number(site?.aiTokenPriceCdf));
+  const safePrice = Number.isFinite(priceCdf) && priceCdf >= 1 ? Math.min(1_000_000, priceCdf) : DEFAULT_AI_TOKEN_PRICE_FC;
+  const minRaw = Math.round(Number(site?.aiTokenMinPurchaseCdf));
+  const minAmountCdf = Number.isFinite(minRaw) && minRaw >= safePrice
+    ? Math.min(100_000_000, minRaw)
+    : Math.max(DEFAULT_AI_TOKEN_MIN_AMOUNT_FC, safePrice);
+  return {
+    priceCdf: safePrice,
+    minAmountCdf,
+    minCount: Math.max(1, Math.floor(minAmountCdf / safePrice)),
+  };
+}
+
 export function aiTokenCostLegend(): string {
   return `${AI_SIMULATION_TOKEN_COST} jeton = budget · ${AI_INVITATION_COMPOSE_TOKEN_COST} = invitation · ${AI_ROOM_PLAN_TOKEN_COST} = plan de salle`;
 }
 
-export function canAffordAiAction(allowance: Pick<AiAllowance, 'totalRemaining'>, cost: number): boolean {
+export function canAffordAiAction(
+  allowance: Pick<AiAllowance, 'totalRemaining' | 'unlimited'>,
+  cost: number,
+): boolean {
+  if (allowance.unlimited) return true;
   return allowance.totalRemaining >= Math.max(1, cost);
 }
 
-/**
- * Nombre de jetons crédités pour un montant payé (2 500 FC / 6 jetons).
- * En dessous du minimum, on reste sur 6 jetons (le paiement sera refusé).
- */
-export function calculateTokensForAmount(amountFc: number): number {
-  if (!Number.isFinite(amountFc) || amountFc < AI_TOKEN_MIN_AMOUNT_FC) {
-    return AI_TOKEN_MIN_COUNT;
+export function calculateTokensForAmount(
+  amountFc: number,
+  pricing: AiTokenPricing = resolveAiTokenPricing(),
+): number {
+  if (!Number.isFinite(amountFc) || amountFc < pricing.minAmountCdf) {
+    return pricing.minCount;
   }
-  return Math.floor((amountFc * AI_TOKEN_BASE_COUNT) / AI_TOKEN_BASE_PRICE_FC);
+  return Math.max(pricing.minCount, Math.floor(amountFc / pricing.priceCdf));
 }
 
-/**
- * Montant à payer pour un nombre de jetons souhaité.
- * Minimum : 6 jetons = 2 500 FC.
- */
-export function calculateAmountForTokens(tokensCount: number): number {
-  const count = Math.max(AI_TOKEN_MIN_COUNT, Math.round(tokensCount || AI_TOKEN_MIN_COUNT));
-  return Math.ceil((count * AI_TOKEN_BASE_PRICE_FC) / AI_TOKEN_BASE_COUNT);
+export function calculateAmountForTokens(
+  tokensCount: number,
+  pricing: AiTokenPricing = resolveAiTokenPricing(),
+): number {
+  const count = Math.max(pricing.minCount, Math.round(tokensCount || pricing.minCount));
+  return Math.max(pricing.minAmountCdf, count * pricing.priceCdf);
 }
 
-/** Montant exact du prochain jeton au-delà de ceux déjà couverts par `amountFc`. */
-export function calculateNextTokenAmount(amountFc: number): number | null {
-  if (!Number.isFinite(amountFc) || amountFc < AI_TOKEN_MIN_AMOUNT_FC) {
-    return AI_TOKEN_MIN_AMOUNT_FC;
+export function calculateNextTokenAmount(
+  amountFc: number,
+  pricing: AiTokenPricing = resolveAiTokenPricing(),
+): number | null {
+  if (!Number.isFinite(amountFc) || amountFc < pricing.minAmountCdf) {
+    return pricing.minAmountCdf;
   }
-  const currentTokens = calculateTokensForAmount(amountFc);
-  return calculateAmountForTokens(currentTokens + 1);
+  const currentTokens = calculateTokensForAmount(amountFc, pricing);
+  return calculateAmountForTokens(currentTokens + 1, pricing);
+}
+
+export function aiTokenAmountPresets(pricing: AiTokenPricing = resolveAiTokenPricing()): number[] {
+  return [1, 2, 3, 4].map((factor) => pricing.minAmountCdf * factor);
 }
 
 export const STORAGE_KEY_AI_DEVICE_ID = 'em_ai_device_id';
 export const STORAGE_KEY_AI_TRIALS = 'em_ai_free_trials_count';
 export const STORAGE_KEY_AI_BONUS_TOKENS = 'em_ai_bonus_tokens';
 export const STORAGE_KEY_AI_CREDITED_ORDERS = 'em_ai_credited_orders';
+export const STORAGE_KEY_AI_GRANTED_TOKENS = 'em_ai_granted_tokens';
 export const AI_ALLOWANCE_CHANGED = 'em-ai-allowance-changed';
 
 export interface AiAllowance {
@@ -62,8 +96,19 @@ export interface AiAllowance {
   freeTrialsMax: number;
   freeRemaining: number;
   bonusTokens: number;
+  grantedTokens: number;
   totalRemaining: number;
   canSimulate: boolean;
+  unlimited: boolean;
+}
+
+let sessionUnlimited = false;
+
+export function setAiTokenSessionUnlimited(value: boolean) {
+  sessionUnlimited = Boolean(value);
+  if (typeof window !== 'undefined') {
+    emitAllowanceChanged(getAiSimulationAllowance());
+  }
 }
 
 /**
@@ -120,11 +165,12 @@ function emitAllowanceChanged(allowance: AiAllowance) {
   }
 }
 
-function writeLocalAllowance(freeTrialsUsed: number, bonusTokens: number) {
+function writeLocalAllowance(freeTrialsUsed: number, bonusTokens: number, grantedTokens = 0) {
   try {
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY_AI_TRIALS, String(Math.max(0, freeTrialsUsed)));
       localStorage.setItem(STORAGE_KEY_AI_BONUS_TOKENS, String(Math.max(0, bonusTokens)));
+      localStorage.setItem(STORAGE_KEY_AI_GRANTED_TOKENS, String(Math.max(0, grantedTokens)));
     }
   } catch {
     /* ignore */
@@ -156,6 +202,7 @@ export function getAiSimulationAllowance(): AiAllowance {
   
   let freeTrialsUsed = 0;
   let bonusTokens = 0;
+  let grantedTokens = 0;
   const deviceId = getOrCreateDeviceId();
 
   try {
@@ -165,13 +212,16 @@ export function getAiSimulationAllowance(): AiAllowance {
 
       const storedBonus = parseInt(localStorage.getItem(STORAGE_KEY_AI_BONUS_TOKENS) || '0', 10);
       bonusTokens = Number.isFinite(storedBonus) ? Math.max(0, storedBonus) : 0;
+
+      const storedGranted = parseInt(localStorage.getItem(STORAGE_KEY_AI_GRANTED_TOKENS) || '0', 10);
+      grantedTokens = Number.isFinite(storedGranted) ? Math.max(0, storedGranted) : 0;
     }
   } catch {
     // Fallback safe si localStorage est désactivé
   }
 
   const freeRemaining = Math.max(0, MAX_FREE_TRIALS - freeTrialsUsed);
-  const totalRemaining = freeRemaining + bonusTokens;
+  const totalRemaining = freeRemaining + bonusTokens + grantedTokens;
 
   return {
     deviceId,
@@ -179,8 +229,10 @@ export function getAiSimulationAllowance(): AiAllowance {
     freeTrialsMax: MAX_FREE_TRIALS,
     freeRemaining,
     bonusTokens,
+    grantedTokens,
     totalRemaining,
-    canSimulate: totalRemaining > 0,
+    canSimulate: sessionUnlimited || totalRemaining > 0,
+    unlimited: sessionUnlimited,
   };
 }
 
@@ -194,7 +246,13 @@ export function applyServerAllowance(data: Partial<AiAllowance> | null | undefin
   const bonusTokens = typeof data.bonusTokens === 'number'
     ? Math.max(0, data.bonusTokens)
     : current.bonusTokens;
-  writeLocalAllowance(freeTrialsUsed, bonusTokens);
+  const grantedTokens = typeof data.grantedTokens === 'number'
+    ? Math.max(0, data.grantedTokens)
+    : current.grantedTokens;
+  if (typeof data.unlimited === 'boolean') {
+    sessionUnlimited = data.unlimited;
+  }
+  writeLocalAllowance(freeTrialsUsed, bonusTokens, grantedTokens);
   const next = getAiSimulationAllowance();
   emitAllowanceChanged(next);
   return next;
@@ -205,17 +263,21 @@ export function applyServerAllowance(data: Partial<AiAllowance> | null | undefin
  * Par défaut 1 (simulation). Les invitations en consomment 2.
  */
 export function consumeAiSimulation(count = AI_SIMULATION_TOKEN_COST): AiAllowance {
-  let { freeTrialsUsed, bonusTokens } = getAiSimulationAllowance();
+  if (sessionUnlimited) return getAiSimulationAllowance();
+  let { freeTrialsUsed, bonusTokens, grantedTokens } = getAiSimulationAllowance();
   let left = Math.max(1, Math.round(count));
 
   const fromBonus = Math.min(left, bonusTokens);
   bonusTokens -= fromBonus;
   left -= fromBonus;
+  const fromGranted = Math.min(left, grantedTokens);
+  grantedTokens -= fromGranted;
+  left -= fromGranted;
   if (left > 0) {
     freeTrialsUsed += left;
   }
 
-  writeLocalAllowance(freeTrialsUsed, bonusTokens);
+  writeLocalAllowance(freeTrialsUsed, bonusTokens, grantedTokens);
   const next = getAiSimulationAllowance();
   emitAllowanceChanged(next);
   return next;

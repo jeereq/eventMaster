@@ -22,6 +22,7 @@ import {
   consumeAiSimulationCredit,
   getAiSimulationWalletAllowance,
   requireAiSimulationCredit,
+  isUnlimitedAiTokenUser,
   AI_SIMULATION_TOKEN_COST,
 } from '../services/aiSimulationWalletService';
 
@@ -252,14 +253,17 @@ async function runEventPlanAi(
     error.status = 400;
     throw error;
   }
-  const userId = (req as AuthenticatedRequest).user?.id || null;
-  await requireAiSimulationCredit(deviceId, userId);
+  const actor = (req as AuthenticatedRequest).user;
+  const userId = actor?.id || null;
+  const unlimited = isUnlimitedAiTokenUser(actor);
+  await requireAiSimulationCredit(deviceId, userId, AI_SIMULATION_TOKEN_COST, { unlimited });
   const result = await simulateEventPlanAi(rateLimitKey, body);
   const historyId = await persistSimulation(req, result, source);
   const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_SIMULATION_TOKEN_COST, {
     action: 'budget_simulation',
-    source,
+    source: unlimited && actor?.impersonatedBy ? 'support' : source,
     relatedId: historyId,
+    unlimited,
   });
   return { ...result, historyId, remaining: allowance.totalRemaining, allowance };
 }
@@ -367,10 +371,16 @@ export async function getAiTokensDeviceBalance(req: Request, res: Response): Pro
     }
 
     const summary = await getDeviceAiTokensSummary(deviceId);
-    const userId = (req as AuthenticatedRequest).user?.id || null;
+    const actor = (req as AuthenticatedRequest).user;
+    const userId = actor?.id || null;
     try {
       const allowance = await getAiSimulationWalletAllowance(deviceId, userId);
-      res.status(200).json({ ...summary, ...allowance });
+      res.status(200).json({
+        ...summary,
+        ...allowance,
+        unlimited: isUnlimitedAiTokenUser(actor) || allowance.unlimited,
+        canSimulate: isUnlimitedAiTokenUser(actor) || allowance.canSimulate,
+      });
       return;
     } catch (err) {
       console.error('[AiSimulation] wallet balance:', err);

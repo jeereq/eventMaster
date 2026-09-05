@@ -1,4 +1,9 @@
-export type AiTokenAction = 'budget_simulation' | 'invitation_compose' | 'room_plan_from_photo' | 'recharge';
+export type AiTokenAction =
+  | 'budget_simulation'
+  | 'invitation_compose'
+  | 'room_plan_from_photo'
+  | 'recharge'
+  | 'grant';
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 

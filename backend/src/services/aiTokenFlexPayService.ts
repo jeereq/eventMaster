@@ -1,6 +1,17 @@
 import { prisma } from '../db';
 import { notifyAiTokenPayment } from './paymentTraceService';
 import { creditPaidAiTokenOrder } from './aiSimulationWalletService';
+import { loadPlatformSettings } from './platformSettingsService';
+import {
+  calculateAmountForTokens as calcAmountForTokens,
+  calculateTokensForAmount as calcTokensForAmount,
+  resolveAiTokenPricing,
+  type AiTokenPricing,
+} from './aiTokenPricing';
+
+export function currentAiTokenPricing(): AiTokenPricing {
+  return resolveAiTokenPricing(loadPlatformSettings());
+}
 import {
   buildFlexPayMetadataUpdate,
   buildFlexPayReference,
@@ -21,25 +32,12 @@ export const AI_TOKEN_MIN_COUNT = 6;
 export const AI_TOKEN_PACK_COUNT = 6;
 export const AI_TOKEN_PACK_PRICE_CDF = 2500;
 
-/**
- * Calcule le nombre de jetons proportionnel à un montant en CDF/FC.
- * Règle : 2 500 FC = 6 jetons (soit ~416,67 FC par jeton).
- * Montant minimum : 2 500 FC.
- */
-export function calculateTokensForAmount(amountFc: number): number {
-  if (!Number.isFinite(amountFc) || amountFc < AI_TOKEN_MIN_AMOUNT_CDF) {
-    return AI_TOKEN_MIN_COUNT;
-  }
-  return Math.floor((amountFc * AI_TOKEN_BASE_COUNT) / AI_TOKEN_BASE_PRICE_CDF);
+export function calculateTokensForAmount(amountFc: number, pricing = currentAiTokenPricing()): number {
+  return calcTokensForAmount(amountFc, pricing);
 }
 
-/**
- * Calcule le montant en CDF/FC proportionnel à un nombre de jetons souhaité.
- * Minimum : 6 jetons = 2 500 FC.
- */
-export function calculateAmountForTokens(tokensCount: number): number {
-  const count = Math.max(AI_TOKEN_MIN_COUNT, Math.round(tokensCount || AI_TOKEN_MIN_COUNT));
-  return Math.ceil((count * AI_TOKEN_BASE_PRICE_CDF) / AI_TOKEN_BASE_COUNT);
+export function calculateAmountForTokens(tokensCount: number, pricing = currentAiTokenPricing()): number {
+  return calcAmountForTokens(tokensCount, pricing);
 }
 
 export type AiTokenPaymentMethod = 'mobile' | 'card';
@@ -83,20 +81,21 @@ export async function initiateAiTokenPayment(
   let amountFc: number;
   let tokensCount: number;
 
+  const pricing = currentAiTokenPricing();
   if (input.amountFc && input.amountFc > 0) {
-    if (input.amountFc < AI_TOKEN_MIN_AMOUNT_CDF) {
+    if (input.amountFc < pricing.minAmountCdf) {
       throw new Error(
-        `Le montant minimum de recharge est de ${AI_TOKEN_MIN_AMOUNT_CDF.toLocaleString('fr-FR')} FC (soit 6 jetons).`,
+        `Le montant minimum de recharge est de ${pricing.minAmountCdf.toLocaleString('fr-FR')} FC (soit ${pricing.minCount} jeton${pricing.minCount > 1 ? 's' : ''}).`,
       );
     }
     amountFc = Math.round(input.amountFc);
-    tokensCount = calculateTokensForAmount(amountFc);
+    tokensCount = calculateTokensForAmount(amountFc, pricing);
   } else if (input.tokensCount && input.tokensCount > 0) {
-    tokensCount = Math.max(AI_TOKEN_MIN_COUNT, Math.round(input.tokensCount));
-    amountFc = calculateAmountForTokens(tokensCount);
+    tokensCount = Math.max(pricing.minCount, Math.round(input.tokensCount));
+    amountFc = calculateAmountForTokens(tokensCount, pricing);
   } else {
-    amountFc = AI_TOKEN_MIN_AMOUNT_CDF;
-    tokensCount = AI_TOKEN_MIN_COUNT;
+    amountFc = pricing.minAmountCdf;
+    tokensCount = pricing.minCount;
   }
 
   let normalizedPhone: string | null = null;

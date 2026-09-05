@@ -15,7 +15,7 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import { cn } from '@/lib/cn';
 
-type TokenAction = 'budget_simulation' | 'invitation_compose' | 'room_plan_from_photo' | 'recharge';
+type TokenAction = 'budget_simulation' | 'invitation_compose' | 'room_plan_from_photo' | 'recharge' | 'grant';
 
 interface LedgerRow {
   id: string;
@@ -26,8 +26,10 @@ interface LedgerRow {
   tokensDelta: number;
   tokensFromFree: number;
   tokensFromBonus: number;
+  tokensFromGranted?: number;
   pool: string;
   poolLabel: string;
+  moneyKind?: 'revenue' | 'non_revenue' | 'mixed';
   relatedId: string | null;
   deviceId: string | null;
   userName: string | null;
@@ -42,10 +44,24 @@ interface UsageResponse {
     consumed: number;
     credited: number;
   };
+  money?: {
+    paidAmountFc: number;
+    paidOrders: number;
+    paidTokensCredited: number;
+    paidTokensConsumed: number;
+  };
+  nonRevenue?: {
+    freeConsumed: number;
+    grantedCredits: number;
+    grantedConsumed: number;
+    unlimitedConsumed: number;
+    total: number;
+  };
   stock: {
     remaining: number;
     remainingFree: number;
     remainingBonus: number;
+    remainingGranted?: number;
     wallets: number;
   };
   byAction: Array<{
@@ -103,8 +119,15 @@ function formatWhen(iso: string): string {
 
 function actionBadge(action: TokenAction, label: string) {
   if (action === 'recharge') return <Badge variant="success">{label}</Badge>;
+  if (action === 'grant') return <Badge variant="warning">{label}</Badge>;
   if (action === 'invitation_compose' || action === 'room_plan_from_photo') return <Badge variant="default">{label}</Badge>;
   return <Badge variant="warning">{label}</Badge>;
+}
+
+function moneyBadge(kind?: LedgerRow['moneyKind']) {
+  if (kind === 'revenue') return <Badge variant="success">Revenu</Badge>;
+  if (kind === 'mixed') return <Badge variant="warning">Mixte</Badge>;
+  return <Badge variant="default">Sans revenu</Badge>;
 }
 
 export default function AdminAiTokensPage() {
@@ -122,6 +145,12 @@ export default function AdminAiTokensPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<UsageResponse | null>(null);
+  const [grantQuery, setGrantQuery] = useState('');
+  const [grantHits, setGrantHits] = useState<Array<{ id: string; name: string | null; email: string; tenantName?: string }>>([]);
+  const [grantUser, setGrantUser] = useState<{ id: string; name: string | null; email: string } | null>(null);
+  const [grantCount, setGrantCount] = useState('10');
+  const [grantBusy, setGrantBusy] = useState(false);
+  const [grantMessage, setGrantMessage] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -170,6 +199,43 @@ export default function AdminAiTokensPage() {
     return () => window.clearTimeout(t);
   }, [qInput]);
 
+  useEffect(() => {
+    const q = grantQuery.trim();
+    if (q.length < 2) {
+      setGrantHits([]);
+      return;
+    }
+    const t = window.setTimeout(() => {
+      void api.get(`/admin/users?q=${encodeURIComponent(q)}&limit=8`).then((res) => {
+        const rows = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
+        setGrantHits(rows);
+      }).catch(() => setGrantHits([]));
+    }, 280);
+    return () => window.clearTimeout(t);
+  }, [grantQuery]);
+
+  const grantTokens = async () => {
+    if (!grantUser || grantBusy) return;
+    const tokensCount = Math.round(Number(grantCount));
+    if (!Number.isFinite(tokensCount) || tokensCount < 1) {
+      setGrantMessage('Indiquez un nombre de jetons valide.');
+      return;
+    }
+    setGrantBusy(true);
+    setGrantMessage('');
+    try {
+      await api.post('/admin/ai-tokens/grant', { userId: grantUser.id, tokensCount });
+      setGrantMessage(`${tokensCount} jeton${tokensCount > 1 ? 's' : ''} offerts à ${grantUser.email}.`);
+      setGrantUser(null);
+      setGrantQuery('');
+      await load();
+    } catch (err: unknown) {
+      setGrantMessage((err as { message?: string })?.message || 'Attribution impossible.');
+    } finally {
+      setGrantBusy(false);
+    }
+  };
+
   const totals = data?.totals;
   const stock = data?.stock;
   const datePresetLabel = ({
@@ -208,13 +274,100 @@ export default function AdminAiTokensPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Jetons IA"
-        description="Chaque mouvement : simulation budget, invitation, ou recharge. Qui, combien, quand."
+        description="Revenus FlexPay séparés des jetons offerts, gratuits ou session support."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Jetons IA' }]} />
         }
       />
 
       {error ? <Alert variant="error">{error}</Alert> : null}
+
+      <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Offrir des jetons</h2>
+        <p className="text-xs text-muted">Attribution Super Admin : sans paiement, visible comme « sans revenu ».</p>
+        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_8rem_auto] gap-2">
+          <div className="relative">
+            <input
+              value={grantQuery}
+              onChange={(event) => {
+                setGrantQuery(event.target.value);
+                setGrantUser(null);
+              }}
+              placeholder="Rechercher un utilisateur (e-mail ou nom)"
+              className="w-full min-h-11 px-3 rounded-xl border border-border bg-background text-sm"
+            />
+            {grantHits.length > 0 && !grantUser ? (
+              <ul className="absolute z-10 mt-1 w-full border border-border rounded-xl bg-surface shadow-lg max-h-56 overflow-auto">
+                {grantHits.map((hit) => (
+                  <li key={hit.id}>
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-surface-muted"
+                      onClick={() => {
+                        setGrantUser(hit);
+                        setGrantQuery(hit.email);
+                        setGrantHits([]);
+                      }}
+                    >
+                      <span className="font-medium text-foreground">{hit.name || hit.email}</span>
+                      <span className="block text-xs text-muted">{hit.email}{hit.tenantName ? ` · ${hit.tenantName}` : ''}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+          <input
+            type="number"
+            min={1}
+            max={10000}
+            value={grantCount}
+            onChange={(event) => setGrantCount(event.target.value)}
+            className="min-h-11 px-3 rounded-xl border border-border bg-background text-sm"
+            aria-label="Nombre de jetons à offrir"
+          />
+          <button
+            type="button"
+            disabled={grantBusy || !grantUser}
+            onClick={() => void grantTokens()}
+            className="min-h-11 px-4 rounded-xl bg-primary-solid text-primary-foreground text-sm font-semibold disabled:opacity-50"
+          >
+            {grantBusy ? 'Attribution…' : 'Offrir'}
+          </button>
+        </div>
+        {grantMessage ? <p className="text-xs text-muted">{grantMessage}</p> : null}
+      </section>
+
+      <div>
+        <p className="text-xs uppercase tracking-wider text-muted mb-2">Argent encaissé (FlexPay)</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden mb-6">
+          {[
+            { label: 'FC encaissés', value: Math.round(data?.money?.paidAmountFc ?? 0).toLocaleString('fr-FR') },
+            { label: 'Achats payés', value: data?.money?.paidOrders ?? 0 },
+            { label: 'Jetons achetés', value: data?.money?.paidTokensCredited ?? 0 },
+            { label: 'Jetons payés consommés', value: data?.money?.paidTokensConsumed ?? 0 },
+          ].map((card) => (
+            <div key={card.label} className="bg-surface px-4 py-3">
+              <div className="text-lg font-semibold text-foreground tabular-nums">{card.value}</div>
+              <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs uppercase tracking-wider text-muted mb-2">Jetons sans revenu</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden mb-6">
+          {[
+            { label: 'Essais gratuits consommés', value: data?.nonRevenue?.freeConsumed ?? 0 },
+            { label: 'Offerts (crédit)', value: data?.nonRevenue?.grantedCredits ?? 0 },
+            { label: 'Offerts consommés', value: data?.nonRevenue?.grantedConsumed ?? 0 },
+            { label: 'Admin / support illimité', value: data?.nonRevenue?.unlimitedConsumed ?? 0 },
+          ].map((card) => (
+            <div key={card.label} className="bg-surface px-4 py-3">
+              <div className="text-lg font-semibold text-foreground tabular-nums">{card.value}</div>
+              <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div>
         <p className="text-xs uppercase tracking-wider text-muted mb-2">Période filtrée</p>
@@ -234,7 +387,7 @@ export default function AdminAiTokensPage() {
 
       <div>
         <p className="text-xs uppercase tracking-wider text-muted mb-2">Stock plateforme (tous wallets)</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remaining ?? 0}</div>
             <div className="text-xs uppercase tracking-wider text-muted">Restants</div>
@@ -245,7 +398,11 @@ export default function AdminAiTokensPage() {
           </div>
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remainingBonus ?? 0}</div>
-            <div className="text-xs uppercase tracking-wider text-muted">Jetons payés</div>
+            <div className="text-xs uppercase tracking-wider text-muted">Payés restants</div>
+          </div>
+          <div className="bg-surface px-4 py-3">
+            <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.remainingGranted ?? 0}</div>
+            <div className="text-xs uppercase tracking-wider text-muted">Offerts restants</div>
           </div>
           <div className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground tabular-nums">{stock?.wallets ?? 0}</div>
@@ -345,7 +502,8 @@ export default function AdminAiTokensPage() {
                   { id: 'budget_simulation', label: 'Simulation budget' },
                   { id: 'invitation_compose', label: 'Invitation IA' },
                   { id: 'room_plan_from_photo', label: 'Plan de salle IA' },
-                  { id: 'recharge', label: 'Recharge' },
+                  { id: 'recharge', label: 'Recharge payante' },
+                  { id: 'grant', label: 'Attribution Super Admin' },
                 ]}
                 value={action}
                 onChange={(id) => {
@@ -390,6 +548,7 @@ export default function AdminAiTokensPage() {
                 <th className="px-3 py-2.5 font-semibold">Action</th>
                 <th className="px-3 py-2.5 font-semibold text-right">Jetons</th>
                 <th className="px-3 py-2.5 font-semibold">Pool</th>
+                <th className="px-3 py-2.5 font-semibold">Argent</th>
                 <th className="px-3 py-2.5 font-semibold">Qui</th>
                 <th className="px-3 py-2.5 font-semibold">Où</th>
               </tr>
@@ -406,6 +565,7 @@ export default function AdminAiTokensPage() {
                     {row.tokensDelta > 0 ? `+${row.tokensDelta}` : row.tokensDelta}
                   </td>
                   <td className="px-3 py-2.5 text-muted">{row.poolLabel}</td>
+                  <td className="px-3 py-2.5">{moneyBadge(row.moneyKind)}</td>
                   <td className="px-3 py-2.5">
                     <div className="font-medium text-foreground">{row.tenantName || row.userName || 'Appareil'}</div>
                     <div className="text-xs text-muted truncate max-w-[16rem]">{row.userEmail || row.deviceId || '—'}</div>

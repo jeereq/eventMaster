@@ -8,6 +8,7 @@ import { composeInvitationTemplateAi } from '../services/invitationTemplateAiSer
 import {
   consumeAiSimulationCredit,
   requireAiSimulationCredit,
+  isUnlimitedAiTokenUser,
   AI_INVITATION_COMPOSE_TOKEN_COST,
 } from '../services/aiSimulationWalletService';
 import {
@@ -440,7 +441,8 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const embedText = body.embedText === true;
     const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
 
-    await requireAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST);
+    const unlimited = isUnlimitedAiTokenUser(req.user);
+    await requireAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
     const result = await composeInvitationTemplateAi({
       userId: req.user.id,
       tenantId: isSuperAdmin ? null : tenantId,
@@ -460,8 +462,9 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     });
     const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
       action: 'invitation_compose',
-      source: 'studio',
+      source: unlimited && req.user.impersonatedBy ? 'support' : 'studio',
       relatedId: historyId,
+      unlimited,
     });
 
     return res.json({
@@ -502,7 +505,8 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
     const rateKey = user?.id || req.ip || deviceId;
 
-    await requireAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST);
+    const unlimited = isUnlimitedAiTokenUser(user);
+    await requireAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
     const result = await composeInvitationTemplateAi({
       userId: rateKey,
       tenantId: user?.tenantId || null,
@@ -522,8 +526,9 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     });
     const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, {
       action: 'invitation_compose',
-      source: user?.id ? 'studio' : 'landing',
+      source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
       relatedId: historyId,
+      unlimited,
     });
 
     return res.json({

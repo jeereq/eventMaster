@@ -48,7 +48,7 @@ export default function GlobalAiSimulatorFab() {
       pathname,
       search: searchParams?.toString() || '',
       canUseRooms,
-      emptyTokens: allowance.totalRemaining <= 0,
+      emptyTokens: !allowance.unlimited && allowance.totalRemaining <= 0,
     }),
     [pathname, searchParams, canUseRooms, allowance.totalRemaining],
   );
@@ -132,7 +132,7 @@ export default function GlobalAiSimulatorFab() {
               placement.mood === 'celebrate' ? 'bg-festive-on-stage/20 text-festive-on-stage' : 'bg-primary-foreground/20',
             )}
           >
-            {allowance.totalRemaining}
+            {allowance.unlimited ? '∞' : allowance.totalRemaining}
           </span>
         ) : null}
       </button>

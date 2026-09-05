@@ -20,6 +20,7 @@ import {
 import {
   consumeAiSimulationCredit,
   requireAiSimulationCredit,
+  isUnlimitedAiTokenUser,
   AI_ROOM_PLAN_TOKEN_COST,
 } from '../services/aiSimulationWalletService';
 import {
@@ -437,7 +438,8 @@ export async function analyzeRoomPlanFromPhoto(req: AuthenticatedRequest, res: R
     const brief = typeof body.brief === 'string' ? body.brief : undefined;
 
     rateLimitRoomPlanAi(userId);
-    await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST);
+    const unlimited = isUnlimitedAiTokenUser(req.user);
+    await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, { unlimited });
     const draft = await analyzeRoomPlanPhoto({
       imageUrl,
       roomType,
@@ -458,8 +460,9 @@ export async function analyzeRoomPlanFromPhoto(req: AuthenticatedRequest, res: R
     });
     const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, {
       action: 'room_plan_from_photo',
-      source: 'dashboard',
+      source: unlimited && req.user?.impersonatedBy ? 'support' : 'dashboard',
       relatedId: historyId,
+      unlimited,
     });
 
     return res.json({
@@ -525,7 +528,8 @@ export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) 
     }
 
     rateLimitRoomPlanAi(userId);
-    await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST);
+    const unlimited = isUnlimitedAiTokenUser(req.user);
+    await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, { unlimited });
     const draft = await composeRoomPlanAi(input);
     const historyId = await persistRoomPlanCompose({
       userId,
@@ -540,8 +544,9 @@ export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) 
     });
     const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, {
       action: 'room_plan_from_photo',
-      source: 'studio',
+      source: unlimited && req.user?.impersonatedBy ? 'support' : 'studio',
       relatedId: historyId,
+      unlimited,
     });
 
     return res.json({
@@ -577,7 +582,8 @@ export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Resp
 
     const rateKey = user?.id || deviceId;
     rateLimitRoomPlanAi(rateKey);
-    await requireAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST);
+    const unlimited = isUnlimitedAiTokenUser(user);
+    await requireAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, { unlimited });
     const draft = await composeRoomPlanAi(input);
     const historyId = await persistRoomPlanCompose({
       userId: user?.id || null,
@@ -592,8 +598,9 @@ export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Resp
     });
     const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, {
       action: 'room_plan_from_photo',
-      source: user?.id ? 'studio' : 'landing',
+      source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
       relatedId: historyId,
+      unlimited,
     });
 
     return res.json({

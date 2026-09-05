@@ -14,18 +14,17 @@ import {
 import { Modal, Button, Input, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import {
-  AI_TOKEN_MIN_AMOUNT_FC,
-  AI_TOKEN_MIN_COUNT,
-  AI_TOKEN_PACK_SIZE,
-  AI_TOKEN_PACK_PRICE_FC,
+  aiTokenAmountPresets,
   aiTokenCostLegend,
   calculateTokensForAmount,
   calculateNextTokenAmount,
   addPurchasedAiTokens,
   getOrCreateDeviceId,
+  resolveAiTokenPricing,
   syncDeviceAiTokensWithBackend,
 } from '@/lib/aiTokens';
 import { api } from '@/lib/api';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 interface AiTokenPurchaseModalProps {
   open: boolean;
@@ -35,7 +34,6 @@ interface AiTokenPurchaseModalProps {
 
 type CheckoutStep = 'form' | 'waiting_mobile' | 'success';
 
-const AMOUNT_PRESETS_FC = [2500, 5000, 7500, 10000] as const;
 const POLL_MAX = 30;
 
 const OPERATORS = [
@@ -64,13 +62,16 @@ export default function AiTokenPurchaseModal({
   onClose,
   onSuccess,
 }: AiTokenPurchaseModalProps) {
+  const { site } = usePlatformSite();
+  const pricing = resolveAiTokenPricing(site);
+  const presets = aiTokenAmountPresets(pricing);
   const [step, setStep] = useState<CheckoutStep>('form');
   const [paymentMethod, setPaymentMethod] = useState<'mobile' | 'card'>('mobile');
   const [operator, setOperator] = useState<'orange' | 'mpesa' | 'airtel'>('orange');
   const [phone, setPhone] = useState('');
-  const [amountInput, setAmountInput] = useState(String(AI_TOKEN_MIN_AMOUNT_FC));
-  const [checkoutAmountFc, setCheckoutAmountFc] = useState(AI_TOKEN_PACK_PRICE_FC);
-  const [checkoutTokens, setCheckoutTokens] = useState(AI_TOKEN_PACK_SIZE);
+  const [amountInput, setAmountInput] = useState('');
+  const [checkoutAmountFc, setCheckoutAmountFc] = useState(0);
+  const [checkoutTokens, setCheckoutTokens] = useState(0);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
@@ -83,9 +84,9 @@ export default function AiTokenPurchaseModal({
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const parsedAmount = parseInt(amountInput.replace(/\s+/g, ''), 10);
-  const isValidAmount = Number.isFinite(parsedAmount) && parsedAmount >= AI_TOKEN_MIN_AMOUNT_FC;
-  const previewTokens = isValidAmount ? calculateTokensForAmount(parsedAmount) : 0;
-  const nextTokenAtFc = isValidAmount ? calculateNextTokenAmount(parsedAmount) : null;
+  const isValidAmount = Number.isFinite(parsedAmount) && parsedAmount >= pricing.minAmountCdf;
+  const previewTokens = isValidAmount ? calculateTokensForAmount(parsedAmount, pricing) : 0;
+  const nextTokenAtFc = isValidAmount ? calculateNextTokenAmount(parsedAmount, pricing) : null;
   const showsLeftoverHint =
     isValidAmount && nextTokenAtFc !== null && parsedAmount < nextTokenAtFc;
 
@@ -102,7 +103,7 @@ export default function AiTokenPurchaseModal({
 
   useEffect(() => {
     if (open && step === 'form') {
-      setAmountInput((current) => current || String(AI_TOKEN_MIN_AMOUNT_FC));
+      setAmountInput((current) => current || String(pricing.minAmountCdf));
     }
   }, [open, step]);
 
@@ -123,7 +124,7 @@ export default function AiTokenPurchaseModal({
 
   const handleSuccess = useCallback(
     (tokensCount = checkoutTokens, orderId?: string | null) => {
-      const credited = Math.max(AI_TOKEN_MIN_COUNT, tokensCount);
+      const credited = Math.max(pricing.minCount, tokensCount);
       clearTimer();
       addPurchasedAiTokens(credited, orderId || activeOrderId);
       void syncDeviceAiTokensWithBackend(api);
@@ -135,7 +136,7 @@ export default function AiTokenPurchaseModal({
         onSuccess(credited);
       }
     },
-    [activeOrderId, checkoutTokens, onSuccess],
+    [activeOrderId, checkoutTokens, onSuccess, pricing.minCount],
   );
 
   const checkPaymentStatus = useCallback(
@@ -204,13 +205,13 @@ export default function AiTokenPurchaseModal({
     }
     if (!isValidAmount) {
       setError(
-        `Le montant minimum payable est de ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)} (soit ${AI_TOKEN_MIN_COUNT} jetons).`,
+        `Le montant minimum payable est de ${formatFc(pricing.minAmountCdf)} (soit ${pricing.minCount} jeton${pricing.minCount > 1 ? 's' : ''}).`,
       );
       return;
     }
 
     const amountFc = Math.round(parsedAmount);
-    const tokensCount = calculateTokensForAmount(amountFc);
+    const tokensCount = calculateTokensForAmount(amountFc, pricing);
     setCheckoutAmountFc(amountFc);
     setCheckoutTokens(tokensCount);
 
@@ -291,7 +292,7 @@ export default function AiTokenPurchaseModal({
       open={open}
       onClose={handleModalClose}
       title="Recharger des jetons IA"
-      description={`${formatFc(AI_TOKEN_PACK_PRICE_FC)} = ${AI_TOKEN_PACK_SIZE} jetons · minimum ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)} · montant libre au-dessus`}
+      description={`${formatFc(pricing.minAmountCdf)} = ${pricing.minCount} jeton${pricing.minCount > 1 ? 's' : ''} · ${formatFc(pricing.priceCdf)} / jeton · montant libre au-dessus`}
       size="md"
     >
       {step === 'success' && (
@@ -396,7 +397,7 @@ export default function AiTokenPurchaseModal({
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground">Recharge proportionnelle</p>
                   <p className="text-[11px] text-muted">
-                    {formatFc(AI_TOKEN_PACK_PRICE_FC)} = {AI_TOKEN_PACK_SIZE} jetons · {aiTokenCostLegend()}
+                    {formatFc(pricing.minAmountCdf)} = {pricing.minCount} jeton{pricing.minCount > 1 ? 's' : ''} · {aiTokenCostLegend()}
                   </p>
                 </div>
               </div>
@@ -424,7 +425,7 @@ export default function AiTokenPurchaseModal({
                 role="radiogroup"
                 aria-labelledby="token-amount-label"
               >
-                {AMOUNT_PRESETS_FC.map((preset) => {
+                {presets.map((preset) => {
                   const selected = parsedAmount === preset;
                   return (
                     <button
@@ -450,7 +451,7 @@ export default function AiTokenPurchaseModal({
               <Input
                 label="Montant libre"
                 type="number"
-                min={AI_TOKEN_MIN_AMOUNT_FC}
+                min={pricing.minAmountCdf}
                 step={100}
                 inputMode="numeric"
                 autoComplete="off"
@@ -459,10 +460,10 @@ export default function AiTokenPurchaseModal({
                   setAmountInput(e.target.value);
                   setError('');
                 }}
-                hint={`Minimum ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)}. Au-dessus, les jetons suivent au prorata (≈ 417 FC / jeton).`}
+                hint={`Minimum ${formatFc(pricing.minAmountCdf)}. ${formatFc(pricing.priceCdf)} par jeton.`}
                 error={
                   amountInput !== '' && !isValidAmount
-                    ? `Montant minimum : ${formatFc(AI_TOKEN_MIN_AMOUNT_FC)}`
+                    ? `Montant minimum : ${formatFc(pricing.minAmountCdf)}`
                     : undefined
                 }
               />
@@ -583,8 +584,8 @@ export default function AiTokenPurchaseModal({
               className="font-bold shadow-sm shadow-primary/30"
             >
               {paymentMethod === 'card'
-                ? `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(AI_TOKEN_MIN_AMOUNT_FC)} par carte`
-                : `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(AI_TOKEN_MIN_AMOUNT_FC)} par Mobile Money`}
+                ? `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(pricing.minAmountCdf)} par carte`
+                : `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(pricing.minAmountCdf)} par Mobile Money`}
             </Button>
 
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center pt-1">

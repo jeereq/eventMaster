@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "AiSimulationWallet" ADD COLUMN IF NOT EXISTS "grantedTokens" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "AiTokenLedger" ADD COLUMN IF NOT EXISTS "tokensFromGranted" INTEGER NOT NULL DEFAULT 0;

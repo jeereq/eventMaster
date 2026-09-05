@@ -11,6 +11,7 @@ import { appendFirstTourQuery } from '@/lib/firstLoginTour';
 import { claimAiSimulationHistory } from '@/lib/aiSimulationHistory';
 import { claimAiTemplateComposeHistory } from '@/lib/aiTemplateComposeHistory';
 import { claimAiRoomPlanComposeHistory } from '@/lib/aiRoomPlanComposeHistory';
+import { setAiTokenSessionUnlimited } from '@/lib/aiTokens';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -413,6 +414,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setPlanQuota(null);
     }
   };
+
+  useEffect(() => {
+    setAiTokenSessionUnlimited(user?.role === 'SUPER_ADMIN' || supportSession);
+  }, [user?.role, supportSession]);
 
   useEffect(() => {
     if (token && tenant?.id && user?.role === 'USER' && tenant.accountKind !== 'CLIENT') {

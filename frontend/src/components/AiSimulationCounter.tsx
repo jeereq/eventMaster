@@ -3,15 +3,14 @@
 import React from 'react';
 import { Coins, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { formatFc } from '@/config/landingPricing';
-import { AI_TOKEN_PACK_PRICE_FC, AI_TOKEN_PACK_SIZE, aiTokenCostLegend, type AiAllowance } from '@/lib/aiTokens';
+import { AI_TOKEN_PACK_SIZE, aiTokenCostLegend, type AiAllowance } from '@/lib/aiTokens';
 
 /**
  * Détermine si au moins 60% des jetons ont été utilisés.
  * Le compteur ne doit s'afficher que si cette condition est remplie.
  */
 export function isAiSimulationThresholdReached(allowance?: AiAllowance | null): boolean {
-  if (!allowance) return false;
+  if (!allowance || allowance.unlimited) return false;
 
   // Si plus aucun crédit disponible (100% consommés)
   if (allowance.totalRemaining <= 0) return true;
@@ -124,7 +123,7 @@ export default function AiSimulationCounter({
           className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl bg-primary/15 hover:bg-primary/25 text-foreground border border-primary/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
-          <span>Recharger dès {formatFc(AI_TOKEN_PACK_PRICE_FC)} ({AI_TOKEN_PACK_SIZE} jetons)</span>
+          <span>Recharger des jetons IA</span>
         </button>
       </div>
 

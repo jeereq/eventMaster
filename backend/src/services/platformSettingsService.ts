@@ -3,6 +3,12 @@ import path from 'path';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { parseRateInput, rateToPercent } from '../utils/ratePercent';
+import {
+  DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
+  DEFAULT_AI_TOKEN_PRICE_CDF,
+  sanitizeAiTokenMinPurchaseCdf,
+  sanitizeAiTokenPriceCdf,
+} from './aiTokenPricing';
 
 const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
 const PLATFORM_CONFIG_ID = 'default';
@@ -70,6 +76,10 @@ export interface PlatformSettings {
    * - BOTH : l’utilisateur choisit
    */
   authOtpChannels: AuthOtpChannels;
+  /** Prix d’un jeton IA en FC. */
+  aiTokenPriceCdf: number;
+  /** Montant minimum d’achat de jetons en FC. */
+  aiTokenMinPurchaseCdf: number;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -106,6 +116,8 @@ export interface PublicSiteConfig {
   enabledCities: string[];
   /** Canaux OTP autorisés pour inscription / validation / reset. */
   authOtpChannels: AuthOtpChannels;
+  aiTokenPriceCdf: number;
+  aiTokenMinPurchaseCdf: number;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -148,6 +160,8 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   usdExchangeRateCdf: 2800,
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
   authOtpChannels: 'BOTH',
+  aiTokenPriceCdf: DEFAULT_AI_TOKEN_PRICE_CDF,
+  aiTokenMinPurchaseCdf: DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -297,6 +311,11 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
     enabledCities: sanitizeEnabledCities(settings.enabledCities),
     authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+    aiTokenPriceCdf: sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
+    aiTokenMinPurchaseCdf: sanitizeAiTokenMinPurchaseCdf(
+      settings.aiTokenMinPurchaseCdf,
+      sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
+    ),
   };
 }
 
@@ -322,6 +341,8 @@ function buildNextSettings(
   next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
   next.enabledCities = sanitizeEnabledCities(next.enabledCities);
   next.authOtpChannels = sanitizeAuthOtpChannels(next.authOtpChannels);
+  next.aiTokenPriceCdf = sanitizeAiTokenPriceCdf(next.aiTokenPriceCdf);
+  next.aiTokenMinPurchaseCdf = sanitizeAiTokenMinPurchaseCdf(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -425,6 +446,11 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
     enabledCities: sanitizeEnabledCities(settings.enabledCities),
     authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+    aiTokenPriceCdf: sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
+    aiTokenMinPurchaseCdf: sanitizeAiTokenMinPurchaseCdf(
+      settings.aiTokenMinPurchaseCdf,
+      sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
+    ),
   };
 }
 

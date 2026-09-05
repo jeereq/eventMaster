@@ -75,7 +75,7 @@ import {
   getAdminPaymentsOverview,
   listAdminPaymentAttempts,
 } from '../controllers/adminPaymentsController';
-import { getAdminAiTokenUsage } from '../controllers/adminAiTokensController';
+import { getAdminAiTokenUsage, grantAdminAiTokens } from '../controllers/adminAiTokensController';
 
 const router = Router();
 
@@ -135,6 +135,7 @@ router.patch('/catalog/offerings/:id/unpublish', unpublishServiceOffering);
 router.get('/payments/overview', getAdminPaymentsOverview);
 router.get('/payments/attempts', listAdminPaymentAttempts);
 router.get('/ai-tokens/usage', getAdminAiTokenUsage);
+router.post('/ai-tokens/grant', grantAdminAiTokens);
 
 router.put('/tenants/:id', updateTenantPlanOrLicense);
 router.delete('/tenants/:id', deleteTenant);

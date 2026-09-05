@@ -36,6 +36,8 @@ export interface PublicSiteConfig {
   usdExchangeRateCdf: number;
   enabledCities: string[];
   authOtpChannels: AuthOtpChannels;
+  aiTokenPriceCdf: number;
+  aiTokenMinPurchaseCdf: number;
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -69,6 +71,8 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   usdExchangeRateCdf: 2800,
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
   authOtpChannels: 'BOTH',
+  aiTokenPriceCdf: 416,
+  aiTokenMinPurchaseCdf: 2500,
 };
 
 interface PlatformSiteContextValue {
@@ -98,6 +102,12 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
         usdExchangeRateCdf: resolveUsdExchangeRateCdf(data.usdExchangeRateCdf, DEFAULT_PUBLIC_SITE.usdExchangeRateCdf),
         enabledCities: sanitizeEnabledCities(data.enabledCities),
         authOtpChannels: sanitizeAuthOtpChannels(data.authOtpChannels),
+        aiTokenPriceCdf: Number(data.aiTokenPriceCdf) > 0
+          ? Math.round(Number(data.aiTokenPriceCdf))
+          : DEFAULT_PUBLIC_SITE.aiTokenPriceCdf,
+        aiTokenMinPurchaseCdf: Number(data.aiTokenMinPurchaseCdf) > 0
+          ? Math.round(Number(data.aiTokenMinPurchaseCdf))
+          : DEFAULT_PUBLIC_SITE.aiTokenMinPurchaseCdf,
       };
       setSite(next);
 
