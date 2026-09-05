@@ -5,6 +5,46 @@ export const AI_FREE_TRIALS_MAX = 4;
 export const AI_SIMULATION_TOKEN_COST = 1;
 export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 
+export type AiTokenAction = 'budget_simulation' | 'invitation_compose' | 'recharge';
+export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'unknown';
+export type AiTokenPool = 'free' | 'bonus' | 'mixed' | 'paid';
+
+export type AiTokenLedgerMeta = {
+  action: AiTokenAction;
+  source?: AiTokenLedgerSource;
+  relatedId?: string | null;
+};
+
+async function recordAiTokenLedger(entry: {
+  userId?: string | null;
+  deviceId?: string | null;
+  action: AiTokenAction;
+  source?: string;
+  tokensDelta: number;
+  tokensFromFree?: number;
+  tokensFromBonus?: number;
+  pool: AiTokenPool;
+  relatedId?: string | null;
+}) {
+  try {
+    await prisma.aiTokenLedger.create({
+      data: {
+        userId: entry.userId?.trim() || null,
+        deviceId: entry.deviceId?.trim() || null,
+        action: entry.action,
+        source: entry.source?.trim() || 'unknown',
+        tokensDelta: entry.tokensDelta,
+        tokensFromFree: Math.max(0, entry.tokensFromFree ?? 0),
+        tokensFromBonus: Math.max(0, entry.tokensFromBonus ?? 0),
+        pool: entry.pool,
+        relatedId: entry.relatedId?.trim() || null,
+      },
+    });
+  } catch (err) {
+    console.warn('[aiWallet] ledger write failed:', (err as Error)?.message);
+  }
+}
+
 export type AiWalletAllowance = {
   deviceId: string;
   userId: string | null;
@@ -220,6 +260,7 @@ export async function consumeAiSimulationCredit(
   deviceId: string,
   userId?: string | null,
   count = AI_SIMULATION_TOKEN_COST,
+  meta?: AiTokenLedgerMeta,
 ): Promise<AiWalletAllowance> {
   const need = Math.max(1, Math.round(count));
   const { wallet, paid } = await ensureAiSimulationWallet(deviceId, userId);
@@ -239,6 +280,20 @@ export async function consumeAiSimulationCredit(
       bonusTokens: bonus - fromBonus,
       freeTrialsUsed: Math.min(AI_FREE_TRIALS_MAX, wallet.freeTrialsUsed + fromFree),
     },
+  });
+
+  const pool: AiTokenPool =
+    fromFree > 0 && fromBonus > 0 ? 'mixed' : fromBonus > 0 ? 'bonus' : 'free';
+  await recordAiTokenLedger({
+    userId,
+    deviceId,
+    action: meta?.action || (need > 1 ? 'invitation_compose' : 'budget_simulation'),
+    source: meta?.source || 'unknown',
+    tokensDelta: -need,
+    tokensFromFree: fromFree,
+    tokensFromBonus: fromBonus,
+    pool,
+    relatedId: meta?.relatedId,
   });
 
   return serialize(updated, paid);
@@ -264,15 +319,26 @@ export async function creditPaidAiTokenOrder(order: {
         ? calculateTokensForAmount(order.amountFc)
         : AI_TOKEN_MIN_COUNT;
 
+  const added = Math.max(1, tokensToAdd);
   const updated = await prisma.aiSimulationWallet.update({
     where: { id: wallet.id },
     data: {
-      bonusTokens: wallet.bonusTokens + Math.max(1, tokensToAdd),
+      bonusTokens: wallet.bonusTokens + added,
       creditedOrderIds: [...credited, order.id],
     },
   });
+  await recordAiTokenLedger({
+    userId: order.userId,
+    deviceId,
+    action: 'recharge',
+    source: 'flexpay',
+    tokensDelta: added,
+    tokensFromBonus: added,
+    pool: 'paid',
+    relatedId: order.id,
+  });
   return serialize(updated, {
-    totalPaidTokens: paid.totalPaidTokens + Math.max(1, tokensToAdd),
+    totalPaidTokens: paid.totalPaidTokens + added,
     paidOrdersCount: paid.paidOrdersCount + 1,
   });
 }

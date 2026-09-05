@@ -11,7 +11,7 @@ import {
  LogOut, Menu, X, Loader2, ShieldCheck, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
- Inbox, Sparkles, Bookmark, Heart, Rss,
+ Inbox, Sparkles, Bookmark, Heart, Rss, Coins,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import PWAInstallCta from '@/components/PWAInstallCta';
@@ -194,6 +194,7 @@ function buildDashboardNav(opts: {
     { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
     { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
     { name: 'Paiements', href: '/dashboard/admin/payments', tourId: 'nav-payments-admin', icon: CreditCard },
+    { name: 'Jetons IA', href: '/dashboard/admin/ai-tokens', tourId: 'nav-ai-tokens', icon: Coins },
     { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
     { name: 'Versements SaaS', href: '/dashboard/admin/payouts', tourId: 'nav-payouts', icon: Wallet },
    ]),

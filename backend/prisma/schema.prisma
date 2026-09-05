@@ -232,6 +232,7 @@ model User {
   aiSimulationRuns      AiSimulationRun[]
   aiSimulationWallets   AiSimulationWallet[]
   aiTemplateComposeRuns AiTemplateComposeRun[]
+  aiTokenLedgers        AiTokenLedger[]
 }
 
 model Event {
@@ -1182,6 +1183,30 @@ model AiTemplateComposeRun {
   stage            Json?
   createdAt        DateTime @default(now())
 
+  @@index([userId, createdAt])
+  @@index([deviceId, createdAt])
+}
+
+/** Journal des mouvements de jetons IA (conso + recharge). */
+model AiTokenLedger {
+  id               String   @id @default(uuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId         String?
+  /** budget_simulation | invitation_compose | recharge */
+  action           String
+  /** landing | dashboard | studio | flexpay */
+  source           String   @default("unknown")
+  tokensDelta      Int
+  tokensFromFree   Int      @default(0)
+  tokensFromBonus  Int      @default(0)
+  /** free | bonus | mixed | paid */
+  pool             String
+  relatedId        String?
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, createdAt])
   @@index([userId, createdAt])
   @@index([deviceId, createdAt])
 }

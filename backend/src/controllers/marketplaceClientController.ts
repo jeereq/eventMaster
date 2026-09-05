@@ -22,6 +22,7 @@ import {
   consumeAiSimulationCredit,
   getAiSimulationWalletAllowance,
   requireAiSimulationCredit,
+  AI_SIMULATION_TOKEN_COST,
 } from '../services/aiSimulationWalletService';
 
 function parseKind(value: unknown): 'venue' | 'service' | null {
@@ -254,7 +255,10 @@ async function runEventPlanAi(
   const userId = (req as AuthenticatedRequest).user?.id || null;
   await requireAiSimulationCredit(deviceId, userId);
   const result = await simulateEventPlanAi(rateLimitKey, body);
-  const allowance = await consumeAiSimulationCredit(deviceId, userId);
+  const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_SIMULATION_TOKEN_COST, {
+    action: 'budget_simulation',
+    source,
+  });
   const historyId = await persistSimulation(req, result, source);
   return { ...result, historyId, remaining: allowance.totalRemaining, allowance };
 }

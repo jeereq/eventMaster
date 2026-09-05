@@ -67,6 +67,7 @@ async function clearDatabase() {
   await prisma.savedRoomAmbience.deleteMany({});
   await prisma.orgRoomAmbience.deleteMany({});
   await prisma.aiSimulationRun.deleteMany({});
+  await prisma.aiTokenLedger.deleteMany({});
   await prisma.aiTokenOrder.deleteMany({});
   await prisma.aiSimulationWallet.deleteMany({});
   await prisma.paymentTrace.deleteMany({});

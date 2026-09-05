@@ -65,6 +65,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' },
       { label: 'Forfaits', href: '/dashboard?tab=subscription-plans' },
       { label: 'Paiements', href: '/dashboard/admin/payments' },
+      { label: 'Jetons IA', href: '/dashboard/admin/ai-tokens' },
       { label: 'Versements SaaS', href: '/dashboard/admin/payouts' },
       { label: 'Journal d’audit', href: '/dashboard/audit' },
       { label: 'Analyses', href: '/dashboard?tab=analytics&section=overview' },
