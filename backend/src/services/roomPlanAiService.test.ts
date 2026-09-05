@@ -135,6 +135,7 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.appearance.wallTexture, 'brick');
     assert.equal(draft.appearance.wallColor, '#f5f0e8');
     assert.equal(draft.appearance.tableColor, '#ffffff');
+    assert.equal(draft.appearance.tableSurface, 'linen');
     assert.equal(draft.items[0]?.color, '#8b1c1c');
     assert.equal(draft.items[0]?.surface, 'linen');
     assert.equal(draft.items[0]?.chairStyle, 'chiavari');
@@ -159,6 +160,11 @@ describe('parseRoomPlanVisionDraft', () => {
     }, { widthM: 22, heightM: 28 });
 
     assert.equal(draft.appearance.roofStyle, 'tentSwag');
+    assert.equal(parseRoomPlanVisionDraft({
+      view: 'top',
+      appearance: { imageRole: 'plan', roofStyle: 'flat', floorType: 'chevron' },
+      items: [],
+    }, { widthM: 18, heightM: 14 }).appearance.roofStyle, 'flat');
     assert.equal(draft.appearance.curtainColor, '#faf7f2');
     assert.equal(draft.items[0]?.shape, 'arc');
     assert.equal(draft.items[0]?.hasCenterpiece, true);
@@ -201,6 +207,7 @@ describe('normalizeRoomPlanVisionKind', () => {
     assert.equal(normalizeRoomPlanVisionKind('Piste de danse'), 'zone');
     assert.equal(normalizeRoomPlanVisionKind('régie'), 'djBooth');
     assert.equal(normalizeRoomPlanVisionKind('guirlandes'), 'stringLight');
+    assert.equal(normalizeRoomPlanVisionKind('tente'), 'gazebo');
     assert.equal(normalizeRoomPlanVisionKind('spaceship'), undefined);
   });
 });

@@ -2510,7 +2510,24 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     [lightingPresetProp, blueprint.metadata.lightingPreset, blueprint.roomType],
   );
   const captureApiRef = useRef<RoomWebGLCaptureApi | null>(null);
+  const viewerRootRef = useRef<HTMLDivElement | null>(null);
   const sceneLabel = useMemo(() => describeRoomScene(blueprint), [blueprint]);
+
+  useEffect(() => {
+    const node = viewerRootRef.current;
+    if (!node) return;
+    const stopPageScroll = (event: Event) => {
+      event.stopPropagation();
+    };
+    node.addEventListener('wheel', stopPageScroll, { passive: true });
+    node.addEventListener('touchmove', stopPageScroll, { passive: true });
+    node.addEventListener('pointerdown', stopPageScroll);
+    return () => {
+      node.removeEventListener('wheel', stopPageScroll);
+      node.removeEventListener('touchmove', stopPageScroll);
+      node.removeEventListener('pointerdown', stopPageScroll);
+    };
+  }, []);
 
   useImperativeHandle(ref, () => ({
     capturePng: (scale) => captureApiRef.current?.capturePng(scale) ?? null,
@@ -2518,15 +2535,17 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
   return (
     <div
+      ref={viewerRootRef}
       role="img"
       aria-label={sceneLabel}
       className={cn(
-        'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground',
+        'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground touch-none overscroll-none',
         className,
       )}
     >
       <Canvas
         shadows
+        style={{ touchAction: 'none' }}
         frameloop={paused ? 'never' : 'always'}
         dpr={qualitySettings.dpr}
         gl={{

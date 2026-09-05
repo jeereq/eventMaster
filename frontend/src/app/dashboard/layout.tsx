@@ -636,7 +636,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         {/* Header mobile */}
-        <header className="md:hidden bg-sidebar border-b border-border px-3 flex items-center justify-between sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
+        <header className="md:hidden bg-sidebar border-b border-border px-3 flex items-center justify-between fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
           <div className="h-12 w-full flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <SiteBrandMark href="/dashboard" showLabel={false} />
@@ -663,6 +663,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           </div>
         </header>
+        <div
+          aria-hidden
+          className="md:hidden h-[calc(3rem+env(safe-area-inset-top,0px))] shrink-0"
+        />
 
         {/* Sidebar */}
         <aside
@@ -867,7 +871,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </aside>
 
       {/* Contenu principal */}
-      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col em-dashboard-glow-bg">
+      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto overscroll-none bg-background flex flex-col em-dashboard-glow-bg">
         <DashboardTopBar
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={toggleSidebarCollapsed}

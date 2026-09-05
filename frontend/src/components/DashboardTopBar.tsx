@@ -103,7 +103,7 @@ export default function DashboardTopBar({
         : tenant?.name || 'Organisation';
 
   return (
-    <header className="hidden md:block sticky top-0 z-20 shrink-0 border-b border-border bg-surface/90 backdrop-blur-md">
+    <header className="hidden md:block sticky top-0 z-30 shrink-0 border-b border-border bg-surface/95 backdrop-blur-md isolate">
       <div className="page-container h-14 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           {onToggleSidebar && (

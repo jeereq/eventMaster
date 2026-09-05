@@ -226,8 +226,15 @@ const FLOOR_ALIASES: Record<string, FloorType> = {
   parquet: 'parquet',
   wood: 'bois',
   bois: 'bois',
+  boisblond: 'boisBlond',
+  boisrustique: 'boisRustique',
+  herringbone: 'chevron',
+  chevron: 'chevron',
+  chevrongris: 'chevronGris',
   marble: 'marbre',
   marbre: 'marbre',
+  calacatta: 'marbreCalacatta',
+  marbrecalacatta: 'marbreCalacatta',
   carpet: 'moquette',
   moquette: 'moquette',
   tile: 'carrelage',
@@ -236,6 +243,9 @@ const FLOOR_ALIASES: Record<string, FloorType> = {
   beton: 'beton',
   grass: 'herbe',
   herbe: 'herbe',
+  lawn: 'herbe',
+  pelouse: 'pelouse',
+  gazon: 'herbe',
   checker: 'damier',
   damier: 'damier',
   terrazzo: 'terrazzo',
@@ -245,7 +255,7 @@ const FLOOR_ALIASES: Record<string, FloorType> = {
   brique: 'brique',
   gravel: 'gravier',
   gravier: 'gravier',
-  gravierFonce: 'gravierFonce',
+  gravierfonce: 'gravierFonce',
   stone: 'pierre',
   pierre: 'pierre',
   epoxy: 'epoxy',
@@ -287,6 +297,9 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   ecran: 'screen',
   fontaine: 'fountain',
   lustre: 'chandelier',
+  tent: 'gazebo',
+  tente: 'gazebo',
+  chapiteau: 'gazebo',
 };
 
 const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
@@ -359,7 +372,7 @@ function asAisleStyle(value: string | undefined): AisleStyle | undefined {
 
 function asFloorType(value: string | undefined): FloorType | undefined {
   if (!value) return undefined;
-  return FLOOR_ALIASES[value] ?? FLOOR_ALIASES[value.toLowerCase()];
+  return FLOOR_ALIASES[value] ?? FLOOR_ALIASES[aliasKey(value)];
 }
 
 function aliasKey(value: string): string {
@@ -414,17 +427,22 @@ function resolveZoneKind(item: RoomPlanVisionItem, fallback?: ZoneKind): ZoneKin
 function inferTableCapacity(item: RoomPlanVisionItem, shape: TableShape): number {
   if (item.seats != null) return Math.max(2, Math.min(16, Math.round(item.seats)));
   if (shape === 'cocktail' || shape === 'highTop') return 2;
-  const span = Math.max(item.w ?? 10, item.h ?? 10);
-  if (span <= 6) return 4;
-  if (span <= 11) return 8;
-  if (span <= 14) return 10;
-  return 12;
+  const w = item.w ?? DEFAULT_FOOTPRINT.table.w;
+  const h = item.h ?? DEFAULT_FOOTPRINT.table.h;
+  if (shape === 'rectangular' || shape === 'arc') {
+    if (w >= 15) return 14;
+    if (w >= 12) return 10;
+    return 8;
+  }
+  const span = Math.max(w, h);
+  const fromSpan = Math.round((span - 5) / 0.55);
+  return Math.max(4, Math.min(16, fromSpan || 8));
 }
 
 function inferRowSeatCount(item: RoomPlanVisionItem): number {
   if (item.seats != null) return Math.max(2, Math.min(40, Math.round(item.seats)));
   if (item.w == null) return 10;
-  return Math.max(4, Math.min(40, Math.round(item.w / 2.4)));
+  return Math.max(4, Math.min(40, Math.round(item.w / 2.2)));
 }
 
 function inferTableShape(item: RoomPlanVisionItem, allowed: TableShape[]): TableShape {
@@ -548,17 +566,42 @@ function neutralizeAisle(
 ): RoomLayoutBlueprint['fixtures'][number] {
   const style = asAisleStyle(item.aisleStyle);
   const color = item.color;
-  const inferred = style
-    ?? (looksRed(color) ? 'royalRed' : looksGold(color) ? 'damaskGold' : undefined);
   return {
     ...fixture,
-    aisleStyle: inferred,
-    color: color ?? (inferred === 'royalRed' ? '#991b1b' : inferred === 'damaskGold' ? '#c4a06a' : '#78716c'),
+    aisleStyle: style,
+    color: color ?? (style === 'royalRed' ? '#991b1b' : style === 'damaskGold' ? '#c4a06a' : '#78716c'),
     material: asZoneMaterial(item.material) ?? 'carpet',
-    hasGoldBorder: inferred === 'damaskGold' || looksGold(color),
+    hasGoldBorder: style === 'damaskGold',
     hasSideLanterns: item.hasSideLanterns === true,
     hasPetals: item.hasPetals === true,
   };
+}
+
+function isTentStructureItem(
+  item: RoomPlanVisionItem,
+  kind: RoomPlanVisionItemKind,
+): boolean {
+  const label = aliasKey(item.label || '');
+  if (label.includes('tente') || label.includes('tent') || label.includes('chapiteau')) {
+    return true;
+  }
+  const area = (item.w ?? 0) * (item.h ?? 0);
+  return kind === 'gazebo' && area >= 2400;
+}
+
+function resolveImportedRoof(
+  appearance: RoomPlanVisionAppearance | undefined,
+  current: RoomLayoutBlueprint,
+  tentSeen: boolean,
+): { roofStyle: RoomLayoutBlueprint['metadata']['roofStyle']; showRoof: boolean | undefined } {
+  const style = tentSeen && !appearance?.roofStyle ? 'tentSwag' : appearance?.roofStyle;
+  if (style === 'flat') {
+    return { roofStyle: 'flat', showRoof: false };
+  }
+  if (style === 'tentSwag' || style === 'gabled' || style === 'coffered') {
+    return { roofStyle: style, showRoof: true };
+  }
+  return { roofStyle: current.metadata.roofStyle, showRoof: current.metadata.showRoof };
 }
 
 function createNeutralFixtureForImport(
@@ -794,9 +837,15 @@ export function applyRoomPlanVisionDraft(
   let zoneCount = 0;
   let chairCount = 0;
 
+  let tentSeen = appearance?.roofStyle === 'tentSwag';
+
   for (const rawItem of draft.items) {
     const kind = resolveImportedKind(rawItem);
     const item = kind === rawItem.kind ? rawItem : { ...rawItem, kind };
+    if (isTentStructureItem(item, kind)) {
+      tentSeen = true;
+      continue;
+    }
     if (FIXTURE_KINDS.has(kind as RoomLayoutBlueprint['fixtures'][number]['kind'])) {
       const fixtureKind = kind as RoomLayoutBlueprint['fixtures'][number]['kind'];
       const allowed = caps.canFixtures && caps.fixtureKinds.includes(fixtureKind as RoomEditorCapabilities['fixtureKinds'][number]);
@@ -986,7 +1035,7 @@ export function applyRoomPlanVisionDraft(
         texture: wallTexture ?? existingWalls[0]?.texture ?? 'plaster',
         color: wallColor,
         openings: [
-          ...wall.doors.map((t) => createWallOpening('door', { t, style: 'double' })),
+          ...wall.doors.map((t) => createWallOpening('door', { t, style: 'single' })),
           ...wall.windows.map((t) => createWallOpening('window', { t })),
         ],
       });
@@ -1018,13 +1067,18 @@ export function applyRoomPlanVisionDraft(
     warnings.push('Photo en perspective : le sol reprend la matière et la couleur vues, sans poser l’image en fond.');
   }
 
+  const canvas = applyDraftCanvas(current.canvas, draft);
+  const roof = resolveImportedRoof(appearance, current, tentSeen);
+  const chandelierFixtures = fixtures.filter((fixture) => fixture.kind === 'chandelier');
+  const tentSized = roof.roofStyle === 'tentSwag' || current.roomType === 'TENT' || tentSeen;
+
   const aligned = tidyImportedFloorLayout(ensureBlueprintDefaults({
     ...current,
     roomOutline: outline,
     walls,
     furniture,
     fixtures,
-    canvas: applyDraftCanvas(current.canvas, draft),
+    canvas,
     metadata: {
       ...current.metadata,
       defaultTableColor: defaultTableColor ?? current.metadata.defaultTableColor,
@@ -1034,14 +1088,17 @@ export function applyRoomPlanVisionDraft(
       floorImageUrl: keepExistingFloor ? current.metadata.floorImageUrl : undefined,
       floorType: observedFloor ?? current.metadata.floorType,
       floorImageFit: keepExistingFloor ? current.metadata.floorImageFit : undefined,
-      roofStyle: appearance?.roofStyle === 'tentSwag' || appearance?.roofStyle === 'gabled' || appearance?.roofStyle === 'coffered'
-        ? appearance.roofStyle
-        : current.metadata.roofStyle,
-      showRoof: appearance?.roofStyle === 'tentSwag' || appearance?.roofStyle === 'gabled' || appearance?.roofStyle === 'coffered'
-        ? true
-        : current.metadata.showRoof,
+      roofStyle: roof.roofStyle,
+      showRoof: roof.showRoof,
+      tentWidthM: tentSized ? canvas.widthM : current.metadata.tentWidthM,
+      tentLengthM: tentSized ? canvas.heightM : current.metadata.tentLengthM,
       curtainColor: appearance?.curtainColor ?? current.metadata.curtainColor,
       showCurtains: appearance?.curtainColor ? true : current.metadata.showCurtains,
+      showChandeliers: chandelierFixtures.length > 0,
+      chandelierCount: chandelierFixtures.length > 0
+        ? Math.max(1, Math.min(5, chandelierFixtures.length))
+        : current.metadata.chandelierCount,
+      chandelierType: chandelierFixtures.length > 0 ? 'modern' : current.metadata.chandelierType,
     },
   }));
 

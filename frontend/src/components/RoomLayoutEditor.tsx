@@ -5955,9 +5955,11 @@ export default function RoomLayoutEditor({
         initialCrop={cropFixture?.imageCrop}
       />
       <div className="space-y-3">
-        {header}
-        {templateBar}
-        {toolbar}
+        <div className="sticky top-0 z-20 -mx-1 px-1 pb-2 space-y-2 bg-background/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none md:mx-0 md:px-0 md:pb-0">
+          {header}
+          {templateBar}
+          {toolbar}
+        </div>
         {quickCreatePanel}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
           <div className="lg:col-span-2 min-h-0 space-y-2">

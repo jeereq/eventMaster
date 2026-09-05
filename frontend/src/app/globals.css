@@ -1433,6 +1433,8 @@ html[data-mood="celebrate"] .font-display {
 
 .em-plan-stage {
   height: min(62dvh, 520px);
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 @media (min-width: 1280px) {

@@ -109,7 +109,7 @@ export default function SiteHeader({
     <>
       <header
         className={cn(
-          'sticky top-0 z-50 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md bg-background/85 dark:bg-background/80 border-b border-border/80 transition-colors duration-200',
+          'fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md bg-background/85 dark:bg-background/80 border-b border-border/80 transition-colors duration-200',
           className,
         )}
       >
@@ -356,6 +356,10 @@ export default function SiteHeader({
           </div>
       </div>
     </header>
+    <div
+      aria-hidden
+      className="h-[calc(3rem+env(safe-area-inset-top,0px))] md:h-[calc(3.5rem+env(safe-area-inset-top,0px))] shrink-0"
+    />
 
     {variant !== 'minimal' && (
       <>

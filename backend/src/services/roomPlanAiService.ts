@@ -30,7 +30,7 @@ const ZONE_KINDS = new Set(['dance', 'vip', 'buffet', 'carpet', 'custom']);
 const FLOOR_TYPES = new Set([
   'parquet', 'marbre', 'moquette', 'carrelage', 'beton', 'herbe',
   'damier', 'terrazzo', 'sable', 'brique', 'bois', 'pierre', 'epoxy',
-  'gravier', 'gravierFonce',
+  'gravier', 'gravierFonce', 'pelouse', 'chevron', 'marbreCalacatta',
 ]);
 const TABLE_SURFACES = new Set(['wood', 'linen', 'walnut', 'marble', 'darkWood', 'whiteLacquer', 'glass']);
 const ZONE_MATERIALS = new Set(['wood', 'carpet', 'vinyl', 'led', 'marble', 'concrete', 'parquet', 'epoxy', 'grass', 'gravel', 'brick']);
@@ -204,6 +204,8 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   gloriette: 'gazebo',
   pergola: 'gazebo',
   tent: 'gazebo',
+  tente: 'gazebo',
+  chapiteau: 'gazebo',
   djbooth: 'djBooth',
   dj: 'djBooth',
   djtable: 'djBooth',
@@ -723,6 +725,10 @@ Champs JSON obligatoires :
 Règles appearance :
 - floorType / floorColor / wallTexture / wallColor / curtainColor : seulement si clairement visibles.
 - Couleurs en hex (#rrggbb) d’après la teinte observée, pas une couleur de thème EventMaster.
+- tableSurface = nappe / plateau visible (linen si nappe tissu, wood si bois nu, marble si marbre).
+- roofStyle = tentSwag si chapiteau / tente drapée, gabled si pignon, coffered si caissons, flat si plafond plat. Une tente n’est PAS un item gazebo : donne canvas.widthM/heightM = taille réelle de la tente.
+- Lustres : un item chandelier par lustre visible au plafond. N’invente pas de cristal ni d’or.
+- w/h de chaque table = empreinte réelle au sol en % (une petite table cocktail ≈ 5–6, une ronde 8 couverts ≈ 10, une longue ≈ 12–16).
 
 Règles items (déduction autorisée) :
 - Aligne tables et rangées sur une grille : mêmes X en colonnes, mêmes Y en lignes. Évite les décalages de 1–2 %.
@@ -751,6 +757,9 @@ Mission :
 - Respecte le type de salle et les mètres fournis pour canvas.widthM / heightM.
 - N’ajoute or, pétales, lustre cristal ou allée rouge que si le brief les demande.
 - view="top", appearance.imageRole="plan".
+- Tente / chapiteau : roofStyle="tentSwag" et canvas = taille réelle. Ne pose pas la tente comme item gazebo.
+- Nappes : tableSurface="linen" (ou la matière demandée) + tableColor observée / demandée.
+- w/h des tables = empreinte réelle en % du plan.
 
 Le schéma JSON est le même que pour une lecture photo :
 {
