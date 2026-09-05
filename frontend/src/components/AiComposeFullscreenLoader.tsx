@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Sparkles, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -13,7 +13,7 @@ const COMPOSE_STEPS: AiProcessStep[] = [
   { id: 'brief', label: 'Lecture du brief' },
   { id: 'faces', label: 'Yeux, sourire et joues' },
   { id: 'layout', label: 'Composition 9:16' },
-  { id: 'photo', label: 'Rendu photographique 35 mm' },
+  { id: 'photo', label: 'Rendu de la carte' },
   { id: 'finish', label: 'Finition de l’invitation' },
 ];
 
@@ -33,6 +33,7 @@ export function AiProcessFullscreenLoader({
   steps,
   stageHint,
   icon: Icon = Sparkles,
+  onCancel,
 }: {
   active: boolean;
   eyebrow: string;
@@ -41,8 +42,11 @@ export function AiProcessFullscreenLoader({
   steps: AiProcessStep[];
   stageHint?: string | null;
   icon?: LucideIcon;
+  onCancel?: () => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!active) {
@@ -68,12 +72,64 @@ export function AiProcessFullscreenLoader({
     };
   }, [active]);
 
+  useEffect(() => {
+    if (!active) return;
+    cancelRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && onCancel) {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const root = rootRef.current;
+      if (!root) return;
+      const focusable = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.getClientRects().length > 0);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const current = document.activeElement as HTMLElement | null;
+      if (event.shiftKey) {
+        if (!current || current === first || !root.contains(current)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (!current || current === last || !root.contains(current)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const onFocusIn = (event: FocusEvent) => {
+      const root = rootRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      (cancelRef.current ?? root).focus();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('focusin', onFocusIn);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('focusin', onFocusIn);
+    };
+  }, [active, onCancel]);
+
   if (!active) return null;
 
   const current = steps[stepIndex] || steps[0];
 
   return (
     <div
+      ref={rootRef}
+      tabIndex={-1}
       className="fixed inset-0 z-[12000] flex items-center justify-center bg-[#0b0907]/92 px-5"
       role="alertdialog"
       aria-modal="true"
@@ -142,15 +198,26 @@ export function AiProcessFullscreenLoader({
                 <span className="font-semibold">{step.label}</span>
                 {isCurrent ? (
                   <span className="ml-auto flex gap-1" aria-hidden>
-                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-bounce" />
-                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-bounce [animation-delay:120ms]" />
-                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-bounce [animation-delay:240ms]" />
+                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse" />
+                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse [animation-delay:120ms]" />
+                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse [animation-delay:240ms]" />
                   </span>
                 ) : null}
               </li>
             );
           })}
         </ol>
+
+        {onCancel ? (
+          <button
+            ref={cancelRef}
+            type="button"
+            onClick={onCancel}
+            className="mt-6 min-h-11 px-5 rounded-xl border border-white/20 bg-white/8 text-sm font-semibold text-white hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          >
+            Annuler
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -161,11 +228,13 @@ export default function AiComposeFullscreenLoader({
   embedText = false,
   hasReferences = false,
   stageHint,
+  onCancel,
 }: {
   active: boolean;
   embedText?: boolean;
   hasReferences?: boolean;
   stageHint?: string | null;
+  onCancel?: () => void;
 }) {
   const steps = COMPOSE_STEPS.map((step) => {
     if (step.id === 'faces' && !hasReferences) {
@@ -180,14 +249,15 @@ export default function AiComposeFullscreenLoader({
   return (
     <AiProcessFullscreenLoader
       active={active}
-      eyebrow="Studio IA"
-      title="Création en cours"
+      eyebrow="Invitation"
+      title="Votre carte se prépare"
       stageHint={stageHint}
       steps={steps}
+      onCancel={onCancel}
       footnote={
         hasReferences
           ? 'Les regards, le sourire et le volume des joues restent fidèles aux photos.'
-          : 'Carte générée uniquement à partir de votre brief.'
+          : 'Carte composée uniquement à partir de votre brief.'
       }
     />
   );

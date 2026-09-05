@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info } from 'lucide-react';
 import {
   INVITATION_PROMPT_MODELS,
@@ -16,6 +16,7 @@ interface PromptModelSelectorProps {
   disabled?: boolean;
   className?: string;
   compact?: boolean;
+  intent?: 'create' | 'clone';
 }
 
 export default function PromptModelSelector({
@@ -24,9 +25,16 @@ export default function PromptModelSelector({
   disabled = false,
   className,
   compact = false,
+  intent = 'create',
 }: PromptModelSelectorProps) {
-  const [activeCategory, setActiveCategory] = useState<PromptCategory | 'all'>('all');
+  const [activeCategory, setActiveCategory] = useState<PromptCategory | 'all'>(
+    intent === 'clone' ? 'clone' : 'all',
+  );
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveCategory(intent === 'clone' ? 'clone' : 'all');
+  }, [intent]);
 
   const filteredModels =
     activeCategory === 'all'
@@ -60,15 +68,15 @@ export default function PromptModelSelector({
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-bold text-foreground inline-flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-primary" />
-          Modèles de prompts & inspirations
+          Exemples de brief
         </span>
         <span className="text-[11px] text-muted hidden sm:inline">
-          Cliquez sur un modèle pour l’appliquer
+          Cliquez pour remplir le brief
         </span>
       </div>
 
       {/* Onglets de catégories */}
-      <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Catégories de modèles de prompt">
+      <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Catégories d’exemples">
         <button
           type="button"
           role="tab"
@@ -110,9 +118,9 @@ export default function PromptModelSelector({
         <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 animate-fade-in">
           <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold">Pour copier une invitation existante :</p>
+            <p className="font-bold">Pour cloner une carte :</p>
             <p className="text-[11px] opacity-90 mt-0.5">
-              Déposez l’image ou la photo de la carte à reproduire dans la zone d’upload ci-dessus, puis choisissez l’un de ces modèles.
+              Déposez la photo de l’invitation dans la zone d’envoi à côté, sur ce même écran, puis choisissez un exemple.
             </p>
           </div>
         </div>

@@ -1,32 +1,25 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Coins,
   ImageIcon,
   Loader2,
-  Maximize2,
   Sparkles,
   Upload,
   Wand2,
   XCircle,
   ArrowRight,
-  Check,
   Type,
   Eye,
   Palette,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
-  SlidersHorizontal,
   History,
   Undo2,
   Redo2,
-  ZoomIn,
   Clock,
-  RotateCcw,
   Download,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -140,13 +133,6 @@ function elementSummary(content: TemplateAiComposeContent | null) {
     });
 }
 
-const STAGE_STEPS = [
-  { id: 'brief', label: 'Brief' },
-  { id: 'analyse', label: 'Analyse' },
-  { id: 'image', label: 'Image' },
-  { id: 'ready', label: 'Aperçu' },
-] as const;
-
 export interface FormActionItem {
   id: string;
   type: 'upload' | 'remove_image' | 'prompt_change' | 'model_applied' | 'generate_success' | 'restore_history' | 'reset';
@@ -173,11 +159,12 @@ export default function LandingInvitationAiGenerator({
   const [prompt, setPrompt] = useState('');
   const [promptHistory, setPromptHistory] = useState<string[]>(['']);
   const [promptHistoryIndex, setPromptHistoryIndex] = useState<number>(0);
-  const [formTab, setFormTab] = useState<'form' | 'modeles' | 'historique'>('form');
+  const [studioIntent, setStudioIntent] = useState<'create' | 'clone'>('create');
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [historySubTab, setHistorySubTab] = useState<'generations' | 'actions'>('generations');
   const [actionHistory, setActionHistory] = useState<FormActionItem[]>([]);
   const [coverFitMode, setCoverFitMode] = useState<'cover' | 'contain'>('cover');
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const generationSeq = useRef(0);
 
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -315,7 +302,7 @@ export default function LandingInvitationAiGenerator({
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
   const addFiles = (list: File[]) => {
-    const validImages = list.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type) || f.type.startsWith('image/')).slice(0, 4);
+    const validImages = list.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type)).slice(0, 4);
     if (!validImages.length) {
       setError('Format non supporté. Veuillez sélectionner des photos JPEG, PNG ou WebP.');
       return;
@@ -330,7 +317,13 @@ export default function LandingInvitationAiGenerator({
     setFiles(merged);
     setPreviews(merged.map((f) => URL.createObjectURL(f)));
     setError('');
-    logAction('upload', 'Images ajoutées', `${validImages.length} photo(s) de référence téléversée(s)`);
+    logAction(
+      'upload',
+      studioIntent === 'clone' ? 'Carte ajoutée' : 'Photos ajoutées',
+      studioIntent === 'clone'
+        ? `${validImages.length} vue(s) de la carte à cloner`
+        : `${validImages.length} photo(s) de visages`,
+    );
   };
 
   const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,6 +341,15 @@ export default function LandingInvitationAiGenerator({
     logAction('remove_image', 'Image retirée', `Référence visuelle #${index + 1} retirée`);
   };
 
+  const switchIntent = (next: 'create' | 'clone') => {
+    if (next === studioIntent) return;
+    previews.forEach((url) => URL.revokeObjectURL(url));
+    setFiles([]);
+    setPreviews([]);
+    setStudioIntent(next);
+    setError('');
+  };
+
   const scrollResultIntoView = () => {
     window.setTimeout(() => {
       const el = resultRef.current;
@@ -359,10 +361,18 @@ export default function LandingInvitationAiGenerator({
     }, 80);
   };
 
-  const handleGenerate = async () => {
+  const requestGenerate = () => {
     if (busy) return;
     if (prompt.trim().length < 8) {
-      setError('Décrivez le style souhaité (quelques mots minimum).');
+      setError(
+        studioIntent === 'clone'
+          ? 'Décrivez ce qu’il faut reprendre de la carte (or, date, noms…).'
+          : 'Décrivez la fête en quelques mots (ambiance, couleurs, lieu).',
+      );
+      return;
+    }
+    if (studioIntent === 'clone' && files.length === 0) {
+      setError('Ajoutez une photo nette de la carte à cloner.');
       return;
     }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -371,12 +381,49 @@ export default function LandingInvitationAiGenerator({
     }
     if (!canAffordAiAction(allowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
       setError(
-        `La génération d’invitation consomme ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons. Solde actuel : ${allowance.totalRemaining}.`,
+        `Cette création utilise ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons. Solde actuel : ${allowance.totalRemaining}.`,
+      );
+      setTokenModalOpen(true);
+      return;
+    }
+    setError('');
+    setConfirmOpen(true);
+  };
+
+  const cancelGenerate = () => {
+    generationSeq.current += 1;
+    setBusy(false);
+    setStage(null);
+    setActiveStep(0);
+  };
+
+  const handleGenerate = async () => {
+    if (busy) return;
+    if (prompt.trim().length < 8) {
+      setError(
+        studioIntent === 'clone'
+          ? 'Décrivez ce qu’il faut reprendre de la carte (or, date, noms…).'
+          : 'Décrivez la fête en quelques mots (ambiance, couleurs, lieu).',
+      );
+      return;
+    }
+    if (studioIntent === 'clone' && files.length === 0) {
+      setError('Ajoutez une photo nette de la carte à cloner.');
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setError('Vous semblez hors ligne. Vérifiez votre connexion puis réessayez.');
+      return;
+    }
+    if (!canAffordAiAction(allowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
+      setError(
+        `Cette création utilise ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons. Solde actuel : ${allowance.totalRemaining}.`,
       );
       setTokenModalOpen(true);
       return;
     }
 
+    const seq = ++generationSeq.current;
     setError('');
     setBusy(true);
     setResult(null);
@@ -384,13 +431,16 @@ export default function LandingInvitationAiGenerator({
     setActiveHistoryId(null);
     setActiveStep(1);
     setStage(
-      files.length
-        ? 'Analyse des visages et du brief…'
-        : embedText
-          ? 'Composition de la carte et de la typographie…'
-          : 'Composition de la carte à partir du brief…',
+      studioIntent === 'clone'
+        ? 'Lecture de la carte à cloner…'
+        : files.length
+          ? 'Analyse des visages et du brief…'
+          : embedText
+            ? 'Composition de la carte et de la typographie…'
+            : 'Composition de la carte à partir du brief…',
     );
     const tick = window.setTimeout(() => {
+      if (seq !== generationSeq.current) return;
       setActiveStep(2);
       setStage(
         embedText
@@ -405,17 +455,19 @@ export default function LandingInvitationAiGenerator({
         files,
         embedText,
       });
+      if (seq !== generationSeq.current) return;
       setResult(data.content);
       setLastStageMeta(data.stage || null);
       setActiveHistoryId(typeof data.historyId === 'string' ? data.historyId : null);
       setAllowance(getAiSimulationAllowance());
       saveAiTemplateDraft(data.content, prompt.trim());
       void fetchAiTemplateComposeHistory().then(setHistory);
-      logAction('generate_success', 'Génération réussie', `Modèle créé pour le brief : « ${prompt.slice(0, 50)}… »`);
+      logAction('generate_success', 'Carte créée', `Invitation composée : « ${prompt.slice(0, 50)}… »`);
       setActiveStep(3);
       setStage(null);
       scrollResultIntoView();
     } catch (err: unknown) {
+      if (seq !== generationSeq.current) return;
       const e = err as { status?: number; message?: string };
       if (e?.status === 402) {
         setTokenModalOpen(true);
@@ -431,13 +483,15 @@ export default function LandingInvitationAiGenerator({
       } else if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         setError('Connexion interrompue. Vérifiez votre accès Internet puis réessayez.');
       } else {
-        setError(e?.message || 'Impossible de générer le modèle. Réessayez dans un instant.');
+        setError(e?.message || 'Impossible de créer la carte. Réessayez dans un instant.');
       }
       setActiveStep(0);
       setStage(null);
     } finally {
       window.clearTimeout(tick);
-      setBusy(false);
+      if (seq === generationSeq.current) {
+        setBusy(false);
+      }
     }
   };
 
@@ -458,7 +512,7 @@ export default function LandingInvitationAiGenerator({
     setActiveHistoryId(null);
     setActiveStep(0);
     setPreviewOpen(false);
-    logAction('reset', 'Réinitialisation', 'Champs et résultat effacés');
+    logAction('reset', 'Aperçu retiré', 'Aperçu retiré');
   };
 
   const openHistoryItem = (item: AiTemplateComposeHistoryItem) => {
@@ -524,15 +578,15 @@ export default function LandingInvitationAiGenerator({
             </span>
             <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 id={`${id}-title`} className="text-sm sm:text-base font-bold text-foreground tracking-tight">
-                  Studio IA — Créateur & Clonage d’invitations
+                <h2 id={`${id}-title`} className="text-sm sm:text-base font-display font-semibold text-foreground tracking-tight">
+                  Invitation
                 </h2>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                  Réalisme 35mm
+                  Carte 9:16
                 </span>
               </div>
               <p className="text-xs text-muted truncate max-w-xl">
-                Brief seul ou photos + brief → invitation 9:16. Déroulez le studio pour créer ou cloner.
+                Décrivez la fête ou déposez une carte à cloner.
               </p>
             </div>
           </div>
@@ -553,7 +607,7 @@ export default function LandingInvitationAiGenerator({
               aria-expanded={false}
               aria-controls={`${id}-body`}
             >
-              Dérouler le Studio IA
+              Ouvrir
             </Button>
           </div>
         </div>
@@ -568,15 +622,15 @@ export default function LandingInvitationAiGenerator({
                 </span>
                 <div className="space-y-0.5 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h2 id={`${id}-title`} className="text-base sm:text-xl font-bold text-foreground tracking-tight">
-                      Studio IA
+                    <h2 id={`${id}-title`} className="text-base sm:text-xl font-display font-semibold text-foreground tracking-tight">
+                      Créer une invitation
                     </h2>
                     <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                      Déroulé
+                      Carte 9:16
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                    Brief seul ou photos + brief. Yeux, sourire et joues restent fidèles aux références.
+                    Décrivez la fête, ou déposez une carte à reproduire. Les visages restent fidèles aux photos.
                   </p>
                 </div>
               </div>
@@ -603,47 +657,12 @@ export default function LandingInvitationAiGenerator({
                   rightIcon={<ChevronUp className="w-4 h-4" />}
                   aria-expanded={true}
                   aria-controls={`${id}-body`}
-                  title="Réduire le Studio IA"
+                  title="Réduire"
                 >
-                  Réduire le Studio
+                  Réduire
                 </Button>
               </div>
             </div>
-
-            <ol className="mt-4 flex flex-wrap gap-2" aria-label="Étapes du studio">
-              {STAGE_STEPS.map((step, index) => {
-                const done = Boolean(result ? index <= 3 : activeStep > index);
-                const isCurrent = busy
-                  ? activeStep === index
-                  : result
-                    ? index === 3
-                    : activeStep === index;
-                return (
-                  <li
-                    key={step.id}
-                    aria-current={isCurrent ? 'step' : undefined}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition',
-                      done && !isCurrent
-                        ? 'bg-primary/15 border-primary/30 text-primary'
-                        : isCurrent
-                          ? 'bg-surface border-primary text-foreground'
-                          : 'bg-surface-muted/60 border-border text-muted',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'w-4 h-4 rounded-full inline-flex items-center justify-center text-xs',
-                        done || isCurrent ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
-                      )}
-                    >
-                      {done && !isCurrent ? <Check className="w-2.5 h-2.5" /> : index + 1}
-                    </span>
-                    {step.label}
-                  </li>
-                );
-              })}
-            </ol>
           </div>
 
           <div
@@ -661,76 +680,55 @@ export default function LandingInvitationAiGenerator({
             onChange={onPickFiles}
           />
 
-          {/* Onglets alignés pour maximiser l'espace */}
           <div
-            className="flex items-center gap-1 p-1 rounded-xl bg-surface-muted/90 border border-border shadow-2xs"
-            role="tablist"
-            aria-label="Sections du générateur IA"
+            role="radiogroup"
+            aria-label="Comment créer la carte"
+            className="grid grid-cols-2 gap-2"
           >
             <button
               type="button"
-              role="tab"
-              aria-selected={formTab === 'form'}
-              onClick={() => setFormTab('form')}
+              role="radio"
+              aria-checked={studioIntent === 'create'}
+              disabled={busy}
+              onClick={() => switchIntent('create')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition touch-manipulation cursor-pointer',
-                formTab === 'form'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-muted hover:text-foreground hover:bg-surface',
+                'min-h-11 px-3 py-2.5 rounded-xl border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                studioIntent === 'create'
+                  ? 'border-primary bg-primary/10 shadow-xs'
+                  : 'border-border bg-surface hover:border-primary/40',
               )}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Formulaire</span>
+              <span className="block text-xs font-bold text-foreground">Décrire une fête</span>
+              <span className="block text-[11px] text-muted mt-0.5">Brief, or, ambiance</span>
             </button>
-
             <button
               type="button"
-              role="tab"
-              aria-selected={formTab === 'modeles'}
-              onClick={() => setFormTab('modeles')}
+              role="radio"
+              aria-checked={studioIntent === 'clone'}
+              disabled={busy}
+              onClick={() => switchIntent('clone')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition touch-manipulation cursor-pointer',
-                formTab === 'modeles'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-muted hover:text-foreground hover:bg-surface',
+                'min-h-11 px-3 py-2.5 rounded-xl border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                studioIntent === 'clone'
+                  ? 'border-primary bg-primary/10 shadow-xs'
+                  : 'border-border bg-surface hover:border-primary/40',
               )}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Modèles de prompt</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={formTab === 'historique'}
-              onClick={() => setFormTab('historique')}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition touch-manipulation cursor-pointer',
-                formTab === 'historique'
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-muted hover:text-foreground hover:bg-surface',
-              )}
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>Historique</span>
-              {(history.length > 0 || actionHistory.length > 0) && (
-                <span className="text-xs px-1.5 py-0.2 rounded-full bg-primary/20 text-foreground ml-0.5 font-bold">
-                  {history.length}
-                </span>
-              )}
+              <span className="block text-xs font-bold text-foreground">Cloner une carte</span>
+              <span className="block text-[11px] text-muted mt-0.5">Photo obligatoire</span>
             </button>
           </div>
 
-          {/* ONGLET 1 : FORMULAIRE DE CRÉATION */}
-          {formTab === 'form' && (
-            <div className="space-y-4 animate-fade-in">
+          <div className="space-y-4">
               <div
                 role="button"
                 tabIndex={busy || files.length >= 4 ? -1 : 0}
                 aria-label={
                   files.length >= 4
                     ? 'Maximum de 4 images atteint'
-                    : 'Ajouter jusqu’à 4 photos optionnelles (JPEG, PNG ou WebP)'
+                    : studioIntent === 'clone'
+                      ? 'Ajouter une photo de la carte à cloner (JPEG, PNG ou WebP)'
+                      : 'Ajouter jusqu’à 4 photos de visages, optionnel (JPEG, PNG ou WebP)'
                 }
                 aria-disabled={busy || files.length >= 4}
                 aria-controls={previews.length ? `${id}-refs` : undefined}
@@ -763,9 +761,15 @@ export default function LandingInvitationAiGenerator({
                 )}
               >
                 <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
-                <p className="text-sm font-bold text-foreground">Photos optionnelles (1 à 4) ou carte à cloner</p>
+                <p className="text-sm font-bold text-foreground">
+                  {studioIntent === 'clone'
+                    ? 'Photo de la carte à reproduire'
+                    : 'Photos de visages (optionnel)'}
+                </p>
                 <p className="text-xs text-muted mt-0.5">
-                  Sans image : carte générée depuis le brief. Avec photos : visages (yeux, sourire, joues) conservés.
+                  {studioIntent === 'clone'
+                    ? 'Une photo nette de l’invitation à cloner. JPEG, PNG ou WebP, jusqu’à 4 vues.'
+                    : 'Sans photo : carte depuis le brief. Avec photos : visages conservés (yeux, sourire, joues).'}
                 </p>
               </div>
 
@@ -798,7 +802,7 @@ export default function LandingInvitationAiGenerator({
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
-                    Brief style ou demande de clonage
+                    {studioIntent === 'clone' ? 'Ce qu’il faut reprendre' : 'Décrivez la fête'}
                   </label>
                   <div className="flex items-center gap-2">
                     {/* Boutons d'action annuler/rétablir */}
@@ -837,7 +841,11 @@ export default function LandingInvitationAiGenerator({
                   value={prompt}
                   disabled={busy}
                   onChange={(e) => updatePromptWithHistory(e.target.value)}
-                  placeholder="Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…"
+                  placeholder={
+                    studioIntent === 'clone'
+                      ? 'Ex. Reprendre l’or et l’ivoire, garder la date en haut, noms en script…'
+                      : 'Ex. Mariage princier, or et ivoire, éclairage naturel, invitation WhatsApp…'
+                  }
                   className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
                 />
 
@@ -871,26 +879,15 @@ export default function LandingInvitationAiGenerator({
                   <span className="min-w-0">
                     <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
                     <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
-                      Noms, date et lieu du brief sont dessinés sur la carte. Aucune photo n’est obligatoire.
+                      Noms, date et lieu du brief sont dessinés sur la carte.
                     </span>
                   </span>
                 </button>
 
-                <div className="flex items-center justify-between text-xs pt-0.5">
-                  <span className="text-muted text-[11px]">Besoin d’inspiration ou d’un modèle clé en main ?</span>
-                  <button
-                    type="button"
-                    onClick={() => setFormTab('modeles')}
-                    className="font-bold text-primary hover:underline text-[11px] inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    Explorer les modèles de prompt →
-                  </button>
-                </div>
               </div>
 
               {error ? (
-                <Alert variant="error" title="Génération interrompue" className="!p-3 text-xs">
+                <Alert variant="error" title="Création interrompue" className="!p-3 text-xs">
                   <p className="break-words">{error}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button
@@ -900,7 +897,7 @@ export default function LandingInvitationAiGenerator({
                       disabled={busy}
                       onClick={() => {
                         setError('');
-                        void handleGenerate();
+                        requestGenerate();
                       }}
                     >
                       Réessayer
@@ -917,8 +914,8 @@ export default function LandingInvitationAiGenerator({
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button
                   type="button"
-                  onClick={handleGenerate}
-                  disabled={busy || prompt.trim().length < 8}
+                  onClick={requestGenerate}
+                  disabled={busy || prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0)}
                   leftIcon={
                     busy ? (
                       <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
@@ -927,7 +924,7 @@ export default function LandingInvitationAiGenerator({
                     )
                   }
                 >
-                  {busy ? 'Génération…' : `Générer mon modèle (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
+                  {busy ? 'Création…' : `Créer la carte (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
                 </Button>
                 {result ? (
                   <Button type="button" variant="secondary" onClick={resetResult} disabled={busy}>
@@ -935,144 +932,121 @@ export default function LandingInvitationAiGenerator({
                   </Button>
                 ) : null}
               </div>
-            </div>
-          )}
 
-          {/* ONGLET 2 : MODÈLES DE PROMPTS */}
-          {formTab === 'modeles' && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="flex items-start justify-between gap-2 p-3 rounded-xl bg-surface-muted/60 border border-border">
-                <div className="text-xs text-muted leading-relaxed">
-                  <span className="font-bold text-foreground">Choisissez un modèle de prompt :</span> Cliquez sur une carte pour charger instantanément la formule testée (mariages, galas, clonage d'invitation).
+              <details className="rounded-xl border border-border bg-surface-muted/40 open:bg-surface">
+                <summary className="min-h-11 px-3.5 py-2.5 text-xs font-bold text-foreground cursor-pointer list-none flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
+                    Voir des exemples
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-muted" aria-hidden />
+                </summary>
+                <div className="px-3 pb-3">
+                  <PromptModelSelector
+                    intent={studioIntent}
+                    onSelectPrompt={(selected) => {
+                      updatePromptWithHistory(selected, 'Exemple de brief appliqué');
+                    }}
+                    selectedPrompt={prompt}
+                    disabled={busy}
+                  />
                 </div>
-                {prompt.trim().length > 0 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setFormTab('form')}
-                    className="shrink-0 text-xs"
-                  >
-                    Retour au form →
-                  </Button>
-                )}
-              </div>
+              </details>
 
-              <PromptModelSelector
-                onSelectPrompt={(selected) => {
-                  updatePromptWithHistory(selected, 'Modèle de prompt sélectionné');
-                }}
-                selectedPrompt={prompt}
-                disabled={busy}
-              />
+              <details className="rounded-xl border border-border bg-surface-muted/40 open:bg-surface">
+                <summary className="min-h-11 px-3.5 py-2.5 text-xs font-bold text-foreground cursor-pointer list-none flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl">
+                  <span className="inline-flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5 text-primary" aria-hidden />
+                    Historique
+                    {history.length > 0 ? (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-foreground font-bold">
+                        {history.length}
+                      </span>
+                    ) : null}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-muted" aria-hidden />
+                </summary>
+                <div className="px-3 pb-3 space-y-3">
+                  <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface border border-border text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setHistorySubTab('generations')}
+                      className={cn(
+                        'flex-1 min-h-11 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
+                        historySubTab === 'generations'
+                          ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                          : 'text-muted hover:text-foreground',
+                      )}
+                    >
+                      Cartes ({history.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHistorySubTab('actions')}
+                      className={cn(
+                        'flex-1 min-h-11 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
+                        historySubTab === 'actions'
+                          ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                          : 'text-muted hover:text-foreground',
+                      )}
+                    >
+                      Actions ({actionHistory.length})
+                    </button>
+                  </div>
 
-              {prompt.trim().length > 0 && (
-                <div className="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/25">
-                  <p className="text-xs font-semibold text-foreground line-clamp-1 pr-2">
-                    ✓ Modèle appliqué dans votre formulaire
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => setFormTab('form')}
-                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                  >
-                    Aller au formulaire
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ONGLET 3 : HISTORIQUE (GÉNÉRATIONS & JOURNAL D'ACTIONS) */}
-          {formTab === 'historique' && (
-            <div className="space-y-3 animate-fade-in">
-              {/* Sélecteur secondaire de sous-onglet */}
-              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface border border-border text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => setHistorySubTab('generations')}
-                  className={cn(
-                    'flex-1 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
-                    historySubTab === 'generations'
-                      ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
-                      : 'text-muted hover:text-foreground',
+                  {historySubTab === 'generations' && (
+                    <AiTemplateComposeHistoryList
+                      items={history}
+                      activeId={activeHistoryId}
+                      onOpen={openHistoryItem}
+                      className="pt-1"
+                      listClassName="max-h-72 sm:max-h-80"
+                    />
                   )}
-                >
-                  Générations IA ({history.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHistorySubTab('actions')}
-                  className={cn(
-                    'flex-1 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
-                    historySubTab === 'actions'
-                      ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  Actions récentes ({actionHistory.length})
-                </button>
-              </div>
 
-              {/* Sous-vue 1 : Générations IA sauvegardées */}
-              {historySubTab === 'generations' && (
-                <AiTemplateComposeHistoryList
-                  items={history}
-                  activeId={activeHistoryId}
-                  onOpen={(item) => {
-                    openHistoryItem(item);
-                    setFormTab('form');
-                  }}
-                  className="pt-1"
-                  listClassName="max-h-72 sm:max-h-80"
-                />
-              )}
-
-              {/* Sous-vue 2 : Journal d'actions de création */}
-              {historySubTab === 'actions' && (
-                <div className="space-y-2 max-h-72 sm:max-h-80 overflow-y-auto overscroll-contain pr-1">
-                  {actionHistory.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-muted border border-dashed border-border rounded-xl">
-                      <Clock className="w-5 h-5 mx-auto mb-1 text-muted/60" />
-                      Aucune action enregistrée pour cette session.
-                    </div>
-                  ) : (
-                    actionHistory.map((act) => (
-                      <div
-                        key={act.id}
-                        className="flex items-start justify-between gap-2 p-2.5 rounded-xl border border-border bg-surface shadow-2xs text-xs"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-foreground">{act.label}</span>
-                            <span className="text-xs text-muted font-mono">{act.time}</span>
-                          </div>
-                          {act.detail && (
-                            <p className="text-[11px] text-muted line-clamp-1 mt-0.5">{act.detail}</p>
-                          )}
+                  {historySubTab === 'actions' && (
+                    <div className="space-y-2 max-h-72 sm:max-h-80 overflow-y-auto overscroll-contain pr-1">
+                      {actionHistory.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-muted border border-dashed border-border rounded-xl">
+                          <Clock className="w-5 h-5 mx-auto mb-1 text-muted/60" />
+                          Aucune action enregistrée pour cette session.
                         </div>
-
-                        {act.snapshotPrompt && act.snapshotPrompt !== prompt && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updatePromptWithHistory(act.snapshotPrompt!, 'Rétablissement depuis action');
-                              setFormTab('form');
-                            }}
-                            className="shrink-0 text-xs font-bold text-primary hover:underline px-2 py-1 rounded bg-primary/10 border border-primary/20"
-                            title="Rétablir ce prompt dans le formulaire"
+                      ) : (
+                        actionHistory.map((act) => (
+                          <div
+                            key={act.id}
+                            className="flex items-start justify-between gap-2 p-2.5 rounded-xl border border-border bg-surface shadow-2xs text-xs"
                           >
-                            Rétablir
-                          </button>
-                        )}
-                      </div>
-                    ))
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-foreground">{act.label}</span>
+                                <span className="text-xs text-muted font-mono">{act.time}</span>
+                              </div>
+                              {act.detail && (
+                                <p className="text-[11px] text-muted line-clamp-1 mt-0.5">{act.detail}</p>
+                              )}
+                            </div>
+
+                            {act.snapshotPrompt && act.snapshotPrompt !== prompt && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updatePromptWithHistory(act.snapshotPrompt!, 'Rétablissement depuis action');
+                                }}
+                                className="shrink-0 min-h-11 text-xs font-bold text-primary hover:underline px-2 py-1 rounded bg-primary/10 border border-primary/20"
+                                title="Rétablir ce brief"
+                              >
+                                Rétablir
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              </details>
             </div>
-          )}
         </div>
 
         {/* Preview rail */}
@@ -1081,49 +1055,11 @@ export default function LandingInvitationAiGenerator({
           className="bg-surface-muted/35 p-4 sm:p-6 flex flex-col xl:min-h-[min(80vh,48rem)]"
           aria-live="polite"
         >
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="mb-3">
             <p className="text-xs font-bold text-foreground inline-flex items-center gap-1.5">
               <ImageIcon className="w-3.5 h-3.5 text-primary" />
-              Aperçu du résultat
+              Votre carte
             </p>
-            {previewTemplate ? (
-              <div className="flex items-center gap-1.5">
-                {/* Bouton pour inspecter l'image HD originale sans aucune découpe */}
-                {generatedImageUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleDownloadGenerated()}
-                    disabled={downloading}
-                    className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-11 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs disabled:opacity-60"
-                    title="Télécharger l’image générée"
-                  >
-                    {downloading ? (
-                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin motion-reduce:animate-none" aria-hidden />
-                    ) : (
-                      <Download className="w-3.5 h-3.5 text-primary" aria-hidden />
-                    )}
-                    <span className="hidden sm:inline">Télécharger</span>
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setLightboxOpen(true)}
-                  className="text-xs font-bold text-foreground inline-flex items-center gap-1 min-h-11 px-2.5 rounded-lg border border-border bg-surface hover:bg-surface-muted touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs"
-                  title="Voir l'image cover entière sans aucun texte ni recadrage"
-                >
-                  <ZoomIn className="w-3.5 h-3.5 text-primary" aria-hidden />
-                  <span className="hidden sm:inline">Plein format</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen(true)}
-                  className="text-xs font-bold text-primary inline-flex items-center gap-1 min-h-11 px-2.5 rounded-lg border border-primary/20 bg-primary/10 hover:bg-primary/20 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" aria-hidden />
-                  Agrandir
-                </button>
-              </div>
-            ) : null}
           </div>
 
           {previewTemplate ? (
@@ -1162,7 +1098,7 @@ export default function LandingInvitationAiGenerator({
                   )}
                 >
                   <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                  <span>Cover pure</span>
+                  <span>Image seule</span>
                 </button>
                 <button
                   type="button"
@@ -1181,7 +1117,7 @@ export default function LandingInvitationAiGenerator({
                 </button>
               </div>
 
-              {/* Contrôle de cadrage : Cover (remplit 9:16) ou Entière (contain sans rogner) */}
+              {/* Cadrage : remplir le cadre 9:16 ou voir toute l’image */}
               {(previewTab === 'card' || previewTab === 'artwork') && (
                 <div className="flex items-center justify-between px-1 text-[11px] text-muted">
                   <span>Ajustement :</span>
@@ -1194,7 +1130,7 @@ export default function LandingInvitationAiGenerator({
                         coverFitMode === 'cover' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
                       )}
                     >
-                      Cover 9:16
+                      Remplir le cadre
                     </button>
                     <button
                       type="button"
@@ -1203,9 +1139,9 @@ export default function LandingInvitationAiGenerator({
                         'min-h-11 px-3 rounded text-xs font-semibold transition cursor-pointer',
                         coverFitMode === 'contain' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
                       )}
-                      title="Affiche 100% de l'image originale sans aucune découpe"
+                      title="Affiche toute l’image, sans découpe"
                     >
-                      Entière (sans découpe)
+                      Toute l’image
                     </button>
                   </div>
                 </div>
@@ -1213,16 +1149,21 @@ export default function LandingInvitationAiGenerator({
 
               {/* Vue 1 : Carte d'invitation complète */}
               {previewTab === 'card' && (
-                <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  aria-label="Agrandir la carte"
+                >
                   <LandingInvitationPreview
                     template={previewTemplate}
                     showOnlyBackground={resultEmbedText}
                     showCaption={false}
                     fitMode={coverFitMode}
                     aspectRatio="9/16"
-                    className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)]"
+                    className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)] pointer-events-none"
                   />
-                </div>
+                </button>
               )}
 
               {/* Vue 2 : Illustration IA pure (sans texte, pour apprécier le photoréalisme) */}
@@ -1240,7 +1181,7 @@ export default function LandingInvitationAiGenerator({
                     <p className="text-[11px] text-muted">
                       {resultEmbedText
                         ? 'Image finale avec typographie incrustée : noms, date et lieu font partie du visuel.'
-                        : 'Illustration HD d’origine sans superposition : fidélité des visages, grain 35 mm et dorures.'}
+                        : 'Image seule, sans textes superposés : visages, or et matières tels que composés.'}
                     </p>
                   </div>
                 </div>
@@ -1253,7 +1194,7 @@ export default function LandingInvitationAiGenerator({
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-muted uppercase tracking-wider">
-                          Palette harmonique détectée
+                          Couleurs de la carte
                         </span>
                         <span className="text-xs text-muted">Cliquez pour copier</span>
                       </div>
@@ -1286,7 +1227,7 @@ export default function LandingInvitationAiGenerator({
                   {elements.length > 0 && (
                     <div className="space-y-1.5 pt-2 border-t border-border/60">
                       <span className="text-xs font-bold text-muted uppercase tracking-wider">
-                        Éléments d’invitation générés ({elements.length})
+                        Textes de la carte ({elements.length})
                       </span>
                       <ul className="space-y-1 max-h-32 overflow-y-auto overscroll-contain pr-1">
                         {elements.map((el, i) => (
@@ -1343,9 +1284,6 @@ export default function LandingInvitationAiGenerator({
                     {downloading ? 'Téléchargement…' : 'Télécharger l’image'}
                   </Button>
                 ) : null}
-                <Button type="button" variant="secondary" onClick={() => setPreviewOpen(true)} fullWidth>
-                  Voir l’aperçu large
-                </Button>
               </div>
             </div>
           ) : (
@@ -1353,16 +1291,10 @@ export default function LandingInvitationAiGenerator({
               <div className="w-14 h-14 rounded-2xl bg-surface border border-border flex items-center justify-center shadow-2xs">
                 <Sparkles className="w-6 h-6 text-primary/60" aria-hidden />
               </div>
-              <p className="text-sm font-semibold text-foreground">En attente de génération</p>
+              <p className="text-sm font-semibold text-foreground">Votre carte apparaîtra ici</p>
               <p className="text-xs text-muted leading-relaxed max-w-[16rem]">
-                L’invitation complète (fond + textes + RSVP) s’affichera ici, comme dans le catalogue.
+                Décrivez la fête ou déposez une carte à cloner, puis créez l’invitation.
               </p>
-              <Link
-                href="/#simulateur-ia"
-                className="text-xs font-semibold text-primary hover:underline min-h-10 inline-flex items-center px-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-              >
-                Simulation budget IA →
-              </Link>
             </div>
           )}
         </aside>
@@ -1370,102 +1302,49 @@ export default function LandingInvitationAiGenerator({
     </div>
   )}
 
-      {/* Modale d'inspection de l'image originale HD (Lightbox 100% sans découpe) */}
-      {previewTemplate && (
-        <Modal
-          open={lightboxOpen}
-          onClose={() => setLightboxOpen(false)}
-          title="Image Cover originale IA (Plein format)"
-          description="Visualisation 100% intégrale de l'illustration en résolution originale, sans rognage ni texte masquant."
-          size="xl"
-          footer={
-            <div className="flex w-full flex-col-reverse sm:flex-row gap-2 sm:justify-between items-center">
-              <span className="text-xs text-muted">
-                Format portrait 9:16 • Rendu ultra-réaliste
-              </span>
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="secondary" onClick={() => setLightboxOpen(false)}>
-                  Fermer
-                </Button>
-                {generatedImageUrl ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => void handleDownloadGenerated()}
-                      disabled={downloading}
-                      leftIcon={
-                        downloading ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
-                        ) : (
-                          <Download className="w-3.5 h-3.5" />
-                        )
-                      }
-                    >
-                      Télécharger
-                    </Button>
-                    <a
-                      href={generatedImageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary-hover transition"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Ouvrir en plein écran
-                    </a>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          }
-        >
-          <div className="flex flex-col items-center justify-center p-2 sm:p-4 bg-black/95 rounded-2xl overflow-hidden min-h-[300px]">
-            {generatedImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={generatedImageUrl}
-                alt="Image de couverture originale générée par IA"
-                className="max-h-[70vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
-              />
-            ) : (
-              <div className="text-white/60 text-xs text-center p-6">
-                Aucune image d'arrière-plan détectée.
-              </div>
-            )}
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Créer la carte"
+        description={`Cette création utilise ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons. Les photos servent uniquement à composer votre carte — elles ne sont pas publiées.`}
+        size="sm"
+        footer={
+          <div className="flex w-full flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <Button type="button" variant="secondary" onClick={() => setConfirmOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setConfirmOpen(false);
+                void handleGenerate();
+              }}
+            >
+              Créer la carte
+            </Button>
           </div>
-        </Modal>
-      )}
+        }
+      >
+        <p className="text-sm text-muted leading-relaxed">
+          {studioIntent === 'clone'
+            ? 'La photo de votre carte guide le rendu. Vous pourrez encore ajuster textes et RSVP ensuite.'
+            : 'Le brief et les photos de visages, s’il y en a, composent l’invitation. Vous pourrez tout ajuster ensuite.'}
+        </p>
+      </Modal>
 
       <Modal
         open={previewOpen && Boolean(previewTemplate)}
         onClose={() => setPreviewOpen(false)}
-        title="Aperçu de votre invitation IA"
-        description="Rendu proche de l’éditeur. Vous pourrez tout ajuster dans le studio."
+        title="Votre invitation"
+        description="Même carte, plus grande. Vous pourrez tout ajuster ensuite."
         size="xl"
         footer={
           <div className="flex w-full flex-col-reverse sm:flex-row gap-2 sm:justify-end">
             <Button type="button" variant="secondary" onClick={() => setPreviewOpen(false)}>
               Fermer
             </Button>
-            {generatedImageUrl ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => void handleDownloadGenerated()}
-                disabled={downloading}
-                leftIcon={
-                  downloading ? (
-                    <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )
-                }
-              >
-                Télécharger
-              </Button>
-            ) : null}
             <Button type="button" onClick={continueToStudio} rightIcon={<ArrowRight className="w-4 h-4" />}>
-              {user ? 'Éditer dans le studio' : 'Continuer et éditer'}
+              {user ? 'Ouvrir dans le studio' : 'Continuer et éditer'}
             </Button>
           </div>
         }
@@ -1493,7 +1372,7 @@ export default function LandingInvitationAiGenerator({
                 )}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Cover pure</span>
+                  <span>Image seule</span>
               </button>
             </div>
             <div className="rounded-2xl border border-border overflow-hidden bg-surface-muted/30 p-2 sm:p-4 flex justify-center">
@@ -1521,6 +1400,7 @@ export default function LandingInvitationAiGenerator({
         embedText={embedText}
         hasReferences={files.length > 0}
         stageHint={stage}
+        onCancel={cancelGenerate}
       />
     </section>
   );
