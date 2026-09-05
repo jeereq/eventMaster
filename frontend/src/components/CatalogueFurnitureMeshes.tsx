@@ -660,6 +660,7 @@ export function CatalogueColumn({
   selected,
   pickable,
   square = false,
+  fluted = false,
 }: {
   w: number;
   d: number;
@@ -668,6 +669,7 @@ export function CatalogueColumn({
   selected: boolean;
   pickable: boolean;
   square?: boolean;
+  fluted?: boolean;
 }) {
   const r = Math.min(w, d) / 2;
   const raycast = pickable ? undefined : () => null;
@@ -682,9 +684,20 @@ export function CatalogueColumn({
       <mesh position={[0, height / 2, 0]} castShadow raycast={raycast}>
         {square
           ? <boxGeometry args={[r * 1.7, height * 0.88, r * 1.7]} />
-          : <cylinderGeometry args={[r * 0.92, r, height * 0.88, 24]} />}
+          : <cylinderGeometry args={[r * 0.92, r, height * 0.88, fluted ? 32 : 24]} />}
         <Mat color={selected ? '#c7d2fe' : '#ffffff'} map={map} roughness={0.82} />
       </mesh>
+      {fluted && !square
+        ? Array.from({ length: 12 }).map((_, i) => {
+            const a = (i / 12) * Math.PI * 2;
+            return (
+              <mesh key={i} position={[Math.cos(a) * r * 0.9, height / 2, Math.sin(a) * r * 0.9]} castShadow raycast={raycast}>
+                <cylinderGeometry args={[r * 0.07, r * 0.075, height * 0.82, 8]} />
+                <Mat color={selected ? '#c7d2fe' : '#f5f5f4'} map={map} roughness={0.7} />
+              </mesh>
+            );
+          })
+        : null}
       {/* Chapiteau */}
       <mesh position={[0, height - 0.08, 0]} castShadow raycast={raycast}>
         {square ? <boxGeometry args={[r * 2.15, 0.14, r * 2.15]} /> : <cylinderGeometry args={[r * 1.3, r * 1.15, 0.14, 24]} />}

@@ -45,13 +45,15 @@ export type SeatMaterial =
   | 'suede'
   | 'mesh'
   | 'rattan';
-export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
+export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle' | 'longBanquet';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
-export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts' | 'couvertStyle' | 'hasCenterpiece';
+export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts' | 'couvertStyle' | 'hasCenterpiece' | 'centerpieceStyle';
 export type StageShape = 'rect' | 'semiCircle';
-export type RoofStyle = 'flat' | 'tentSwag';
-export type FloorDecalKind = 'rose' | 'butterfly' | 'custom';
+export type RoofStyle = 'flat' | 'tentSwag' | 'gabled' | 'coffered';
+export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
+export type CenterpieceStyle = 'floral' | 'greeneryRunner' | 'candleCluster';
+export type StageRoofStyle = 'none' | 'gabled';
 
 export type RoomOutlineShape =
   | 'rectangle'
@@ -70,13 +72,13 @@ export type RoomOutlineShape =
   | 'trapezoid'
   | 'stadium'
   | 'cross';
-export type ColumnShape = 'round' | 'square';
+export type ColumnShape = 'round' | 'square' | 'fluted';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
 
 /** Type de zone au sol (piste, VIP, moquette…). */
 export type ZoneKind = 'dance' | 'vip' | 'buffet' | 'carpet' | 'custom';
 /** Matériau de surface pour zones / moquettes. */
-export type ZoneMaterial = 'wood' | 'carpet' | 'vinyl' | 'led' | 'marble' | 'concrete' | 'parquet' | 'epoxy';
+export type ZoneMaterial = 'wood' | 'carpet' | 'vinyl' | 'led' | 'marble' | 'concrete' | 'parquet' | 'epoxy' | 'grass' | 'gravel' | 'brick';
 
 /** Styles de texture murale pour le rendu WebGL. */
 export type WallTextureStyle =
@@ -322,7 +324,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs' | 'balcony' | 'arch' | 'partition' | 'decal' | 'pedestal';
+    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs' | 'balcony' | 'arch' | 'partition' | 'decal' | 'pedestal' | 'stringLight' | 'fountain' | 'gazebo' | 'djBooth' | 'screen';
     x: number;
     y: number;
     w: number;
@@ -378,6 +380,8 @@ export interface RoomLayoutBlueprint {
     decalKind?: FloorDecalKind;
     /** Piédestal floral : colonne blanche ou or. */
     pedestalStyle?: PedestalStyle;
+    /** Toit de scène (amphithéâtre jardin). */
+    stageRoof?: StageRoofStyle;
     /** Style de lustre / suspension au plafond. */
     chandelierStyle?: ChandelierFixtureStyle;
     /** Rayon de diffusion de la lumière (en % ou mètres). */
@@ -411,6 +415,8 @@ export interface RoomLayoutBlueprint {
         couvertStyle?: 'classic' | 'gold' | 'festive';
         /** Centre de table (vase or + bouquet). */
         hasCenterpiece?: boolean;
+        /** Style du centre : bouquet haut, runner verdure, ou grappe de bougies. */
+        centerpieceStyle?: CenterpieceStyle;
         x: number;
         y: number;
         locked?: boolean;
@@ -884,6 +890,11 @@ export function createBlueprintFixture(
     partition: { x: 28, y: 40, w: 36, h: 16, label: 'Cloison basse' },
     decal: { x: 38, y: 38, w: 16, h: 16, label: 'Motif au sol' },
     pedestal: { x: 20, y: 78, w: 5, h: 5, label: 'Piédestal floral' },
+    stringLight: { x: 18, y: 18, w: 64, h: 64, label: 'Guirlandes Edison' },
+    fountain: { x: 42, y: 40, w: 16, h: 16, label: 'Fontaine' },
+    gazebo: { x: 36, y: 36, w: 28, h: 28, label: 'Gloriette' },
+    djBooth: { x: 36, y: 4, w: 28, h: 10, label: 'Régie DJ' },
+    screen: { x: 38, y: 4, w: 24, h: 6, label: 'Écran' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -903,6 +914,11 @@ export function createBlueprintFixture(
       kind === 'partition' ? '#c4a4a4' :
       kind === 'decal' ? '#dcaeae' :
       kind === 'pedestal' ? '#f8fafc' :
+      kind === 'stringLight' ? '#fbbf24' :
+      kind === 'fountain' ? '#94a3b8' :
+      kind === 'gazebo' ? '#f8fafc' :
+      kind === 'djBooth' ? '#1c1917' :
+      kind === 'screen' ? '#0f172a' :
       undefined,
     flowerType: kind === 'arch' || kind === 'pedestal' ? 'rose' as FlowerType : kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'arch' || kind === 'pedestal' ? '#f4e8e4' : kind === 'flower' ? '#e11d48' : undefined,
@@ -924,6 +940,11 @@ export function createBlueprintFixture(
       kind === 'partition' ? 0.92 :
       kind === 'pedestal' ? 1.15 :
       kind === 'decal' ? 0.02 :
+      kind === 'stringLight' ? 3.4 :
+      kind === 'fountain' ? 1.6 :
+      kind === 'gazebo' ? 3.2 :
+      kind === 'djBooth' ? 1.1 :
+      kind === 'screen' ? 2.4 :
       undefined,
     steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
@@ -939,7 +960,7 @@ export function createBlueprintFixture(
     hasGoldBorder: kind === 'aisle' ? true : undefined,
     hasSideLanterns: kind === 'aisle' ? true : undefined,
     hasPetals: kind === 'aisle' ? true : undefined,
-    chandelierStyle: kind === 'chandelier' ? 'crystalCascade' : undefined,
+    chandelierStyle: kind === 'chandelier' ? 'crystalCascade' : kind === 'stringLight' ? 'fairyCanopy' : undefined,
     lightRadius: kind === 'chandelier' ? 25 : undefined,
     lightWarmth: kind === 'chandelier' ? 'gold' : undefined,
     lightIntensity: kind === 'chandelier' ? 85 : undefined,
@@ -1187,9 +1208,12 @@ export const zoneMaterialLabels: Record<ZoneMaterial, string> = {
   led: 'Piste LED',
   marble: 'Marbre',
   concrete: 'Béton',
-  parquet: 'Parquet',
-  epoxy: 'Résine',
-};
+    parquet: 'Parquet',
+    epoxy: 'Résine',
+    grass: 'Gazon',
+    gravel: 'Gravier',
+    brick: 'Brique',
+  };
 
 export function defaultRoomOutline(shape: RoomOutlineShape = 'rectangle'): NonNullable<RoomLayoutBlueprint['roomOutline']> {
   return {
@@ -1899,6 +1923,9 @@ export function resolveZonePreviewBackground(
       concrete: 'rgba(156,163,175,0.65)',
       parquet: 'rgba(196,160,106,0.6)',
       epoxy: 'rgba(203,213,225,0.7)',
+      grass: 'rgba(77,124,63,0.6)',
+      gravel: 'rgba(120,113,108,0.65)',
+      brick: 'rgba(180,83,9,0.6)',
     };
     return tones[zone.material];
   }
@@ -2686,6 +2713,375 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     build: (p) => composeTemplate('tent-garden', 'TENT', 'octagon', { tableCount: 6, tableShape: 'round', ...p }, 'grid'),
   },
   {
+    id: 'grand-hall-classical',
+    name: 'Grand hall — colonnades',
+    description: 'Colonnes cannelées, tables mixtes, chaises sombres et bougies',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'grand-hall-classical',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 10, tableShape: 'round', seatsPerTable: p?.seatsPerTable ?? 8, chairType: 'FOLDING', ...p },
+        'banquet',
+      );
+      const furniture = next.furniture.map((item, index) =>
+        item.kind === 'table'
+          ? {
+            ...item,
+            shape: index % 3 === 0 ? 'rectangular' as const : 'round' as const,
+            capacity: index % 3 === 0 ? 12 : 8,
+            chairType: 'FOLDING' as const,
+            seatMaterial: 'wood' as const,
+            tableSurface: 'linen' as const,
+            tableColor: '#faf7f2',
+            hasCenterpiece: true,
+            centerpieceStyle: (index % 3 === 0 ? 'greeneryRunner' : 'candleCluster') as CenterpieceStyle,
+            hasCouverts: true,
+          }
+          : item,
+      );
+      return refreshBlueprintMetadata({
+        ...next,
+        furniture,
+        fixtures: [
+          { ...createBlueprintFixture('column'), id: makeLayoutId('column'), x: 12, y: 18, columnShape: 'fluted', color: '#d6d3d1' },
+          { ...createBlueprintFixture('column'), id: makeLayoutId('column'), x: 12, y: 42, columnShape: 'fluted', color: '#d6d3d1' },
+          { ...createBlueprintFixture('column'), id: makeLayoutId('column'), x: 12, y: 66, columnShape: 'fluted', color: '#d6d3d1' },
+          { ...createBlueprintFixture('column'), id: makeLayoutId('column'), x: 85, y: 18, columnShape: 'fluted', color: '#d6d3d1' },
+          { ...createBlueprintFixture('column'), id: makeLayoutId('column'), x: 85, y: 42, columnShape: 'fluted', color: '#d6d3d1' },
+          { ...createBlueprintFixture('column'), id: makeLayoutId('column'), x: 85, y: 66, columnShape: 'fluted', color: '#d6d3d1' },
+          { ...createBlueprintFixture('chandelier'), id: makeLayoutId('chandelier'), x: 46, y: 32, chandelierStyle: 'candleCandelabra', lightWarmth: 'candle' },
+          { ...createBlueprintFixture('chandelier'), id: makeLayoutId('chandelier'), x: 46, y: 58, chandelierStyle: 'candleCandelabra', lightWarmth: 'candle' },
+        ],
+        metadata: {
+          ...next.metadata,
+          floorType: 'pierre',
+          floorColor: '#d6d3d1',
+          lightingPreset: 'banquet',
+          wallPaintColor: '#f5f0e8',
+        },
+      });
+    },
+  },
+  {
+    id: 'garden-dusk-reception',
+    name: 'Jardin — crépuscule',
+    description: 'Pelouse, piste bois, guirlandes et chaises pliantes crème',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'garden-dusk-reception',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 8, tableShape: 'round', seatsPerTable: 8, chairType: 'FOLDING', ...p },
+        'circle',
+      );
+      const furniture = [
+        ...next.furniture.map((item) =>
+          item.kind === 'table'
+            ? {
+              ...item,
+              chairType: 'FOLDING' as const,
+              seatMaterial: 'wood' as const,
+              tableSurface: 'linen' as const,
+              tableColor: '#faf7f2',
+              hasCenterpiece: true,
+              centerpieceStyle: 'candleCluster' as const,
+              hasCouverts: true,
+            }
+            : item,
+        ),
+        {
+          ...createBlueprintZone('Piste', 1, { zoneKind: 'dance', material: 'wood', w: 28, h: 22 }),
+          x: 36,
+          y: 38,
+        },
+        {
+          ...createBlueprintZone('Terrasse brique', 2, { zoneKind: 'custom', material: 'brick', w: 22, h: 16, color: '#b45309' }),
+          x: 6,
+          y: 72,
+        },
+        {
+          ...createBlueprintZone('Allée gravier', 3, { zoneKind: 'custom', material: 'gravel', w: 70, h: 8, color: '#a8a29e' }),
+          x: 15,
+          y: 18,
+        },
+      ];
+      return refreshBlueprintMetadata({
+        ...next,
+        furniture,
+        fixtures: [
+          { ...createBlueprintFixture('stringLight'), id: makeLayoutId('stringLight') },
+          { ...createBlueprintFixture('stage'), id: makeLayoutId('stage'), x: 8, y: 28, w: 18, h: 16, stageShape: 'semiCircle', material: 'concrete', color: '#a8a29e', heightM: 0.28 },
+        ],
+        metadata: {
+          ...next.metadata,
+          floorType: 'herbe',
+          floorColor: '#4d7c3f',
+          lightingPreset: 'dusk',
+        },
+      });
+    },
+  },
+  {
+    id: 'night-banquet-edison',
+    name: 'Banquet de nuit — Edison',
+    description: 'Tables longues, runner verdure, Napoleon blanc et ciel nuit',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'night-banquet-edison',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 4, tableShape: 'rectangular', seatsPerTable: 14, chairType: 'BANQUET', ...p },
+        'longBanquet',
+      );
+      const furniture = next.furniture.map((item, index) =>
+        item.kind === 'table'
+          ? {
+            ...item,
+            shape: index === 0 ? 'oval' as const : 'rectangular' as const,
+            capacity: index === 0 ? 10 : 14,
+            chairStyle: 'napoleon' as const,
+            seatMaterial: 'linen' as const,
+            tableSurface: 'linen' as const,
+            tableColor: '#faf7f2',
+            hasCenterpiece: true,
+            centerpieceStyle: 'greeneryRunner' as const,
+            hasCouverts: true,
+          }
+          : item,
+      );
+      return refreshBlueprintMetadata({
+        ...next,
+        furniture,
+        fixtures: [{ ...createBlueprintFixture('stringLight'), id: makeLayoutId('stringLight'), x: 12, y: 12, w: 76, h: 76 }],
+        metadata: {
+          ...next.metadata,
+          floorType: 'gravierFonce',
+          floorColor: '#3f3f46',
+          lightingPreset: 'night',
+        },
+      });
+    },
+  },
+  {
+    id: 'courtyard-gala',
+    name: 'Cour — gala pierre',
+    description: 'Dalles, piste marbre, cross-back et régie DJ',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'courtyard-gala',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 10, tableShape: 'round', seatsPerTable: 8, chairType: 'CROSSBACK', ...p },
+        'grid',
+      );
+      const furniture = [
+        ...next.furniture.map((item) =>
+          item.kind === 'table'
+            ? {
+              ...item,
+              chairType: 'CROSSBACK' as const,
+              chairStyle: 'crossback' as const,
+              seatMaterial: 'linen' as const,
+              tableSurface: 'linen' as const,
+              tableColor: '#faf7f2',
+              hasCenterpiece: true,
+              centerpieceStyle: 'candleCluster' as const,
+              hasCouverts: true,
+            }
+            : item,
+        ),
+        {
+          ...createBlueprintZone('Piste', 1, { zoneKind: 'dance', material: 'marble', w: 26, h: 22 }),
+          x: 37,
+          y: 36,
+        },
+      ];
+      return refreshBlueprintMetadata({
+        ...next,
+        furniture,
+        fixtures: [
+          { ...createBlueprintFixture('djBooth'), id: makeLayoutId('djBooth'), x: 36, y: 4 },
+          { ...createBlueprintFixture('stringLight'), id: makeLayoutId('stringLight') },
+          { ...createBlueprintFixture('pedestal'), id: makeLayoutId('pedestal'), x: 20, y: 86, w: 8, h: 8, label: 'Vases' },
+          { ...createBlueprintFixture('pedestal'), id: makeLayoutId('pedestal'), x: 72, y: 86, w: 8, h: 8, label: 'Vases' },
+        ],
+        metadata: {
+          ...next.metadata,
+          floorType: 'pierreModulaire',
+          lightingPreset: 'day',
+        },
+      });
+    },
+  },
+  {
+    id: 'fountain-gala',
+    name: 'Gala — fontaine & gloriettes',
+    description: 'Fontaine centrale, tables en arc, gloriettes et motifs au sol',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'fountain-gala',
+        'BANQUET',
+        'rectangle',
+        { tableCount: 4, tableShape: 'arc', seatsPerTable: p?.seatsPerTable ?? 8, chairType: 'BANQUET', ...p },
+        'circle',
+      );
+      const ring = composeArcRing({ centerX: 50, centerY: 52, radiusPct: 18, segmentCount: 4, tableColor: '#e8d4c8' });
+      const satellites = next.furniture
+        .filter((item): item is Extract<typeof item, { kind: 'table' }> => item.kind === 'table')
+        .slice(0, 4)
+        .map((item, index) => ({
+          ...item,
+          x: 18 + (index % 2) * 56,
+          y: 22 + Math.floor(index / 2) * 50,
+          chairStyle: 'louis' as const,
+          seatMaterial: 'linen' as const,
+          tableColor: '#e8d4c8',
+          hasCenterpiece: true,
+        }));
+      return refreshBlueprintMetadata({
+        ...next,
+        furniture: [...ring, ...satellites],
+        fixtures: [
+          { ...createBlueprintFixture('fountain'), id: makeLayoutId('fountain') },
+          { ...createBlueprintFixture('gazebo'), id: makeLayoutId('gazebo'), x: 8, y: 8, w: 22, h: 22 },
+          { ...createBlueprintFixture('gazebo'), id: makeLayoutId('gazebo'), x: 70, y: 8, w: 22, h: 22 },
+          { ...createBlueprintFixture('gazebo'), id: makeLayoutId('gazebo'), x: 8, y: 68, w: 22, h: 22 },
+          { ...createBlueprintFixture('gazebo'), id: makeLayoutId('gazebo'), x: 70, y: 68, w: 22, h: 22 },
+          { ...createBlueprintFixture('decal'), id: makeLayoutId('decal'), x: 42, y: 18, w: 16, h: 28, decalKind: 'path', color: '#f8fafc' },
+          { ...createBlueprintFixture('stage'), id: makeLayoutId('stage'), x: 30, y: 2, w: 40, h: 10, color: '#1c1917' },
+          { ...createBlueprintFixture('stringLight'), id: makeLayoutId('stringLight') },
+        ],
+        metadata: {
+          ...next.metadata,
+          floorType: 'pierre',
+          lightingPreset: 'dusk',
+        },
+      });
+    },
+  },
+  {
+    id: 'stone-amphitheater-backyard',
+    name: 'Amphi jardin — pierre',
+    description: 'Gradins, lounge orange, scène à pignon et écran',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'trapezoid',
+    build: (p) => {
+      const rows = generateAmphitheaterRows({
+        style: 'romanSemiCircle',
+        tierCount: p?.rowCount ?? 5,
+        seatsPerRow: p?.seatsPerRow ?? 8,
+        chairType: 'ARMCHAIR',
+        chairStyle: 'lounge',
+        seatMaterial: 'suede',
+      });
+      return refreshBlueprintMetadata({
+        version: 1,
+        templateId: 'stone-amphitheater-backyard',
+        roomType: 'AMPHITHEATER',
+        canvas: { widthM: 22, heightM: 18 },
+        roomOutline: defaultRoomOutline('trapezoid'),
+        furniture: rows,
+        fixtures: [
+          { ...createBlueprintFixture('stage'), id: makeLayoutId('stage'), x: 32, y: 4, w: 36, h: 14, material: 'concrete', color: '#a8a29e', stageRoof: 'gabled', heightM: 0.4 },
+          { ...createBlueprintFixture('screen'), id: makeLayoutId('screen'), x: 38, y: 3, w: 24, h: 5 },
+        ],
+        metadata: {
+          totalSeats: rows.reduce((sum, row) => sum + row.seatCount, 0),
+          floorType: 'dallesIrregulieres',
+          lightingPreset: 'day',
+          roofStyle: 'gabled',
+          showRoof: true,
+        },
+      });
+    },
+  },
+  {
+    id: 'circular-auditorium',
+    name: 'Auditorium circulaire',
+    description: 'Bancs concentriques, sol rond et plafond à caissons',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'circle',
+    build: (p) => {
+      const rows = generateAmphitheaterRows({
+        style: 'romanSemiCircle',
+        tierCount: p?.rowCount ?? 6,
+        seatsPerRow: p?.seatsPerRow ?? 16,
+        chairType: 'THEATER',
+        chairStyle: 'modern',
+        seatMaterial: 'wood',
+        aisleSplit: true,
+      });
+      return refreshBlueprintMetadata({
+        version: 1,
+        templateId: 'circular-auditorium',
+        roomType: 'AMPHITHEATER',
+        canvas: { widthM: 24, heightM: 24 },
+        roomOutline: defaultRoomOutline('circle'),
+        furniture: [
+          ...rows,
+          { ...createBlueprintZone('Scène ronde', 1, { zoneKind: 'custom', material: 'concrete', w: 22, h: 22 }), x: 39, y: 40 },
+        ],
+        fixtures: [{ ...createBlueprintFixture('stage'), id: makeLayoutId('stage'), x: 40, y: 42, w: 20, h: 16, material: 'concrete', color: '#cbd5e1', heightM: 0.12 }],
+        metadata: {
+          totalSeats: rows.reduce((sum, row) => sum + row.seatCount, 0),
+          floorType: 'beton',
+          lightingPreset: 'conference',
+          roofStyle: 'coffered',
+          showRoof: true,
+          chandelierType: 'recessed',
+          showChandeliers: true,
+        },
+      });
+    },
+  },
+  {
+    id: 'modern-auditorium',
+    name: 'Auditorium moderne',
+    description: 'Gradins, sièges navy, scène bois courbe et pupitre',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'stadium',
+    build: (p) => {
+      const rows = generateAmphitheaterRows({
+        style: 'tieredSteps',
+        tierCount: p?.rowCount ?? 7,
+        seatsPerRow: p?.seatsPerRow ?? 14,
+        chairType: 'THEATER',
+        seatMaterial: 'velvet',
+      });
+      return refreshBlueprintMetadata({
+        version: 1,
+        templateId: 'modern-auditorium',
+        roomType: 'AMPHITHEATER',
+        canvas: { widthM: 26, heightM: 18 },
+        roomOutline: defaultRoomOutline('stadium'),
+        furniture: rows,
+        fixtures: [
+          { ...createBlueprintFixture('stage'), id: makeLayoutId('stage'), x: 22, y: 4, w: 56, h: 12, stageShape: 'semiCircle', material: 'wood', color: '#d6c4b0', heightM: 0.32 },
+          { ...createBlueprintFixture('podium'), id: makeLayoutId('podium'), x: 40, y: 8, color: '#1c1917' },
+        ],
+        metadata: {
+          totalSeats: rows.reduce((sum, row) => sum + row.seatCount, 0),
+          floorType: 'moquette',
+          floorColor: '#64748b',
+          lightingPreset: 'conference',
+          roofStyle: 'coffered',
+          showRoof: true,
+        },
+      });
+    },
+  },
+  {
     id: 'empty-rectangle',
     name: 'Salle rectangle vide',
     description: 'Contour vide à meubler librement',
@@ -2875,6 +3271,7 @@ export function applyTableStyleToAll(
       hasCouverts: fields.includes('hasCouverts') ? source.hasCouverts : item.hasCouverts,
       couvertStyle: fields.includes('couvertStyle') ? source.couvertStyle : item.couvertStyle,
       hasCenterpiece: fields.includes('hasCenterpiece') ? source.hasCenterpiece : item.hasCenterpiece,
+      centerpieceStyle: fields.includes('centerpieceStyle') ? source.centerpieceStyle : item.centerpieceStyle,
     };
   });
   return refreshBlueprintMetadata({ ...blueprint, furniture });
@@ -3913,6 +4310,14 @@ export const stageShapeLabels: Record<StageShape, string> = {
 export const roofStyleLabels: Record<RoofStyle, string> = {
   flat: 'Plat',
   tentSwag: 'Tente drapée',
+  gabled: 'Pignon (jardin)',
+  coffered: 'Caissons',
+};
+
+export const centerpieceStyleLabels: Record<CenterpieceStyle, string> = {
+  floral: 'Bouquet haut',
+  greeneryRunner: 'Runner verdure',
+  candleCluster: 'Bougies',
 };
 
 export const flowerTypeLabels: Record<FlowerType, string> = {
@@ -3991,6 +4396,16 @@ export function getFixtureClass(kind: string): string {
       return 'bg-rose-50/80 border-rose-200 text-rose-800';
     case 'pedestal':
       return 'bg-stone-50 border-stone-300 text-stone-700';
+    case 'stringLight':
+      return 'bg-amber-50 border-amber-300 text-amber-800';
+    case 'fountain':
+      return 'bg-sky-50 border-sky-300 text-sky-800';
+    case 'gazebo':
+      return 'bg-stone-50 border-stone-300 text-stone-700';
+    case 'djBooth':
+      return 'bg-zinc-100 border-zinc-400 text-zinc-800';
+    case 'screen':
+      return 'bg-zinc-900 border-zinc-600 text-zinc-100';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:
@@ -4003,6 +4418,7 @@ export const tableArrangeLabels: Record<TableArrangePreset, string> = {
   banquet: 'Banquet',
   ushape: 'En U',
   circle: 'Cercle',
+  longBanquet: 'Tables longues',
 };
 
 export const arrangeDensityLabels: Record<ArrangeDensity, string> = {
@@ -4091,6 +4507,18 @@ function arrangePositions(
         return { x, y: top + height * (0.08 + t * 0.84) };
       });
     return [...col(leftCount, lx), ...col(rightCount, rx)];
+  }
+
+  if (preset === 'longBanquet') {
+    const cols = count <= 2 ? 1 : count <= 6 ? 2 : 3;
+    const perCol = Math.ceil(count / cols);
+    return Array.from({ length: count }, (_, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = left + ((col + 0.5) / cols) * width;
+      const y = top + ((row + 0.5) / perCol) * height;
+      return { x, y };
+    });
   }
 
   const cols = Math.max(1, Math.ceil(Math.sqrt(count * (width / Math.max(height, 1)))));

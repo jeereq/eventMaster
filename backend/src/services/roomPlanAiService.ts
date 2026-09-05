@@ -28,9 +28,10 @@ const ZONE_KINDS = new Set(['dance', 'vip', 'buffet', 'carpet', 'custom']);
 const FLOOR_TYPES = new Set([
   'parquet', 'marbre', 'moquette', 'carrelage', 'beton', 'herbe',
   'damier', 'terrazzo', 'sable', 'brique', 'bois', 'pierre', 'epoxy',
+  'gravier', 'gravierFonce',
 ]);
 const TABLE_SURFACES = new Set(['wood', 'linen', 'walnut', 'marble', 'darkWood', 'whiteLacquer', 'glass']);
-const ZONE_MATERIALS = new Set(['wood', 'carpet', 'vinyl', 'led', 'marble', 'concrete', 'parquet', 'epoxy']);
+const ZONE_MATERIALS = new Set(['wood', 'carpet', 'vinyl', 'led', 'marble', 'concrete', 'parquet', 'epoxy', 'grass', 'gravel', 'brick']);
 const WALL_TEXTURES = new Set([
   'plaster', 'brick', 'wood', 'concrete', 'wallpaper', 'stone',
   'tadelakt', 'travertine', 'metroTile', 'woodPanel',
@@ -76,6 +77,11 @@ const ITEM_KINDS = new Set([
   'partition',
   'decal',
   'pedestal',
+  'stringLight',
+  'fountain',
+  'gazebo',
+  'djBooth',
+  'screen',
 ]);
 
 export type RoomPlanVisionView = 'top' | 'perspective' | 'unclear';
@@ -100,7 +106,12 @@ export type RoomPlanVisionItemKind =
   | 'arch'
   | 'partition'
   | 'decal'
-  | 'pedestal';
+  | 'pedestal'
+  | 'stringLight'
+  | 'fountain'
+  | 'gazebo'
+  | 'djBooth'
+  | 'screen';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -262,7 +273,7 @@ function parseAppearance(raw: unknown, view: RoomPlanVisionView): RoomPlanVision
   if (tableSurface) appearance.tableSurface = tableSurface;
   const tableColor = parseHexColor(source.tableColor);
   if (tableColor) appearance.tableColor = tableColor;
-  if (source.roofStyle === 'tentSwag' || source.roofStyle === 'flat') {
+  if (source.roofStyle === 'tentSwag' || source.roofStyle === 'flat' || source.roofStyle === 'gabled' || source.roofStyle === 'coffered') {
     appearance.roofStyle = source.roofStyle;
   }
   const curtainColor = parseHexColor(source.curtainColor);
@@ -429,11 +440,11 @@ Champs JSON obligatoires :
     "wallColor": "#rrggbb",
     "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "tableColor": "#rrggbb",
-    "roofStyle": "flat"|"tentSwag",
+    "roofStyle": "flat"|"tentSwag"|"gabled"|"coffered",
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -464,7 +475,8 @@ Règles items :
 - row = rangée de chaises alignées (pas une table ronde). chairStyle + seatMaterial si visibles. louis = Louis XVI, ovalBack = dossier ovale rose, chiavari = Chiavari or.
 - chair = fauteuil isolé seulement, pas les chaises collées à une table.
 - arch = arche florale (fer à cheval / semi-cercle fleuri). partition = cloison basse courbe végétalisée.
-- pedestal = colonne / piédestal carré surmonté d’un bouquet. decal = grand motif peint ou projeté au sol (roses, papillons).
+- pedestal = colonne / piédestal carré surmonté d’un bouquet. decal = grand motif peint ou projeté au sol (roses, papillons, chemin).
+- stringLight = guirlandes Edison entre poteaux. fountain = fontaine. gazebo = gloriette / pergola. djBooth = régie. screen = écran.
 - aisle : aisleStyle seulement si le tapis correspond vraiment (rouge royal, bois, LED…). Sinon color hex seule. hasPetals / hasSideLanterns seulement s’ils sont visibles.
 - stage : stageShape="semiCircle" si plateau en demi-lune / D. roofStyle="tentSwag" si plafond tente drapé. curtainColor si rideaux / tentures murales visibles.
 - zone = piste, VIP, buffet au sol, moquette large. color + material obligatoires si la surface se voit.

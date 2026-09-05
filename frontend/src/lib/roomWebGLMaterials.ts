@@ -1122,6 +1122,26 @@ export function resolveChairVisual(
     base.seatColor = '#f4f4f5';
     base.cushion = false;
   }
+  if (chairType === 'FOLDING' && material === 'wood') {
+    base.frameColor = '#1c1917';
+    base.seatColor = '#f5f0e8';
+    base.cushion = true;
+  }
+  if (style === 'napoleon' && (material === 'linen' || material === 'plastic' || !material)) {
+    base.frameColor = '#f8fafc';
+    base.seatColor = '#f4f4f5';
+    base.cushion = true;
+  }
+  if (style === 'lounge' && (material === 'suede' || material === 'velvet')) {
+    base.seatColor = '#ea580c';
+    base.frameColor = '#171717';
+    base.cushion = true;
+  }
+  if (chairType === 'THEATER' && (material === 'velvet' || material === 'fabric')) {
+    base.seatColor = '#1e3a5f';
+    base.frameColor = '#292524';
+    base.cushion = true;
+  }
   return base;
 }
 
@@ -1134,6 +1154,9 @@ export const ZONE_MATERIAL_COLORS: Record<ZoneMaterial, string> = {
   concrete: '#9ca3af',
   parquet: '#c4a06a',
   epoxy: '#cbd5e1',
+  grass: '#4d7c3f',
+  gravel: '#78716c',
+  brick: '#b45309',
 };
 
 export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
@@ -1256,6 +1279,33 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
       roughness: 0.15,
       metalness: 0.22,
       thicknessM: 0.018,
+    };
+  }
+  if (mat === 'grass') {
+    return {
+      map: loadTiledTexture('/floors/grass.svg', 2, 2),
+      color: '#ffffff',
+      roughness: 0.95,
+      metalness: 0,
+      thicknessM: 0.03,
+    };
+  }
+  if (mat === 'gravel') {
+    return {
+      map: loadTiledTexture('/floors/sable.svg', 1.4, 1.4),
+      color: '#a8a29e',
+      roughness: 0.92,
+      metalness: 0.02,
+      thicknessM: 0.025,
+    };
+  }
+  if (mat === 'brick') {
+    return {
+      map: loadTiledTexture('/floors/brique.svg', 1.6, 1.6),
+      color: '#ffffff',
+      roughness: 0.78,
+      metalness: 0.04,
+      thicknessM: 0.04,
     };
   }
   // led — bandeau piste (ambre / club), pas cyan piscine

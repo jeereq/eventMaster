@@ -53,7 +53,12 @@ export type RoomPlanVisionItemKind =
   | 'arch'
   | 'partition'
   | 'decal'
-  | 'pedestal';
+  | 'pedestal'
+  | 'stringLight'
+  | 'fountain'
+  | 'gazebo'
+  | 'djBooth'
+  | 'screen';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -133,6 +138,11 @@ const FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
   'partition',
   'decal',
   'pedestal',
+  'stringLight',
+  'fountain',
+  'gazebo',
+  'djBooth',
+  'screen',
 ]);
 
 const OUTLINE_SHAPES = new Set<RoomOutlineShape>([
@@ -152,7 +162,7 @@ const TABLE_SURFACES = new Set<TableSurfaceStyle>([
   'wood', 'linen', 'walnut', 'marble', 'darkWood', 'whiteLacquer', 'glass',
 ]);
 const ZONE_MATERIALS = new Set<ZoneMaterial>([
-  'wood', 'carpet', 'vinyl', 'led', 'marble', 'concrete', 'parquet', 'epoxy',
+  'wood', 'carpet', 'vinyl', 'led', 'marble', 'concrete', 'parquet', 'epoxy', 'grass', 'gravel', 'brick',
 ]);
 const WALL_TEXTURES = new Set<WallTextureStyle>([
   'plaster', 'brick', 'wood', 'concrete', 'wallpaper', 'stone',
@@ -189,6 +199,9 @@ const FLOOR_ALIASES: Record<string, FloorType> = {
   sable: 'sable',
   brick: 'brique',
   brique: 'brique',
+  gravel: 'gravier',
+  gravier: 'gravier',
+  gravierFonce: 'gravierFonce',
   stone: 'pierre',
   pierre: 'pierre',
   epoxy: 'epoxy',
@@ -626,8 +639,12 @@ export function applyRoomPlanVisionDraft(
         ? 'custom'
         : observedFloor ?? current.metadata.floorType,
       floorImageFit: usePlanCover ? 'cover' : useFloorTile ? 'tile' : current.metadata.floorImageFit,
-      roofStyle: appearance?.roofStyle === 'tentSwag' ? 'tentSwag' : current.metadata.roofStyle,
-      showRoof: appearance?.roofStyle === 'tentSwag' ? true : current.metadata.showRoof,
+      roofStyle: appearance?.roofStyle === 'tentSwag' || appearance?.roofStyle === 'gabled' || appearance?.roofStyle === 'coffered'
+        ? appearance.roofStyle
+        : current.metadata.roofStyle,
+      showRoof: appearance?.roofStyle === 'tentSwag' || appearance?.roofStyle === 'gabled' || appearance?.roofStyle === 'coffered'
+        ? true
+        : current.metadata.showRoof,
       curtainColor: appearance?.curtainColor ?? current.metadata.curtainColor,
       showCurtains: appearance?.curtainColor ? true : current.metadata.showCurtains,
     },

@@ -37,6 +37,8 @@ export type FloorType =
   | 'sable'
   | 'epoxy'
   | 'brique'
+  | 'gravier'
+  | 'gravierFonce'
   | 'custom';
 
 export type BuiltInRoomThemeId =

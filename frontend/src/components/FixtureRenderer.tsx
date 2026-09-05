@@ -36,6 +36,11 @@ export default function FixtureRenderer({
   const isPartition = fixture.kind === 'partition';
   const isDecal = fixture.kind === 'decal';
   const isPedestal = fixture.kind === 'pedestal';
+  const isStringLight = fixture.kind === 'stringLight';
+  const isFountain = fixture.kind === 'fountain';
+  const isGazebo = fixture.kind === 'gazebo';
+  const isDjBooth = fixture.kind === 'djBooth';
+  const isScreen = fixture.kind === 'screen';
   const isAisle = fixture.kind === 'aisle';
   const isCarpet = fixture.kind === 'carpet';
   const isDoor = fixture.kind === 'door' || fixture.kind === 'entrance';
@@ -96,6 +101,34 @@ export default function FixtureRenderer({
           style={{ background: fixture.decalKind === 'butterfly'
             ? `radial-gradient(circle at 30% 40%, ${tint}, transparent 55%), radial-gradient(circle at 70% 40%, ${tint}, transparent 55%)`
             : `radial-gradient(circle, ${tint}, transparent 70%)` }}
+        />
+        {showLabel && fixture.label ? (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (isStringLight) {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="w-full h-full border border-dashed border-amber-400/70 rounded-[var(--radius-button)] bg-amber-50/40" />
+        {showLabel && fixture.label ? (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (isFountain || isGazebo || isDjBooth || isScreen) {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div
+          className={`w-full h-full border ${isFountain ? 'rounded-full bg-sky-100 border-sky-300' : isGazebo ? 'rounded-[0.4rem] bg-stone-50 border-stone-300' : isScreen ? 'bg-zinc-900 border-zinc-600' : 'bg-zinc-200 border-zinc-400'}`}
         />
         {showLabel && fixture.label ? (
           <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">

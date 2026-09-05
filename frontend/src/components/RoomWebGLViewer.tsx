@@ -66,6 +66,14 @@ import {
   TentSwagRoof,
   FloorDecalMesh,
   SquarePedestalMesh,
+  GreeneryRunnerMesh,
+  CandleClusterMesh,
+  EdisonStringLightMesh,
+  FountainMesh,
+  GazeboMesh,
+  DjBoothMesh,
+  ScreenMesh,
+  GabledStageRoof,
 } from '@/components/roomCelebrationMeshes';
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
@@ -533,11 +541,11 @@ function RoofMesh({
   opacity?: number;
   /** Décalage Y (vue empilée : sommet du dernier étage). */
   baseElevationM?: number;
-  roofStyle?: 'flat' | 'tentSwag';
+  roofStyle?: 'flat' | 'tentSwag' | 'gabled' | 'coffered';
 }) {
   const y = baseElevationM + wallHeightM + 0.04;
   const shapeGeo = useMemo(() => {
-    if (roofStyle === 'tentSwag') return null;
+    if (roofStyle === 'tentSwag' || roofStyle === 'gabled') return null;
     if (!outline || outline.shape === 'rectangle') return null;
     const pts = outlinePolygonPoints(outline);
     if (pts.length < 3) return null;
@@ -563,6 +571,48 @@ function RoofMesh({
         opacity={Math.max(0.72, opacity)}
         baseElevationM={baseElevationM}
       />
+    );
+  }
+
+  if (roofStyle === 'gabled') {
+    return (
+      <group position={[0, y, 0]}>
+        <mesh rotation={[0, 0, 0.28]} position={[0, 0.35, 0]} castShadow>
+          <boxGeometry args={[widthM * 0.62, 0.08, heightM * 0.92]} />
+          <meshStandardMaterial color={color} roughness={0.55} transparent opacity={opacity} />
+        </mesh>
+        <mesh rotation={[0, 0, -0.28]} position={[0, 0.35, 0]} castShadow>
+          <boxGeometry args={[widthM * 0.62, 0.08, heightM * 0.92]} />
+          <meshStandardMaterial color={color} roughness={0.55} transparent opacity={opacity} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (roofStyle === 'coffered') {
+    const cells = 6;
+    return (
+      <group position={[0, y, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[widthM, heightM]} />
+          <meshStandardMaterial color="#1c1917" roughness={0.7} transparent opacity={Math.max(0.7, opacity)} side={THREE.DoubleSide} />
+        </mesh>
+        {Array.from({ length: cells + 1 }).map((_, i) => {
+          const t = (i / cells - 0.5);
+          return (
+            <group key={i}>
+              <mesh position={[t * widthM, -0.06, 0]}>
+                <boxGeometry args={[0.08, 0.12, heightM]} />
+                <meshStandardMaterial color="#292524" roughness={0.45} />
+              </mesh>
+              <mesh position={[0, -0.06, t * heightM]}>
+                <boxGeometry args={[widthM, 0.12, 0.08]} />
+                <meshStandardMaterial color="#292524" roughness={0.45} />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
     );
   }
 
@@ -1263,6 +1313,7 @@ function TableMesh({
   tableSurface,
   hasCouverts = false,
   hasCenterpiece = false,
+  centerpieceStyle = 'floral',
   couvertStyle = 'classic',
   attachedChairs = true,
   rotation,
@@ -1289,6 +1340,7 @@ function TableMesh({
   tableSurface?: import('@/lib/roomLayoutUtils').TableSurfaceStyle;
   hasCouverts?: boolean;
   hasCenterpiece?: boolean;
+  centerpieceStyle?: 'floral' | 'greeneryRunner' | 'candleCluster';
   couvertStyle?: 'classic' | 'gold' | 'festive';
   attachedChairs?: boolean;
   rotation?: number;
@@ -1309,7 +1361,7 @@ function TableMesh({
   );
 
   const size =
-    shape === 'rectangular' ? [1.8, 0.9] :
+    shape === 'rectangular' ? (capacity >= 14 ? [4.4, 0.95] : capacity >= 10 ? [3.2, 0.92] : [1.8, 0.9]) :
     shape === 'oval' ? [1.7, 1.0] :
     shape === 'square' ? [1.2, 1.2] :
     shape === 'cocktail' ? [0.7, 0.7] :
@@ -1355,7 +1407,13 @@ function TableMesh({
       })}
       {hasCenterpiece && shape !== 'cocktail' && shape !== 'highTop' ? (
         <group position={[0, topY, 0]}>
-          <TallCenterpiece selected={selected} />
+          {centerpieceStyle === 'greeneryRunner' ? (
+            <GreeneryRunnerMesh length={Math.max(size[0], size[1]) * 0.72} selected={selected} />
+          ) : centerpieceStyle === 'candleCluster' ? (
+            <CandleClusterMesh selected={selected} />
+          ) : (
+            <TallCenterpiece selected={selected} />
+          )}
         </group>
       ) : null}
       {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
@@ -1613,6 +1671,7 @@ function FixtureMesh({
   stageShape,
   decalKind,
   pedestalStyle,
+  stageRoof,
   widthM,
   roomDepthM,
   selected,
@@ -1637,7 +1696,7 @@ function FixtureMesh({
   stairDirection?: 0 | 90 | 180 | 270;
   stairStyle?: 'straight' | 'open' | 'compact';
   balconySide?: 'north' | 'south' | 'east' | 'west';
-  columnShape?: 'round' | 'square';
+  columnShape?: 'round' | 'square' | 'fluted';
   doorStyle?: DoorStyle;
   doorSwing?: 'left' | 'right' | 'double' | 'sliding' | 'arch';
   hasMat?: boolean;
@@ -1653,8 +1712,9 @@ function FixtureMesh({
   lightIntensity?: number;
   lightRadius?: number;
   stageShape?: 'rect' | 'semiCircle';
-  decalKind?: 'rose' | 'butterfly' | 'custom';
+  decalKind?: 'rose' | 'butterfly' | 'custom' | 'path';
   pedestalStyle?: 'squareWhite' | 'columnGold';
+  stageRoof?: 'none' | 'gabled';
   widthM: number;
   roomDepthM: number;
   selected: boolean;
@@ -1677,6 +1737,11 @@ function FixtureMesh({
     kind === 'arch' ? 2.2 :
     kind === 'partition' ? 0.92 :
     kind === 'pedestal' ? Math.max(0.7, podiumHeightM ?? 1.15) :
+    kind === 'stringLight' ? Math.max(2.4, podiumHeightM ?? 3.4) :
+    kind === 'fountain' ? 1.2 :
+    kind === 'gazebo' ? Math.max(2.4, podiumHeightM ?? 3.2) :
+    kind === 'djBooth' ? 1.1 :
+    kind === 'screen' ? Math.max(1.4, podiumHeightM ?? 2.4) :
     kind === 'decal' ? 0.02 :
     kind === 'carpet' ? 0.06 :
     kind === 'buffet' ? 0.9 :
@@ -1743,6 +1808,7 @@ function FixtureMesh({
           selected={selected}
           pickable={pickable}
           square={columnShape === 'square'}
+          fluted={columnShape === 'fluted'}
         />
       ) : kind === 'flower' ? (
         <CatalogueFlower
@@ -1767,18 +1833,33 @@ function FixtureMesh({
           gold={pedestalStyle === 'columnGold'}
           selected={selected}
         />
+      ) : kind === 'stringLight' ? (
+        <EdisonStringLightMesh w={w} d={d} heightM={height} selected={selected} />
+      ) : kind === 'fountain' ? (
+        <FountainMesh color={baseColor} selected={selected} />
+      ) : kind === 'gazebo' ? (
+        <GazeboMesh w={w} d={d} heightM={height} selected={selected} />
+      ) : kind === 'djBooth' ? (
+        <DjBoothMesh w={w} d={d} color={color ?? '#1c1917'} selected={selected} />
+      ) : kind === 'screen' ? (
+        <ScreenMesh w={w} heightM={height} selected={selected} />
       ) : kind === 'podium' || kind === 'stage' ? (
-        <EventStage
-          w={w}
-          d={d}
-          height={height}
-          steps={stepCount}
-          map={map}
-          baseColor={baseColor}
-          selected={selected}
-          kind={kind === 'podium' ? 'podium' : 'stage'}
-          shape={stageShape ?? 'rect'}
-        />
+        <group>
+          <EventStage
+            w={w}
+            d={d}
+            height={height}
+            steps={stepCount}
+            map={map}
+            baseColor={baseColor}
+            selected={selected}
+            kind={kind === 'podium' ? 'podium' : 'stage'}
+            shape={stageShape ?? 'rect'}
+          />
+          {stageRoof === 'gabled' ? (
+            <GabledStageRoof w={w} d={d} heightM={Math.max(2.2, height + 2)} selected={selected} />
+          ) : null}
+        </group>
       ) : kind === 'stairs' ? (
         <group rotation={[0, ((stairDirection ?? 0) * Math.PI) / 180, 0]}>
           <CatalogueInterstoryStairs
@@ -2171,6 +2252,7 @@ function SceneContent({
             stageShape={f.stageShape}
             decalKind={f.decalKind}
             pedestalStyle={f.pedestalStyle}
+            stageRoof={f.stageRoof}
             widthM={widthM}
             roomDepthM={heightM}
             selected={selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
@@ -2333,6 +2415,7 @@ function SceneContent({
             tableSurface={item.tableSurface ?? blueprint.metadata.defaultTableSurface}
             hasCouverts={item.hasCouverts}
             hasCenterpiece={item.hasCenterpiece}
+            centerpieceStyle={item.centerpieceStyle}
             couvertStyle={item.couvertStyle}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}

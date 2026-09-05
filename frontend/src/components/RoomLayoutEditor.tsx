@@ -87,6 +87,7 @@ import {
   tableShapeLabels,
   stageShapeLabels,
   roofStyleLabels,
+  centerpieceStyleLabels,
   wallsFromRoomOutline,
   resolveFurnitureSurfaceAt,
   type ArrangeDensity,
@@ -106,6 +107,8 @@ import {
   type AmphitheaterStyle,
   type FloorDecalKind,
   type PedestalStyle,
+  type CenterpieceStyle,
+  type StageRoofStyle,
   type OpeningMaterial,
   openingMaterialLabels,
 } from '@/lib/roomLayoutUtils';
@@ -3711,6 +3714,19 @@ export default function RoomLayoutEditor({
                 </select>
               </label>
             ) : null}
+            {selectedFixture.kind === 'stage' ? (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Toit de scène</span>
+                <select
+                  value={selectedFixture.stageRoof ?? 'none'}
+                  onChange={(e) => updateFixture(selectedFixture.id, { stageRoof: e.target.value as StageRoofStyle }, 'Toit de scène')}
+                  className={EDITOR_FIELD}
+                >
+                  <option value="none">Aucun</option>
+                  <option value="gabled">Pignon (jardin)</option>
+                </select>
+              </label>
+            ) : null}
 
             {isPodium && (
               <>
@@ -3781,6 +3797,7 @@ export default function RoomLayoutEditor({
                   >
                     <option value="rose">Roses</option>
                     <option value="butterfly">Papillons</option>
+                    <option value="path">Chemin / allée au sol</option>
                     <option value="custom">Image (importer ci-dessous)</option>
                   </select>
                 </label>
@@ -3847,6 +3864,7 @@ export default function RoomLayoutEditor({
                   <select value={selectedFixture.columnShape ?? 'round'} onChange={(e) => updateFixture(selectedFixture.id, { columnShape: e.target.value as ColumnShape }, 'Forme colonne modifiée')} className={EDITOR_FIELD}>
                     <option value="round">Ronde</option>
                     <option value="square">Carrée</option>
+                    <option value="fluted">Cannelée (classique)</option>
                   </select>
                 </label>
                 <label className="block text-xs space-y-1">
@@ -4038,6 +4056,20 @@ export default function RoomLayoutEditor({
                   className="rounded border-border size-4"
                 />
                 Centre de table (vase & bouquet)
+              </label>
+            ) : null}
+            {selectedFurniture.hasCenterpiece && selectedFurniture.shape !== 'cocktail' && selectedFurniture.shape !== 'highTop' ? (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Style de centre</span>
+                <select
+                  value={selectedFurniture.centerpieceStyle ?? 'floral'}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { centerpieceStyle: e.target.value as CenterpieceStyle }, 'Style de centre')}
+                  className={EDITOR_FIELD}
+                >
+                  {(Object.keys(centerpieceStyleLabels) as CenterpieceStyle[]).map((style) => (
+                    <option key={style} value={style}>{centerpieceStyleLabels[style]}</option>
+                  ))}
+                </select>
               </label>
             ) : null}
             {selectedFurniture.hasCouverts === true && (
@@ -5163,6 +5195,31 @@ export default function RoomLayoutEditor({
           title="Motif au sol : roses ou papillons"
         >
           Motif sol
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('stringLight') ? (
+        <button type="button" onClick={() => addFixture('stringLight')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Guirlandes Edison sur poteaux">
+          Guirlandes
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('fountain') ? (
+        <button type="button" onClick={() => addFixture('fountain')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          Fontaine
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('gazebo') ? (
+        <button type="button" onClick={() => addFixture('gazebo')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          Gloriette
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('djBooth') ? (
+        <button type="button" onClick={() => addFixture('djBooth')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          Régie DJ
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('screen') ? (
+        <button type="button" onClick={() => addFixture('screen')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          Écran
         </button>
       ) : null}
       </EditorToolGroup>

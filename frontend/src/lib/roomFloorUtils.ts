@@ -37,6 +37,8 @@ export const floorTypeLabels: Record<FloorType, string> = {
   beton: 'Béton poli',
   epoxy: 'Résine brillante',
   brique: 'Brique',
+  gravier: 'Gravier clair',
+  gravierFonce: 'Gravier nuit',
   custom: 'Image importée',
 };
 
@@ -47,7 +49,7 @@ export const FLOOR_TYPE_PICKER_ORDER: FloorType[] = [
   'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'marbre', 'epoxyMenthe', 'epoxy',
   'pavesPinwheel', 'pierreModulaire', 'pavesGranit', 'dallesIrregulieres',
   'carrelage', 'damier', 'terrazzo', 'pierre', 'moquette',
-  'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'beton', 'brique',
+  'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce', 'beton', 'brique',
 ];
 
 type FloorAsset = {
@@ -95,6 +97,8 @@ export const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   beton: { url: '/floors/concrete.svg', size: DAMIER_TILE, fallback: '#8b95a3' },
   epoxy: { url: '/floors/epoxy.svg', size: DAMIER_TILE, fallback: '#cbd5e1' },
   brique: { url: '/floors/brique.svg', size: '64px 32px', fallback: '#b45309' },
+  gravier: { url: '/floors/sable.svg', size: '40px 40px', fallback: '#c4b8a4' },
+  gravierFonce: { url: '/floors/cobble-granite.png', size: PHOTO, fallback: '#3f3f46' },
 };
 
 /** Répétition monde (mètres) pour textures WebGL. */
@@ -134,6 +138,8 @@ export const FLOOR_TEXTURE_REPEAT_M: Record<Exclude<FloorType, 'custom'>, number
   beton: 2.5,
   epoxy: 3.0,
   brique: 1.4,
+  gravier: 1.2,
+  gravierFonce: 1.1,
 };
 
 export function getFloorAsset(floorType: FloorType | undefined): FloorAsset {

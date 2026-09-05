@@ -290,7 +290,7 @@ export function FloorDecalMesh({
 }: {
   w: number;
   d: number;
-  kind?: 'rose' | 'butterfly' | 'custom';
+  kind?: 'rose' | 'butterfly' | 'custom' | 'path';
   color?: string;
   map?: THREE.Texture | null;
   selected?: boolean;
@@ -306,6 +306,20 @@ export function FloorDecalMesh({
           roughness={0.85}
           transparent
           opacity={0.88}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    );
+  }
+  if (kind === 'path') {
+    return (
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+        <planeGeometry args={[w, d]} />
+        <meshStandardMaterial
+          color={tint}
+          roughness={0.35}
+          transparent
+          opacity={0.55}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -382,6 +396,324 @@ export function SquarePedestalMesh({
       <group position={[0, h + 0.12, 0]}>
         <FlowerBloom color={flowerColor} scale={1.2} selected={selected} />
       </group>
+    </group>
+  );
+}
+
+function CandleGlow({
+  height = 0.22,
+  selected = false,
+}: {
+  height?: number;
+  selected?: boolean;
+}) {
+  return (
+    <group>
+      <mesh position={[0, height * 0.35, 0]} castShadow>
+        <cylinderGeometry args={[0.035, 0.04, height, 10]} />
+        <meshStandardMaterial color={selected ? '#fde68a' : '#f8fafc'} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, height * 0.78, 0]}>
+        <sphereGeometry args={[0.018, 8, 8]} />
+        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={1.4} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Runner eucalyptus + bougies (tables banquet). */
+export function GreeneryRunnerMesh({
+  length = 1.4,
+  selected = false,
+}: {
+  length?: number;
+  selected?: boolean;
+}) {
+  const n = Math.max(4, Math.round(length / 0.28));
+  return (
+    <group>
+      {Array.from({ length: n }).map((_, i) => {
+        const t = n === 1 ? 0 : i / (n - 1);
+        const x = (t - 0.5) * length;
+        return (
+          <group key={i} position={[x, 0.04, (i % 2 === 0 ? 0.04 : -0.03)]}>
+            <mesh rotation={[0.2, t * 1.4, 0.15]} castShadow>
+              <sphereGeometry args={[0.07, 8, 8]} />
+              <meshStandardMaterial color={selected ? '#86efac' : LEAF} roughness={0.92} />
+            </mesh>
+            {i % 2 === 0 ? <CandleGlow height={0.16 + (i % 3) * 0.04} selected={selected} /> : null}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Grappe de bougies pour tables rondes. */
+export function CandleClusterMesh({ selected = false }: { selected?: boolean }) {
+  return (
+    <group>
+      {([-0.08, 0, 0.09] as const).map((x, i) => (
+        <group key={i} position={[x, 0, i === 1 ? 0.02 : -0.04]}>
+          <CandleGlow height={0.14 + i * 0.05} selected={selected} />
+        </group>
+      ))}
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.14, 16]} />
+        <meshStandardMaterial color={LEAF} roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Guirlandes Edison tendues entre poteaux. */
+export function EdisonStringLightMesh({
+  w,
+  d,
+  heightM = 3.4,
+  selected = false,
+}: {
+  w: number;
+  d: number;
+  heightM?: number;
+  selected?: boolean;
+}) {
+  const poles: Array<[number, number]> = [
+    [-w * 0.42, -d * 0.42],
+    [w * 0.42, -d * 0.42],
+    [-w * 0.42, d * 0.42],
+    [w * 0.42, d * 0.42],
+  ];
+  const spans: Array<[[number, number], [number, number]]> = [
+    [poles[0], poles[1]],
+    [poles[0], poles[2]],
+    [poles[1], poles[3]],
+    [poles[2], poles[3]],
+    [poles[0], poles[3]],
+    [poles[1], poles[2]],
+  ];
+  const h = Math.max(2.4, heightM);
+  return (
+    <group>
+      {poles.map(([x, z], i) => (
+        <group key={`p-${i}`} position={[x, 0, z]}>
+          <mesh position={[0, 0.08, 0]} receiveShadow>
+            <boxGeometry args={[0.28, 0.16, 0.28]} />
+            <meshStandardMaterial color="#a8a29e" roughness={0.85} />
+          </mesh>
+          <mesh position={[0, h * 0.5, 0]} castShadow>
+            <cylinderGeometry args={[0.035, 0.04, h, 8]} />
+            <meshStandardMaterial color={selected ? '#c7d2fe' : '#44403c'} metalness={0.45} roughness={0.4} />
+          </mesh>
+        </group>
+      ))}
+      {spans.map(([a, b], si) => {
+        const bulbs = 7;
+        return (
+          <group key={`s-${si}`}>
+            {Array.from({ length: bulbs }).map((_, i) => {
+              const t = (i + 0.5) / bulbs;
+              const sag = Math.sin(t * Math.PI) * 0.45;
+              return (
+                <mesh
+                  key={i}
+                  position={[
+                    a[0] + (b[0] - a[0]) * t,
+                    h - 0.12 - sag,
+                    a[1] + (b[1] - a[1]) * t,
+                  ]}
+                >
+                  <sphereGeometry args={[0.035, 8, 8]} />
+                  <meshStandardMaterial
+                    color="#fde68a"
+                    emissive="#fbbf24"
+                    emissiveIntensity={selected ? 1.8 : 1.15}
+                  />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })}
+      <pointLight position={[0, h * 0.7, 0]} intensity={0.55} color="#fde68a" distance={Math.max(w, d) * 1.4} />
+    </group>
+  );
+}
+
+/** Fontaine à vasques. */
+export function FountainMesh({
+  color = '#94a3b8',
+  selected = false,
+}: {
+  color?: string;
+  selected?: boolean;
+}) {
+  const stone = selected ? '#c7d2fe' : color;
+  return (
+    <group>
+      <mesh position={[0, 0.12, 0]} receiveShadow>
+        <cylinderGeometry args={[0.95, 1.05, 0.24, 24]} />
+        <meshStandardMaterial color={stone} roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.78, 24]} />
+        <meshStandardMaterial color="#7dd3fc" roughness={0.12} metalness={0.35} />
+      </mesh>
+      <mesh position={[0, 0.55, 0]} castShadow>
+        <cylinderGeometry args={[0.42, 0.5, 0.18, 20]} />
+        <meshStandardMaterial color={stone} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 0.92, 0]} castShadow>
+        <cylinderGeometry args={[0.16, 0.2, 0.14, 16]} />
+        <meshStandardMaterial color={stone} roughness={0.48} />
+      </mesh>
+      <mesh position={[0, 1.08, 0]}>
+        <sphereGeometry args={[0.06, 10, 10]} />
+        <meshStandardMaterial color="#e0f2fe" roughness={0.15} metalness={0.2} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Gloriette / pergola à treillis. */
+export function GazeboMesh({
+  w,
+  d,
+  heightM = 3.2,
+  selected = false,
+}: {
+  w: number;
+  d: number;
+  heightM?: number;
+  selected?: boolean;
+}) {
+  const h = Math.max(2.4, heightM);
+  const frame = selected ? '#c7d2fe' : IVORY;
+  const posts: Array<[number, number]> = [
+    [-w * 0.4, -d * 0.4],
+    [w * 0.4, -d * 0.4],
+    [-w * 0.4, d * 0.4],
+    [w * 0.4, d * 0.4],
+  ];
+  return (
+    <group>
+      {posts.map(([x, z], i) => (
+        <mesh key={i} position={[x, h * 0.45, z]} castShadow>
+          <boxGeometry args={[0.12, h * 0.9, 0.12]} />
+          <meshStandardMaterial color={frame} roughness={0.45} />
+        </mesh>
+      ))}
+      <mesh position={[0, h * 0.92, 0]} castShadow>
+        <boxGeometry args={[w * 0.86, 0.08, d * 0.86]} />
+        <meshStandardMaterial color={frame} roughness={0.4} />
+      </mesh>
+      {[-0.25, 0, 0.25].map((off) => (
+        <mesh key={`x-${off}`} position={[0, h * 0.92, off * d]} rotation={[0, 0, 0]}>
+          <boxGeometry args={[w * 0.82, 0.03, 0.03]} />
+          <meshStandardMaterial color="#e7e5e4" roughness={0.5} />
+        </mesh>
+      ))}
+      {[-0.25, 0, 0.25].map((off) => (
+        <mesh key={`z-${off}`} position={[off * w, h * 0.92, 0]}>
+          <boxGeometry args={[0.03, 0.03, d * 0.82]} />
+          <meshStandardMaterial color="#e7e5e4" roughness={0.5} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Régie DJ / bar technique. */
+export function DjBoothMesh({
+  w,
+  d,
+  color = '#1c1917',
+  selected = false,
+}: {
+  w: number;
+  d: number;
+  color?: string;
+  selected?: boolean;
+}) {
+  const body = selected ? '#c7d2fe' : color;
+  return (
+    <group>
+      <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, 1.05, d]} />
+        <meshStandardMaterial color={body} roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 1.12, 0]} receiveShadow>
+        <boxGeometry args={[w * 0.92, 0.06, d * 0.7]} />
+        <meshStandardMaterial color="#e7e5e4" roughness={0.25} metalness={0.2} />
+      </mesh>
+      {([-0.32, 0.32] as const).map((side) => (
+        <group key={side} position={[side * w * 0.55, 1.35, -d * 0.15]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.22, 0.55, 0.18]} />
+            <meshStandardMaterial color="#171717" roughness={0.6} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Écran de projection. */
+export function ScreenMesh({
+  w,
+  heightM = 2.4,
+  selected = false,
+}: {
+  w: number;
+  heightM?: number;
+  selected?: boolean;
+}) {
+  const h = Math.max(1.4, heightM);
+  return (
+    <group>
+      <mesh position={[0, h * 0.55, 0]} castShadow>
+        <boxGeometry args={[w, h, 0.08]} />
+        <meshStandardMaterial color={selected ? '#1e293b' : '#0f172a'} roughness={0.85} />
+      </mesh>
+      <mesh position={[0, h * 0.55, 0.05]}>
+        <boxGeometry args={[w * 0.92, h * 0.82, 0.02]} />
+        <meshStandardMaterial color="#111827" roughness={0.35} metalness={0.15} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Toit à pignon au-dessus d’une scène. */
+export function GabledStageRoof({
+  w,
+  d,
+  heightM = 2.6,
+  selected = false,
+}: {
+  w: number;
+  d: number;
+  heightM?: number;
+  selected?: boolean;
+}) {
+  const h = Math.max(1.8, heightM);
+  const wood = selected ? '#c7d2fe' : '#b45309';
+  const stone = '#78716c';
+  return (
+    <group>
+      {([-1, 1] as const).map((side) => (
+        <mesh key={side} position={[side * w * 0.38, h * 0.42, 0]} castShadow>
+          <boxGeometry args={[0.28, h * 0.84, 0.28]} />
+          <meshStandardMaterial color={stone} roughness={0.7} />
+        </mesh>
+      ))}
+      <mesh position={[0, h * 0.92, 0]} rotation={[0, 0, 0.32]} castShadow>
+        <boxGeometry args={[w * 0.55, 0.08, d * 0.7]} />
+        <meshStandardMaterial color={wood} roughness={0.55} />
+      </mesh>
+      <mesh position={[0, h * 0.92, 0]} rotation={[0, 0, -0.32]} castShadow>
+        <boxGeometry args={[w * 0.55, 0.08, d * 0.7]} />
+        <meshStandardMaterial color={wood} roughness={0.55} />
+      </mesh>
     </group>
   );
 }
