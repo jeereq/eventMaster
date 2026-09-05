@@ -311,7 +311,7 @@ function EditorToolGroup({
           'inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 rounded-full border text-sm font-medium transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           open
-            ? 'bg-primary text-primary-foreground border-primary'
+            ? 'bg-primary-solid text-primary-foreground border-transparent'
             : 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground',
         )}
         aria-expanded={open}
@@ -376,6 +376,7 @@ export default function RoomLayoutEditor({
   const [aiPlanWarnings, setAiPlanWarnings] = useState<string[]>([]);
   const [retryPlanPhoto, setRetryPlanPhoto] = useState<File | null>(null);
   const [aiPlanBrief, setAiPlanBrief] = useState('');
+  const [lastPlanPhotoUrl, setLastPlanPhotoUrl] = useState('');
   const [planPath, setPlanPath] = useState<PlanCreationPathId>(focusPlanImport ? 'photo' : 'manual');
   const [studioOpen, setStudioOpen] = useState(false);
   const aiPlanFileRef = useRef<HTMLInputElement>(null);
@@ -1236,7 +1237,7 @@ export default function RoomLayoutEditor({
       }
       setRetryPlanPhoto(file);
     }
-    let imageUrl = blueprint.metadata.floorImageUrl;
+    let imageUrl = lastPlanPhotoUrl;
     if (file) {
       imageUrl = await resolvePlanImageUrl(file);
     }
@@ -1261,9 +1262,10 @@ export default function RoomLayoutEditor({
       });
       setSelection(applied.selection);
       setAiPlanWarnings(applied.warnings);
+      setLastPlanPhotoUrl(imageUrl);
       setRetryPlanPhoto(null);
       if (applied.selection.length === 0) {
-        log('Aucun élément déduit — le plan reste un repère. Placez le mobilier à la main ou réessayez avec une photo plus nette.', 'info');
+        log('Aucun élément déduit. Placez le mobilier à la main ou réessayez avec une photo plus nette.', 'info');
       } else {
         log('Éléments importés depuis la photo — déplacez, tournez ou supprimez avant d’enregistrer.', 'info');
       }
@@ -1954,7 +1956,7 @@ export default function RoomLayoutEditor({
                           rows={2}
                           maxLength={400}
                           placeholder="Mariage, 80 convives, piste au centre…"
-                          className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm resize-y min-h-11"
+                          className={cn(EDITOR_FIELD, 'resize-y')}
                         />
                       </label>
                       {aiPlanReading ? (
@@ -1968,19 +1970,19 @@ export default function RoomLayoutEditor({
                           disabled={readOnly || aiPlanReading}
                           aria-busy={aiPlanReading || undefined}
                           onClick={() => {
-                            if (blueprint.metadata.floorImageUrl) {
+                            if (lastPlanPhotoUrl) {
                               void readRoomPlanWithAi();
                               return;
                             }
                             aiPlanFileRef.current?.click();
                           }}
-                          className={cn(EDITOR_PANEL_BTN, 'bg-primary text-primary-foreground border-primary')}
+                          className={cn(EDITOR_PANEL_BTN, 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover')}
                         >
                           <Sparkles className="w-3.5 h-3.5" aria-hidden />
                           {aiPlanReading
                             ? 'Lecture en cours…'
-                            : blueprint.metadata.floorImageUrl
-                              ? 'Lire cette image'
+                            : lastPlanPhotoUrl
+                              ? 'Relire la dernière photo'
                               : 'Choisir une photo de la salle'}
                         </button>
                         {retryPlanPhoto && aiPlanError ? (
@@ -1993,7 +1995,7 @@ export default function RoomLayoutEditor({
                             Réessayer
                           </button>
                         ) : null}
-                        {blueprint.metadata.floorImageUrl ? (
+                        {lastPlanPhotoUrl ? (
                           <button
                             type="button"
                             disabled={readOnly || aiPlanReading}
@@ -2691,10 +2693,10 @@ export default function RoomLayoutEditor({
                   <div className="space-y-3">
                     <label className="block text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
-                        <ImagePlus className="w-3.5 h-3.5" /> Importer un plan de salle (image)
+                        <ImagePlus className="w-3.5 h-3.5" /> Repère photo (sol)
                       </span>
                       <p className={EDITOR_HINT}>
-                        Photo ou scan du plan : affiché en entier sous le mobilier (repère pour placer tables &amp; allées).
+                        Affiche le scan sous le mobilier, sans le lire. Pour détecter tables et décor, utilisez « Lire le plan avec l’IA ».
                       </p>
                       <input
                         type="file"
@@ -2725,7 +2727,7 @@ export default function RoomLayoutEditor({
                     {blueprint.metadata.floorImageUrl && (
                       <div className="flex flex-wrap gap-2 items-center">
                         <span className="text-sm font-medium text-primary">
-                          {blueprint.metadata.floorImageFit === 'cover' ? 'Plan importé' : 'Texture tuilée'}
+                          {blueprint.metadata.floorImageFit === 'cover' ? 'Repère photo au sol' : 'Texture tuilée'}
                         </span>
                         <button
                           type="button"
@@ -3659,7 +3661,7 @@ export default function RoomLayoutEditor({
                           className={cn(
                             'text-left min-h-11 px-3 py-2.5 rounded-[var(--radius-button)] border text-sm',
                             def.style === style
-                              ? 'bg-primary text-primary-foreground border-primary'
+                              ? 'bg-primary-solid text-primary-foreground border-transparent'
                               : 'border-border bg-surface text-muted hover:bg-surface-muted',
                           )}
                         >
@@ -5106,11 +5108,12 @@ export default function RoomLayoutEditor({
       {caps.canCustomImages ? (
         <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
           <ImagePlus className="w-3.5 h-3.5" aria-hidden />
-          Importer plan
+          Repère photo (sol)
           <input
             type="file"
             accept="image/*"
             className="sr-only"
+            aria-label="Poser un repère photo au sol"
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (file) await importRoomPlanImage(file);
@@ -5125,7 +5128,7 @@ export default function RoomLayoutEditor({
           disabled={readOnly || aiPlanReading}
           aria-busy={aiPlanReading || undefined}
           onClick={() => {
-            if (blueprint.metadata.floorImageUrl) {
+            if (lastPlanPhotoUrl) {
               void readRoomPlanWithAi();
               return;
             }
@@ -5868,23 +5871,23 @@ export default function RoomLayoutEditor({
               void readRoomPlanWithAi(retryPlanPhoto);
               return;
             }
-            if (blueprint.metadata.floorImageUrl && !aiPlanError) {
+            if (lastPlanPhotoUrl && !aiPlanError) {
               void readRoomPlanWithAi();
               return;
             }
             aiPlanFileRef.current?.click();
           }}
-          className={cn(EDITOR_PANEL_BTN, 'bg-primary text-primary-foreground border-primary')}
+          className={cn(EDITOR_PANEL_BTN, 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover')}
         >
           {aiPlanReading
             ? 'Lecture en cours…'
             : retryPlanPhoto && aiPlanError
               ? 'Réessayer'
-              : blueprint.metadata.floorImageUrl
-                ? 'Lire cette image'
+              : lastPlanPhotoUrl
+                ? 'Relire la dernière photo'
                 : 'Choisir une photo de la salle'}
         </button>
-        {blueprint.metadata.floorImageUrl || retryPlanPhoto ? (
+        {lastPlanPhotoUrl || retryPlanPhoto ? (
           <button
             type="button"
             disabled={aiPlanReading}

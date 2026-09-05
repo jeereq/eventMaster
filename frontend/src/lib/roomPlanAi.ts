@@ -1008,11 +1008,13 @@ export function applyRoomPlanVisionDraft(
 
   const imageRole = resolveImageRole(draft);
   const observedFloor = asFloorType(appearance?.floorType);
-  const usePlanCover = Boolean(options.imageUrl) && imageRole === 'plan' && draft.view !== 'perspective';
-  const useFloorTile = Boolean(options.imageUrl) && imageRole === 'texture';
+  const importedImage = options.imageUrl;
+  const keepExistingFloor = Boolean(current.metadata.floorImageUrl)
+    && current.metadata.floorImageUrl !== importedImage
+    && current.metadata.floorImageFit !== 'cover';
 
   if (draft.view === 'perspective' || imageRole === 'photo') {
-    warnings.push('Photo en perspective : le sol reprend la matière et la couleur vues, sans étirer l’image.');
+    warnings.push('Photo en perspective : le sol reprend la matière et la couleur vues, sans poser l’image en fond.');
   }
 
   const aligned = tidyImportedFloorLayout(ensureBlueprintDefaults({
@@ -1028,15 +1030,9 @@ export function applyRoomPlanVisionDraft(
       defaultTableSurface: defaultSurface ?? current.metadata.defaultTableSurface,
       wallPaintColor: wallColor ?? current.metadata.wallPaintColor,
       floorColor: appearance?.floorColor ?? current.metadata.floorColor,
-      floorImageUrl: usePlanCover || useFloorTile
-        ? options.imageUrl
-        : imageRole === 'photo'
-          ? undefined
-          : current.metadata.floorImageUrl,
-      floorType: usePlanCover || useFloorTile
-        ? 'custom'
-        : observedFloor ?? current.metadata.floorType,
-      floorImageFit: usePlanCover ? 'cover' : useFloorTile ? 'tile' : current.metadata.floorImageFit,
+      floorImageUrl: keepExistingFloor ? current.metadata.floorImageUrl : undefined,
+      floorType: observedFloor ?? current.metadata.floorType,
+      floorImageFit: keepExistingFloor ? current.metadata.floorImageFit : undefined,
       roofStyle: appearance?.roofStyle === 'tentSwag' || appearance?.roofStyle === 'gabled' || appearance?.roofStyle === 'coffered'
         ? appearance.roofStyle
         : current.metadata.roofStyle,

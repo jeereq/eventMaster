@@ -42,7 +42,7 @@ import { cn } from '@/lib/cn';
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[280px] bg-surface-muted animate-pulse rounded-2xl" />
+    <div className="w-full h-full min-h-[280px] bg-surface-muted animate-pulse rounded-[var(--radius-card)]" />
   ),
 });
 
@@ -167,7 +167,7 @@ export default function LandingRoomPlanAiStudio({
       aria-busy={busy}
       aria-labelledby={`${id}-title`}
       className={cn(
-        'rounded-[1.25rem] border border-border bg-surface shadow-sm overflow-hidden scroll-mt-20',
+        'rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden scroll-mt-20',
         className,
       )}
     >
@@ -193,11 +193,11 @@ export default function LandingRoomPlanAiStudio({
             </div>
           </div>
           <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums">
               <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
               {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
             </span>
-            <span className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold">
               Ouvrir
               <ChevronDown className="w-4 h-4" aria-hidden />
             </span>
@@ -221,7 +221,7 @@ export default function LandingRoomPlanAiStudio({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums">
                   <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
                   {allowance.totalRemaining} jeton{allowance.totalRemaining === 1 ? '' : 's'}
                 </span>
@@ -249,40 +249,39 @@ export default function LandingRoomPlanAiStudio({
                 accept={ROOM_PLAN_PHOTO_ACCEPT}
                 className="sr-only"
                 tabIndex={-1}
+                aria-label="Ajouter une photo de la salle"
                 onChange={(event) => {
                   pickFile(event.target.files?.[0]);
                   event.target.value = '';
                 }}
               />
 
-              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Comment créer le plan">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  role="radio"
-                  aria-checked={intent === 'brief'}
+                  aria-pressed={intent === 'brief'}
                   disabled={busy}
                   onClick={() => setIntent('brief')}
                   className={cn(
-                    'min-h-11 px-3 py-2.5 rounded-xl border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     intent === 'brief' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40',
                   )}
                 >
                   <span className="block text-xs font-bold text-foreground">Décrire la salle</span>
-                  <span className="block text-[11px] text-muted mt-0.5">Brief seul</span>
+                  <span className="block text-xs text-muted mt-0.5">Brief seul</span>
                 </button>
                 <button
                   type="button"
-                  role="radio"
-                  aria-checked={intent === 'photo'}
+                  aria-pressed={intent === 'photo'}
                   disabled={busy}
                   onClick={() => setIntent('photo')}
                   className={cn(
-                    'min-h-11 px-3 py-2.5 rounded-xl border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     intent === 'photo' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40',
                   )}
                 >
                   <span className="block text-xs font-bold text-foreground">Depuis une photo</span>
-                  <span className="block text-[11px] text-muted mt-0.5">Analyse + import</span>
+                  <span className="block text-xs text-muted mt-0.5">Analyse + import</span>
                 </button>
               </div>
 
@@ -301,7 +300,7 @@ export default function LandingRoomPlanAiStudio({
                   pickFile(event.dataTransfer.files?.[0]);
                 }}
                 className={cn(
-                  'w-full rounded-xl border-2 border-dashed p-4 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  'w-full rounded-[var(--radius-card)] border-2 border-dashed p-4 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   dragOver ? 'border-primary bg-primary/10' : 'border-primary/25 hover:border-primary/50',
                 )}
               >
@@ -313,7 +312,7 @@ export default function LandingRoomPlanAiStudio({
               </button>
 
               {previewUrl ? (
-                <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-border">
+                <div className="relative w-20 h-20 rounded-[var(--radius-card)] overflow-hidden border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={previewUrl} alt="Photo de la salle" className="w-full h-full object-cover" />
                   <button
@@ -340,7 +339,7 @@ export default function LandingRoomPlanAiStudio({
                   disabled={busy}
                   onChange={(event) => setPrompt(event.target.value)}
                   placeholder="Ex. Mariage 120 convives, 12 tables rondes, allée, table d’honneur…"
-                  className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
+                  className="w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
                 />
                 <p className="text-xs text-muted tabular-nums text-right">{prompt.trim().length}/1500</p>
               </div>
@@ -365,12 +364,14 @@ export default function LandingRoomPlanAiStudio({
                 <p className="text-sm font-semibold text-foreground">
                   {preview ? 'Aperçu généré' : 'Aperçu 2D / 3D'}
                 </p>
-                <div className="inline-flex items-center rounded-lg border border-border bg-surface p-0.5">
+                <div className="inline-flex items-center rounded-[var(--radius-button)] border border-border bg-surface p-0.5">
                   <button
                     type="button"
+                    aria-pressed={!force2d}
+                    aria-label="Aperçu 3D"
                     onClick={() => setForce2d(false)}
                     className={cn(
-                      'min-h-11 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5',
+                      'min-h-11 px-2.5 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                       !force2d ? 'bg-primary/10 text-foreground' : 'text-muted',
                     )}
                   >
@@ -379,9 +380,11 @@ export default function LandingRoomPlanAiStudio({
                   </button>
                   <button
                     type="button"
+                    aria-pressed={force2d}
+                    aria-label="Aperçu 2D"
                     onClick={() => setForce2d(true)}
                     className={cn(
-                      'min-h-11 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5',
+                      'min-h-11 px-2.5 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                       force2d ? 'bg-primary/10 text-foreground' : 'text-muted',
                     )}
                   >
@@ -391,7 +394,7 @@ export default function LandingRoomPlanAiStudio({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border overflow-hidden bg-stage aspect-[16/10] min-h-[260px]">
+              <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-stage aspect-[16/10] min-h-[260px]">
                 {preview ? (
                   <RoomLayoutPreview
                     blueprint={preview.blueprint}

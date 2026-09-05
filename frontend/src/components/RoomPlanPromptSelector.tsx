@@ -35,17 +35,16 @@ export default function RoomPlanPromptSelector({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-foreground">Exemples de brief</p>
-        <p className="text-[11px] text-muted hidden sm:block">Cliquez pour remplir</p>
+        <p className="text-xs text-muted hidden sm:block">Cliquez pour remplir</p>
       </div>
-      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Types d’événement">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Types d’événement">
         <button
           type="button"
-          role="tab"
-          aria-selected={category === 'all'}
+          aria-pressed={category === 'all'}
           disabled={disabled}
           onClick={() => setCategory('all')}
           className={cn(
-            'min-h-11 px-2.5 rounded-full border text-xs font-semibold',
+            'min-h-11 px-2.5 rounded-full border text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
             category === 'all'
               ? 'border-primary bg-primary/10 text-foreground'
               : 'border-border bg-surface text-muted hover:text-foreground',
@@ -57,12 +56,11 @@ export default function RoomPlanPromptSelector({
           <button
             key={item.id}
             type="button"
-            role="tab"
-            aria-selected={category === item.id}
+            aria-pressed={category === item.id}
             disabled={disabled}
             onClick={() => setCategory(item.id)}
             className={cn(
-              'min-h-11 px-2.5 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5',
+              'min-h-11 px-2.5 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               category === item.id
                 ? 'border-primary bg-primary/10 text-foreground'
                 : 'border-border bg-surface text-muted hover:text-foreground',
@@ -83,7 +81,7 @@ export default function RoomPlanPromptSelector({
               disabled={disabled}
               onClick={() => onSelect(model)}
               className={cn(
-                'text-left min-h-11 p-3 rounded-xl border transition',
+                'text-left min-h-11 p-3 rounded-[var(--radius-card)] border transition',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 active
                   ? 'border-primary bg-primary/10'
@@ -93,9 +91,9 @@ export default function RoomPlanPromptSelector({
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-foreground">{model.title}</span>
-                <span className="text-[10px] font-semibold text-primary-solid shrink-0">{model.badge}</span>
+                <span className="text-xs font-semibold text-primary-solid shrink-0">{model.badge}</span>
               </span>
-              <span className="block text-[11px] text-muted mt-1 leading-snug">{model.summary}</span>
+              <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
             </button>
           );
         })}

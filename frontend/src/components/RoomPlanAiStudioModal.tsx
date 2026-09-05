@@ -155,40 +155,39 @@ export default function RoomPlanAiStudioModal({
             accept={ROOM_PLAN_PHOTO_ACCEPT}
             className="sr-only"
             tabIndex={-1}
+            aria-label="Ajouter une photo de la salle"
             onChange={(event) => {
               pickFile(event.target.files?.[0]);
               event.target.value = '';
             }}
           />
 
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Mode du studio">
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              role="radio"
-              aria-checked={intent === 'brief'}
+              aria-pressed={intent === 'brief'}
               disabled={busy}
               onClick={() => setIntent('brief')}
               className={cn(
-                'min-h-11 px-3 py-2.5 rounded-xl border text-left',
+                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 intent === 'brief' ? 'border-primary bg-primary/10' : 'border-border',
               )}
             >
               <span className="block text-xs font-bold text-foreground">Décrire</span>
-              <span className="block text-[11px] text-muted">Brief seul</span>
+              <span className="block text-xs text-muted">Brief seul</span>
             </button>
             <button
               type="button"
-              role="radio"
-              aria-checked={intent === 'photo'}
+              aria-pressed={intent === 'photo'}
               disabled={busy}
               onClick={() => setIntent('photo')}
               className={cn(
-                'min-h-11 px-3 py-2.5 rounded-xl border text-left',
+                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 intent === 'photo' ? 'border-primary bg-primary/10' : 'border-border',
               )}
             >
               <span className="block text-xs font-bold text-foreground">Photo</span>
-              <span className="block text-[11px] text-muted">Analyser et importer</span>
+              <span className="block text-xs text-muted">Analyser et importer</span>
             </button>
           </div>
 
@@ -196,14 +195,14 @@ export default function RoomPlanAiStudioModal({
             type="button"
             disabled={busy}
             onClick={() => fileRef.current?.click()}
-            className="w-full min-h-11 rounded-xl border-2 border-dashed border-primary/25 p-3 text-sm font-semibold text-foreground"
+            className="w-full min-h-11 rounded-[var(--radius-card)] border-2 border-dashed border-primary/25 p-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <Upload className="w-4 h-4 text-primary-solid inline mr-2" aria-hidden />
             {file ? file.name : 'Ajouter une photo (optionnel)'}
           </button>
 
           {previewUrl ? (
-            <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-border">
+            <div className="relative w-16 h-16 rounded-[var(--radius-card)] overflow-hidden border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={previewUrl} alt="Photo à analyser" className="w-full h-full object-cover" />
               <button
@@ -227,7 +226,7 @@ export default function RoomPlanAiStudioModal({
               disabled={busy}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder="Ex. Banquet 80 personnes, 10 tables rondes, scène et piste…"
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
+              className="w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
             />
           </label>
 
