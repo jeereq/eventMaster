@@ -411,15 +411,21 @@ export default function EventPrepAiSimulator({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <h3 className="text-sm font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-primary" />
+              <Wand2 className="w-4 h-4 text-primary-solid" aria-hidden />
               Simulation IA
             </h3>
             <p className="text-xs text-muted leading-relaxed">
               Décrivez votre événement : l’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs budget</strong> — économique, équilibré, confort. Ce n’est pas un plan de salle.
             </p>
           </div>
-          <Button size="sm" variant={open ? 'secondary' : 'primary'} onClick={() => setOpen((value) => !value)} className="shrink-0">
-            {open ? 'Masquer' : 'Projet'}
+          <Button
+            size="sm"
+            variant={open ? 'secondary' : 'primary'}
+            onClick={() => setOpen((value) => !value)}
+            className="shrink-0"
+            aria-expanded={open}
+          >
+            {open ? 'Masquer le brief' : 'Ouvrir le brief'}
           </Button>
         </div>
       ) : null}
@@ -431,11 +437,10 @@ export default function EventPrepAiSimulator({
 
       {/* ─── Barre d'onglets : Créer vs Historiques ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
-        <div className="inline-flex p-1 rounded-xl bg-surface-muted border border-border/80 w-full sm:w-auto" role="tablist" aria-label="Modes du simulateur">
+        <div className="inline-flex p-1 rounded-xl bg-surface-muted border border-border/80 w-full sm:w-auto" aria-label="Modes du simulateur">
           <button
             type="button"
-            role="tab"
-            aria-selected={activeTab === 'create'}
+            aria-pressed={activeTab === 'create'}
             onClick={() => setActiveTab('create')}
             className={cn(
               'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
@@ -449,8 +454,7 @@ export default function EventPrepAiSimulator({
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={activeTab === 'history'}
+            aria-pressed={activeTab === 'history'}
             onClick={() => setActiveTab('history')}
             className={cn(
               'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
@@ -464,7 +468,7 @@ export default function EventPrepAiSimulator({
             {history.length > 0 && (
               <span className={cn(
                 'ml-1 px-1.5 py-0.5 text-xs rounded-full font-bold tabular-nums',
-                activeTab === 'history' ? 'bg-primary/10 text-primary' : 'bg-surface border border-border text-muted',
+                activeTab === 'history' ? 'bg-primary/10 text-primary-solid' : 'bg-surface border border-border text-muted',
               )}>
                 {history.length}
               </span>
@@ -476,7 +480,7 @@ export default function EventPrepAiSimulator({
           <button
             type="button"
             onClick={() => setActiveTab('create')}
-            className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-center"
+            className="min-h-11 px-3 text-xs font-semibold text-primary-solid hover:underline inline-flex items-center gap-1.5 self-start sm:self-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>Nouvelle simulation</span>
@@ -597,7 +601,7 @@ export default function EventPrepAiSimulator({
               />
               <div className="flex items-center justify-between text-[11px] text-muted px-0.5">
                 <span>Calculé en francs :</span>
-                <span className="font-semibold text-primary">
+                <span className="font-semibold text-primary-solid">
                   {budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—'}
                 </span>
               </div>
@@ -716,7 +720,7 @@ export default function EventPrepAiSimulator({
                     />
                     {budgetMinFcCalculated > 0 ? (
                       <p className="text-[11px] text-muted text-right px-0.5">
-                        Calculé : <span className="font-semibold text-primary">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span>
+                        Calculé : <span className="font-semibold text-primary-solid">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span>
                       </p>
                     ) : null}
                   </div>
@@ -820,7 +824,7 @@ export default function EventPrepAiSimulator({
             </p>
           ) : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3" role="radiogroup" aria-label="Propositions IA">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {result.packages.map((pack) => {
               const active = (selected?.id || result.packages[0]?.id) === pack.id;
               const packLeftover = budgetValue > 0 ? budgetValue - pack.estimatedTotalFc : null;
@@ -828,8 +832,7 @@ export default function EventPrepAiSimulator({
                 <button
                   key={pack.id}
                   type="button"
-                  role="radio"
-                  aria-checked={active}
+                  aria-pressed={active}
                   onClick={() => {
                     setSelectedId(pack.id);
                     setPackModalOpen(true);
@@ -846,7 +849,7 @@ export default function EventPrepAiSimulator({
                       <span className="text-xs font-bold px-2 py-1 rounded-full bg-surface border border-border text-foreground">
                         {pack.label}
                       </span>
-                      <span className="text-xs font-semibold text-primary">Éléments</span>
+                      <span className="text-xs font-semibold text-primary-solid">Éléments</span>
                     </div>
                     {pack.summary ? (
                       <p className="text-xs font-bold text-foreground leading-snug mt-1">{pack.summary}</p>
@@ -864,7 +867,7 @@ export default function EventPrepAiSimulator({
                       {pack.venue ? '1 salle' : 'Sans salle'} + {pack.services.length} prestataire{pack.services.length > 1 ? 's' : ''}
                     </p>
                     {packLeftover != null ? (
-                      <p className={cn('text-xs font-semibold mt-0.5', packLeftover >= 0 ? 'text-primary' : 'text-festive-accent')}>
+                      <p className={cn('text-xs font-semibold mt-0.5', packLeftover >= 0 ? 'text-primary-solid' : 'text-festive-accent')}>
                         {packLeftover >= 0
                           ? `Reste ${formatFc(packLeftover)} vs budget`
                           : `Dépassement ${formatFc(Math.abs(packLeftover))}`}

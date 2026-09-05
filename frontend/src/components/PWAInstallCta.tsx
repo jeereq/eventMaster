@@ -116,7 +116,7 @@ export default function PWAInstallCta({
     if (chipDismissed) return null;
     const chip = (
       <div
-        className="md:hidden pointer-events-none fixed z-[45] left-[max(0.75rem,env(safe-area-inset-left))] bottom-[var(--em-site-fab-bottom)] max-w-[min(15.25rem,calc(100vw-5.75rem))]"
+        className="md:hidden pointer-events-none fixed z-[45] left-[max(0.75rem,env(safe-area-inset-left))] bottom-[calc(var(--em-site-fab-bottom)+3.75rem)] max-w-[min(16rem,calc(100vw-1.5rem))]"
         role="region"
         aria-label="Installer l’application"
       >
@@ -132,7 +132,7 @@ export default function PWAInstallCta({
             onClick={() => void install()}
             className="shrink-0"
           >
-            OK
+            Installer
           </Button>
           <button
             type="button"

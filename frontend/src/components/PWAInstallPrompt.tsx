@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Download, Share, Smartphone, X } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
@@ -42,7 +42,7 @@ export default function PWAInstallPrompt({
     return () => window.clearTimeout(timer);
   }, [installed, storageKey]);
 
-  const dismiss = () => {
+  const dismiss = useCallback(() => {
     try {
       localStorage.setItem(storageKey, '1');
     } catch {
@@ -50,7 +50,16 @@ export default function PWAInstallPrompt({
     }
     setOpen(false);
     setHelp(null);
-  };
+  }, [storageKey, setHelp]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') dismiss();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, dismiss]);
 
   if (!open || installed) return null;
 
@@ -63,7 +72,8 @@ export default function PWAInstallPrompt({
           ? 'bg-surface text-foreground border-border bottom-[calc(5.25rem+env(safe-area-inset-bottom))]'
           : 'bg-primary-solid text-primary-foreground border-primary/40 bottom-4'
       }`}
-      role="dialog"
+      role="status"
+      aria-live="polite"
       aria-label={`Installer ${site.platformName}`}
     >
       <button
@@ -74,12 +84,12 @@ export default function PWAInstallPrompt({
         }`}
         aria-label="Fermer"
       >
-        <X className="w-4 h-4" />
+        <X className="w-4 h-4" aria-hidden />
       </button>
 
       <div className="flex items-start gap-3 pr-8">
-        <div className={`p-2 rounded-[var(--radius-button)] shrink-0 ${isGuest ? 'bg-primary/10 text-primary' : 'bg-white/15'}`}>
-          <Smartphone className="w-5 h-5" />
+        <div className={`p-2 rounded-[var(--radius-button)] shrink-0 ${isGuest ? 'bg-primary/10 text-primary-solid' : 'bg-primary-foreground/15'}`}>
+          <Smartphone className="w-5 h-5" aria-hidden />
         </div>
         <div className="space-y-2 min-w-0">
           <p className="font-semibold text-sm leading-tight">
@@ -91,12 +101,10 @@ export default function PWAInstallPrompt({
 
           {help ? (
             <div
-              role="status"
-              aria-live="polite"
-              className={`text-xs rounded-[var(--radius-card)] p-3 space-y-1.5 ${isGuest ? 'bg-surface-muted border border-border' : 'bg-white/10'}`}
+              className={`text-xs rounded-[var(--radius-card)] p-3 space-y-1.5 ${isGuest ? 'bg-surface-muted border border-border' : 'bg-primary-foreground/10'}`}
             >
               <p className="font-semibold flex items-center gap-1.5">
-                <Share className="w-3.5 h-3.5" />
+                <Share className="w-3.5 h-3.5" aria-hidden />
                 Comment installer
               </p>
               <p>

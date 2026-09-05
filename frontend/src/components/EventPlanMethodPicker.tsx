@@ -51,7 +51,7 @@ export default function EventPlanMethodPicker({
           Un pack budget assemble salle, prestataires et matériel pour les devis. Ce n’est pas le plan de salle 3D.
           Vous pouvez lancer les deux méthodes, puis retenir un mix.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Méthode de simulation">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SIM_METHODS.map((item) => {
             const Icon = item.icon;
             const selected = value === item.id;
@@ -60,8 +60,7 @@ export default function EventPlanMethodPicker({
               <button
                 key={item.id}
                 type="button"
-                role="radio"
-                aria-checked={selected}
+                aria-pressed={selected}
                 onClick={() => onChange(item.id)}
                 className={cn(
                   'text-left rounded-2xl border p-4 transition touch-manipulation cursor-pointer min-h-[7.5rem] flex flex-col gap-2',
@@ -80,7 +79,7 @@ export default function EventPlanMethodPicker({
                   </span>
                   <span className="flex items-center gap-1.5">
                     {count > 0 ? (
-                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary">
+                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary-solid">
                         {count} pack{count > 1 ? 's' : ''}
                       </span>
                     ) : null}
@@ -114,6 +113,7 @@ export default function EventPlanMethodPicker({
         <button
           type="button"
           onClick={() => onChange('final')}
+          aria-pressed={value === 'final'}
           disabled={finalLocked && !simReady && counts.final === 0}
           className={cn(
             'w-full text-left rounded-2xl border p-4 transition touch-manipulation flex items-start gap-3',
@@ -134,7 +134,7 @@ export default function EventPlanMethodPicker({
             <span className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-bold text-foreground">Pack budget final</span>
               {counts.final > 0 ? (
-                <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary">
+                <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary-solid">
                   Pack retenu
                 </span>
               ) : null}

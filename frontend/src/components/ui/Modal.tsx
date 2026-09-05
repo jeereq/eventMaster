@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { X } from 'lucide-react';
@@ -29,6 +29,11 @@ const sizeMap = {
 };
 
 let openModalCount = 0;
+const stackListeners = new Set<() => void>();
+
+function emitModalStackChange() {
+  stackListeners.forEach((listener) => listener());
+}
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -68,8 +73,11 @@ export default function Modal({
   dismissible = true,
   hideHeader = false,
 }: ModalProps) {
+  const titleId = useId();
+  const descId = useId();
   const [mounted, setMounted] = useState(false);
   const [stackDepth, setStackDepth] = useState(1);
+  const [stackTop, setStackTop] = useState(0);
   const openedAtRef = useRef(0);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -89,10 +97,20 @@ export default function Modal({
   }, []);
 
   useEffect(() => {
+    const sync = () => setStackTop(openModalCount);
+    stackListeners.add(sync);
+    sync();
+    return () => {
+      stackListeners.delete(sync);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open || !mounted) return;
     openModalCount += 1;
     const myDepth = openModalCount;
     setStackDepth(myDepth);
+    emitModalStackChange();
     openedAtRef.current = Date.now();
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -138,6 +156,7 @@ export default function Modal({
     }, 0);
     return () => {
       openModalCount = Math.max(0, openModalCount - 1);
+      emitModalStackChange();
       window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
@@ -148,9 +167,15 @@ export default function Modal({
   if (!open || !mounted) return null;
 
   const showHeader = !hideHeader && (title || description || dismissible);
+  const isTop = stackDepth === stackTop;
 
   return createPortal(
-    <div className={cn('fixed inset-0', containerClassName)} style={{ zIndex: 11000 + stackDepth }}>
+    <div
+      className={cn('fixed inset-0', containerClassName)}
+      style={{ zIndex: 11000 + stackDepth }}
+      inert={!isTop ? true : undefined}
+      aria-hidden={!isTop || undefined}
+    >
       {dismissible ? (
         <button
           type="button"
@@ -167,8 +192,8 @@ export default function Modal({
           role="dialog"
           aria-modal="true"
           tabIndex={-1}
-          aria-labelledby={title ? 'modal-title' : undefined}
-          aria-describedby={description ? 'modal-desc' : undefined}
+          aria-labelledby={title ? titleId : undefined}
+          aria-describedby={description ? descId : undefined}
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -178,12 +203,12 @@ export default function Modal({
             <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border shrink-0">
               <div className="min-w-0">
                 {title && (
-                  <h2 id="modal-title" className="text-lg font-bold text-foreground tracking-tight break-words">
+                  <h2 id={titleId} className="text-lg font-bold text-foreground tracking-tight break-words">
                     {title}
                   </h2>
                 )}
                 {description && (
-                  <p id="modal-desc" className="text-sm text-muted mt-1 break-words">
+                  <p id={descId} className="text-sm text-muted mt-1 break-words">
                     {description}
                   </p>
                 )}
@@ -196,7 +221,7 @@ export default function Modal({
                   aria-label="Fermer la fenêtre"
                   data-modal-close
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden />
                 </button>
               )}
             </div>

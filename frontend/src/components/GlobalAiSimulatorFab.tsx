@@ -102,6 +102,8 @@ export default function GlobalAiSimulatorFab() {
             : 'bg-primary-solid text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary-solid-hover focus-visible:ring-primary-foreground focus-visible:ring-offset-primary-solid',
         )}
         aria-label={placement.ariaLabel}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         title={placement.title}
       >
         <span
