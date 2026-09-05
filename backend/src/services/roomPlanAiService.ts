@@ -748,20 +748,34 @@ Si la photo n’est pas une salle, view="unclear", items=[], warnings explicites
 }
 
 function composeSystemPrompt(): string {
-  return `Tu es l’architecte de plans de salle EventMaster (RDC).
-À partir du BRIEF, tu CONÇOIS un plan réaliste et tu produis UNIQUEMENT un JSON valide.
+  return `Tu es l’architecte de réception EventMaster (RDC).
+À partir du BRIEF, tu CONÇOIS un plan de salle habité — pas une grille de logiciel — et tu produis UNIQUEMENT un JSON valide.
 
-Mission :
-- Place un agencement cohérent : chaque table, rangée, piste, scène, allée, buffet, DJ, colonne… est un item séparé.
-- 10 tables demandées = 10 items "table". 4 rangées = 4 items "row".
-- Respecte le type de salle et les mètres fournis pour canvas.widthM / heightM.
-- N’ajoute or, pétales, lustre cristal ou allée rouge que si le brief les demande.
+Interdit (placement) :
+- Ranger tables, lustres ou fleurs en une seule ligne droite, en damier militaire, ou avec des écarts de 1–2 % « pour faire propre ».
+- Coller le mobilier aux murs. Laisser 1,2–1,8 m de circulation le long des parois.
+- Bloquer une porte, une allée ou la scène.
+- Inventer un amphithéâtre ou une tente si le brief n’en parle pas.
+
+Logique de composition (dans cet ordre) :
+1) Murs + portes. Au moins une entrée principale (kind=door + entrance) sur un petit côté, dégagée, souvent face à la table d’honneur ou à la scène. Une issue de service (buffet / cuisine) sur un autre mur si banquet. Pose walls[] avec doors aux bonnes positions (0–1 le long du segment).
+2) Axe de cérémonie. Allée (aisle) depuis la porte principale vers le point focal (table d’honneur, autel, scène). Elle peut être légèrement courbe ou décentrée — pas un trait au milieu par défaut.
+3) Point focal. Scène et/ou podium : fond de salle, face aux convives, stageShape adapté (rect banquet, semiCircle cérémonie). Le podium (orateur, couple, MC) est DEVANT la scène, décalé ou centré selon le brief — jamais collé dans un coin au hasard.
+4) Tables. Banquet / mariage : tables RONDES (shape=round, seats 8–10) en quinconce / nid d’abeille, pas en rangées d’école. Table d’honneur ovale ou rectangulaire au fond, plus large, face à la porte. Cocktail : highTop / cocktail en îlots de 3–4, pas une file. Conseil : une seule table longue. hasCenterpiece=true sur chaque table ronde de banquet.
+5) Piste / DJ / écran. Piste (zone dance) comme un plateau composé (souvent près de la scène, pas un carré résiduel). DJ et écran ancrés à la scène, pas au milieu des tables.
+6) Fleurs. Compositions aux seuils (entrée, arche), aux coins d’allée, autour de la table d’honneur et 2–4 jardinières (flower) — jamais une rangée identique le long d’un mur.
+7) Lustres. Un chandelier par nœud d’activité : au-dessus de la piste, au-dessus de la table d’honneur, puis au-dessus des grappes de tables (pas une file au plafond). Style selon l’ambiance (cristal / classic gala, lantern jardin, modern loft).
+8) Couleurs et matières. Palette cohérente tirée du brief (ivoire + parquet clair mariage ; lin + noyer gala ; moquette grise conférence). floorColor, wallColor, tableColor, curtainColor, color des allées/fleurs en #rrggbb réels — pas le vert EventMaster.
+
+Mission de comptage :
+- N tables demandées = N items "table". N rangées = N items "row".
+- Respecte type de salle et mètres pour canvas.widthM / heightM.
+- Or, pétales, allée rouge, lustre cristal : seulement si le brief ou le type d’événement (mariage, gala) le justifie.
 - view="top", appearance.imageRole="plan".
-- Tente / chapiteau : roofStyle="tentSwag" et canvas = taille réelle. Ne pose pas la tente comme item gazebo.
-- Nappes : tableSurface="linen" (ou la matière demandée) + tableColor observée / demandée.
-- w/h des tables = empreinte réelle en % du plan.
+- Tente : roofStyle="tentSwag", canvas = taille réelle. Pas d’item gazebo pour la tente elle-même.
+- w/h = empreinte réelle au sol (ronde 8 couverts ≈ 9–11, cocktail ≈ 5–6, longue ≈ 12–16).
 
-Le schéma JSON est le même que pour une lecture photo :
+Schéma JSON :
 {
   "view": "top",
   "canvas": { "widthM": number, "heightM": number },
@@ -796,7 +810,7 @@ Le schéma JSON est le même que pour une lecture photo :
   "warnings": ["..."]
 }
 
-Répartis le mobilier sans chevauchement, aligné en lignes et colonnes régulières. Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items.`;
+Sans chevauchement. Circulation continue porte → allée → tables → scène. Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items.`;
 }
 
 async function requestRoomPlanJson(input: {
@@ -857,7 +871,8 @@ export async function composeRoomPlanFromBrief(input: {
   const userText = `Brief : """${brief.slice(0, 1500)}"""
 Salle : type=${roomType}, largeur=${input.widthM} m, longueur=${input.heightM} m.
 Utilise CES mètres pour canvas.widthM / heightM.
-Conçois le plan et produis le JSON à importer.`;
+Compose comme un architecte de réception : portes et issues, podium/scène avec ligne de vue, tables rondes en quinconce (pas une file droite), fleurs aux seuils et à l’honneur, lustres au-dessus des nœuds d’activité, palette de couleurs du brief.
+Produis le JSON à importer.`;
 
   return requestRoomPlanJson({
     system: composeSystemPrompt(),

@@ -25,6 +25,7 @@ interface AuthSplitLayoutProps {
   backHref?: string;
   backLabel?: string;
   maxWidthClassName?: string;
+  hideMobileTitle?: boolean;
   children: React.ReactNode;
 }
 
@@ -35,6 +36,7 @@ export function AuthSplitLayout({
   backHref = '/',
   backLabel = 'Retour au site',
   maxWidthClassName,
+  hideMobileTitle = false,
   children,
 }: AuthSplitLayoutProps) {
   const { theme, toggleTheme } = useTheme();
@@ -51,11 +53,11 @@ export function AuthSplitLayout({
         }}
       >
         <div
-          className="absolute top-[-18%] left-[-18%] w-[55%] h-[55%] rounded-full blur-[110px] pointer-events-none opacity-40"
+          className="absolute top-[-18%] left-[-18%] w-[55%] h-[55%] rounded-full blur-[56px] motion-reduce:blur-none pointer-events-none opacity-40"
           style={{ background: `rgb(var(--auth-glow))` }}
         />
         <div
-          className="absolute bottom-[-22%] right-[-12%] w-[50%] h-[50%] rounded-full blur-[100px] pointer-events-none opacity-25"
+          className="absolute bottom-[-22%] right-[-12%] w-[50%] h-[50%] rounded-full blur-[48px] motion-reduce:blur-none pointer-events-none opacity-25"
           style={{ background: `rgb(var(--celebrate-glow))` }}
         />
         <div
@@ -72,7 +74,7 @@ export function AuthSplitLayout({
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
             <h1 className="text-3xl xl:text-4xl font-display font-semibold tracking-tight leading-tight">{title}</h1>
-            <p className="text-white/70 text-sm leading-relaxed">{description}</p>
+            <p className="text-white/85 text-sm leading-relaxed">{description}</p>
           </div>
 
           {features.length > 0 && (
@@ -90,7 +92,7 @@ export function AuthSplitLayout({
                     </span>
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
-                      <p className="text-xs text-white/55 leading-relaxed mt-0.5">{feat.desc}</p>
+                      <p className="text-xs text-white/80 leading-relaxed mt-0.5">{feat.desc}</p>
                     </div>
                   </li>
                 );
@@ -99,7 +101,7 @@ export function AuthSplitLayout({
           )}
         </div>
 
-        <div className="text-xs text-white/40 relative z-10 flex justify-between items-center">
+        <div className="text-xs text-white/75 relative z-10 flex justify-between items-center">
           <span>© {new Date().getFullYear()} {site.platformName}</span>
           <Link href="/contact" className="hover:text-white/80 transition">Support</Link>
         </div>
@@ -121,7 +123,7 @@ export function AuthSplitLayout({
           </button>
         </div>
 
-        <div className={cn(maxWidthClassName || 'max-w-md', 'w-full mx-auto space-y-4 pt-8 lg:pt-0')}>
+        <main id="main-content" className={cn(maxWidthClassName || 'max-w-md', 'w-full mx-auto space-y-4 pt-8 lg:pt-0')}>
           {backHref && (
             <Link
               href={backHref}
@@ -131,9 +133,12 @@ export function AuthSplitLayout({
               {backLabel}
             </Link>
           )}
+          {hideMobileTitle ? null : (
+            <h1 className="lg:hidden text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+          )}
           {children}
           <p className="text-center text-xs text-muted lg:hidden">© {new Date().getFullYear()} {site.platformName}</p>
-        </div>
+        </main>
       </div>
     </div>
   );
@@ -148,18 +153,25 @@ interface MethodToggleProps<T extends string> {
 
 export function MethodToggle<T extends string>({ value, onChange, options, label }: MethodToggleProps<T>) {
   return (
-    <div className="space-y-2">
+    <fieldset className="space-y-2">
       {label && (
-        <p className="text-xs font-semibold text-muted">{label}</p>
+        <legend className="text-xs font-semibold text-muted">{label}</legend>
       )}
-      <div className={cn('grid gap-2', options.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className={cn('grid gap-2', options.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}
+      >
         {options.map((opt) => (
           <button
             key={opt.value}
             type="button"
+            role="radio"
+            aria-checked={value === opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
               'min-h-11 py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-semibold transition flex items-center justify-center gap-2',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               value === opt.value
                 ? 'bg-primary/10 border-primary/30 text-primary'
                 : 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground',
@@ -170,7 +182,7 @@ export function MethodToggle<T extends string>({ value, onChange, options, label
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 

@@ -175,16 +175,16 @@ export default function FirstLoginOnboardingModal({
                   className={cn(
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shrink-0',
                     isDone
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-primary-solid text-primary-foreground'
                       : isCurrent
-                      ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30 ring-2 ring-primary/20'
+                      ? 'bg-primary-solid text-primary-foreground shadow-sm shadow-primary/30 ring-2 ring-primary/20'
                       : 'bg-surface-muted border border-border text-muted',
                   )}
                 >
                   {isDone ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-3.5 h-3.5" />}
                 </div>
                 <div className="min-w-0 hidden sm:block">
-                  <p className={cn('text-[11px] font-semibold truncate', isCurrent ? 'text-primary' : 'text-muted')}>
+                  <p className={cn('text-xs font-semibold truncate', isCurrent ? 'text-primary' : 'text-muted')}>
                     {s.label}
                   </p>
                 </div>
@@ -235,7 +235,7 @@ export default function FirstLoginOnboardingModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-xs text-muted hover:text-foreground font-medium py-2 px-3"
+                className="text-xs text-muted hover:text-foreground font-medium min-h-11 px-3 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 Passer pour le moment
               </button>

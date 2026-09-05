@@ -88,13 +88,14 @@ function LoginPageContent() {
       features={isClientFlow ? CLIENT_FEATURES : FEATURES}
       backHref="/"
       backLabel="Retour au site"
+      hideMobileTitle
     >
       <Card padding="lg" className="border-border shadow-sm">
         <div className="text-center lg:text-left mb-6">
           <div className="inline-flex lg:hidden justify-center mb-4">
             <SiteBrandMark href={null} size="lg" showLabel={false} />
           </div>
-          <h2 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h2>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h1>
           <p className="mt-2 text-sm text-muted">
             Nouveau ici ?{' '}
             <Link href={registerHref} className="font-semibold text-primary hover:underline">

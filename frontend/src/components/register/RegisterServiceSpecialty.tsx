@@ -52,7 +52,7 @@ export default function RegisterServiceSpecialty({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-foreground mb-2 touch-manipulation"
+          className="inline-flex items-center gap-1 min-h-11 text-xs font-semibold text-muted hover:text-foreground mb-1 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           Retour
@@ -65,7 +65,7 @@ export default function RegisterServiceSpecialty({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div role="radiogroup" aria-label="Type d’offre" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {GROUPS.map((item) => {
           const Icon = item.icon;
           const selected = group === item.id;
@@ -73,9 +73,12 @@ export default function RegisterServiceSpecialty({
             <button
               key={item.id}
               type="button"
+              role="radio"
+              aria-checked={selected}
               onClick={() => onGroup(item.id)}
               className={cn(
                 'flex items-start gap-2.5 min-h-11 p-3 rounded-[var(--radius-card)] border text-left transition touch-manipulation',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 selected
                   ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
                   : 'border-border bg-surface hover:border-primary/40',
@@ -89,7 +92,7 @@ export default function RegisterServiceSpecialty({
               </span>
               <span>
                 <span className="block text-sm font-semibold text-foreground">{item.title}</span>
-                <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">{item.hint}</span>
+                <span className="block text-xs text-muted mt-0.5 leading-relaxed">{item.hint}</span>
               </span>
             </button>
           );
@@ -101,16 +104,19 @@ export default function RegisterServiceSpecialty({
           <p className="text-xs font-semibold text-foreground">
             {group === 'rental' ? 'Quel matériel louez-vous ?' : 'Quelle prestation proposez-vous ?'}
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div role="radiogroup" aria-label="Spécialité" className="flex flex-wrap gap-1.5">
             {options.map((id) => {
               const selected = category === id;
               return (
                 <button
                   key={id}
                   type="button"
+                  role="radio"
+                  aria-checked={selected}
                   onClick={() => onCategory(id)}
                   className={cn(
                     'min-h-11 px-3 py-2 rounded-full border text-xs font-semibold transition touch-manipulation',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     selected
                       ? 'border-primary bg-primary-solid text-primary-foreground'
                       : 'border-border bg-surface text-foreground hover:border-primary/40',

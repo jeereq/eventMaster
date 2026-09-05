@@ -23,9 +23,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Mariage — table d’honneur',
     category: 'wedding',
     badge: 'Allée',
-    summary: 'Tables rondes, allée centrale et table d’honneur.',
+    summary: 'Tables rondes en quinconce, allée et honneur.',
     prompt:
-      'Mariage 120 convives : 12 tables rondes de 10, table d’honneur ovale au fond, allée rouge au centre, arche florale à l’entrée, parquet clair et nappes ivoire.',
+      'Mariage 120 convives dans une salle rectangle. Porte d’entrée principale au milieu du petit côté sud, issue service à l’ouest près du buffet. Allée ivoire botanique depuis la porte jusqu’à la table d’honneur ovale (12 places, nappe ivoire, centre floral) collée au fond nord, face à l’entrée — pas collée au mur. 12 tables rondes de 10 en quinconce (nid d’abeille), jamais alignées en file, écart service 1,4 m. Arche florale au seuil, jardinières aux virages de l’allée, deux colonnes de fleurs encadrant l’honneur. Lustres cristal : un au-dessus de l’honneur, un au-dessus du premier tiers de l’allée, trois au-dessus des grappes de tables. Parquet chêne clair #d4c4a8, murs plâtre crème #f3efe6, nappes ivoire #f7f1e6, rideaux champagne #e8d5b5, chaises Chiavari bois.',
     roomType: 'BANQUET',
   },
   {
@@ -33,9 +33,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Cérémonie jardin',
     category: 'wedding',
     badge: 'Rangées',
-    summary: 'Rangées face à l’autel, allée nuptiale.',
+    summary: 'Rangées, allée nuptiale, autel et fleurs.',
     prompt:
-      'Cérémonie en jardin : 8 rangées de 10 chaises, allée centrale, arche florale face aux invités, pelouse, deux colonnes de fleurs.',
+      'Cérémonie en jardin : entrée par une arche florale au sud. Allée gazon un peu décentrée vers un podium demi-lune (couple / officiant) au nord, pas une ligne au milieu. 8 rangées de 10 chaises en deux blocs, allée 2,2 m, extrémités légèrement ouvertes en éventail. Deux colonnes de fleurs à l’autel, jardinières aux têtes de rangées, lanternes aux bords de l’allée. Pas de tables. Pelouse #6b8f4e, arche hortensia blanc et eucalyptus, ciel ouvert. Un lustre lanterne seulement sous un dais discret derrière le podium.',
     roomType: 'BANQUET',
   },
   {
@@ -43,9 +43,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Gala — scène et piste',
     category: 'banquet',
     badge: 'Gala',
-    summary: 'Banquet, scène et piste de danse.',
+    summary: 'Rondes décalées, scène, piste, DJ, lustres.',
     prompt:
-      'Gala 80 personnes : 10 tables rondes de 8, scène en fond, piste de danse centrale, régie DJ, lustres, parquet et nappes lin.',
+      'Gala 80 personnes. Entrée est, dégagée. Scène rectangulaire au fond ouest, podium orateur légèrement décalé à cour. Piste de danse comme un ovale entre la scène et les tables, pas un carré vide. 10 tables rondes de 8 en deux grappes décalées (gauche / droite), jamais une seule file. Régie DJ collée à la scène, côté jardin. Buffet le long du mur nord, hors circulation. Lustres cristal au-dessus de la piste et au centre de chaque grappe. Parquet noyer #5c4033, nappes lin or pâle #e6d5a8, murs tadelakt chaud #c4b09a, rideaux bordeaux profond #6b2d3c, chaises Napoléon velours.',
     roomType: 'BANQUET',
   },
   {
@@ -53,9 +53,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Banquet en U',
     category: 'banquet',
     badge: 'U',
-    summary: 'Tables longues en U, buffet et scène.',
+    summary: 'U ouvert vers la scène, buffet et podium.',
     prompt:
-      'Banquet en U pour 40 personnes : tables rectangulaires formant un U, buffet le long du mur, petite scène, chaises Napoléon, parquet.',
+      'Banquet 40 personnes en U ouvert vers le sud : trois tables rectangulaires formant le U, ouverture face à une petite scène + podium. Porte d’entrée au sud-est, jamais dans le U. Buffet le long du mur ouest, derrière le bras du U. Deux compositions florales aux angles intérieurs du U, centres de table sur chaque bras. Un lustre moderne au-dessus du vide central du U. Parquet #c4a574, nappes blanches, murs plâtre #eee8df, chaises Napoléon.',
     roomType: 'BANQUET',
   },
   {
@@ -63,9 +63,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Conférence théâtre',
     category: 'pro',
     badge: 'Rangées',
-    summary: 'Rangées face à la scène et écran.',
+    summary: 'Rangées, allées, scène, écran, podium.',
     prompt:
-      'Conférence 80 places : 8 rangées de 10 sièges théâtre, scène, écran, podium, allée centrale, moquette grise.',
+      'Conférence 80 places. Portes : entrée publique au fond (sud), issue de secours à l’ouest. Scène + écran au nord, podium orateur décalé à cour (pas collé au centre de l’écran). 8 rangées de 10 en deux blocs, allée centrale 1,8 m et deux allées latérales 1,2 m — les rangées reculent légèrement en éventail, pas un rectangle parfait. Moquette grise #6d7178, murs béton clair #d8d4ce, écran noir, spots recessed au plafond (pas de lustre cristal). Aucune fleur sauf deux jardinières discrètes à l’entrée.',
     roomType: 'CONFERENCE',
   },
   {
@@ -73,9 +73,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Salle de conseil',
     category: 'pro',
     badge: 'VIP',
-    summary: 'Une grande table, fauteuils, écran.',
+    summary: 'Table unique, écran, buffet, entrée claire.',
     prompt:
-      'Salle de conseil : une table rectangulaire de 16, fauteuils, écran au bout, buffet discret, parquet noyer.',
+      'Salle de conseil : porte unique à l’est. Une table ovale / rectangulaire de 16 au centre, axe long vers l’écran à l’ouest. Fauteuils lounge, pas de rangées. Buffet discret contre le mur nord, hors de l’axe écran. Un lustre moderne au-dessus de la table, spots recessed ailleurs. Parquet noyer #4a3728, murs bois #8b7355, plateau marbre #e8e4dc. Pas de fleurs en file — un seul arrangement bas au centre de table.',
     roomType: 'CONFERENCE',
   },
   {
@@ -83,9 +83,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Cocktail mange-debout',
     category: 'cocktail',
     badge: 'Piste',
-    summary: 'Mange-debout, piste et DJ.',
+    summary: 'Îlots cocktail, piste, DJ, guirlandes.',
     prompt:
-      'Cocktail 60 personnes : 12 mange-debout, piste de danse, régie DJ, buffet, guirlandes Edison, parquet.',
+      'Cocktail 60 personnes. Entrée sud. 12 mange-debout (highTop) en trois îlots de 4, décalés, jamais alignés sur une droite. Piste au nord-ouest près du DJ (scène basse + régie), buffet en L contre le mur est. Guirlandes Edison en trois travées au-dessus des îlots, un lustre industriel au-dessus de la piste. Parquet #b8956a, plateaux noyer, murs brique #8a5a44. Deux jardinières à l’entrée seulement.',
     roomType: 'BANQUET',
   },
   {
@@ -93,9 +93,9 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     title: 'Réception sous tente',
     category: 'cocktail',
     badge: 'Tente',
-    summary: 'Tente drapée, tables et fontaine.',
+    summary: 'Tente drapée, rondes, fontaine, arche.',
     prompt:
-      'Réception sous tente : 8 tables rondes de 8, plafond drapé, fontaine centrale, guirlandes, herbe autour, entrée arche.',
+      'Réception sous tente : roofStyle tentSwag, entrée par arche florale au sud. 8 tables rondes de 8 en quinconce autour d’une fontaine centrale (pas un cercle parfait : légèrement ovalisé). Allée depuis l’arche qui contourne la fontaine vers une petite table d’honneur au nord. Lustres lanternes au-dessus de la fontaine et de l’honneur, guirlandes en périphérie. Herbe autour #5f7d3e, drapés ivoire #f4efe6, nappes lin, parquet clair sous la tente. Issue latérale ouest vers le service.',
     roomType: 'TENT',
   },
 ];

@@ -31,15 +31,19 @@ export interface AlertProps {
   children: React.ReactNode;
   className?: string;
   icon?: React.ReactNode;
+  id?: string;
 }
 
-export default function Alert({ variant = 'info', title, children, className, icon }: AlertProps) {
+export default function Alert({ variant = 'info', title, children, className, icon, id }: AlertProps) {
   const config = variants[variant];
   const IconComponent = config.Icon;
 
   return (
     <div
+      id={id}
       role="alert"
+      aria-live={variant === 'error' ? 'assertive' : 'polite'}
+      tabIndex={variant === 'error' ? -1 : undefined}
       className={cn(
         'flex items-start gap-3 p-4 rounded-xl border text-sm leading-relaxed',
         config.container,

@@ -614,13 +614,17 @@ function RegisterPageContent() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showMobileSteps, setShowMobileSteps] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy'>('summary');
 
   useEffect(() => {
     setVerificationMethod(defaultAuthOtpMethod(authChannels));
   }, [authChannels]);
+
+  useEffect(() => {
+    if (!error) return;
+    document.getElementById('register-form-error')?.focus();
+  }, [error]);
 
   const hasExplicitAction = Boolean(actionParam || intentParam || planParam || searchParams.get('kind'));
   const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
@@ -645,7 +649,7 @@ function RegisterPageContent() {
     }
 
     const track = resolveVendorTrackFromParams({ action: actionParam, plan: planParam });
-    setVendorTrack(track);
+    if (track) setVendorTrack(track);
     if (actionParam === 'rentals') {
       setServiceGroup('rental');
     }
@@ -813,7 +817,7 @@ function RegisterPageContent() {
           </div>
         ) : successMessage ? (
           <div className="text-center space-y-4 py-2">
-            <div className="inline-flex items-center justify-center bg-emerald-100 dark:bg-emerald-950/30 p-3.5 rounded-full text-emerald-600 dark:text-emerald-400">
+            <div className="inline-flex items-center justify-center bg-primary/15 p-3.5 rounded-full text-primary">
               {verificationMethod === 'WHATSAPP' ? (
                 <MessageSquare className="w-8 h-8" />
               ) : (
@@ -835,42 +839,46 @@ function RegisterPageContent() {
         ) : (
           <>
             {showAccountForm && (
-            <div className="mb-3.5 p-2.5 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-[color:var(--festive-accent-soft)]/20 to-primary/5 border border-primary/20 flex items-center justify-between gap-3 text-xs">
+            <div className="mb-3.5 p-2.5 rounded-[var(--radius-card)] bg-primary/8 border border-primary/20 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-md bg-primary/20 text-primary flex items-center justify-center shrink-0">
                   <GoalIcon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/15 px-1.5 py-0.5 rounded">
+                    <span className="text-xs font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded">
                       {config.goalTag}
                     </span>
                     {matchedPlan && (
-                      <span className="text-[9px] font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded">
+                      <span className="text-xs font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded">
                         Forfait : {matchedPlan.ms365Name}
                       </span>
                     )}
                     {templateIdParam && (
-                      <span className="text-[9px] font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded flex items-center gap-1">
+                      <span className="text-xs font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded flex items-center gap-1">
                         <Sparkles className="w-2.5 h-2.5 text-primary" /> Modèle prêt
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xs font-bold text-foreground truncate mt-0.5">
+                  <h2 className="text-xs font-bold text-foreground truncate mt-0.5">
                     {config.goalTitle}
-                  </h3>
+                  </h2>
                 </div>
               </div>
 
-              <div className="hidden sm:flex items-center gap-2 text-[10px] text-muted shrink-0">
-                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+              <div className="hidden sm:flex items-center gap-2 text-xs text-muted shrink-0">
+                <span className="inline-flex items-center gap-1 text-primary font-medium">
                   <CheckCircle2 className="w-3 h-3" /> Sans carte
                 </span>
               </div>
             </div>
             )}
 
-            {error && <Alert variant="error" className="mb-3 py-2 text-xs">{error}</Alert>}
+            {error && (
+              <Alert variant="error" className="mb-3 py-2 text-xs" id="register-form-error">
+                {error}
+              </Alert>
+            )}
 
             {showVendorChooser && (
               <RegisterVendorTrackPicker onSelect={setVendorTrack} />
@@ -923,7 +931,7 @@ function RegisterPageContent() {
                 <button
                   type="button"
                   onClick={() => setServiceCategory(null)}
-                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:underline"
+                  className="mt-2 inline-flex items-center min-h-11 gap-1.5 text-xs font-semibold text-primary hover:underline"
                 >
                   Métier : {SERVICE_CATEGORY_LABELS[serviceCategory]} — modifier
                 </button>
@@ -932,7 +940,7 @@ function RegisterPageContent() {
                 <button
                   type="button"
                   onClick={() => setVendorTrack(null)}
-                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:underline"
+                  className="mt-2 inline-flex items-center min-h-11 gap-1.5 text-xs font-semibold text-primary hover:underline"
                 >
                   Je suis plutôt prestataire
                 </button>
@@ -954,7 +962,7 @@ function RegisterPageContent() {
                           ? 'Compte prestataire'
                           : ACCOUNT_KIND_LABELS[accountKind]}
                     </span>
-                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1 py-0.2 rounded shrink-0">
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
                       Offre liée
                     </span>
                   </div>
@@ -965,7 +973,7 @@ function RegisterPageContent() {
                     <legend className="text-xs font-semibold text-foreground">
                       Type de compte souhaité
                     </legend>
-                    <span className="text-[10px] text-muted">Modifiable plus tard</span>
+                    <span className="text-xs text-muted">Modifiable plus tard</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -977,7 +985,7 @@ function RegisterPageContent() {
                         <label
                           key={kind}
                           className={cn(
-                            'flex flex-col justify-center gap-0.5 p-2 rounded-[var(--radius-card)] border text-xs cursor-pointer transition-all touch-manipulation',
+                            'flex flex-col justify-center gap-0.5 min-h-11 p-2.5 rounded-[var(--radius-card)] border text-xs cursor-pointer transition-all touch-manipulation',
                             isSelected
                               ? 'border-primary bg-primary/5 ring-1 ring-primary/40 text-foreground shadow-xs'
                               : 'border-border text-muted hover:border-primary/40 hover:bg-surface-muted/50',
@@ -1005,12 +1013,12 @@ function RegisterPageContent() {
                               {ACCOUNT_KIND_LABELS[kind]}
                             </span>
                             {isRecommended && (
-                              <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-1 py-0.2 rounded">
+                              <span className="text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                                 Recommandé
                               </span>
                             )}
                           </div>
-                          <span className="font-normal text-[10px] text-muted opacity-90 leading-tight pl-5 truncate">
+                          <span className="font-normal text-xs text-muted leading-tight pl-5">
                             {ACCOUNT_KIND_DESCRIPTIONS[kind]}
                           </span>
                         </label>
@@ -1136,7 +1144,7 @@ function RegisterPageContent() {
                         setLegalModalTab('summary');
                         setLegalModalOpen(true);
                       }}
-                      className="text-[10px] font-bold text-primary hover:underline inline-flex items-center gap-1 touch-manipulation cursor-pointer"
+                      className="text-xs font-bold text-primary hover:underline inline-flex items-center min-h-11 gap-1 touch-manipulation cursor-pointer"
                     >
                       <Eye className="w-3 h-3" />
                       Tout lire & approuver
@@ -1150,7 +1158,7 @@ function RegisterPageContent() {
                     className={cn(
                       'px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
                       acceptTerms
-                        ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
+                        ? 'border-primary/30 bg-primary/8'
                         : 'border-border bg-surface hover:border-primary/40',
                     )}
                   >
@@ -1168,8 +1176,8 @@ function RegisterPageContent() {
                         }}
                         className="rounded text-primary focus:ring-primary accent-primary shrink-0"
                       />
-                      <span className="font-medium text-foreground truncate text-[11px]">
-                        Conditions d’utilisation <span className="text-[10px] text-muted">v{TERMS_VERSION}</span>
+                      <span className="font-medium text-foreground truncate text-xs">
+                        Conditions d’utilisation <span className="text-xs text-muted">v{TERMS_VERSION}</span>
                       </span>
                     </label>
 
@@ -1180,13 +1188,13 @@ function RegisterPageContent() {
                         setLegalModalOpen(true);
                       }}
                       className={cn(
-                        'px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 transition flex items-center gap-0.5 touch-manipulation cursor-pointer',
+                        'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
                         acceptTerms
-                          ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
+                          ? 'text-primary bg-primary/12'
                           : 'text-primary bg-primary/10 hover:bg-primary/20',
                       )}
                     >
-                      {acceptTerms ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : 'Lire'}
+                      {acceptTerms ? <CheckCircle2 className="w-4 h-4 text-primary" /> : 'Lire'}
                     </button>
                   </div>
 
@@ -1195,7 +1203,7 @@ function RegisterPageContent() {
                     className={cn(
                       'px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
                       acceptPrivacy
-                        ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20'
+                        ? 'border-primary/30 bg-primary/8'
                         : 'border-border bg-surface hover:border-primary/40',
                     )}
                   >
@@ -1213,8 +1221,8 @@ function RegisterPageContent() {
                         }}
                         className="rounded text-primary focus:ring-primary accent-primary shrink-0"
                       />
-                      <span className="font-medium text-foreground truncate text-[11px]">
-                        Confidentialité <span className="text-[10px] text-muted">v{PRIVACY_VERSION}</span>
+                      <span className="font-medium text-foreground truncate text-xs">
+                        Confidentialité <span className="text-xs text-muted">v{PRIVACY_VERSION}</span>
                       </span>
                     </label>
 
@@ -1225,13 +1233,13 @@ function RegisterPageContent() {
                         setLegalModalOpen(true);
                       }}
                       className={cn(
-                        'px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 transition flex items-center gap-0.5 touch-manipulation cursor-pointer',
+                        'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
                         acceptPrivacy
-                          ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/30'
+                          ? 'text-primary bg-primary/12'
                           : 'text-primary bg-primary/10 hover:bg-primary/20',
                       )}
                     >
-                      {acceptPrivacy ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : 'Lire'}
+                      {acceptPrivacy ? <CheckCircle2 className="w-4 h-4 text-primary" /> : 'Lire'}
                     </button>
                   </div>
                 </div>
@@ -1249,7 +1257,7 @@ function RegisterPageContent() {
                   {config.submitButtonLabel}
                 </Button>
 
-                <p className="text-center text-[10px] text-muted flex items-center justify-center gap-1">
+                <p className="text-center text-xs text-muted flex items-center justify-center gap-1">
                   <Zap className="w-3 h-3 text-primary shrink-0" />
                   Accès débloqué immédiatement après validation du code
                 </p>
