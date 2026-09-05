@@ -9,6 +9,7 @@ import {
   resolveSeatFabricMap,
   resolveTableMaterial,
 } from '@/lib/roomWebGLMaterials';
+import { CatalogueArcTable } from '@/components/roomCelebrationMeshes';
 
 type MatProps = {
   color: string;
@@ -69,7 +70,7 @@ export function CatalogueChair({
   const sh = sh0 * visual.scale;
   const sd = sd0 * visual.scale;
   const backH = visual.backHeight * visual.scale;
-  const seatTint = selected ? '#a5b4fc' : '#ffffff';
+  const seatTint = selected ? '#a5b4fc' : visual.seatColor;
   const style = chairStyle ?? (chairType === 'ARMCHAIR' ? 'classic' : undefined);
 
   if (chairType === 'STOOL') {
@@ -98,11 +99,11 @@ export function CatalogueChair({
           <React.Fragment key={side}>
             <mesh position={[side * sw * 0.32, seatH * 0.55, 0]} rotation={[0.15, 0, side * 0.08]} castShadow>
               <boxGeometry args={[0.02, seatH * 1.15, 0.02]} />
-              <Mat color="#94a3b8" metalness={0.75} roughness={0.25} />
+              <Mat color={visual.frameColor} metalness={0.15} roughness={0.35} />
             </mesh>
             <mesh position={[side * sw * 0.28, seatH * 0.45, sd * 0.2]} rotation={[-0.35, 0, 0]} castShadow>
               <boxGeometry args={[0.018, seatH * 0.95, 0.018]} />
-              <Mat color="#64748b" metalness={0.7} roughness={0.3} />
+              <Mat color={visual.frameColor} metalness={0.12} roughness={0.4} />
             </mesh>
           </React.Fragment>
         ))}
@@ -116,7 +117,7 @@ export function CatalogueChair({
         </mesh>
         <mesh position={[0, seatH + backH * 0.7, -sd * 0.38]} castShadow>
           <boxGeometry args={[sw * 0.75, 0.04, 0.03]} />
-          <Mat color="#94a3b8" metalness={0.7} roughness={0.3} />
+          <Mat color={visual.frameColor} metalness={0.12} roughness={0.4} />
         </mesh>
       </group>
     );
@@ -331,7 +332,26 @@ export function CatalogueChair({
         )),
       )}
 
-      {isChiavari ? (
+      {style === 'louis' || style === 'ovalBack' ? (
+        <>
+          <mesh position={[0, seatH, 0]} castShadow receiveShadow>
+            <boxGeometry args={[sw * 1.02, 0.05, sd]} />
+            <Mat color={visual.frameColor} roughness={0.45} metalness={0.15} />
+          </mesh>
+          <mesh position={[0, seatH + 0.04, 0]} castShadow>
+            <boxGeometry args={[sw * 0.9, 0.04, sd * 0.88]} />
+            <Mat color={seatTint} map={map} roughness={0.7} />
+          </mesh>
+          <mesh position={[0, seatH + backH * 0.48, -sd * 0.4]} castShadow>
+            <boxGeometry args={[sw * 0.55, backH * 0.85, 0.06]} />
+            <Mat color={visual.frameColor} roughness={0.4} metalness={0.12} />
+          </mesh>
+          <mesh position={[0, seatH + backH * 0.62, -sd * 0.36]} rotation={[0.08, 0, 0]} castShadow>
+            <sphereGeometry args={[sw * 0.28, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.72]} />
+            <Mat color={seatTint} map={map} roughness={0.65} />
+          </mesh>
+        </>
+      ) : isChiavari ? (
         <>
           <mesh position={[0, seatH, 0]} castShadow receiveShadow>
             <boxGeometry args={[sw, 0.04, sd]} />
@@ -455,6 +475,17 @@ export function CatalogueTableStructure({
   };
   const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
   const segments = shape === 'oval' ? 40 : 48;
+
+  if (shape === 'arc') {
+    return (
+      <CatalogueArcTable
+        size={size}
+        topY={topY}
+        color={topColor}
+        selected={selected}
+      />
+    );
+  }
 
   if (shape === 'cocktail') {
     return (

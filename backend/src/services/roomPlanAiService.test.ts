@@ -108,17 +108,21 @@ describe('parseRoomPlanVisionDraft', () => {
   it('reconnaît arche, cloison, table arc et scène demi-lune', () => {
     const draft = parseRoomPlanVisionDraft({
       view: 'perspective',
-      appearance: { imageRole: 'photo', roofStyle: 'tentSwag', floorType: 'herbe' },
+      appearance: { imageRole: 'photo', roofStyle: 'tentSwag', floorType: 'herbe', curtainColor: '#faf7f2' },
       items: [
         { kind: 'table', x: 20, y: 30, shape: 'arc', seats: 10, chairStyle: 'ovalBack', hasCenterpiece: true },
         { kind: 'arch', x: 40, y: 8, w: 24, h: 12 },
         { kind: 'partition', x: 28, y: 40, w: 36, h: 14 },
         { kind: 'stage', x: 36, y: 6, w: 28, h: 12, stageShape: 'semiCircle' },
         { kind: 'row', x: 20, y: 50, seats: 10, chairStyle: 'louis' },
+        { kind: 'pedestal', x: 22, y: 8, w: 5, h: 5, pedestalStyle: 'squareWhite' },
+        { kind: 'decal', x: 40, y: 50, w: 14, h: 14, decalKind: 'butterfly', color: '#dcaeae' },
+        { kind: 'aisle', x: 47, y: 18, w: 6, h: 70, hasPetals: true, hasSideLanterns: true },
       ],
     }, { widthM: 22, heightM: 28 });
 
     assert.equal(draft.appearance.roofStyle, 'tentSwag');
+    assert.equal(draft.appearance.curtainColor, '#faf7f2');
     assert.equal(draft.items[0]?.shape, 'arc');
     assert.equal(draft.items[0]?.hasCenterpiece, true);
     assert.equal(draft.items[0]?.chairStyle, 'ovalBack');
@@ -126,6 +130,12 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.items[2]?.kind, 'partition');
     assert.equal(draft.items[3]?.stageShape, 'semiCircle');
     assert.equal(draft.items[4]?.chairStyle, 'louis');
+    assert.equal(draft.items[5]?.kind, 'pedestal');
+    assert.equal(draft.items[5]?.pedestalStyle, 'squareWhite');
+    assert.equal(draft.items[6]?.kind, 'decal');
+    assert.equal(draft.items[6]?.decalKind, 'butterfly');
+    assert.equal(draft.items[7]?.hasPetals, true);
+    assert.equal(draft.items[7]?.hasSideLanterns, true);
   });
 
   it('traite une photo comme imageRole photo par défaut', () => {

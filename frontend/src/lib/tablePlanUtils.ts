@@ -1,4 +1,4 @@
-export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop';
+export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop' | 'arc';
 
 import type React from 'react';
 import type { TableSurfaceStyle } from '@/lib/roomLayoutUtils';
@@ -23,6 +23,11 @@ export function getTableShapeLabel(shape: TableShape | string): string {
       return 'Carrée';
     case 'oval':
       return 'Ovale';
+    case 'arc':
+      return 'Arc';
+    case 'cocktail':
+    case 'highTop':
+      return 'Cocktail';
     default:
       return 'Table';
   }
@@ -38,6 +43,11 @@ export function getTableShapeDescription(shape: TableShape | string): string {
       return 'Format compact à quatre côtés, pratique pour les espaces restreints.';
     case 'oval':
       return 'Forme elliptique élégante, combinant convivialité et esthétique.';
+    case 'arc':
+      return 'Segment courbe pour composer des anneaux et des allées festives.';
+    case 'cocktail':
+    case 'highTop':
+      return 'Table haute, idéale pour un cocktail ou un espace debout.';
     default:
       return '';
   }
@@ -53,6 +63,8 @@ export function getTableShapeEmoji(shape: TableShape | string): string {
       return '🔲';
     case 'oval':
       return '🥚';
+    case 'arc':
+      return '🌙';
     default:
       return '🍽️';
   }
@@ -62,6 +74,7 @@ function tableSizeClass(shape: TableShape | string): string {
   if (shape === 'round') return 'w-24 h-24 rounded-full';
   if (shape === 'oval') return 'w-28 h-20 rounded-[999px]';
   if (shape === 'square') return 'w-20 h-20 rounded-[1.15rem]';
+  if (shape === 'arc') return 'w-36 h-20 rounded-[2rem]';
   return 'w-32 h-16 rounded-[0.85rem]';
 }
 
@@ -96,7 +109,7 @@ export function getTableVisualStyle(
   tableSurface?: TableSurfaceStyle,
 ): { className: string; style?: React.CSSProperties } {
   const size = tableSizeClass(shape);
-  const shapeKey = ['round', 'oval', 'square', 'rectangular', 'cocktail', 'highTop'].includes(String(shape))
+  const shapeKey = ['round', 'oval', 'square', 'rectangular', 'cocktail', 'highTop', 'arc'].includes(String(shape))
     ? (shape === 'cocktail' || shape === 'highTop' ? 'round' : shape)
     : 'rectangular';
   const className = `${size} em-table-realistic em-table-realistic--${shapeKey}${active ? ' em-table-realistic--active' : ''}`;
@@ -187,6 +200,17 @@ export function getSeatCoordinates(
   seatIndex: number,
   radius = 45,
 ) {
+  if (shape === 'arc') {
+    const n = Math.max(1, capacity);
+    const t = n === 1 ? 0.5 : seatIndex / (n - 1);
+    const a = (t - 0.5) * Math.PI * 0.9;
+    return {
+      x: Math.sin(a) * radius * 1.15,
+      y: Math.cos(a) * radius * 0.7,
+      rotationDeg: (a * 180) / Math.PI,
+    };
+  }
+
   if (shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop') {
     const angle = (seatIndex / capacity) * 2 * Math.PI - Math.PI / 2;
     const rx = shape === 'oval' ? radius * 1.3 : radius;
@@ -235,6 +259,14 @@ export function getTableSeatPlacement3D(
   const [tw, td] = tableSize;
   const gap = 0.48;
   const n = Math.max(1, capacity);
+
+  if (shape === 'arc') {
+    const radius = Math.max(1.4, tw / 2) + 0.5;
+    const sweep = Math.PI * 0.95;
+    const start = -sweep / 2;
+    const a = start + (n === 1 ? sweep / 2 : (seatIndex / (n - 1)) * sweep);
+    return { x: Math.sin(a) * radius, z: Math.cos(a) * radius, rotationY: a + Math.PI };
+  }
 
   if (shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop') {
     const a = (seatIndex / n) * Math.PI * 2 - Math.PI / 2;

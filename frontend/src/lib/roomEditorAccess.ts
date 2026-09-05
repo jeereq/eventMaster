@@ -25,7 +25,7 @@ export type RoomEditorCapabilities = {
   /** Qualité showcase + mode présentation. */
   canShowcaseRender: boolean;
   tableShapes: TableShape[];
-  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet' | 'stairs' | 'balcony'>;
+  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet' | 'stairs' | 'balcony' | 'arch' | 'partition' | 'decal' | 'pedestal'>;
 };
 
 const LEVEL_ORDER: RoomEditorLevel[] = ['basic', 'standard', 'advanced', 'complete'];
@@ -77,7 +77,7 @@ export function roomEditorCapabilities(
       canSnapGrid: true,
       canAutoAssign: true,
       canTemplates: true,
-      tableShapes: ['round', 'rectangular', 'square', 'oval'] as TableShape[],
+      tableShapes: ['round', 'rectangular', 'square', 'oval', 'arc'] as TableShape[],
       canFixtures: themesFixtures,
       fixtureKinds: themesFixtures ? ['entrance', 'door', 'aisle', 'corridor'] : [],
     } satisfies Partial<RoomEditorCapabilities>);
@@ -100,9 +100,9 @@ export function roomEditorCapabilities(
       canAutoAssign: true,
       canAlign: true,
       canShowcaseRender: true,
-      tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
+      tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   } else if (parsed === 'complete') {
@@ -126,9 +126,9 @@ export function roomEditorCapabilities(
       canAutoAssign: true,
       canAlign: true,
       canShowcaseRender: true,
-      tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
+      tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   }

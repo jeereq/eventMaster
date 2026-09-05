@@ -64,6 +64,7 @@ import {
   generateAmphitheaterRows,
   estimateAmphitheaterSeats,
   createBlueprintChair,
+  composeArcRing,
   createBlueprintFixture,
   createBlueprintRow,
   createBlueprintTable,
@@ -84,6 +85,8 @@ import {
   saveCustomTemplateToBlueprint,
   tableArrangeLabels,
   tableShapeLabels,
+  stageShapeLabels,
+  roofStyleLabels,
   wallsFromRoomOutline,
   resolveFurnitureSurfaceAt,
   type ArrangeDensity,
@@ -91,6 +94,8 @@ import {
   type LayoutParams,
   type SeatMaterial,
   type TableArrangePreset,
+  type StageShape,
+  type RoofStyle,
   type TableSurfaceStyle,
   type ZoneKind,
   type ZoneMaterial,
@@ -99,6 +104,8 @@ import {
   type AisleStyle,
   type ChandelierFixtureStyle,
   type AmphitheaterStyle,
+  type FloorDecalKind,
+  type PedestalStyle,
   type OpeningMaterial,
   openingMaterialLabels,
 } from '@/lib/roomLayoutUtils';
@@ -734,6 +741,30 @@ export default function RoomLayoutEditor({
     };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, table] }, { message: `Table « ${table.name} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'table', id: table.id }]);
+  };
+
+  const addArcRing = () => {
+    if (!caps.tableShapes.includes('arc')) {
+      log('Les tables en arc ne sont pas incluses dans votre forfait', 'info');
+      return;
+    }
+    const existing = blueprint.furniture.filter((f) => f.kind === 'table').length;
+    const remaining = caps.maxTables - existing;
+    if (remaining < 2) {
+      log(`Limite de ${caps.maxTables} tables atteinte (${caps.label})`, 'info');
+      return;
+    }
+    const tables = composeArcRing({
+      segmentCount: Math.min(6, remaining),
+      capacity: 8,
+      startIndex: existing + 1,
+      tableColor: blueprint.metadata.defaultTableColor ?? '#e8d4c8',
+    }).map((table) => ({ ...table, storyId: resolveActiveStoryId(blueprint) }));
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, ...tables] },
+      { message: `Anneau de ${tables.length} tables en arc`, kind: 'add' },
+    );
+    setSelection(tables.map((table) => ({ kind: 'table' as const, id: table.id })));
   };
 
   const duplicateSelectedTable = duplicateSelection;
@@ -2407,6 +2438,21 @@ export default function RoomLayoutEditor({
                   </label>
                   {blueprint.metadata.showRoof && (
                     <div className="grid grid-cols-2 gap-3 pl-1">
+                      <label className="block space-y-1.5 col-span-2">
+                        <span className="text-xs font-semibold text-foreground">Style de toit</span>
+                        <select
+                          value={blueprint.metadata.roofStyle ?? 'flat'}
+                          onChange={(e) => updateBlueprint({
+                            ...blueprint,
+                            metadata: { ...blueprint.metadata, roofStyle: e.target.value as RoofStyle },
+                          }, { message: `Toit : ${roofStyleLabels[e.target.value as RoofStyle]}`, kind: 'settings' })}
+                          className={EDITOR_FIELD}
+                        >
+                          {(Object.keys(roofStyleLabels) as RoofStyle[]).map((style) => (
+                            <option key={style} value={style}>{roofStyleLabels[style]}</option>
+                          ))}
+                        </select>
+                      </label>
                       <label className="block space-y-1.5">
                         <span className="text-xs font-semibold text-foreground">Couleur plafond</span>
                         <input
@@ -2536,6 +2582,21 @@ export default function RoomLayoutEditor({
                           {label}
                         </label>
                       ))}
+                      {blueprint.metadata.showCurtains === true ? (
+                        <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground">
+                          <span className="shrink-0">Teinte</span>
+                          <input
+                            type="color"
+                            value={blueprint.metadata.curtainColor ?? '#7f1d1d'}
+                            onChange={(e) => updateBlueprint({
+                              ...blueprint,
+                              metadata: { ...blueprint.metadata, curtainColor: e.target.value },
+                            }, { message: 'Couleur des rideaux', kind: 'settings' })}
+                            aria-label="Couleur des rideaux"
+                            className="w-14 min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
+                          />
+                        </label>
+                      ) : null}
                     </div>
                   </details>
                 </div>
@@ -3158,13 +3219,17 @@ export default function RoomLayoutEditor({
       const isPodium = selectedFixture.kind === 'podium';
       const isStage = selectedFixture.kind === 'stage' || isPodium;
       const isFlower = selectedFixture.kind === 'flower';
+      const isArch = selectedFixture.kind === 'arch';
+      const isPartition = selectedFixture.kind === 'partition';
+      const isDecal = selectedFixture.kind === 'decal';
+      const isPedestal = selectedFixture.kind === 'pedestal';
       const isBuffet = selectedFixture.kind === 'buffet';
       const isStairs = selectedFixture.kind === 'stairs';
       const isBalcony = selectedFixture.kind === 'balcony';
       const isDoor = selectedFixture.kind === 'door' || selectedFixture.kind === 'entrance';
       const isAisle = selectedFixture.kind === 'aisle' || selectedFixture.kind === 'carpet';
       const isChandelier = selectedFixture.kind === 'chandelier';
-      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle;
+      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle || isDecal;
 
       return (
         <div className="space-y-3">
@@ -3184,13 +3249,21 @@ export default function RoomLayoutEditor({
                           ? 'Buffet'
                           : isPodium
                             ? 'Podium'
-                            : isFlower
-                              ? 'Décoration florale'
-                              : isColumn
-                                ? 'Colonne / Poteau'
-                                : isStage
-                                  ? 'Scène'
-                                  : `Fixe — ${selectedFixture.kind}`}
+                            : isArch
+                              ? 'Arche florale'
+                              : isPartition
+                                ? 'Cloison basse'
+                                : isDecal
+                                  ? 'Motif au sol'
+                                  : isPedestal
+                                    ? 'Piédestal floral'
+                                : isFlower
+                                  ? 'Décoration florale'
+                                  : isColumn
+                                    ? 'Colonne / Poteau'
+                                    : isStage
+                                      ? 'Scène'
+                                      : `Fixe — ${selectedFixture.kind}`}
             </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
@@ -3624,6 +3697,21 @@ export default function RoomLayoutEditor({
               </div>
             )}
 
+            {selectedFixture.kind === 'stage' ? (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Forme de scène</span>
+                <select
+                  value={selectedFixture.stageShape ?? 'rect'}
+                  onChange={(e) => updateFixture(selectedFixture.id, { stageShape: e.target.value as StageShape }, `Scène : ${stageShapeLabels[e.target.value as StageShape]}`)}
+                  className={EDITOR_FIELD}
+                >
+                  {(Object.keys(stageShapeLabels) as StageShape[]).map((shape) => (
+                    <option key={shape} value={shape}>{stageShapeLabels[shape]}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
             {isPodium && (
               <>
                 <label className="block text-xs space-y-1">
@@ -3681,6 +3769,55 @@ export default function RoomLayoutEditor({
                 </label>
               </>
             )}
+
+            {isDecal ? (
+              <>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Motif</span>
+                  <select
+                    value={selectedFixture.decalKind ?? 'rose'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { decalKind: e.target.value as FloorDecalKind }, 'Motif au sol')}
+                    className={EDITOR_FIELD}
+                  >
+                    <option value="rose">Roses</option>
+                    <option value="butterfly">Papillons</option>
+                    <option value="custom">Image (importer ci-dessous)</option>
+                  </select>
+                </label>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Couleur</span>
+                  <input type="color" value={selectedFixture.color ?? '#dcaeae'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value }, 'Couleur du motif')} aria-label="Couleur du motif" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
+                </label>
+              </>
+            ) : null}
+
+            {isPedestal ? (
+              <>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Style</span>
+                  <select
+                    value={selectedFixture.pedestalStyle ?? 'squareWhite'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { pedestalStyle: e.target.value as PedestalStyle }, 'Style de piédestal')}
+                    className={EDITOR_FIELD}
+                  >
+                    <option value="squareWhite">Colonne blanche</option>
+                    <option value="columnGold">Colonne or</option>
+                  </select>
+                </label>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Hauteur (m)</span>
+                  <input
+                    type="number"
+                    min={0.7}
+                    max={2}
+                    step={0.05}
+                    value={selectedFixture.heightM ?? 1.15}
+                    onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || 1.15 }, 'Hauteur piédestal')}
+                    className={EDITOR_FIELD}
+                  />
+                </label>
+              </>
+            ) : null}
 
             {isFlower && (
               <>
@@ -3849,6 +3986,7 @@ export default function RoomLayoutEditor({
                   {caps.tableShapes.includes('oval') ? <option value="oval">Ovale</option> : null}
                   {caps.tableShapes.includes('cocktail') ? <option value="cocktail">Cocktail (basse)</option> : null}
                   {caps.tableShapes.includes('highTop') ? <option value="highTop">Mange-debout</option> : null}
+                  {caps.tableShapes.includes('arc') ? <option value="arc">Courbe (arc)</option> : null}
                 </select>
               </label>
               <label className="text-xs space-y-1">
@@ -3891,6 +4029,17 @@ export default function RoomLayoutEditor({
               />
               Afficher assiettes & couverts
             </label>
+            {selectedFurniture.shape !== 'cocktail' && selectedFurniture.shape !== 'highTop' ? (
+              <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedFurniture.hasCenterpiece === true}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { hasCenterpiece: e.target.checked }, e.target.checked ? 'Centre de table affiché' : 'Centre de table masqué')}
+                  className="rounded border-border size-4"
+                />
+                Centre de table (vase & bouquet)
+              </label>
+            ) : null}
             {selectedFurniture.hasCouverts === true && (
               <label className="block text-xs space-y-1">
                 <span className="font-semibold text-muted">Style de service</span>
@@ -4051,6 +4200,13 @@ export default function RoomLayoutEditor({
                   className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Couverts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['hasCenterpiece']), { message: 'Centres de table appliqués à toutes les tables', kind: 'edit' })}
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
+                >
+                  Centres
                 </button>
               </div>
             </div>
@@ -4773,6 +4929,16 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={addTable} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
         <Plus className="w-3.5 h-3.5" aria-hidden /> Table
       </button>
+      {caps.tableShapes.includes('arc') ? (
+        <button
+          type="button"
+          onClick={addArcRing}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+          title="Six tables en arc autour d’un centre"
+        >
+          Anneau d’arcs
+        </button>
+      ) : null}
       {caps.canAddRows ? (
         <>
           <button type="button" onClick={addRow} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
@@ -4957,6 +5123,46 @@ export default function RoomLayoutEditor({
       {caps.fixtureKinds.includes('flower') ? (
         <button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           <Flower2 className="w-3.5 h-3.5" aria-hidden /> Fleurs
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('arch') ? (
+        <button
+          type="button"
+          onClick={() => addFixture('arch')}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+          title="Arche florale (cérémonie, fond de salle)"
+        >
+          <Flower2 className="w-3.5 h-3.5" aria-hidden /> Arche
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('partition') ? (
+        <button
+          type="button"
+          onClick={() => addFixture('partition')}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+          title="Cloison basse courbe végétalisée"
+        >
+          Cloison
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('pedestal') ? (
+        <button
+          type="button"
+          onClick={() => addFixture('pedestal')}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+          title="Colonne carrée + bouquet (cérémonie)"
+        >
+          Piédestal
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('decal') ? (
+        <button
+          type="button"
+          onClick={() => addFixture('decal')}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+          title="Motif au sol : roses ou papillons"
+        >
+          Motif sol
         </button>
       ) : null}
       </EditorToolGroup>

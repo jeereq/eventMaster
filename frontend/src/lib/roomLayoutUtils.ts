@@ -15,7 +15,7 @@ export type ChairType =
   | 'MESH'
   | 'BARSTOOL'
   | 'POUF';
-export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop';
+export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop' | 'arc';
 /** Finition du plateau de table (3D). */
 export type TableSurfaceStyle = 'wood' | 'linen' | 'walnut' | 'marble' | 'darkWood' | 'whiteLacquer' | 'glass';
 /** Style de fauteuil / chaise (surtout fauteuils). */
@@ -30,7 +30,9 @@ export type ChairStyle =
   | 'crossback'
   | 'tolix'
   | 'ghost'
-  | 'panton';
+  | 'panton'
+  | 'louis'
+  | 'ovalBack';
 /** Matériau d’assise. */
 export type SeatMaterial =
   | 'velvet'
@@ -45,7 +47,11 @@ export type SeatMaterial =
   | 'rattan';
 export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
-export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts' | 'couvertStyle';
+export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts' | 'couvertStyle' | 'hasCenterpiece';
+export type StageShape = 'rect' | 'semiCircle';
+export type RoofStyle = 'flat' | 'tentSwag';
+export type FloorDecalKind = 'rose' | 'butterfly' | 'custom';
+export type PedestalStyle = 'squareWhite' | 'columnGold';
 
 export type RoomOutlineShape =
   | 'rectangle'
@@ -316,7 +322,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs' | 'balcony';
+    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'door' | 'chandelier' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs' | 'balcony' | 'arch' | 'partition' | 'decal' | 'pedestal';
     x: number;
     y: number;
     w: number;
@@ -333,6 +339,8 @@ export interface RoomLayoutBlueprint {
     material?: ZoneMaterial;
     /** Podium / scène / escalier : hauteur réelle en mètres. */
     heightM?: number;
+    /** Empreinte de la scène : rectangle ou demi-lune. */
+    stageShape?: StageShape;
     /** Podium / escalier : nombre de marches. */
     steps?: number;
     /** Buffet : afficher assiettes / couverts. */
@@ -366,6 +374,10 @@ export interface RoomLayoutBlueprint {
     hasSideLanterns?: boolean;
     /** Pétales de roses éparpillés sur l’allée. */
     hasPetals?: boolean;
+    /** Motif de décalcomanie au sol (roses, papillons, image). */
+    decalKind?: FloorDecalKind;
+    /** Piédestal floral : colonne blanche ou or. */
+    pedestalStyle?: PedestalStyle;
     /** Style de lustre / suspension au plafond. */
     chandelierStyle?: ChandelierFixtureStyle;
     /** Rayon de diffusion de la lumière (en % ou mètres). */
@@ -397,6 +409,8 @@ export interface RoomLayoutBlueprint {
         hasCouverts?: boolean;
         /** classic | gold | festive */
         couvertStyle?: 'classic' | 'gold' | 'festive';
+        /** Centre de table (vase or + bouquet). */
+        hasCenterpiece?: boolean;
         x: number;
         y: number;
         locked?: boolean;
@@ -493,6 +507,8 @@ export interface RoomLayoutBlueprint {
     roofOpacity?: number;
     /** Couleur du plafond / underside. */
     roofColor?: string;
+    /** Toit plat ou faîte de tente drapée. */
+    roofStyle?: RoofStyle;
     /** Style de lustre / suspension. */
     chandelierType?: import('@/lib/roomCeilingUtils').ChandelierType;
     /** Nombre de lustres (1–5, plafonné par la qualité de rendu). */
@@ -518,6 +534,8 @@ export interface RoomLayoutBlueprint {
     showUplights?: boolean;
     /** Rideaux décoratifs. */
     showCurtains?: boolean;
+    /** Teinte des rideaux muraux (ivoire, bordeaux…). */
+    curtainColor?: string;
     /** Plantes d’angle. */
     showDecorPlants?: boolean;
     /** Mode présentation (orbit auto, labels masqués). */
@@ -862,6 +880,10 @@ export function createBlueprintFixture(
     buffet: { x: 12, y: 70, w: 36, h: 10, label: 'Buffet' },
     stairs: { x: 70, y: 35, w: 12, h: 28, label: 'Escalier' },
     balcony: { x: 30, y: 90, w: 40, h: 8, label: 'Balcon' },
+    arch: { x: 36, y: 4, w: 28, h: 14, label: 'Arche florale' },
+    partition: { x: 28, y: 40, w: 36, h: 16, label: 'Cloison basse' },
+    decal: { x: 38, y: 38, w: 16, h: 16, label: 'Motif au sol' },
+    pedestal: { x: 20, y: 78, w: 5, h: 5, label: 'Piédestal floral' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -877,9 +899,13 @@ export function createBlueprintFixture(
       kind === 'stairs' ? '#a8a29e' :
       kind === 'balcony' ? '#d6d3d1' :
       kind === 'chandelier' ? '#f59e0b' :
+      kind === 'arch' ? '#f4e8e4' :
+      kind === 'partition' ? '#c4a4a4' :
+      kind === 'decal' ? '#dcaeae' :
+      kind === 'pedestal' ? '#f8fafc' :
       undefined,
-    flowerType: kind === 'flower' ? 'boquet' as FlowerType : undefined,
-    flowerColor: kind === 'flower' ? '#e11d48' : undefined,
+    flowerType: kind === 'arch' || kind === 'pedestal' ? 'rose' as FlowerType : kind === 'flower' ? 'boquet' as FlowerType : undefined,
+    flowerColor: kind === 'arch' || kind === 'pedestal' ? '#f4e8e4' : kind === 'flower' ? '#e11d48' : undefined,
     material:
       kind === 'carpet' ? 'carpet' :
       kind === 'aisle' ? 'carpet' :
@@ -894,6 +920,10 @@ export function createBlueprintFixture(
       kind === 'stairs' ? 1.2 :
       kind === 'balcony' ? 0.12 :
       kind === 'chandelier' ? 3.5 :
+      kind === 'arch' ? 2.4 :
+      kind === 'partition' ? 0.92 :
+      kind === 'pedestal' ? 1.15 :
+      kind === 'decal' ? 0.02 :
       undefined,
     steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
@@ -913,7 +943,51 @@ export function createBlueprintFixture(
     lightRadius: kind === 'chandelier' ? 25 : undefined,
     lightWarmth: kind === 'chandelier' ? 'gold' : undefined,
     lightIntensity: kind === 'chandelier' ? 85 : undefined,
+    stageShape: kind === 'stage' ? 'rect' : undefined,
+    decalKind: kind === 'decal' ? 'rose' : undefined,
+    pedestalStyle: kind === 'pedestal' ? 'squareWhite' : undefined,
   };
+}
+
+/** Place des tables en arc autour d’un centre (cercle / demi-cercle). */
+export function composeArcRing(opts: {
+  centerX?: number;
+  centerY?: number;
+  radiusPct?: number;
+  segmentCount?: number;
+  capacity?: number;
+  startIndex?: number;
+  sweepDeg?: number;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
+  tableColor?: string;
+}): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }>[] {
+  const count = Math.max(2, Math.min(12, Math.round(opts.segmentCount ?? 6)));
+  const radius = opts.radiusPct ?? 22;
+  const cx = opts.centerX ?? 50;
+  const cy = opts.centerY ?? 52;
+  const sweep = opts.sweepDeg ?? 360;
+  const start = opts.startIndex ?? 1;
+  const tables: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }>[] = [];
+  const groupId = makeLayoutId('arc-ring');
+  for (let i = 0; i < count; i += 1) {
+    const t = count === 1 ? 0 : i / count;
+    const deg = (t * sweep) - (sweep === 360 ? 0 : sweep / 2);
+    const rad = (deg * Math.PI) / 180;
+    tables.push({
+      ...createBlueprintTable(start + i, { shape: 'arc', capacity: opts.capacity ?? 8, chairType: 'BANQUET' }),
+      x: Math.round((cx + Math.sin(rad) * radius) * 10) / 10,
+      y: Math.round((cy - Math.cos(rad) * radius) * 10) / 10,
+      rotation: Math.round(deg),
+      chairStyle: opts.chairStyle ?? 'ovalBack',
+      seatMaterial: opts.seatMaterial ?? 'velvet',
+      tableSurface: 'linen',
+      tableColor: opts.tableColor ?? '#e8d4c8',
+      hasCouverts: true,
+      groupId,
+    });
+  }
+  return tables;
 }
 
 /**
@@ -1068,6 +1142,8 @@ export const chairStyleLabels: Record<ChairStyle, string> = {
   tolix: 'Tolix (métal)',
   ghost: 'Ghost (transparent)',
   panton: 'Panton',
+  louis: 'Louis XVI',
+  ovalBack: 'Dossier ovale (rose)',
 };
 
 export const seatMaterialLabels: Record<SeatMaterial, string> = {
@@ -1332,6 +1408,10 @@ export type RoomAmbiencePreset = {
   lightingPreset?: import('@/lib/roomRenderQuality').LightingPreset;
   showChandeliers?: boolean;
   chandelierType?: import('@/lib/roomCeilingUtils').ChandelierType;
+  showRoof?: boolean;
+  roofStyle?: RoofStyle;
+  roofColor?: string;
+  roofOpacity?: number;
 };
 
 export type SavedRoomAmbience = {
@@ -1372,6 +1452,10 @@ export const ROOM_AMBIENCE_PRESETS: RoomAmbiencePreset[] = [
     defaultTableColor: '#faf7f2',
     lightingPreset: 'day',
     showChandeliers: true,
+    showRoof: true,
+    roofStyle: 'tentSwag',
+    roofColor: '#f5f0e8',
+    roofOpacity: 0.78,
   },
   {
     id: 'gala-velours',
@@ -1530,6 +1614,10 @@ export function applyRoomAmbiencePreset(
     metadata.lightingPreset = preset.lightingPreset ?? blueprint.metadata.lightingPreset;
     metadata.showChandeliers = preset.showChandeliers ?? blueprint.metadata.showChandeliers;
     metadata.chandelierType = preset.chandelierType ?? blueprint.metadata.chandelierType;
+    metadata.showRoof = preset.showRoof ?? blueprint.metadata.showRoof;
+    metadata.roofStyle = preset.roofStyle ?? blueprint.metadata.roofStyle;
+    metadata.roofColor = preset.roofColor ?? blueprint.metadata.roofColor;
+    metadata.roofOpacity = preset.roofOpacity ?? blueprint.metadata.roofOpacity;
   }
 
   const walls = scope.walls
@@ -2103,6 +2191,258 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     },
   },
   {
+    id: 'wedding-aisle-banquet',
+    name: 'Mariage — allée & banquet',
+    description: 'Deux rangées de tables, allée blanche, arche florale, nappes et Chiavari or',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'wedding-aisle-banquet',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 10, tableShape: 'round', seatsPerTable: p?.seatsPerTable ?? 8, chairType: 'BANQUET', ...p },
+        'banquet',
+      );
+      const furniture = next.furniture.map((item) =>
+        item.kind === 'table'
+          ? {
+            ...item,
+            chairStyle: 'chiavari' as const,
+            seatMaterial: 'linen' as const,
+            tableSurface: 'linen' as const,
+            tableColor: '#faf7f2',
+            hasCenterpiece: true,
+            hasCouverts: true,
+            couvertStyle: 'gold' as const,
+          }
+          : item,
+      );
+      return refreshBlueprintMetadata({
+        ...next,
+        furniture,
+        fixtures: [
+          {
+            id: makeLayoutId('aisle'),
+            kind: 'aisle',
+            x: 46,
+            y: 16,
+            w: 8,
+            h: 72,
+            label: 'Allée d’honneur',
+            aisleStyle: 'whiteMirror',
+            color: '#f8fafc',
+            hasGoldBorder: false,
+            hasSideLanterns: false,
+            hasPetals: false,
+          },
+          {
+            id: makeLayoutId('stage'),
+            kind: 'stage',
+            x: 34,
+            y: 3,
+            w: 32,
+            h: 12,
+            label: 'Plateau',
+            heightM: 0.32,
+            stageShape: 'semiCircle',
+            color: '#f8fafc',
+            material: 'marble',
+          },
+          {
+            id: makeLayoutId('arch'),
+            kind: 'arch',
+            x: 36,
+            y: 2,
+            w: 28,
+            h: 12,
+            label: 'Arche florale',
+            color: '#f4e8e4',
+            flowerType: 'rose',
+          },
+          {
+            id: makeLayoutId('chandelier'),
+            kind: 'chandelier',
+            x: 46,
+            y: 32,
+            w: 8,
+            h: 8,
+            label: 'Lustre',
+            chandelierStyle: 'crystalCascade',
+            lightWarmth: 'gold',
+            heightM: 3.5,
+          },
+          {
+            id: makeLayoutId('chandelier'),
+            kind: 'chandelier',
+            x: 46,
+            y: 58,
+            w: 8,
+            h: 8,
+            label: 'Lustre',
+            chandelierStyle: 'fairyCanopy',
+            lightWarmth: 'gold',
+            heightM: 3.4,
+          },
+        ],
+        metadata: {
+          ...next.metadata,
+          floorType: 'parquet',
+          floorColor: '#f5f0e8',
+          defaultTableSurface: 'linen',
+          defaultTableColor: '#faf7f2',
+          showRoof: true,
+          roofStyle: 'tentSwag',
+          roofColor: '#f5f0e8',
+          roofOpacity: 0.78,
+          showChandeliers: false,
+          showCurtains: true,
+          curtainColor: '#faf7f2',
+          lightingPreset: 'banquet',
+        },
+      });
+    },
+  },
+  {
+    id: 'wedding-organic-gala',
+    name: 'Mariage — gala organique',
+    description: 'Anneau d’arcs, nappes blush, motifs au sol et cloisons roses',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'wedding-organic-gala',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 6, tableShape: 'round', seatsPerTable: p?.seatsPerTable ?? 8, chairType: 'BANQUET', ...p },
+        'circle',
+      );
+      const blush = '#e8d4c8';
+      const ring = composeArcRing({
+        centerX: 50,
+        centerY: 54,
+        radiusPct: 20,
+        segmentCount: 6,
+        capacity: p?.seatsPerTable ?? 8,
+        tableColor: blush,
+      });
+      const centerTable = {
+        ...createBlueprintTable(ring.length + 1, { shape: 'round', capacity: 10, chairType: 'BANQUET' }),
+        x: 50,
+        y: 54,
+        chairStyle: 'ovalBack' as const,
+        seatMaterial: 'velvet' as const,
+        tableSurface: 'linen' as const,
+        tableColor: blush,
+        hasCenterpiece: true,
+        hasCouverts: true,
+      };
+      const satellites = next.furniture
+        .filter((item): item is Extract<typeof item, { kind: 'table' }> => item.kind === 'table')
+        .slice(0, 3)
+        .map((item, index) => ({
+          ...item,
+          x: 18 + index * 32,
+          y: 78,
+          chairStyle: 'ovalBack' as const,
+          seatMaterial: 'velvet' as const,
+          tableSurface: 'linen' as const,
+          tableColor: blush,
+          hasCenterpiece: true,
+          hasCouverts: true,
+        }));
+      return refreshBlueprintMetadata({
+        ...next,
+        furniture: [...ring, centerTable, ...satellites],
+        fixtures: [
+          {
+            id: makeLayoutId('partition'),
+            kind: 'partition',
+            x: 12,
+            y: 30,
+            w: 24,
+            h: 14,
+            label: 'Cloison gauche',
+            color: '#c4a4a4',
+          },
+          {
+            id: makeLayoutId('partition'),
+            kind: 'partition',
+            x: 64,
+            y: 30,
+            w: 24,
+            h: 14,
+            label: 'Cloison droite',
+            color: '#c4a4a4',
+          },
+          {
+            id: makeLayoutId('stage'),
+            kind: 'stage',
+            x: 28,
+            y: 3,
+            w: 44,
+            h: 12,
+            label: 'Scène',
+            heightM: 0.4,
+            color: '#f8fafc',
+            material: 'marble',
+          },
+          {
+            id: makeLayoutId('buffet'),
+            kind: 'buffet',
+            x: 6,
+            y: 4,
+            w: 18,
+            h: 8,
+            label: 'Bar',
+            color: '#f8fafc',
+            material: 'marble',
+          },
+          {
+            id: makeLayoutId('buffet'),
+            kind: 'buffet',
+            x: 76,
+            y: 4,
+            w: 18,
+            h: 8,
+            label: 'Bar',
+            color: '#f8fafc',
+            material: 'marble',
+          },
+          {
+            id: makeLayoutId('decal'),
+            kind: 'decal',
+            x: 28,
+            y: 40,
+            w: 14,
+            h: 14,
+            label: 'Roses',
+            decalKind: 'rose',
+            color: '#dcaeae',
+          },
+          {
+            id: makeLayoutId('decal'),
+            kind: 'decal',
+            x: 58,
+            y: 62,
+            w: 12,
+            h: 12,
+            label: 'Papillons',
+            decalKind: 'butterfly',
+            color: '#c4a06a',
+          },
+        ],
+        metadata: {
+          ...next.metadata,
+          floorType: 'epoxy',
+          floorColor: '#f3eee6',
+          defaultTableSurface: 'linen',
+          defaultTableColor: blush,
+        },
+      });
+    },
+  },
+  {
     id: 'classroom',
     name: 'Salle de classe',
     description: 'Tables rectangulaires en rangées, allée centrale',
@@ -2302,13 +2642,13 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
   {
     id: 'chairs-ceremony',
     name: 'Cérémonie — chaises',
-    description: 'Deux blocs de chaises, allée centrale, sans tables',
+    description: 'Pelouse, grille 4×8, allée blanche, autel et piédestaux',
     roomType: 'CONFERENCE',
     outlineShape: 'rectangle',
     build: (p) => {
       const bp = generateChairOnlyBlueprint(
-        { rowCount: p?.rowCount ?? 8, seatsPerRow: p?.seatsPerRow ?? 10, ...p },
-        p?.chairType ?? 'BANQUET',
+        { rowCount: p?.rowCount ?? 8, seatsPerRow: p?.seatsPerRow ?? 8, ...p },
+        p?.chairType ?? 'FOLDING',
         'ceremony',
       );
       return refreshBlueprintMetadata({
@@ -2534,6 +2874,7 @@ export function applyTableStyleToAll(
       capacity: fields.includes('capacity') ? source.capacity : item.capacity,
       hasCouverts: fields.includes('hasCouverts') ? source.hasCouverts : item.hasCouverts,
       couvertStyle: fields.includes('couvertStyle') ? source.couvertStyle : item.couvertStyle,
+      hasCenterpiece: fields.includes('hasCenterpiece') ? source.hasCenterpiece : item.hasCenterpiece,
     };
   });
   return refreshBlueprintMetadata({ ...blueprint, furniture });
@@ -3083,44 +3424,176 @@ function generateChairOnlyBlueprint(
 
   if (mode === 'ceremony') {
     const rowCount = Math.max(4, params.rowCount ?? 8);
-    const seatsPerSide = Math.max(4, Math.floor((params.seatsPerRow ?? 10) / 2));
+    const seatsPerSide = Math.max(4, Math.floor((params.seatsPerRow ?? 8) / 2));
     for (let i = 0; i < rowCount; i++) {
       const y = 28 + (i / Math.max(1, rowCount - 1)) * 55;
-      const curve = 0.08 + i * 0.015;
-      // Rangée gauche
       furniture.push({
         id: uid('row'),
         kind: 'row',
         label: `Gauche ${i + 1}`,
         seatCount: seatsPerSide,
         chairType,
+        chairStyle: chairType === 'FOLDING' ? undefined : 'classic',
+        seatMaterial: 'plastic',
         tier: 0,
         x: 32,
         y,
-        curve,
+        curve: 0,
         focusX: 50,
         focusY: 12,
-        rotation: 8,
+        rotation: 0,
       });
-      // Rangée droite
       furniture.push({
         id: uid('row'),
         kind: 'row',
         label: `Droite ${i + 1}`,
         seatCount: seatsPerSide,
         chairType,
+        chairStyle: chairType === 'FOLDING' ? undefined : 'classic',
+        seatMaterial: 'plastic',
         tier: 0,
         x: 68,
         y,
-        curve,
+        curve: 0,
         focusX: 50,
         focusY: 12,
-        rotation: -8,
+        rotation: 0,
       });
     }
     fixtures.push(
-      { id: uid('aisle'), kind: 'aisle', x: 47, y: 18, w: 6, h: 70, label: 'Allée centrale' },
-      { id: uid('stage'), kind: 'stage', x: 35, y: 3, w: 30, h: 10, label: 'Autel / podium', heightM: 0.35 },
+      {
+        id: uid('aisle'),
+        kind: 'aisle',
+        x: 47,
+        y: 18,
+        w: 6,
+        h: 70,
+        label: 'Allée centrale',
+        aisleStyle: 'whiteMirror',
+        color: '#f8fafc',
+        hasGoldBorder: false,
+        hasSideLanterns: true,
+        hasPetals: true,
+      },
+      {
+        id: uid('stage'),
+        kind: 'stage',
+        x: 36,
+        y: 2,
+        w: 28,
+        h: 14,
+        label: 'Autel',
+        heightM: 0.28,
+        stageShape: 'semiCircle',
+        color: '#f8fafc',
+        material: 'marble',
+      },
+      {
+        id: uid('arch'),
+        kind: 'arch',
+        x: 38,
+        y: 1,
+        w: 24,
+        h: 10,
+        label: 'Arche florale',
+        color: '#f4e8e4',
+        flowerType: 'rose',
+      },
+      {
+        id: uid('pedestal'),
+        kind: 'pedestal',
+        x: 22,
+        y: 8,
+        w: 5,
+        h: 5,
+        label: 'Piédestal autel G',
+        pedestalStyle: 'squareWhite',
+        flowerType: 'rose',
+        flowerColor: '#f4e8e4',
+        color: '#f8fafc',
+        heightM: 1.15,
+      },
+      {
+        id: uid('pedestal'),
+        kind: 'pedestal',
+        x: 73,
+        y: 8,
+        w: 5,
+        h: 5,
+        label: 'Piédestal autel D',
+        pedestalStyle: 'squareWhite',
+        flowerType: 'rose',
+        flowerColor: '#f4e8e4',
+        color: '#f8fafc',
+        heightM: 1.15,
+      },
+      {
+        id: uid('pedestal'),
+        kind: 'pedestal',
+        x: 38,
+        y: 88,
+        w: 5,
+        h: 5,
+        label: 'Entrée gauche',
+        pedestalStyle: 'squareWhite',
+        flowerType: 'rose',
+        flowerColor: '#f4e8e4',
+        color: '#f8fafc',
+        heightM: 1.15,
+      },
+      {
+        id: uid('pedestal'),
+        kind: 'pedestal',
+        x: 57,
+        y: 88,
+        w: 5,
+        h: 5,
+        label: 'Entrée droite',
+        pedestalStyle: 'squareWhite',
+        flowerType: 'rose',
+        flowerColor: '#f4e8e4',
+        color: '#f8fafc',
+        heightM: 1.15,
+      },
+    );
+    furniture.push(
+      {
+        id: uid('table'),
+        kind: 'table',
+        name: 'Autel',
+        shape: 'square',
+        capacity: 2,
+        chairType: 'BANQUET',
+        chairStyle: 'louis',
+        seatMaterial: 'linen',
+        tableSurface: 'linen',
+        tableColor: '#faf7f2',
+        attachedChairs: false,
+        x: 50,
+        y: 10,
+      },
+      {
+        id: uid('chair'),
+        kind: 'chair',
+        chairType: 'ARMCHAIR',
+        chairStyle: 'louis',
+        seatMaterial: 'linen',
+        label: 'Siège d’honneur',
+        x: 56,
+        y: 10,
+        rotation: 0,
+      },
+      {
+        id: uid('chair'),
+        kind: 'chair',
+        chairType: 'ARMCHAIR',
+        chairStyle: 'louis',
+        seatMaterial: 'linen',
+        label: 'Siège d’honneur',
+        x: 62,
+        y: 10,
+        rotation: 0,
+      },
     );
     return {
       version: 1,
@@ -3128,7 +3601,12 @@ function generateChairOnlyBlueprint(
       canvas: { widthM: 18, heightM: 14 },
       fixtures,
       furniture,
-      metadata: { rowCount: rowCount * 2, totalSeats: rowCount * 2 * seatsPerSide },
+      metadata: {
+        rowCount: rowCount * 2,
+        totalSeats: rowCount * 2 * seatsPerSide,
+        floorType: 'herbe',
+        floorColor: '#4d7c3f',
+      },
     };
   }
 
@@ -3424,6 +3902,17 @@ export const tableShapeLabels: Record<TableShape, string> = {
   oval: 'Ovale',
   cocktail: 'Cocktail (basse)',
   highTop: 'Mange-debout',
+  arc: 'Courbe (arc)',
+};
+
+export const stageShapeLabels: Record<StageShape, string> = {
+  rect: 'Rectangle',
+  semiCircle: 'Demi-lune',
+};
+
+export const roofStyleLabels: Record<RoofStyle, string> = {
+  flat: 'Plat',
+  tentSwag: 'Tente drapée',
 };
 
 export const flowerTypeLabels: Record<FlowerType, string> = {
@@ -3494,7 +3983,14 @@ export function getFixtureClass(kind: string): string {
     case 'column':
       return 'bg-stone-400 border-stone-500';
     case 'flower':
+    case 'arch':
       return 'bg-transparent border-transparent';
+    case 'partition':
+      return 'bg-rose-50 border-rose-200 text-rose-800';
+    case 'decal':
+      return 'bg-rose-50/80 border-rose-200 text-rose-800';
+    case 'pedestal':
+      return 'bg-stone-50 border-stone-300 text-stone-700';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:

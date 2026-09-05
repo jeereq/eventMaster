@@ -74,6 +74,8 @@ const ITEM_KINDS = new Set([
   'flower',
   'arch',
   'partition',
+  'decal',
+  'pedestal',
 ]);
 
 export type RoomPlanVisionView = 'top' | 'perspective' | 'unclear';
@@ -96,7 +98,9 @@ export type RoomPlanVisionItemKind =
   | 'chandelier'
   | 'flower'
   | 'arch'
-  | 'partition';
+  | 'partition'
+  | 'decal'
+  | 'pedestal';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -117,7 +121,11 @@ export interface RoomPlanVisionItem {
   seatMaterial?: string;
   aisleStyle?: string;
   hasCenterpiece?: boolean;
+  hasPetals?: boolean;
+  hasSideLanterns?: boolean;
   stageShape?: string;
+  decalKind?: string;
+  pedestalStyle?: string;
   anchor?: 'box' | 'center';
 }
 
@@ -137,6 +145,7 @@ export interface RoomPlanVisionAppearance {
   tableSurface?: string;
   tableColor?: string;
   roofStyle?: string;
+  curtainColor?: string;
 }
 
 export interface RoomPlanVisionDraft {
@@ -256,6 +265,8 @@ function parseAppearance(raw: unknown, view: RoomPlanVisionView): RoomPlanVision
   if (source.roofStyle === 'tentSwag' || source.roofStyle === 'flat') {
     appearance.roofStyle = source.roofStyle;
   }
+  const curtainColor = parseHexColor(source.curtainColor);
+  if (curtainColor) appearance.curtainColor = curtainColor;
   return appearance;
 }
 
@@ -326,7 +337,15 @@ export function parseRoomPlanVisionDraft(
     const aisleStyle = asKnown(row.aisleStyle, AISLE_STYLES);
     if (aisleStyle) item.aisleStyle = aisleStyle;
     if (row.hasCenterpiece === true) item.hasCenterpiece = true;
+    if (row.hasPetals === true) item.hasPetals = true;
+    if (row.hasSideLanterns === true) item.hasSideLanterns = true;
     if (row.stageShape === 'semiCircle' || row.shape === 'semiCircle') item.stageShape = 'semiCircle';
+    if (row.decalKind === 'rose' || row.decalKind === 'butterfly' || row.decalKind === 'custom') {
+      item.decalKind = row.decalKind;
+    }
+    if (row.pedestalStyle === 'squareWhite' || row.pedestalStyle === 'columnGold') {
+      item.pedestalStyle = row.pedestalStyle;
+    }
     if (row.anchor === 'center' || row.anchor === 'box') item.anchor = row.anchor;
     items.push(item);
   }
@@ -410,10 +429,11 @@ Champs JSON obligatoires :
     "wallColor": "#rrggbb",
     "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "tableColor": "#rrggbb",
-    "roofStyle": "flat"|"tentSwag"
+    "roofStyle": "flat"|"tentSwag",
+    "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -424,7 +444,11 @@ Champs JSON obligatoires :
     "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
     "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack",
     "seatMaterial": "velvet"|"wood"|"fabric"|"leather"|"plastic"|"linen",
-    "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet"
+    "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet",
+    "hasPetals": true,
+    "hasSideLanterns": true,
+    "decalKind": "rose"|"butterfly",
+    "pedestalStyle": "squareWhite"|"columnGold"
   }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,
@@ -432,7 +456,7 @@ Champs JSON obligatoires :
 }
 
 Règles appearance :
-- floorType / floorColor / wallTexture / wallColor : seulement si clairement visibles.
+- floorType / floorColor / wallTexture / wallColor / curtainColor : seulement si clairement visibles.
 - Couleurs en hex (#rrggbb) d’après la teinte observée, pas une couleur de thème EventMaster.
 
 Règles items :
@@ -440,9 +464,10 @@ Règles items :
 - row = rangée de chaises alignées (pas une table ronde). chairStyle + seatMaterial si visibles. louis = Louis XVI, ovalBack = dossier ovale rose, chiavari = Chiavari or.
 - chair = fauteuil isolé seulement, pas les chaises collées à une table.
 - arch = arche florale (fer à cheval / semi-cercle fleuri). partition = cloison basse courbe végétalisée.
-- stage : stageShape="semiCircle" si plateau en demi-lune / D. roofStyle="tentSwag" si plafond tente drapé.
+- pedestal = colonne / piédestal carré surmonté d’un bouquet. decal = grand motif peint ou projeté au sol (roses, papillons).
+- aisle : aisleStyle seulement si le tapis correspond vraiment (rouge royal, bois, LED…). Sinon color hex seule. hasPetals / hasSideLanterns seulement s’ils sont visibles.
+- stage : stageShape="semiCircle" si plateau en demi-lune / D. roofStyle="tentSwag" si plafond tente drapé. curtainColor si rideaux / tentures murales visibles.
 - zone = piste, VIP, buffet au sol, moquette large. color + material obligatoires si la surface se voit.
-- aisle : aisleStyle seulement si le tapis correspond vraiment (rouge royal, bois, LED…). Sinon color hex seule.
 - door / entrance : seulement si clairement une ouverture d’accès (sinon walls.doors).
 - walls : uniquement les murs / ouvertures VISIBLES. Tableau vide si tu n’es pas sûr — n’invente pas de portes.
 - Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, du plus certain au moins certain.

@@ -32,6 +32,10 @@ export default function FixtureRenderer({
   const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
   const isStage = fixture.kind === 'stage' || fixture.kind === 'podium';
   const isFlower = fixture.kind === 'flower';
+  const isArch = fixture.kind === 'arch';
+  const isPartition = fixture.kind === 'partition';
+  const isDecal = fixture.kind === 'decal';
+  const isPedestal = fixture.kind === 'pedestal';
   const isAisle = fixture.kind === 'aisle';
   const isCarpet = fixture.kind === 'carpet';
   const isDoor = fixture.kind === 'door' || fixture.kind === 'entrance';
@@ -61,6 +65,85 @@ export default function FixtureRenderer({
   // ─────────────────────────────────────────────────────────────
   // 1. FLEURS & DÉCORATIONS FLORALES
   // ─────────────────────────────────────────────────────────────
+  if (isArch) {
+    const bloom = fixture.color ?? fixture.flowerColor ?? '#f4e8e4';
+    return (
+      <div
+        className={`${fill ? 'relative' : 'absolute'} flex items-center justify-center ${className}`}
+        style={positionStyle}
+      >
+        <div
+          className="relative w-full h-full rounded-t-full border-[6px] border-b-0"
+          style={{ borderColor: bloom, background: 'transparent' }}
+        >
+          <span className="absolute inset-x-2 top-1 h-1.5 rounded-full bg-emerald-700/70" />
+        </div>
+        {showLabel && fixture.label && (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (isDecal) {
+    const tint = fixture.color ?? '#dcaeae';
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div
+          className="w-full h-full rounded-full opacity-80"
+          style={{ background: fixture.decalKind === 'butterfly'
+            ? `radial-gradient(circle at 30% 40%, ${tint}, transparent 55%), radial-gradient(circle at 70% 40%, ${tint}, transparent 55%)`
+            : `radial-gradient(circle, ${tint}, transparent 70%)` }}
+        />
+        {showLabel && fixture.label ? (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (isPedestal) {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="w-full h-full flex flex-col items-center justify-end">
+          <div className="w-3/5 h-3/5 rounded-sm border border-stone-300 bg-stone-50" />
+          <FlowerRenderer flowerType={fixture.flowerType ?? 'rose'} color={fixture.flowerColor ?? '#f4e8e4'} size="sm" />
+        </div>
+        {showLabel && fixture.label ? (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (isPartition) {
+    const tint = fixture.color ?? '#c4a4a4';
+    return (
+      <div
+        className={`${fill ? 'relative' : 'absolute'} select-none ${className}`}
+        style={positionStyle}
+      >
+        <div
+          className="w-full h-full rounded-[2rem] border-2 shadow-xs flex items-end justify-center pb-0.5"
+          style={{ backgroundColor: tint, borderColor: '#9a7a7a' }}
+        >
+          <span className="text-[8px] font-bold text-rose-950/80">🌿</span>
+        </div>
+        {showLabel && fixture.label && (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   if (isFlower) {
     return (
       <div

@@ -59,6 +59,14 @@ import {
   CatalogueAisle,
 } from '@/components/CatalogueAmbiance';
 import { RowSeatsLOD } from '@/components/RowSeatsLOD';
+import {
+  FloralArchMesh,
+  TallCenterpiece,
+  CurvedPartitionMesh,
+  TentSwagRoof,
+  FloorDecalMesh,
+  SquarePedestalMesh,
+} from '@/components/roomCelebrationMeshes';
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
@@ -515,6 +523,7 @@ function RoofMesh({
   color = '#e7e5e4',
   opacity = 0.55,
   baseElevationM = 0,
+  roofStyle = 'flat',
 }: {
   widthM: number;
   heightM: number;
@@ -524,9 +533,11 @@ function RoofMesh({
   opacity?: number;
   /** Décalage Y (vue empilée : sommet du dernier étage). */
   baseElevationM?: number;
+  roofStyle?: 'flat' | 'tentSwag';
 }) {
   const y = baseElevationM + wallHeightM + 0.04;
   const shapeGeo = useMemo(() => {
+    if (roofStyle === 'tentSwag') return null;
     if (!outline || outline.shape === 'rectangle') return null;
     const pts = outlinePolygonPoints(outline);
     if (pts.length < 3) return null;
@@ -540,7 +551,20 @@ function RoofMesh({
     const geo = new THREE.ShapeGeometry(shape);
     geo.rotateX(Math.PI / 2);
     return geo;
-  }, [outline, widthM, heightM]);
+  }, [outline, widthM, heightM, roofStyle]);
+
+  if (roofStyle === 'tentSwag') {
+    return (
+      <TentSwagRoof
+        widthM={widthM}
+        heightM={heightM}
+        wallHeightM={wallHeightM}
+        color={color}
+        opacity={Math.max(0.72, opacity)}
+        baseElevationM={baseElevationM}
+      />
+    );
+  }
 
   return (
     <mesh
@@ -1238,6 +1262,7 @@ function TableMesh({
   tableImageUrl,
   tableSurface,
   hasCouverts = false,
+  hasCenterpiece = false,
   couvertStyle = 'classic',
   attachedChairs = true,
   rotation,
@@ -1263,6 +1288,7 @@ function TableMesh({
   tableImageUrl?: string;
   tableSurface?: import('@/lib/roomLayoutUtils').TableSurfaceStyle;
   hasCouverts?: boolean;
+  hasCenterpiece?: boolean;
   couvertStyle?: 'classic' | 'gold' | 'festive';
   attachedChairs?: boolean;
   rotation?: number;
@@ -1288,6 +1314,7 @@ function TableMesh({
     shape === 'square' ? [1.2, 1.2] :
     shape === 'cocktail' ? [0.7, 0.7] :
     shape === 'highTop' ? [0.75, 0.75] :
+    shape === 'arc' ? [3.6, 1.8] :
     [1.35, 1.35];
   const topY = shape === 'highTop' ? 1.05 : shape === 'cocktail' ? 0.55 : 0.72;
 
@@ -1326,6 +1353,11 @@ function TableMesh({
           />
         );
       })}
+      {hasCenterpiece && shape !== 'cocktail' && shape !== 'highTop' ? (
+        <group position={[0, topY, 0]}>
+          <TallCenterpiece selected={selected} />
+        </group>
+      ) : null}
       {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
         const seat = getTableSeatPlacement3D(shape, capacity, i, size as [number, number]);
         return (
@@ -1578,6 +1610,9 @@ function FixtureMesh({
   lightWarmth,
   lightIntensity,
   lightRadius,
+  stageShape,
+  decalKind,
+  pedestalStyle,
   widthM,
   roomDepthM,
   selected,
@@ -1617,6 +1652,9 @@ function FixtureMesh({
   lightWarmth?: 'warm' | 'candle' | 'neutral' | 'gold' | 'rose' | 'night' | 'golden' | 'cool';
   lightIntensity?: number;
   lightRadius?: number;
+  stageShape?: 'rect' | 'semiCircle';
+  decalKind?: 'rose' | 'butterfly' | 'custom';
+  pedestalStyle?: 'squareWhite' | 'columnGold';
   widthM: number;
   roomDepthM: number;
   selected: boolean;
@@ -1636,6 +1674,10 @@ function FixtureMesh({
     kind === 'balcony' ? 0.12 :
     kind === 'column' || kind === 'pillar' ? 2.6 :
     kind === 'flower' ? 0.7 :
+    kind === 'arch' ? 2.2 :
+    kind === 'partition' ? 0.92 :
+    kind === 'pedestal' ? Math.max(0.7, podiumHeightM ?? 1.15) :
+    kind === 'decal' ? 0.02 :
     kind === 'carpet' ? 0.06 :
     kind === 'buffet' ? 0.9 :
     0.35;
@@ -1662,8 +1704,10 @@ function FixtureMesh({
         ? '#d6d3d1'
       : kind === 'buffet'
         ? '#8b6914'
-        : kind === 'flower'
-          ? '#fb7185'
+        : kind === 'flower' || kind === 'arch' || kind === 'pedestal'
+          ? '#f4e8e4'
+        : kind === 'partition' || kind === 'decal'
+          ? '#c4a4a4'
           : kind === 'entrance'
             ? '#059669'
             : kind === 'aisle'
@@ -1709,6 +1753,20 @@ function FixtureMesh({
           selected={selected}
           map={map}
         />
+      ) : kind === 'arch' ? (
+        <FloralArchMesh w={w} d={d} color={baseColor} selected={selected} />
+      ) : kind === 'partition' ? (
+        <CurvedPartitionMesh w={w} d={d} color={baseColor} selected={selected} />
+      ) : kind === 'decal' ? (
+        <FloorDecalMesh w={w} d={d} kind={decalKind ?? 'rose'} color={baseColor} map={map} selected={selected} />
+      ) : kind === 'pedestal' ? (
+        <SquarePedestalMesh
+          color={color ?? '#f8fafc'}
+          flowerColor={baseColor}
+          heightM={height}
+          gold={pedestalStyle === 'columnGold'}
+          selected={selected}
+        />
       ) : kind === 'podium' || kind === 'stage' ? (
         <EventStage
           w={w}
@@ -1719,6 +1777,7 @@ function FixtureMesh({
           baseColor={baseColor}
           selected={selected}
           kind={kind === 'podium' ? 'podium' : 'stage'}
+          shape={stageShape ?? 'rect'}
         />
       ) : kind === 'stairs' ? (
         <group rotation={[0, ((stairDirection ?? 0) * Math.PI) / 180, 0]}>
@@ -2024,6 +2083,7 @@ function SceneContent({
           outline={blueprint.roomOutline}
           color={blueprint.metadata.roofColor ?? '#d6d3d1'}
           opacity={blueprint.metadata.roofOpacity ?? 0.45}
+          roofStyle={blueprint.metadata.roofStyle ?? 'flat'}
           baseElevationM={stackView ? topStoryElev : 0}
         />
       )}
@@ -2039,6 +2099,7 @@ function SceneContent({
             curtains: blueprint.metadata.showCurtains === true,
             plants: blueprint.metadata.showDecorPlants === true,
           }}
+          curtainColor={blueprint.metadata.curtainColor}
           maxChandeliers={qualitySettings.maxChandeliers}
           maxUplights={qualitySettings.maxUplights}
           chandelierPointLights={qualitySettings.chandelierPointLights}
@@ -2069,7 +2130,7 @@ function SceneContent({
 
       {blueprint.fixtures.filter((f) => isStoryVisible(blueprint, f.storyId)).map((f) => {
         /** Surfaces plates : ne capturent pas les clics en mode caméra bloquée. */
-        const isSurfaceFixture = f.kind === 'carpet' || f.kind === 'aisle' || f.kind === 'corridor' || f.kind === 'perimeter';
+        const isSurfaceFixture = f.kind === 'carpet' || f.kind === 'aisle' || f.kind === 'corridor' || f.kind === 'perimeter' || f.kind === 'decal';
         const fixturePickable = isSurfaceFixture
           ? surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)
           : true;
@@ -2107,6 +2168,9 @@ function SceneContent({
             lightWarmth={f.lightWarmth}
             lightIntensity={f.lightIntensity}
             lightRadius={f.lightRadius}
+            stageShape={f.stageShape}
+            decalKind={f.decalKind}
+            pedestalStyle={f.pedestalStyle}
             widthM={widthM}
             roomDepthM={heightM}
             selected={selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
@@ -2268,6 +2332,7 @@ function SceneContent({
             tableImageUrl={item.tableImageUrl}
             tableSurface={item.tableSurface ?? blueprint.metadata.defaultTableSurface}
             hasCouverts={item.hasCouverts}
+            hasCenterpiece={item.hasCenterpiece}
             couvertStyle={item.couvertStyle}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}

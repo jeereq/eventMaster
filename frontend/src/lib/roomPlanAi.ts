@@ -49,7 +49,11 @@ export type RoomPlanVisionItemKind =
   | 'stairs'
   | 'balcony'
   | 'chandelier'
-  | 'flower';
+  | 'flower'
+  | 'arch'
+  | 'partition'
+  | 'decal'
+  | 'pedestal';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -68,6 +72,12 @@ export interface RoomPlanVisionItem {
   chairStyle?: string;
   seatMaterial?: string;
   aisleStyle?: string;
+  hasCenterpiece?: boolean;
+  hasPetals?: boolean;
+  hasSideLanterns?: boolean;
+  stageShape?: string;
+  decalKind?: string;
+  pedestalStyle?: string;
   anchor?: 'box' | 'center';
 }
 
@@ -78,7 +88,9 @@ export interface RoomPlanVisionAppearance {
   wallTexture?: string;
   wallColor?: string;
   tableSurface?: string;
+  roofStyle?: string;
   tableColor?: string;
+  curtainColor?: string;
 }
 
 export interface RoomPlanVisionDraft {
@@ -117,6 +129,10 @@ const FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
   'balcony',
   'chandelier',
   'flower',
+  'arch',
+  'partition',
+  'decal',
+  'pedestal',
 ]);
 
 const OUTLINE_SHAPES = new Set<RoomOutlineShape>([
@@ -143,7 +159,7 @@ const WALL_TEXTURES = new Set<WallTextureStyle>([
   'tadelakt', 'travertine', 'metroTile', 'woodPanel',
 ]);
 const CHAIR_STYLES = new Set<ChairStyle>([
-  'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback',
+  'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback', 'louis', 'ovalBack',
 ]);
 const SEAT_MATERIALS = new Set<SeatMaterial>([
   'velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen',
@@ -293,8 +309,8 @@ function neutralizeAisle(
     color: color ?? (inferred === 'royalRed' ? '#991b1b' : inferred === 'damaskGold' ? '#c4a06a' : '#78716c'),
     material: asZoneMaterial(item.material) ?? 'carpet',
     hasGoldBorder: inferred === 'damaskGold' || looksGold(color),
-    hasSideLanterns: false,
-    hasPetals: false,
+    hasSideLanterns: item.hasSideLanterns === true,
+    hasPetals: item.hasPetals === true,
   };
 }
 
@@ -311,8 +327,23 @@ function applyFixtureLook(
   if (item.kind === 'aisle') {
     next = neutralizeAisle(next, item);
   }
-  if (item.kind === 'flower' && item.color) {
+  if ((item.kind === 'flower' || item.kind === 'arch' || item.kind === 'pedestal') && item.color) {
     next = { ...next, flowerColor: item.color };
+  }
+  if (item.kind === 'decal') {
+    next = {
+      ...next,
+      decalKind: item.decalKind === 'butterfly' || item.decalKind === 'custom' ? item.decalKind : 'rose',
+    };
+  }
+  if (item.kind === 'pedestal') {
+    next = {
+      ...next,
+      pedestalStyle: item.pedestalStyle === 'columnGold' ? 'columnGold' : 'squareWhite',
+    };
+  }
+  if ((item.kind === 'stage' || item.kind === 'podium') && (item.stageShape === 'semiCircle' || item.shape === 'semiCircle')) {
+    next = { ...next, stageShape: 'semiCircle' };
   }
   if (item.kind === 'chandelier' && item.color && !looksGold(item.color)) {
     next = { ...next, lightWarmth: 'neutral', color: item.color };
@@ -432,6 +463,7 @@ export function applyRoomPlanVisionDraft(
         tableSurface: asTableSurface(item.surface) ?? defaultSurface,
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
         ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
+        hasCenterpiece: item.hasCenterpiece === true,
         groupId: AI_ROOM_IMPORT_GROUP_ID,
         storyId,
       };
@@ -594,6 +626,10 @@ export function applyRoomPlanVisionDraft(
         ? 'custom'
         : observedFloor ?? current.metadata.floorType,
       floorImageFit: usePlanCover ? 'cover' : useFloorTile ? 'tile' : current.metadata.floorImageFit,
+      roofStyle: appearance?.roofStyle === 'tentSwag' ? 'tentSwag' : current.metadata.roofStyle,
+      showRoof: appearance?.roofStyle === 'tentSwag' ? true : current.metadata.showRoof,
+      curtainColor: appearance?.curtainColor ?? current.metadata.curtainColor,
+      showCurtains: appearance?.curtainColor ? true : current.metadata.showCurtains,
     },
   });
 

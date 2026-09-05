@@ -302,12 +302,15 @@ export function RoomCurtains({
   widthM,
   heightM,
   wallHeightM,
+  color = '#7f1d1d',
 }: {
   widthM: number;
   heightM: number;
   wallHeightM: number;
+  color?: string;
 }) {
   const h = Math.min(wallHeightM * 0.92, wallHeightM - 0.15);
+  const fold = color === '#7f1d1d' ? '#991b1b' : color;
   const panels = useMemo(() => ([
     { pos: [0, h / 2, -heightM / 2 + 0.12] as [number, number, number], w: widthM * 0.42, rot: 0 },
     { pos: [0, h / 2, heightM / 2 - 0.12] as [number, number, number], w: widthM * 0.42, rot: Math.PI },
@@ -319,14 +322,14 @@ export function RoomCurtains({
         <group key={i} position={p.pos} rotation={[0, p.rot, 0]}>
           <mesh castShadow>
             <boxGeometry args={[p.w, h, 0.05]} />
-            <meshStandardMaterial color="#7f1d1d" roughness={0.88} metalness={0.02} />
+            <meshStandardMaterial color={color} roughness={0.88} metalness={0.02} />
           </mesh>
           {Array.from({ length: 8 }).map((_, f) => {
             const x = ((f + 0.5) / 8 - 0.5) * p.w * 0.95;
             return (
               <mesh key={f} position={[x, 0, 0.03]} castShadow>
                 <boxGeometry args={[p.w / 18, h * 0.98, 0.04]} />
-                <meshStandardMaterial color="#991b1b" roughness={0.9} />
+                <meshStandardMaterial color={fold} roughness={0.9} />
               </mesh>
             );
           })}
@@ -398,6 +401,7 @@ export function RoomAmbiance({
   chandelierPointLights = true,
   chandelierType,
   chandelierCount,
+  curtainColor,
 }: {
   widthM: number;
   heightM: number;
@@ -408,6 +412,7 @@ export function RoomAmbiance({
   chandelierPointLights?: boolean;
   chandelierType?: ChandelierType | string;
   chandelierCount?: number;
+  curtainColor?: string;
 }) {
   const count = resolveChandelierCount(chandelierCount, maxChandeliers);
   return (
@@ -426,7 +431,7 @@ export function RoomAmbiance({
         <RoomUplights widthM={widthM} heightM={heightM} maxCount={maxUplights} />
       ) : null}
       {flags.curtains ? (
-        <RoomCurtains widthM={widthM} heightM={heightM} wallHeightM={wallHeightM} />
+        <RoomCurtains widthM={widthM} heightM={heightM} wallHeightM={wallHeightM} color={curtainColor} />
       ) : null}
       {flags.plants ? <RoomCornerPlants widthM={widthM} heightM={heightM} /> : null}
     </group>

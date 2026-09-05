@@ -1072,6 +1072,8 @@ const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
   tolix: { backHeight: 0.42, seatSize: [0.38, 0.04, 0.36], scale: 0.98, hasArms: false, cushion: false },
   ghost: { backHeight: 0.5, seatSize: [0.42, 0.06, 0.4], scale: 1, hasArms: false, cushion: false },
   panton: { backHeight: 0.55, seatSize: [0.46, 0.08, 0.44], scale: 1.05, hasArms: false, cushion: false },
+  louis: { backHeight: 0.7, seatSize: [0.42, 0.07, 0.4], scale: 1.05, hasArms: false, cushion: true },
+  ovalBack: { backHeight: 0.68, seatSize: [0.44, 0.08, 0.42], scale: 1.08, hasArms: false, cushion: true },
 };
 
 export function resolveChairVisual(
@@ -1099,6 +1101,26 @@ export function resolveChairVisual(
   if (chairType === 'POUF') {
     base.backHeight = 0;
     base.cushion = true;
+  }
+  if (style === 'chiavari' && (!material || material === 'linen' || material === 'fabric')) {
+    base.frameColor = '#c9a227';
+    base.seatColor = '#f8fafc';
+    base.cushion = true;
+  }
+  if (style === 'ovalBack' && (!material || material === 'velvet' || material === 'linen' || material === 'fabric')) {
+    base.seatColor = '#c4a4a4';
+    base.frameColor = '#d6c4b0';
+    base.cushion = true;
+  }
+  if (style === 'louis' && !material) {
+    base.seatColor = '#f8fafc';
+    base.frameColor = '#f5f5f4';
+    base.cushion = true;
+  }
+  if (chairType === 'FOLDING' && (material === 'plastic' || material === 'linen')) {
+    base.frameColor = '#f8fafc';
+    base.seatColor = '#f4f4f5';
+    base.cushion = false;
   }
   return base;
 }

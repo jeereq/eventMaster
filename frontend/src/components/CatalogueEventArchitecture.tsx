@@ -158,6 +158,7 @@ export function EventStage({
   baseColor,
   selected,
   kind,
+  shape = 'rect',
 }: {
   w: number;
   d: number;
@@ -167,9 +168,31 @@ export function EventStage({
   baseColor: string;
   selected: boolean;
   kind: 'stage' | 'podium';
+  shape?: 'rect' | 'semiCircle';
 }) {
   const stepCount = Math.max(1, Math.min(4, steps));
   const isStage = kind === 'stage';
+  const radius = Math.max(w, d) * 0.5;
+
+  if (shape === 'semiCircle') {
+    return (
+      <group>
+        <mesh position={[0, height / 2, 0]} rotation={[0, Math.PI, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[radius, radius, height, 32, 1, false, 0, Math.PI]} />
+          <meshStandardMaterial
+            color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
+            map={map ?? undefined}
+            roughness={0.45}
+            metalness={0.06}
+          />
+        </mesh>
+        <mesh position={[0, height + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[radius * 0.98, 32, 0, Math.PI]} />
+          <meshStandardMaterial color={selected ? '#e0e7ff' : '#f8fafc'} roughness={0.55} />
+        </mesh>
+      </group>
+    );
+  }
 
   return (
     <group>
