@@ -5,6 +5,8 @@ import {
   formatContextForImage,
   hasUsableComposeContext,
   isPersistedUserId,
+  parseInvitationContextSource,
+  selectComposeContext,
   type InvitationComposeContext,
 } from './invitationComposeContextUtils.ts';
 import {
@@ -42,13 +44,21 @@ describe('isPersistedUserId', () => {
 });
 
 describe('formatContextForVision', () => {
-  it('injecte organisateur, événements et briefs sans demander un visage', () => {
-    const block = formatContextForVision(sampleContext());
+  it('injecte l’organisation sans les briefs d’historique', () => {
+    const block = formatContextForVision(selectComposeContext(sampleContext(), 'org'), 'org');
+    assert.match(block, /CONTEXTE ORGANISATION/);
     assert.match(block, /Marie Kabila/);
     assert.match(block, /Salle Royale/);
     assert.match(block, /Mariage Jean & Amina/);
-    assert.match(block, /Mariage floral or ivoire/);
+    assert.doesNotMatch(block, /Mariage floral or ivoire/);
     assert.match(block, /N’invente aucun visage/);
+  });
+
+  it('injecte seulement l’historique de recherches', () => {
+    const block = formatContextForVision(selectComposeContext(sampleContext(), 'history'), 'history');
+    assert.match(block, /HISTORIQUE DE RECHERCHES/);
+    assert.match(block, /Mariage floral or ivoire/);
+    assert.doesNotMatch(block, /Salle Royale/);
   });
 
   it('reste vide sans données utiles', () => {
@@ -73,12 +83,36 @@ describe('formatContextForVision', () => {
   });
 });
 
+describe('selectComposeContext', () => {
+  it('ne garde que l’organisation ou que l’historique', () => {
+    const full = sampleContext();
+    const org = selectComposeContext(full, 'org');
+    assert.equal(org.organizationName, 'Salle Royale');
+    assert.equal(org.recentPrompts.length, 0);
+    assert.equal(org.recentEvents.length, 1);
+
+    const history = selectComposeContext(full, 'history');
+    assert.deepEqual(history.recentPrompts, ['Mariage floral or ivoire']);
+    assert.equal(history.organizationName, null);
+    assert.equal(history.recentEvents.length, 0);
+
+    assert.equal(hasUsableComposeContext(selectComposeContext(full, 'none')), false);
+  });
+
+  it('ignore une valeur inconnue', () => {
+    assert.equal(parseInvitationContextSource('both'), 'none');
+    assert.equal(parseInvitationContextSource('org'), 'org');
+  });
+});
+
 describe('formatContextForImage', () => {
   it('expose le contexte en anglais pour le modèle image', () => {
-    const block = formatContextForImage(sampleContext());
+    const block = formatContextForImage(selectComposeContext(sampleContext(), 'org'), 'org');
+    assert.match(block, /ORGANIZATION CONTEXT/);
     assert.match(block, /Marie Kabila/);
     assert.match(block, /wedding/);
     assert.match(block, /NEVER invent a face/);
+    assert.doesNotMatch(block, /Mariage floral or ivoire/);
   });
 });
 

@@ -19,6 +19,12 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
+import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
+import {
+ persistInvitationContextSource,
+ readStoredInvitationContextSource,
+ type InvitationContextSource,
+} from '@/lib/invitationContextSource';
 import {
  getAiSimulationAllowance,
  syncDeviceAiTokensWithBackend,
@@ -310,6 +316,7 @@ export default function TemplatesPage() {
  const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
+ const [aiComposeContextSource, setAiComposeContextSource] = useState<InvitationContextSource>('none');
  const [aiImageDownloading, setAiImageDownloading] = useState(false);
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
@@ -343,6 +350,15 @@ export default function TemplatesPage() {
  /* ignore */
  }
  }, []);
+
+ useEffect(() => {
+ const stored = readStoredInvitationContextSource();
+ if (stored === 'org' && !(user && tenant?.id) && user?.role !== 'SUPER_ADMIN') {
+ setAiComposeContextSource('none');
+ return;
+ }
+ setAiComposeContextSource(stored);
+ }, [user, tenant?.id]);
 
  const loadTenants = async () => {
  if (user?.role === 'SUPER_ADMIN') {
@@ -1078,6 +1094,7 @@ export default function TemplatesPage() {
  imageUrls: uploadedUrls,
  generateBackground: true,
  embedText: aiComposeEmbedText,
+ contextSource: aiComposeContextSource,
  });
  // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
  const stageTimer = window.setTimeout(() => {
@@ -1249,6 +1266,19 @@ export default function TemplatesPage() {
  selectedPrompt={aiComposePrompt}
  disabled={aiComposeBusy}
  compact
+ />
+ </div>
+
+ <div className="mt-3">
+ <InvitationContextSourcePicker
+ id="ai-compose-context"
+ value={aiComposeContextSource}
+ onChange={(source) => {
+ setAiComposeContextSource(source);
+ persistInvitationContextSource(source);
+ }}
+ disabled={aiComposeBusy}
+ canUseOrg={Boolean(tenant?.id) || user?.role === 'SUPER_ADMIN'}
  />
  </div>
 

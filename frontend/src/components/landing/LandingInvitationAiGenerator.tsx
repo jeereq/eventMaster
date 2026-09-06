@@ -49,6 +49,12 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
+import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
+import {
+  persistInvitationContextSource,
+  readStoredInvitationContextSource,
+  type InvitationContextSource,
+} from '@/lib/invitationContextSource';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -152,7 +158,7 @@ export default function LandingInvitationAiGenerator({
   id?: string;
   defaultExpanded?: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -187,6 +193,7 @@ export default function LandingInvitationAiGenerator({
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [embedText, setEmbedText] = useState(false);
+  const [contextSource, setContextSource] = useState<InvitationContextSource>('none');
   const [downloading, setDownloading] = useState(false);
 
   const logAction = (
@@ -258,6 +265,20 @@ export default function LandingInvitationAiGenerator({
       return () => window.removeEventListener('hashchange', checkHash);
     }
   }, [id]);
+
+  useEffect(() => {
+    const stored = readStoredInvitationContextSource();
+    if (stored === 'org' && !(user && tenant?.id)) {
+      setContextSource('none');
+      return;
+    }
+    setContextSource(stored);
+  }, [user, tenant?.id]);
+
+  const handleContextSourceChange = (source: InvitationContextSource) => {
+    setContextSource(source);
+    persistInvitationContextSource(source);
+  };
 
   useEffect(() => {
     if (files.length > 0 || result || busy || prompt.trim().length > 0) {
@@ -448,6 +469,7 @@ export default function LandingInvitationAiGenerator({
         prompt: prompt.trim(),
         files,
         embedText,
+        contextSource,
       });
       if (seq !== generationSeq.current) return;
       setResult(data.content);
@@ -822,6 +844,16 @@ export default function LandingInvitationAiGenerator({
                   }
                   className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
                 />
+
+                <div className="pt-1">
+                  <InvitationContextSourcePicker
+                    id={`${id}-context`}
+                    value={contextSource}
+                    onChange={handleContextSourceChange}
+                    disabled={busy}
+                    canUseOrg={Boolean(user && tenant?.id)}
+                  />
+                </div>
 
                 <button
                   type="button"

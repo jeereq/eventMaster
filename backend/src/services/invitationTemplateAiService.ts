@@ -7,6 +7,7 @@ import {
   formatContextForVision,
   hasUsableComposeContext,
   loadInvitationComposeContext,
+  parseInvitationContextSource,
 } from './invitationComposeContext.ts';
 import {
   buildGeminiSceneSteps,
@@ -1321,6 +1322,7 @@ export async function composeInvitationTemplateAi(input: {
   embedText?: boolean;
   deviceId?: string | null;
   authUserId?: string | null;
+  contextSource?: string | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const prompt = String(input.prompt || '').trim();
@@ -1336,14 +1338,16 @@ export async function composeInvitationTemplateAi(input: {
   const processed = processUserPromptForHonestFaces(prompt, {
     referenceCount: imageUrls.length,
   });
+  const contextSource = parseInvitationContextSource(input.contextSource);
   const composeContext = await loadInvitationComposeContext({
     userId: input.authUserId || input.userId,
     tenantId: input.tenantId,
     deviceId: input.deviceId,
     currentPrompt: prompt,
+    source: contextSource,
   });
-  const organizerVision = formatContextForVision(composeContext);
-  const organizerImage = formatContextForImage(composeContext);
+  const organizerVision = formatContextForVision(composeContext, contextSource);
+  const organizerImage = formatContextForImage(composeContext, contextSource);
 
   const key = requireAiConfigured();
   const structured = await visionStructure(key, processed.visionBrief, imageUrls, {
@@ -1395,8 +1399,10 @@ export async function composeInvitationTemplateAi(input: {
     (global as Record<string, unknown>).aiVisualAnalysis = structured.visualAnalysis;
   }
   (global as Record<string, unknown>).aiEmbedText = embedText;
+  (global as Record<string, unknown>).aiContextSource = contextSource;
   if (hasUsableComposeContext(composeContext)) {
     (global as Record<string, unknown>).aiOrganizerContext = {
+      source: contextSource,
       organizerName: composeContext.organizerName,
       organizationName: composeContext.organizationName,
       accountKind: composeContext.accountKind,

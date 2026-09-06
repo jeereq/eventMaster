@@ -36,6 +36,9 @@ export type InvitationComposeEventSummary = {
   clientName: string | null;
 };
 
+export const INVITATION_CONTEXT_SOURCES = ['none', 'org', 'history'] as const;
+export type InvitationContextSource = (typeof INVITATION_CONTEXT_SOURCES)[number];
+
 export type InvitationComposeContext = {
   organizerName: string | null;
   organizationName: string | null;
@@ -45,6 +48,24 @@ export type InvitationComposeContext = {
   recentEvents: InvitationComposeEventSummary[];
   recentPrompts: string[];
 };
+
+export function parseInvitationContextSource(raw: unknown): InvitationContextSource {
+  return raw === 'org' || raw === 'history' || raw === 'none' ? raw : 'none';
+}
+
+export function selectComposeContext(
+  context: InvitationComposeContext,
+  source: InvitationContextSource,
+): InvitationComposeContext {
+  if (source === 'none') return emptyComposeContext();
+  if (source === 'org') {
+    return { ...context, recentPrompts: [] };
+  }
+  return {
+    ...emptyComposeContext(),
+    recentPrompts: context.recentPrompts,
+  };
+}
 
 export function isPersistedUserId(value: string | null | undefined): boolean {
   return Boolean(value && UUID_RE.test(value.trim()));
@@ -92,12 +113,33 @@ export function hasUsableComposeContext(context: InvitationComposeContext): bool
   );
 }
 
+function visionHeading(source: InvitationContextSource): string {
+  if (source === 'history') {
+    return 'CONTEXTE HISTORIQUE DE RECHERCHES (briefs déjà demandés — décor seulement, JAMAIS un visage) :';
+  }
+  if (source === 'org') {
+    return 'CONTEXTE ORGANISATION (nom, type de compte, événements — décor seulement, JAMAIS un visage) :';
+  }
+  return 'CONTEXTE PERSONNE CONNECTÉE / REQUÊTES (décor, langue, type d’événement, noms — JAMAIS un visage) :';
+}
+
+function imageHeading(source: InvitationContextSource): string {
+  if (source === 'history') {
+    return 'REQUEST HISTORY CONTEXT (prior invitation briefs — décor taste only, NEVER invent a face):';
+  }
+  if (source === 'org') {
+    return 'ORGANIZATION CONTEXT (org name, account kind, recent events — décor only, NEVER invent a face):';
+  }
+  return 'ORGANIZER / REQUEST CONTEXT (décor, event type, names for typography — NEVER invent a face from this):';
+}
+
 /** Bloc FR pour l’analyse structurelle (brief + besoins). */
-export function formatContextForVision(context: InvitationComposeContext): string {
+export function formatContextForVision(
+  context: InvitationComposeContext,
+  source: InvitationContextSource = 'none',
+): string {
   if (!hasUsableComposeContext(context)) return '';
-  const lines: string[] = [
-    'CONTEXTE PERSONNE CONNECTÉE / REQUÊTES (décor, langue, type d’événement, noms — JAMAIS un visage) :',
-  ];
+  const lines: string[] = [visionHeading(source)];
   if (context.organizerName) lines.push(`- Organisateur : ${context.organizerName}`);
   if (context.organizationName) {
     const kind = context.accountKindLabel ? ` (${context.accountKindLabel})` : '';
@@ -125,7 +167,10 @@ export function formatContextForVision(context: InvitationComposeContext): strin
 }
 
 /** Bloc EN pour Nano Banana / image models (contexte + intention, reco Gemini). */
-export function formatContextForImage(context: InvitationComposeContext): string {
+export function formatContextForImage(
+  context: InvitationComposeContext,
+  source: InvitationContextSource = 'none',
+): string {
   if (!hasUsableComposeContext(context)) return '';
   const bits: string[] = [];
   if (context.organizerName) bits.push(`organizer ${context.organizerName}`);
@@ -147,7 +192,7 @@ export function formatContextForImage(context: InvitationComposeContext): string
     bits.push(`prior invitation briefs: ${context.recentPrompts.join(' | ')}`);
   }
   return [
-    'ORGANIZER / REQUEST CONTEXT (décor, event type, names for typography — NEVER invent a face from this):',
+    imageHeading(source),
     bits.join('. '),
     'If the current brief is thin, reuse the usual event kind and décor taste. Do not portrait the organizer unless their photo is attached.',
   ].join('\n');

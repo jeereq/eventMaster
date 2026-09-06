@@ -5,8 +5,11 @@ import {
   clipContextText,
   emptyComposeContext,
   isPersistedUserId,
+  parseInvitationContextSource,
+  selectComposeContext,
   uniquePriorPrompts,
   type InvitationComposeContext,
+  type InvitationContextSource,
 } from './invitationComposeContextUtils.ts';
 
 export {
@@ -14,7 +17,10 @@ export {
   formatContextForVision,
   hasUsableComposeContext,
   isPersistedUserId,
+  parseInvitationContextSource,
+  selectComposeContext,
   type InvitationComposeContext,
+  type InvitationContextSource,
 } from './invitationComposeContextUtils.ts';
 
 export async function loadInvitationComposeContext(input: {
@@ -22,17 +28,25 @@ export async function loadInvitationComposeContext(input: {
   tenantId?: string | null;
   deviceId?: string | null;
   currentPrompt?: string;
+  source?: InvitationContextSource | string | null;
 }): Promise<InvitationComposeContext> {
+  const source = parseInvitationContextSource(input.source);
+  if (source === 'none') return emptyComposeContext();
+
   const userId = isPersistedUserId(input.userId) ? input.userId!.trim() : null;
   const tenantId = input.tenantId?.trim() || null;
   const deviceId = input.deviceId?.trim() || null;
   const currentPrompt = input.currentPrompt || '';
+  const wantOrg = source === 'org';
+  const wantHistory = source === 'history';
 
+  if (wantOrg && !userId && !tenantId) return emptyComposeContext();
+  if (wantHistory && !userId && !deviceId) return emptyComposeContext();
   if (!userId && !tenantId && !deviceId) return emptyComposeContext();
 
   try {
     const [userRow, events, history] = await Promise.all([
-      userId
+      wantOrg && userId
         ? prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -46,7 +60,7 @@ export async function loadInvitationComposeContext(input: {
               },
             },
           })
-        : tenantId
+        : wantOrg && tenantId
           ? prisma.tenant.findUnique({
               where: { id: tenantId },
               select: {
@@ -56,7 +70,7 @@ export async function loadInvitationComposeContext(input: {
               },
             }).then((tenant) => (tenant ? { name: null, tenant } : null))
           : Promise.resolve(null),
-      tenantId
+      wantOrg && tenantId
         ? prisma.event.findMany({
             where: { tenantId },
             orderBy: { date: 'desc' },
@@ -70,13 +84,15 @@ export async function loadInvitationComposeContext(input: {
             },
           })
         : Promise.resolve([]),
-      listAiTemplateComposeRuns({ userId, deviceId, limit: 8 }),
+      wantHistory
+        ? listAiTemplateComposeRuns({ userId, deviceId, limit: 8 })
+        : Promise.resolve([]),
     ]);
 
     const tenant = userRow && 'tenant' in userRow ? userRow.tenant : null;
     const vendor = tenant?.vendorProfile;
 
-    return {
+    const loaded: InvitationComposeContext = {
       organizerName: userRow && 'name' in userRow ? userRow.name?.trim() || null : null,
       organizationName: vendor?.displayName?.trim() || tenant?.name?.trim() || null,
       accountKind: tenant?.accountKind || null,
@@ -96,6 +112,7 @@ export async function loadInvitationComposeContext(input: {
         currentPrompt,
       ),
     };
+    return selectComposeContext(loaded, source);
   } catch (error) {
     console.warn(
       '[invitationComposeContext] load failed:',
