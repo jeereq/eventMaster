@@ -34,9 +34,9 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     title: 'Cloner le design & intégrer mes photos réelles',
     category: 'clone',
     badge: 'Clonage + Visages',
-    summary: 'Duplique le cadre et le décor de l’invitation tout en intégrant vos photos avec réalisme 35mm.',
+    summary: 'Duplique le cadre et le décor de l’invitation en intégrant vos photos telles quelles, sans embellir les visages.',
     prompt:
-      'Cloner la composition et les ornements de l’invitation de référence en y intégrant les personnes de mes photos. Rendu 35mm photographique ultra-réaliste des visages (carnation naturelle, texture de peau réelle, cheveux et vêtements fidèles à 100%), parfaitement fondu dans le cadre doré.',
+      'Cloner la composition et les ornements de l’invitation de référence en y intégrant les personnes de mes photos telles qu’elles apparaissent — visages honnêtes, sans embellissement ni lissage. Rendu 35mm, carnation, sourire et cheveux identiques aux photos, fondu dans le cadre doré.',
     isClone: true,
   },
   {

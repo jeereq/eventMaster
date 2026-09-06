@@ -450,6 +450,8 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       imageUrls,
       generateBackground,
       embedText,
+      deviceId,
+      authUserId: req.user.id,
     });
     const historyId = await persistTemplateCompose({
       userId: req.user.id,
@@ -514,6 +516,8 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       imageUrls,
       generateBackground,
       embedText,
+      deviceId,
+      authUserId: user?.id || null,
     });
     const historyId = await persistTemplateCompose({
       userId: user?.id || null,

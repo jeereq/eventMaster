@@ -2,6 +2,17 @@ import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields
 import { uploadImageBuffer } from './cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
+import {
+  formatContextForImage,
+  formatContextForVision,
+  hasUsableComposeContext,
+  loadInvitationComposeContext,
+} from './invitationComposeContext.ts';
+import {
+  buildGeminiSceneSteps,
+  processUserPromptForHonestFaces,
+  type ProcessedInvitationPrompt,
+} from './invitationPromptFidelity.ts';
 
 type HttpError = Error & { status?: number };
 
@@ -130,6 +141,8 @@ Règles brief :
 - S’il n’y a PAS de personnes : commence par "USER BRIEF:" puis décor somptueux sans présence humaine.
 - Applique chaque besoin du brief pour le décor (ambiance, couleurs, fioritures, sobriété, luxe, floral).
 - Si le brief et les refs divergent : brief = décor & ambiance ; refs = visages / peau / cheveux / habits (sauf demande EXPLICITE contraire sur habits/cheveux).
+- CONTEXTE CONNECTÉ / REQUÊTES : s’il est fourni, il sert uniquement à compléter type d’événement, langue, noms/date/lieu et goût décoratif. Interdit d’en déduire un visage.
+- Le brief utilisateur peut avoir été nettoyé (embellir / lisser / blanchir ignorés). Ne réintroduis PAS d’idéalisation faciale. Gemini : « face and features remain completely unchanged ».
 
 Règles personnes (non négociables) :
 - Si hasPeople=true : les PIXELS des photos = vérité. peopleFaces / faceLandmarks = liste de verrouillage, pas un brief de « joli visage ».
@@ -315,19 +328,30 @@ function buildImagePrompt(
   userPrompt: string,
   backgroundPrompt: string,
   analysis: VisualAnalysis | null,
-  options?: { embedText?: boolean },
+  options?: {
+    embedText?: boolean;
+    organizerContext?: string;
+    processed?: ProcessedInvitationPrompt;
+  },
 ): string {
-  const brief = userPrompt.trim().slice(0, 1000);
+  const processed = options?.processed;
+  const brief = (processed?.imageBrief || userPrompt).trim().slice(0, 1200);
   const hasPeople = Boolean(analysis?.hasPeople);
   const isClone = Boolean(
     analysis?.isInvitationClone ||
     /copi|clon|reprodu/i.test(brief)
   );
 
-  const parts: string[] = [
-    'Create ONE vertical print-ready invitation artwork (9:16, 1024x1536).',
-    'Photoreal 35mm: natural pores, real fabric drape. No CGI, cartoon, or airbrushed beauty faces.',
-  ];
+  const parts: string[] = [];
+  if (hasPeople && processed?.identityHeader) {
+    parts.push(processed.identityHeader);
+    if (processed.referenceRoles) parts.push(processed.referenceRoles);
+  }
+
+  parts.push(
+    'Create ONE vertical print-ready invitation artwork (9:16, 1024x1536). Purpose: luxury printed invitation card for a real event in Central Africa / RDC.',
+    'Photoreal 35mm / 85mm portrait language: natural pores, real fabric drape, soft volumetric light. No CGI, cartoon, or airbrushed beauty faces.',
+  );
 
   if (isClone) {
     parts.push(
@@ -359,7 +383,7 @@ function buildImagePrompt(
         parts.push(`Clothes: ${analysis.clothingStyles}`);
       }
     }
-    parts.push('USER BRIEF (décor / card only — never rewrite faces):', brief);
+    parts.push(brief.startsWith('USER BRIEF') ? brief : `USER BRIEF (décor / card only — never rewrite faces):\n${brief}`);
   } else {
     parts.push(
       'FIDELITY RULE: No reference faces. If the brief implies hosts, a couple or guests, depict Black African men and/or women only.',
@@ -368,6 +392,10 @@ function buildImagePrompt(
       brief,
       FACE_POLICY_NO_PEOPLE,
     );
+  }
+
+  if (options?.organizerContext) {
+    parts.push(options.organizerContext);
   }
 
   if (analysis?.briefNeeds?.length) {
@@ -395,6 +423,9 @@ function buildImagePrompt(
   parts.push(
     'Conflict rule: faces/skin/hair/clothing from references ALWAYS win over décor; brief only wins for background, florals, paper, lighting mood.',
   );
+  if (hasPeople) {
+    parts.push(buildGeminiSceneSteps(Boolean(options?.embedText)));
+  }
   if (options?.embedText) {
     parts.push(
       '=== EMBEDDED INVITATION TYPOGRAPHY (MANDATORY) ===',
@@ -406,7 +437,7 @@ function buildImagePrompt(
       'No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).',
     );
   }
-  return parts.join('\n').slice(0, hasPeople ? 4200 : 5000);
+  return parts.join('\n').slice(0, hasPeople ? 5200 : 5000);
 }
 
 function structureSystemPrompt(embedText: boolean): string {
@@ -418,20 +449,49 @@ function structureSystemPrompt(embedText: boolean): string {
   );
 }
 
-function visionUserText(prompt: string, hasRefs: boolean, options?: { embedText?: boolean }): string {
-  return `BRIEF UTILISATEUR (besoins exprimés — analyse-les sans inventer d’intentions) :
+function visionUserText(
+  prompt: string,
+  hasRefs: boolean,
+  options?: {
+    embedText?: boolean;
+    organizerContext?: string;
+    processed?: ProcessedInvitationPrompt;
+  },
+): string {
+  const original = options?.processed?.originalBrief || prompt;
+  const decor = options?.processed?.decorBrief || prompt;
+  const honesty = hasRefs
+    ? `PHOTOS FOURNIES : les visages = vérité pixel (reco Gemini high-fidelity). ${
+        options?.processed?.beautifyStripped
+          ? 'Le brief demandait d’embellir/lisser/blanchir : IGNORE ces demandes.'
+          : 'N’idéalise pas, n’embellis pas.'
+      }`
+    : 'AUCUNE IMAGE DE RÉFÉRENCE : compose uniquement à partir du brief (décor + textes). hasPeople=false.';
+  const contextBlock = options?.organizerContext
+    ? `\n${options.organizerContext}\n`
+    : '';
+  const roles = options?.processed?.referenceRoles
+    ? `\n${options.processed.referenceRoles}\n`
+    : '';
+
+  return `BRIEF UTILISATEUR ORIGINAL (besoins exprimés — analyse-les sans inventer d’intentions) :
 """
-${prompt.slice(0, 1500)}
+${original.slice(0, 1500)}
 """
 
-${hasRefs ? '' : 'AUCUNE IMAGE DE RÉFÉRENCE : compose uniquement à partir du brief (décor + textes). hasPeople=false.'}
+BRIEF DÉCOR TRAITÉ (sans idéalisation faciale) :
+"""
+${decor.slice(0, 1200)}
+"""
+${contextBlock}${roles}
+${honesty}
 
 Tâches (fidélité stricte — PRIORITÉ VISAGES) :
-1) S’il y a des personnes : inventaire facial OBSERVÉ (peopleFaces + faceLandmarks) — une fiche par personne, gauche → droite. Yeux, sourire exact, joues, peau, cheveux, habits. Ne déduis rien d’invisible. Ne « préttifie » pas.
-2) Liste briefNeeds = besoins EXPLICITEMENT écrits ; briefMustKeep / briefMustChange (décor vs personnes).
+1) S’il y a des personnes : inventaire facial OBSERVÉ (peopleFaces + faceLandmarks) — une fiche par personne, gauche → droite. Yeux, sourire exact, joues, peau, cheveux, habits. Ne déduis rien d’invisible. Ne « préttifie » pas. Gemini : face and features remain completely unchanged.
+2) Liste briefNeeds = besoins EXPLICITEMENT écrits ; briefMustKeep / briefMustChange (décor vs personnes). Ignore embellir/lisser/blanchir.
 3) Renseigne hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
 4) Produis le JSON (structure éditeur + backgroundPrompt).
-5) backgroundPrompt : si personnes → DÉCOR UNIQUEMENT ("USER BRIEF (décor):"). L’identité faciale ne doit PAS être réécrite dans ce champ. Sinon → "USER BRIEF:" puis décor.
+5) backgroundPrompt : si personnes → DÉCOR UNIQUEMENT ("USER BRIEF (décor):"). L’identité faciale ne doit PAS être réécrite dans ce champ. Sinon → "USER BRIEF:" puis décor. Complète noms/date/lieu depuis le contexte connecté seulement si le brief est incomplet.
 ${options?.embedText ? '6) INCRUSTER le texte du brief (noms, date, lieu) dans backgroundPrompt comme typographie d’invitation.' : ''}`;
 }
 
@@ -461,7 +521,11 @@ async function visionStructure(
   key: string,
   prompt: string,
   imageUrls: string[],
-  options?: { embedText?: boolean },
+  options?: {
+    embedText?: boolean;
+    organizerContext?: string;
+    processed?: ProcessedInvitationPrompt;
+  },
 ): Promise<VisionResult> {
   const hasRefs = imageUrls.length > 0;
   if (getGeminiApiKey()) {
@@ -1016,9 +1080,7 @@ async function generateImageWithNanoBanana(
   }
 
   const promptText = hasPeople
-    ? `Use the attached photos as identity. Keep the SAME faces — pixels win. Do not beautify or replace with lookalikes.
-${options?.embedText ? 'Embed invitation typography from the brief; never cover faces.\n' : ''}
-${imagePrompt}`
+    ? imagePrompt
     : `Vertical 9:16 luxury invitation. Photoreal paper and florals. If people appear, Black African hosts only — never Caucasian stock faces.
 ${options?.embedText ? 'Embed invitation typography from the brief.\n' : ''}
 ${imagePrompt}`;
@@ -1257,6 +1319,8 @@ export async function composeInvitationTemplateAi(input: {
   imageUrls: string[];
   generateBackground?: boolean;
   embedText?: boolean;
+  deviceId?: string | null;
+  authUserId?: string | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const prompt = String(input.prompt || '').trim();
@@ -1269,17 +1333,37 @@ export async function composeInvitationTemplateAi(input: {
     .map((u) => u.trim())
     .slice(0, 4);
 
+  const processed = processUserPromptForHonestFaces(prompt, {
+    referenceCount: imageUrls.length,
+  });
+  const composeContext = await loadInvitationComposeContext({
+    userId: input.authUserId || input.userId,
+    tenantId: input.tenantId,
+    deviceId: input.deviceId,
+    currentPrompt: prompt,
+  });
+  const organizerVision = formatContextForVision(composeContext);
+  const organizerImage = formatContextForImage(composeContext);
+
   const key = requireAiConfigured();
-  const structured = await visionStructure(key, prompt, imageUrls, { embedText });
+  const structured = await visionStructure(key, processed.visionBrief, imageUrls, {
+    embedText,
+    organizerContext: organizerVision,
+    processed,
+  });
   if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;
     structured.visualAnalysis.peopleCount = 0;
   }
   const imagePrompt = buildImagePrompt(
-    prompt,
+    processed.imageBrief,
     structured.backgroundPrompt,
     structured.visualAnalysis,
-    { embedText },
+    {
+      embedText,
+      organizerContext: organizerImage,
+      processed,
+    },
   );
 
   let bgImageUrl = '';
@@ -1311,6 +1395,18 @@ export async function composeInvitationTemplateAi(input: {
     (global as Record<string, unknown>).aiVisualAnalysis = structured.visualAnalysis;
   }
   (global as Record<string, unknown>).aiEmbedText = embedText;
+  if (hasUsableComposeContext(composeContext)) {
+    (global as Record<string, unknown>).aiOrganizerContext = {
+      organizerName: composeContext.organizerName,
+      organizationName: composeContext.organizationName,
+      accountKind: composeContext.accountKind,
+      recentEventTitles: composeContext.recentEvents.map((event) => event.title),
+      usedPriorPrompts: composeContext.recentPrompts.length,
+    };
+  }
+  if (processed.beautifyStripped) {
+    (global as Record<string, unknown>).aiFaceHonesty = 'beautify-stripped';
+  }
   let elements = sanitizeElements(structured.elements);
   if (embedText) {
     elements = elements.filter((el) => el.type === 'rsvp-block');
