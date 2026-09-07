@@ -286,6 +286,7 @@ const QUICK_PANEL = {
   bars: { id: 'editor-quick-bars', titleId: 'editor-quick-bars-title' },
   chandeliers: { id: 'editor-quick-chandeliers', titleId: 'editor-quick-chandeliers-title' },
   aisles: { id: 'editor-quick-aisles', titleId: 'editor-quick-aisles-title' },
+  hospitality: { id: 'editor-quick-hospitality', titleId: 'editor-quick-hospitality-title' },
 } as const;
 
 function DiscloseChevron({ open }: { open: boolean }) {
@@ -297,7 +298,7 @@ function DiscloseChevron({ open }: { open: boolean }) {
   );
 }
 
-type EditorToolGroupId = 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene';
+type EditorToolGroupId = 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality';
 
 function ToolbarCluster({
   label,
@@ -432,7 +433,7 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality'>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
@@ -484,7 +485,14 @@ export default function RoomLayoutEditor({
           id.includes('bistrot') ||
           id.includes('salon') ||
           id.includes('cocktail') ||
-          id.includes('communal')
+          id.includes('communal') ||
+          id.includes('fast-casual') ||
+          id.includes('pizzeria') ||
+          id.includes('container') ||
+          id.includes('lounge') ||
+          id.includes('patio') ||
+          id.includes('coffee') ||
+          id.includes('loft')
         );
       }
       if (templateCategory === 'conference') {
@@ -505,6 +513,13 @@ export default function RoomLayoutEditor({
         !id.includes('cafe') &&
         !id.includes('bistrot') &&
         !id.includes('salon') &&
+        !id.includes('fast-casual') &&
+        !id.includes('pizzeria') &&
+        !id.includes('container') &&
+        !id.includes('lounge') &&
+        !id.includes('patio') &&
+        !id.includes('coffee') &&
+        !id.includes('loft') &&
         !id.includes('conference') &&
         !id.includes('amphi') &&
         !id.includes('board') &&
@@ -1270,6 +1285,66 @@ export default function RoomLayoutEditor({
       kind: 'add',
     });
     setSelection([{ kind: 'fixture', id: result.stairsId }]);
+    setQuickCreate(null);
+  };
+
+  const addParasolTable = () => {
+    const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
+    if (tableCount >= caps.maxTables) {
+      log(`Limite de ${caps.maxTables} tables atteinte (${caps.label})`, 'info');
+      return;
+    }
+    const count = tableCount + 1;
+    const table = placeCenteredItemWithClearance(
+      blueprint,
+      {
+        ...createBlueprintTable(count, { chairType: 'CROSSBACK', shape: 'round', capacity: 4 }),
+        name: `Terrasse ${count}`,
+        hasParasol: true,
+        storyId: resolveActiveStoryId(blueprint),
+      },
+      { w: 10, h: 10 },
+      'table',
+    );
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, table] },
+      { message: `Table avec parasol ajoutée`, kind: 'add' },
+    );
+    setSelection([{ kind: 'table', id: table.id }]);
+    setQuickCreate(null);
+  };
+
+  const addBoothAssembly = () => {
+    const rowCount = blueprint.furniture.filter((f) => f.kind === 'row').length;
+    const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
+    if (rowCount >= caps.maxRows || tableCount >= caps.maxTables) {
+      log(`Capacité maximale atteinte pour ajouter une cabine`, 'info');
+      return;
+    }
+    const targetStory = resolveActiveStoryId(blueprint);
+    const groupId = `booth-${Date.now()}`;
+    const draftRow = {
+      ...createBlueprintRow(rowCount + 1, { seatCount: 4, chairType: 'BANQUET', label: `Banquette ${rowCount + 1}` }),
+      groupId,
+      storyId: targetStory,
+    };
+    const row = placeCenteredItemWithClearance(blueprint, draftRow, { w: 14, h: 5 }, 'row');
+    const table = {
+      ...createBlueprintTable(tableCount + 1, { shape: 'rectangular', capacity: 4, chairType: 'BANQUET' }),
+      name: `Box ${tableCount + 1}`,
+      x: row.x,
+      y: Math.min(94, row.y + 7),
+      groupId,
+      storyId: targetStory,
+    };
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, row, table] },
+      { message: `Cabine restaurant (banquette + table) ajoutée`, kind: 'add' },
+    );
+    setSelection([
+      { kind: 'row', id: row.id },
+      { kind: 'table', id: table.id },
+    ]);
     setQuickCreate(null);
   };
 
@@ -5518,6 +5593,80 @@ export default function RoomLayoutEditor({
       </EditorToolGroup>
 
       <EditorToolGroup
+        id="hospitality"
+        label="Resto & Shop"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'hospitality' ? null : 'hospitality')}
+          className={cn(EDITOR_TOOL, quickCreate === 'hospitality' ? EDITOR_TOOL_ON : EDITOR_TOOL_PRIMARY)}
+          title="Comptoirs, four à pizza, banquettes, beauté & parasols"
+          aria-expanded={quickCreate === 'hospitality'}
+          aria-controls={QUICK_PANEL.hospitality.id}
+        >
+          <Sparkles className="w-3.5 h-3.5" aria-hidden /> Resto & Shop…
+        </button>
+        {caps.fixtureKinds.includes('orderCounter') ? (
+          <button
+            type="button"
+            onClick={() => addFixture('orderCounter')}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+            title="Comptoir de commande avec terminal POS"
+          >
+            Caisse POS
+          </button>
+        ) : null}
+        {caps.fixtureKinds.includes('pickupCounter') ? (
+          <button
+            type="button"
+            onClick={() => addFixture('pickupCounter')}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+            title="Comptoir de retrait des commandes"
+          >
+            Retrait
+          </button>
+        ) : null}
+        {caps.fixtureKinds.includes('pizzaOven') ? (
+          <button
+            type="button"
+            onClick={() => addFixture('pizzaOven')}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+            title="Four à pizza au feu de bois circulaire"
+          >
+            Four pizza
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={addBoothAssembly}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+          title="Cabine restaurant : banquette murale + table"
+        >
+          Cabine Booth
+        </button>
+        <button
+          type="button"
+          onClick={addParasolTable}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+          title="Table 4 places avec parasol d'ombrage"
+        >
+          Table Parasol
+        </button>
+        {caps.fixtureKinds.includes('loungeSofa') ? (
+          <button
+            type="button"
+            onClick={() => addFixture('loungeSofa')}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+            title="Canapé lounge confortable"
+          >
+            Canapé Lounge
+          </button>
+        ) : null}
+      </EditorToolGroup>
+
+      <EditorToolGroup
         id="zones"
         label="Zones"
         openId={toolbarGroup}
@@ -6156,6 +6305,149 @@ export default function RoomLayoutEditor({
                 <span className="text-xs font-bold text-primary mt-2">+ Installer</span>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {quickCreate === 'hospitality' && (
+        <div
+          id={QUICK_PANEL.hospitality.id}
+          role="region"
+          aria-labelledby={QUICK_PANEL.hospitality.titleId}
+          className="w-full space-y-3"
+        >
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 id={QUICK_PANEL.hospitality.titleId} className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-500" aria-hidden />
+                Mobilier & Équipements Resto, Commerce & Beauté
+              </h4>
+              <p className="text-xs text-muted">Éléments spécialisés inspirés des plans architecturaux réels : fast-casual, pizzerias, cafés, salons et terrasses.</p>
+            </div>
+            <button type="button" onClick={() => setQuickCreate(null)} className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}>
+              Fermer
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            <button type="button" onClick={() => { addFixture('orderCounter'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🏪</span> Caisse & Commande POS
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Comptoir d’accueil et commande avec caisse enregistreuse.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Placer</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('pickupCounter'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🛎️</span> Comptoir Retrait
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Zone de délivrance des plats préparés aux clients (Pick-Up).</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Placer</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('pizzaOven'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🍕</span> Four à Pizza 6&apos;
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Four circulaire au feu de bois avec sole en pierre réfractaire.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Placer</span>
+            </button>
+
+            <button type="button" onClick={addBoothAssembly} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🛋️</span> Cabine Booth 4 pl.
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Ensemble coordonné : banquette murale + table rectangulaire.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Assembler</span>
+            </button>
+
+            <button type="button" onClick={addParasolTable} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>⛱️</span> Table Parasol Terrasse
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Table 4 places avec parasol d’ombrage pour terrasse extérieure.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Poser</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('kitchenLine'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🍳</span> Cuisine Inox Pro
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Ligne de cuisson professionnelle : brûleurs, friteuse et plan inox.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Installer</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('displayCase'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🍰</span> Vitrine Pâtisserie
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Vitrine réfrigérée rétro-éclairée pour desserts, tapas et salades.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Poser</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('condimentStation'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🧂</span> Station Condiments
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Meuble de libre-service : sauces, couverts, serviettes et eau.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Poser</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('loungeSofa'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🛋️</span> Canapé Lounge
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Canapé capitonné avec accoudoirs pour espace salon ou coin VIP.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Poser</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('stylingStation'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>✂️</span> Poste Coiffure & Miroir
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Poste coiffeuse avec miroir vertical et fauteuil de coupe.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Installer</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('washBasin'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🧴</span> Bac Shampoing
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Bac de lavage ergonomique en céramique avec fauteuil relax.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Installer</span>
+            </button>
+
+            <button type="button" onClick={() => { addFixture('car'); setQuickCreate(null); }} className={EDITOR_PICK}>
+              <div>
+                <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                  <span>🚗</span> Emplacement Véhicule
+                </p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">Repère véhicule pour carport, garage ou entrée d’immeuble.</p>
+              </div>
+              <span className="text-xs font-bold text-primary mt-2">+ Stationner</span>
+            </button>
           </div>
         </div>
       )}

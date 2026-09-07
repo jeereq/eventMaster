@@ -644,6 +644,234 @@ export default function FixtureRenderer({
     );
   }
 
+  if (fixture.kind === 'orderCounter') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-md border-2 border-amber-900/60 bg-gradient-to-b from-stone-800 to-stone-900 text-white flex flex-col justify-between p-1 shadow-xs overflow-hidden">
+          <div className="flex items-center justify-between gap-1 border-b border-white/20 pb-0.5">
+            <span className="w-2.5 h-2 bg-amber-400 rounded-xs flex items-center justify-center text-[6px] font-black text-black">POS</span>
+            <span className="text-[7.5px] font-bold tracking-wider text-amber-300 uppercase truncate">Commande & Caisse</span>
+          </div>
+          <div className="flex justify-around items-center opacity-80 py-0.5">
+            <span className="w-4 h-2.5 bg-black/60 rounded-xs border border-white/30" />
+            <span className="w-3 h-1.5 bg-amber-500/40 rounded-xs" />
+            <span className="w-4 h-2.5 bg-black/60 rounded-xs border border-white/30" />
+          </div>
+          {showLabel && (
+            <span className="text-[8px] font-black uppercase tracking-wide text-center text-amber-200 truncate">
+              {fixture.label || 'Comptoir Commande'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'pickupCounter') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-md border-2 border-sky-800 bg-gradient-to-b from-sky-950 to-slate-900 text-white flex flex-col justify-between p-1 shadow-xs overflow-hidden">
+          <div className="flex items-center justify-between gap-1 border-b border-sky-400/30 pb-0.5">
+            <span className="text-[7.5px] font-black tracking-wider text-sky-300 uppercase truncate">Zone Retrait</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+          <div className="flex justify-around items-center opacity-80 py-0.5">
+            <span className="w-5 h-2 bg-amber-200/40 rounded-xs border border-amber-300/40" />
+            <span className="w-5 h-2 bg-amber-200/40 rounded-xs border border-amber-300/40" />
+          </div>
+          {showLabel && (
+            <span className="text-[8px] font-black uppercase tracking-wide text-center text-sky-200 truncate">
+              {fixture.label || 'Retrait / Pick-up'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'pizzaOven') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-full border-3 border-amber-800 bg-gradient-to-br from-stone-700 via-stone-800 to-amber-950 flex flex-col items-center justify-center p-1 shadow-md overflow-hidden text-center">
+          {/* Sole et foyer incandescent */}
+          <div className="w-2/3 h-2/3 rounded-full border-2 border-orange-500/80 bg-gradient-to-t from-amber-500 via-orange-600 to-stone-900 flex flex-col items-center justify-end pb-1 shadow-inner">
+            <div className="w-3/5 h-2.5 rounded-t-full bg-gradient-to-t from-yellow-300 to-red-600 animate-pulse shadow-[0_0_8px_#f97316]" />
+          </div>
+          {showLabel && (
+            <span className="absolute bottom-1 text-[7.5px] font-black uppercase text-amber-200 tracking-wider bg-black/60 px-1 rounded">
+              {fixture.label || 'Four Pizza'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'kitchenLine') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-md border-2 border-slate-500 bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 text-slate-900 flex flex-col justify-between p-1 shadow-xs overflow-hidden">
+          <div className="flex justify-around items-center h-1/2 border-b border-slate-400/80 px-1">
+            {/* Brûleurs & Plaque cuisson */}
+            <span className="w-3 h-3 rounded-full border-2 border-slate-700 bg-slate-800 flex items-center justify-center">
+              <span className="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_4px_#3b82f6]" />
+            </span>
+            <span className="w-3 h-3 rounded-full border-2 border-slate-700 bg-slate-800 flex items-center justify-center">
+              <span className="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_4px_#3b82f6]" />
+            </span>
+            <span className="w-4 h-3.5 rounded-xs border border-slate-600 bg-slate-500" />
+          </div>
+          <div className="flex justify-around items-center h-1/2 pt-0.5 text-[7.5px] font-bold text-slate-800">
+            <span>Inox Pro</span>
+            {showLabel && <span className="truncate">{fixture.label || 'Cuisine'}</span>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'displayCase') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-md border-2 border-cyan-500/80 bg-gradient-to-b from-cyan-950/80 via-slate-900 to-cyan-900 text-white flex flex-col justify-between p-1 shadow-xs overflow-hidden">
+          <div className="flex items-center justify-between border-b border-cyan-400/40 pb-0.5">
+            <span className="text-[7.5px] font-bold text-cyan-300 uppercase tracking-wider">Vitrine Réfrigérée</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+          </div>
+          <div className="flex justify-around items-center opacity-90 py-0.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-2xs" />
+            <span className="w-2 h-2 rounded-full bg-rose-400 shadow-2xs" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-2xs" />
+            <span className="w-2 h-2 rounded-full bg-amber-200 shadow-2xs" />
+          </div>
+          {showLabel && (
+            <span className="text-[8px] font-semibold text-center text-cyan-200 truncate">
+              {fixture.label || 'Présentoir'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'stylingStation') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-xl border-2 border-indigo-400/80 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col items-center justify-between p-1.5 shadow-sm overflow-hidden text-center">
+          {/* Miroir avec halos */}
+          <div className="w-4/5 h-2.5 rounded-md border border-cyan-300/80 bg-gradient-to-r from-cyan-100 via-white to-cyan-100 opacity-90 shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
+          {/* Fauteuil de coiffure stylisé */}
+          <div className="w-6 h-6 rounded-full border-2 border-indigo-300 bg-indigo-900 flex items-center justify-center shadow-inner">
+            <span className="w-3 h-2 rounded-t-sm bg-indigo-200" />
+          </div>
+          {showLabel && (
+            <span className="text-[7.5px] font-bold text-indigo-200 uppercase tracking-wide truncate">
+              {fixture.label || 'Poste Coiffure'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'washBasin') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-lg border-2 border-blue-400/80 bg-slate-900 text-white flex flex-col items-center justify-between p-1 shadow-xs overflow-hidden">
+          {/* Bac de lavage ergonomique en céramique */}
+          <div className="w-3/4 h-1/2 rounded-b-xl border-2 border-slate-300 bg-gradient-to-b from-white to-slate-200 shadow-inner flex items-center justify-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+          </div>
+          {/* Fauteuil bac */}
+          <div className="w-4/5 h-1/3 rounded-t-md bg-blue-900 border border-blue-400/40" />
+          {showLabel && (
+            <span className="text-[7px] font-bold text-blue-200 uppercase truncate">
+              {fixture.label || 'Bac Shampoing'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'condimentStation') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-md border-2 border-stone-400 bg-stone-100 text-stone-900 flex flex-col justify-between p-1 shadow-xs overflow-hidden">
+          <div className="flex justify-around items-center border-b border-stone-300 pb-0.5">
+            <span className="w-1.5 h-2.5 rounded-t-xs bg-red-600" title="Ketchup" />
+            <span className="w-1.5 h-2.5 rounded-t-xs bg-amber-500" title="Moutarde" />
+            <span className="w-2 h-2 rounded-xs bg-stone-300 border border-stone-400" title="Serviettes" />
+          </div>
+          <span className="text-[7.5px] font-bold text-center text-stone-700 uppercase tracking-wider truncate">
+            {fixture.label || 'Condiments & Eau'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'loungeSofa') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-xl border-2 border-emerald-700/60 bg-gradient-to-b from-emerald-900 to-slate-900 text-white flex flex-col justify-between p-1.5 shadow-sm overflow-hidden">
+          {/* Dossier rembourré */}
+          <div className="w-full h-2 rounded-full bg-emerald-800 border border-emerald-600/40" />
+          {/* Assise et coussins */}
+          <div className="flex justify-around items-center gap-1 flex-1 py-0.5">
+            <span className="flex-1 h-full rounded-md bg-emerald-950/80 border border-emerald-600/30" />
+            <span className="flex-1 h-full rounded-md bg-emerald-950/80 border border-emerald-600/30" />
+          </div>
+          {showLabel && (
+            <span className="text-[7.5px] font-bold text-center text-emerald-200 uppercase truncate">
+              {fixture.label || 'Canapé Lounge'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'car') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-2xl border-2 border-teal-600 bg-gradient-to-b from-teal-800 to-teal-950 text-white flex flex-col items-center justify-between p-1.5 shadow-md overflow-hidden">
+          {/* Pare-brise avant */}
+          <div className="w-3/4 h-2 rounded-t-lg bg-sky-200/80 border border-teal-300 shadow-inner" />
+          {/* Toit */}
+          <div className="w-4/5 flex-1 rounded-sm bg-teal-900 border border-teal-700/60 my-0.5 flex items-center justify-center">
+            <span className="text-[7px] font-black uppercase tracking-wider text-teal-300">Véhicule</span>
+          </div>
+          {/* Lunette arrière */}
+          <div className="w-3/4 h-1.5 rounded-b-md bg-sky-200/80 border border-teal-300" />
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'parasol') {
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full rounded-full border-2 border-amber-600 bg-amber-100 text-amber-900 shadow-md flex items-center justify-center overflow-hidden">
+          {/* Rayons du parasol (8 baleines) */}
+          <svg viewBox="0 0 100 100" className="w-full h-full absolute inset-0">
+            <circle cx="50" cy="50" r="48" fill="#fef3c7" stroke="#d97706" strokeWidth="2" />
+            <line x1="50" y1="2" x2="50" y2="98" stroke="#b45309" strokeWidth="1.5" />
+            <line x1="2" y1="50" x2="98" y2="50" stroke="#b45309" strokeWidth="1.5" />
+            <line x1="16" y1="16" x2="84" y2="84" stroke="#b45309" strokeWidth="1.5" />
+            <line x1="84" y1="16" x2="16" y2="84" stroke="#b45309" strokeWidth="1.5" />
+            <circle cx="50" cy="50" r="6" fill="#b45309" />
+          </svg>
+          {showLabel && (
+            <span className="relative z-10 text-[7px] font-black uppercase text-amber-950 bg-white/80 px-1 rounded shadow-xs">
+              {fixture.label || 'Parasol'}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (isStage && fixture.kind === 'podium') {
     const style: PodiumStyle = fixture.podiumStyle ?? 'speaker';
     const round = style === 'circular' || style === 'couple';

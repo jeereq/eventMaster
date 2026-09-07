@@ -106,6 +106,15 @@ const SOLID_FIXTURE_KINDS = new Set([
   'balcony',
   'djBooth',
   'screen',
+  'orderCounter',
+  'pickupCounter',
+  'pizzaOven',
+  'kitchenLine',
+  'displayCase',
+  'stylingStation',
+  'washBasin',
+  'condimentStation',
+  'car',
 ]);
 
 export function estimateTableSizeMeters(
@@ -744,7 +753,13 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
       for (const fx of mutableFixtures) {
         if (!fx.isSolid || !sameStory(item.storyId, fx.storyId)) continue;
 
-        const isServiceCounter = fx.kind === 'bar' || fx.kind === 'buffet';
+        const isServiceCounter =
+          fx.kind === 'bar' ||
+          fx.kind === 'buffet' ||
+          fx.kind === 'orderCounter' ||
+          fx.kind === 'pickupCounter' ||
+          fx.kind === 'condimentStation' ||
+          fx.kind === 'displayCase';
         const isStage = fx.kind === 'stage' || fx.kind === 'podium' || fx.kind === 'djBooth';
         const requiredClearance = isServiceCounter
           ? clearances.serviceCounterClearance

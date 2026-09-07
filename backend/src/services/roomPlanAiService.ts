@@ -95,6 +95,17 @@ const ITEM_KINDS = new Set([
   'bar',
   'corridor',
   'perimeter',
+  'orderCounter',
+  'pickupCounter',
+  'pizzaOven',
+  'kitchenLine',
+  'displayCase',
+  'stylingStation',
+  'washBasin',
+  'condimentStation',
+  'loungeSofa',
+  'car',
+  'parasol',
 ]);
 
 /** Vocabulaire courant renvoyé par les modèles vision → kind EventMaster. */
@@ -141,10 +152,6 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   booths: 'row',
   box: 'row',
   alcove: 'row',
-  sofa: 'row',
-  couch: 'row',
-  canape: 'row',
-  canapé: 'row',
   pew: 'row',
   pews: 'row',
   bleacher: 'row',
@@ -173,8 +180,14 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   barstools: 'chair',
   tabouret: 'chair',
   tabourets: 'chair',
-  stylist: 'chair',
-  shampoo: 'chair',
+
+  // Canapés et salons
+  sofa: 'loungeSofa',
+  couch: 'loungeSofa',
+  canape: 'loungeSofa',
+  canapé: 'loungeSofa',
+  loungesofa: 'loungeSofa',
+  salonsofa: 'loungeSofa',
 
   // Bars, comptoirs, buffets et stations
   bar: 'bar',
@@ -182,27 +195,67 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   comptoir: 'bar',
   counter: 'bar',
   servicecounter: 'bar',
-  ordercounter: 'bar',
-  pickupcounter: 'bar',
-  pickup: 'bar',
-  order: 'bar',
   sushibar: 'bar',
   winebar: 'bar',
+  circularbar: 'bar',
+  cocktailbar: 'bar',
   buffet: 'buffet',
   catering: 'buffet',
   station: 'buffet',
-  waterstation: 'buffet',
-  condiments: 'buffet',
-  condimentstation: 'buffet',
   credenza: 'buffet',
   dispensary: 'buffet',
-  showcase: 'buffet',
-  vitrine: 'buffet',
-  pastrydisplay: 'buffet',
-  oven: 'buffet',
-  pizzaoven: 'buffet',
-  four: 'buffet',
-  fourpizza: 'buffet',
+
+  // Comptoirs spécialisés restaurant & vente
+  ordercounter: 'orderCounter',
+  order: 'orderCounter',
+  comptoircommande: 'orderCounter',
+  sellingarea: 'orderCounter',
+  pickupcounter: 'pickupCounter',
+  pickup: 'pickupCounter',
+  comptoirretrait: 'pickupCounter',
+  retrait: 'pickupCounter',
+
+  // Équipements de cuisine & restauration
+  pizzaoven: 'pizzaOven',
+  fourpizza: 'pizzaOven',
+  fourabois: 'pizzaOven',
+  woodfiredoven: 'pizzaOven',
+  oven: 'pizzaOven',
+  four: 'pizzaOven',
+  kitchenline: 'kitchenLine',
+  cookingarea: 'kitchenLine',
+  hotcooking: 'kitchenLine',
+  chipsmaking: 'kitchenLine',
+  hamburgermaking: 'kitchenLine',
+  pastaprep: 'kitchenLine',
+  fryer: 'kitchenLine',
+  grill: 'kitchenLine',
+
+  // Vitrines, beauté et stations
+  showcase: 'displayCase',
+  vitrine: 'displayCase',
+  pastrydisplay: 'displayCase',
+  pastrycase: 'displayCase',
+  displaycase: 'displayCase',
+  productdisplay: 'displayCase',
+  stylingstation: 'stylingStation',
+  coiffeuse: 'stylingStation',
+  stationcoiffure: 'stylingStation',
+  washbasin: 'washBasin',
+  shampoobowl: 'washBasin',
+  baclavage: 'washBasin',
+  shampoostation: 'washBasin',
+  washstation: 'washBasin',
+  shampoo: 'washBasin',
+  stylist: 'stylingStation',
+  condiments: 'condimentStation',
+  condimentstation: 'condimentStation',
+  waterstation: 'condimentStation',
+
+  // Véhicules & Extérieur
+  car: 'car',
+  voiture: 'car',
+  vehicule: 'car',
 
   // Accueil, caisse, podiums et estrades
   podium: 'podium',
@@ -213,9 +266,9 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   reception: 'podium',
   receptiondesk: 'podium',
   frontdesk: 'podium',
-  cashier: 'podium',
-  caisse: 'podium',
-  pos: 'podium',
+  cashier: 'orderCounter',
+  caisse: 'orderCounter',
+  pos: 'orderCounter',
   stage: 'stage',
   scene: 'stage',
   escenario: 'stage',
@@ -263,10 +316,6 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   massage: 'zone',
   facial: 'zone',
   waxing: 'zone',
-  washstation: 'zone',
-  shampoostation: 'zone',
-  stylingstation: 'table',
-  coiffeuse: 'table',
 
   // Instruments
   piano: 'instrument',
@@ -498,7 +547,18 @@ export type RoomPlanVisionItemKind =
   | 'instrument'
   | 'bar'
   | 'corridor'
-  | 'perimeter';
+  | 'perimeter'
+  | 'orderCounter'
+  | 'pickupCounter'
+  | 'pizzaOven'
+  | 'kitchenLine'
+  | 'displayCase'
+  | 'stylingStation'
+  | 'washBasin'
+  | 'condimentStation'
+  | 'loungeSofa'
+  | 'car'
+  | 'parasol';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -937,7 +997,7 @@ Required JSON fields:
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -1040,7 +1100,7 @@ JSON schema:
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",

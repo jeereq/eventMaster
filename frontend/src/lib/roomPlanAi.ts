@@ -82,7 +82,18 @@ export type RoomPlanVisionItemKind =
   | 'instrument'
   | 'bar'
   | 'corridor'
-  | 'perimeter';
+  | 'perimeter'
+  | 'orderCounter'
+  | 'pickupCounter'
+  | 'pizzaOven'
+  | 'kitchenLine'
+  | 'displayCase'
+  | 'stylingStation'
+  | 'washBasin'
+  | 'condimentStation'
+  | 'loungeSofa'
+  | 'car'
+  | 'parasol';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -194,6 +205,17 @@ const FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
   'bar',
   'corridor',
   'perimeter',
+  'orderCounter',
+  'pickupCounter',
+  'pizzaOven',
+  'kitchenLine',
+  'displayCase',
+  'stylingStation',
+  'washBasin',
+  'condimentStation',
+  'loungeSofa',
+  'car',
+  'parasol',
 ]);
 
 const OUTLINE_SHAPES = new Set<RoomOutlineShape>([
@@ -1136,6 +1158,7 @@ export function applyRoomPlanVisionDraft(
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
         ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
         hasCenterpiece: item.hasCenterpiece === true,
+        hasParasol: Boolean((item as any).hasParasol || item.label?.toLowerCase().includes('parasol') || item.label?.toLowerCase().includes('umbrella')),
         groupId: `${AI_ROOM_IMPORT_GROUP_ID}-table`,
         storyId,
       };

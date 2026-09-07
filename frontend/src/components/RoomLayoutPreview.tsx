@@ -193,6 +193,11 @@ function ThumbPreview({
                 {item.hasCenterpiece && (
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 absolute inset-1/2 -translate-x-1/2 -translate-y-1/2" />
                 )}
+                {item.hasParasol && (
+                  <span className="absolute -inset-2 rounded-full border border-amber-500/70 bg-amber-300/30 pointer-events-none flex items-center justify-center">
+                    <span className="w-1 h-1 rounded-full bg-amber-600" />
+                  </span>
+                )}
               </div>
             </div>
           );
@@ -402,6 +407,14 @@ function FlatShowcasePreview({
                       title="Centre de table"
                     >
                       <span className="w-1 h-1 rounded-full bg-white" />
+                    </span>
+                  )}
+                  {item.hasParasol && (
+                    <span
+                      className="absolute -inset-3.5 rounded-full border-2 border-dashed border-amber-500/80 bg-amber-200/25 pointer-events-none flex items-center justify-center shadow-xs"
+                      title="Table avec parasol d'ombrage"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-600" />
                     </span>
                   )}
                 </div>
