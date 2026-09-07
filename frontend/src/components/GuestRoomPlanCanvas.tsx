@@ -65,18 +65,18 @@ function TableDetailPopover({
           <button
             type="button"
             onClick={onClose}
-            className="text-muted hover:text-foreground text-xs shrink-0 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center rounded-md hover:bg-surface-muted transition"
+            className="text-muted hover:text-foreground text-sm shrink-0 min-h-11 min-w-11 flex items-center justify-center rounded-md hover:bg-surface-muted transition"
             aria-label="Fermer les détails de la table"
           >
             ✕
           </button>
         </div>
-        <p className="text-[10px] text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
+        <p className="text-xs text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
         {table.isGuestTable && (
-          <span className="inline-block text-[9px] font-semibold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-md">Votre table</span>
+          <span className="inline-block text-xs font-semibold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-md">Votre table</span>
         )}
         {guestNames && guestNames.length > 0 && (
-          <ul className="text-[10px] text-muted space-y-0.5 pt-1 border-t border-border">
+          <ul className="text-xs text-muted space-y-0.5 pt-1 border-t border-border">
             {guestNames.map((n) => (
               <li key={n} className="truncate">{n}</li>
             ))}

@@ -579,7 +579,7 @@ export interface RoomLayoutBlueprint {
     /** Teinte / couleur dominante du sol (architecture). */
     floorColor?: string;
     /** Afficher le toit / plafond en 3D. */
-    showRoof?: boolean;
+    showRoof?: boolean; 
     /** Opacité du toit (0–1). */
     roofOpacity?: number;
     /** Couleur du plafond / underside. */

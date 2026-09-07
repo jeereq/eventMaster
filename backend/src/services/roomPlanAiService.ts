@@ -862,7 +862,14 @@ export function parseRoomPlanVisionDraft(
     };
     if (w != null) item.w = w;
     if (h != null) item.h = h;
-    if (row.rotation != null) item.rotation = Math.round(clamp(asNumber(row.rotation, 0), -180, 180));
+    if (row.rotation != null) {
+      const rawRot = clamp(asNumber(row.rotation, 0), -180, 180);
+      item.rotation = (kind === 'door' || kind === 'entrance')
+        ? ((Math.round(rawRot / 90) * 90) % 360 + 360) % 360
+        : Math.round(rawRot);
+    } else if (kind === 'door' || kind === 'entrance') {
+      item.rotation = 0;
+    }
     const shape = resolveTableShape(row.shape)
       ?? (kind === 'table' && typeof row.kind === 'string' ? resolveTableShape(row.kind) : undefined)
       ?? (kind === 'table' && typeof row.type === 'string' ? resolveTableShape(row.type) : undefined);
@@ -1032,6 +1039,8 @@ Appearance rules:
 
 Item rules (inference allowed):
 - ZERO OVERLAP / ZERO STACKING: Never place multiple chairs or tables at the same or overlapping coordinates. Each chair must have its own distinct physical floor location. Maintain realistic real-world clearances: minimum 0.7m center-to-center between chairs, minimum 1.4m edge-to-edge between tables for pulled-back chairs, minimum 1.2m along perimeter walls.
+- ZERO EMBEDDING IN WALLS OR OTHER ITEMS: No furniture (table, chair, row, booth, counter, bar, fixture) may EVER be incorporated, embedded or intersect a wall, partition or another item. Maintain at least 0.90m clear circulation from all walls and partitions.
+- STRICTLY ORTHOGONAL DOORS: Doors and entrances (kind="door"|"entrance") must ALWAYS be straight and strictly orthogonal (rotation strictly 0°, 90°, 180° or 270°). Oblique or arbitrary angled doors are strictly forbidden. The swing and access zone in front of and behind doors must remain 100% empty of any furniture.
 - Align tables and rows on a grid: shared X in columns, shared Y in rows. Avoid 1–2% jitter “for neatness”.
 - table = each isolated table. seats = visible chairs/covers around it, else estimate from diameter (cocktail/2-top: 2, 4-top square/round: 4, round 8 seats ≈ 8, communal/long: 8–14). shape="square"|"round"|"rectangular"|"oval"|"cocktail". hasCenterpiece=true if a central vase/candle is visible.
 - row = each aligned chair row, banquette, booth or continuous sofa. One visible booth/banquette = one "row" item (label="Banquette" or "Booth").
@@ -1060,6 +1069,8 @@ From the ENGLISH SCENE BRIEF, DESIGN a lived-in venue floor plan — not a softw
 
 Placement forbidden:
 - Stacking or overlapping chairs, tables or fixtures in the same space. NEVER output identical or overlapping (x, y) coordinates for multiple objects. Each chair and piece of furniture must occupy its own distinct physical footprint.
+- Embedding or incorporating any item (table, chair, row, booth, counter, fixture) into a wall, partition or another item.
+- Generating crooked, oblique or tilted doors: doors and entrances must ALWAYS be strictly orthogonal (0°, 90°, 180°, 270°) and properly oriented along wall segments.
 - Crowding furniture without realistic human circulation: maintain at least 0.7m center-to-center between chairs, at least 1.4m to 1.8m edge-to-edge between tables for pulled chairs and service aisles, and at least 1.2m to 1.8m circulation corridors along perimeter walls.
 - Lining tables, chandeliers or flowers in a single straight file, military checkerboard, or 1–2% “neat” jitter.
 - Blocking a door, aisle or stage.

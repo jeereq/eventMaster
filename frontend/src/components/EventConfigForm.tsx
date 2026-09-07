@@ -1023,7 +1023,7 @@ export default function EventConfigForm({
                   </span>
                 </label>
                 {!onlinePaymentsEnabled && (
-                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
                     Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
                   </p>
                 )}

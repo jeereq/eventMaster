@@ -10,6 +10,63 @@ export function snapPct(value: number, step = IMPORT_SNAP_STEP): number {
 }
 
 /**
+ * Normalise l'orientation d'une porte pour garantir un alignement orthogonal strict (0°, 90°, 180°, 270°).
+ * Évite les angles obliques ou imprécis (ex: 17°, 33°) non conformes aux règles architecturales.
+ */
+export function normalizeDoorOrthogonal(rotationDeg: number = 0): number {
+  if (!Number.isFinite(rotationDeg)) return 0;
+  const snapped = Math.round(rotationDeg / 90) * 90;
+  return ((snapped % 360) + 360) % 360;
+}
+
+/**
+ * Calcule la distance euclidienne minimale entre un point P(px, py) et un segment [A, B] en mètres,
+ * ainsi que le point projeté le plus proche et le vecteur normal unitaire orienté vers l'extérieur.
+ */
+export function distancePointToSegmentM(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): { distM: number; closestX: number; closestY: number; nx: number; ny: number } {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq < 1e-6) {
+    const distM = Math.hypot(px - x1, py - y1);
+    return {
+      distM,
+      closestX: x1,
+      closestY: y1,
+      nx: distM > 1e-4 ? (px - x1) / distM : 1,
+      ny: distM > 1e-4 ? (py - y1) / distM : 0,
+    };
+  }
+
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  const closestX = x1 + t * dx;
+  const closestY = y1 + t * dy;
+  const distM = Math.hypot(px - closestX, py - closestY);
+
+  let nx = 0;
+  let ny = 0;
+  if (distM > 1e-4) {
+    nx = (px - closestX) / distM;
+    ny = (py - closestY) / distM;
+  } else {
+    // Le point est exactement sur l'axe du segment : normale orthogonale au segment
+    const segLen = Math.sqrt(lenSq);
+    nx = -dy / segLen;
+    ny = dx / segLen;
+  }
+
+  return { distM, closestX, closestY, nx, ny };
+}
+
+/**
  * Distances et dégagements physiques réels (en mètres).
  * Basés sur les normes événementielles et de sécurité CHR / ERP :
  * - Table à table : 1.40m (recul chaises 2x 0.45m + passage serveur 0.50m)
@@ -261,6 +318,9 @@ export interface LayoutClearanceConflict {
     | 'table_overlap'
     | 'table_row_overlap'
     | 'chair_table_overlap'
+    | 'element_overlap'
+    | 'wall_penetration'
+    | 'door_crooked'
     | 'door_blocked'
     | 'stage_blocked'
     | 'wall_blocked'
@@ -407,6 +467,84 @@ export function detectLayoutClearanceConflicts(
           itemIds: [item.id, df.id],
           distanceM: Math.round(dist * 100) / 100,
           requiredM: clearances.doorClearance,
+        });
+      }
+    }
+  }
+
+  // 5. Portes non droites (angles obliques non orthogonaux)
+  for (const df of doorFixtures) {
+    const rot = df.rotation ?? 0;
+    if (Math.abs(rot % 90) !== 0) {
+      conflicts.push({
+        id: `door_crooked_${df.id}`,
+        type: 'door_crooked',
+        severity: 'warning',
+        message: `La porte "${df.label || 'Porte'}" a une inclinaison non droite (${rot}°). L'alignement doit être strictement orthogonal (0°, 90°, 180° ou 270°).`,
+        itemIds: [df.id],
+      });
+    }
+  }
+
+  // 6. Non-incorporation dans les murs (cloisons et parois)
+  if (Array.isArray(blueprint.walls)) {
+    const wallItems = [...tables, ...chairs, ...rows];
+    for (const wall of blueprint.walls) {
+      if (!wall.start || !wall.end) continue;
+      const x1 = pctToM_X(wall.start.x);
+      const y1 = pctToM_Y(wall.start.y);
+      const x2 = pctToM_X(wall.end.x);
+      const y2 = pctToM_Y(wall.end.y);
+      const thicknessM = typeof wall.thicknessM === 'number' && wall.thicknessM > 0 ? wall.thicknessM : 0.20;
+
+      for (const item of wallItems) {
+        if (!sameStory(item.storyId, wall.storyId)) continue;
+        const itemX = pctToM_X(item.x);
+        const itemY = pctToM_Y(item.y);
+        const sz = item.kind === 'table'
+          ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation)
+          : item.kind === 'row'
+            ? estimateRowSizeMeters(item.seatCount, item.rotation)
+            : { radiusM: 0.25, halfWM: 0.25 };
+
+        const { distM } = distancePointToSegmentM(itemX, itemY, x1, y1, x2, y2);
+        const physicalCoreDist = sz.radiusM + thicknessM / 2;
+
+        if (distM < physicalCoreDist) {
+          const penetrationM = physicalCoreDist - distM;
+          conflicts.push({
+            id: `wall_penetration_${item.id}_${wall.id || 'wall'}`,
+            type: 'wall_penetration',
+            severity: 'error',
+            message: `L'élément "${item.name || item.label || 'Mobilier'}" est incorporé / encastré dans un mur ou une cloison (pénétration de ${penetrationM.toFixed(2)}m).`,
+            itemIds: [item.id, wall.id || 'wall'],
+            distanceM: Math.round(distM * 100) / 100,
+            requiredM: Math.round(physicalCoreDist * 100) / 100,
+          });
+        }
+      }
+    }
+  }
+
+  // 7. Non-incorporation dans les installations fixes solides
+  const solidFixtures = (blueprint.fixtures || []).filter((fx) => SOLID_FIXTURE_KINDS.has(fx.kind));
+  for (const item of [...tables, ...chairs, ...rows]) {
+    for (const fx of solidFixtures) {
+      if (!sameStory(item.storyId, fx.storyId)) continue;
+      const itemX = pctToM_X(item.x);
+      const itemY = pctToM_Y(item.y);
+      const fxX = pctToM_X(fx.x);
+      const fxY = pctToM_Y(fx.y);
+      const fxW = pctToM_X(fx.w);
+      const fxH = pctToM_Y(fx.h);
+
+      if (itemX >= fxX && itemX <= fxX + fxW && itemY >= fxY && itemY <= fxY + fxH) {
+        conflicts.push({
+          id: `element_overlap_${item.id}_${fx.id}`,
+          type: 'element_overlap',
+          severity: 'error',
+          message: `L'élément "${item.name || item.label || 'Mobilier'}" est incorporé dans l'installation fixe "${fx.label || fx.kind}".`,
+          itemIds: [item.id, fx.id],
         });
       }
     }
@@ -575,6 +713,32 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
           });
         }
       }
+    }
+  }
+
+  // Extraire les segments de murs pour l'anti-incorporation
+  type WallSegmentM = {
+    id: string;
+    x1M: number;
+    y1M: number;
+    x2M: number;
+    y2M: number;
+    thicknessM: number;
+    storyId?: string;
+  };
+  const wallSegments: WallSegmentM[] = [];
+  if (Array.isArray(blueprint.walls)) {
+    for (const w of blueprint.walls) {
+      if (!w.start || !w.end) continue;
+      wallSegments.push({
+        id: w.id || `wall_${wallSegments.length}`,
+        x1M: pctToM_X(w.start.x),
+        y1M: pctToM_Y(w.start.y),
+        x2M: pctToM_X(w.end.x),
+        y2M: pctToM_Y(w.end.y),
+        thicknessM: typeof w.thicknessM === 'number' && w.thicknessM > 0 ? w.thicknessM : 0.20,
+        storyId: w.storyId,
+      });
     }
   }
 
@@ -873,7 +1037,30 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
       }
     }
 
-    // 11. Circulation périphérique le long des murs extérieurs
+    // 11. Dégagement strict et anti-incorporation des cloisons / murs intérieurs
+    for (const item of mutableItems) {
+      for (const wall of wallSegments) {
+        if (!sameStory(item.storyId, wall.storyId)) continue;
+
+        const { distM, nx, ny } = distancePointToSegmentM(
+          item.cxM,
+          item.cyM,
+          wall.x1M,
+          wall.y1M,
+          wall.x2M,
+          wall.y2M,
+        );
+
+        const requiredWallDist = item.radiusM + wall.thicknessM / 2 + clearances.wallMargin * 0.75;
+        if (distM < requiredWallDist) {
+          const pushM = requiredWallDist - distM;
+          item.cxM += nx * pushM;
+          item.cyM += ny * pushM;
+        }
+      }
+    }
+
+    // 12. Circulation périphérique le long des murs extérieurs
     for (const item of mutableItems) {
       const minX = clearances.wallMargin + item.halfWM;
       const maxX = widthM - clearances.wallMargin - item.halfWM;
@@ -915,8 +1102,20 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     };
   });
 
+  // Normaliser l'orthogonalité de toutes les portes (angles stricts 0°, 90°, 180°, 270°)
+  const updatedFixtures = (blueprint.fixtures || []).map((fx) => {
+    if (fx.kind === 'door' || fx.kind === 'entrance') {
+      return {
+        ...fx,
+        rotation: normalizeDoorOrthogonal(fx.rotation ?? 0),
+      };
+    }
+    return fx;
+  });
+
   return {
     ...blueprint,
     furniture: updatedFurniture,
+    fixtures: updatedFixtures,
   };
 }

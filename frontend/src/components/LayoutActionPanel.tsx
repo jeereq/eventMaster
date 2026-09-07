@@ -75,13 +75,13 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
 
       {/* Filtres de contexte ergonomiques */}
       {actions.length > 3 && (
-        <div className="px-2.5 py-1.5 border-b border-border-subtle bg-surface flex items-center gap-1 overflow-x-auto text-xs" role="tablist" aria-label="Filtrer l'historique">
+        <div className="px-2.5 py-1.5 border-b border-border-subtle bg-surface flex items-center gap-1.5 overflow-x-auto text-xs" role="tablist" aria-label="Filtrer l'historique">
           <button
             type="button"
             role="tab"
             aria-selected={filter === 'all'}
             onClick={() => setFilter('all')}
-            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
+            className={`px-2.5 py-1 min-h-[32px] rounded-md text-xs font-semibold transition ${
               filter === 'all' ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:text-foreground'
             }`}
           >
@@ -92,7 +92,7 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
             role="tab"
             aria-selected={filter === 'furniture'}
             onClick={() => setFilter('furniture')}
-            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
+            className={`px-2.5 py-1 min-h-[32px] rounded-md text-xs font-semibold transition ${
               filter === 'furniture' ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:text-foreground'
             }`}
           >
@@ -103,7 +103,7 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
             role="tab"
             aria-selected={filter === 'ai'}
             onClick={() => setFilter('ai')}
-            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
+            className={`px-2.5 py-1 min-h-[32px] rounded-md text-xs font-semibold transition ${
               filter === 'ai' ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:text-foreground'
             }`}
           >
@@ -114,7 +114,7 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
             role="tab"
             aria-selected={filter === 'story'}
             onClick={() => setFilter('story')}
-            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
+            className={`px-2.5 py-1 min-h-[32px] rounded-md text-xs font-semibold transition ${
               filter === 'story' ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:text-foreground'
             }`}
           >
@@ -125,7 +125,7 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
             role="tab"
             aria-selected={filter === 'template'}
             onClick={() => setFilter('template')}
-            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
+            className={`px-2.5 py-1 min-h-[32px] rounded-md text-xs font-semibold transition ${
               filter === 'template' ? 'bg-primary/10 text-primary font-bold' : 'text-muted hover:text-foreground'
             }`}
           >

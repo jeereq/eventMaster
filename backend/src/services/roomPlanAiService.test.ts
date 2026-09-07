@@ -232,6 +232,22 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.items[1]?.x, 40);
     assert.equal(draft.items[1]?.w, 28);
   });
+
+  it('redresse les portes pour garantir une rotation strictement orthogonale (0, 90, 180, 270)', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [
+        { kind: 'door', x: 50, y: 95, w: 6, h: 4, rotation: 35 },
+        { kind: 'entrance', x: 5, y: 50, w: 4, h: 8, rotation: 110 },
+        { kind: 'door', x: 95, y: 50, w: 4, h: 6, rotation: -78 },
+      ],
+    }, { widthM: 20, heightM: 16 });
+
+    assert.equal(draft.items.length, 3);
+    assert.equal(draft.items[0]?.rotation, 0, 'Angle 35° doit être ramené à 0°');
+    assert.equal(draft.items[1]?.rotation, 90, 'Angle 110° doit être ramené à 90°');
+    assert.equal(draft.items[2]?.rotation, 270, 'Angle -78° doit être ramené à 270°');
+  });
 });
 
 describe('normalizeRoomPlanVisionKind', () => {

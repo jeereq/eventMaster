@@ -1,6 +1,7 @@
 import { api } from '@/lib/api';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
 import { roomEditorCapabilities, type RoomEditorCapabilities } from '@/lib/roomEditorAccess';
+import { normalizeDoorOrthogonal } from '@/lib/roomLayoutClearance';
 import { tidyImportedFloorLayout, type LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import {
@@ -1119,13 +1120,17 @@ export function applyRoomPlanVisionDraft(
       }
       const created = applyFixtureLook(createNeutralFixtureForImport(fixtureKind), item);
       const box = itemFootprint(item, { w: created.w, h: created.h });
+      const rawRot = item.rotation;
+      const rot = (fixtureKind === 'door' || fixtureKind === 'entrance')
+        ? normalizeDoorOrthogonal(rawRot ?? 0)
+        : rawRot;
       const fixture = {
         ...created,
         x: box.x,
         y: box.y,
         w: box.w,
         h: box.h,
-        rotation: item.rotation,
+        rotation: rot,
         label: item.label || created.label,
         groupId: `${AI_ROOM_IMPORT_GROUP_ID}-${fixtureKind}`,
         storyId,

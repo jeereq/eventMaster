@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -185,6 +185,7 @@ import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry, typ
 import {
   enforceRealLayoutClearances,
   detectLayoutClearanceConflicts,
+  normalizeDoorOrthogonal,
   type ClearancePreset,
 } from '@/lib/roomLayoutClearance';
 import { readImageFile } from '@/lib/imageCropUtils';
@@ -3727,7 +3728,64 @@ export default function RoomLayoutEditor({
 
             {/* ───────── PORTES & ENTRÉES D’ACCUEIL ───────── */}
             {isDoor && (
-              <div className="space-y-2 pt-2 border-t border-border">
+              <div className="space-y-3 pt-2 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <p className={EDITOR_HEADING}>
+                    <DoorOpen className="w-3.5 h-3.5 text-primary" /> Orientation & Dégagement
+                  </p>
+                  {(selectedFixture.rotation ?? 0) % 90 !== 0 ? (
+                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">
+                      Angle oblique
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Droit
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Alignement orthogonal strict :</span>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { deg: 0, label: '0° Sud' },
+                      { deg: 90, label: '90° Est' },
+                      { deg: 180, label: '180° Nord' },
+                      { deg: 270, label: '270° Ouest' },
+                    ].map(({ deg, label }) => {
+                      const isSelected = (selectedFixture.rotation ?? 0) === deg;
+                      return (
+                        <button
+                          key={deg}
+                          type="button"
+                          onClick={() => updateFixture(selectedFixture.id, { rotation: deg }, `Porte orientée ${label}`)}
+                          className={cn(
+                            'min-h-11 px-1.5 py-1 text-xs font-semibold rounded-[var(--radius-button)] border transition-all text-center',
+                            isSelected
+                              ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                              : 'bg-surface hover:bg-surface-muted border-border text-foreground',
+                          )}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(selectedFixture.rotation ?? 0) % 90 !== 0 && (
+                    <button
+                      type="button"
+                      onClick={() => updateFixture(
+                        selectedFixture.id,
+                        { rotation: normalizeDoorOrthogonal(selectedFixture.rotation ?? 0) },
+                        'Porte redressée à angle droit',
+                      )}
+                      className="w-full min-h-11 px-3 py-2 text-xs font-bold text-amber-800 dark:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-[var(--radius-button)] flex items-center justify-center gap-1.5 transition-colors mt-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Redresser la porte à 90° (alignement droit)
+                    </button>
+                  )}
+                </div>
+
                 <p className={EDITOR_HEADING}>
                   <DoorOpen className="w-3.5 h-3.5 text-primary" /> Style de porte
                 </p>
@@ -5408,7 +5466,7 @@ export default function RoomLayoutEditor({
         <MoveHorizontal className="w-3.5 h-3.5" aria-hidden />
         Espacements
         {clearanceReport.conflicts.length > 0 ? (
-          <span className="px-1.5 py-0.2 rounded-full bg-amber-500/25 text-[10px] font-bold">
+          <span className="px-1.5 py-0.5 rounded-full bg-amber-500/25 text-xs font-bold">
             {clearanceReport.conflicts.length}
           </span>
         ) : null}
@@ -6809,23 +6867,28 @@ export default function RoomLayoutEditor({
             <p className="text-xs font-bold text-muted uppercase tracking-wider">
               Anomalies physiques détectées ({clearanceReport.conflicts.length}) :
             </p>
-            <ul className="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-border p-2 bg-surface-muted/30 text-xs">
+            <ul className="max-h-48 overflow-y-auto space-y-1.5 rounded-xl border border-border p-2 bg-surface-muted/30 text-xs">
               {clearanceReport.conflicts.map((c) => (
-                <li key={c.id} className="p-1.5 rounded-lg bg-surface border border-border-subtle flex items-start gap-2">
-                  <span className="text-amber-600 shrink-0 mt-0.5">⚠️</span>
-                  <span className="text-foreground leading-snug">{c.message}</span>
+                <li key={c.id} className="p-2 rounded-lg bg-surface border border-border-subtle flex items-start gap-2">
+                  <span className={cn('shrink-0 mt-0.5 text-sm', c.severity === 'error' ? 'text-rose-600' : 'text-amber-600')}>
+                    {c.severity === 'error' ? '🚫' : '⚠️'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-foreground leading-snug font-medium">{c.message}</span>
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
         ) : null}
 
-        <div className="p-3 rounded-xl bg-surface-muted/60 border border-border text-[11px] text-muted space-y-1 leading-relaxed">
-          <p className="font-bold text-foreground text-xs">Normes physiques appliquées :</p>
-          <p>• <strong>Table à table :</strong> 1.40m min. (2x 0.45m recul chaise + 0.50m couloir de service).</p>
-          <p>• <strong>Chaise à chaise :</strong> 0.70m min. centre-à-centre (zéro superposition de coordonnées).</p>
-          <p>• <strong>Accès portes & scènes :</strong> 1.40m à 1.50m de sécurité vierge de tout mobilier.</p>
-          <p>• <strong>Circulation murs :</strong> 0.90m libre tout le long du périmètre de la salle.</p>
+        <div className="p-3 rounded-xl bg-surface-muted/60 border border-border text-xs text-muted space-y-1 leading-relaxed">
+          <p className="font-bold text-foreground text-xs">Règles physiques & architecturales appliquées :</p>
+          <p>• <strong>Anti-incorporation murs :</strong> Aucun meuble ne peut s&apos;incorporer ou chevaucher un mur ou une cloison intérieure (recul physique strict).</p>
+          <p>• <strong>Portes orthogonales :</strong> Les portes sont rigoureusement droites (0°, 90°, 180° ou 270°) avec sas libre de 1.40m.</p>
+          <p>• <strong>Zéro chevauchement :</strong> Chaque table et chaise a son emprise propre sans superposition ni encastrement.</p>
+          <p>• <strong>Table à table :</strong> 1.40m min. (passage serveur 0.50m + 2x 0.45m recul chaise).</p>
+          <p>• <strong>Circulation périphérique :</strong> 0.90m libre le long des parois extérieures.</p>
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-border">

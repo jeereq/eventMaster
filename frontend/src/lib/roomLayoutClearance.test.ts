@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   enforceRealLayoutClearances,
   detectLayoutClearanceConflicts,
+  normalizeDoorOrthogonal,
+  distancePointToSegmentM,
   REAL_CLEARANCE_METERS,
 } from './roomLayoutClearance.ts';
 
@@ -272,5 +274,125 @@ describe('detectLayoutClearanceConflicts', () => {
     assert.equal(report.isCompliant, true);
     assert.equal(report.conflicts.length, 0);
     assert.equal(report.score, 100);
+  });
+
+  it('détecte les portes non droites (angles obliques non orthogonaux)', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [],
+      fixtures: [
+        { id: 'd1', kind: 'door', label: 'Porte Entrée', x: 50, y: 95, w: 4, h: 2, rotation: 37 },
+      ],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprint);
+    assert.equal(report.isCompliant, false);
+    const conflict = report.conflicts.find((c) => c.type === 'door_crooked');
+    assert.ok(conflict, 'Doit détecter un conflit de porte oblique');
+    assert.match(conflict.message, /strictement orthogonal/);
+  });
+
+  it('détecte les éléments incorporés ou encastrés dans un mur', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        // Table centrée exactement sur la cloison (x=50%, y=50%)
+        { id: 't1', kind: 'table', name: 'Table Murale', shape: 'round', capacity: 8, x: 50, y: 50 },
+      ],
+      fixtures: [],
+      walls: [
+        {
+          id: 'w1',
+          start: { x: 50, y: 20 },
+          end: { x: 50, y: 80 },
+          thicknessM: 0.20,
+        },
+      ],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprint);
+    assert.equal(report.isCompliant, false);
+    const wallConflict = report.conflicts.find((c) => c.type === 'wall_penetration');
+    assert.ok(wallConflict, 'Doit détecter une incorporation dans le mur');
+    assert.equal(wallConflict.severity, 'error');
+  });
+
+  it('détecte les éléments incorporés dans une installation fixe', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 't1', kind: 'table', name: 'Table Buffet', shape: 'round', capacity: 8, x: 22, y: 22 },
+      ],
+      fixtures: [
+        { id: 'fx1', kind: 'buffet', label: 'Buffet Cocktail', x: 20, y: 20, w: 10, h: 10 },
+      ],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprint);
+    assert.equal(report.isCompliant, false);
+    const overlapConflict = report.conflicts.find((c) => c.type === 'element_overlap');
+    assert.ok(overlapConflict, 'Doit détecter une incorporation dans le buffet');
+    assert.equal(overlapConflict.severity, 'error');
+  });
+});
+
+describe('règles architecturales des portes et murs', () => {
+  it('normalise l’orientation des portes à des angles strictement orthogonaux', () => {
+    assert.equal(normalizeDoorOrthogonal(0), 0);
+    assert.equal(normalizeDoorOrthogonal(22), 0);
+    assert.equal(normalizeDoorOrthogonal(46), 90);
+    assert.equal(normalizeDoorOrthogonal(89), 90);
+    assert.equal(normalizeDoorOrthogonal(134), 90);
+    assert.equal(normalizeDoorOrthogonal(136), 180);
+    assert.equal(normalizeDoorOrthogonal(269), 270);
+    assert.equal(normalizeDoorOrthogonal(-45), 360 % 360); // 0 or 360 -> 0
+    assert.equal(normalizeDoorOrthogonal(-85), 270);
+  });
+
+  it('enforceRealLayoutClearances redresse automatiquement les portes obliques', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [],
+      fixtures: [
+        { id: 'd1', kind: 'door', x: 50, y: 95, w: 4, h: 2, rotation: 33 },
+        { id: 'e1', kind: 'entrance', x: 10, y: 50, w: 4, h: 2, rotation: 112 },
+      ],
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const d1 = result.fixtures.find((f) => f.id === 'd1')!;
+    const e1 = result.fixtures.find((f) => f.id === 'e1')!;
+
+    assert.equal(d1.rotation, 0, 'La porte à 33° doit être redressée à 0°');
+    assert.equal(e1.rotation, 90, 'L’entrée à 112° doit être redressée à 90°');
+  });
+
+  it('enforceRealLayoutClearances expulse une table incorporée dans un mur intérieur', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 't1', kind: 'table', shape: 'round', capacity: 8, x: 50, y: 50 },
+      ],
+      fixtures: [],
+      walls: [
+        {
+          id: 'w1',
+          start: { x: 50, y: 20 },
+          end: { x: 50, y: 80 },
+          thicknessM: 0.20,
+        },
+      ],
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const t1 = result.furniture.find((f) => f.id === 't1')!;
+
+    // La table ne doit plus être à x=50% sur le mur
+    const dxM = Math.abs(((t1.x - 50) / 100) * 20);
+    assert.ok(dxM >= 1.0, `La table est encore trop proche du mur : distance ${dxM.toFixed(2)}m`);
+
+    // Le rapport de dégagement ne doit plus rapporter de pénétration murale
+    const report = detectLayoutClearanceConflicts(result);
+    assert.ok(!report.conflicts.some((c) => c.type === 'wall_penetration'));
   });
 });
