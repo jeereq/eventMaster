@@ -938,6 +938,7 @@ Merci de confirmer votre présence :
  pricingZones: form.pricingZones,
  ticketsTotal: form.ticketsTotal,
  seatSelectionEnabled: form.seatSelectionEnabled,
+ tablePlan: form.tablePlan,
  eventProgram: form.eventProgram,
  photos: form.photos,
  guestGuidelines: form.guestGuidelines,

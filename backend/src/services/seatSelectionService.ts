@@ -51,11 +51,19 @@ export async function listSeatInventory(eventId: string): Promise<{
   floorType: string | null;
   floorImageUrl: string | null;
   depthAmount: number;
+  pricingZones: unknown[];
+  roomLayoutBlueprint: unknown;
+  roomType: string | null;
 }> {
   await purgeExpiredSeatHolds(eventId);
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { tablePlan: true, ticketPricingMode: true, ticketPriceFc: true },
+    select: {
+      tablePlan: true,
+      ticketPricingMode: true,
+      ticketPriceFc: true,
+      room: { select: { layoutBlueprint: true, roomType: true } },
+    },
   });
   const plan = event?.tablePlan as Record<string, unknown> | null;
   const tables = planTables(plan);
@@ -106,6 +114,9 @@ export async function listSeatInventory(eventId: string): Promise<{
     floorType: (plan?.floorType as string) ?? null,
     floorImageUrl: (plan?.floorImageUrl as string) ?? null,
     depthAmount: typeof plan?.depthAmount === 'number' ? plan.depthAmount : 0,
+    pricingZones: Array.isArray(plan?.pricingZones) ? (plan?.pricingZones as unknown[]) : [],
+    roomLayoutBlueprint: event?.room?.layoutBlueprint ?? null,
+    roomType: event?.room?.roomType ?? null,
   };
 }
 

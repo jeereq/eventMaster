@@ -224,6 +224,12 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         tablePlanData = blueprintToTablePlan(room.layoutBlueprint as any);
       }
     }
+    if (req.body.tablePlan && typeof req.body.tablePlan === 'object') {
+      tablePlanData = {
+        ...(tablePlanData || {}),
+        ...(req.body.tablePlan as object),
+      };
+    }
     if (req.body.pricingZones !== undefined) {
       tablePlanData = mergePricingZonesIntoTablePlan(
         tablePlanData ?? { tables: [] },

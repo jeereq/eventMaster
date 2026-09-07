@@ -74,6 +74,7 @@ type PlanTable = {
   x: number;
   y: number;
   seats: SeatSelectionSeat[];
+  pricingZoneId?: string | null;
 };
 
 export default function SeatSelectionPlanCanvas({
@@ -132,6 +133,7 @@ export default function SeatSelectionPlanCanvas({
           x: s.x,
           y: s.y,
           seats: [s],
+          pricingZoneId: s.pricingZoneId ?? null,
         });
       }
     }
@@ -193,16 +195,35 @@ export default function SeatSelectionPlanCanvas({
           )}
 
           {pricingZones.map((zone) => {
-            if (zone.x == null || zone.y == null || zone.w == null || zone.h == null) return null;
+            let x = zone.x;
+            let y = zone.y;
+            let w = zone.w;
+            let h = zone.h;
+            if (x == null || y == null || w == null || h == null) {
+              const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
+              if (assigned.length > 0) {
+                const xs = assigned.map((t) => t.x);
+                const ys = assigned.map((t) => t.y);
+                const minX = Math.max(2, Math.min(...xs) - 8);
+                const maxX = Math.min(98, Math.max(...xs) + 8);
+                const minY = Math.max(2, Math.min(...ys) - 7);
+                const maxY = Math.min(98, Math.max(...ys) + 7);
+                x = Math.round(minX);
+                y = Math.round(minY);
+                w = Math.round(maxX - minX);
+                h = Math.round(maxY - minY);
+              }
+            }
+            if (x == null || y == null || w == null || h == null) return null;
             return (
               <div
                 key={zone.id}
                 className="absolute pointer-events-none z-[1] rounded-md border"
                 style={{
-                  left: `${zone.x}%`,
-                  top: `${zone.y}%`,
-                  width: `${zone.w}%`,
-                  height: `${zone.h}%`,
+                  left: `${x}%`,
+                  top: `${y}%`,
+                  width: `${w}%`,
+                  height: `${h}%`,
                   backgroundColor: zone.color ? `${zone.color}22` : 'rgba(196,163,90,0.12)',
                   borderColor: zone.color ? `${zone.color}88` : 'rgba(196,163,90,0.35)',
                 }}

@@ -14,6 +14,15 @@ import {
   Ticket,
   Sparkles,
   Check,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  Layers,
+  Box,
+  Coins,
+  ArrowRight,
+  ChevronRight,
+  Info,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
@@ -36,6 +45,8 @@ import {
 import { lightingPresetLabels, type LightingPreset } from '@/lib/roomRenderQuality';
 import { ensureBlueprintDefaults, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import RoomLayoutPreview, { type RoomPreviewQuality } from '@/components/RoomLayoutPreview';
+import PublicEventZoneStudio3D from '@/components/PublicEventZoneStudio3D';
+import type { TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import {
   EVENT_CONFIG_TABS,
   EVENT_KIND_LABELS,
@@ -148,6 +159,7 @@ export default function EventConfigForm({
   const [ticketPrice, setTicketPrice] = useState('');
   const [ticketPricingMode, setTicketPricingMode] = useState<TicketPricingMode>('global');
   const [pricingZones, setPricingZones] = useState<PricingZone[]>([]);
+  const [tableZoneAssignments, setTableZoneAssignments] = useState<Record<string, string>>({});
   const [ticketsTotal, setTicketsTotal] = useState('');
   const [seatSelection, setSeatSelection] = useState(false);
   const [eventProgram, setEventProgram] = useState<EventProgram>(() => createEmptyProgram());
@@ -202,6 +214,7 @@ export default function EventConfigForm({
       setTicketPrice('');
       setTicketPricingMode('global');
       setPricingZones([]);
+      setTableZoneAssignments({});
       setTicketsTotal('');
       setSeatSelection(false);
       setEventProgram(createEmptyProgram());
@@ -242,6 +255,22 @@ export default function EventConfigForm({
     );
     setTicketPricingMode(normalizeTicketPricingMode(initialEvent.ticketPricingMode));
     setPricingZones(pricingZonesFromTablePlan(initialEvent.tablePlan));
+
+    if (initialEvent?.tablePlan && typeof initialEvent.tablePlan === 'object') {
+      const tPlan = initialEvent.tablePlan as any;
+      if (Array.isArray(tPlan.tables)) {
+        const map: Record<string, string> = {};
+        for (const t of tPlan.tables) {
+          if (t.id && t.pricingZoneId) map[t.id] = t.pricingZoneId;
+        }
+        setTableZoneAssignments(map);
+      } else {
+        setTableZoneAssignments({});
+      }
+    } else {
+      setTableZoneAssignments({});
+    }
+
     setTicketsTotal(initialEvent.ticketsTotal != null ? String(initialEvent.ticketsTotal) : '');
     setSeatSelection(Boolean((initialEvent as { seatSelectionEnabled?: boolean }).seatSelectionEnabled));
     setEventProgram(normalizeEventProgram((initialEvent as { eventProgram?: unknown }).eventProgram));
@@ -418,6 +447,76 @@ export default function EventConfigForm({
     return 'dusk';
   }, [eventProgram.slots]);
 
+  const availableTables = useMemo((): TablePlanPreviewTable[] => {
+    if (selectedRoomBlueprint?.furniture) {
+      const tableItems = selectedRoomBlueprint.furniture.filter(
+        (f): f is Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }> => f.kind === 'table',
+      );
+      if (tableItems.length > 0) {
+        return tableItems.map((t) => ({
+          id: t.id,
+          name: t.name,
+          shape: t.shape,
+          capacity: t.capacity,
+          x: t.x,
+          y: t.y,
+          tableColor: t.tableColor,
+          chairType: t.chairType,
+          pricingZoneId: tableZoneAssignments[t.id] || pricingZones[0]?.id,
+        }));
+      }
+    }
+    if (initialEvent?.tablePlan && typeof initialEvent.tablePlan === 'object') {
+      const tPlan = initialEvent.tablePlan as any;
+      if (Array.isArray(tPlan.tables) && tPlan.tables.length > 0) {
+        return tPlan.tables.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          shape: t.shape || 'round',
+          capacity: t.capacity || 8,
+          x: t.x,
+          y: t.y,
+          tableColor: t.tableColor,
+          chairType: t.chairType,
+          pricingZoneId: tableZoneAssignments[t.id] || t.pricingZoneId || pricingZones[0]?.id,
+        }));
+      }
+    }
+    return [];
+  }, [selectedRoomBlueprint, initialEvent, tableZoneAssignments, pricingZones]);
+
+  const setDatePreset = (preset: 'this_saturday' | 'next_saturday' | 'in_month') => {
+    const d = new Date();
+    if (preset === 'this_saturday') {
+      const day = d.getDay();
+      const diff = (6 - day + 7) % 7 || 7;
+      d.setDate(d.getDate() + diff);
+      d.setHours(18, 0, 0, 0);
+    } else if (preset === 'next_saturday') {
+      const day = d.getDay();
+      const diff = ((6 - day + 7) % 7 || 7) + 7;
+      d.setDate(d.getDate() + diff);
+      d.setHours(18, 0, 0, 0);
+    } else if (preset === 'in_month') {
+      d.setMonth(d.getMonth() + 1);
+      d.setHours(19, 0, 0, 0);
+    }
+    setDate(toDateTimeLocalValue(d.toISOString()));
+  };
+
+  const setEndsAtPreset = (hoursToAdd: number, orMidnight?: boolean) => {
+    if (!date) return;
+    const start = new Date(date);
+    if (Number.isNaN(start.getTime())) return;
+    const end = new Date(start);
+    if (orMidnight) {
+      end.setHours(23, 59, 0, 0);
+    } else {
+      end.setHours(end.getHours() + hoursToAdd);
+    }
+    setEndsAt(toDateTimeLocalValue(end.toISOString()));
+  };
+
   const applyDressPreset = (presetId: DressCodePresetId | '') => {
     if (!presetId) {
       setGuestGuidelines((prev) => ({
@@ -499,6 +598,18 @@ export default function EventConfigForm({
   const buildPayload = (): EventConfigPayload => {
     const publicEvent = complete ? isPublic : Boolean(initialEvent?.isPublic);
     const paid = complete ? publicEvent && ticketing : Boolean(initialEvent?.ticketingEnabled);
+
+    const planToSave = availableTables.length > 0
+      ? {
+          ...(initialEvent?.tablePlan && typeof initialEvent.tablePlan === 'object' ? initialEvent.tablePlan : {}),
+          pricingZones,
+          tables: availableTables.map((t) => ({
+            ...t,
+            pricingZoneId: tableZoneAssignments[t.id] ?? t.pricingZoneId ?? pricingZones[0]?.id,
+          })),
+        }
+      : undefined;
+
     return {
       title: title.trim(),
       description: description.trim(),
@@ -544,6 +655,7 @@ export default function EventConfigForm({
         ? composeE164(contactCc, contactNational) || null
         : initialEvent?.dayOfContactPhone || null,
       themeId: themeId || null,
+      tablePlan: planToSave,
     };
   };
 
@@ -644,40 +756,67 @@ export default function EventConfigForm({
       }
     >
       <form id="event-config-form" onSubmit={handleFormSubmit} className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border overflow-x-auto">
-            {EVENT_CONFIG_TABS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setFormError('');
-                  setTab(item.id);
-                }}
-                className={cn(
-                  'relative min-h-10 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition whitespace-nowrap',
-                  tab === item.id
-                    ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                    : 'text-muted hover:text-foreground',
-                )}
-              >
-                {item.label}
-                {tabNeedsAttention(item.id) && (
-                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
-                )}
-              </button>
-            ))}
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex gap-1 p-1 rounded-2xl bg-surface-muted border border-border overflow-x-auto w-full sm:w-auto">
+            {EVENT_CONFIG_TABS.map((item, idx) => {
+              const Icon =
+                item.id === 'essentials'
+                  ? Sparkles
+                  : item.id === 'place'
+                  ? MapPin
+                  : item.id === 'access'
+                  ? Ticket
+                  : LayoutGrid;
+              const isCurrent = tab === item.id;
+              const hasAttention = tabNeedsAttention(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setFormError('');
+                    setTab(item.id);
+                  }}
+                  className={cn(
+                    'relative min-h-11 px-3.5 py-2 rounded-xl text-xs font-semibold transition whitespace-nowrap flex items-center gap-2',
+                    isCurrent
+                      ? 'bg-surface text-foreground shadow-sm ring-1 ring-border'
+                      : 'text-muted hover:text-foreground hover:bg-surface/50',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
+                      isCurrent
+                        ? 'bg-primary text-white'
+                        : 'bg-surface text-muted border border-border'
+                    )}
+                  >
+                    {idx + 1}
+                  </span>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{item.label}</span>
+                  {hasAttention && (
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" title="Champ requis" />
+                  )}
+                </button>
+              );
+            })}
           </div>
           <button
             type="button"
             onClick={() => setMode(complete ? 'simple' : 'complete')}
-            className="text-[11px] font-semibold text-muted hover:text-foreground underline-offset-2 hover:underline"
+            className="text-xs font-semibold text-primary hover:underline px-2 py-1 min-h-11 inline-flex items-center"
           >
             {complete ? 'Formulaire simple' : 'Formulaire complet'}
           </button>
         </div>
 
-        {formError && <p className="text-xs text-rose-600">{formError}</p>}
+        {formError && (
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 font-medium">
+            {formError}
+          </div>
+        )}
 
         {tab === 'essentials' && (
           <section className="space-y-3">
@@ -688,10 +827,10 @@ export default function EventConfigForm({
                   type="button"
                   onClick={() => applyKind(eventKind === kind ? '' : kind)}
                   className={cn(
-                    'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border transition',
+                    'inline-flex min-h-9 items-center px-3.5 py-1.5 rounded-full text-xs font-semibold border transition',
                     eventKind === kind
-                      ? 'bg-foreground text-background border-foreground'
-                      : 'bg-surface text-muted border-border hover:text-foreground',
+                      ? 'bg-foreground text-background border-foreground shadow-xs'
+                      : 'bg-surface text-muted border-border hover:text-foreground hover:border-foreground/30',
                   )}
                 >
                   {EVENT_KIND_LABELS[kind]}
@@ -767,22 +906,78 @@ export default function EventConfigForm({
             </label>
 
             <div className={cn('grid grid-cols-1 gap-3', complete ? 'sm:grid-cols-2' : '')}>
-              <Input
-                label="Date & heure"
-                type="datetime-local"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
-              {complete && (
+              <div className="space-y-1.5">
                 <Input
-                  label="Heure de fin (optionnel)"
+                  label="Date & heure"
                   type="datetime-local"
-                  value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
                 />
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-[10px] text-muted font-medium">Raccourcis :</span>
+                  <button
+                    type="button"
+                    onClick={() => setDatePreset('this_saturday')}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                  >
+                    Ce samedi (18h)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDatePreset('next_saturday')}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                  >
+                    Samedi prochain
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDatePreset('in_month')}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                  >
+                    Dans 1 mois
+                  </button>
+                </div>
+              </div>
+
+              {complete && (
+                <div className="space-y-1.5">
+                  <Input
+                    label="Heure de fin (optionnel)"
+                    type="datetime-local"
+                    value={endsAt}
+                    onChange={(e) => setEndsAt(e.target.value)}
+                  />
+                  {date && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[10px] text-muted font-medium">Durée :</span>
+                      <button
+                        type="button"
+                        onClick={() => setEndsAtPreset(2)}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                      >
+                        +2h
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEndsAtPreset(4)}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                      >
+                        +4h
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEndsAtPreset(6, true)}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                      >
+                        Soirée (minuit)
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
+
             {!complete && (
               <Input
                 label="Lieu"
@@ -804,37 +999,61 @@ export default function EventConfigForm({
             )}
 
             {complete && (
-              <div className="space-y-2">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Visibilité</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: false, label: 'Privé — liste d’invités', icon: GlobeLock },
-                    { id: true, label: 'Public — inscription ouverte', icon: Globe },
-                  ].map((opt) => (
-                    <button
-                      key={String(opt.id)}
-                      type="button"
-                      onClick={() => {
-                        setIsPublic(opt.id);
-                        if (!opt.id) setTicketing(false);
-                      }}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition',
-                        isPublic === opt.id
-                          ? 'bg-foreground text-background border-foreground'
-                          : 'bg-surface text-muted border-border hover:text-foreground',
-                      )}
-                    >
-                      <opt.icon className="w-3.5 h-3.5" />
-                      {opt.label}
-                    </button>
-                  ))}
+              <div className="space-y-2 pt-1 border-t border-border">
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                  Visibilité & Accès
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPublic(false);
+                      setTicketing(false);
+                    }}
+                    className={cn(
+                      'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
+                      !isPublic
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
+                        : 'border-border bg-surface hover:bg-surface-muted'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-bold text-xs text-foreground">
+                        <GlobeLock className="w-4 h-4 text-primary" />
+                        <span>Événement Privé</span>
+                      </div>
+                      {!isPublic && <Check className="w-4 h-4 text-primary" />}
+                    </div>
+                    <p className="text-[11px] text-muted leading-relaxed">
+                      Sur invitation nominative. Lien RSVP unique par convive, placement sur plan de table privé.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPublic(true);
+                      if (onlinePaymentsEnabled) setTicketing(true);
+                    }}
+                    className={cn(
+                      'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
+                      isPublic
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
+                        : 'border-border bg-surface hover:bg-surface-muted'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-bold text-xs text-foreground">
+                        <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Événement Public & Billetterie</span>
+                      </div>
+                      {isPublic && <Check className="w-4 h-4 text-primary" />}
+                    </div>
+                    <p className="text-[11px] text-muted leading-relaxed">
+                      Fiche marketplace ouverte, billetterie multi-zones 3D, paiements Mobile Money & Carte.
+                    </p>
+                  </button>
                 </div>
-                <p className="text-[11px] text-muted leading-relaxed">
-                  {isPublic
-                    ? 'La fiche sera listée sur le marketplace. Les visiteurs s’inscrivent ou achètent un billet.'
-                    : 'Seules les personnes que vous invitez ont accès via leur lien RSVP.'}
-                </p>
               </div>
             )}
           </section>
@@ -1008,195 +1227,181 @@ export default function EventConfigForm({
         {tab === 'access' && (
           <section className="space-y-3">
             {complete && isPublic && (
-              <div className="space-y-3">
-                <label className={`flex items-center gap-2 text-sm ${!onlinePaymentsEnabled ? 'opacity-60' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={ticketing}
-                    disabled={!onlinePaymentsEnabled}
-                    onChange={(e) => setTicketing(e.target.checked)}
-                    className="rounded border-border"
-                  />
-                  <span className="inline-flex items-center gap-1.5 font-medium">
-                    <Ticket className="w-4 h-4" />
-                    Billets payants en ligne
-                  </span>
-                </label>
-                {!onlinePaymentsEnabled && (
-                  <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
-                    Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
-                  </p>
-                )}
-                {ticketing && (
-                  <div className="space-y-3">
-                    <fieldset className="space-y-2">
-                      <legend className="text-xs font-semibold text-foreground">Mode tarifaire</legend>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="radio"
-                          name="ticketPricingMode"
-                          checked={ticketPricingMode === 'global'}
-                          onChange={() => setTicketPricingMode('global')}
-                        />
-                        <span>Prix unique pour tous les billets</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="radio"
-                          name="ticketPricingMode"
-                          checked={ticketPricingMode === 'by_zone'}
-                          onChange={() => {
-                            setTicketPricingMode('by_zone');
-                            if (pricingZones.length === 0) {
-                              setPricingZones([createEmptyPricingZone(0), createEmptyPricingZone(1)]);
-                            }
-                          }}
-                        />
-                        <span>Prix par zones (VIP, fosse, balcon…)</span>
-                      </label>
-                    </fieldset>
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5">
+                  <label className={`flex items-start gap-3 text-sm cursor-pointer ${!onlinePaymentsEnabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={ticketing}
+                      disabled={!onlinePaymentsEnabled}
+                      onChange={(e) => setTicketing(e.target.checked)}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
+                    />
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 font-bold text-foreground">
+                        <Ticket className="w-4 h-4 text-primary" />
+                        Billetterie en ligne payante
+                      </span>
+                      <p className="text-[11px] text-muted mt-0.5">
+                        Paiement sécurisé par Mobile Money (Orange Money, M-Pesa, Airtel Money) et Carte bancaire.
+                      </p>
+                    </div>
+                  </label>
 
-                    {ticketPricingMode === 'global' ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Input
-                          label="Prix du billet (FC)"
-                          type="number"
-                          min={0}
-                          value={ticketPrice}
-                          onChange={(e) => setTicketPrice(e.target.value)}
-                          placeholder="ex. 25000"
-                        />
-                        <Input
-                          label="Nombre de places (optionnel)"
-                          type="number"
-                          min={1}
-                          value={ticketsTotal}
-                          onChange={(e) => setTicketsTotal(e.target.value)}
-                          placeholder="Illimité"
-                        />
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-foreground">Zones tarifaires</p>
+                  {!onlinePaymentsEnabled && (
+                    <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
+                      Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
+                    </p>
+                  )}
+
+                  {ticketing && (
+                    <div className="space-y-3.5 pt-2 border-t border-border">
+                      <div>
+                        <p className="text-xs font-bold text-foreground mb-1.5">Mode tarifaire</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <button
                             type="button"
-                            className="text-[11px] font-semibold text-primary hover:underline"
-                            onClick={() => setPricingZones((prev) => [...prev, createEmptyPricingZone(prev.length)])}
+                            onClick={() => setTicketPricingMode('global')}
+                            className={cn(
+                              'p-3 rounded-xl border text-left transition relative flex flex-col gap-1 min-h-11',
+                              ticketPricingMode === 'global'
+                                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                                : 'border-border bg-surface hover:bg-surface-muted'
+                            )}
                           >
-                            + Ajouter une zone
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-foreground">Tarif Unique</span>
+                              {ticketPricingMode === 'global' && <Check className="w-3.5 h-3.5 text-primary" />}
+                            </div>
+                            <span className="text-[11px] text-muted">Un prix unique pour tous les billets de l’événement.</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTicketPricingMode('by_zone');
+                              if (pricingZones.length === 0) {
+                                setPricingZones([createEmptyPricingZone(0), createEmptyPricingZone(1)]);
+                              }
+                            }}
+                            className={cn(
+                              'p-3 rounded-xl border text-left transition relative flex flex-col gap-1 min-h-11',
+                              ticketPricingMode === 'by_zone'
+                                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                                : 'border-border bg-surface hover:bg-surface-muted'
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                                <Box className="w-3.5 h-3.5 text-primary" />
+                                Zones Tarifaires 3D
+                              </span>
+                              {ticketPricingMode === 'by_zone' && <Check className="w-3.5 h-3.5 text-primary" />}
+                            </div>
+                            <span className="text-[11px] text-muted">Catégories distinctes (VIP, Carré d’Or, Standard) avec modélisation 3D et tarifs distincts.</span>
                           </button>
                         </div>
-                        {/* Modèles rapides de zones */}
-                        <div className="flex flex-wrap items-center gap-1.5 pb-1">
-                          <span className="text-[10px] text-muted font-medium mr-0.5">Modèles rapides :</span>
-                          {TICKETING_ZONE_PRESETS.map((preset) => (
-                            <button
-                              key={preset.id}
-                              type="button"
-                              onClick={() => {
-                                setPricingZones(
-                                  preset.zones.map((z, idx) => ({
-                                    id: `zone-${preset.id}-${idx}`,
-                                    name: z.name,
-                                    priceFc: z.priceFc,
-                                    color: z.color,
-                                  }))
-                                );
-                              }}
-                              className="px-2 py-1 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition shadow-2xs flex items-center gap-1.5"
-                              title={`${preset.description} (${preset.zones.map((z) => `${z.name} ${formatFc(z.priceFc)}`).join(' · ')})`}
-                            >
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: preset.zones[0].color }} />
-                              <span>{preset.badge}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[11px] text-muted">
-                          Les tables du plan sont associées automatiquement selon leur position. Prix par défaut si non assignée :
-                        </p>
-                        <Input
-                          label="Prix par défaut (FC, optionnel)"
-                          type="number"
-                          min={0}
-                          value={ticketPrice}
-                          onChange={(e) => setTicketPrice(e.target.value)}
-                          placeholder="ex. 15000"
-                        />
-                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                          {pricingZones.map((zone, index) => (
-                            <div key={zone.id} className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-end p-2 rounded border border-border">
-                              <input
-                                type="color"
-                                value={zone.color || '#c4a35a'}
-                                onChange={(e) => setPricingZones((prev) => prev.map((z, i) => (i === index ? { ...z, color: e.target.value } : z)))}
-                                className="w-9 h-9 rounded border border-border cursor-pointer"
-                                aria-label={`Couleur ${zone.name}`}
-                              />
-                              <Input
-                                label="Nom"
-                                value={zone.name}
-                                onChange={(e) => setPricingZones((prev) => prev.map((z, i) => (i === index ? { ...z, name: e.target.value } : z)))}
-                              />
-                              <Input
-                                label="Prix (FC)"
-                                type="number"
-                                min={0}
-                                value={zone.priceFc > 0 ? String(zone.priceFc) : ''}
-                                onChange={(e) => setPricingZones((prev) => prev.map((z, i) => (i === index ? { ...z, priceFc: Number(e.target.value) || 0 } : z)))}
-                              />
-                              <button
-                                type="button"
-                                disabled={pricingZones.length <= 1}
-                                onClick={() => setPricingZones((prev) => prev.filter((_, i) => i !== index))}
-                                className="text-[11px] text-muted hover:text-red-500 disabled:opacity-30 pb-2"
-                              >
-                                Retirer
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <Input
-                          label="Nombre de places total (optionnel)"
-                          type="number"
-                          min={1}
-                          value={ticketsTotal}
-                          onChange={(e) => setTicketsTotal(e.target.value)}
-                          placeholder="Illimité"
-                        />
                       </div>
-                    )}
-                  </div>
-                )}
-                {!ticketing && (
-                  <Input
-                    label="Capacité (optionnel)"
-                    type="number"
-                    min={1}
-                    value={ticketsTotal}
-                    onChange={(e) => setTicketsTotal(e.target.value)}
-                    placeholder="Illimité"
-                  />
-                )}
-                <p className="text-[11px] text-muted">
-                  {ticketing
-                    ? 'Paiement par carte (Stripe). L’acheteur reçoit le lien RSVP / badge QR.'
-                    : 'Inscription gratuite : le visiteur renseigne nom et e-mail, puis reçoit son lien RSVP.'}
-                </p>
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={seatSelection}
-                    onChange={(e) => setSeatSelection(e.target.checked)}
-                    className="rounded border-border mt-0.5"
-                  />
-                  <span>
-                    <span className="font-medium">Choisir sa place à l’achat</span>
-                    <span className="block text-[11px] text-muted mt-0.5">
-                      Plan de table importé depuis la salle requis. 1 billet = 1 siège.
-                    </span>
-                  </span>
-                </label>
+
+                      {ticketPricingMode === 'global' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <Input
+                            label="Prix du billet (FC)"
+                            type="number"
+                            min={0}
+                            value={ticketPrice}
+                            onChange={(e) => setTicketPrice(e.target.value)}
+                            placeholder="ex. 25000"
+                            required
+                          />
+                          <Input
+                            label="Nombre de places (optionnel)"
+                            type="number"
+                            min={1}
+                            value={ticketsTotal}
+                            onChange={(e) => setTicketsTotal(e.target.value)}
+                            placeholder="Illimité"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-3 pt-1">
+                          <PublicEventZoneStudio3D
+                            blueprint={selectedRoomBlueprint}
+                            pricingZones={pricingZones}
+                            onUpdatePricingZones={setPricingZones}
+                            tables={availableTables}
+                            tableZoneAssignments={tableZoneAssignments}
+                            onAssignTableZone={(tableId, zoneId) =>
+                              setTableZoneAssignments((prev) => ({ ...prev, [tableId]: zoneId }))
+                            }
+                            onBulkAssignTables={(assignments, updatedZones) => {
+                              setTableZoneAssignments((prev) => ({ ...prev, ...assignments }));
+                              if (updatedZones) setPricingZones(updatedZones);
+                            }}
+                            roomName={selectedRoom?.name}
+                            lightingPreset={roomPreviewLighting}
+                            onOpenRoomPicker={() => setTab('place')}
+                          />
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <Input
+                              label="Prix par défaut (FC, optionnel)"
+                              type="number"
+                              min={0}
+                              value={ticketPrice}
+                              onChange={(e) => setTicketPrice(e.target.value)}
+                              placeholder="ex. 15000"
+                            />
+                            <Input
+                              label="Nombre de places total (optionnel)"
+                              type="number"
+                              min={1}
+                              value={ticketsTotal}
+                              onChange={(e) => setTicketsTotal(e.target.value)}
+                              placeholder="Illimité"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!ticketing && (
+                    <Input
+                      label="Capacité (optionnel)"
+                      type="number"
+                      min={1}
+                      value={ticketsTotal}
+                      onChange={(e) => setTicketsTotal(e.target.value)}
+                      placeholder="Illimité"
+                    />
+                  )}
+                  <p className="text-[11px] text-muted">
+                    {ticketing
+                      ? 'Paiements par Mobile Money et Carte (FlexPay). L’acheteur reçoit son billet avec QR Code unique et son lien d’accès.'
+                      : 'Inscription gratuite : le visiteur renseigne son nom et téléphone, puis reçoit son pass d’accès.'}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-2">
+                  <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={seatSelection}
+                      onChange={(e) => setSeatSelection(e.target.checked)}
+                      className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                    />
+                    <div>
+                      <span className="font-bold text-foreground">
+                        Activer le choix de place sur le plan 2D / 3D à l’achat
+                      </span>
+                      <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
+                        Permet aux acheteurs de choisir leur siège ou table directement sur le plan interactif 2D ou 3D. 1 billet = 1 siège garanti.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
                 <div className="space-y-2 pt-2 border-t border-border">
                   <p className="text-xs font-semibold text-foreground">Programme & ambiance</p>
                   <p className="text-[11px] text-muted">
@@ -1482,7 +1687,7 @@ export default function EventConfigForm({
               </div>
             )}
 
-            <div className="pt-1 border-t border-border">
+            <div className="pt-2 border-t border-border">
               {editingId ? (
                 <Button
                   type="button"
@@ -1491,22 +1696,26 @@ export default function EventConfigForm({
                   leftIcon={<LayoutGrid className="w-3.5 h-3.5" />}
                   onClick={() => onOpenTablePlan?.(editingId)}
                 >
-                  Ouvrir le plan de table 2D
+                  Ouvrir l’atelier plan de table (2D & 3D)
                 </Button>
               ) : (
-                <label className="flex items-start gap-2 text-sm">
+                <label className="flex items-start gap-2.5 text-sm cursor-pointer p-2.5 rounded-xl border border-border bg-surface-muted/40 hover:bg-surface-muted transition">
                   <input
                     type="checkbox"
                     checked={openTablePlanAfterSave}
                     onChange={(e) => setOpenTablePlanAfterSave(e.target.checked)}
-                    className="mt-0.5 rounded border-border"
+                    className="mt-0.5 rounded border-border text-primary focus:ring-primary/30"
                   />
-                  <span>
-                    Ouvrir le plan de table après création
-                    <span className="block text-[11px] text-muted">
-                      Utile si vous n’avez pas de salle liée, pour dessiner les tables à la main.
+                  <div>
+                    <span className="font-semibold text-foreground">
+                      Ouvrir l’atelier 3D complet du plan après création
                     </span>
-                  </span>
+                    <span className="block text-[11px] text-muted leading-relaxed">
+                      {isPublic && ticketing && ticketPricingMode === 'by_zone'
+                        ? 'Permet d’ajuster les tables, les sièges et la disposition des zones tarifaires dans l’atelier 3D.'
+                        : 'Permet de dessiner et peaufiner les tables, les sièges et les convives immédiatement.'}
+                    </span>
+                  </div>
                 </label>
               )}
             </div>

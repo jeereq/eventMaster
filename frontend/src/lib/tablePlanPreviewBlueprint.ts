@@ -5,6 +5,8 @@ import {
   type RoomType,
   type TableShape,
 } from '@/lib/roomLayoutUtils';
+import type { PricingZone } from '@/lib/ticketPricing';
+import { formatFc } from '@/config/landingPricing';
 
 export type TablePlanPreviewTable = {
   id: string;
@@ -18,6 +20,7 @@ export type TablePlanPreviewTable = {
   tableColor?: string;
   rotation?: number;
   sourceFurnitureId?: string;
+  pricingZoneId?: string;
 };
 
 export type TablePlanPreviewInput = {
@@ -33,22 +36,86 @@ export type TablePlanPreviewInput = {
   lightingPreset?: RoomLayoutBlueprint['metadata']['lightingPreset'] | null;
   fixtures?: unknown;
   renderQuality?: RoomLayoutBlueprint['metadata']['renderQuality'] | null;
+  pricingZones?: PricingZone[];
 };
 
-function tablesToFurniture(tables: TablePlanPreviewTable[]) {
-  return tables.map((table) => ({
-    id: table.id,
-    kind: 'table' as const,
-    name: table.name,
-    shape: table.shape,
-    capacity: table.capacity,
-    chairType: (table.chairType as ChairType) || 'BANQUET',
-    tableColor: table.tableColor,
-    x: table.x,
-    y: table.y,
-    locked: table.locked,
-    rotation: table.rotation,
-  }));
+function pricingZonesToFurniture(
+  zones: PricingZone[] | undefined,
+  tables: TablePlanPreviewTable[],
+): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }>[] {
+  if (!zones || zones.length === 0) return [];
+  const result: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }>[] = [];
+
+  for (const zone of zones) {
+    let x = zone.x;
+    let y = zone.y;
+    let w = zone.w;
+    let h = zone.h;
+
+    // Si les bornes de la zone sont absentes, on les calcule à partir des tables assignées
+    if (x == null || y == null || w == null || h == null) {
+      const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
+      if (assigned.length > 0) {
+        const xs = assigned.map((t) => t.x);
+        const ys = assigned.map((t) => t.y);
+        const minX = Math.max(2, Math.min(...xs) - 8);
+        const maxX = Math.min(98, Math.max(...xs) + 8);
+        const minY = Math.max(2, Math.min(...ys) - 7);
+        const maxY = Math.min(98, Math.max(...ys) + 7);
+        x = Math.round(minX);
+        y = Math.round(minY);
+        w = Math.round(maxX - minX);
+        h = Math.round(maxY - minY);
+      }
+    }
+
+    if (x != null && y != null && w != null && h != null) {
+      const label = `${zone.name}${zone.priceFc > 0 ? ` · ${formatFc(zone.priceFc)}` : ''}`;
+      result.push({
+        id: `zone-mesh-${zone.id}`,
+        kind: 'zone',
+        label,
+        color: zone.color || '#c4a35a',
+        x,
+        y,
+        w,
+        h,
+      });
+    }
+  }
+
+  return result;
+}
+
+function tablesToFurniture(tables: TablePlanPreviewTable[], zones?: PricingZone[]) {
+  const zoneColorMap = new Map<string, string>();
+  if (zones) {
+    for (const z of zones) {
+      if (z.color) zoneColorMap.set(z.id, z.color);
+    }
+  }
+
+  return tables.map((table) => {
+    const zoneColor = table.pricingZoneId ? zoneColorMap.get(table.pricingZoneId) : undefined;
+    const effectiveTableColor =
+      table.tableColor && table.tableColor !== '#ffffff' && table.tableColor !== '#f3e6c8'
+        ? table.tableColor
+        : (zoneColor || table.tableColor);
+
+    return {
+      id: table.id,
+      kind: 'table' as const,
+      name: table.name,
+      shape: table.shape,
+      capacity: table.capacity,
+      chairType: (table.chairType as ChairType) || 'BANQUET',
+      tableColor: effectiveTableColor,
+      x: table.x,
+      y: table.y,
+      locked: table.locked,
+      rotation: table.rotation,
+    };
+  });
 }
 
 function estimateCanvasM(
@@ -97,24 +164,36 @@ export function buildTablePlanPreviewBlueprint(
   tablePlan: TablePlanPreviewInput | null | undefined,
   tables: TablePlanPreviewTable[],
   roomBlueprint?: RoomLayoutBlueprint | null,
+  pricingZonesOverride?: PricingZone[],
 ): RoomLayoutBlueprint | null {
   const planFixtures = Array.isArray(tablePlan?.fixtures)
     ? (tablePlan.fixtures as RoomLayoutBlueprint['fixtures'])
     : undefined;
 
+  const resolvedZones = pricingZonesOverride ?? tablePlan?.pricingZones ?? [];
+
   if (tables.length === 0 && !roomBlueprint?.furniture?.length && (!planFixtures || planFixtures.length === 0)) {
     return null;
   }
 
-  const furniture = tablesToFurniture(tables);
+  const zoneFurniture = pricingZonesToFurniture(resolvedZones, tables);
+  const tableFurniture = tablesToFurniture(tables, resolvedZones);
   const meta = metadataFromPlan(tablePlan, tables);
 
   if (roomBlueprint) {
     const base = ensureBlueprintDefaults(structuredClone(roomBlueprint));
+    // Conserver le mobilier non-table de la salle (bars, scène, podium, etc.)
+    const existingDecor = base.furniture.filter((f) => f.kind !== 'table' && f.kind !== 'zone');
+    const combinedFurniture = [
+      ...zoneFurniture,
+      ...(tableFurniture.length > 0 ? tableFurniture : base.furniture.filter((f) => f.kind === 'table')),
+      ...existingDecor,
+    ];
+
     return ensureBlueprintDefaults({
       ...base,
       fixtures: planFixtures ?? base.fixtures,
-      furniture: furniture.length > 0 ? furniture : base.furniture,
+      furniture: combinedFurniture,
       metadata: {
         ...base.metadata,
         ...meta,
@@ -136,7 +215,7 @@ export function buildTablePlanPreviewBlueprint(
     roomOutline: tablePlan?.roomOutline,
     canvas,
     fixtures: planFixtures ?? [],
-    furniture,
+    furniture: [...zoneFurniture, ...tableFurniture],
     metadata: {
       ...meta,
       renderQuality: meta.renderQuality ?? 'standard',

@@ -43,6 +43,14 @@ interface RoomLayoutPreviewProps {
   lightingPreset?: LightingPreset;
   /** Bouton plein écran sur mobile (showcase WebGL). */
   allowMobileExpand?: boolean;
+  /** Table sélectionnée active */
+  selectedTableId?: string | null;
+  /** Multi-sélection de tables */
+  selectedTableIds?: string[];
+  /** Callback lors du clic sur une table en 3D ou 2D */
+  onSelectTable?: (tableId: string) => void;
+  /** Callback lors du clic sur une zone en 3D */
+  onSelectZone?: (zoneId: string) => void;
 }
 
 function useIsMobileViewport(maxWidthPx = 639) {
@@ -64,6 +72,10 @@ type WebGLPreviewProps = {
   quality: RoomPreviewQuality;
   lightingPreset: LightingPreset;
   className?: string;
+  selectedTableId?: string | null;
+  selectedTableIds?: string[];
+  onSelectTable?: (tableId: string) => void;
+  onSelectZone?: (zoneId: string) => void;
 };
 
 function WebGLPreviewCanvas({
@@ -71,12 +83,38 @@ function WebGLPreviewCanvas({
   quality,
   lightingPreset,
   className,
-}: Omit<WebGLPreviewProps, 'blueprint'>) {
+  selectedTableId,
+  selectedTableIds,
+  onSelectTable,
+  onSelectZone,
+}: WebGLPreviewProps) {
+  const selected = useMemo(() => {
+    const list: Array<{ kind: 'table' | 'zone'; id: string }> = [];
+    if (selectedTableId) {
+      list.push({ kind: 'table', id: selectedTableId });
+    }
+    if (selectedTableIds?.length) {
+      for (const id of selectedTableIds) {
+        if (!list.some((s) => s.kind === 'table' && s.id === id)) {
+          list.push({ kind: 'table', id });
+        }
+      }
+    }
+    return list;
+  }, [selectedTableId, selectedTableIds]);
+
   return (
     <RoomWebGLViewer
       blueprint={webglBlueprint}
-      selected={[]}
-      onSelect={() => {}}
+      selected={selected}
+      onSelect={(sel) => {
+        if (!sel) return;
+        if (sel.kind === 'table' && onSelectTable) {
+          onSelectTable(sel.id);
+        } else if (sel.kind === 'zone' && onSelectZone) {
+          onSelectZone(sel.id);
+        }
+      }}
       readOnly
       previewMode
       renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
@@ -456,6 +494,10 @@ export default function RoomLayoutPreview({
   force2d = false,
   lightingPreset: lightingPresetOverride,
   allowMobileExpand,
+  selectedTableId,
+  selectedTableIds,
+  onSelectTable,
+  onSelectZone,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -533,6 +575,10 @@ export default function RoomLayoutPreview({
               webglBlueprint={webglBlueprint}
               quality={quality}
               lightingPreset={lightingPreset}
+              selectedTableId={selectedTableId}
+              selectedTableIds={selectedTableIds}
+              onSelectTable={onSelectTable}
+              onSelectZone={onSelectZone}
             />
           ) : (
             <FlatShowcasePreview
@@ -602,6 +648,10 @@ export default function RoomLayoutPreview({
               webglBlueprint={webglBlueprint}
               quality={quality}
               lightingPreset={lightingPreset}
+              selectedTableId={selectedTableId}
+              selectedTableIds={selectedTableIds}
+              onSelectTable={onSelectTable}
+              onSelectZone={onSelectZone}
               className="rounded-none"
             />
           </div>

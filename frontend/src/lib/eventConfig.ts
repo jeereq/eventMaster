@@ -94,6 +94,7 @@ export type EventConfigPayload = {
   themeId: string | null;
   seatSelectionEnabled?: boolean;
   eventProgram?: import('@/lib/eventProgram').EventProgram | null;
+  tablePlan?: unknown;
 };
 
 export function isEventKindId(value: string | null | undefined): value is EventKindId {

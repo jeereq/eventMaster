@@ -207,8 +207,8 @@ export default function TablePlanner({
   );
 
   const previewBlueprint = useMemo(
-    () => buildTablePlanPreviewBlueprint(initialTablePlan, tables, roomLayoutBlueprint),
-    [initialTablePlan, tables, roomLayoutBlueprint],
+    () => buildTablePlanPreviewBlueprint(initialTablePlan, tables, roomLayoutBlueprint, pricingZones),
+    [initialTablePlan, tables, roomLayoutBlueprint, pricingZones],
   );
 
   const tablePlannerWalls = useMemo(() => {
@@ -597,8 +597,13 @@ export default function TablePlanner({
       .filter(Boolean) as Array<{ seatIndex: number; name: string }>;
   };
 
+  const active3DTable = useMemo(() => {
+    if (!activeTableId) return null;
+    return tables.find((t) => t.id === activeTableId) ?? null;
+  }, [activeTableId, tables]);
+
   const render3DPreview = (heightClass: string) => (
-    <div className={cn('flex flex-col min-h-0 space-y-2', heightClass)}>
+    <div className={cn('flex flex-col min-h-0 space-y-2.5', heightClass)}>
       {!previewBlueprint ? (
         <div className="flex-1 min-h-[320px] rounded-[var(--radius-card)] border border-dashed border-border bg-surface-muted flex flex-col items-center justify-center gap-2 p-6 text-center">
           <Box className="w-10 h-10 text-muted" />
@@ -619,25 +624,173 @@ export default function TablePlanner({
           ) : null}
         </div>
       ) : (
-        <>
-          <RoomLayoutPreview
-            blueprint={previewBlueprint}
-            quality={previewQuality}
-            lightingPreset={previewLighting}
-            showMeta
-            className="flex-1 min-h-[320px] [&_.em-floor-canvas]:min-h-[320px]"
-          />
+        <div className="flex-1 flex flex-col min-h-0 space-y-2">
+          {/* Barre d'outils 3D pour la tarification par zone */}
+          {zonePricing && pricingZones.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-surface border border-border shadow-2xs shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider flex items-center gap-1 mr-1">
+                  <Paintbrush className="w-3.5 h-3.5 text-primary" />
+                  Pinceau 3D :
+                </span>
+                {pricingZones.map((zone) => {
+                  const isPaintActive = paintZoneId === zone.id;
+                  const stats = ticketingSummary.byZone.find((bz) => bz.zone.id === zone.id);
+                  return (
+                    <button
+                      key={zone.id}
+                      type="button"
+                      onClick={() => setPaintZoneId(isPaintActive ? null : zone.id)}
+                      className={cn(
+                        'inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition shadow-2xs',
+                        isPaintActive
+                          ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/40'
+                          : 'border-border bg-surface hover:bg-surface-muted text-foreground'
+                      )}
+                      title={
+                        isPaintActive
+                          ? 'Pinceau actif : touchez une table en 3D pour lui appliquer cette zone'
+                          : `Cliquer pour peindre en 3D (${zone.name})`
+                      }
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
+                        style={{ backgroundColor: zone.color || '#c4a35a' }}
+                      />
+                      <span className="truncate max-w-[100px]">{zone.name}</span>
+                      {stats && (
+                        <span className="text-[10px] text-muted tabular-nums">
+                          ({stats.tableCount} tbl.)
+                        </span>
+                      )}
+                      {isPaintActive && <Check className="w-3 h-3 text-primary ml-0.5" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setShowDistributeModal(true)}
+                  className="text-xs h-8"
+                  leftIcon={<Sparkles className="w-3 h-3" />}
+                >
+                  Répartir 3D
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditingZonesList(pricingZones.length ? pricingZones : [createEmptyPricingZone(0), createEmptyPricingZone(1)]);
+                    setShowZoneManagerModal(true);
+                  }}
+                  className="text-xs h-8"
+                >
+                  Gérer tarifs
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Rendu 3D avec sélection de table interactive */}
+          <div className="relative flex-1 min-h-[320px] rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
+            <RoomLayoutPreview
+              blueprint={previewBlueprint}
+              quality={previewQuality}
+              lightingPreset={previewLighting}
+              selectedTableId={activeTableId}
+              onSelectTable={(tableId) => {
+                if (paintZoneId) {
+                  setTables((prev) =>
+                    prev.map((t) => (t.id === tableId ? { ...t, pricingZoneId: paintZoneId } : t))
+                  );
+                  setActiveTableId(tableId);
+                } else {
+                  setActiveTableId(tableId);
+                }
+              }}
+              showMeta={false}
+              className="absolute inset-0 h-full w-full [&_.em-floor-canvas]:min-h-[320px]"
+            />
+
+            {/* Hint en haut du canvas */}
+            <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-foreground/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-[10px] font-semibold text-background">
+              <Box className="w-3 h-3 text-primary" />
+              <span>
+                {paintZoneId
+                  ? `Pinceau actif : touchez une table pour l'assigner à ${pricingZones.find((z) => z.id === paintZoneId)?.name}`
+                  : 'Touchez une table en 3D pour la sélectionner et modifier sa zone'}
+              </span>
+            </div>
+
+            {/* Carte de la table 3D active sélectionnée */}
+            {active3DTable && (
+              <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 backdrop-blur-md border border-border p-2.5 shadow-lg flex flex-wrap items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs text-foreground">{active3DTable.name}</span>
+                  <span className="text-[11px] text-muted">({active3DTable.capacity} places)</span>
+                  {active3DTable.pricingZoneId && (
+                    <span
+                      className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs"
+                      style={{
+                        backgroundColor:
+                          pricingZones.find((z) => z.id === active3DTable.pricingZoneId)?.color || '#c4a35a',
+                      }}
+                    >
+                      {pricingZones.find((z) => z.id === active3DTable.pricingZoneId)?.name}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {zonePricing && pricingZones.length > 0 && (
+                    <div className="flex items-center gap-1 mr-1">
+                      <span className="text-[10px] text-muted">Zone :</span>
+                      {pricingZones.map((z) => (
+                        <button
+                          key={z.id}
+                          type="button"
+                          onClick={() =>
+                            setTables((prev) =>
+                              prev.map((t) => (t.id === active3DTable.id ? { ...t, pricingZoneId: z.id } : t))
+                            )
+                          }
+                          className={cn(
+                            'w-5 h-5 rounded-full border transition hover:scale-110 active:scale-95',
+                            active3DTable.pricingZoneId === z.id
+                              ? 'ring-2 ring-primary border-white'
+                              : 'border-border'
+                          )}
+                          style={{ backgroundColor: z.color || '#c4a35a' }}
+                          title={`Assigner à ${z.name}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setEditingTable(active3DTable)}
+                    className="text-xs h-7 px-2"
+                  >
+                    Détails table
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <p className="text-[11px] text-muted leading-relaxed">
-            Lecture seule — placement des invités en{' '}
+            Vue 3D interactive — sélectionnez ou peignez les tables directement en 3D. Pour placer manuellement les convives par siège, basculez en{' '}
             <button type="button" onClick={() => setPlannerView('2d')} className="font-semibold text-primary hover:underline">
-              2D
+              vue 2D
             </button>
             .
-            {roomLayoutBlueprint
-              ? ' Architecture et décor depuis le modèle de salle.'
-              : ' Rendu simplifié à partir du plan importé.'}
           </p>
-        </>
+        </div>
       )}
     </div>
   );

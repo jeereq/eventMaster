@@ -7,14 +7,16 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
-import { Ticket, Plus, Minus, X, Check, Users } from 'lucide-react';
+import { Ticket, Plus, Minus, X, Check, Users, Box, Loader2 } from 'lucide-react';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
 import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventProgram';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
-import { normalizeTicketPricingMode } from '@/lib/ticketPricing';
+import { normalizeTicketPricingMode, type PricingZone } from '@/lib/ticketPricing';
 import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
+import SeatSelection3DViewer from '@/components/SeatSelection3DViewer';
+import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import PaymentAccountPicker from '@/components/PaymentAccountPicker';
 import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 
@@ -38,6 +40,9 @@ type SeatInventoryMeta = {
   roomThemeId: string | null;
   floorType: string | null;
   floorImageUrl: string | null;
+  pricingZones?: unknown[];
+  roomLayoutBlueprint?: any;
+  roomType?: string | null;
 };
 
 export default function EventTicketCheckoutForm({ event }: { event: PublicEventCard }) {
@@ -57,6 +62,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const [selectedSeats, setSelectedSeats] = useState<Array<{ tableId: string; seatIndex: number }>>([]);
   const [selectedZoneId, setSelectedZoneId] = useState('');
   const [seatsLoading, setSeatsLoading] = useState(false);
+  const [planViewMode, setPlanViewMode] = useState<PlanViewMode>('3d');
 
   const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
   const zonePricing = pricingMode === 'by_zone';
@@ -92,6 +98,9 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           roomThemeId: data.roomThemeId ?? null,
           floorType: data.floorType ?? null,
           floorImageUrl: data.floorImageUrl ?? null,
+          pricingZones: Array.isArray(data.pricingZones) ? data.pricingZones : [],
+          roomLayoutBlueprint: data.roomLayoutBlueprint ?? null,
+          roomType: data.roomType ?? null,
         });
       })
       .catch(() => {
@@ -315,50 +324,75 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           )}
 
           {seatMode ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
+            <div className="space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                 <div>
-                  <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5 text-primary" />
-                    Choisissez vos places sur le plan
+                    Choisissez vos places sur le plan interactif
                   </p>
                   <p className="text-[11px] text-muted">
                     {selectedSeats.length === 0
-                      ? 'Touchez un ou plusieurs sièges libres (jusqu’à 8 places)'
+                      ? 'Touchez un ou plusieurs sièges libres sur le plan (jusqu’à 8 places)'
                       : `${selectedSeats.length} place${selectedSeats.length > 1 ? 's' : ''} sélectionnée${selectedSeats.length > 1 ? 's' : ''} (max 8)`}
                   </p>
                 </div>
-                {selectedSeats.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSeats([])}
-                    className="text-[11px] text-rose-600 hover:underline font-medium"
-                  >
-                    Tout désélectionner
-                  </button>
-                )}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <PlanViewToggle
+                    value={planViewMode}
+                    onChange={setPlanViewMode}
+                  />
+                  {selectedSeats.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSeats([])}
+                      className="text-[11px] text-rose-600 hover:underline font-semibold px-2 py-1"
+                    >
+                      Tout désélectionner
+                    </button>
+                  )}
+                </div>
               </div>
 
               {seatsLoading ? (
-                <p className="text-xs text-muted">Chargement du plan…</p>
+                <div className="p-8 rounded-2xl border border-dashed border-border bg-surface text-center space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+                  <p className="text-xs text-muted">Chargement du plan de salle interactif…</p>
+                </div>
               ) : seats.length === 0 ? (
                 <p className="text-xs text-muted">Aucune place libre sur le plan.</p>
               ) : (
                 <>
-                  <SeatSelectionPlanCanvas
-                    seats={seats}
-                    fixtures={planMeta?.fixtures as SeatSelectionPlanCanvasProps['fixtures']}
-                    roomOutline={planMeta?.roomOutline as SeatSelectionPlanCanvasProps['roomOutline']}
-                    roomThemeId={planMeta?.roomThemeId}
-                    floorType={planMeta?.floorType}
-                    floorImageUrl={planMeta?.floorImageUrl}
-                    pricingZones={pricingZones}
-                    selectedSeats={selectedSeats}
-                    onSelect={(tableId, seatIndex) => toggleSeat(tableId, seatIndex)}
-                    zoneColorById={zoneColorById}
-                    showZonePricing={zonePricing}
-                    height={320}
-                  />
+                  {planViewMode === '3d' ? (
+                    <SeatSelection3DViewer
+                      seats={seats}
+                      selectedSeats={selectedSeats}
+                      onToggleSeat={(tableId, seatIndex) => toggleSeat(tableId, seatIndex)}
+                      pricingZones={pricingZones.length > 0 ? pricingZones : (planMeta?.pricingZones as PricingZone[]) || []}
+                      zoneColorById={zoneColorById}
+                      planMeta={planMeta}
+                      lightingPreset={resolveLightingFromProgram(
+                        normalizeEventProgram(event.eventProgram),
+                        new Date(),
+                        event.date,
+                      )}
+                    />
+                  ) : (
+                    <SeatSelectionPlanCanvas
+                      seats={seats}
+                      fixtures={planMeta?.fixtures as SeatSelectionPlanCanvasProps['fixtures']}
+                      roomOutline={planMeta?.roomOutline as SeatSelectionPlanCanvasProps['roomOutline']}
+                      roomThemeId={planMeta?.roomThemeId}
+                      floorType={planMeta?.floorType}
+                      floorImageUrl={planMeta?.floorImageUrl}
+                      pricingZones={pricingZones.length > 0 ? pricingZones : (planMeta?.pricingZones as PricingZone[]) || []}
+                      selectedSeats={selectedSeats}
+                      onSelect={(tableId, seatIndex) => toggleSeat(tableId, seatIndex)}
+                      zoneColorById={zoneColorById}
+                      showZonePricing={zonePricing}
+                      height={320}
+                    />
+                  )}
 
                   {/* Badges des places sélectionnées */}
                   {selectedSeatObjects.length > 0 && (
