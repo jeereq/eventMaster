@@ -128,6 +128,9 @@ export const HEIGHT_PRESET_CONFIG: Record<
   },
 };
 
+export const DEFAULT_ZONE_COLOR = '#c4a35a';
+export const DEFAULT_TABLE_COLOR = '#f3e6c8';
+
 export default function TablePlanner({
   guests,
   initialTablePlan,
@@ -173,7 +176,7 @@ export default function TablePlanner({
   const [newTableName, setNewTableName] = useState('');
   const [newTableShape, setNewTableShape] = useState<TableShape>('round');
   const [newTableCapacity, setNewTableCapacity] = useState<number>(8);
-  const [newTableColor, setNewTableColor] = useState('#f3e6c8');
+  const [newTableColor, setNewTableColor] = useState(DEFAULT_TABLE_COLOR);
   const [newChairType, setNewChairType] = useState<ChairType>('BANQUET');
   const [isExpanded, setIsExpanded] = useState(false);
   const [guestsOpen, setGuestsOpen] = useState(false);
@@ -241,16 +244,59 @@ export default function TablePlanner({
     });
   }, [showDistributeModal, tables, pricingZones, distributeStrategy, fixtures, updateBoundsOnDistribute]);
 
-  // Cancel paint brush on Escape key
+  // Keyboard navigation & accessibility for active table
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && paintZoneId) {
-        setPaintZoneId(null);
+      // Ignore when user is typing in form inputs or editable elements
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        if (paintZoneId) {
+          setPaintZoneId(null);
+          return;
+        }
+        if (activeTableId) {
+          setActiveTableId(null);
+          return;
+        }
+      }
+
+      if (!activeTableId) return;
+
+      const step = e.shiftKey ? 3 : 0.8;
+      let dx = 0;
+      let dy = 0;
+
+      if (e.key === 'ArrowLeft') dx = -step;
+      else if (e.key === 'ArrowRight') dx = step;
+      else if (e.key === 'ArrowUp') dy = -step;
+      else if (e.key === 'ArrowDown') dy = step;
+
+      if (dx !== 0 || dy !== 0) {
+        e.preventDefault();
+        setTables((prev) =>
+          prev.map((t) => {
+            if (t.id !== activeTableId || t.locked) return t;
+            const newX = Math.max(5, Math.min(95, Number((t.x + dx).toFixed(2))));
+            const newY = Math.max(5, Math.min(95, Number((t.y + dy).toFixed(2))));
+            return { ...t, x: newX, y: newY };
+          })
+        );
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [paintZoneId]);
+  }, [paintZoneId, activeTableId]);
 
   // Dragging states
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -339,7 +385,7 @@ export default function TablePlanner({
     setShowAddModal(false);
     setNewTableName('');
     setNewTableCapacity(8);
-    setNewTableColor('#f3e6c8');
+    setNewTableColor(DEFAULT_TABLE_COLOR);
     setNewChairType('BANQUET');
   };
 
@@ -700,8 +746,8 @@ export default function TablePlanner({
           {/* Barre d'outils 3D pour la tarification par zone */}
           {zonePricing && pricingZones.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-surface border border-border shadow-2xs shrink-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider flex items-center gap-1 mr-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none touch-pan-x">
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider flex items-center gap-1 mr-1 shrink-0">
                   <Paintbrush className="w-3.5 h-3.5 text-primary" />
                   Pinceau 3D :
                 </span>
@@ -714,7 +760,7 @@ export default function TablePlanner({
                       type="button"
                       onClick={() => setPaintZoneId(isPaintActive ? null : zone.id)}
                       className={cn(
-                        'inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition shadow-2xs',
+                        'inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition shadow-2xs shrink-0',
                         isPaintActive
                           ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/40'
                           : 'border-border bg-surface hover:bg-surface-muted text-foreground'
@@ -724,10 +770,15 @@ export default function TablePlanner({
                           ? 'Pinceau actif : touchez une table en 3D pour lui appliquer cette zone'
                           : `Cliquer pour peindre en 3D (${zone.name})`
                       }
+                      aria-label={
+                        isPaintActive
+                          ? `Désactiver le pinceau 3D pour la zone ${zone.name}`
+                          : `Activer le pinceau 3D pour la zone ${zone.name}`
+                      }
                     >
                       <span
                         className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
-                        style={{ backgroundColor: zone.color || '#c4a35a' }}
+                        style={{ backgroundColor: zone.color || DEFAULT_ZONE_COLOR }}
                       />
                       <span className="truncate max-w-[100px]">{zone.name}</span>
                       {stats && (
@@ -741,7 +792,7 @@ export default function TablePlanner({
                 })}
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <Button
                   size="sm"
                   variant="secondary"
@@ -808,7 +859,7 @@ export default function TablePlanner({
                       className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs"
                       style={{
                         backgroundColor:
-                          pricingZones.find((z) => z.id === active3DTable.pricingZoneId)?.color || '#c4a35a',
+                          pricingZones.find((z) => z.id === active3DTable.pricingZoneId)?.color || DEFAULT_ZONE_COLOR,
                       }}
                     >
                       {pricingZones.find((z) => z.id === active3DTable.pricingZoneId)?.name}
@@ -835,8 +886,9 @@ export default function TablePlanner({
                               ? 'ring-2 ring-primary border-white'
                               : 'border-border'
                           )}
-                          style={{ backgroundColor: z.color || '#c4a35a' }}
+                          style={{ backgroundColor: z.color || DEFAULT_ZONE_COLOR }}
                           title={`Assigner à ${z.name}`}
+                          aria-label={`Assigner la table ${active3DTable.name} à la zone ${z.name}`}
                         />
                       ))}
                     </div>
@@ -974,6 +1026,7 @@ export default function TablePlanner({
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-2 text-muted hover:text-foreground bg-surface hover:bg-surface-muted rounded-[var(--radius-button)] border border-border transition shadow-sm"
             title={isExpanded ? 'Réduire' : 'Plein écran'}
+            aria-label={isExpanded ? 'Réduire le plein écran' : 'Passer en plein écran'}
           >
             {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -1037,8 +1090,8 @@ export default function TablePlanner({
               <span
                 className="absolute top-1.5 left-2 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-2xs tabular-nums flex items-center gap-1.5"
                 style={{
-                  backgroundColor: zone.color || '#c4a35a',
-                  color: isLightHexColor(zone.color || '#c4a35a') ? '#1c1917' : '#ffffff',
+                  backgroundColor: zone.color || DEFAULT_ZONE_COLOR,
+                  color: isLightHexColor(zone.color || DEFAULT_ZONE_COLOR) ? '#1c1917' : '#ffffff',
                 }}
               >
                 <span>{zone.name}</span>
@@ -1088,6 +1141,9 @@ export default function TablePlanner({
             return (
               <div
                 key={table.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Table ${table.name}, ${occupiedCount} sur ${table.capacity} places${zone ? `, zone ${zone.name}` : ''}${table.locked ? ', verrouillée' : ''}`}
                 onPointerDown={(e) => {
                   if (paintZoneId) return;
                   handlePointerDown(table.id, e);
@@ -1102,6 +1158,18 @@ export default function TablePlanner({
                   }
                   setActiveTableId(table.id);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (paintZoneId) {
+                      setTables((prev) =>
+                        prev.map((t) => (t.id === table.id ? { ...t, pricingZoneId: paintZoneId } : t))
+                      );
+                    } else {
+                      setActiveTableId(table.id);
+                    }
+                  }
+                }}
                 onMouseEnter={() => setHoveredTableId(table.id)}
                 onMouseLeave={() => setHoveredTableId(null)}
                 style={{
@@ -1111,7 +1179,7 @@ export default function TablePlanner({
                   touchAction: 'none',
                 }}
                 className={cn(
-                  'absolute select-none p-3 em-floor-item touch-none transition-all',
+                  'absolute select-none p-3 em-floor-item touch-none transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden',
                   paintZoneId
                     ? 'cursor-pointer hover:scale-105 ring-2 ring-primary/40'
                     : table.locked
@@ -1160,7 +1228,7 @@ export default function TablePlanner({
                   )}
                   style={{
                     ...visual.style,
-                    ...(zonePricing && zone ? { boxShadow: `0 0 0 2px ${zone.color || '#c4a35a'}, 0 3px 10px rgba(0,0,0,0.12)` } : {}),
+                    ...(zonePricing && zone ? { boxShadow: `0 0 0 2px ${zone.color || DEFAULT_ZONE_COLOR}, 0 3px 10px rgba(0,0,0,0.12)` } : {}),
                   }}
                 >
                   <div className="px-2 relative z-10 drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]">
@@ -1173,8 +1241,8 @@ export default function TablePlanner({
                         <div
                           className="text-[8px] font-bold mt-0.5 px-1.5 py-0.5 rounded truncate max-w-[85px] shadow-2xs"
                           style={{
-                            backgroundColor: zone.color || '#c4a35a',
-                            color: isLightHexColor(zone.color || '#c4a35a') ? '#1c1917' : '#ffffff',
+                            backgroundColor: zone.color || DEFAULT_ZONE_COLOR,
+                            color: isLightHexColor(zone.color || DEFAULT_ZONE_COLOR) ? '#1c1917' : '#ffffff',
                           }}
                           title={`${zone.name}${zone.priceFc > 0 ? ` · ${formatFc(zone.priceFc)}` : ''}`}
                         >
@@ -1271,18 +1339,32 @@ export default function TablePlanner({
                       <div
                         key={index}
                         data-no-drag
+                        role="button"
+                        tabIndex={0}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedGuestSeat({ tableId: table.id, seatIndex: index });
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedGuestSeat({ tableId: table.id, seatIndex: index });
+                          }
+                        }}
+                        aria-label={
+                          guest
+                            ? `Siège ${index + 1}, placé pour ${guest.firstName} ${guest.lastName}`
+                            : `Siège ${index + 1}, libre`
+                        }
                         style={{
                           left: `calc(50% + ${coords.x}px)`,
                           top: `calc(50% + ${coords.y}px)`,
                           transform: 'translate(-50%, -50%)',
                         }}
                         className={cn(
-                          'em-floor-seat absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-semibold cursor-pointer touch-manipulation',
+                          'em-floor-seat absolute w-7 h-7 rounded-full border flex items-center justify-center text-[9px] font-semibold cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden',
                           guest ? 'em-floor-seat--filled' : 'em-floor-seat--empty',
                         )}
                         title={guest ? `${guest.firstName} ${guest.lastName}` : `Siège ${index + 1} (libre)`}
@@ -1371,7 +1453,7 @@ export default function TablePlanner({
               {ticketingSummary.byZone.map((stat) => (
                 <div
                   key={stat.zone.id}
-                  style={{ width: `${stat.percentageOfSeats}%`, backgroundColor: stat.zone.color || '#c4a35a' }}
+                  style={{ width: `${stat.percentageOfSeats}%`, backgroundColor: stat.zone.color || DEFAULT_ZONE_COLOR }}
                   title={`${stat.zone.name} : ${stat.seatCount} places (${stat.percentageOfSeats}%) · ${formatFc(stat.totalRevenueFc)}`}
                   className="h-full transition-all"
                 />
@@ -1409,10 +1491,15 @@ export default function TablePlanner({
                       ? 'Pinceau actif : cliquez pour désactiver'
                       : `Cliquer pour activer le pinceau : assignez ensuite n'importe quelle table d'un clic sur le plan`
                   }
+                  aria-label={
+                    isPaintActive
+                      ? `Désactiver le pinceau pour la zone ${stat.zone.name}`
+                      : `Activer le pinceau pour la zone ${stat.zone.name}`
+                  }
                 >
                   <span
                     className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs border border-black/10"
-                    style={{ backgroundColor: stat.zone.color || '#c4a35a' }}
+                    style={{ backgroundColor: stat.zone.color || DEFAULT_ZONE_COLOR }}
                   />
                   <div>
                     <div className="flex items-center gap-1.5">
@@ -1789,8 +1876,10 @@ export default function TablePlanner({
                 Placer un invité - Siège {selectedSeat.seatIndex + 1}
               </h3>
               <button
+                type="button"
                 onClick={() => setSelectedGuestSeat(null)}
                 className="p-1.5 text-muted hover:text-foreground rounded-[var(--radius-button)] hover:bg-surface-muted transition"
+                aria-label="Fermer la fenêtre"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1878,8 +1967,10 @@ export default function TablePlanner({
                 Ajouter une nouvelle table
               </h3>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
                 className="p-1.5 text-muted hover:text-foreground rounded-[var(--radius-button)] hover:bg-surface-muted transition"
+                aria-label="Fermer la fenêtre"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1980,8 +2071,10 @@ export default function TablePlanner({
                 Modifier la table : {editingTable.name}
               </h3>
               <button
+                type="button"
                 onClick={() => setEditingTable(null)}
                 className="p-1.5 text-muted hover:text-foreground rounded-[var(--radius-button)] hover:bg-surface-muted transition"
+                aria-label="Fermer la fenêtre"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2224,7 +2317,7 @@ export default function TablePlanner({
                       <div className="flex items-center gap-2.5">
                         <span
                           className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
-                          style={{ backgroundColor: stat.zone.color || '#c4a35a' }}
+                          style={{ backgroundColor: stat.zone.color || DEFAULT_ZONE_COLOR }}
                         />
                         <div>
                           <p className="font-semibold text-foreground">{stat.zone.name}</p>
@@ -2356,7 +2449,7 @@ export default function TablePlanner({
                   >
                     <input
                       type="color"
-                      value={zone.color || '#c4a35a'}
+                      value={zone.color || DEFAULT_ZONE_COLOR}
                       onChange={(e) =>
                         setEditingZonesList((prev) =>
                           prev.map((z, i) => (i === idx ? { ...z, color: e.target.value } : z))
