@@ -35,6 +35,8 @@ import {
   Check,
   Smartphone,
   Sliders,
+  FileText,
+  Rss,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -97,13 +99,14 @@ export default function OrganizerDashboardHome({
   homeEventsPageSize,
   setHomeEventsPageSize,
 }: OrganizerDashboardHomeProps) {
-  const { user, tenant, planQuota } = useAuth();
+  const { user, tenant, planQuota, access } = useAuth();
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState('');
 
   const isVendor = tenant?.accountKind === 'VENDOR';
   const isBoth = tenant?.accountKind === 'BOTH';
+  const isManager = access?.level === 'manager' && !access?.isOwner;
 
   const usage = planQuota?.usage || billing?.usage;
   const limits = planQuota?.limits || billing?.limits;
@@ -141,9 +144,11 @@ export default function OrganizerDashboardHome({
           <div className="relative space-y-4 max-w-3xl">
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/15 text-primary border border-primary/25">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {isVendor
+                  {isManager
+                    ? 'Espace Manager'
+                    : isVendor
                     ? 'Espace Prestataire / Salles'
                     : isBoth
                     ? 'Espace Mixte (Organisation & Vitrine)'
@@ -165,7 +170,9 @@ export default function OrganizerDashboardHome({
                 {greetingLabel}{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋
               </h1>
               <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                {isVendor
+                {isManager
+                  ? 'Pilotez le quotidien : événements, équipe, réalisations, simulateur IA et devis. Le forfait se change uniquement chez le propriétaire.'
+                  : isVendor
                   ? 'Gérez vos prestations, vos disponibilités et répondez rapidement aux demandes de devis des organisateurs.'
                   : 'Créez vos événements, envoyez vos invitations par WhatsApp, concevez vos plans de table et contrôlez les accès avec fluidité.'}
               </p>
@@ -194,40 +201,57 @@ export default function OrganizerDashboardHome({
 
             {/* Raccourcis directs en 1 clic */}
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-              <span className="text-[11px] font-medium text-muted mr-1">Raccourcis :</span>
+              <span className="text-xs font-medium text-muted mr-1">Raccourcis :</span>
               <Link
                 href={isVendor ? '/dashboard/marketplace' : '/dashboard/events'}
-                className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-[11px] font-bold text-primary transition inline-flex items-center gap-1"
+                className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
               >
                 <PlusCircle className="w-3 h-3" />
                 {isVendor ? 'Nouvelle prestation' : 'Créer un événement'}
               </Link>
               <Link
                 href="/dashboard/rooms"
-                className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
+                className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center"
               >
                 Plan de table 2D/3D
               </Link>
               <Link
                 href="/dashboard/protocol"
-                className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition inline-flex items-center gap-1"
+                className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
               >
                 <ScanLine className="w-3 h-3 text-amber-500" />
                 Scanner QR Protocole
               </Link>
+              <Link
+                href="/dashboard/catalogue"
+                className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center"
+              >
+                Marketplace & Devis
+              </Link>
+              <Link
+                href="/dashboard/catalogue?tab=plan&planView=ai"
+                className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                Simulateur IA
+              </Link>
+              {isManager ? (
+                <>
                   <Link
-                    href="/dashboard/catalogue"
-                    className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
+                    href="/dashboard/publications"
+                    className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
                   >
-                    Marketplace & Devis
+                    <Rss className="w-3 h-3" />
+                    Réalisations
                   </Link>
                   <Link
-                    href="/dashboard/catalogue?tab=plan&planView=ai"
-                    className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-[11px] font-bold text-primary transition inline-flex items-center gap-1"
+                    href="/dashboard/team"
+                    className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center"
                   >
-                    <Sparkles className="w-3 h-3" />
-                    Simulateur IA (3 Packs)
+                    Équipe
                   </Link>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -327,20 +351,24 @@ export default function OrganizerDashboardHome({
           </Link>
 
           <Link
-            href="/dashboard/billing"
+            href={isManager ? '/dashboard/invoices' : '/dashboard/billing'}
             className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Mon Forfait</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                {isManager ? 'Factures' : 'Mon Forfait'}
+              </span>
               <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
-                <Award className="w-4 h-4" />
+                {isManager ? <FileText className="w-4 h-4" /> : <Award className="w-4 h-4" />}
               </div>
             </div>
             <div className="mt-3">
               <p className="text-xl font-black text-foreground tracking-tight truncate">
                 {tenant?.plan || billing?.plan || 'Standard'}
               </p>
-              <p className="text-[11px] text-muted mt-0.5">Gérer mon abonnement</p>
+              <p className="text-xs text-muted mt-0.5">
+                {isManager ? 'Consultation — le forfait reste au propriétaire' : 'Gérer mon abonnement'}
+              </p>
             </div>
           </Link>
         </div>
@@ -508,7 +536,39 @@ export default function OrganizerDashboardHome({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={cn('grid grid-cols-1 gap-4', isManager ? 'md:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-3')}>
+          {isManager ? (
+            <div className="p-5 rounded-2xl border border-primary/25 bg-primary/5 hover:border-primary/50 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
+                    <Rss className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                    Réalisations
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                    Photos et actualités
+                  </h3>
+                  <p className="text-xs text-muted leading-relaxed mt-1">
+                    Publiez le travail des salles et prestations. Le protocole et les clients consultent la même grille.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth
+                onClick={() => router.push('/dashboard/publications')}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="mt-auto"
+              >
+                Ouvrir les réalisations
+              </Button>
+            </div>
+          ) : null}
           {/* Carte 1 : Plan de Salle 2D/3D */}
           <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
             <div className="space-y-3">
@@ -592,16 +652,28 @@ export default function OrganizerDashboardHome({
               </div>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              fullWidth
-              onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
-              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-              className="shadow-xs shadow-primary/20 mt-auto"
-            >
-              Lancer une simulation IA
-            </Button>
+            <div className="flex flex-col gap-2 mt-auto">
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth
+                onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="shadow-xs shadow-primary/20"
+              >
+                Lancer une simulation IA
+              </Button>
+              {isManager ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai&buyTokens=1')}
+                >
+                  Acheter des jetons
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           {/* Carte 3 : Devis, Réservations & Suivi */}
@@ -770,10 +842,14 @@ export default function OrganizerDashboardHome({
             <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Award className="w-4 h-4" />
             </span>
-            <h2 className="text-lg font-bold text-foreground">Formules, Quotas & Abonnements disponibles</h2>
+            <h2 className="text-lg font-bold text-foreground">
+              {isManager ? 'Quotas de l’organisation' : 'Formules, Quotas & Abonnements disponibles'}
+            </h2>
           </div>
           <p className="text-xs text-muted mt-0.5">
-            Suivez l’utilisation de vos quotas et découvrez les formules d’abonnement adaptées à la taille de vos projets.
+            {isManager
+              ? 'Suivez l’usage des événements, invités et salles. Pour changer de forfait, demandez au propriétaire.'
+              : 'Suivez l’utilisation de vos quotas et découvrez les formules d’abonnement adaptées à la taille de vos projets.'}
           </p>
         </div>
 
@@ -784,7 +860,34 @@ export default function OrganizerDashboardHome({
           </div>
         )}
 
-        {/* Grande carte explicative des abonnements & upgrade */}
+        {isManager ? (
+          <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1 min-w-0">
+              <p className="text-sm font-bold text-foreground">Forfait {tenant?.plan || billing?.plan || 'actuel'}</p>
+              <p className="text-xs text-muted leading-relaxed">
+                Vous consultez les factures. Le propriétaire change le plan dans Facturation.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => router.push('/dashboard/invoices')}
+                leftIcon={<FileText className="w-3.5 h-3.5" />}
+              >
+                Voir les factures
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => router.push('/dashboard/publications')}
+                leftIcon={<Rss className="w-3.5 h-3.5" />}
+              >
+                Publier une réalisation
+              </Button>
+            </div>
+          </div>
+        ) : (
         <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/5 via-surface to-surface-muted p-5 sm:p-7 space-y-6 shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-border/80">
             <div className="space-y-1">
@@ -934,6 +1037,7 @@ export default function OrganizerDashboardHome({
             </div>
           </div>
         </div>
+        )}
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════════
@@ -945,24 +1049,28 @@ export default function OrganizerDashboardHome({
             <Zap className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-foreground">Une question sur la gestion de vos événements ?</p>
-            <p className="text-[11px] text-muted">
-              Consultez notre guide complet avec vidéos et conseils étape par étape pour réussir vos réceptions.
+            <p className="text-xs font-bold text-foreground">
+              {isManager ? 'Une question sur votre rôle manager ?' : 'Une question sur la gestion de vos événements ?'}
+            </p>
+            <p className="text-xs text-muted">
+              {isManager
+                ? 'Le guide manager couvre réalisations, jetons IA, équipe et ce que le propriétaire garde (forfait).'
+                : 'Consultez notre guide complet avec vidéos et conseils étape par étape pour réussir vos réceptions.'}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
           <Link
             href="/dashboard/guide"
-            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl border border-border hover:bg-surface-muted text-xs font-semibold text-foreground transition"
+            className="flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center text-center px-3.5 py-2 rounded-xl border border-border hover:bg-surface-muted text-xs font-semibold text-foreground transition"
           >
             Guide utilisateur
           </Link>
           <Link
-            href="/dashboard/catalogue"
-            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs"
+            href={isManager ? '/dashboard/publications' : '/dashboard/catalogue'}
+            className="flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center text-center px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs"
           >
-            Explorer le marketplace
+            {isManager ? 'Réalisations' : 'Explorer le marketplace'}
           </Link>
         </div>
       </section>

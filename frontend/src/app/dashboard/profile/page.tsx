@@ -346,6 +346,8 @@ function ProfilePageContent() {
                           <p className="text-xs text-muted">
                             {isClient
                               ? 'Passez organisateur pour créer des événements, ou prestataire pour publier des offres.'
+                              : access?.level === 'manager' && !access?.isOwner
+                              ? 'Un changement de type peut réinitialiser le forfait. Seul le propriétaire choisit ensuite un plan dans Facturation.'
                               : (
                                 <>
                                   Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}

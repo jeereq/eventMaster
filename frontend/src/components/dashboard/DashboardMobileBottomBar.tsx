@@ -187,7 +187,25 @@ export function buildMobileBottomItems({
     ];
   }
 
-  // 7. Organisateur standard (B2C ou B2B)
+  // 7. Manager organisation — réalisations et simulateur au premier plan
+  if (access?.level === 'manager' && !access?.isOwner) {
+    const managerItems: MobileBottomNavItem[] = [
+      { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
+    ];
+    if (workspace.showEvents) {
+      managerItems.push({ id: 'events', name: 'Événements', href: '/dashboard/events', icon: Calendar });
+    }
+    if (workspace.showBrowseCatalogue) {
+      managerItems.push({ id: 'publications', name: 'Réalisations', href: '/dashboard/publications', icon: Rss });
+      managerItems.push({ id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store });
+    } else if (workspace.showProtocol) {
+      managerItems.push({ id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine });
+    }
+    managerItems.push({ id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true });
+    return managerItems;
+  }
+
+  // 8. Organisateur / propriétaire (B2C ou B2B)
   const items: MobileBottomNavItem[] = [
     { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
   ];

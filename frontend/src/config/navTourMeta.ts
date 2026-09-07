@@ -202,7 +202,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-publications': {
     title: 'Réalisations',
     description:
-      'Photos et actualités publiées par les salles et les prestations. Ouvrez une réalisation pour voir le détail et la fiche du partenaire.',
+      'Photos et actualités des salles et prestations. Propriétaires et managers publient des posts liés aux fiches ; le protocole et les clients consultent la grille.',
     route: '/dashboard/publications',
   },
   'nav-agenda': {

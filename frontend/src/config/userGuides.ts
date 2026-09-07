@@ -338,17 +338,20 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Manager organisation',
     badge: 'Organisation',
     summary:
-      'Vous pilotez le quotidien : équipe, salles 2D/3D, événements, Explorer (catalogue acheteur), devis / réservations, Mes offres. La facturation reste au propriétaire.',
+      'Vous pilotez le quotidien : équipe, événements, salles 2D/3D, modèles, réalisations, simulateur IA, Explorer, devis / réservations et Mes offres. La facturation et le changement de forfait restent au propriétaire.',
     canDo: [
-      'Gérer l\'équipe et les rôles',
+      'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
       'Créer salles (étages, plan 3D selon forfait) et événements (privés / publics)',
+      'Créer et modifier des modèles d’invitation (à la main ou par IA)',
+      'Publier et consulter les réalisations des salles et prestations',
+      'Lancer des simulations budget IA et acheter des jetons',
       'Explorer le catalogue et suivre devis / réservations séparément',
       'Publier des offres vendeur (Mes offres) et traiter les demandes reçues',
       'Assigner des tâches et préparer le mode Protocole',
-      'Consulter les factures (sans changer de forfait)',
+      'Consulter les factures et les quotas (sans changer de forfait)',
     ],
     cannotDo: [
-      'Accéder à la facturation ni changer de forfait',
+      'Accéder à Facturation & plan ni changer de forfait',
       'Supprimer l\'organisation ou transférer la propriété',
       'Voir les autres organisations',
     ],
@@ -361,6 +364,8 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
+      { label: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai' },
+      { label: 'Réalisations', href: '/dashboard/publications' },
       { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
@@ -373,9 +378,10 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'whats-new',
         title: 'Nouveautés à connaître',
         content:
-          '1. Explorer = catalogue acheteur ; Mes offres = publication vendeur.\n2. Menus Demandes de devis et Réservations séparés.\n3. Événements → Liste | Tâches ; Protocole → Accueil | Tâches.\n4. Salles multi-étages / escaliers selon le forfait (voir Facturation chez le propriétaire).',
+          '1. Réalisations : grille élargie — publiez photos et actualités liées aux salles / prestations.\n2. Simulateur IA : bouton Acheter des jetons toujours visible (1 jeton = 1 simulation).\n3. Explorer = catalogue acheteur ; Mes offres = publication vendeur.\n4. Devis et Réservations sont deux menus distincts.\n5. Le forfait se change uniquement chez le propriétaire (Facturation).',
         links: [
-          { label: 'Explorer', href: '/dashboard/catalogue' },
+          { label: 'Réalisations', href: '/dashboard/publications' },
+          { label: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai' },
           { label: 'Événements', href: '/dashboard/events' },
         ],
       },
@@ -438,11 +444,29 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Mes offres — pas Explorer.\n2. Publiez prestation / matériel & équipements ; salles via Salles.\n3. Traitez devis reçus et réservations (accepter → acompte → confirmer).',
         links: [{ label: 'Mes offres', href: '/dashboard/marketplace' }],
       },
+      {
+        id: 'publications',
+        title: 'Publier une réalisation',
+        content:
+          '1. Réalisations : grille des posts de l’organisation.\n2. Créez un post lié à une salle ou une prestation (photos, légende).\n3. Le protocole et les clients consultent la même grille, sans créer.\n4. Ouvrez une réalisation pour voir le détail et la fiche.',
+        links: [{ label: 'Réalisations', href: '/dashboard/publications' }],
+      },
+      {
+        id: 'ai-simulator',
+        title: 'Simuler un pack et recharger des jetons',
+        content:
+          '1. Simulateur IA : décrivez l’événement, lancez 3 formules (éco, équilibré, confort).\n2. 1 jeton = 1 simulation budget.\n3. Acheter des jetons ouvre le paiement Mobile Money / carte.\n4. Retenez un pack, puis envoyez les devis depuis Explorer.',
+        links: [
+          { label: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai' },
+          { label: 'Explorer', href: '/dashboard/catalogue' },
+        ],
+      },
     ],
     tips: [
-      'Explorer pour acheter / retenir ; Mes offres pour vendre.',
+      'Explorer pour acheter / retenir ; Mes offres pour vendre ; Réalisations pour montrer le travail.',
+      'Achetez des jetons depuis le simulateur — le bouton n’attend plus que le solde soit bas.',
       'Déléguez le protocole et des tâches avant le jour J.',
-      'Escaliers / balcons = Premium+ (forfait de l’organisation).',
+      'Escaliers / balcons = Premium+ (forfait de l’organisation, changé par le propriétaire).',
       'Commission vendeur ({commissionPercent} %) distincte de l’abonnement.',
     ],
   },

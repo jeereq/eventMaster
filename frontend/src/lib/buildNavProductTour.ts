@@ -185,6 +185,23 @@ export function buildFirstLoginTour(
       steps.push(firstLoginFinish(home, 'Ensuite : ouvrez un événement le jour J et testez le scan QR.'));
       return steps;
 
+    case 'org_manager':
+      push('nav-dashboard', home);
+      if (!workspace || workspace.showEvents) push('nav-events');
+      if (!workspace || workspace.showBrowseCatalogue) {
+        push('nav-catalogue');
+        push('nav-publications');
+      }
+      push('nav-quotes');
+      if (!workspace || workspace.showTeam) push('nav-team');
+      steps.push(
+        firstLoginFinish(
+          home,
+          'Ensuite : créez un événement, publiez une réalisation ou lancez une simulation IA.',
+        ),
+      );
+      return steps;
+
     case 'org_commercial':
       push('nav-org-commercial');
       steps.push(firstLoginFinish(home, 'Ensuite : partagez votre lien de parrainage.'));

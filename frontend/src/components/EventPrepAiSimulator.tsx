@@ -84,6 +84,7 @@ export default function EventPrepAiSimulator({
   defaultOpen = false,
   embedded = false,
   preferDefaults = false,
+  openPurchaseOnMount = false,
   className,
   onAllowanceChange,
 }: {
@@ -95,6 +96,7 @@ export default function EventPrepAiSimulator({
   defaultOpen?: boolean;
   embedded?: boolean;
   preferDefaults?: boolean;
+  openPurchaseOnMount?: boolean;
   className?: string;
   onAllowanceChange?: (allowance: AiAllowance) => void;
 }) {
@@ -143,7 +145,7 @@ export default function EventPrepAiSimulator({
   const [error, setError] = useState('');
   const [result, setResult] = useState<EventPlanAiResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(openPurchaseOnMount);
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
   const [history, setHistory] = useState<Awaited<ReturnType<typeof fetchAiSimulationHistory>>>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);

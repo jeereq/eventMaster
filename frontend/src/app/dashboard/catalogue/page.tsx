@@ -781,6 +781,7 @@ function ClientMarketplaceInner() {
             {planView === 'ai' ? (
               <EventPrepAiSimulator
                 defaultOpen
+                openPurchaseOnMount={searchParams.get('buyTokens') === '1'}
                 defaults={{
                   eventType: brief.eventType,
                   city: brief.city,
