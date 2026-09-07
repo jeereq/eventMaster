@@ -1,5 +1,5 @@
-export const TERMS_VERSION = '1.2';
-export const PRIVACY_VERSION = '1.2';
+export const TERMS_VERSION = '1.4';
+export const PRIVACY_VERSION = '1.4';
 
 export const LEGAL_DOCUMENTS = {
   TERMS: { type: 'TERMS', version: TERMS_VERSION },
