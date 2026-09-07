@@ -190,6 +190,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             location: true,
             latitude: true,
             longitude: true,
+            isPublic: true,
             tablePlan: true,
             eventProgram: true,
             guestGuidelines: true,
@@ -266,10 +267,24 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     let roomLayoutPreview: unknown = null;
     let sourceRoomType: string | null = null;
     let previewLightingPreset: string | null = null;
+    let pricingZones: any[] = [];
 
     const eventObj = guest.event as any;
     if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
       const plan = eventObj.tablePlan;
+      pricingZones = Array.isArray(plan.pricingZones) ? plan.pricingZones : [];
+
+      const isPublicEvent = Boolean(guest.event?.isPublic);
+      const sharingPolicy = (plan.neighborSharingPolicy && typeof plan.neighborSharingPolicy === 'object' ? plan.neighborSharingPolicy : null) as {
+        mode?: 'full' | 'first_name' | 'hidden';
+        shareSameTable?: boolean;
+        shareSameZone?: boolean;
+      } | null;
+
+      const policyMode = sharingPolicy?.mode ?? (isPublicEvent ? 'first_name' : 'full');
+      const shareSameTable = sharingPolicy?.shareSameTable !== false; // default true
+      const shareSameZone = Boolean(sharingPolicy?.shareSameZone); // default false
+
       if (Array.isArray(plan.tables)) {
         tablePlanOverview = plan.tables.map((table: any) => ({
           id: table.id,
@@ -284,6 +299,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             const entry = Object.entries(table.seats || {}).find(([, id]) => id === guestId);
             return entry ? parseInt(entry[0], 10) : undefined;
           })(),
+          pricingZoneId: table.pricingZoneId,
           chairType: table.chairType,
           chairImageUrl: table.chairImageUrl,
           tableColor: table.tableColor,
@@ -301,27 +317,108 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
 
           if (guestSeatEntry) {
             const seatIndex = parseInt(guestSeatEntry[0], 10);
-            const neighborIds = seatEntries
-              .filter(([, id]) => id && id !== guestId)
-              .map(([, id]) => id as string);
+            const tableZone = pricingZones.find((z: any) => z.id === table.pricingZoneId);
 
-            let neighbors: Array<{ id: string; firstName: string; lastName: string; seatIndex?: number }> = [];
-            if (neighborIds.length > 0) {
-              const neighborGuests = await prisma.guest.findMany({
-                where: { id: { in: neighborIds } },
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              });
-              neighbors = neighborGuests.map((g) => {
-                const neighborSeat = seatEntries.find(([, id]) => id === g.id);
-                return {
-                  ...g,
-                  seatIndex: neighborSeat ? parseInt(neighborSeat[0], 10) : undefined,
-                };
-              });
+            let neighbors: Array<{ id: string; firstName: string; lastName: string; anonymous?: boolean; seatIndex?: number }> = [];
+
+            if (shareSameTable) {
+              const neighborIds = seatEntries
+                .filter(([, id]) => id && id !== guestId)
+                .map(([, id]) => id as string);
+
+              if (neighborIds.length > 0) {
+                const neighborGuests = await prisma.guest.findMany({
+                  where: { id: { in: neighborIds } },
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                });
+
+                neighbors = neighborGuests.map((g) => {
+                  const neighborSeat = seatEntries.find(([, id]) => id === g.id);
+                  const seatIdx = neighborSeat ? parseInt(neighborSeat[0], 10) : undefined;
+
+                  if (policyMode === 'hidden') {
+                    return {
+                      id: g.id,
+                      firstName: 'Participant',
+                      lastName: '',
+                      anonymous: true,
+                      seatIndex: seatIdx,
+                    };
+                  }
+                  if (policyMode === 'first_name') {
+                    return {
+                      id: g.id,
+                      firstName: g.firstName,
+                      lastName: g.lastName ? `${g.lastName.charAt(0).toUpperCase()}.` : '',
+                      anonymous: false,
+                      seatIndex: seatIdx,
+                    };
+                  }
+                  return {
+                    ...g,
+                    anonymous: false,
+                    seatIndex: seatIdx,
+                  };
+                });
+              }
+            }
+
+            // Calcul des convives de la même zone si shareSameZone est activé
+            let zoneNeighbors: Array<{ id: string; firstName: string; lastName: string; tableName: string; anonymous?: boolean }> = [];
+            let zoneNeighborsCount = 0;
+            if (table.pricingZoneId) {
+              const otherZoneTables = plan.tables.filter((t: any) => t.id !== table.id && t.pricingZoneId === table.pricingZoneId);
+              const otherZoneGuestIds: Array<{ guestId: string; tableName: string }> = [];
+              for (const zt of otherZoneTables) {
+                const zSeats = zt.seats || {};
+                for (const gid of Object.values(zSeats) as string[]) {
+                  if (gid && gid !== guestId) {
+                    otherZoneGuestIds.push({ guestId: gid, tableName: zt.name });
+                  }
+                }
+              }
+              zoneNeighborsCount = otherZoneGuestIds.length;
+
+              if (shareSameZone && otherZoneGuestIds.length > 0) {
+                const ids = otherZoneGuestIds.map((item) => item.guestId);
+                const zoneGuests = await prisma.guest.findMany({
+                  where: { id: { in: ids } },
+                  select: { id: true, firstName: true, lastName: true },
+                  take: 30,
+                });
+                zoneNeighbors = zoneGuests.map((g) => {
+                  const item = otherZoneGuestIds.find((x) => x.guestId === g.id);
+                  if (policyMode === 'hidden') {
+                    return {
+                      id: g.id,
+                      firstName: 'Participant',
+                      lastName: '',
+                      tableName: item?.tableName || 'Table',
+                      anonymous: true,
+                    };
+                  }
+                  if (policyMode === 'first_name') {
+                    return {
+                      id: g.id,
+                      firstName: g.firstName,
+                      lastName: g.lastName ? `${g.lastName.charAt(0).toUpperCase()}.` : '',
+                      tableName: item?.tableName || 'Table',
+                      anonymous: false,
+                    };
+                  }
+                  return {
+                    id: g.id,
+                    firstName: g.firstName,
+                    lastName: g.lastName,
+                    tableName: item?.tableName || 'Table',
+                    anonymous: false,
+                  };
+                });
+              }
             }
 
             tableDetails = {
@@ -331,7 +428,18 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
               seatIndex,
               chairType: table.chairType,
               chairImageUrl: table.chairImageUrl,
+              pricingZoneId: table.pricingZoneId || null,
+              zoneName: tableZone?.name || null,
+              zoneColor: tableZone?.color || null,
+              privacyPolicy: {
+                mode: policyMode,
+                shareSameTable,
+                shareSameZone,
+                isPublic: isPublicEvent,
+              },
               neighbors,
+              zoneNeighborsCount,
+              zoneNeighbors: shareSameZone ? zoneNeighbors : undefined,
             };
             break;
           }
@@ -419,6 +527,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
       tableDetails,
       tablePlanOverview,
+      pricingZones,
       planFixtures,
       roomOutline,
       roomThemeId,

@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
   HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box,
   Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal,
-  ZoomIn, ZoomOut, Columns
+  ZoomIn, ZoomOut, Columns, ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
@@ -37,6 +37,7 @@ import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
+import type { NeighborSharingPolicy } from '@/lib/eventConfig';
 import Link from 'next/link';
 
 type PlannerView = PlanViewMode;
@@ -84,8 +85,16 @@ interface TablePlannerProps {
     lightingPreset?: LightingPreset | null;
     renderQuality?: 'draft' | 'standard' | 'showcase' | null;
     pricingZones?: PricingZone[];
+    neighborSharingPolicy?: NeighborSharingPolicy;
+    [key: string]: unknown;
   } | null | undefined;
-  onSave: (newTablePlan: { tables: Table[]; fixtures?: unknown[]; pricingZones?: PricingZone[] }) => Promise<void>;
+  onSave: (newTablePlan: {
+    tables: Table[];
+    fixtures?: unknown[];
+    pricingZones?: PricingZone[];
+    neighborSharingPolicy?: NeighborSharingPolicy;
+    [key: string]: unknown;
+  }) => Promise<void>;
   roomName?: string | null;
   roomLayoutBlueprint?: RoomLayoutBlueprint | null;
   previewLightingPreset?: Exclude<LightingPreset, 'auto'>;
@@ -94,6 +103,7 @@ interface TablePlannerProps {
   importingLayout?: boolean;
   editorLevel?: string | null;
   ticketPricingMode?: TicketPricingMode;
+  isPublic?: boolean;
 }
 
 export type PlannerHeightPreset = 'standard' | 'comfort' | 'expanded' | 'screen';
@@ -143,12 +153,29 @@ export default function TablePlanner({
   importingLayout,
   editorLevel = 'complete',
   ticketPricingMode = 'global',
+  isPublic = false,
 }: TablePlannerProps) {
   const caps = roomEditorCapabilities(editorLevel, true);
   const zonePricing = ticketPricingMode === 'by_zone';
   const [pricingZones, setPricingZones] = useState<PricingZone[]>(() =>
     pricingZonesFromTablePlan(initialTablePlan),
   );
+  const [neighborSharingPolicy, setNeighborSharingPolicy] = useState<NeighborSharingPolicy>(() => {
+    const p = (initialTablePlan as any)?.neighborSharingPolicy;
+    if (p && typeof p === 'object') {
+      return {
+        mode: p.mode || (isPublic ? 'first_name' : 'full'),
+        shareSameTable: p.shareSameTable !== false,
+        shareSameZone: Boolean(p.shareSameZone),
+      };
+    }
+    return {
+      mode: isPublic ? 'first_name' : 'full',
+      shareSameTable: true,
+      shareSameZone: false,
+    };
+  });
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [tables, setTables] = useState<Table[]>(() => {
     if (initialTablePlan && Array.isArray(initialTablePlan.tables)) {
       return initialTablePlan.tables;
@@ -157,7 +184,15 @@ export default function TablePlanner({
   });
   useEffect(() => {
     setPricingZones(pricingZonesFromTablePlan(initialTablePlan));
-  }, [initialTablePlan]);
+    const p = (initialTablePlan as any)?.neighborSharingPolicy;
+    if (p && typeof p === 'object') {
+      setNeighborSharingPolicy({
+        mode: p.mode || (isPublic ? 'first_name' : 'full'),
+        shareSameTable: p.shareSameTable !== false,
+        shareSameZone: Boolean(p.shareSameZone),
+      });
+    }
+  }, [initialTablePlan, isPublic]);
   const [fixtures] = useState(() => initialTablePlan?.fixtures ?? []);
   const floorStyle = useMemo(
     () => resolveFloorStyle(
@@ -692,6 +727,7 @@ export default function TablePlanner({
         tables,
         fixtures: fixtures.length ? fixtures : undefined,
         pricingZones,
+        neighborSharingPolicy,
       });
       alert('Plan de table sauvegardé avec succès !');
     } catch (err) {
@@ -976,6 +1012,18 @@ export default function TablePlanner({
           >
             {caps.canAutoAssign ? <Sparkles className="w-4 h-4 mr-1.5" /> : <Lock className="w-4 h-4 mr-1.5 opacity-80" />}
             Placement Magique
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setShowPrivacyModal(true)}
+            variant="secondary"
+            className="transition shadow-sm font-semibold"
+            title="Confidentialité et partage d'informations entre voisins de table, allée ou zone"
+          >
+            <ShieldCheck className="w-4 h-4 mr-1.5 text-primary" />
+            <span className="hidden sm:inline">Partage & Confidentialité</span>
+            <span className="sm:hidden">Partage</span>
           </Button>
 
           <Button
@@ -2522,6 +2570,145 @@ export default function TablePlanner({
               >
                 <Save className="w-4 h-4" />
                 Enregistrer les zones
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Confidentialité & Partage entre convives */}
+      {showPrivacyModal && (
+        <Modal
+          open={showPrivacyModal}
+          onClose={() => setShowPrivacyModal(false)}
+          title={
+            <div className="flex items-center gap-2 text-base font-bold text-foreground">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              <span>Confidentialité & Partage entre convives</span>
+            </div>
+          }
+          description="Déterminez si les informations des participants sur la même table, allée ou zone peuvent être partagées avec les autres invités."
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-foreground block">
+                Mode de visibilité des noms des voisins
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNeighborSharingPolicy((p) => ({ ...p, mode: 'first_name' }))}
+                  className={cn(
+                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                    neighborSharingPolicy.mode === 'first_name'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                      : 'border-border bg-surface hover:bg-surface-muted'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-foreground">Prénoms seuls</span>
+                    {neighborSharingPolicy.mode === 'first_name' && <Check className="w-3.5 h-3.5 text-primary" />}
+                  </div>
+                  <span className="text-[10.5px] text-muted leading-snug">
+                    Prénom affiché (ex. &quot;Sarah M.&quot;). Recommandé pour les événements publics.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNeighborSharingPolicy((p) => ({ ...p, mode: 'hidden' }))}
+                  className={cn(
+                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                    neighborSharingPolicy.mode === 'hidden'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                      : 'border-border bg-surface hover:bg-surface-muted'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-foreground">Anonymat total</span>
+                    {neighborSharingPolicy.mode === 'hidden' && <Check className="w-3.5 h-3.5 text-primary" />}
+                  </div>
+                  <span className="text-[10.5px] text-muted leading-snug">
+                    Aucun nom divulgué. Les sièges apparaissent uniquement comme &quot;Occupés&quot;.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNeighborSharingPolicy((p) => ({ ...p, mode: 'full' }))}
+                  className={cn(
+                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                    neighborSharingPolicy.mode === 'full'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                      : 'border-border bg-surface hover:bg-surface-muted'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-foreground">Partage complet</span>
+                    {neighborSharingPolicy.mode === 'full' && <Check className="w-3.5 h-3.5 text-primary" />}
+                  </div>
+                  <span className="text-[10.5px] text-muted leading-snug">
+                    Prénom et nom affichés (recommandé pour les mariages, galas ou réseaux pro).
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 pt-2 border-t border-border">
+              <label className="flex items-start gap-2.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={neighborSharingPolicy.shareSameTable}
+                  onChange={(e) => setNeighborSharingPolicy((p) => ({ ...p, shareSameTable: e.target.checked }))}
+                  className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                />
+                <div>
+                  <span className="font-semibold text-foreground">
+                    Partager les informations entre convives d&apos;une même table
+                  </span>
+                  <span className="block text-[10.5px] text-muted mt-0.5">
+                    Permet aux personnes placées à la même table de voir les noms de leurs voisins de table.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={neighborSharingPolicy.shareSameZone}
+                  onChange={(e) => setNeighborSharingPolicy((p) => ({ ...p, shareSameZone: e.target.checked }))}
+                  className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                />
+                <div>
+                  <span className="font-semibold text-foreground">
+                    Partager les informations entre voisins de la même allée ou zone
+                  </span>
+                  <span className="block text-[10.5px] text-muted mt-0.5">
+                    Permet aux convives d&apos;une même zone ou allée (ex: Carré VIP) de consulter la liste des invités de la zone.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="px-4 py-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted text-xs font-semibold transition"
+              >
+                Fermer
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPrivacyModal(false);
+                  void handleSavePlan();
+                }}
+                className="px-5 py-2 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-xs font-bold transition shadow-xs flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Enregistrer la politique
               </button>
             </div>
           </div>

@@ -94,7 +94,28 @@ export type EventConfigPayload = {
   themeId: string | null;
   seatSelectionEnabled?: boolean;
   eventProgram?: import('@/lib/eventProgram').EventProgram | null;
+  neighborSharingPolicy?: NeighborSharingPolicy;
   tablePlan?: unknown;
+};
+
+export type NeighborSharingMode = 'full' | 'first_name' | 'hidden';
+
+export interface NeighborSharingPolicy {
+  mode: NeighborSharingMode;
+  shareSameTable: boolean;
+  shareSameZone: boolean;
+}
+
+export const DEFAULT_PUBLIC_SHARING_POLICY: NeighborSharingPolicy = {
+  mode: 'first_name',
+  shareSameTable: true,
+  shareSameZone: false,
+};
+
+export const DEFAULT_PRIVATE_SHARING_POLICY: NeighborSharingPolicy = {
+  mode: 'full',
+  shareSameTable: true,
+  shareSameZone: false,
 };
 
 export function isEventKindId(value: string | null | undefined): value is EventKindId {

@@ -3079,6 +3079,7 @@ Merci de confirmer votre présence :
  onImportRoomLayout={handleImportRoomLayout}
  importingLayout={importingLayout}
  ticketPricingMode={(selectedEvent.ticketPricingMode as 'global' | 'by_zone' | undefined) ?? 'global'}
+ isPublic={selectedEvent.isPublic}
  />
  </div>
  )}

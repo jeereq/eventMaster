@@ -25,6 +25,7 @@ import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { getTableShapeLabel } from '@/lib/tablePlanUtils';
 import { PlanZoomControls } from '@/components/PlanViewChrome';
+import { MapPin, Sparkles } from 'lucide-react';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
 
 interface GuestRoomPlanCanvasProps {
@@ -58,29 +59,52 @@ function TableDetailPopover({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 max-w-[90vw] pointer-events-auto">
-      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-3 shadow-[var(--shadow-soft)] text-left space-y-2">
+    <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-3 w-64 max-w-[90vw] pointer-events-auto animate-fade-in">
+      <div className="bg-surface border border-border rounded-2xl p-3.5 shadow-xl text-left space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-semibold text-foreground text-xs">{table.name}</p>
+          <div className="min-w-0">
+            <p className="font-bold text-foreground text-xs truncate">{table.name}</p>
+            <p className="text-[10px] text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-muted hover:text-foreground text-sm shrink-0 min-h-11 min-w-11 flex items-center justify-center rounded-md hover:bg-surface-muted transition"
+            className="text-muted hover:text-foreground text-sm shrink-0 min-h-11 min-w-11 flex items-center justify-center rounded-lg hover:bg-surface-muted transition"
             aria-label="Fermer les détails de la table"
           >
             ✕
           </button>
         </div>
-        <p className="text-xs text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
+
         {table.isGuestTable && (
-          <span className="inline-block text-xs font-semibold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-md">Votre table</span>
+          <div className="bg-primary/10 border border-primary/25 rounded-xl p-2.5 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Mon emplacement</span>
+            </div>
+            {typeof table.guestSeatIndex === 'number' && (
+              <p className="text-[11px] font-semibold text-foreground">
+                Siège n°{table.guestSeatIndex + 1} réservé à votre nom
+              </p>
+            )}
+          </div>
         )}
+
         {guestNames && guestNames.length > 0 && (
-          <ul className="text-xs text-muted space-y-0.5 pt-1 border-t border-border">
-            {guestNames.map((n) => (
-              <li key={n} className="truncate">{n}</li>
-            ))}
-          </ul>
+          <div className="pt-1.5 border-t border-border">
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1">Convives à cette table</p>
+            <ul className="text-xs text-foreground space-y-1 max-h-32 overflow-y-auto">
+              {guestNames.map((n, i) => (
+                <li key={i} className="truncate flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+                  <span className="truncate">{n}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>
@@ -133,6 +157,24 @@ export default function GuestRoomPlanCanvas({
   );
 
   const markerSize = getGuestTableMarkerSize(tables.length);
+
+  const guestTable = useMemo(
+    () => tables.find((t) => t.isGuestTable || t.id === guestTableId),
+    [tables, guestTableId],
+  );
+
+  const handleCenterOnGuestTable = () => {
+    if (!guestTable || !containerRef.current) return;
+    const pos = displayPositions.get(guestTable.id) ?? { x: guestTable.x, y: guestTable.y };
+    const logical = pctToLogical(pos.x, pos.y);
+    const container = containerRef.current;
+    container.scrollTo({
+      left: logical.x * zoom - container.clientWidth / 2,
+      top: logical.y * zoom - container.clientHeight / 2,
+      behavior: 'smooth',
+    });
+    setSelectedTableId(guestTable.id);
+  };
 
   const fitToContainer = () => {
     const el = containerRef.current;
@@ -196,7 +238,18 @@ export default function GuestRoomPlanCanvas({
 
   return (
     <div className={`space-y-2 ${fill ? 'h-full min-h-0 flex flex-col' : ''} ${className}`} data-guest-no-swipe>
-      <div className="flex items-center justify-end shrink-0">
+      <div className="flex items-center justify-between shrink-0 px-1">
+        {guestTable ? (
+          <button
+            type="button"
+            onClick={handleCenterOnGuestTable}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/25 text-xs font-bold text-primary transition active:scale-95 shadow-2xs"
+            title="Centrer le plan sur mon emplacement"
+          >
+            <MapPin className="w-3.5 h-3.5 text-primary" />
+            <span>Mon emplacement</span>
+          </button>
+        ) : <div />}
         <PlanZoomControls
           zoom={zoom}
           onZoomOut={() => adjustZoom(-0.15)}
@@ -312,7 +365,7 @@ export default function GuestRoomPlanCanvas({
               return (
                 <div
                   key={table.id}
-                  className="absolute flex flex-col items-center"
+                  className={`absolute flex flex-col items-center ${isGuest ? 'z-20' : 'z-10'}`}
                   style={{
                     left: logical.x,
                     top: logical.y,
@@ -322,6 +375,20 @@ export default function GuestRoomPlanCanvas({
                     filter: amount > 0 ? 'drop-shadow(var(--em-item-shadow, 0 8px 12px rgba(0,0,0,0.25)))' : undefined,
                   }}
                 >
+                  {/* Pin / Beacon flottant au-dessus de la table de l'invité */}
+                  {isGuest && (
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-bounce motion-reduce:animate-none">
+                      <div className="px-2.5 py-1 rounded-full bg-primary text-white text-[9.5px] font-black tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary/40">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300"></span>
+                        </span>
+                        <span>Vous êtes ici</span>
+                      </div>
+                      <div className="w-1.5 h-1.5 rotate-45 bg-primary -mt-1 border-r border-b border-white/30" />
+                    </div>
+                  )}
+
                   {isSelected && (
                     <TableDetailPopover
                       table={table}
@@ -333,36 +400,41 @@ export default function GuestRoomPlanCanvas({
                     type="button"
                     onClick={() => setSelectedTableId(isSelected ? null : table.id)}
                     className={`flex items-center justify-center shrink-0 transition-all overflow-hidden ${
- tableVisual.className
- } ${
- isGuest
- ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-background border-amber-500'
- : isSelected
- ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary'
- : 'border-border hover:border-primary'
- }`}
+                      tableVisual.className
+                    } ${
+                      isGuest
+                        ? 'ring-4 ring-primary ring-offset-2 ring-offset-background border-primary shadow-[0_0_24px_rgba(5,150,105,0.45)] scale-105'
+                        : isSelected
+                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary'
+                          : 'border-border hover:border-primary'
+                    }`}
                     style={{
                       width: markerSize,
                       height: markerSize,
                       ...tableVisual.style,
                       backgroundColor: tableVisual.style?.backgroundColor ?? tableVisual.style?.backgroundImage ? undefined : color,
                     }}
-                    aria-label={`Table ${table.name}`}
+                    aria-label={`Table ${table.name}${isGuest ? ' (Votre table)' : ''}`}
                   >
                     <span className="text-[9px] font-black text-foreground leading-none px-0.5 text-center line-clamp-2">
                       {table.name.replace(/^Table\s*/i, 'T')}
                     </span>
                   </button>
-                  <span
-                    className={`mt-1 text-[8px] font-bold text-center leading-tight max-w-[72px] truncate ${
- isGuest ? 'text-amber-300' : 'text-muted'
- }`}
-                  >
-                    {table.name}
-                  </span>
-                  {isGuest && typeof table.guestSeatIndex === 'number' && (
-                    <span className="mt-0.5 text-[8px] font-black uppercase tracking-wide text-amber-200 bg-amber-950/70 px-1.5 py-0.5 rounded">
-                      Siège {table.guestSeatIndex + 1}
+
+                  {isGuest ? (
+                    <div className="flex flex-col items-center mt-1 z-20">
+                      <span className="text-[9px] font-black text-center text-primary bg-primary/15 px-2 py-0.5 rounded-full border border-primary/25 whitespace-nowrap">
+                        ★ {table.name}
+                      </span>
+                      {typeof table.guestSeatIndex === 'number' && (
+                        <span className="mt-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-200 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap">
+                          Siège n°{table.guestSeatIndex + 1}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="mt-1 text-[8px] font-bold text-center leading-tight max-w-[72px] truncate text-muted">
+                      {table.name}
                     </span>
                   )}
                 </div>

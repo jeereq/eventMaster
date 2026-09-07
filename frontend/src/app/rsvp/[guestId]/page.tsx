@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { cn } from "@/lib/cn";
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
@@ -74,7 +74,18 @@ interface GuestRsvpData {
     seatIndex?: number;
     chairType?: string;
     chairImageUrl?: string;
-    neighbors: Array<{ id: string; firstName: string; lastName: string; seatIndex?: number }>;
+    pricingZoneId?: string | null;
+    zoneName?: string | null;
+    zoneColor?: string | null;
+    privacyPolicy?: {
+      mode: 'full' | 'first_name' | 'hidden';
+      shareSameTable: boolean;
+      shareSameZone: boolean;
+      isPublic?: boolean;
+    };
+    neighbors: Array<{ id: string; firstName: string; lastName: string; seatIndex?: number; anonymous?: boolean }>;
+    zoneNeighborsCount?: number;
+    zoneNeighbors?: Array<{ id: string; firstName: string; lastName: string; tableName: string; anonymous?: boolean }>;
   } | null;
   tablePlanOverview?: Array<{
     id: string;
@@ -85,9 +96,14 @@ interface GuestRsvpData {
     y: number;
     occupiedCount: number;
     isGuestTable: boolean;
+    guestSeatIndex?: number;
+    pricingZoneId?: string;
     chairType?: string;
     chairImageUrl?: string;
+    tableColor?: string;
+    tableImageUrl?: string;
   }> | null;
+  pricingZones?: any[] | null;
   planFixtures?: Array<{
     id: string;
     kind: string;
@@ -170,7 +186,9 @@ const lightenColor = (hex: string, percent = 30) => {
 
 export default function RsvpPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const guestId = params.guestId as string;
+  const initialTabParam = searchParams?.get('tab');
   const { site } = usePlatformSite();
 
   const [guest, setGuest] = useState<GuestRsvpData | null>(null);
@@ -188,7 +206,12 @@ export default function RsvpPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Guest Dashboard states
-  const [activeGuestTab, setActiveGuestTab] = useState<'badge' | 'table' | 'route' | 'guestbook' | 'feed'>('badge');
+  const [activeGuestTab, setActiveGuestTab] = useState<'badge' | 'table' | 'route' | 'guestbook' | 'feed'>(() => {
+    if (initialTabParam === 'table' || initialTabParam === 'route' || initialTabParam === 'guestbook' || initialTabParam === 'feed') {
+      return initialTabParam;
+    }
+    return 'badge';
+  });
   const [guestbookMessage, setGuestbookMessage] = useState('');
   const [guestbookPhoto, setGuestbookPhoto] = useState<string | null>(null);
   const [guestbookPhotos, setGuestbookPhotos] = useState<string[]>([]);
@@ -923,6 +946,7 @@ export default function RsvpPage() {
                     previewLightingPreset={
                       (guest.previewLightingPreset as Exclude<LightingPreset, 'auto'> | null) ?? null
                     }
+                    pricingZones={guest.pricingZones ?? null}
                     guestFirstName={guest.firstName}
                     guestLastName={guest.lastName}
                     immersive

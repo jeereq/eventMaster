@@ -12,14 +12,38 @@ import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
-import { LayoutGrid, Users, Maximize2, Download } from 'lucide-react';
+import { LayoutGrid, Users, Maximize2, Download, MapPin, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import { api } from '@/lib/api';
 import { ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { TableShape } from '@/lib/tablePlanUtils';
+import type { PricingZone } from '@/lib/ticketPricing';
 
 type GuestPlanView = PlanViewMode;
+
+export interface GuestTableNeighbor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  seatIndex?: number;
+  anonymous?: boolean;
+}
+
+export interface GuestZoneNeighbor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  tableName: string;
+  anonymous?: boolean;
+}
+
+export interface GuestPrivacyPolicy {
+  mode: 'full' | 'first_name' | 'hidden';
+  shareSameTable: boolean;
+  shareSameZone: boolean;
+  isPublic?: boolean;
+}
 
 export interface GuestTableDetails {
   tableName: string;
@@ -28,7 +52,13 @@ export interface GuestTableDetails {
   seatIndex?: number;
   chairType?: ChairType;
   chairImageUrl?: string;
-  neighbors: Array<{ id: string; firstName: string; lastName: string; seatIndex?: number }>;
+  pricingZoneId?: string | null;
+  zoneName?: string | null;
+  zoneColor?: string | null;
+  privacyPolicy?: GuestPrivacyPolicy;
+  neighbors: GuestTableNeighbor[];
+  zoneNeighborsCount?: number;
+  zoneNeighbors?: GuestZoneNeighbor[];
 }
 
 export interface GuestTablePlanOverviewItem {
@@ -42,6 +72,7 @@ export interface GuestTablePlanOverviewItem {
   isGuestTable: boolean;
   /** Index du siège de l’invité (0-based) si isGuestTable. */
   guestSeatIndex?: number;
+  pricingZoneId?: string;
   chairType?: ChairType;
   chairImageUrl?: string;
   tableColor?: string;
@@ -92,6 +123,7 @@ interface GuestTablePlanViewProps {
   roomLayoutPreview?: RoomLayoutBlueprint | null;
   sourceRoomType?: string | null;
   previewLightingPreset?: Exclude<LightingPreset, 'auto'> | null;
+  pricingZones?: PricingZone[] | null;
   guestFirstName: string;
   guestLastName: string;
   immersive?: boolean;
@@ -106,19 +138,30 @@ function getSeatOccupant(
   if (tableDetails.seatIndex === seatIndex) {
     return {
       type: 'guest' as const,
-      label: `${guestFirstName} ${guestLastName} (Vous)`,
-      initials: `${guestFirstName[0]}${guestLastName[0]}`,
+      label: `${guestFirstName} ${guestLastName} (Vous - Mon emplacement)`,
+      initials: `${guestFirstName[0] || 'V'}${guestLastName[0] || ''}`,
+      anonymous: false,
     };
   }
   const neighbor = tableDetails.neighbors.find((n) => n.seatIndex === seatIndex);
   if (neighbor) {
+    if (neighbor.anonymous) {
+      return {
+        type: 'neighbor' as const,
+        label: `Place occupée (Profil privé)`,
+        initials: '?',
+        anonymous: true,
+      };
+    }
+    const full = `${neighbor.firstName} ${neighbor.lastName}`.trim();
     return {
       type: 'neighbor' as const,
-      label: `${neighbor.firstName} ${neighbor.lastName}`,
-      initials: `${neighbor.firstName[0]}${neighbor.lastName[0]}`,
+      label: full || 'Participant',
+      initials: `${neighbor.firstName[0] || ''}${neighbor.lastName[0] || ''}` || 'P',
+      anonymous: false,
     };
   }
-  return { type: 'empty' as const, label: `Siège ${seatIndex + 1}` };
+  return { type: 'empty' as const, label: `Siège ${seatIndex + 1} (libre)`, initials: '', anonymous: false };
 }
 
 export default function GuestTablePlanView({
@@ -136,6 +179,7 @@ export default function GuestTablePlanView({
   roomLayoutPreview = null,
   sourceRoomType,
   previewLightingPreset,
+  pricingZones = null,
   guestFirstName,
   guestLastName,
   placementAccessible = false,
@@ -146,7 +190,7 @@ export default function GuestTablePlanView({
   const [planHeight, setPlanHeight] = useState(360);
   const guestFullName = `${guestFirstName} ${guestLastName}`;
   const theme = getRoomTheme(roomThemeId);
-  const neighborNames = tableDetails?.neighbors.map((n) => `${n.firstName} ${n.lastName}`) ?? [];
+  const neighborNames = tableDetails?.neighbors.map((n) => (n.anonymous ? 'Place occupée' : `${n.firstName} ${n.lastName}`.trim())) ?? [];
   const guestTableId = tablePlanOverview?.find((t) => t.isGuestTable)?.id;
 
   const previewBlueprint = useMemo(
@@ -162,6 +206,7 @@ export default function GuestTablePlanView({
           depthView,
           fixtures: planFixtures,
           sourceRoomType,
+          pricingZones: pricingZones ?? undefined,
         },
         tablePlanOverview.map((table) => ({
           id: table.id,
@@ -172,6 +217,7 @@ export default function GuestTablePlanView({
           y: table.y,
           chairType: table.chairType,
           tableColor: table.tableColor,
+          pricingZoneId: table.pricingZoneId,
         })),
         roomLayoutPreview,
       );
@@ -186,6 +232,7 @@ export default function GuestTablePlanView({
       depthView,
       planFixtures,
       sourceRoomType,
+      pricingZones,
       roomLayoutPreview,
     ],
   );
@@ -262,22 +309,61 @@ export default function GuestTablePlanView({
         <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
         {effectivePlanView === '3d' && previewBlueprint ? (
           <div className="p-2 sm:p-3 space-y-2">
-            <RoomLayoutPreview
-              blueprint={previewBlueprint}
-              quality="showcase"
-              lightingPreset={previewLighting}
-              showMeta={false}
-              className={cn(
-                opts.fill ? 'flex-1 min-h-[280px] h-full' : undefined,
-                '[&_.em-floor-canvas]:min-h-[280px] [&_.em-floor-canvas]:rounded-xl',
-              )}
-            />
-            <p className="text-[10px] text-muted leading-relaxed shrink-0 px-1">
-              Orbitez pour explorer la salle. Votre table est visible sur le{' '}
-              <button type="button" onClick={() => setPlanView('2d')} className="font-semibold text-primary hover:underline">
-                plan 2D
+            <div className="relative overflow-hidden rounded-xl border border-border bg-foreground/5 shadow-[var(--shadow-soft)]">
+              <RoomLayoutPreview
+                blueprint={previewBlueprint}
+                quality="showcase"
+                lightingPreset={previewLighting}
+                showMeta={false}
+                selectedTableId={guestTableId}
+                className={cn(
+                  opts.fill ? 'flex-1 min-h-[300px] h-full' : 'min-h-[300px] h-[360px] sm:h-[420px]',
+                  '[&_.em-floor-canvas]:min-h-[300px] [&_.em-floor-canvas]:rounded-xl',
+                )}
+              />
+
+              {/* Beacon HUD 3D "Mon emplacement" */}
+              <div className="absolute top-3 left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-foreground/90 backdrop-blur-md px-3.5 py-2 text-background shadow-lg border border-background/20 animate-fade-in pointer-events-none max-w-[85%]">
+                <span className="relative flex h-3 w-3 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                      Mon emplacement 3D
+                    </p>
+                    {tableDetails?.zoneName && (
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate">
+                        {tableDetails.zoneName}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-bold text-white truncate">
+                    {tableDetails?.tableName ?? 'Votre table'}
+                    {tableDetails?.seatIndex !== undefined ? ` · Siège n°${tableDetails.seatIndex + 1}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              {/* Bouton pour basculer en 2D */}
+              <div className="absolute bottom-3 right-3 z-20">
+                <button
+                  type="button"
+                  onClick={() => setPlanView('2d')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface/90 backdrop-blur-md text-foreground border border-border text-xs font-semibold hover:bg-surface shadow-sm transition active:scale-95"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-primary" />
+                  <span>Voir en 2D</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-muted leading-relaxed shrink-0 px-1 flex items-center justify-between">
+              <span>Orbitez pour explorer la salle. Votre table est mise en avant avec un halo doré.</span>
+              <button type="button" onClick={() => setPlanView('2d')} className="font-semibold text-primary hover:underline ml-2 shrink-0">
+                Voir en 2D →
               </button>
-              .
             </p>
           </div>
         ) : (
@@ -314,6 +400,19 @@ export default function GuestTablePlanView({
           borderColor: `color-mix(in srgb, ${theme.accentColor} 28%, var(--border))`,
         }}
       >
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
+            <MapPin className="w-3.5 h-3.5 text-primary" />
+            <span>Mon emplacement</span>
+          </span>
+          {tableDetails.zoneName && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+              <Sparkles className="w-3 h-3" />
+              <span>Zone {tableDetails.zoneName}</span>
+            </span>
+          )}
+        </div>
+
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <h3 className="text-2xl font-display font-semibold text-foreground leading-none">{tableDetails.tableName}</h3>
@@ -397,8 +496,10 @@ export default function GuestTablePlanView({
                         <div
                           className={`w-9 h-9 rounded-xl border flex items-center justify-center text-[8px] font-semibold ${
                             occupant.type === 'guest'
-                              ? 'bg-primary text-white border-primary ring-2 ring-primary/25'
-                              : 'bg-surface-muted border-border text-foreground'
+                              ? 'bg-primary text-white border-primary ring-2 ring-primary/25 shadow-sm'
+                              : occupant.anonymous
+                                ? 'bg-surface-muted/80 border-border/80 text-muted'
+                                : 'bg-surface-muted border-border text-foreground'
                           }`}
                         >
                           {occupant.initials}
@@ -417,28 +518,95 @@ export default function GuestTablePlanView({
       </div>
 
       <div className="space-y-3">
-        <h4 className="font-semibold text-foreground text-xs flex items-center gap-2">
-          <Users className="w-4 h-4 text-primary" />
-          Voisins de table
-        </h4>
-        {tableDetails.neighbors.length === 0 ? (
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h4 className="font-semibold text-foreground text-xs flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            <span>Voisins de table</span>
+          </h4>
+          {tableDetails.privacyPolicy && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded-full border border-border">
+              {tableDetails.privacyPolicy.mode === 'hidden' ? (
+                <>
+                  <EyeOff className="w-3 h-3 text-muted" />
+                  <span>Anonymat préservé</span>
+                </>
+              ) : tableDetails.privacyPolicy.mode === 'first_name' ? (
+                <>
+                  <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>Prénoms partagés</span>
+                </>
+              ) : (
+                <span>Partage complet</span>
+              )}
+            </span>
+          )}
+        </div>
+
+        {tableDetails.privacyPolicy && !tableDetails.privacyPolicy.shareSameTable ? (
+          <div className="rounded-xl border border-border bg-surface-muted/60 p-3 text-xs text-muted space-y-1">
+            <div className="flex items-center gap-1.5 font-semibold text-foreground">
+              <EyeOff className="w-4 h-4 text-muted" />
+              <span>Confidentialité activée</span>
+            </div>
+            <p>
+              Le partage d&apos;informations nominatives entre convives de la même table est désactivé pour cet événement public afin de respecter la vie privée des participants.
+            </p>
+          </div>
+        ) : tableDetails.neighbors.length === 0 ? (
           <p className="text-muted text-xs">Vous êtes seul(e) à cette table pour le moment.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {tableDetails.neighbors.map((neighbor) => (
               <div key={neighbor.id} className="bg-surface border border-border rounded-2xl p-3 flex items-center gap-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-semibold text-[10px] bg-primary/10 text-primary border border-primary/15">
-                  {neighbor.firstName[0]}{neighbor.lastName[0]}
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-semibold text-[10px] bg-primary/10 text-primary border border-primary/15 shrink-0">
+                  {neighbor.anonymous ? '?' : `${neighbor.firstName[0] || ''}${neighbor.lastName[0] || ''}`}
                 </div>
-                <div>
-                  <span className="font-semibold text-foreground text-xs block">{neighbor.firstName} {neighbor.lastName}</span>
-                  <span className="text-[10px] text-muted">{neighbor.seatIndex !== undefined ? `Siège ${neighbor.seatIndex + 1}` : 'Invité'}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-foreground text-xs block truncate">
+                    {neighbor.anonymous ? 'Place réservée' : `${neighbor.firstName} ${neighbor.lastName}`.trim()}
+                  </span>
+                  <span className="text-[10px] text-muted block truncate">
+                    {neighbor.seatIndex !== undefined ? `Siège n°${neighbor.seatIndex + 1}` : 'Invité'}
+                    {neighbor.anonymous ? ' · Profil privé' : ''}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {tableDetails.zoneNeighbors && tableDetails.zoneNeighbors.length > 0 && (
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h4 className="font-semibold text-foreground text-xs flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-500" />
+              <span>Autres convives dans votre zone ({tableDetails.zoneName ?? 'Zone'})</span>
+            </h4>
+            <span className="text-[10px] text-muted font-medium">
+              {tableDetails.zoneNeighborsCount ?? tableDetails.zoneNeighbors.length} participant{(tableDetails.zoneNeighborsCount ?? tableDetails.zoneNeighbors.length) > 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {tableDetails.zoneNeighbors.map((zNeighbor, idx) => (
+              <div key={`${zNeighbor.id}-${idx}`} className="bg-surface border border-border rounded-2xl p-2.5 flex items-center gap-2.5 shadow-[0_4px_16px_rgba(15,23,42,0.03)]">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  {zNeighbor.anonymous ? '?' : `${zNeighbor.firstName[0] || ''}${zNeighbor.lastName[0] || ''}`}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-foreground text-xs block truncate">
+                    {zNeighbor.anonymous ? 'Participant' : `${zNeighbor.firstName} ${zNeighbor.lastName}`.trim()}
+                  </span>
+                  <span className="text-[10px] text-muted truncate block">
+                    {zNeighbor.tableName} {zNeighbor.anonymous ? '· Profil privé' : ''}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 

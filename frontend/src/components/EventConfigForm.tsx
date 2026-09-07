@@ -23,6 +23,7 @@ import {
   ArrowRight,
   ChevronRight,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
@@ -65,6 +66,8 @@ import {
   type EventConfigSource,
   type EventConfigTab,
   type EventKindId,
+  type NeighborSharingMode,
+  type NeighborSharingPolicy,
 } from '@/lib/eventConfig';
 import {
   createEmptyPricingZone,
@@ -162,6 +165,9 @@ export default function EventConfigForm({
   const [tableZoneAssignments, setTableZoneAssignments] = useState<Record<string, string>>({});
   const [ticketsTotal, setTicketsTotal] = useState('');
   const [seatSelection, setSeatSelection] = useState(false);
+  const [neighborSharingMode, setNeighborSharingMode] = useState<NeighborSharingMode>('first_name');
+  const [shareSameTable, setShareSameTable] = useState(true);
+  const [shareSameZone, setShareSameZone] = useState(false);
   const [eventProgram, setEventProgram] = useState<EventProgram>(() => createEmptyProgram());
   const [photos, setPhotos] = useState<string[]>([]);
   const [roomId, setRoomId] = useState('');
@@ -273,6 +279,18 @@ export default function EventConfigForm({
 
     setTicketsTotal(initialEvent.ticketsTotal != null ? String(initialEvent.ticketsTotal) : '');
     setSeatSelection(Boolean((initialEvent as { seatSelectionEnabled?: boolean }).seatSelectionEnabled));
+
+    const initialSharingPolicy = (initialEvent?.tablePlan as any)?.neighborSharingPolicy || (initialEvent as any)?.neighborSharingPolicy;
+    if (initialSharingPolicy && typeof initialSharingPolicy === 'object') {
+      setNeighborSharingMode(initialSharingPolicy.mode || (initialEvent?.isPublic ? 'first_name' : 'full'));
+      setShareSameTable(initialSharingPolicy.shareSameTable !== false);
+      setShareSameZone(Boolean(initialSharingPolicy.shareSameZone));
+    } else {
+      setNeighborSharingMode(initialEvent?.isPublic ? 'first_name' : 'full');
+      setShareSameTable(true);
+      setShareSameZone(false);
+    }
+
     setEventProgram(normalizeEventProgram((initialEvent as { eventProgram?: unknown }).eventProgram));
     setPhotos(photosFromEvent(initialEvent.photos));
     setRoomId(initialEvent.roomId || initialEvent.room?.id || '');
@@ -599,16 +617,29 @@ export default function EventConfigForm({
     const publicEvent = complete ? isPublic : Boolean(initialEvent?.isPublic);
     const paid = complete ? publicEvent && ticketing : Boolean(initialEvent?.ticketingEnabled);
 
-    const planToSave = availableTables.length > 0
-      ? {
-          ...(initialEvent?.tablePlan && typeof initialEvent.tablePlan === 'object' ? initialEvent.tablePlan : {}),
-          pricingZones,
-          tables: availableTables.map((t) => ({
-            ...t,
-            pricingZoneId: tableZoneAssignments[t.id] ?? t.pricingZoneId ?? pricingZones[0]?.id,
-          })),
-        }
-      : undefined;
+    const neighborSharingPolicy: NeighborSharingPolicy = {
+      mode: neighborSharingMode,
+      shareSameTable,
+      shareSameZone,
+    };
+
+    const existingPlan = initialEvent?.tablePlan && typeof initialEvent.tablePlan === 'object'
+      ? (initialEvent.tablePlan as Record<string, unknown>)
+      : {};
+
+    const planToSave = {
+      ...existingPlan,
+      pricingZones: complete && paid && ticketPricingMode === 'by_zone' ? pricingZones : pricingZonesFromTablePlan(initialEvent?.tablePlan),
+      ...(availableTables.length > 0
+        ? {
+            tables: availableTables.map((t) => ({
+              ...t,
+              pricingZoneId: tableZoneAssignments[t.id] ?? t.pricingZoneId ?? pricingZones[0]?.id,
+            })),
+          }
+        : {}),
+      neighborSharingPolicy,
+    };
 
     return {
       title: title.trim(),
@@ -636,6 +667,7 @@ export default function EventConfigForm({
           : null
         : initialEvent?.ticketsTotal ?? null,
       seatSelectionEnabled: complete ? publicEvent && seatSelection : Boolean((initialEvent as { seatSelectionEnabled?: boolean } | undefined)?.seatSelectionEnabled),
+      neighborSharingPolicy,
       eventProgram,
       photos,
       guestGuidelines,
@@ -1400,6 +1432,119 @@ export default function EventConfigForm({
                       </span>
                     </div>
                   </label>
+                </div>
+
+                {/* Confidentialité & Partage entre participants */}
+                <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-primary" />
+                      <span className="font-bold text-xs text-foreground">
+                        Confidentialité & Partage entre convives (Événement public)
+                      </span>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      RGPD & Vie privée
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    Déterminez si les participants peuvent voir les identités des personnes assises à leur table, allée ou zone sur les plans 2D/3D.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setNeighborSharingMode('first_name')}
+                      className={cn(
+                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                        neighborSharingMode === 'first_name'
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                          : 'border-border bg-surface hover:bg-surface-muted'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-foreground">Prénoms seuls</span>
+                        {neighborSharingMode === 'first_name' && <Check className="w-3.5 h-3.5 text-primary" />}
+                      </div>
+                      <span className="text-[10px] text-muted leading-snug">
+                        Prénom visible (ex. &quot;Sarah M.&quot;). Idéal pour la convivialité et la discrétion. (Recommandé)
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNeighborSharingMode('hidden')}
+                      className={cn(
+                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                        neighborSharingMode === 'hidden'
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                          : 'border-border bg-surface hover:bg-surface-muted'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-foreground">Anonymat total</span>
+                        {neighborSharingMode === 'hidden' && <Check className="w-3.5 h-3.5 text-primary" />}
+                      </div>
+                      <span className="text-[10px] text-muted leading-snug">
+                        Aucun nom visible. Les sièges apparaissent simplement &quot;Occupés&quot;.
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNeighborSharingMode('full')}
+                      className={cn(
+                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                        neighborSharingMode === 'full'
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                          : 'border-border bg-surface hover:bg-surface-muted'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-foreground">Partage complet</span>
+                        {neighborSharingMode === 'full' && <Check className="w-3.5 h-3.5 text-primary" />}
+                      </div>
+                      <span className="text-[10px] text-muted leading-snug">
+                        Prénom et nom affichés. Adapté aux conférences ou galas d&apos;affaires.
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <label className="flex items-start gap-2.5 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={shareSameTable}
+                        onChange={(e) => setShareSameTable(e.target.checked)}
+                        className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                      />
+                      <div>
+                        <span className="font-semibold text-foreground">
+                          Autoriser le partage des informations entre personnes de la même table
+                        </span>
+                        <span className="block text-[10.5px] text-muted mt-0.5">
+                          Si décoché, l&apos;invité ne voit aucun détail sur les autres sièges de sa table.
+                        </span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={shareSameZone}
+                        onChange={(e) => setShareSameZone(e.target.checked)}
+                        className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                      />
+                      <div>
+                        <span className="font-semibold text-foreground">
+                          Autoriser le partage des informations entre voisins de la même allée ou zone
+                        </span>
+                        <span className="block text-[10.5px] text-muted mt-0.5">
+                          Permet aux participants d&apos;une même zone tarifaire ou allée de voir la liste des convives présents.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-border">
