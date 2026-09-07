@@ -1,5 +1,6 @@
 import { api } from '@/lib/api';
 import type { InvitationContextSource } from '@/lib/invitationContextSource';
+import type { InvitationArtStyleId } from '@/config/invitationArtStyles';
 import {
   applyServerAllowance,
   getOrCreateDeviceId,
@@ -53,6 +54,7 @@ export async function composeTemplateWithAi(input: {
   generateBackground?: boolean;
   embedText?: boolean;
   contextSource?: InvitationContextSource;
+  artStyle?: InvitationArtStyleId;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const data = await api.post('/templates/ai/compose', {
@@ -62,6 +64,7 @@ export async function composeTemplateWithAi(input: {
     generateBackground: input.generateBackground !== false,
     embedText: Boolean(input.embedText),
     contextSource: input.contextSource || 'none',
+    artStyle: input.artStyle || 'realiste',
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
@@ -79,6 +82,7 @@ export async function composeTemplateWithAiPublic(input: {
   generateBackground?: boolean;
   embedText?: boolean;
   contextSource?: InvitationContextSource;
+  artStyle?: InvitationArtStyleId;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
@@ -92,6 +96,7 @@ export async function composeTemplateWithAiPublic(input: {
     generateBackground: input.generateBackground !== false,
     embedText: Boolean(input.embedText),
     contextSource: input.contextSource || 'none',
+    artStyle: input.artStyle || 'realiste',
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);

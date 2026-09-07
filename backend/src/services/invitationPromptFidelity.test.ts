@@ -186,6 +186,15 @@ describe('processUserPromptForHonestFaces', () => {
     assert.match(scaffold, /Kinshasa/);
   });
 
+  it('applique le style dessin animé dans le scaffold', () => {
+    const scaffold = buildEnglishSceneBriefScaffold('Mariage coutumier Kongo', {
+      referenceCount: 0,
+      artStyleLine: '2D animated-feature look, clean cel-shading',
+    });
+    assert.match(scaffold, /2D animated-feature/);
+    assert.doesNotMatch(scaffold, /photoreal 35mm/);
+  });
+
   it('applique une reformulation Gemini anglaise sur le brief traité', () => {
     const base = processUserPromptForHonestFaces('Dot Kuba ocre et cuivre', { referenceCount: 0 });
     const next = applyEnglishSceneBrief(

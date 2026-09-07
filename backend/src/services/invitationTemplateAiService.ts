@@ -17,6 +17,14 @@ import {
   processUserPromptForHonestFaces,
   type ProcessedInvitationPrompt,
 } from './invitationPromptFidelity.ts';
+import {
+  invitationArtStyleFaceLockNote,
+  invitationArtStyleImageDirective,
+  invitationArtStyleScaffoldLine,
+  invitationArtStyleStructureRules,
+  parseInvitationArtStyle,
+  type InvitationArtStyleId,
+} from './invitationArtStyle.ts';
 
 type HttpError = Error & { status?: number };
 
@@ -64,15 +72,13 @@ Visual truth (non-negotiable):
 - Skin & morphology: record exact melanin tone (golden / warm / mahogany / ebony, Fitzpatrick IV–VI when visible), facial structure, and hair texture (4A–4C, taper fade, braids, locs, bun, wig) as observed.
 - If a detail is blurry, cropped, or unclear: write "unclear" — never fill gaps.
 
-Photographic realism (non-negotiable):
-- People and décor must read as authentic 35mm photography: visible fine pores, natural melanin undertones, soft specular highlights, volumetric shadows.
-- Forbidden: plastic skin, airbrush beauty, wax-doll faces, CGI / cartoon looks.
+{{ART_STYLE_RULES}}
 
 Invitation cloning (when a card is present or the brief says copy / clone / reproduce):
 1) Read exact layout: frame, double gold border, floral arch, baroque or Kuba / art-deco ornaments, margins, paper texture.
 2) Extract the exact palette (background, type, ornaments, foils).
 3) Mirror that structure in JSON (elements, global.frameType, global.palette, fontTheme) and set isInvitationClone=true with clonedCardFeatures filled.
-4) If people photos are also attached, place those exact people photorealistically inside the cloned card frame.
+4) If people photos are also attached, place those exact people inside the cloned card frame in the chosen art style, identity locked.
 
 Priority order:
 1) Reference images = visual truth for people (faces, skin, hair, clothes, pose) AND for any card to clone (layout, ornaments, palette).
@@ -336,6 +342,7 @@ function buildImagePrompt(
     embedText?: boolean;
     organizerContext?: string;
     processed?: ProcessedInvitationPrompt;
+    artStyle?: InvitationArtStyleId;
   },
 ): string {
   const processed = options?.processed;
@@ -356,10 +363,14 @@ function buildImagePrompt(
     if (processed.referenceRoles) parts.push(processed.referenceRoles);
   }
 
+  const artStyle = parseInvitationArtStyle(options?.artStyle);
   parts.push(
     'Create ONE vertical print-ready invitation artwork (9:16, 1024x1536). Purpose: luxury printed invitation card for a real event in Central Africa / RDC.',
-    'Photoreal 35mm / 85mm portrait language: natural pores, real fabric drape, soft volumetric light. No CGI, cartoon, or airbrushed beauty faces.',
+    invitationArtStyleImageDirective(artStyle),
   );
+  if (hasPeople) {
+    parts.push(invitationArtStyleFaceLockNote(artStyle));
+  }
 
   if (isClone) {
     parts.push(
@@ -448,8 +459,12 @@ function buildImagePrompt(
   return parts.join('\n').slice(0, hasPeople ? 5200 : 5000);
 }
 
-function structureSystemPrompt(embedText: boolean): string {
+function structureSystemPrompt(embedText: boolean, artStyle?: InvitationArtStyleId): string {
+  const style = parseInvitationArtStyle(artStyle);
   return STRUCTURE_SYSTEM.replace(
+    '{{ART_STYLE_RULES}}',
+    invitationArtStyleStructureRules(style),
+  ).replace(
     '- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).',
     embedText
       ? '- Vertical print-ready image WITH sharp embedded invitation typography (names, date, venue from the brief), correctly spelled, never covering faces.'
@@ -505,7 +520,7 @@ ${options?.embedText ? '6) Embed brief text (names, date, venue) in backgroundPr
 
 async function reformulateUserBriefToEnglish(
   processed: ProcessedInvitationPrompt,
-  options?: { referenceCount?: number; embedText?: boolean },
+  options?: { referenceCount?: number; embedText?: boolean; artStyle?: InvitationArtStyleId },
 ): Promise<ProcessedInvitationPrompt> {
   if (!getGeminiApiKey()) return processed;
   try {
@@ -517,6 +532,7 @@ async function reformulateUserBriefToEnglish(
         {
           referenceCount: options?.referenceCount,
           embedText: options?.embedText,
+          artStyleLine: invitationArtStyleScaffoldLine(parseInvitationArtStyle(options?.artStyle)),
         },
       ),
       temperature: 0.25,
@@ -565,13 +581,14 @@ async function visionStructure(
     embedText?: boolean;
     organizerContext?: string;
     processed?: ProcessedInvitationPrompt;
+    artStyle?: InvitationArtStyleId;
   },
 ): Promise<VisionResult> {
   const hasRefs = imageUrls.length > 0;
   if (getGeminiApiKey()) {
     try {
       const parsed = await requestGeminiJson({
-        system: structureSystemPrompt(Boolean(options?.embedText)),
+        system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle),
         userText: visionUserText(prompt, hasRefs, options),
         imageUrls,
         temperature: 0.2,
@@ -620,7 +637,7 @@ async function visionStructure(
         temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: structureSystemPrompt(Boolean(options?.embedText)) },
+          { role: 'system', content: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle) },
           { role: 'user', content: userContent },
         ],
       }),
@@ -1093,7 +1110,7 @@ async function generateImageWithNanoBanana(
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean; embedText?: boolean },
+  options?: { hasPeople?: boolean; embedText?: boolean; artStyle?: InvitationArtStyleId },
   model: string = getNanoBananaProModel(),
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   const hasRefs = referenceUrls.length > 0;
@@ -1121,7 +1138,7 @@ async function generateImageWithNanoBanana(
 
   const promptText = hasPeople
     ? imagePrompt
-    : `Vertical 9:16 luxury invitation. Photoreal paper and florals. If people appear, Black African hosts only — never Caucasian stock faces.
+    : `Vertical 9:16 luxury invitation. ${invitationArtStyleImageDirective(parseInvitationArtStyle(options?.artStyle))} If people appear, Black African hosts only — never Caucasian stock faces.
 ${options?.embedText ? 'Embed invitation typography from the brief.\n' : ''}
 ${imagePrompt}`;
 
@@ -1267,7 +1284,7 @@ async function createNewInvitationImage(
   imageUrls: string[],
   imagePrompt: string,
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean; embedText?: boolean },
+  options?: { hasPeople?: boolean; embedText?: boolean; artStyle?: InvitationArtStyleId },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   const nanoKey = getNanoBananaApiKey();
   if (nanoKey) {
@@ -1362,6 +1379,7 @@ export async function composeInvitationTemplateAi(input: {
   deviceId?: string | null;
   authUserId?: string | null;
   contextSource?: string | null;
+  artStyle?: string | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const prompt = String(input.prompt || '').trim();
@@ -1369,6 +1387,8 @@ export async function composeInvitationTemplateAi(input: {
     fail(400, 'Décrivez le style d’invitation souhaité (au moins quelques mots).');
   }
   const embedText = Boolean(input.embedText);
+  const artStyle = parseInvitationArtStyle(input.artStyle);
+  const artStyleLine = invitationArtStyleScaffoldLine(artStyle);
   const imageUrls = (input.imageUrls || [])
     .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))
     .map((u) => u.trim())
@@ -1377,10 +1397,12 @@ export async function composeInvitationTemplateAi(input: {
   const processedBase = processUserPromptForHonestFaces(prompt, {
     referenceCount: imageUrls.length,
     embedText,
+    artStyleLine,
   });
   const processed = await reformulateUserBriefToEnglish(processedBase, {
     referenceCount: imageUrls.length,
     embedText,
+    artStyle,
   });
   const contextSource = parseInvitationContextSource(input.contextSource);
   const composeContext = await loadInvitationComposeContext({
@@ -1397,6 +1419,7 @@ export async function composeInvitationTemplateAi(input: {
     embedText,
     organizerContext: organizerContextEn,
     processed,
+    artStyle,
   });
   if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;
@@ -1410,6 +1433,7 @@ export async function composeInvitationTemplateAi(input: {
       embedText,
       organizerContext: organizerContextEn,
       processed,
+      artStyle,
     },
   );
 
@@ -1426,6 +1450,7 @@ export async function composeInvitationTemplateAi(input: {
         {
           hasPeople: Boolean(structured.visualAnalysis?.hasPeople) && imageUrls.length > 0,
           embedText,
+          artStyle,
         },
       );
       bgImageUrl = created.url;
@@ -1442,6 +1467,7 @@ export async function composeInvitationTemplateAi(input: {
     (global as Record<string, unknown>).aiVisualAnalysis = structured.visualAnalysis;
   }
   (global as Record<string, unknown>).aiEmbedText = embedText;
+  (global as Record<string, unknown>).aiArtStyle = artStyle;
   (global as Record<string, unknown>).aiContextSource = contextSource;
   if (hasUsableComposeContext(composeContext)) {
     (global as Record<string, unknown>).aiOrganizerContext = {

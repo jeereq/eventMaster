@@ -21,6 +21,12 @@ import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryL
 import PromptModelSelector from '@/components/PromptModelSelector';
 import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
+import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
+import {
+ persistInvitationArtStyle,
+ readStoredInvitationArtStyle,
+ type InvitationArtStyleId,
+} from '@/config/invitationArtStyles';
 import {
  persistInvitationContextSource,
  readStoredInvitationContextSource,
@@ -319,6 +325,7 @@ export default function TemplatesPage() {
  const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
+ const [aiComposeArtStyle, setAiComposeArtStyle] = useState<InvitationArtStyleId>(() => readStoredInvitationArtStyle());
  const [aiComposeContextSource, setAiComposeContextSource] = useState<InvitationContextSource>('none');
  const [aiComposeDragging, setAiComposeDragging] = useState(false);
  const [aiImageDownloading, setAiImageDownloading] = useState(false);
@@ -1112,6 +1119,7 @@ export default function TemplatesPage() {
  generateBackground: true,
  embedText: aiComposeEmbedText,
  contextSource: aiComposeContextSource,
+ artStyle: aiComposeArtStyle,
  });
  // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
  const stageTimer = window.setTimeout(() => {
@@ -1333,6 +1341,18 @@ export default function TemplatesPage() {
  <p className="mt-2 text-[11px] text-muted">
  Besoin d’un brief prêt ? Ouvrez l’onglet <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Prompts</button> — les 4 mariages coutumiers sont en un tap.
  </p>
+
+ <div className="mt-3">
+ <InvitationArtStylePicker
+ id="ai-compose-art-style"
+ value={aiComposeArtStyle}
+ onChange={(style) => {
+ setAiComposeArtStyle(style);
+ persistInvitationArtStyle(style);
+ }}
+ disabled={aiComposeBusy}
+ />
+ </div>
 
  <div className="mt-3">
  <InvitationContextSourcePicker

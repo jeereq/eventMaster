@@ -51,6 +51,12 @@ import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryL
 import PromptModelSelector from '@/components/PromptModelSelector';
 import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
+import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
+import {
+  persistInvitationArtStyle,
+  readStoredInvitationArtStyle,
+  type InvitationArtStyleId,
+} from '@/config/invitationArtStyles';
 import {
   persistInvitationContextSource,
   readStoredInvitationContextSource,
@@ -196,6 +202,7 @@ export default function LandingInvitationAiGenerator({
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [embedText, setEmbedText] = useState(false);
+  const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(() => readStoredInvitationArtStyle());
   const [contextSource, setContextSource] = useState<InvitationContextSource>('none');
   const [downloading, setDownloading] = useState(false);
 
@@ -481,6 +488,7 @@ export default function LandingInvitationAiGenerator({
         files,
         embedText,
         contextSource,
+        artStyle,
       });
       if (seq !== generationSeq.current) return;
       setResult(data.content);
@@ -867,6 +875,16 @@ export default function LandingInvitationAiGenerator({
                       : 'Ex. Mariage princier, or et ivoire, éclairage naturel, invitation WhatsApp…'
                   }
                   className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
+                />
+
+                <InvitationArtStylePicker
+                  id={`${id}-art-style`}
+                  value={artStyle}
+                  onChange={(style) => {
+                    setArtStyle(style);
+                    persistInvitationArtStyle(style);
+                  }}
+                  disabled={busy}
                 />
 
                 <div className="pt-1">

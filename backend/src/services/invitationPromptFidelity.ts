@@ -120,7 +120,7 @@ export function buildHonestFaceIdentityHeader(referenceCount: number): string {
  */
 export function buildEnglishSceneBriefScaffold(
   decorBrief: string,
-  options?: { referenceCount?: number; embedText?: boolean },
+  options?: { referenceCount?: number; embedText?: boolean; artStyleLine?: string },
 ): string {
   const cleaned = collapseSpaces(decorBrief).slice(0, 900);
   if (!cleaned) return '';
@@ -146,10 +146,8 @@ export function buildEnglishSceneBriefScaffold(
     'tall 9:16 portrait frame, centered ceremonial focus, generous margins for lettering, soft depth of field on florals and paper grain';
 
   const styleParts = [
-    'photoreal 35mm editorial print look',
-    'natural materials (cotton paper, gold foil, fresh florals)',
-    'warm volumetric light',
-    'no CGI, no cartoon, no airbrushed beauty faces',
+    options?.artStyleLine
+      || 'photoreal 35mm editorial print look; natural materials (cotton paper, gold foil, fresh florals); warm volumetric light; no CGI, no cartoon, no airbrushed beauty faces',
   ];
   if (options?.embedText) {
     styleParts.push('sharp embedded invitation typography for names, date and venue when provided');
@@ -176,7 +174,7 @@ export function buildEnglishSceneBriefScaffold(
 export function buildBriefReformulationUserText(
   originalBrief: string,
   decorBrief: string,
-  options?: { referenceCount?: number; embedText?: boolean },
+  options?: { referenceCount?: number; embedText?: boolean; artStyleLine?: string },
 ): string {
   const refs = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
   return `ORIGINAL USER BRIEF (any language — preserve facts):
@@ -192,6 +190,9 @@ ${decorBrief.slice(0, 1200)}
 Context flags:
 - referencePhotoCount: ${refs}
 - embedInvitationTypography: ${options?.embedText ? 'yes' : 'no'}
+- artStyle: ${options?.artStyleLine || 'photoreal 35mm editorial print look'}
+
+The [Style] clause of englishSceneBrief MUST follow artStyle. Do not force photoreal if another style is requested.
 
 Rewrite into englishSceneBrief now.`;
 }
@@ -240,7 +241,7 @@ export function applyEnglishSceneBrief(
 
 export function processUserPromptForHonestFaces(
   prompt: string,
-  options?: { referenceCount?: number; embedText?: boolean },
+  options?: { referenceCount?: number; embedText?: boolean; artStyleLine?: string },
 ): ProcessedInvitationPrompt {
   const originalBrief = collapseSpaces(prompt).slice(0, 1500);
   const referenceCount = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
@@ -250,6 +251,7 @@ export function processUserPromptForHonestFaces(
   const englishSceneBrief = buildEnglishSceneBriefScaffold(decorBrief, {
     referenceCount,
     embedText: options?.embedText,
+    artStyleLine: options?.artStyleLine,
   });
 
   const honestyNote = referenceCount
