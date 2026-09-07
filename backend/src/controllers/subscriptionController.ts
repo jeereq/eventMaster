@@ -16,8 +16,10 @@ import { notifyPlatformStaff } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import {
   getSaasPaymentMode,
+  getSubscriptionDiscountAccess,
   isOnlinePaymentsEnabled,
 } from '../services/platformSettingsService';
+import { resolveSubscriptionDiscountAccess } from '../services/subscriptionDiscountAccess';
 import {
   activateSubscriptionRequest,
   computeSubscriptionCheckoutAmount,
@@ -112,6 +114,11 @@ export async function submitDiscountRequest(req: AuthenticatedRequest, res: Resp
     const tenantId = req.user?.tenantId;
     if (!tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié.' });
+    }
+
+    const discountGate = resolveSubscriptionDiscountAccess(tenantId, getSubscriptionDiscountAccess());
+    if (!discountGate.allowed) {
+      return res.status(403).json({ error: discountGate.reason });
     }
 
     const { requestedPlan, durationDays, requestedDiscountPercent, requestedAmount, note } = req.body || {};
@@ -620,10 +627,19 @@ export async function rejectSubscriptionRequest(req: AuthenticatedRequest, res: 
 
 // 6. Get public/authenticated subscription plans from settings
 export async function getSubscriptionPlans(req: AuthenticatedRequest, res: Response) {
+  const access = getSubscriptionDiscountAccess();
+  const gate = resolveSubscriptionDiscountAccess(req.user?.tenantId, access);
   return res.json({
     ...getPlansConfiguration(),
     saasPaymentMode: getSaasPaymentMode(),
     onlinePaymentsEnabled: isOnlinePaymentsEnabled(),
+    discountRequestsAllowed: gate.allowed,
+    discountCampaign: {
+      enabled: access.enabled,
+      periodStart: access.periodStart,
+      periodEnd: access.periodEnd,
+      periodActive: gate.periodActive,
+    },
   });
 }
 

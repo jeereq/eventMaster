@@ -80,9 +80,10 @@ export default function SubscriptionDiscountRequestModal({
           avec un lien de paiement au tarif négocié. La place n’est pas activée tant que le paiement n’est pas validé.
         </p>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2" role="group" aria-label="Type de rabais">
           <button
             type="button"
+            aria-pressed={mode === 'percent'}
             onClick={() => setMode('percent')}
             className={`flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold ${
               mode === 'percent' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
@@ -92,6 +93,7 @@ export default function SubscriptionDiscountRequestModal({
           </button>
           <button
             type="button"
+            aria-pressed={mode === 'amount'}
             onClick={() => setMode('amount')}
             className={`flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold ${
               mode === 'amount' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
@@ -140,7 +142,7 @@ export default function SubscriptionDiscountRequestModal({
           />
         </label>
 
-        {error && <p className="text-xs font-medium text-rose-600">{error}</p>}
+        {error && <p className="text-xs font-medium text-danger" role="alert">{error}</p>}
 
         <div className="flex gap-2">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1" disabled={submitting}>

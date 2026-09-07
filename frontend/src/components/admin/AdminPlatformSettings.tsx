@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { api } from '@/lib/api';
 import {
-  Check, Globe, Loader2, Mail, MapPin, MessageSquare, ShieldAlert, Volume2, Wallet,
+  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -71,6 +72,12 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   twilioAuthToken?: string;
   twilioPhoneNumber?: string;
   audioNotifications?: typeof DEFAULT_AUDIO_NOTIFICATIONS;
+  subscriptionDiscountAccess?: {
+    enabled?: boolean;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    tenantIds?: string[];
+  };
 };
 
 type SettingsSectionId =
@@ -387,11 +394,15 @@ export default function AdminPlatformSettings({
                 </div>
                 <p className="text-xs text-muted md:col-span-2">
                   Sans credentials, les paiements FlexPay sont simulés. Env :{' '}
-                  <code className="text-[11px]">FLEXPAY_CARD_TOKEN</code>,{' '}
-                  <code className="text-[11px]">FLEXPAY_CARD_MERCHANT</code>.
+                  <code className="font-mono text-xs">FLEXPAY_CARD_TOKEN</code>,{' '}
+                  <code className="font-mono text-xs">FLEXPAY_CARD_MERCHANT</code>.
                 </p>
               </div>
             )}
+            <DiscountAccessEditor
+              value={value.subscriptionDiscountAccess}
+              onChange={(subscriptionDiscountAccess) => patch({ subscriptionDiscountAccess })}
+            />
             <div className="pt-4 mt-2 border-t border-border space-y-4">
                 <SectionTitle icon={Wallet}>Jetons IA</SectionTitle>
                 <p className="text-xs text-muted -mt-2">
@@ -1005,6 +1016,185 @@ function WelcomeAiGrantsEditor({
             })}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+type DiscountAccessValue = NonNullable<AdminPlatformSettingsValues['subscriptionDiscountAccess']>;
+
+function DiscountAccessEditor({
+  value,
+  onChange,
+}: {
+  value?: DiscountAccessValue;
+  onChange: (next: DiscountAccessValue) => void;
+}) {
+  const access = {
+    enabled: value?.enabled !== false,
+    periodStart: value?.periodStart ?? '',
+    periodEnd: value?.periodEnd ?? '',
+    tenantIds: value?.tenantIds ?? [],
+  };
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Array<{ id: string; name: string; plan: string }>>([]);
+  const [named, setNamed] = useState<Record<string, string>>({});
+  const [searching, setSearching] = useState(false);
+
+  const patch = (partial: Partial<DiscountAccessValue>) => {
+    onChange({
+      enabled: access.enabled,
+      periodStart: access.periodStart || null,
+      periodEnd: access.periodEnd || null,
+      tenantIds: access.tenantIds,
+      ...partial,
+    });
+  };
+
+  const allowlistedIds = access.tenantIds.join('|');
+  useEffect(() => {
+    const ids = allowlistedIds ? allowlistedIds.split('|') : [];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void Promise.all(
+      ids.map((id) =>
+        api
+          .get(`/admin/tenants?q=${encodeURIComponent(id)}&pageSize=1`)
+          .then((data: { items?: Array<{ id: string; name: string }> }) => {
+            const item = data.items?.find((tenant) => tenant.id === id);
+            return item ? ([id, item.name] as const) : null;
+          })
+          .catch(() => null),
+      ),
+    ).then((pairs) => {
+      if (cancelled) return;
+      setNamed((prev) => {
+        const next = { ...prev };
+        for (const pair of pairs) {
+          if (pair) next[pair[0]] = pair[1];
+        }
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [allowlistedIds]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      setSearching(true);
+      void api
+        .get(`/admin/tenants?q=${encodeURIComponent(q)}&pageSize=8`)
+        .then((data: { items?: Array<{ id: string; name: string; plan: string }> }) => {
+          setResults(Array.isArray(data.items) ? data.items : []);
+        })
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 280);
+    return () => window.clearTimeout(handle);
+  }, [query]);
+
+  const addTenant = (id: string, name: string) => {
+    if (access.tenantIds.includes(id)) return;
+    setNamed((prev) => ({ ...prev, [id]: name }));
+    patch({ tenantIds: [...access.tenantIds, id] });
+    setQuery('');
+    setResults([]);
+  };
+
+  return (
+    <div className="pt-4 mt-2 border-t border-border space-y-4">
+      <SectionTitle icon={Percent}>Paiement au rabais</SectionTitle>
+      <p className="text-xs text-muted -mt-2 leading-relaxed">
+        Ouvert pour tout le monde si aucune période ni organisation n’est renseignée. Une organisation listée
+        reste éligible hors campagne. Une période ouvre le rabais à toutes les organisations.
+      </p>
+      <label className="flex items-center justify-between gap-3 min-h-11 cursor-pointer">
+        <span className="text-sm font-medium text-foreground">Autoriser les demandes de rabais</span>
+        <input
+          type="checkbox"
+          checked={access.enabled}
+          onChange={(e) => patch({ enabled: e.target.checked })}
+          className="accent-primary w-5 h-5"
+        />
+      </label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className={labelClass} htmlFor="discount-period-start">Début de campagne</label>
+          <input
+            id="discount-period-start"
+            type="date"
+            value={access.periodStart}
+            onChange={(e) => patch({ periodStart: e.target.value || null })}
+            disabled={!access.enabled}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass} htmlFor="discount-period-end">Fin de campagne</label>
+          <input
+            id="discount-period-end"
+            type="date"
+            value={access.periodEnd}
+            onChange={(e) => patch({ periodEnd: e.target.value || null })}
+            disabled={!access.enabled}
+            className={fieldClass}
+          />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass} htmlFor="discount-tenant-search">Organisations toujours éligibles</label>
+        <input
+          id="discount-tenant-search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          disabled={!access.enabled}
+          placeholder="Rechercher une organisation…"
+          className={fieldClass}
+        />
+        {searching ? <p className="text-xs text-muted">Recherche…</p> : null}
+        {results.length > 0 && (
+          <ul className="border border-border rounded-xl overflow-hidden bg-surface">
+            {results.map((tenant) => (
+              <li key={tenant.id}>
+                <button
+                  type="button"
+                  onClick={() => addTenant(tenant.id, tenant.name)}
+                  className="w-full min-h-11 px-3 text-left text-sm hover:bg-surface-muted"
+                >
+                  {tenant.name} <span className="text-muted">· {tenant.plan}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {access.tenantIds.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {access.tenantIds.map((id) => (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 min-h-11 pl-3 pr-1 rounded-full bg-primary/10 text-primary text-xs font-semibold"
+              >
+                {named[id] || id.slice(0, 8)}
+                <button
+                  type="button"
+                  aria-label={`Retirer ${named[id] || 'cette organisation'}`}
+                  onClick={() => patch({ tenantIds: access.tenantIds.filter((item) => item !== id) })}
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full hover:bg-primary/15"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

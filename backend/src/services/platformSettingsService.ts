@@ -14,6 +14,11 @@ import {
   sanitizeWelcomeGrantRules,
   type WelcomeGrantRules,
 } from './welcomeAiTokensPolicy';
+import {
+  DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
+  sanitizeSubscriptionDiscountAccess,
+  type SubscriptionDiscountAccess,
+} from './subscriptionDiscountAccess';
 
 const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
 const PLATFORM_CONFIG_ID = 'default';
@@ -130,6 +135,8 @@ export interface PlatformSettings {
   welcomeAiGrants: WelcomeGrantRules;
   /** Sons in-app des notifications plateforme (cloche web). */
   audioNotifications: AudioNotificationsSettings;
+  /** Ouverture des demandes de rabais (période et/ou organisations). */
+  subscriptionDiscountAccess: SubscriptionDiscountAccess;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -170,6 +177,7 @@ export interface PublicSiteConfig {
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
   audioNotifications: AudioNotificationsSettings;
+  subscriptionDiscountAccess: Pick<SubscriptionDiscountAccess, 'enabled' | 'periodStart' | 'periodEnd'>;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -216,6 +224,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   aiTokenMinPurchaseCdf: DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
   welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
+  subscriptionDiscountAccess: DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -372,6 +381,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     ),
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+    subscriptionDiscountAccess: sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess),
   };
 }
 
@@ -401,6 +411,7 @@ function buildNextSettings(
   next.aiTokenMinPurchaseCdf = sanitizeAiTokenMinPurchaseCdf(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
   next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
   next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
+  next.subscriptionDiscountAccess = sanitizeSubscriptionDiscountAccess(next.subscriptionDiscountAccess);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -511,7 +522,19 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     ),
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+    subscriptionDiscountAccess: (() => {
+      const access = sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess);
+      return {
+        enabled: access.enabled,
+        periodStart: access.periodStart,
+        periodEnd: access.periodEnd,
+      };
+    })(),
   };
+}
+
+export function getSubscriptionDiscountAccess(settings = loadPlatformSettings()) {
+  return sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess);
 }
 
 export function getContactDestinations(settings = loadPlatformSettings()) {

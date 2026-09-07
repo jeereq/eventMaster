@@ -50,6 +50,11 @@ export interface PublicSiteConfig {
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
   audioNotifications: AudioNotificationsSettings;
+  subscriptionDiscountAccess: {
+    enabled: boolean;
+    periodStart: string | null;
+    periodEnd: string | null;
+  };
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -87,6 +92,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   aiTokenMinPurchaseCdf: 2500,
   welcomeAiGrants: DEFAULT_WELCOME_AI_GRANTS,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
+  subscriptionDiscountAccess: { enabled: true, periodStart: null, periodEnd: null },
 };
 
 interface PlatformSiteContextValue {
@@ -124,6 +130,11 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
           : DEFAULT_PUBLIC_SITE.aiTokenMinPurchaseCdf,
         welcomeAiGrants: sanitizeWelcomeAiGrants(data.welcomeAiGrants),
         audioNotifications: sanitizeAudioNotifications(data.audioNotifications),
+        subscriptionDiscountAccess: {
+          enabled: data.subscriptionDiscountAccess?.enabled !== false,
+          periodStart: data.subscriptionDiscountAccess?.periodStart ?? null,
+          periodEnd: data.subscriptionDiscountAccess?.periodEnd ?? null,
+        },
       };
       setSite(next);
 

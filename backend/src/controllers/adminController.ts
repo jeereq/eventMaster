@@ -218,6 +218,7 @@ export async function listAdminTenants(req: AuthenticatedRequest, res: Response)
     if (q) {
       prismaAnd(where, {
         OR: [
+          { id: q },
           { name: { contains: q, mode: 'insensitive' } },
           { manager: { name: { contains: q, mode: 'insensitive' } } },
           { manager: { email: { contains: q, mode: 'insensitive' } } },

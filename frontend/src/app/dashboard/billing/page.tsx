@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Alert, SkeletonBillingView, Button } from '@/components/ui';
+import { Alert, SkeletonBillingView, Button, StatusPill } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
@@ -90,6 +90,29 @@ interface SubscriptionRequest {
   flexPayChannel?: string | null;
 }
 
+function requestStatusTone(req: SubscriptionRequest): 'emerald' | 'rose' | 'primary' | 'amber' {
+  if (req.status === 'APPROVED') return 'emerald';
+  if (req.status === 'REJECTED') return 'rose';
+  if (req.status === 'QUOTED') return 'primary';
+  return 'amber';
+}
+
+function requestStatusLabel(req: SubscriptionRequest) {
+  if (req.status === 'APPROVED') return 'Approuvée';
+  if (req.status === 'REJECTED') return 'Refusée';
+  if (req.status === 'QUOTED') return 'Rabais validé — à payer';
+  if (req.requestKind === 'discount') return 'Rabais en examen';
+  return 'En attente';
+}
+
+function formatCampaignWindow(start: string | null, end: string | null) {
+  const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('fr-FR');
+  if (start && end) return `du ${fmt(start)} au ${fmt(end)}`;
+  if (start) return `à partir du ${fmt(start)}`;
+  if (end) return `jusqu’au ${fmt(end)}`;
+  return null;
+}
+
 function FeatureCell({ value }: { value: string | boolean }) {
   if (value === true) return <Check className="w-4 h-4 text-emerald-600 mx-auto" />;
   if (value === false) return <Minus className="w-4 h-4 text-muted mx-auto" />;
@@ -137,6 +160,13 @@ function BillingPageInner() {
     catalogAmount: number;
   } | null>(null);
   const [discountSubmitting, setDiscountSubmitting] = useState(false);
+  const [discountRequestsAllowed, setDiscountRequestsAllowed] = useState(true);
+  const [discountCampaign, setDiscountCampaign] = useState<{
+    enabled: boolean;
+    periodStart: string | null;
+    periodEnd: string | null;
+    periodActive: boolean;
+  } | null>(null);
 
   const loadBillingStatus = async () => {
     try {
@@ -160,6 +190,12 @@ function BillingPageInner() {
         setRequests(requestsData);
       }
       setInvoices(invoicesData.invoices || []);
+      if (typeof plansData?.discountRequestsAllowed === 'boolean') {
+        setDiscountRequestsAllowed(plansData.discountRequestsAllowed);
+      }
+      if (plansData?.discountCampaign) {
+        setDiscountCampaign(plansData.discountCampaign);
+      }
     } catch (err: any) {
       setError('Impossible de charger les informations de facturation.');
     } finally {
@@ -339,6 +375,11 @@ function BillingPageInner() {
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
+      {discountCampaign?.enabled && discountCampaign.periodActive && formatCampaignWindow(discountCampaign.periodStart, discountCampaign.periodEnd) && (
+        <Alert variant="info">
+          Campagne de rabais ouverte {formatCampaignWindow(discountCampaign.periodStart, discountCampaign.periodEnd)}. Demandez un tarif négocié sur un forfait, puis payez le montant validé.
+        </Alert>
+      )}
       {pendingSignupPlan && (
         <Alert variant="info">
           Forfait choisi à l’inscription : <strong>{pendingSignupPlan}</strong>. Votre espace reste
@@ -416,14 +457,12 @@ function BillingPageInner() {
                 <span className="text-2xl font-black text-foreground">
                   {plans.find((p) => p.id === billing.plan)?.displayName || billing.plan}
                 </span>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                  billing.plan === 'FREE'
-                    ? 'bg-amber-50 text-amber-800'
-                    : 'bg-emerald-50 text-emerald-700'
-                }`}>
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  {billing.plan === 'FREE' ? 'Sans abonnement payant' : 'Actif'}
-                </span>
+                <StatusPill tone={billing.plan === 'FREE' ? 'amber' : 'emerald'} className="text-xs">
+                  <span className="inline-flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    {billing.plan === 'FREE' ? 'Sans abonnement payant' : 'Actif'}
+                  </span>
+                </StatusPill>
                 {billing.plan !== 'FREE' && billing.billingCycle === 'annual' && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
                     Cycle annuel
@@ -575,7 +614,7 @@ function BillingPageInner() {
                       />
                     )}
                     {isCurrent && billing && (
-                      <p className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1.5 mt-2">
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-lg px-2 py-1.5 mt-2">
                         Événements : {formatQuotaSummary(billing.usage.events, billing.limits.maxEvents)}
                         {' · '}
                         Modèles : {formatQuotaSummary(billing.usage.templates, billing.limits.maxTemplates)}
@@ -589,7 +628,7 @@ function BillingPageInner() {
                         !allowedPaidIds.includes(plan.id)
                       }
                       onClick={() => handleUpgrade(plan.id)}
-                      className={`w-full py-2.5 mt-5 font-semibold rounded-xl text-xs disabled:opacity-50 ${
+                      className={`w-full min-h-11 py-2.5 mt-5 font-semibold rounded-xl text-xs disabled:opacity-50 ${
                         plan.highlighted || isFocused || (isCurrent && plan.id !== 'FREE')
                           ? 'bg-primary text-white'
                           : 'bg-foreground text-background'
@@ -609,7 +648,7 @@ function BillingPageInner() {
                         `Demander ${plan.displayName}`
                       )}
                     </button>
-                    {plan.id !== 'FREE' && allowedPaidIds.includes(plan.id) && (
+                    {plan.id !== 'FREE' && allowedPaidIds.includes(plan.id) && discountRequestsAllowed && (
                       <button
                         type="button"
                         disabled={actionLoading !== null}
@@ -627,7 +666,7 @@ function BillingPageInner() {
                             catalogAmount,
                           });
                         }}
-                        className="w-full py-2 mt-2 text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                        className="w-full min-h-11 mt-2 text-xs font-semibold text-primary hover:underline disabled:opacity-50"
                       >
                         Demander un rabais
                       </button>
@@ -662,7 +701,7 @@ function BillingPageInner() {
                 <tr className="bg-surface-muted">
                   <th className="text-left px-4 py-2 text-xs text-muted">Fonctionnalité</th>
                   {comparisonIds.map((id) => (
-                    <th key={id} className="px-2 py-2 text-[10px] text-center text-muted">
+                    <th key={id} className="px-2 py-2 text-xs text-center text-muted">
                       {LANDING_PLANS.find((p) => p.id === id)?.ms365Name}
                     </th>
                   ))}
@@ -692,7 +731,7 @@ function BillingPageInner() {
             <FileText className="w-5 h-5 text-primary" />
             Factures récentes
           </h3>
-          <Link href="/dashboard/invoices" className="text-xs font-bold text-primary hover:underline">
+          <Link href="/dashboard/invoices" className="inline-flex items-center min-h-11 text-xs font-bold text-primary hover:underline">
             Voir tout →
           </Link>
         </div>
@@ -720,27 +759,7 @@ function BillingPageInner() {
                   <div key={req.id} className="rounded-xl border border-border p-4 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-sm">{req.requestedPlan}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          req.status === 'APPROVED'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : req.status === 'REJECTED'
-                              ? 'bg-rose-50 text-rose-700'
-                              : req.status === 'QUOTED'
-                                ? 'bg-sky-50 text-sky-700'
-                                : 'bg-amber-50 text-amber-700'
-                        }`}
-                      >
-                        {req.status === 'APPROVED'
-                          ? 'Approuvée'
-                          : req.status === 'REJECTED'
-                            ? 'Refusée'
-                            : req.status === 'QUOTED'
-                              ? 'Rabais validé — à payer'
-                              : req.requestKind === 'discount'
-                                ? 'Rabais en examen'
-                                : 'En attente'}
-                      </span>
+                      <StatusPill tone={requestStatusTone(req)} className="text-xs">{requestStatusLabel(req)}</StatusPill>
                     </div>
                     <p className="text-xs text-muted">
                     {req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}
@@ -749,7 +768,7 @@ function BillingPageInner() {
                     {canRetryFlex && (
                       <button
                         type="button"
-                        className="text-xs font-semibold text-primary"
+                        className="min-h-11 text-xs font-semibold text-primary"
                         onClick={() => {
                           setFlexPayCheckout({
                             planName: req.requestedPlan,
@@ -792,33 +811,13 @@ function BillingPageInner() {
                         <td className="py-2">{req.durationDays} j</td>
                         <td className="py-2">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
                         <td className="py-2">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              req.status === 'APPROVED'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : req.status === 'REJECTED'
-                                  ? 'bg-rose-50 text-rose-700'
-                                  : req.status === 'QUOTED'
-                                    ? 'bg-sky-50 text-sky-700'
-                                    : 'bg-amber-50 text-amber-700'
-                            }`}
-                          >
-                            {req.status === 'APPROVED'
-                              ? 'Approuvée'
-                              : req.status === 'REJECTED'
-                                ? 'Refusée'
-                                : req.status === 'QUOTED'
-                                  ? 'Rabais validé — à payer'
-                                  : req.requestKind === 'discount'
-                                    ? 'Rabais en examen'
-                                    : 'En attente'}
-                          </span>
+                          <StatusPill tone={requestStatusTone(req)} className="text-xs">{requestStatusLabel(req)}</StatusPill>
                         </td>
                         <td className="py-2">
                           {canRetryFlex ? (
                             <button
                               type="button"
-                              className="font-semibold text-primary"
+                              className="min-h-11 font-semibold text-primary"
                               onClick={() => {
                                 setFlexPayCheckout({
                                   planName: req.requestedPlan,
