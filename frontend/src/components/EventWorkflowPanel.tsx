@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   CheckCircle2,
   Users,
   ClipboardList,
   Shirt,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 import {
   type EventWorkflowState,
@@ -38,14 +39,55 @@ export default function EventWorkflowPanel({
   compact = false,
   protocolDesk = false,
 }: EventWorkflowPanelProps) {
-  
-  const mainSteps = workflow.steps.filter(s => s.tab); // keep only steps with a tab mapped
+  const mainSteps = workflow.steps.filter((s) => s.tab); // keep only steps with a tab mapped
   const showSupport = !compact && !protocolDesk;
 
+  const activeIndex = mainSteps.findIndex((s) => s.tab === activeTab);
+  const activeStep = activeIndex >= 0 ? mainSteps[activeIndex] : null;
+
+  const activeBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Auto-scroll pour garder l'étape active toujours visible au centre sur mobile
+  useEffect(() => {
+    if (activeBtnRef.current) {
+      activeBtnRef.current.scrollIntoView({
+        inline: 'center',
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+    }
+  }, [activeTab]);
+
   return (
-    <div className="space-y-4">
-      {/* Main Workflow Stepper */}
-      <div className="bg-surface rounded-2xl border border-border shadow-sm p-4 overflow-x-auto scrollbar-hide">
+    <div className="space-y-3.5">
+      {/* Synthèse de progression glanceable (accessible en 2 secondes) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-primary inline-flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
+            {activeStep ? `Étape ${activeIndex + 1}/${mainSteps.length} · ${activeStep.title}` : 'Vue active'}
+          </span>
+          {activeStep?.detail ? (
+            <span className="hidden sm:inline-block text-xs text-muted truncate max-w-xs">
+              — {activeStep.detail}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-24 sm:w-32 h-1.5 bg-surface-muted rounded-full overflow-hidden border border-border/40">
+            <div
+              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+              style={{ width: `${workflow.progressPercent}%` }}
+            />
+          </div>
+          <span className="text-xs font-semibold text-muted tabular-nums">
+            {workflow.completedCount}/{workflow.totalCount} terminées ({workflow.progressPercent}%)
+          </span>
+        </div>
+      </div>
+
+      {/* Stepper principal avec défilement fluide et ancrage automatique */}
+      <div className="bg-surface rounded-2xl border border-border shadow-2xs p-3.5 sm:p-4 overflow-x-auto scroll-smooth scrollbar-hide relative">
         <div className="flex items-center justify-between gap-2 min-w-max">
           {mainSteps.map((step, index) => {
             const isLast = index === mainSteps.length - 1;
@@ -57,15 +99,17 @@ export default function EventWorkflowPanel({
               <React.Fragment key={step.id}>
                 <button
                   type="button"
+                  ref={isActive ? activeBtnRef : null}
                   onClick={() => step.tab && onNavigateTab(step.tab)}
+                  aria-current={isActive ? 'step' : undefined}
                   className={cn(
-                    "flex flex-col items-center gap-2 relative group p-2 rounded-xl transition-all min-h-11 min-w-[72px] touch-manipulation",
-                    isActive ? "bg-primary/5" : "hover:bg-surface-muted"
+                    "flex flex-col items-center gap-2 relative group p-2 rounded-xl transition-all min-h-11 min-w-[76px] touch-manipulation",
+                    isActive ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-surface-muted"
                   )}
                 >
                   <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
-                    isActive ? "border-primary bg-primary text-white" 
+                    "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-2xs",
+                    isActive ? "border-primary bg-primary text-white scale-105" 
                     : isCompleted ? "border-emerald-500 bg-emerald-500 text-white"
                     : isCurrent ? "border-primary/50 text-primary bg-primary/10"
                     : "border-border bg-surface-muted text-muted"
@@ -98,9 +142,9 @@ export default function EventWorkflowPanel({
         </div>
       </div>
 
-      {/* Support / Secondary Navigation */}
+      {/* Support / Navigation secondaire */}
       {showSupport && (
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center pt-1">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider mr-1">
             Paramètres & Support :
           </span>
@@ -111,8 +155,8 @@ export default function EventWorkflowPanel({
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] sm:min-h-[34px] rounded-full text-xs font-semibold transition-colors border touch-manipulation",
                 activeTab === id 
-                  ? "bg-foreground text-background border-foreground shadow-sm" 
-                  : "bg-surface text-muted border-border hover:text-foreground"
+                  ? "bg-foreground text-background border-foreground shadow-2xs" 
+                  : "bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted"
               )}
             >
               <Icon className="w-3.5 h-3.5" />
