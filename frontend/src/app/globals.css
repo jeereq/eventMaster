@@ -637,6 +637,18 @@ html[data-mood="celebrate"] .font-display {
   color: var(--stage-foreground);
 }
 
+/* Plein viewport : .em-stage force position:relative, donc overlay doit gagner. */
+.em-stage-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  width: 100vw;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 /* ─── Ambiance et dégradés pour le Dashboard ─── */
 .em-dashboard-glow-bg {
   position: relative;

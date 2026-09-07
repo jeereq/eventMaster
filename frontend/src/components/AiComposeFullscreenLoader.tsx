@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Sparkles, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -165,7 +166,12 @@ export function AiProcessFullscreenLoader({
   const [progress, setProgress] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [waitLine, setWaitLine] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!active) {
@@ -246,17 +252,17 @@ export function AiProcessFullscreenLoader({
     };
   }, [active]);
 
-  if (!active) return null;
+  if (!active || !mounted) return null;
 
   const current = steps[stepIndex] || steps[0];
   const shownProgress = Math.round(progress);
   const elapsedLabel = elapsed < 60 ? `${elapsed} s` : `${Math.floor(elapsed / 60)} min ${elapsed % 60} s`;
 
-  return (
+  return createPortal(
     <div
       ref={rootRef}
       tabIndex={-1}
-      className="em-stage fixed inset-0 z-[12000] flex items-center justify-center px-5"
+      className="em-stage em-stage-overlay flex items-center justify-center px-5"
       role="alertdialog"
       aria-modal="true"
       aria-busy="true"
@@ -358,7 +364,8 @@ export function AiProcessFullscreenLoader({
           {WAIT_LINES[waitLine]} La génération continue jusqu’à la fin.
         </p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
