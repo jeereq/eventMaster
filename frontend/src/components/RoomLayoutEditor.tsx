@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -245,7 +245,7 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
-import { Alert, Button, Input } from '@/components/ui';
+import { Alert, Button, Input, Modal } from '@/components/ui';
 
 const EDITOR_FIELD =
   'w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
@@ -356,6 +356,16 @@ function EditorToolGroup({
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
 
+type TemplateCategory = 'all' | 'banquet' | 'restaurant' | 'conference' | 'empty';
+
+const TEMPLATE_CATEGORIES: { id: TemplateCategory; label: string }[] = [
+  { id: 'all', label: 'Tous' },
+  { id: 'banquet', label: 'Banquets & Fêtes' },
+  { id: 'restaurant', label: 'Restaurants & Cafés' },
+  { id: 'conference', label: 'Conférences' },
+  { id: 'empty', label: 'Salles & Formes' },
+];
+
 interface RoomLayoutEditorProps {
   blueprint: RoomLayoutBlueprint;
   onChange: (blueprint: RoomLayoutBlueprint) => void;
@@ -450,6 +460,52 @@ export default function RoomLayoutEditor({
   const skipHistoryRef = useRef(false);
   const dragHistPushedRef = useRef(false);
   const [customTplName, setCustomTplName] = useState('');
+  const [templateCategory, setTemplateCategory] = useState<TemplateCategory>('all');
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+
+  const filteredTemplates = useMemo(() => {
+    if (templateCategory === 'all') return ROOM_LAYOUT_TEMPLATES;
+    return ROOM_LAYOUT_TEMPLATES.filter((tpl) => {
+      const id = tpl.id.toLowerCase();
+      if (templateCategory === 'restaurant') {
+        return (
+          id.includes('restaurant') ||
+          id.includes('cafe') ||
+          id.includes('bistrot') ||
+          id.includes('salon') ||
+          id.includes('cocktail') ||
+          id.includes('communal')
+        );
+      }
+      if (templateCategory === 'conference') {
+        return (
+          id.includes('conference') ||
+          id.includes('amphi') ||
+          id.includes('board') ||
+          id.includes('class') ||
+          id.includes('theater') ||
+          id.includes('chair')
+        );
+      }
+      if (templateCategory === 'empty') {
+        return id.includes('empty') || id.includes('tent');
+      }
+      return (
+        !id.includes('restaurant') &&
+        !id.includes('cafe') &&
+        !id.includes('bistrot') &&
+        !id.includes('salon') &&
+        !id.includes('conference') &&
+        !id.includes('amphi') &&
+        !id.includes('board') &&
+        !id.includes('class') &&
+        !id.includes('theater') &&
+        !id.includes('empty') &&
+        !id.includes('tent')
+      );
+    });
+  }, [templateCategory]);
+
   const [tplParams, setTplParams] = useState<LayoutParams>({
     tableCount: 8,
     seatsPerTable: 8,
@@ -5006,21 +5062,40 @@ export default function RoomLayoutEditor({
           </select>
         </label>
       </div>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-border-subtle" role="tablist" aria-label="Catégories de modèles">
+        {TEMPLATE_CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            role="tab"
+            aria-selected={templateCategory === cat.id}
+            onClick={() => setTemplateCategory(cat.id)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition border min-h-[32px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              templateCategory === cat.id
+                ? 'bg-primary-solid text-primary-foreground border-transparent shadow-2xs font-bold'
+                : 'bg-surface border-border text-muted hover:text-foreground hover:bg-surface-muted',
+            )}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {ROOM_LAYOUT_TEMPLATES.map((tpl) => (
+        {filteredTemplates.map((tpl) => (
           <button
             key={tpl.id}
             type="button"
             onClick={() => applyTemplate(tpl.id)}
             className={cn(
-              'shrink-0 text-left min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-sm font-medium transition-colors min-w-[128px]',
+              'shrink-0 text-left min-h-11 px-3.5 py-2.5 rounded-[var(--radius-card)] border text-sm font-medium transition min-w-[150px] max-w-[240px]',
               blueprint.templateId === tpl.id
-                ? 'bg-primary/10 border-primary/50 text-primary'
-                : 'bg-surface border-border text-muted hover:border-primary/30',
+                ? 'bg-primary/10 border-primary/50 text-primary font-bold shadow-2xs'
+                : 'bg-surface border-border text-foreground hover:border-primary/40 hover:bg-surface-muted/50',
             )}
           >
-            <span className="block">{tpl.name}</span>
-            <span className="font-normal text-muted">{tpl.description}</span>
+            <span className="block truncate font-bold text-foreground">{tpl.name}</span>
+            <span className="text-xs text-muted line-clamp-1 mt-0.5">{tpl.description}</span>
           </button>
         ))}
       </div>
@@ -5083,6 +5158,17 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={() => {
+          webglRef.current?.resetCamera?.();
+          log('Vue 3D recentrée au centre de la salle', 'info');
+        }}
+        title="Recentrer la caméra au centre de la scène"
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+      >
+        <Crosshair className="w-3.5 h-3.5" aria-hidden /> Recentrer
+      </button>
+      <button
+        type="button"
+        onClick={() => {
           if (walkthroughActive) {
             setWalkthroughActive(false);
             setWalkthroughLabel('');
@@ -5125,6 +5211,14 @@ export default function RoomLayoutEditor({
         className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
       >
         <Redo2 className="w-3.5 h-3.5" aria-hidden /> Rétablir
+      </button>
+      <button
+        type="button"
+        onClick={() => setShortcutsModalOpen(true)}
+        title="Consulter les raccourcis clavier"
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+      >
+        <Keyboard className="w-3.5 h-3.5" aria-hidden /> Raccourcis
       </button>
       {onRegenerate && (
         <button type="button" onClick={() => { onRegenerate(); }} className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}>
@@ -6155,6 +6249,62 @@ export default function RoomLayoutEditor({
 
   const ambiencePreviewModal = (
     <>
+    <Modal
+      open={shortcutsModalOpen}
+      onClose={() => setShortcutsModalOpen(false)}
+      title="Raccourcis clavier du plan 2D / 3D"
+      description="Concevez et modifiez vos plans d'événements plus rapidement."
+      size="md"
+    >
+      <div className="space-y-4 py-1 text-sm text-foreground">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Annuler / Rétablir</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+Z</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+Y</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Caméra libre / bloquée</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Ctrl+L</kbd>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Dupliquer l’élément</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Ctrl+D</kbd>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Tout sélectionner</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Ctrl+A</kbd>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Grouper / Dégrouper</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+G</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+Maj+G</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Supprimer la sélection</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Suppr</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">⌫</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Déplacement précis</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Flèches (↑ ↓ ← →)</kbd>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Pivoter l'élément</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">R</kbd>
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary leading-relaxed font-medium">
+          Astuce ergonomie : Lorsque la caméra est verrouillée, vous pouvez glisser-déposer le mobilier directement dans la vue 3D avec la souris ou le doigt.
+        </div>
+      </div>
+    </Modal>
     {caps.canPlanFromPhoto && !readOnly ? (
       <RoomPlanAiStudioModal
         open={studioOpen}

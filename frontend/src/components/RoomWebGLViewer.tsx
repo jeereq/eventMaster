@@ -120,6 +120,7 @@ function describeRoomScene(blueprint: RoomLayoutBlueprint): string {
 
 export type RoomWebGLCaptureApi = {
   capturePng: (scale?: number) => string | null;
+  resetCamera?: () => void;
 };
 
 interface RoomWebGLViewerProps {
@@ -2596,6 +2597,13 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
   useImperativeHandle(ref, () => ({
     capturePng: (scale) => captureApiRef.current?.capturePng(scale) ?? null,
+    resetCamera: () => {
+      try {
+        (orbitControlsRef.current as any)?.reset?.();
+      } catch {
+        /* ignore */
+      }
+    },
   }), []);
 
   return (
