@@ -92,7 +92,7 @@ export default function LandingModelsSection({
 
                       <div className="mt-2.5 sm:mt-3 space-y-1">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
                             {categoryLabel(template.category)}
                           </span>
                         </div>
@@ -100,7 +100,7 @@ export default function LandingModelsSection({
                           {template.name}
                         </h3>
                         {template.description ? (
-                          <p className="text-[11px] sm:text-xs text-muted leading-relaxed line-clamp-2">
+                          <p className="text-xs sm:text-xs text-muted leading-relaxed line-clamp-2">
                             {template.description}
                           </p>
                         ) : null}
@@ -111,13 +111,13 @@ export default function LandingModelsSection({
                       <button
                         type="button"
                         onClick={() => onPreview(template)}
-                        className="text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1 touch-manipulation cursor-pointer py-1"
+                        className="text-xs font-semibold text-muted hover:text-foreground transition inline-flex items-center gap-1.5 touch-manipulation cursor-pointer min-h-11 px-2.5 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
                         <Eye className="w-3.5 h-3.5" /> Aperçu
                       </button>
                       <Link
                         href={`/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`}
-                        className="py-1 px-2.5 rounded-md bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all inline-flex items-center gap-1 touch-manipulation"
+                        className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
                         Utiliser <ArrowRight className="w-3.5 h-3.5" />
                       </Link>

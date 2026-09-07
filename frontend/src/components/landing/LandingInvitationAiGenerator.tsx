@@ -602,7 +602,7 @@ export default function LandingInvitationAiGenerator({
 
           <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
             <span
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
               title="Jetons IA disponibles"
             >
               <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
@@ -640,7 +640,7 @@ export default function LandingInvitationAiGenerator({
 
               <div className="flex items-center gap-2 shrink-0">
                 <span
-                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface border border-border tabular-nums shadow-2xs"
                   title="Jetons IA disponibles (invitations ou simulation)"
                 >
                   <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
@@ -702,7 +702,7 @@ export default function LandingInvitationAiGenerator({
               )}
             >
               <span className="block text-xs font-bold text-foreground">Décrire une fête</span>
-              <span className="block text-[11px] text-muted mt-0.5">Brief, or, ambiance</span>
+              <span className="block text-xs text-muted mt-0.5">Brief, or, ambiance</span>
             </button>
             <button
               type="button"
@@ -718,7 +718,7 @@ export default function LandingInvitationAiGenerator({
               )}
             >
               <span className="block text-xs font-bold text-foreground">Cloner une carte</span>
-              <span className="block text-[11px] text-muted mt-0.5">Photo obligatoire</span>
+              <span className="block text-xs text-muted mt-0.5">Photo obligatoire</span>
             </button>
           </div>
 
@@ -806,22 +806,22 @@ export default function LandingInvitationAiGenerator({
                       type="button"
                       disabled={promptHistoryIndex <= 0 || busy}
                       onClick={handleUndoPrompt}
-                      className="text-[11px] font-semibold text-muted hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-muted transition disabled:opacity-30"
+                      className="text-xs font-semibold text-muted hover:text-foreground inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-30"
                       title="Annuler (Undo)"
                       aria-label="Annuler la modification du prompt"
                     >
-                      <Undo2 className="w-3 h-3" />
+                      <Undo2 className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Annuler</span>
                     </button>
                     <button
                       type="button"
                       disabled={promptHistoryIndex >= promptHistory.length - 1 || busy}
                       onClick={handleRedoPrompt}
-                      className="text-[11px] font-semibold text-muted hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-muted transition disabled:opacity-30"
+                      className="text-xs font-semibold text-muted hover:text-foreground inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-30"
                       title="Rétablir (Redo)"
                       aria-label="Rétablir la modification du prompt"
                     >
-                      <Redo2 className="w-3 h-3" />
+                      <Redo2 className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">Rétablir</span>
                     </button>
                     <span className="text-xs text-muted tabular-nums ml-1" aria-live="polite">
@@ -884,7 +884,7 @@ export default function LandingInvitationAiGenerator({
                   </span>
                   <span className="min-w-0">
                     <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
-                    <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
+                    <span className="block text-xs text-muted mt-0.5 leading-relaxed">
                       Noms, date et lieu du brief sont dessinés sur la carte.
                     </span>
                   </span>
@@ -1029,7 +1029,7 @@ export default function LandingInvitationAiGenerator({
                                 <span className="text-xs text-muted font-mono">{act.time}</span>
                               </div>
                               {act.detail && (
-                                <p className="text-[11px] text-muted line-clamp-1 mt-0.5">{act.detail}</p>
+                                <p className="text-xs text-muted line-clamp-1 mt-0.5">{act.detail}</p>
                               )}
                             </div>
 
@@ -1125,7 +1125,7 @@ export default function LandingInvitationAiGenerator({
 
               {/* Cadrage : remplir le cadre 9:16 ou voir toute l’image */}
               {(previewTab === 'card' || previewTab === 'artwork') && (
-                <div className="flex items-center justify-between px-1 text-[11px] text-muted">
+                <div className="flex items-center justify-between px-1 text-xs text-muted">
                   <span>Ajustement :</span>
                   <div className="inline-flex rounded-lg border border-border p-0.5 bg-surface">
                     <button
@@ -1184,7 +1184,7 @@ export default function LandingInvitationAiGenerator({
                     className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)]"
                   />
                   <div className="px-2 py-1 text-center">
-                    <p className="text-[11px] text-muted">
+                    <p className="text-xs text-muted">
                       {resultEmbedText
                         ? 'Image finale avec typographie incrustée : noms, date et lieu font partie du visuel.'
                         : 'Image seule, sans textes superposés : visages, or et matières tels que composés.'}
@@ -1219,7 +1219,7 @@ export default function LandingInvitationAiGenerator({
                                 className="w-3.5 h-3.5 rounded-md border border-black/10 dark:border-white/10 shadow-2xs shrink-0"
                                 style={{ backgroundColor: swatch.color }}
                               />
-                              <span className="capitalize text-[11px]">{swatch.key}</span>
+                              <span className="capitalize text-xs">{swatch.key}</span>
                               <span className="text-xs font-mono text-muted group-hover:text-foreground">
                                 {isCopied ? '✓ Copié' : swatch.color}
                               </span>
@@ -1239,7 +1239,7 @@ export default function LandingInvitationAiGenerator({
                         {elements.map((el, i) => (
                           <li
                             key={`${el.type}-${i}`}
-                            className="flex items-start gap-2 text-[11px] text-muted"
+                            className="flex items-start gap-2 text-xs text-muted"
                           >
                             <Type className="w-3 h-3 mt-0.5 text-primary shrink-0" aria-hidden />
                             <span className="min-w-0">
@@ -1257,7 +1257,7 @@ export default function LandingInvitationAiGenerator({
               )}
 
               {/* État de la préparation */}
-              <p className="text-[11px] text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 {lastStageMeta?.backgroundReady
                   ? 'Fond généré + structure texte / RSVP prêts à éditer.'
                   : 'Structure prête. Affinez le fond dans le studio si besoin.'}

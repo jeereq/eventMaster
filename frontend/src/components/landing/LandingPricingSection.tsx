@@ -64,7 +64,7 @@ interface LandingPricingSectionProps {
 
 function FeatureCell({ value }: { value: string | boolean }) {
  if (value === true) {
- return <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" aria-label="Inclus" />;
+ return <Check className="w-4 h-4 text-primary-solid mx-auto" aria-label="Inclus" />;
  }
  if (value === false) {
  return <Minus className="w-4 h-4 text-muted dark:text-muted mx-auto" aria-label="Non inclus" />;
@@ -75,9 +75,9 @@ function FeatureCell({ value }: { value: string | boolean }) {
 const BADGE_TONE: Record<PlanCapabilityBadge['tone'], string> = {
  indigo: 'bg-primary/10 text-primary border-primary/20',
  violet: 'bg-primary/10 text-primary border-primary/20',
- emerald: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
- amber: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
- rose: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20',
+ emerald: 'bg-primary/10 text-primary-solid border-primary/20',
+ amber: 'bg-festive-accent-soft text-festive-accent border-festive-accent/25',
+ rose: 'bg-danger/10 text-danger border-danger/20',
 };
 
 const TIER_ACCENT: Record<string, string> = {
@@ -321,7 +321,7 @@ export default function LandingPricingSection({
  )}
  >
  <span>Annuel</span>
- <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full">
+ <span className="text-xs font-bold text-primary-solid bg-primary/10 px-1.5 py-0.2 rounded-full">
  −{ANNUAL_DISCOUNT_PERCENT} %
  </span>
  </button>
@@ -365,9 +365,9 @@ export default function LandingPricingSection({
  key={plan.id}
  className={`relative flex flex-col rounded-[var(--radius-card)] overflow-hidden transition-all duration-300 min-w-[17.5rem] sm:min-w-0 shrink-0 snap-start flex-1 ${
  plan.highlighted
- ? 'border-2 border-primary bg-surface dark:bg-surface shadow-xl shadow-primary/25 ring-2 ring-primary/30 sm:scale-[1.02] z-10'
+ ? 'border-2 border-primary bg-surface dark:bg-surface shadow-xs ring-2 ring-primary/30 sm:scale-[1.02] z-10'
  : plan.promoActive
- ? 'border border-rose-500/40 bg-surface dark:bg-surface shadow-md'
+ ? 'border border-danger/40 bg-surface dark:bg-surface shadow-md'
  : 'em-hud-card border-border'
  }`}
  >
@@ -380,7 +380,7 @@ export default function LandingPricingSection({
  )}
 
  {plan.badge && !plan.highlighted && (
- <div className="absolute top-4 right-4 bg-primary text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
+ <div className="absolute top-4 right-4 bg-primary text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
  <Sparkles className="w-3 h-3" />
  {plan.badge}
  </div>
@@ -388,7 +388,7 @@ export default function LandingPricingSection({
 
  <div className="p-6 sm:p-7 flex-1 flex flex-col">
  <div className="space-y-1 pr-16">
- <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+ <span className="text-xs font-bold uppercase tracking-wider text-muted">
  {plan.tierLabel}
  </span>
  <h3 className="text-xl font-bold text-foreground dark:text-foreground">{plan.displayName}</h3>
@@ -403,7 +403,7 @@ export default function LandingPricingSection({
  {plan.badges.slice(0, 4).map((badge) => (
  <span
  key={badge.id}
- className={`inline-flex text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${BADGE_TONE[badge.tone]}`}
+ className={`inline-flex text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${BADGE_TONE[badge.tone]}`}
  >
  {badge.label}
  </span>
@@ -414,11 +414,11 @@ export default function LandingPricingSection({
  <div className="mt-6 mb-5">
  {plan.promoActive && plan.catalogPrice && (
  <div className="flex flex-wrap items-center gap-2 mb-2">
- <span className="text-[10px] font-bold uppercase tracking-wider bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 px-2.5 py-1 rounded-full">
+ <span className="text-xs font-bold uppercase tracking-wider bg-danger/10 text-danger px-2.5 py-1 rounded-full">
  {plan.promoLabel}
  </span>
  {plan.promoSavingsPercent != null && (
- <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+ <span className="text-xs font-bold text-primary-solid">
  −{plan.promoSavingsPercent} %
  </span>
  )}
@@ -431,7 +431,7 @@ export default function LandingPricingSection({
  plan.highlighted
  ? 'text-primary dark:text-primary'
  : plan.promoActive
- ? 'text-rose-600 dark:text-rose-400'
+ ? 'text-danger'
  : 'text-foreground dark:text-foreground'
  }`}
  >
@@ -441,14 +441,14 @@ export default function LandingPricingSection({
  <span className="text-sm font-medium text-muted">{planPricePeriodSuffix(plan.id, billing)}</span>
  )}
  </div>
- <p className="text-[11px] text-muted mt-1.5">{plan.monthlyNote}</p>
+ <p className="text-xs text-muted mt-1.5">{plan.monthlyNote}</p>
  {billing === 'annual' && plan.id !== 'FREE' && (
- <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+ <p className="text-xs text-primary-solid font-semibold mt-1">
  Facturé {isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup · {ANNUAL_DISCOUNT_PERCENT} % d&apos;économie vs {isB2cPlanId(plan.id) ? 'trimestre' : 'mois'}
  </p>
  )}
  {billing === 'annual' && plan.id !== 'FREE' && (
- <p className="text-[10px] text-muted mt-0.5">
+ <p className="text-xs text-muted mt-0.5">
  {annualEquivalentNote(plan.id, resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]))}
  </p>
  )}
@@ -457,7 +457,7 @@ export default function LandingPricingSection({
  <ul className="space-y-2.5 text-xs text-muted dark:text-foreground flex-1">
  {plan.highlights.map((h) => (
  <li key={h} className="flex gap-2.5">
- <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+ <Check className="w-4 h-4 text-primary-solid shrink-0 mt-0.5" />
  <span className="leading-relaxed">{h}</span>
  </li>
  ))}
@@ -521,7 +521,7 @@ export default function LandingPricingSection({
  <div className="border-t border-border dark:border-border">
    <div className="sm:hidden px-4 py-2 bg-primary/5 text-primary text-xs font-medium flex items-center justify-between border-b border-border/80">
      <span>↔ Faites glisser pour comparer tous les forfaits</span>
-     <span className="font-mono text-[10px] bg-primary/10 px-1.5 py-0.5 rounded">9 forfaits</span>
+     <span className="font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">9 forfaits</span>
    </div>
    <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
      <table className="w-full text-left min-w-[960px]">
@@ -537,10 +537,10 @@ export default function LandingPricingSection({
  key={id}
  className="py-3 px-2 text-center min-w-[92px] align-bottom"
  >
- <span className="text-[10px] font-bold text-foreground dark:text-foreground block">
+ <span className="text-xs font-bold text-foreground dark:text-foreground block">
  {p?.displayName}
  </span>
- <span className="text-[9px] text-muted font-semibold block mt-0.5">
+ <span className="text-xs text-muted font-semibold block mt-0.5">
  {p?.price}
  </span>
  </th>
@@ -558,7 +558,7 @@ export default function LandingPricingSection({
  <tr className="bg-primary/10 dark:bg-primary/10">
  <td
  colSpan={comparisonIds.length + 1}
- className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-primary dark:text-primary"
+ className="py-2.5 px-4 text-xs font-bold uppercase tracking-wider text-primary dark:text-primary"
  >
  {row.category}
  </td>
@@ -587,10 +587,10 @@ export default function LandingPricingSection({
  {/* Bandeau des moyens de paiement acceptés (Orange Money, M-Pesa, Airtel, Cartes) */}
  <div className="mt-8 p-4 rounded-2xl bg-surface/80 dark:bg-surface/80 border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
  <div className="flex items-center gap-2.5 text-xs text-muted">
- <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+ <ShieldCheck className="w-5 h-5 text-primary-solid shrink-0" />
  <div>
  <span className="font-bold text-foreground block">Paiements 100% sécurisés via FlexPay</span>
- <span className="text-[11px] text-muted">Activation instantanée de votre forfait ou billets en Francs Congolais (CDF) et USD</span>
+ <span className="text-xs text-muted">Activation instantanée de votre forfait ou billets en Francs Congolais (CDF) et USD</span>
  </div>
  </div>
 
@@ -601,7 +601,7 @@ export default function LandingPricingSection({
  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs border border-red-500/25">
  <Smartphone className="w-3.5 h-3.5" /> M-Pesa
  </span>
- <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-500/25">
+ <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-danger/10 text-danger font-bold text-xs border border-danger/25">
  <Smartphone className="w-3.5 h-3.5" /> Airtel Money
  </span>
  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs border border-blue-500/25">

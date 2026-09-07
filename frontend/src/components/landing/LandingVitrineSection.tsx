@@ -336,7 +336,7 @@ export default function LandingVitrineSection() {
         {catalogError ? (
           <div
             role="alert"
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-[var(--radius-card)] border border-rose-500/30 bg-rose-500/10"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-[var(--radius-card)] border border-danger/30 bg-danger/10"
           >
             <p className="text-xs sm:text-sm text-foreground leading-relaxed">{catalogError}</p>
             <Button

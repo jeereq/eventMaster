@@ -50,7 +50,7 @@ export default function LandingMobileStickyBar({
                 <LayoutDashboard className="w-3.5 h-3.5 text-primary shrink-0" />
                 Connecté{displayName ? ` (${displayName})` : ''}
               </p>
-              <p className="text-[10px] text-muted truncate">Retrouvez vos événements et réservations</p>
+              <p className="text-xs text-muted truncate">Retrouvez vos événements et réservations</p>
             </>
           ) : (
             <>
@@ -58,7 +58,7 @@ export default function LandingMobileStickyBar({
                 <Sparkles className="w-3.5 h-3.5 text-[color:var(--festive-accent)] shrink-0" />
                 100% dans le navigateur
               </p>
-              <p className="text-[10px] text-muted truncate">Sans carte bancaire · Essai gratuit</p>
+              <p className="text-xs text-muted truncate">Sans carte bancaire · Essai gratuit</p>
             </>
           )}
         </div>

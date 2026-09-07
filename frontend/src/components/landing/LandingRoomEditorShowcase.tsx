@@ -175,7 +175,7 @@ export default function LandingRoomEditorShowcase() {
                         <h3 className="text-base sm:text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                           {feat.title}
                         </h3>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted">
                           {feat.badge}
                         </span>
                       </div>
@@ -191,7 +191,7 @@ export default function LandingRoomEditorShowcase() {
                   <div className="space-y-2 py-3 border-y border-border/70">
                     {feat.highlights.map((item) => (
                       <div key={item} className="flex items-start gap-2.5 text-xs text-foreground/90">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-primary-solid shrink-0 mt-0.5" />
                         <span className="leading-snug">{item}</span>
                       </div>
                     ))}
@@ -247,12 +247,12 @@ export default function LandingRoomEditorShowcase() {
                 <div className="flex items-center justify-between gap-1 mb-1">
                   <span className="text-xs font-bold text-foreground">{lvl.name}</span>
                   {lvl.highlight && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[color:var(--festive-accent-soft)] text-[color:var(--festive-accent)]">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[color:var(--festive-accent-soft)] text-[color:var(--festive-accent)]">
                       Particuliers
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-muted leading-relaxed">{lvl.desc}</p>
+                <p className="text-xs text-muted leading-relaxed">{lvl.desc}</p>
               </div>
             ))}
           </div>
@@ -260,7 +260,7 @@ export default function LandingRoomEditorShowcase() {
           {/* Bandeau d'action final */}
           <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted border-t border-border/80">
             <span className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-primary-solid shrink-0" />
               Vos données de salle sont sauvegardées en temps réel et sécurisées dans le cloud.
             </span>
             <Button href={roomEditorUrl} size="sm" variant="primary" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>

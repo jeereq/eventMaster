@@ -121,7 +121,7 @@ function PreviewImage({
         style={style}
       >
         <ImageIcon className={cn('text-muted/60', compact ? 'w-3.5 h-3.5' : 'w-5 h-5 mb-1')} aria-hidden />
-        {!compact && <span className="text-[10px] opacity-75">Image de référence</span>}
+        {!compact && <span className="text-xs opacity-75">Image de référence</span>}
       </div>
     );
   }
@@ -143,7 +143,7 @@ function PreviewImage({
 
 function renderDivider(el: PreviewElement, compact?: boolean, accentColor = '#c5a059') {
   const color = el.color || accentColor;
-  const symbolSize = compact ? 'text-[10px]' : 'text-sm';
+  const symbolSize = compact ? 'text-xs' : 'text-sm';
   if (el.dividerStyle === 'dashed') {
     return <div className="w-full border-t border-dashed my-1" style={{ borderColor: color }} />;
   }
@@ -209,7 +209,7 @@ function renderElement(el: PreviewElement, compact?: boolean, paletteAccent = '#
               ...resolveTypography(el.fontSize, compact).style,
             }}
             className={`inline-block pointer-events-none transition-shadow ${buttonClasses(el.buttonStyle)} ${
-              compact ? 'text-[10px] px-3 py-1' : 'text-sm px-5 py-2.5'
+              compact ? 'text-xs px-3 py-1' : 'text-sm px-5 py-2.5'
             }`}
           >
             {el.text || 'Confirmer votre présence'}
@@ -248,7 +248,7 @@ function renderElement(el: PreviewElement, compact?: boolean, paletteAccent = '#
       return (
         <div
           className={`border border-dashed rounded-xl text-center w-full my-1 ${
-            compact ? 'px-2 py-2 text-[9px]' : 'px-4 py-3 text-xs'
+            compact ? 'px-2 py-2 text-xs' : 'px-4 py-3 text-xs'
           }`}
           style={{ borderColor: accent, color: accent }}
         >
@@ -269,7 +269,7 @@ function renderLegacyElement(el: LandingTemplate['elements'][number], compact?: 
       <div className="flex justify-center my-1">
         <span
           className={`inline-block rounded-xl font-bold text-white bg-primary shadow-sm ${
-            compact ? 'px-3 py-1 text-[10px]' : 'px-5 py-2.5 text-sm'
+            compact ? 'px-3 py-1 text-xs' : 'px-5 py-2.5 text-sm'
           }`}
         >
           {el.content || 'Confirmer votre présence'}
@@ -294,12 +294,11 @@ function renderFrame(frameType?: string) {
   switch (frameType) {
     case 'gold-border':
       return (
-        <div className="absolute inset-2 sm:inset-3 border border-amber-500/40 rounded-xl pointer-events-none z-[3] shadow-[inset_0_0_0_1px_rgba(217,175,90,0.35)]">
-          {/* Coins dorés ornementaux */}
-          <div className="absolute top-1 left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-amber-400" />
-          <div className="absolute top-1 right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-amber-400" />
-          <div className="absolute bottom-1 left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-amber-400" />
-          <div className="absolute bottom-1 right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-amber-400" />
+        <div className="absolute inset-2 sm:inset-3 border border-festive-accent/40 rounded-xl pointer-events-none z-[3] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--festive-accent)_35%,transparent)]">
+          <div className="absolute top-1 left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-festive-accent" />
+          <div className="absolute top-1 right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-festive-accent" />
+          <div className="absolute bottom-1 left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-festive-accent" />
+          <div className="absolute bottom-1 right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-festive-accent" />
         </div>
       );
 
@@ -312,12 +311,12 @@ function renderFrame(frameType?: string) {
 
     case 'floral-wreath':
       return (
-        <div className="absolute inset-2 sm:inset-3.5 border border-amber-500/35 rounded-2xl pointer-events-none z-[3]">
-          <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-surface/90 px-2 text-[10px] text-amber-500 select-none font-serif">
-            ❀ ✦ ❀
+        <div className="absolute inset-2 sm:inset-3.5 border border-festive-accent/35 rounded-2xl pointer-events-none z-[3]">
+          <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-surface/90 px-2 text-xs text-festive-accent select-none font-serif tracking-widest">
+            · · ·
           </span>
-          <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-surface/90 px-2 text-[10px] text-amber-500 select-none font-serif">
-            ❀ ✦ ❀
+          <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-surface/90 px-2 text-xs text-festive-accent select-none font-serif tracking-widest">
+            · · ·
           </span>
         </div>
       );
@@ -325,8 +324,8 @@ function renderFrame(frameType?: string) {
     case 'minimal-leaves':
       return (
         <div className="absolute inset-2.5 sm:inset-4 border border-foreground/15 rounded-xl pointer-events-none z-[3]">
-          <div className="absolute -top-1 left-4 text-[9px] text-foreground/45 select-none bg-surface/90 px-1">🌿</div>
-          <div className="absolute -bottom-1 right-4 text-[9px] text-foreground/45 select-none bg-surface/90 px-1">🌿</div>
+          <div className="absolute -top-1 left-4 w-2 h-2 rounded-full bg-primary/35 select-none" aria-hidden />
+          <div className="absolute -bottom-1 right-4 w-2 h-2 rounded-full bg-primary/35 select-none" aria-hidden />
         </div>
       );
 
@@ -413,7 +412,7 @@ export default function LandingInvitationPreview({
       {showOnlyBackground ? (
         showCaption ? (
           <div className="relative z-10 flex flex-col items-center justify-end h-full p-3 pointer-events-none">
-            <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/20 shadow-sm animate-fade-in">
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/20 shadow-sm animate-fade-in">
               Illustration haute définition générée par IA
             </span>
           </div>
