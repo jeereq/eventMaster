@@ -655,7 +655,7 @@ export default function LandingInvitationAiGenerator({
                       Carte 9:16
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                  <p className="hidden sm:block text-xs sm:text-sm text-muted leading-relaxed">
                     Décrivez la fête, ou déposez une carte à reproduire. Les visages restent fidèles aux photos.
                   </p>
                 </div>
@@ -734,7 +734,7 @@ export default function LandingInvitationAiGenerator({
               )}
             >
               <span className="block text-xs font-bold text-foreground">Décrire une fête</span>
-              <span className="block text-xs text-muted mt-0.5">Brief, or, ambiance</span>
+              <span className="hidden sm:block text-xs text-muted mt-0.5">Brief, or, ambiance</span>
             </button>
             <button
               type="button"
@@ -750,7 +750,7 @@ export default function LandingInvitationAiGenerator({
               )}
             >
               <span className="block text-xs font-bold text-foreground">Cloner une carte</span>
-              <span className="block text-xs text-muted mt-0.5">Photo obligatoire</span>
+              <span className="hidden sm:block text-xs text-muted mt-0.5">Photo obligatoire</span>
             </button>
           </div>
 
@@ -794,7 +794,7 @@ export default function LandingInvitationAiGenerator({
                     ? 'Photo de la carte à reproduire'
                     : 'Photos de visages (optionnel)'}
                 </p>
-                <p className="text-xs text-muted mt-0.5">
+                <p className="hidden sm:block text-xs text-muted mt-0.5">
                   {studioIntent === 'clone'
                     ? 'Une photo nette de l’invitation à cloner. JPEG, PNG ou WebP, jusqu’à 4 vues.'
                     : 'Sans photo : carte depuis le brief. Avec photos : visages conservés (yeux, sourire, joues).'}
@@ -926,7 +926,7 @@ export default function LandingInvitationAiGenerator({
                   </span>
                   <span className="min-w-0">
                     <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
-                    <span className="block text-xs text-muted mt-0.5 leading-relaxed">
+                    <span className="hidden sm:block text-xs text-muted mt-0.5 leading-relaxed">
                       Noms, date et lieu du brief sont dessinés sur la carte.
                     </span>
                   </span>
@@ -983,7 +983,7 @@ export default function LandingInvitationAiGenerator({
                 ) : null}
               </div>
 
-              <p className="text-xs text-muted">
+              <p className="hidden sm:block text-xs text-muted">
                 Briefs coutumiers Kongo, Luba, Mongo et Lunda :{' '}
                 <button type="button" className="font-bold text-primary hover:underline" onClick={() => setStudioTab('prompts')}>
                   onglet Prompts
@@ -1231,7 +1231,7 @@ export default function LandingInvitationAiGenerator({
                     className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)]"
                   />
                   <div className="px-2 py-1 text-center">
-                    <p className="text-xs text-muted">
+                    <p className="hidden sm:block text-xs text-muted">
                       {resultEmbedText
                         ? 'Image finale avec typographie incrustée : noms, date et lieu font partie du visuel.'
                         : 'Image seule, sans textes superposés : visages, or et matières tels que composés.'}
@@ -1249,7 +1249,7 @@ export default function LandingInvitationAiGenerator({
                         <span className="text-xs font-bold text-muted uppercase tracking-wider">
                           Couleurs de la carte
                         </span>
-                        <span className="text-xs text-muted">Cliquez pour copier</span>
+                        <span className="hidden sm:inline text-xs text-muted">Cliquez pour copier</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {palette.map((swatch) => {
@@ -1304,7 +1304,7 @@ export default function LandingInvitationAiGenerator({
               )}
 
               {/* État de la préparation */}
-              <p className="text-xs text-muted leading-relaxed">
+              <p className="hidden sm:block text-xs text-muted leading-relaxed">
                 {lastStageMeta?.backgroundReady
                   ? 'Fond généré + structure texte / RSVP prêts à éditer.'
                   : 'Structure prête. Affinez le fond dans le studio si besoin.'}

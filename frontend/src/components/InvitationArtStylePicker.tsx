@@ -61,7 +61,7 @@ export default function InvitationArtStylePicker({
                 <Icon className={cn('w-3.5 h-3.5 shrink-0', selected ? 'text-primary' : 'text-muted')} aria-hidden />
                 <span className="text-xs font-bold text-foreground">{style.label}</span>
               </span>
-              <span className="block text-[11px] text-muted mt-0.5 leading-snug">{style.summary}</span>
+              <span className="hidden sm:block text-[11px] text-muted mt-0.5 leading-snug">{style.summary}</span>
             </button>
           );
         })}

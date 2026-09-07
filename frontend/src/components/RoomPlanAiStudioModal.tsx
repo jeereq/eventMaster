@@ -237,7 +237,8 @@ export default function RoomPlanAiStudioModal({
                 onClick={() => setTokenModalOpen(true)}
                 className="text-primary font-bold hover:underline"
               >
-                Recharger ({AI_ROOM_PLAN_TOKEN_COST} jetons / plan)
+                <span className="sm:hidden">Recharger</span>
+                <span className="hidden sm:inline">Recharger ({AI_ROOM_PLAN_TOKEN_COST} jetons / plan)</span>
               </button>
             ) : (
               <span className="text-muted font-semibold">Coût : {AI_ROOM_PLAN_TOKEN_COST} jetons</span>
@@ -265,7 +266,7 @@ export default function RoomPlanAiStudioModal({
               )}
             >
               <span className="block text-xs text-foreground">1. Décrire par écrit</span>
-              <span className="block text-[11px] text-muted">Brief ou inspiration</span>
+              <span className="hidden sm:block text-[11px] text-muted">Brief ou inspiration</span>
             </button>
             <button
               type="button"
@@ -278,11 +279,11 @@ export default function RoomPlanAiStudioModal({
               )}
             >
               <span className="block text-xs text-foreground">2. Importer une photo</span>
-              <span className="block text-[11px] text-muted">Plan 2D ou photo de salle</span>
+              <span className="hidden sm:block text-[11px] text-muted">Plan 2D ou photo de salle</span>
             </button>
           </div>
 
-          <p className="text-xs text-muted">
+          <p className="hidden sm:block text-xs text-muted">
             Inspirations prêtes à coller : onglet{' '}
             <button type="button" className="font-bold text-primary hover:underline" onClick={() => setStudioTab('prompts')}>
               Prompts

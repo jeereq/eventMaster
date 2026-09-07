@@ -11,13 +11,13 @@ export interface PromptModel {
   isClone?: boolean;
 }
 
-export const PROMPT_CATEGORIES: Array<{ id: PromptCategory; label: string; iconName?: string }> = [
-  { id: 'coutumier', label: '4 Tribus — mariages coutumiers' },
-  { id: 'clone', label: 'Copier une invitation' },
-  { id: 'wedding', label: 'Mariages & Dots' },
-  { id: 'gala', label: 'Galas & Entreprises' },
-  { id: 'birthday', label: 'Anniversaires & Soirées' },
-  { id: 'rdc-langues', label: '4 Langues nationales RDC' },
+export const PROMPT_CATEGORIES: Array<{ id: PromptCategory; label: string; shortLabel: string; iconName?: string }> = [
+  { id: 'coutumier', label: '4 Tribus — mariages coutumiers', shortLabel: 'Tribus' },
+  { id: 'clone', label: 'Copier une invitation', shortLabel: 'Copier' },
+  { id: 'wedding', label: 'Mariages & Dots', shortLabel: 'Mariages' },
+  { id: 'gala', label: 'Galas & Entreprises', shortLabel: 'Galas' },
+  { id: 'birthday', label: 'Anniversaires & Soirées', shortLabel: 'Soirées' },
+  { id: 'rdc-langues', label: '4 Langues nationales RDC', shortLabel: 'Langues' },
 ];
 
 export const INVITATION_PROMPT_MODELS: PromptModel[] = [

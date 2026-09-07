@@ -208,7 +208,7 @@ export default function Modal({
                   </h2>
                 )}
                 {description && (
-                  <p id={descId} className="text-sm text-muted mt-1 break-words">
+                  <p id={descId} className="hidden sm:block text-sm text-muted mt-1 break-words">
                     {description}
                   </p>
                 )}

@@ -94,7 +94,7 @@ export default function RoomPlanPromptSelector({
                 <span className="text-xs font-bold text-foreground">{model.title}</span>
                 <span className="text-xs font-semibold text-primary-solid shrink-0">{model.badge}</span>
               </span>
-              <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
+              <span className="hidden sm:block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
               <span className="mt-2 block text-[11px] font-semibold text-primary">
                 {active ? 'Prérempli' : 'Préremplir'}
               </span>

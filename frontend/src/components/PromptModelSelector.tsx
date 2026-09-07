@@ -118,7 +118,8 @@ export default function PromptModelSelector({
             )}
           >
             {getCategoryIcon(cat.id)}
-            <span>{cat.label}</span>
+            <span className="sm:hidden">{cat.shortLabel}</span>
+            <span className="hidden sm:inline">{cat.label}</span>
           </button>
         ))}
       </div>
@@ -128,7 +129,7 @@ export default function PromptModelSelector({
           <Crown className="w-4 h-4 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">4 grandes tribus — mariages coutumiers</p>
-            <p className="text-[11px] opacity-90 mt-0.5">
+            <p className="hidden sm:block text-[11px] opacity-90 mt-0.5">
               Kongo (Bakongo), Luba (Baluba), Mongo et Lunda. Appuyez sur « Préremplir » puis ajustez date, lieu et noms.
             </p>
           </div>
@@ -141,7 +142,7 @@ export default function PromptModelSelector({
           <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">Pour cloner une carte :</p>
-            <p className="text-[11px] opacity-90 mt-0.5">
+            <p className="hidden sm:block text-[11px] opacity-90 mt-0.5">
               Déposez la photo de l’invitation dans la zone d’envoi à côté, sur ce même écran, puis choisissez un exemple.
             </p>
           </div>
@@ -154,7 +155,7 @@ export default function PromptModelSelector({
           <Languages className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">4 Langues nationales de la RDC :</p>
-            <p className="text-[11px] opacity-90 mt-0.5">
+            <p className="hidden sm:block text-[11px] opacity-90 mt-0.5">
               Lingala (Kinshasa & Fleuve), Kiswahili (Est & Grand Katanga), Kikongo (Kongo Central & Bandundu), Tshiluba (Grand Kasaï).
               Les titres, textes et formulations cérémoniales sont générés fidèlement dans la langue choisie.
             </p>
@@ -182,7 +183,7 @@ export default function PromptModelSelector({
               aria-pressed={isSelected}
               onClick={() => handleSelect(model)}
               className={cn(
-                'group min-h-11 p-2.5 sm:p-3 rounded-xl border transition-all text-left touch-manipulation flex flex-col justify-between space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer',
+                'group min-h-11 p-2.5 sm:p-3 rounded-xl border transition-all text-left touch-manipulation flex flex-col justify-between space-y-1 sm:space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer',
                 isSelected
                   ? 'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40'
                   : 'border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/60',
@@ -209,13 +210,13 @@ export default function PromptModelSelector({
                     {model.badge}
                   </span>
                 </div>
-                <p className="text-[11px] text-muted leading-relaxed line-clamp-2">
+                <p className="hidden sm:block text-[11px] text-muted leading-relaxed line-clamp-2">
                   {model.summary}
                 </p>
               </div>
 
               <div className="pt-1 border-t border-border/60 flex items-center justify-between text-[11px] font-semibold">
-                <span className="text-muted/80 text-[10px] truncate max-w-[70%]">
+                <span className="hidden sm:inline text-muted/80 text-[10px] truncate max-w-[70%]">
                   {model.prompt.slice(0, 45)}…
                 </span>
                 <span

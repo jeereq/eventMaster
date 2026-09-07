@@ -959,7 +959,7 @@ export default function TablePlanner({
             })()}
           </div>
 
-          <p className="text-[11px] text-muted leading-relaxed">
+          <p className="hidden sm:block text-[11px] text-muted leading-relaxed">
             Vue 3D interactive — sélectionnez ou peignez les tables directement en 3D. Pour placer manuellement les convives par siège, basculez en{' '}
             <button type="button" onClick={() => setPlannerView('2d')} className="font-semibold text-primary hover:underline">
               vue 2D
@@ -1484,7 +1484,7 @@ export default function TablePlanner({
                   Événement payant
                 </span>
               </div>
-              <p className="text-xs text-muted mt-0.5">
+              <p className="hidden sm:block text-xs text-muted mt-0.5">
                 Répartissez vos tables par zones (VIP, Carré d’Or, Standard). Les billets vendus sur la plateforme appliquent automatiquement ces tarifs.
               </p>
             </div>

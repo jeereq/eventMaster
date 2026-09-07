@@ -1196,7 +1196,7 @@ export default function TemplatesPage() {
  <Wand2 className="w-4 h-4 text-primary" />
  Créer avec l’IA
  </h2>
- <p className="text-[11px] text-muted mt-1 leading-relaxed">
+ <p className="hidden sm:block text-[11px] text-muted mt-1 leading-relaxed">
  Brief seul ou photos + brief ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Yeux, sourire et joues restent fidèles aux photos.
  </p>
  </div>
@@ -1226,7 +1226,8 @@ export default function TemplatesPage() {
  onClick={() => setAiTokenModalOpen(true)}
  className="text-primary font-bold hover:underline"
  >
- Recharger ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons / invitation)
+ <span className="sm:hidden">Recharger</span>
+ <span className="hidden sm:inline">Recharger ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons / invitation)</span>
  </button>
  )}
  </div>
@@ -1271,7 +1272,17 @@ export default function TemplatesPage() {
  }`}
  >
  <Upload className="w-4 h-4" />
- {aiComposeFiles.length > 0 ? `Ajouter d'autres photos (${aiComposeFiles.length}/4)` : 'Glisser ou cliquer pour ajouter des photos (1–4)'}
+ {aiComposeFiles.length > 0 ? (
+ <>
+ <span className="sm:hidden">Ajouter ({aiComposeFiles.length}/4)</span>
+ <span className="hidden sm:inline">{`Ajouter d'autres photos (${aiComposeFiles.length}/4)`}</span>
+ </>
+ ) : (
+ <>
+ <span className="sm:hidden">Ajouter des photos</span>
+ <span className="hidden sm:inline">Glisser ou cliquer pour ajouter des photos (1–4)</span>
+ </>
+ )}
  </div>
  {aiComposePreviewUrls.length > 0 && (
  <div className="mt-2 flex flex-wrap gap-2">
@@ -1297,9 +1308,10 @@ export default function TemplatesPage() {
  <div>
  <div className="flex items-center justify-between">
  <label htmlFor="ai-compose-prompt" className="text-xs font-bold text-muted uppercase tracking-wider">
- Brief de style ou demande de clonage
+ <span className="sm:hidden">Brief</span>
+ <span className="hidden sm:inline">Brief de style ou demande de clonage</span>
  </label>
- <span className="text-[11px] text-muted font-mono">
+ <span className="hidden sm:inline text-[11px] text-muted font-mono">
  {aiComposePrompt.length} car. · {aiComposePrompt.trim().split(/\s+/).filter(Boolean).length} mot{aiComposePrompt.trim().split(/\s+/).filter(Boolean).length > 1 ? 's' : ''}
  </span>
  </div>
@@ -1338,7 +1350,7 @@ export default function TemplatesPage() {
  ))}
  </div>
 
- <p className="mt-2 text-[11px] text-muted">
+ <p className="hidden sm:block mt-2 text-[11px] text-muted">
  Besoin d’un brief prêt ? Ouvrez l’onglet <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Prompts</button> — les 4 mariages coutumiers sont en un tap.
  </p>
 
@@ -1393,7 +1405,7 @@ export default function TemplatesPage() {
  </span>
  <span className="min-w-0">
  <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
- <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
+ <span className="hidden sm:block text-[11px] text-muted mt-0.5 leading-relaxed">
  Noms, date et lieu du brief sont dessinés sur la carte. Aucune photo n’est obligatoire.
  </span>
  </span>

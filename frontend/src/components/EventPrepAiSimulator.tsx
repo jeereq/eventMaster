@@ -420,7 +420,7 @@ export default function EventPrepAiSimulator({
               <Wand2 className="w-4 h-4 text-primary-solid" aria-hidden />
               Simulation IA
             </h3>
-            <p className="text-xs text-muted leading-relaxed">
+            <p className="hidden sm:block text-xs text-muted leading-relaxed">
               Décrivez votre événement : l’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs budget</strong> — économique, équilibré, confort. Ce n’est pas un plan de salle.
             </p>
           </div>
@@ -484,7 +484,7 @@ export default function EventPrepAiSimulator({
 
       {activeTab === 'prompts' ? (
         <div className="space-y-3 pt-1">
-          <p className="text-xs text-muted">
+          <p className="hidden sm:block text-xs text-muted">
             Un bouton préremplit le brief, le type d’événement et le budget. Ajustez ensuite ville et date.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -519,7 +519,7 @@ export default function EventPrepAiSimulator({
                       {model.badge}
                     </span>
                   </span>
-                  <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
+                  <span className="hidden sm:block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
                   <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
                     {selected ? <Check className="w-3.5 h-3.5" /> : null}
                     {selected ? 'Prérempli' : 'Préremplir'}
@@ -575,7 +575,7 @@ export default function EventPrepAiSimulator({
               placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
               className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
             />
-            <p className="text-xs text-muted">
+            <p className="hidden sm:block text-xs text-muted">
               Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
               <button type="button" className="font-bold text-primary hover:underline" onClick={() => setActiveTab('prompts')}>
                 onglet Prompts

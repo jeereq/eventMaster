@@ -12,7 +12,7 @@ const TABS: Array<{
   icon: LucideIcon;
 }> = [
   { id: 'create', label: 'Création', icon: Wand2 },
-  { id: 'history', label: 'Historiques', icon: Clock },
+  { id: 'history', label: 'Historique', icon: Clock },
   { id: 'prompts', label: 'Prompts', icon: Sparkles },
 ];
 
