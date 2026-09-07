@@ -22,10 +22,23 @@ import {
 } from '@/lib/layoutAlignMath';
 import {
   enforceRealLayoutClearances,
+  detectLayoutClearanceConflicts,
   REAL_CLEARANCE_METERS,
+  CLEARANCE_PRESETS,
+  type ClearancePreset,
+  type ClearanceAnalysisReport,
+  type LayoutClearanceConflict,
 } from '@/lib/roomLayoutClearance';
 
-export { enforceRealLayoutClearances, REAL_CLEARANCE_METERS };
+export {
+  enforceRealLayoutClearances,
+  detectLayoutClearanceConflicts,
+  REAL_CLEARANCE_METERS,
+  CLEARANCE_PRESETS,
+  type ClearancePreset,
+  type ClearanceAnalysisReport,
+  type LayoutClearanceConflict,
+};
 
 export type LayoutSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'chair' | 'wall';
 

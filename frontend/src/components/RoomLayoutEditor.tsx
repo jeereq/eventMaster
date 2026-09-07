@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -181,6 +181,11 @@ import {
   type LayoutSelectionItem,
 } from '@/lib/roomSelectionUtils';
 import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry, type RoomActionContext } from '@/lib/layoutActionLog';
+import {
+  enforceRealLayoutClearances,
+  detectLayoutClearanceConflicts,
+  type ClearancePreset,
+} from '@/lib/roomLayoutClearance';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import PlanCreationPath, { type PlanCreationPathId } from '@/components/PlanCreationPath';
@@ -462,6 +467,10 @@ export default function RoomLayoutEditor({
   const [customTplName, setCustomTplName] = useState('');
   const [templateCategory, setTemplateCategory] = useState<TemplateCategory>('all');
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [clearanceModalOpen, setClearanceModalOpen] = useState(false);
+  const [clearancePreset, setClearancePreset] = useState<ClearancePreset>('standard');
+
+  const clearanceReport = useMemo(() => detectLayoutClearanceConflicts(blueprint), [blueprint]);
 
   const filteredTemplates = useMemo(() => {
     if (templateCategory === 'all') return ROOM_LAYOUT_TEMPLATES;
@@ -613,6 +622,30 @@ export default function RoomLayoutEditor({
     syncHistoryFlags();
   }, [emitBlueprint, syncHistoryFlags, withLoggedAction]);
 
+  const optimizeClearances = useCallback((preset: ClearancePreset = clearancePreset) => {
+    const next = enforceRealLayoutClearances(blueprint, { preset });
+    const reportBefore = detectLayoutClearanceConflicts(blueprint);
+    const reportAfter = detectLayoutClearanceConflicts(next);
+    const fixedCount = Math.max(0, reportBefore.conflicts.length - reportAfter.conflicts.length);
+
+    updateBlueprint(next, {
+      message: `Espacements optimisés (${fixedCount > 0 ? `${fixedCount} conflits résolus` : 'conformité vérifiée'})`,
+      kind: 'edit',
+      context: {
+        source: 'clearance',
+        category: 'furniture',
+      },
+    });
+
+    log(
+      reportAfter.isCompliant
+        ? 'Espacements réels optimisés : 0 collision, circulation fluide garantie.'
+        : `Espacements ajustés : ${reportAfter.conflicts.length} point(s) à vérifier.`,
+      'info',
+      { source: 'clearance', category: 'furniture' },
+    );
+  }, [blueprint, clearancePreset, updateBlueprint, log]);
+
   useEffect(() => {
     if (!focusPlanImport && !seedPlanPhoto) return;
     setPlanPath('photo');
@@ -638,11 +671,14 @@ export default function RoomLayoutEditor({
       } else if (key === 'l') {
         e.preventDefault();
         setLockOrbit((v) => !v);
+      } else if ((key === 'o' || key === 'e') && (e.altKey || e.shiftKey)) {
+        e.preventDefault();
+        optimizeClearances();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, undo, redo]);
+  }, [readOnly, undo, redo, optimizeClearances]);
 
   const primary = selection.length === 1 ? selection[0] : null;
   const selected = primary; // compat panneaux propriété (sélection unique)
@@ -1998,6 +2034,14 @@ export default function RoomLayoutEditor({
                         <Ungroup className="w-3.5 h-3.5" aria-hidden /> Dégrouper
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => optimizeClearances()}
+                      className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'w-full mt-1.5')}
+                      title="Optimiser les espacements réels et séparer le mobilier trop proche"
+                    >
+                      <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> Optimiser les espacements
+                    </button>
                   </>
                 ) : null}
               </div>
@@ -5241,6 +5285,25 @@ export default function RoomLayoutEditor({
       </button>
       <button
         type="button"
+        onClick={() => setClearanceModalOpen(true)}
+        title="Gérer et optimiser les espacements réels (Ctrl+Alt+O)"
+        className={cn(
+          EDITOR_TOOL,
+          clearanceReport.conflicts.length > 0
+            ? 'border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-200 font-bold'
+            : EDITOR_TOOL_IDLE,
+        )}
+      >
+        <MoveHorizontal className="w-3.5 h-3.5" aria-hidden />
+        Espacements
+        {clearanceReport.conflicts.length > 0 ? (
+          <span className="px-1.5 py-0.2 rounded-full bg-amber-500/25 text-[10px] font-bold">
+            {clearanceReport.conflicts.length}
+          </span>
+        ) : null}
+      </button>
+      <button
+        type="button"
         onClick={() => setShortcutsModalOpen(true)}
         title="Consulter les raccourcis clavier"
         className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
@@ -6326,9 +6389,125 @@ export default function RoomLayoutEditor({
             <span className="text-muted font-medium">Pivoter l'élément</span>
             <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">R</kbd>
           </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Optimiser les espacements</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Ctrl+Alt+O</kbd>
+          </div>
         </div>
         <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary leading-relaxed font-medium">
           Astuce ergonomie : Lorsque la caméra est verrouillée, vous pouvez glisser-déposer le mobilier directement dans la vue 3D avec la souris ou le doigt.
+        </div>
+      </div>
+    </Modal>
+    <Modal
+      open={clearanceModalOpen}
+      onClose={() => setClearanceModalOpen(false)}
+      title="Gestion des espacements & dégagements"
+      description="Contrôlez et optimisez en temps réel les distances physiques réelles entre tables, chaises, passages, scènes et portes."
+      size="md"
+    >
+      <div className="space-y-4">
+        <div
+          className={cn(
+            'p-3.5 rounded-2xl border flex items-start gap-3',
+            clearanceReport.isCompliant
+              ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-950 dark:text-emerald-200'
+              : 'bg-amber-500/10 border-amber-500/25 text-amber-950 dark:text-amber-200',
+          )}
+        >
+          <div
+            className={cn(
+              'p-2 rounded-xl shrink-0',
+              clearanceReport.isCompliant ? 'bg-emerald-500/20 text-emerald-600' : 'bg-amber-500/20 text-amber-600',
+            )}
+          >
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-bold text-xs uppercase tracking-wider">
+                Score d'espacement : {clearanceReport.score}/100
+              </p>
+              <span
+                className={cn(
+                  'text-[10px] font-bold px-2 py-0.5 rounded-full border',
+                  clearanceReport.isCompliant
+                    ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-500/20 border-amber-500/30 text-amber-800 dark:text-amber-300',
+                )}
+              >
+                {clearanceReport.isCompliant ? 'Conforme' : `${clearanceReport.conflicts.length} problème(s)`}
+              </span>
+            </div>
+            <p className="text-xs mt-1 leading-relaxed opacity-90">{clearanceReport.summary}</p>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-foreground">Profil d'espacement souhaité :</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'standard' as const, label: 'Standard', desc: '1.40m tables · Réceptions' },
+              { id: 'vip' as const, label: 'Confort VIP', desc: '1.80m tables · Galas' },
+              { id: 'compact' as const, label: 'Bistrot', desc: '1.10m tables · Urbain' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setClearancePreset(p.id)}
+                className={cn(
+                  'p-2.5 rounded-xl border text-left transition',
+                  clearancePreset === p.id
+                    ? 'border-primary bg-primary/10 font-bold'
+                    : 'border-border bg-surface hover:bg-surface-muted',
+                )}
+              >
+                <span className="block text-xs text-foreground">{p.label}</span>
+                <span className="block text-[10px] text-muted">{p.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {clearanceReport.conflicts.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-muted uppercase tracking-wider">
+              Anomalies physiques détectées ({clearanceReport.conflicts.length}) :
+            </p>
+            <ul className="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-border p-2 bg-surface-muted/30 text-xs">
+              {clearanceReport.conflicts.map((c) => (
+                <li key={c.id} className="p-1.5 rounded-lg bg-surface border border-border-subtle flex items-start gap-2">
+                  <span className="text-amber-600 shrink-0 mt-0.5">⚠️</span>
+                  <span className="text-foreground leading-snug">{c.message}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <div className="p-3 rounded-xl bg-surface-muted/60 border border-border text-[11px] text-muted space-y-1 leading-relaxed">
+          <p className="font-bold text-foreground text-xs">Normes physiques appliquées :</p>
+          <p>• <strong>Table à table :</strong> 1.40m min. (2x 0.45m recul chaise + 0.50m couloir de service).</p>
+          <p>• <strong>Chaise à chaise :</strong> 0.70m min. centre-à-centre (zéro superposition de coordonnées).</p>
+          <p>• <strong>Accès portes & scènes :</strong> 1.40m à 1.50m de sécurité vierge de tout mobilier.</p>
+          <p>• <strong>Circulation murs :</strong> 0.90m libre tout le long du périmètre de la salle.</p>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-border">
+          <Button type="button" variant="secondary" onClick={() => setClearanceModalOpen(false)} className="min-h-11">
+            Fermer
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              optimizeClearances(clearancePreset);
+              setClearanceModalOpen(false);
+            }}
+            className="min-h-11"
+            leftIcon={<MoveHorizontal className="w-4 h-4" />}
+          >
+            Optimiser en 1 clic
+          </Button>
         </div>
       </div>
     </Modal>

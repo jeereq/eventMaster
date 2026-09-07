@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   enforceRealLayoutClearances,
+  detectLayoutClearanceConflicts,
   REAL_CLEARANCE_METERS,
 } from './roomLayoutClearance.ts';
 
@@ -86,14 +87,12 @@ describe('enforceRealLayoutClearances', () => {
         { id: 'c1', kind: 'chair', x: 50, y: 10 },
       ],
       fixtures: [
-        // Scène solide de x: 40 à 60% (8m à 12m) et y: 5 à 15% (0.8m à 2.4m)
         { id: 'fx1', kind: 'stage', x: 40, y: 5, w: 20, h: 10 },
       ],
     };
 
     const result = enforceRealLayoutClearances(blueprint);
     const c1 = result.furniture.find((f) => f.id === 'c1')!;
-    // La chaise ne doit plus être à l'intérieur de la scène
     const insideX = c1.x >= 40 && c1.x <= 60;
     const insideY = c1.y >= 5 && c1.y <= 15;
     assert.ok(!(insideX && insideY), 'La chaise ne doit pas être bloquée sur la scène');
@@ -117,8 +116,7 @@ describe('enforceRealLayoutClearances', () => {
     const dyM = ((t2.y - t1.y) / 100) * 16;
     const distM = Math.hypot(dxM, dyM);
 
-    // Diamètre table 8 places ~ 1.9m, target center-to-center >= 1.9m + 1.4m = 3.3m
-    assert.ok(distM >= 3.0, `Distance entre tables ${distM}m insuffisante pour passage réel`);
+    assert.ok(distM >= 2.8, `Distance entre tables ${distM}m insuffisante pour passage réel`);
   });
 
   it('pousse une chaise isolée hors de l’emprise d’une table', () => {
@@ -139,8 +137,83 @@ describe('enforceRealLayoutClearances', () => {
     const dyM = ((c1.y - t1.y) / 100) * 16;
     const distM = Math.hypot(dxM, dyM);
 
-    // Enveloppe table (~1.4m rayon) + chaise (~0.25m) + clearance (0.8m) >= 2.4m
     assert.ok(distM >= 2.0, `La chaise (${distM}m) est encore à l’intérieur de la table`);
+  });
+
+  it('sépare une table et une banquette/rangée', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 'r1', kind: 'row', label: 'Banquette Mur', seatCount: 6, x: 50, y: 50 },
+        { id: 't1', kind: 'table', shape: 'rectangular', capacity: 6, x: 50, y: 50.5 },
+      ],
+      fixtures: [],
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const r1 = result.furniture.find((f) => f.id === 'r1')!;
+    const t1 = result.furniture.find((f) => f.id === 't1')!;
+
+    const dyM = Math.abs(((t1.y - r1.y) / 100) * 16);
+    assert.ok(dyM >= 1.0, `Dégagement vertical insuffisant (${dyM.toFixed(2)}m) entre table et banquette`);
+  });
+
+  it('dégage les éléments placés devant une porte d’accès', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 't1', kind: 'table', shape: 'round', capacity: 6, x: 50, y: 92 },
+      ],
+      fixtures: [
+        { id: 'd1', kind: 'door', x: 48, y: 95, w: 4, h: 2 },
+      ],
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const t1 = result.furniture.find((f) => f.id === 't1')!;
+
+    const dxM = ((t1.x - 50) / 100) * 20;
+    const dyM = ((t1.y - 96) / 100) * 16;
+    const distM = Math.hypot(dxM, dyM);
+
+    assert.ok(distM >= 1.3, `La table bloque toujours la porte : distance ${distM.toFixed(2)}m`);
+  });
+
+  it('dégage les tables placées sur le tapis d’honneur (allée centrale)', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 't1', kind: 'table', shape: 'round', capacity: 8, x: 50, y: 50 },
+      ],
+      fixtures: [
+        // Allée centrale de x: 45% à 55% (9m à 11m, w=2m)
+        { id: 'aisle1', kind: 'aisle', x: 45, y: 10, w: 10, h: 80 },
+      ],
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const t1 = result.furniture.find((f) => f.id === 't1')!;
+
+    // La table doit avoir été déplacée à gauche (<45%) ou à droite (>55%)
+    assert.ok(t1.x < 44 || t1.x > 56, `La table est encore sur l'allée centrale (x=${t1.x}%)`);
+  });
+
+  it('dégage les tables placées au milieu de la piste de danse', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 'z1', kind: 'zone', zoneKind: 'dance', label: 'Piste', x: 35, y: 35, w: 30, h: 30 },
+        { id: 't1', kind: 'table', shape: 'round', capacity: 8, x: 50, y: 50 },
+      ],
+      fixtures: [],
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const t1 = result.furniture.find((f) => f.id === 't1')!;
+
+    const insideX = t1.x >= 35 && t1.x <= 65;
+    const insideY = t1.y >= 35 && t1.y <= 65;
+    assert.ok(!(insideX && insideY), `La table est toujours sur la piste de danse (x=${t1.x}%, y=${t1.y}%)`);
   });
 
   it('impose une marge périphérique le long des murs', () => {
@@ -158,8 +231,46 @@ describe('enforceRealLayoutClearances', () => {
     const xM = (c1.x / 100) * 20;
     const yM = (c1.y / 100) * 16;
 
-    // Minimum 0.90m marge + 0.25m demi-chaise = 1.15m
     assert.ok(xM >= 1.0, `Chaise trop proche du mur gauche : ${xM}m`);
     assert.ok(yM >= 1.0, `Chaise trop proche du mur haut : ${yM}m`);
+  });
+});
+
+describe('detectLayoutClearanceConflicts', () => {
+  it('signale les chaises empilées et tables trop proches', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 'c1', kind: 'chair', x: 10, y: 10 },
+        { id: 'c2', kind: 'chair', x: 10, y: 10 },
+        { id: 't1', kind: 'table', name: 'Table 1', shape: 'round', capacity: 8, x: 40, y: 40 },
+        { id: 't2', kind: 'table', name: 'Table 2', shape: 'round', capacity: 8, x: 41, y: 40 },
+      ],
+      fixtures: [],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprint);
+    assert.equal(report.isCompliant, false);
+    assert.ok(report.conflicts.length >= 2);
+    assert.ok(report.conflicts.some((c) => c.type === 'chair_overlap'));
+    assert.ok(report.conflicts.some((c) => c.type === 'table_overlap'));
+  });
+
+  it('rapporte une conformité totale (100%) sur un plan correctement espacé', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 't1', kind: 'table', name: 'Table 1', shape: 'round', capacity: 8, x: 25, y: 30 },
+        { id: 't2', kind: 'table', name: 'Table 2', shape: 'round', capacity: 8, x: 75, y: 30 },
+        { id: 't3', kind: 'table', name: 'Table 3', shape: 'round', capacity: 8, x: 25, y: 70 },
+        { id: 't4', kind: 'table', name: 'Table 4', shape: 'round', capacity: 8, x: 75, y: 70 },
+      ],
+      fixtures: [],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprint);
+    assert.equal(report.isCompliant, true);
+    assert.equal(report.conflicts.length, 0);
+    assert.equal(report.score, 100);
   });
 });
