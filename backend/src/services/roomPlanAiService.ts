@@ -178,7 +178,6 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   tapis: 'carpet',
   moquette: 'carpet',
   buffet: 'buffet',
-  bar: 'buffet',
   catering: 'buffet',
   column: 'column',
   colonne: 'column',
@@ -491,6 +490,81 @@ function clampPct(value: unknown, fallback: number): number {
   return Math.round(clamp(asNumber(value, fallback), 0, 100) * 10) / 10;
 }
 
+function unwrapVisionRoot(raw: unknown): Record<string, unknown> {
+  let source = raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? { ...(raw as Record<string, unknown>) }
+    : {};
+  for (const key of ['plan', 'layout', 'data', 'draft', 'result', 'roomPlan', 'floorPlan']) {
+    const nested = source[key];
+    if (!nested || typeof nested !== 'object' || Array.isArray(nested)) continue;
+    const nestedObj = nested as Record<string, unknown>;
+    if (
+      nestedObj.items != null
+      || nestedObj.furniture != null
+      || nestedObj.elements != null
+      || nestedObj.outline != null
+      || nestedObj.canvas != null
+    ) {
+      source = { ...source, ...nestedObj };
+    }
+  }
+  return source;
+}
+
+function collectVisionItemRows(source: Record<string, unknown>): unknown[] {
+  const rows: unknown[] = [];
+  const push = (value: unknown) => {
+    if (Array.isArray(value)) {
+      rows.push(...value);
+      return;
+    }
+    if (value && typeof value === 'object') {
+      for (const nested of Object.values(value as Record<string, unknown>)) {
+        if (Array.isArray(nested)) rows.push(...nested);
+      }
+    }
+  };
+  push(source.items);
+  if (rows.length === 0) {
+    push(source.furniture);
+    push(source.elements);
+    push(source.objects);
+    push(source.fixtures);
+  }
+  return rows;
+}
+
+function readItemGeometry(row: Record<string, unknown>): { x: unknown; y: unknown; w: unknown; h: unknown } {
+  const pos = row.position && typeof row.position === 'object' && !Array.isArray(row.position)
+    ? row.position as Record<string, unknown>
+    : null;
+  const boxCandidate = row.bbox || row.box || row.rect;
+  const box = boxCandidate && typeof boxCandidate === 'object' && !Array.isArray(boxCandidate)
+    ? boxCandidate as Record<string, unknown>
+    : null;
+  const from = box || pos || row;
+  return {
+    x: from.x ?? row.x,
+    y: from.y ?? row.y,
+    w: from.w ?? from.width ?? row.w ?? row.width,
+    h: from.h ?? from.height ?? row.h ?? row.height,
+  };
+}
+
+function takeFiniteNumbers(values: unknown[]): number[] {
+  return values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+}
+
+function shouldScaleUnitInterval(values: number[]): boolean {
+  if (values.length < 4) return false;
+  return Math.max(...values) <= 1.5;
+}
+
+function clampPctMaybeUnit(value: unknown, fallback: number, scale01: boolean): number {
+  const n = asNumber(value, fallback);
+  return clampPct(scale01 && n <= 1.5 ? n * 100 : n, fallback);
+}
+
 function clampMeters(value: unknown, fallback: number): number {
   return Math.round(clamp(asNumber(value, fallback), ROOM_PLAN_CANVAS_MIN_M, ROOM_PLAN_CANVAS_MAX_M) * 10) / 10;
 }
@@ -557,7 +631,7 @@ export function parseRoomPlanVisionDraft(
   raw: unknown,
   known: { widthM: number; heightM: number },
 ): RoomPlanVisionDraft {
-  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const source = unwrapVisionRoot(raw);
   const canvasRaw = source.canvas && typeof source.canvas === 'object'
     ? (source.canvas as Record<string, unknown>)
     : {};
@@ -573,30 +647,42 @@ export function parseRoomPlanVisionDraft(
       .slice(0, 8)
     : [];
 
-  const itemsRaw = Array.isArray(source.items) ? source.items : [];
+  const itemsRaw = collectVisionItemRows(source);
+  const geometryByIndex = itemsRaw.map((entry) => (
+    entry && typeof entry === 'object' ? readItemGeometry(entry as Record<string, unknown>) : { x: undefined, y: undefined, w: undefined, h: undefined }
+  ));
+  const scale01 = shouldScaleUnitInterval(takeFiniteNumbers([
+    ...geometryByIndex.flatMap((geo) => [geo.x, geo.y, geo.w, geo.h]),
+    outlineRaw.x,
+    outlineRaw.y,
+    outlineRaw.w,
+    outlineRaw.h,
+  ]));
   const items: RoomPlanVisionItem[] = [];
-  for (const entry of itemsRaw) {
+  for (const [index, entry] of itemsRaw.entries()) {
     if (items.length >= ROOM_PLAN_VISION_ITEM_MAX) {
       warnings.push(`Plus de ${ROOM_PLAN_VISION_ITEM_MAX} objets visibles — le reste a été ignoré.`);
       break;
     }
     if (!entry || typeof entry !== 'object') continue;
     const row = entry as Record<string, unknown>;
-    const kindRaw = normalizeRoomPlanVisionKind(row.kind);
+    const kindRaw = normalizeRoomPlanVisionKind(row.kind ?? row.type ?? row.category ?? row.object);
     if (!kindRaw) continue;
-    const w = row.w != null ? clampPct(row.w, 10) : undefined;
-    const h = row.h != null ? clampPct(row.h, 8) : undefined;
+    const geo = geometryByIndex[index] ?? readItemGeometry(row);
+    const w = geo.w != null ? clampPctMaybeUnit(geo.w, 10, scale01) : undefined;
+    const h = geo.h != null ? clampPctMaybeUnit(geo.h, 8, scale01) : undefined;
     const kind = refineSeatKindFromFootprint(kindRaw, w, h);
     const item: RoomPlanVisionItem = {
       kind,
-      x: clampPct(row.x, 50),
-      y: clampPct(row.y, 50),
+      x: clampPctMaybeUnit(geo.x, 50, scale01),
+      y: clampPctMaybeUnit(geo.y, 50, scale01),
     };
     if (w != null) item.w = w;
     if (h != null) item.h = h;
     if (row.rotation != null) item.rotation = Math.round(clamp(asNumber(row.rotation, 0), -180, 180));
     const shape = resolveTableShape(row.shape)
-      ?? (kind === 'table' && typeof row.kind === 'string' ? resolveTableShape(row.kind) : undefined);
+      ?? (kind === 'table' && typeof row.kind === 'string' ? resolveTableShape(row.kind) : undefined)
+      ?? (kind === 'table' && typeof row.type === 'string' ? resolveTableShape(row.type) : undefined);
     if (shape) item.shape = shape;
     else if (kind === 'table' && item.w != null && item.h != null) {
       const ratio = item.w / Math.max(item.h, 0.1);
@@ -609,9 +695,12 @@ export function parseRoomPlanVisionDraft(
     } else if (kind === 'row') {
       item.seats = inferRowSeats(item.w);
     }
-    const label = asString(row.label, 40);
+    const label = asString(row.label, 40) ?? asString(row.name, 40);
     if (label) item.label = label;
-    const zoneKind = resolveZoneKind(row.zoneKind, typeof row.kind === 'string' ? row.kind : kind);
+    const zoneKind = resolveZoneKind(
+      row.zoneKind,
+      typeof row.kind === 'string' ? row.kind : typeof row.type === 'string' ? row.type : kind,
+    );
     if (zoneKind) item.zoneKind = zoneKind;
     const color = parseHexColor(row.color);
     if (color) item.color = color;
@@ -636,6 +725,7 @@ export function parseRoomPlanVisionDraft(
       item.pedestalStyle = row.pedestalStyle;
     }
     if (row.anchor === 'center' || row.anchor === 'box') item.anchor = row.anchor;
+    else item.anchor = 'box';
     items.push(item);
   }
 
@@ -648,8 +738,8 @@ export function parseRoomPlanVisionDraft(
     const end = row.end && typeof row.end === 'object' ? row.end as Record<string, unknown> : null;
     if (!start || !end) continue;
     walls.push({
-      start: { x: clampPct(start.x, 8), y: clampPct(start.y, 8) },
-      end: { x: clampPct(end.x, 92), y: clampPct(end.y, 8) },
+      start: { x: clampPctMaybeUnit(start.x, 8, scale01), y: clampPctMaybeUnit(start.y, 8, scale01) },
+      end: { x: clampPctMaybeUnit(end.x, 92, scale01), y: clampPctMaybeUnit(end.y, 8, scale01) },
       doors: asRatioList(row.doors, 3),
       windows: asRatioList(row.windows, 4),
     });
@@ -674,10 +764,10 @@ export function parseRoomPlanVisionDraft(
     },
     outline: {
       shape: outlineShape,
-      x: clampPct(outlineRaw.x, 5),
-      y: clampPct(outlineRaw.y, 5),
-      w: clampPct(outlineRaw.w, 90),
-      h: clampPct(outlineRaw.h, 90),
+      x: clampPctMaybeUnit(outlineRaw.x, 5, scale01),
+      y: clampPctMaybeUnit(outlineRaw.y, 5, scale01),
+      w: clampPctMaybeUnit(outlineRaw.w, 90, scale01),
+      h: clampPctMaybeUnit(outlineRaw.h, 90, scale01),
     },
     appearance: parseAppearance(source.appearance, view),
     items,

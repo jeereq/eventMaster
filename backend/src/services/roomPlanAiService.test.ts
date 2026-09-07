@@ -199,6 +199,39 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.items.length, ROOM_PLAN_VISION_ITEM_MAX);
     assert.ok(draft.warnings.some((w) => w.includes(String(ROOM_PLAN_VISION_ITEM_MAX))));
   });
+
+  it('accepte type à la place de kind et déplie un plan imbriqué', () => {
+    const draft = parseRoomPlanVisionDraft({
+      plan: {
+        view: 'top',
+        furniture: [
+          { type: 'table', name: 'Honneur', position: { x: 20, y: 18 }, width: 12, height: 10 },
+          { type: 'dancefloor', x: 40, y: 50, w: 22, h: 18 },
+        ],
+      },
+    }, { widthM: 20, heightM: 16 });
+    assert.equal(draft.items.length, 2);
+    assert.equal(draft.items[0]?.kind, 'table');
+    assert.equal(draft.items[0]?.label, 'Honneur');
+    assert.equal(draft.items[0]?.x, 20);
+    assert.equal(draft.items[1]?.kind, 'zone');
+  });
+
+  it('convertit des coordonnées 0–1 en pourcentages 0–100', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [
+        { kind: 'table', x: 0.22, y: 0.31, w: 0.12, h: 0.1 },
+        { kind: 'stage', x: 0.4, y: 0.08, w: 0.28, h: 0.12 },
+      ],
+    }, { widthM: 20, heightM: 16 });
+    assert.equal(draft.items.length, 2);
+    assert.equal(draft.items[0]?.x, 22);
+    assert.equal(draft.items[0]?.y, 31);
+    assert.equal(draft.items[0]?.w, 12);
+    assert.equal(draft.items[1]?.x, 40);
+    assert.equal(draft.items[1]?.w, 28);
+  });
 });
 
 describe('normalizeRoomPlanVisionKind', () => {
@@ -208,6 +241,7 @@ describe('normalizeRoomPlanVisionKind', () => {
     assert.equal(normalizeRoomPlanVisionKind('régie'), 'djBooth');
     assert.equal(normalizeRoomPlanVisionKind('guirlandes'), 'stringLight');
     assert.equal(normalizeRoomPlanVisionKind('tente'), 'gazebo');
+    assert.equal(normalizeRoomPlanVisionKind('Bar'), 'bar');
     assert.equal(normalizeRoomPlanVisionKind('spaceship'), undefined);
   });
 });

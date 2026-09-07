@@ -3,7 +3,6 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -284,7 +283,6 @@ function ParamNumber({
 }
 
 export default function RoomsManagement() {
-  const router = useRouter();
   const aiDraftConsumed = useRef(false);
   const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
   const { site } = usePlatformSite();
@@ -517,6 +515,7 @@ export default function RoomsManagement() {
   useEffect(() => {
     if (aiDraftConsumed.current) return;
     if (typeof window === 'undefined' || new URLSearchParams(window.location.search).get('aiDraft') !== '1') return;
+    if (!planFeatures) return;
     if (roomsAtLimit) {
       setError(getQuotaActionMessage('rooms', planQuota, tenant?.plan));
       return;
@@ -530,8 +529,8 @@ export default function RoomsManagement() {
         : allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE'
     ) as RoomType;
     const caps = roomEditorCapabilities(
-      planFeatures?.roomEditorLevel,
-      planFeatures?.roomThemesFixtures === true,
+      planFeatures.roomEditorLevel,
+      planFeatures.roomThemesFixtures === true,
     );
     const applied = applyRoomPlanVisionDraft(
       emptyRoomPlanSeed(type, stored.widthM ?? 20, stored.heightM ?? 16),
@@ -539,17 +538,28 @@ export default function RoomsManagement() {
       caps,
       { imageUrl: stored.imageUrl },
     );
+    const importedCount = applied.selection.length;
     resetWizard();
     setRoomType(type);
     setLayoutParams(defaultParams[type]);
-    setBlueprintDraft(refreshBlueprintMetadata(applied.blueprint));
+    setBlueprintDraft(stampLayoutAction(
+      refreshBlueprintMetadata(applied.blueprint),
+      importedCount > 0
+        ? `Plan IA importé (${importedCount} éléments)`
+        : 'Plan IA importé — aucun mobilier déduit',
+    ));
     setWizardStep(3);
     setWizardPlanTab('editeur');
     setFarthestStep(3);
     setShowWizard(true);
+    setSuccess(
+      importedCount > 0
+        ? `Plan IA chargé : ${importedCount} éléments. Nommez la salle, puis créez-la.`
+        : 'Plan IA chargé sans mobilier. Placez les tables avant de créer la salle.',
+    );
     clearRoomPlanAiDraft();
-    router.replace('/dashboard/rooms', { scroll: false });
-  }, [allowedRoomTypes, roomsAtLimit, planFeatures, planQuota, tenant?.plan, router]);
+    window.history.replaceState({}, '', '/dashboard/rooms');
+  }, [allowedRoomTypes, roomsAtLimit, planFeatures, planQuota, tenant?.plan]);
 
   const goToStep = (step: number) => {
     if (step > 1 && !name.trim()) {
@@ -1534,9 +1544,22 @@ export default function RoomsManagement() {
                         disabled={locked}
                         onClick={() => {
                           if (locked) return;
+                          if (roomType === type) return;
                           setRoomType(type);
                           setLayoutParams(defaultParams[type]);
-                          setBlueprintDraft(buildWizardBlueprint(type, defaultParams[type], null));
+                          setBlueprintDraft((prev) => {
+                            const hasImportedLayout = Boolean(
+                              prev
+                              && (
+                                (prev.furniture?.length ?? 0) > 0
+                                || (prev.fixtures?.length ?? 0) > 0
+                              ),
+                            );
+                            if (hasImportedLayout && prev) {
+                              return refreshBlueprintMetadata({ ...prev, roomType: type });
+                            }
+                            return buildWizardBlueprint(type, defaultParams[type], prev);
+                          });
                         }}
                         className={cn(
                           'text-left p-3.5 min-h-11 rounded-[var(--radius-card)] border transition-colors',

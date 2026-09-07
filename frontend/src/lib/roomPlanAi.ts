@@ -327,25 +327,6 @@ const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
   custom: 'custom',
 };
 
-const ZONE_FALLBACK_FIXTURES = new Set<RoomPlanVisionItemKind>([
-  'stage',
-  'podium',
-  'carpet',
-  'buffet',
-  'arch',
-  'partition',
-  'decal',
-  'fountain',
-  'gazebo',
-  'djBooth',
-  'screen',
-  'instrument',
-  'bar',
-  'flower',
-  'pedestal',
-  'corridor',
-]);
-
 const CANVAS_MIN_M = 5;
 const CANVAS_MAX_M = 80;
 const CANVAS_KEEP_RELATIVE_DELTA = 0.15;
@@ -358,6 +339,54 @@ const SEAT_CHAIR_SPAN_MAX = 12;
 
 function clampPct(value: number): number {
   return Math.min(100, Math.max(0, Math.round(value * 10) / 10));
+}
+
+function scalePctIfUnit(value: number | undefined, scale01: boolean): number | undefined {
+  if (value == null || !Number.isFinite(value)) return value;
+  return clampPct(scale01 && value <= 1.5 ? value * 100 : value);
+}
+
+function draftLooksLikeUnitInterval(draft: RoomPlanVisionDraft): boolean {
+  const nums: number[] = [];
+  for (const item of draft.items) {
+    for (const value of [item.x, item.y, item.w, item.h]) {
+      if (typeof value === 'number' && Number.isFinite(value)) nums.push(value);
+    }
+  }
+  if (nums.length < 4) return false;
+  return Math.max(...nums) <= 1.5;
+}
+
+function scaleImportedDraftUnits(draft: RoomPlanVisionDraft): RoomPlanVisionDraft {
+  if (!draftLooksLikeUnitInterval(draft)) return draft;
+  return {
+    ...draft,
+    outline: {
+      ...draft.outline,
+      x: scalePctIfUnit(draft.outline.x, true) ?? draft.outline.x,
+      y: scalePctIfUnit(draft.outline.y, true) ?? draft.outline.y,
+      w: scalePctIfUnit(draft.outline.w, true) ?? draft.outline.w,
+      h: scalePctIfUnit(draft.outline.h, true) ?? draft.outline.h,
+    },
+    items: draft.items.map((item) => ({
+      ...item,
+      x: scalePctIfUnit(item.x, true) ?? item.x,
+      y: scalePctIfUnit(item.y, true) ?? item.y,
+      w: scalePctIfUnit(item.w, true),
+      h: scalePctIfUnit(item.h, true),
+    })),
+    walls: draft.walls.map((wall) => ({
+      ...wall,
+      start: {
+        x: scalePctIfUnit(wall.start.x, true) ?? wall.start.x,
+        y: scalePctIfUnit(wall.start.y, true) ?? wall.start.y,
+      },
+      end: {
+        x: scalePctIfUnit(wall.end.x, true) ?? wall.end.x,
+        y: scalePctIfUnit(wall.end.y, true) ?? wall.end.y,
+      },
+    })),
+  };
 }
 
 function asTableSurface(value: string | undefined): TableSurfaceStyle | undefined {
@@ -743,14 +772,14 @@ export function emptyRoomPlanSeed(
   widthM = 20,
   heightM = 16,
 ): RoomLayoutBlueprint {
-  return {
+  return ensureBlueprintDefaults({
     version: 1,
     roomType,
     canvas: { widthM, heightM },
     fixtures: [],
     furniture: [],
     metadata: { totalSeats: 0 },
-  };
+  });
 }
 
 export async function composeRoomPlanWithAi(input: {
@@ -825,7 +854,10 @@ export function loadRoomPlanAiDraft(): RoomPlanAiDraft | null {
     const raw = sessionStorage.getItem(AI_ROOM_PLAN_DRAFT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as RoomPlanAiDraft;
-    if (!parsed?.draft || !Array.isArray(parsed.draft.items)) return null;
+    if (!parsed?.draft) return null;
+    if (!Array.isArray(parsed.draft.items)) {
+      parsed.draft = { ...parsed.draft, items: [] };
+    }
     return parsed;
   } catch {
     return null;
@@ -864,6 +896,7 @@ export function applyRoomPlanVisionDraft(
     );
   }
   const appearance = draft.appearance;
+  const scaledDraft = scaleImportedDraftUnits(draft);
   const chairType = defaultChairType(current.roomType);
   const storyId = current.metadata.activeStoryId;
   const furniture: RoomLayoutBlueprint['furniture'] = [];
@@ -879,7 +912,7 @@ export function applyRoomPlanVisionDraft(
 
   let tentSeen = appearance?.roofStyle === 'tentSwag';
 
-  for (const rawItem of draft.items) {
+  for (const rawItem of scaledDraft.items) {
     const kind = resolveImportedKind(rawItem);
     const item = kind === rawItem.kind ? rawItem : { ...rawItem, kind };
     if (isTentStructureItem(item, kind)) {
@@ -889,7 +922,7 @@ export function applyRoomPlanVisionDraft(
     if (FIXTURE_KINDS.has(kind as RoomLayoutBlueprint['fixtures'][number]['kind'])) {
       const fixtureKind = kind as RoomLayoutBlueprint['fixtures'][number]['kind'];
       const allowed = caps.canFixtures && caps.fixtureKinds.includes(fixtureKind as RoomEditorCapabilities['fixtureKinds'][number]);
-      if (!allowed && caps.canZones && ZONE_FALLBACK_FIXTURES.has(kind)) {
+      if (!allowed) {
         const box = itemFootprint(item, DEFAULT_FOOTPRINT.zone);
         const zoneKind = resolveZoneKind(item, kind === 'carpet' ? 'carpet' : kind === 'buffet' ? 'buffet' : 'custom');
         const zone = {
@@ -910,10 +943,6 @@ export function applyRoomPlanVisionDraft(
         furniture.push(zone);
         selection.push({ kind: 'zone', id: zone.id });
         warnings.push(`« ${zone.label} » importé comme zone — élément hors forfait décor.`);
-        continue;
-      }
-      if (!allowed) {
-        warnings.push(`« ${item.label || kind} » ignoré — non inclus dans votre forfait.`);
         continue;
       }
       const created = applyFixtureLook(createNeutralFixtureForImport(fixtureKind), item);
@@ -967,7 +996,28 @@ export function applyRoomPlanVisionDraft(
 
     if (kind === 'row') {
       if (!caps.canAddRows) {
-        warnings.push('Les rangées ne sont pas incluses dans votre forfait.');
+        if (tableCount >= caps.maxTables) {
+          warnings.push(`Limite de ${caps.maxTables} tables (${caps.label}) — rangées supplémentaires ignorées.`);
+          continue;
+        }
+        tableCount += 1;
+        const box = itemFootprint(item, DEFAULT_FOOTPRINT.row);
+        const table = {
+          ...createBlueprintTable(tableCount, {
+            shape: asTableShape('rectangular', caps.tableShapes),
+            capacity: inferRowSeatCount(item),
+            chairType,
+          }),
+          name: item.label || `Rangée ${tableCount}`,
+          x: box.cx,
+          y: box.cy,
+          rotation: item.rotation,
+          groupId: `${AI_ROOM_IMPORT_GROUP_ID}-table`,
+          storyId,
+        };
+        furniture.push(table);
+        selection.push({ kind: 'table', id: table.id });
+        warnings.push(`« ${table.name} » importée comme table — rangées hors forfait.`);
         continue;
       }
       if (rowCount >= caps.maxRows) {
@@ -1022,8 +1072,7 @@ export function applyRoomPlanVisionDraft(
 
     if (kind === 'zone') {
       if (!caps.canZones) {
-        warnings.push('Les zones (piste, VIP, buffet) ne sont pas incluses dans votre forfait.');
-        continue;
+        warnings.push(`« ${item.label || 'Zone'} » importée comme zone — édition limitée sur votre forfait.`);
       }
       zoneCount += 1;
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.zone);
@@ -1049,17 +1098,17 @@ export function applyRoomPlanVisionDraft(
     warnings.push(`« ${item.label || kind} » non reconnu — non importé.`);
   }
 
-  const outlineShape = OUTLINE_SHAPES.has(draft.outline.shape as RoomOutlineShape)
-    ? draft.outline.shape as RoomOutlineShape
+  const outlineShape = OUTLINE_SHAPES.has(scaledDraft.outline.shape as RoomOutlineShape)
+    ? scaledDraft.outline.shape as RoomOutlineShape
     : 'rectangle';
   const outline = caps.canChangeOutline
     ? {
       ...defaultRoomOutline(outlineShape),
       shape: outlineShape,
-      x: draft.outline.x,
-      y: draft.outline.y,
-      w: draft.outline.w,
-      h: draft.outline.h,
+      x: scaledDraft.outline.x,
+      y: scaledDraft.outline.y,
+      w: scaledDraft.outline.w,
+      h: scaledDraft.outline.h,
     }
     : (current.roomOutline ?? defaultRoomOutline('rectangle'));
 
@@ -1067,8 +1116,8 @@ export function applyRoomPlanVisionDraft(
   const wallColor = appearance?.wallColor;
   const existingWalls = current.walls ?? [];
   let walls = existingWalls;
-  if (draft.walls.length > 0) {
-    walls = draft.walls.map((wall) => {
+  if (scaledDraft.walls.length > 0) {
+    walls = scaledDraft.walls.map((wall) => {
       const segment = createWallSegment({
         start: wall.start,
         end: wall.end,
