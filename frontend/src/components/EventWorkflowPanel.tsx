@@ -59,7 +59,7 @@ export default function EventWorkflowPanel({
                   type="button"
                   onClick={() => step.tab && onNavigateTab(step.tab)}
                   className={cn(
-                    "flex flex-col items-center gap-2 relative group p-2 rounded-xl transition-all",
+                    "flex flex-col items-center gap-2 relative group p-2 rounded-xl transition-all min-h-11 min-w-[72px] touch-manipulation",
                     isActive ? "bg-primary/5" : "hover:bg-surface-muted"
                   )}
                 >
@@ -75,12 +75,12 @@ export default function EventWorkflowPanel({
                   
                   <div className="text-center">
                     <p className={cn(
-                      "text-[11px] font-bold uppercase tracking-wider transition-colors",
-                      isActive ? "text-primary" : isCompleted ? "text-emerald-700" : "text-muted"
+                      "text-xs font-bold uppercase tracking-wider transition-colors",
+                      isActive ? "text-primary" : isCompleted ? "text-emerald-700 dark:text-emerald-400" : "text-muted"
                     )}>
                       {step.title}
                     </p>
-                    <p className="text-[10px] text-muted mt-0.5 max-w-[140px] line-clamp-1">
+                    <p className="text-xs text-muted mt-0.5 max-w-[140px] line-clamp-1">
                       {step.detail}
                     </p>
                   </div>
@@ -101,7 +101,7 @@ export default function EventWorkflowPanel({
       {/* Support / Secondary Navigation */}
       {showSupport && (
         <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-[11px] font-semibold text-muted uppercase tracking-wider mr-2">
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider mr-1">
             Paramètres & Support :
           </span>
           {SUPPORT_TABS.map(({ id, label, icon: Icon }) => (
@@ -109,7 +109,7 @@ export default function EventWorkflowPanel({
               key={id}
               onClick={() => onNavigateTab(id)}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] sm:min-h-[34px] rounded-full text-xs font-semibold transition-colors border touch-manipulation",
                 activeTab === id 
                   ? "bg-foreground text-background border-foreground shadow-sm" 
                   : "bg-surface text-muted border-border hover:text-foreground"

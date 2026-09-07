@@ -98,10 +98,10 @@ export default function ProtocolTasksInbox({ protocol = true }: { protocol?: boo
               return (
                 <li
                   key={task.id}
-                  className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2"
+                  className="rounded-xl border border-border bg-surface-muted/40 p-3 sm:px-3.5 sm:py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all hover:bg-surface-muted/70"
                 >
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex flex-wrap items-center gap-1">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <StatusPill tone="slate">{EVENT_TASK_KIND_LABELS[task.kind]}</StatusPill>
                       {due !== 'none' ? (
                         <StatusPill tone={due === 'overdue' ? 'rose' : 'amber'}>
@@ -115,15 +115,16 @@ export default function ProtocolTasksInbox({ protocol = true }: { protocol?: boo
                     >
                       {task.title}
                     </Link>
-                    <p className="text-[11px] text-muted truncate">{task.event.title}</p>
+                    <p className="text-xs text-muted truncate">{task.event.title}</p>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 pt-1.5 border-t border-border/40 sm:border-t-0 sm:pt-0 w-full sm:w-auto">
                     <Button
                       size="sm"
                       variant="secondary"
                       loading={busy}
                       onClick={() => void setStatus(task, 'IN_PROGRESS')}
                       disabled={task.status === 'IN_PROGRESS'}
+                      className="flex-1 sm:flex-initial min-h-11 sm:min-h-[36px]"
                     >
                       En cours
                     </Button>
@@ -132,6 +133,7 @@ export default function ProtocolTasksInbox({ protocol = true }: { protocol?: boo
                       loading={busy}
                       leftIcon={<Check className="w-3.5 h-3.5" />}
                       onClick={() => void setStatus(task, 'DONE')}
+                      className="flex-1 sm:flex-initial min-h-11 sm:min-h-[36px]"
                     >
                       Faite
                     </Button>

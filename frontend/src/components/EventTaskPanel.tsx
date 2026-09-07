@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ClipboardList, Loader2, Plus, Sparkles, Trash2, UserRound } from 'lucide-react';
+import { AlertCircle, Check, ClipboardList, Clock, Flag, Link2, Loader2, Plus, Sparkles, Trash2, UserRound } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, EmptyState, Input, StatusPill, ViewModeToggle, useViewMode, listStackClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -158,7 +158,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     );
   }
 
-  const selectClass = 'px-3 py-1.5 rounded-xl border border-border bg-surface text-[12px] font-medium text-foreground hover:bg-surface-muted transition-colors outline-none focus:ring-2 focus:ring-primary/20';
+  const selectClass = 'px-2.5 py-1 min-h-[36px] sm:min-h-[32px] rounded-xl border border-border bg-surface text-xs font-medium text-foreground hover:bg-surface-muted transition-colors outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -287,135 +287,183 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               <li
                 key={task.id}
                 className={cn(
-                  'rounded-xl border border-border/50 bg-surface px-4 py-3 flex items-start gap-4 transition-colors hover:border-border hover:shadow-sm',
-                  mode === 'grid' && 'h-full flex-col',
-                  done && 'opacity-60 bg-surface-muted/30 border-transparent',
+                  'rounded-2xl border border-border/80 bg-surface p-3.5 sm:p-4 transition-all hover:border-border hover:shadow-2xs flex flex-col gap-3',
+                  mode === 'grid' && 'h-full justify-between',
+                  done && 'opacity-65 bg-surface-muted/20 border-border/40',
                 )}
               >
-                <div className={cn(
-                  "flex items-start gap-3 w-full",
-                  mode === 'grid' && "items-center"
-                )}>
-                  <button
-                    type="button"
-                    disabled={!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED'}
-                    onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
-                    className={cn(
-                      'mt-0.5 w-6 h-6 rounded-full border-2 inline-flex items-center justify-center shrink-0 transition-all',
-                      done
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'border-muted/30 text-transparent hover:border-primary hover:text-primary',
-                    )}
-                    title={done ? 'Rouvrir' : 'Marquer faite'}
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className={cn('text-sm font-semibold tracking-tight', done && 'line-through text-muted')}>{task.title}</p>
-                    {task.notes ? <p className="text-xs text-muted/80">{task.notes}</p> : null}
-                    {task.blockedBy ? (
-                      <p className="text-[10px] text-muted inline-flex items-center gap-1 bg-surface-muted px-2 py-0.5 rounded-full mt-1">
-                        Dépend de : <span className="font-medium">{task.blockedBy.title}</span>
-                        {task.blockedBy.status !== 'DONE' ? ' (en cours)' : ''}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className={cn(
-                  "flex flex-wrap items-center gap-2",
-                  mode === 'list' && "mt-1 pl-9",
-                  mode === 'grid' && "mt-auto w-full pt-3"
-                )}>
-                    {canManage ? (
-                      <select
-                        value={task.status}
-                        onChange={(e) => void patch(task.id, { status: e.target.value })}
-                        className={selectClass}
+                {/* En-tête : Checkbox (touch-target 44px), Titre & Notes, et Action Supprimer */}
+                <div className="flex items-start justify-between gap-3 w-full">
+                  <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
+                    <button
+                      type="button"
+                      disabled={!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED'}
+                      onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
+                      className={cn(
+                        'min-w-11 min-h-11 -m-2 p-2 inline-flex items-center justify-center shrink-0 transition-transform active:scale-95 touch-manipulation',
+                        (!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED') && 'cursor-not-allowed opacity-40',
+                      )}
+                      title={done ? 'Rouvrir' : 'Marquer faite'}
+                      aria-label={done ? 'Marquer comme non faite' : 'Marquer comme faite'}
+                    >
+                      <span
+                        className={cn(
+                          'w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors',
+                          done
+                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
+                            : 'border-muted/40 text-transparent hover:border-primary hover:text-primary/70',
+                        )}
                       >
-                        {STATUS_OPTIONS.map(([id, label]) => (
-                          <option key={id} value={id}>{label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <StatusPill tone={statusTone(task.status)}>{EVENT_TASK_STATUS_LABELS[task.status]}</StatusPill>
-                    )}
-                    {canManage ? (
-                      <select
-                        value={task.kind || 'GENERAL'}
-                        onChange={(e) => void patch(task.id, { kind: e.target.value })}
-                        className={selectClass}
-                      >
-                        {KIND_OPTIONS.map(([id, label]) => (
-                          <option key={id} value={id}>{label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <StatusPill tone="slate">{EVENT_TASK_KIND_LABELS[task.kind || 'GENERAL']}</StatusPill>
-                    )}
-                    {canManage ? (
-                      <select
-                        value={String(task.priority ?? 1)}
-                        onChange={(e) => void patch(task.id, { priority: Number(e.target.value) })}
-                        className={selectClass}
-                      >
-                        {[0, 1, 2].map((level) => (
-                          <option key={level} value={level}>{EVENT_TASK_PRIORITY_LABELS[level]}</option>
-                        ))}
-                      </select>
-                    ) : task.priority === 2 ? (
-                      <StatusPill tone="rose">Haute</StatusPill>
-                    ) : null}
-                    {dueText ? (
-                      <StatusPill tone={due === 'overdue' ? 'rose' : due === 'today' ? 'amber' : 'slate'}>
-                        {dueText}
-                      </StatusPill>
-                    ) : null}
-                    {task.mine ? <StatusPill tone="sky">Moi</StatusPill> : null}
-                    {canManage ? (
-                      <label className="inline-flex items-center gap-1 text-[11px] text-muted">
-                        <UserRound className="w-3 h-3" />
-                        <select
-                          value={task.assignee?.id || ''}
-                          onChange={(e) => void patch(task.id, { assigneeId: e.target.value || null })}
-                          className="bg-transparent border-0 text-[11px] font-medium text-foreground max-w-[10rem]"
-                        >
-                          <option value="">Non assignée</option>
-                          {assignees.map((person) => (
-                            <option key={person.id} value={person.id}>
-                              {person.name || person.email} · {person.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : (
-                      <span className="text-[11px] text-muted">
-                        {task.assignee ? task.assignee.name || task.assignee.email : 'Non assignée'}
+                        <Check className="w-3.5 h-3.5" />
                       </span>
-                    )}
-                    {canManage ? (
+                    </button>
+
+                    <div className="min-w-0 flex-1 space-y-1 pt-0.5">
+                      <p className={cn('text-sm sm:text-base font-semibold tracking-tight text-foreground break-words leading-snug', done && 'line-through text-muted')}>
+                        {task.title}
+                      </p>
+                      {task.notes ? (
+                        <p className="text-xs text-muted/90 leading-relaxed line-clamp-2">
+                          {task.notes}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {canManage ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(task.id)}
+                      className="min-w-11 min-h-11 -m-2 p-2 inline-flex items-center justify-center text-muted/50 hover:text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors shrink-0 touch-manipulation"
+                      title="Supprimer la tâche"
+                      aria-label="Supprimer la tâche"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  ) : null}
+                </div>
+
+                {/* Bannière de dépendance bloquante */}
+                {task.blockedBy ? (
+                  <div className="ml-0 sm:ml-9 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 max-w-full truncate">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span className="truncate">
+                      Dépend de : <strong className="font-semibold">{task.blockedBy.title}</strong>
+                      {task.blockedBy.status !== 'DONE' ? ' (en cours)' : ' (terminée)'}
+                    </span>
+                  </div>
+                ) : null}
+
+                {/* Ligne inférieure : Statut, Type, Priorité, Échéance, Assignation, Dépendance (responsive wrap fluide) */}
+                <div className={cn(
+                  "flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 sm:border-t-0 sm:pt-0 sm:ml-9",
+                  mode === 'grid' && "mt-auto w-full pt-3 border-t border-border/50 sm:ml-0"
+                )}>
+                  {canManage ? (
+                    <select
+                      value={task.status}
+                      onChange={(e) => void patch(task.id, { status: e.target.value })}
+                      className={cn(selectClass, 'font-semibold')}
+                      aria-label="Statut de la tâche"
+                    >
+                      {STATUS_OPTIONS.map(([id, label]) => (
+                        <option key={id} value={id}>{label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <StatusPill tone={statusTone(task.status)}>{EVENT_TASK_STATUS_LABELS[task.status]}</StatusPill>
+                  )}
+
+                  {canManage ? (
+                    <select
+                      value={task.kind || 'GENERAL'}
+                      onChange={(e) => void patch(task.id, { kind: e.target.value })}
+                      className={selectClass}
+                      aria-label="Catégorie de la tâche"
+                    >
+                      {KIND_OPTIONS.map(([id, label]) => (
+                        <option key={id} value={id}>{label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <StatusPill tone="slate">{EVENT_TASK_KIND_LABELS[task.kind || 'GENERAL']}</StatusPill>
+                  )}
+
+                  {canManage ? (
+                    <select
+                      value={String(task.priority ?? 1)}
+                      onChange={(e) => void patch(task.id, { priority: Number(e.target.value) })}
+                      className={cn(
+                        selectClass,
+                        task.priority === 2 && 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400 font-semibold',
+                      )}
+                      aria-label="Priorité de la tâche"
+                    >
+                      {[0, 1, 2].map((level) => (
+                        <option key={level} value={level}>{EVENT_TASK_PRIORITY_LABELS[level]}</option>
+                      ))}
+                    </select>
+                  ) : task.priority === 2 ? (
+                    <StatusPill tone="rose" className="gap-1 inline-flex items-center">
+                      <Flag className="w-3 h-3" />
+                      Haute
+                    </StatusPill>
+                  ) : null}
+
+                  {dueText ? (
+                    <StatusPill
+                      tone={due === 'overdue' ? 'rose' : due === 'today' ? 'amber' : 'slate'}
+                      className="inline-flex items-center gap-1 min-h-[26px]"
+                    >
+                      <Clock className="w-3 h-3" />
+                      {dueText}
+                    </StatusPill>
+                  ) : null}
+
+                  {task.mine ? <StatusPill tone="sky">Moi</StatusPill> : null}
+
+                  {canManage ? (
+                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-[36px] sm:min-h-[32px]">
+                      <UserRound className="w-3.5 h-3.5 text-muted shrink-0" />
+                      <select
+                        value={task.assignee?.id || ''}
+                        onChange={(e) => void patch(task.id, { assigneeId: e.target.value || null })}
+                        className="bg-transparent border-0 text-xs font-medium text-foreground max-w-[10rem] sm:max-w-[12rem] outline-none cursor-pointer"
+                        aria-label="Assigner la tâche"
+                      >
+                        <option value="">Non assignée</option>
+                        {assignees.map((person) => (
+                          <option key={person.id} value={person.id}>
+                            {person.name || person.email} · {person.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/50 border border-border/60 px-2.5 py-1 rounded-xl">
+                      <UserRound className="w-3.5 h-3.5 text-muted shrink-0" />
+                      {task.assignee ? task.assignee.name || task.assignee.email : 'Non assignée'}
+                    </span>
+                  )}
+
+                  {canManage ? (
+                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-[36px] sm:min-h-[32px]">
+                      <Link2 className="w-3.5 h-3.5 text-muted shrink-0" />
                       <select
                         value={task.blockedById || ''}
                         onChange={(e) => void patch(task.id, { blockedById: e.target.value || null })}
-                        className={selectClass}
+                        className="bg-transparent border-0 text-xs font-medium text-foreground max-w-[10rem] sm:max-w-[12rem] outline-none cursor-pointer"
                         title="Tâche bloquante"
+                        aria-label="Tâche bloquante"
                       >
                         <option value="">Sans dépendance</option>
                         {blockers.map((item) => (
                           <option key={item.id} value={item.id}>{item.title}</option>
                         ))}
                       </select>
-                    ) : null}
-                  </div>
-                {canManage ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(task.id)}
-                    className="p-1.5 rounded-lg text-muted/50 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                ) : null}
+                    </label>
+                  ) : null}
+                </div>
               </li>
             );
           })}

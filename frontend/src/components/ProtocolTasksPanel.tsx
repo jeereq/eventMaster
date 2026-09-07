@@ -164,9 +164,9 @@ export default function ProtocolTasksPanel({
             return (
               <li
                 key={task.id}
-                className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3"
+                className="rounded-2xl border border-border/80 bg-surface p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all hover:border-border hover:shadow-2xs"
               >
-                <div className="min-w-0 flex-1 space-y-1">
+                <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <StatusPill tone={statusTone(task.status)}>
                       {EVENT_TASK_STATUS_LABELS[task.status]}
@@ -179,17 +179,17 @@ export default function ProtocolTasksPanel({
                       </StatusPill>
                     ) : null}
                   </div>
-                  <p className="text-sm font-semibold text-foreground">{task.title}</p>
+                  <p className="text-sm sm:text-base font-semibold text-foreground tracking-tight">{task.title}</p>
                   {task.notes ? (
                     <p className="text-xs text-muted leading-relaxed line-clamp-2">{task.notes}</p>
                   ) : null}
                   {task.assignee && !task.mine ? (
-                    <p className="text-[11px] text-muted">
-                      Assignée à {task.assignee.name || task.assignee.email}
+                    <p className="text-xs text-muted">
+                      Assignée à <span className="font-medium text-foreground">{task.assignee.name || task.assignee.email}</span>
                     </p>
                   ) : null}
                 </div>
-                <div className="flex flex-wrap gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 pt-2 border-t border-border/40 sm:border-t-0 sm:pt-0 w-full sm:w-auto">
                   {task.status === 'OPEN' || task.status === 'BLOCKED' ? (
                     <Button
                       size="sm"
@@ -197,6 +197,7 @@ export default function ProtocolTasksPanel({
                       loading={busy}
                       leftIcon={<Play className="w-3.5 h-3.5" />}
                       onClick={() => void setStatus(task, 'IN_PROGRESS')}
+                      className="flex-1 sm:flex-initial min-h-11 sm:min-h-[36px]"
                     >
                       Démarrer
                     </Button>
@@ -207,6 +208,7 @@ export default function ProtocolTasksPanel({
                       loading={busy}
                       leftIcon={<Check className="w-3.5 h-3.5" />}
                       onClick={() => void setStatus(task, 'DONE')}
+                      className="flex-1 sm:flex-initial min-h-11 sm:min-h-[36px]"
                     >
                       Faite
                     </Button>
