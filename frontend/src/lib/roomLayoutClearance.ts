@@ -1,8 +1,13 @@
-import {
-  clampPct,
-  IMPORT_SNAP_STEP,
-  snapPct,
-} from './layoutAlignMath.ts';
+export const IMPORT_SNAP_STEP = 0.5;
+
+export function clampPct(value: number, min = 1, max = 99): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+export function snapPct(value: number, step = IMPORT_SNAP_STEP): number {
+  if (!Number.isFinite(value) || step <= 0) return value;
+  return Math.round(value / step) * step;
+}
 
 export const REAL_CLEARANCE_METERS = {
   /** Distance minimale centre-à-centre entre deux chaises (0.50m largeur + 0.20m espace libre) */
@@ -62,7 +67,6 @@ export type MinimalBlueprintFurnitureItem = {
   seatCount?: number;
   storyId?: string;
   zoneKind?: string;
-  [key: string]: unknown;
 };
 
 export type MinimalBlueprintFixtureItem = {
@@ -73,14 +77,12 @@ export type MinimalBlueprintFixtureItem = {
   w: number;
   h: number;
   storyId?: string;
-  [key: string]: unknown;
 };
 
 export type MinimalBlueprint = {
   canvas?: { widthM?: number; heightM?: number };
-  furniture: MinimalBlueprintFurnitureItem[];
-  fixtures?: MinimalBlueprintFixtureItem[];
-  [key: string]: unknown;
+  furniture: any[];
+  fixtures?: any[];
 };
 
 type MutableItem = {
