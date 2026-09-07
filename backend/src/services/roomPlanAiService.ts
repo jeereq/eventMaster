@@ -1,4 +1,11 @@
-import { parseGeminiJson, requestGeminiJson } from './geminiJsonClient.ts';
+import { parseGeminiJson, requestGeminiJson, getGeminiApiKey } from './geminiJsonClient.ts';
+import {
+  ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
+  applyRoomPlanEnglishSceneBrief,
+  buildRoomPlanBriefReformulationUserText,
+  parseRoomPlanEnglishSceneBriefFromJson,
+  processRoomPlanBrief,
+} from './roomPlanPromptFidelity.ts';
 
 type HttpError = Error & { status?: number };
 
@@ -681,25 +688,25 @@ export function parseRoomPlanVisionDraft(
 }
 
 function systemPrompt(): string {
-  return `Tu es l’analyste de plans de salle EventMaster (RDC).
-Tu ANALYSES la photo, tu DÉDUIS le mobilier visible, puis tu produis UNIQUEMENT un JSON valide.
+  return `You are EventMaster’s venue floor-plan analyst (Central Africa / RDC).
+Analyze the photo, infer every visible piece of furniture, then return ONLY valid JSON.
 
-Mission :
-- ÉNUMÈRE chaque élément visible (table, rangée, chaise isolée, piste, scène, allée, buffet, DJ, écran, colonne, fleurs, lustre, porte…).
-- Un item JSON par objet au sol. 12 tables visibles = 12 items "table". 5 rangées = 5 items "row".
-- DÉDUIS le kind le plus proche à partir des preuves visuelles (silhouette, nappe, chaises autour, tapis, estrade).
-- Un plan vide n’est acceptable que si la photo n’est vraiment pas une salle (texture seule, selfie, document).
-- Interdit : inventer de l’or, des pétales, des lanternes, un lustre cristal, une allée rouge, des portes ou un amphithéâtre fantôme s’ils ne se voient pas.
-- Si un détail est flou : estime quand même l’objet principal (table / rangée / zone) et ajoute un warning. N’invente pas de numéros de sièges.
+Mission:
+- ENUMERATE each visible element (table, seating row, isolated chair, dance floor, stage, aisle, buffet, DJ booth, screen, column, florals, chandelier, door…).
+- One JSON item per floor object. 12 visible tables = 12 "table" items. 5 rows = 5 "row" items.
+- Infer the closest kind from visual evidence (silhouette, tablecloth, chairs around, carpet, raised platform).
+- An empty plan is acceptable only if the photo is clearly not a venue (bare texture, selfie, document).
+- Forbidden: inventing gold, petals, lanterns, crystal chandeliers, a red aisle, doors or a phantom amphitheater when they are not visible.
+- If a detail is blurry: still estimate the main object (table / row / zone) and add a warning. Do not invent seat counts.
 
-Repère :
-- Le rectangle de la salle = 0–100 % (origine haut-gauche, y vers le bas), comme un plan 2D vu du dessus.
-- Pour CHAQUE item : x,y = coin HAUT-GAUCHE de l’empreinte au sol, w et h = largeur et hauteur en % (anchor="box").
-- Photo verticale / scan / PDF : view="top", appearance.imageRole="plan".
-- Photo en perspective : view="perspective", appearance.imageRole="photo", confidence plus basse. Projette quand même le mobilier au sol (devant = y élevé, fond = y faible).
-- Photo d’un parquet / carrelage sans mobilier : appearance.imageRole="texture".
+Coordinate frame:
+- The room rectangle = 0–100% (origin top-left, y downward), like a 2D top plan.
+- For EACH item: x,y = TOP-LEFT corner of the floor footprint; w and h = width and height in % (anchor="box").
+- Vertical photo / scan / PDF: view="top", appearance.imageRole="plan".
+- Perspective photo: view="perspective", appearance.imageRole="photo", lower confidence. Still project furniture onto the floor (near = high y, far = low y).
+- Photo of bare parquet / tile with no furniture: appearance.imageRole="texture".
 
-Champs JSON obligatoires :
+Required JSON fields:
 {
   "view": "top" | "perspective" | "unclear",
   "canvas": { "widthM": number, "heightM": number },
@@ -741,60 +748,60 @@ Champs JSON obligatoires :
   "warnings": ["..."]
 }
 
-Règles appearance :
-- floorType / floorColor / wallTexture / wallColor / curtainColor : seulement si clairement visibles.
-- Couleurs en hex (#rrggbb) d’après la teinte observée, pas une couleur de thème EventMaster.
-- tableSurface = nappe / plateau visible (linen si nappe tissu, wood si bois nu, marble si marbre).
-- roofStyle = tentSwag si chapiteau / tente drapée, gabled si pignon, coffered si caissons, flat si plafond plat. Une tente n’est PAS un item gazebo : donne canvas.widthM/heightM = taille réelle de la tente.
-- Lustres : un item chandelier par lustre visible au plafond. N’invente pas de cristal ni d’or.
-- w/h de chaque table = empreinte réelle au sol en % (une petite table cocktail ≈ 5–6, une ronde 8 couverts ≈ 10, une longue ≈ 12–16).
+Appearance rules:
+- floorType / floorColor / wallTexture / wallColor / curtainColor: only when clearly visible.
+- Colors as hex (#rrggbb) from the observed tint — not an EventMaster theme color.
+- tableSurface = visible cloth / top (linen if fabric cloth, wood if bare wood, marble if marble).
+- roofStyle = tentSwag for draped marquee/tent, gabled for pitched roof, coffered for coffers, flat for flat ceiling. A tent is NOT a gazebo item: set canvas.widthM/heightM to the real tent size.
+- Chandeliers: one chandelier item per visible ceiling fixture. Do not invent crystal or gold.
+- Table w/h = real floor footprint in % (small cocktail ≈ 5–6, round 8 seats ≈ 10, long ≈ 12–16).
 
-Règles items (déduction autorisée) :
-- Aligne tables et rangées sur une grille : mêmes X en colonnes, mêmes Y en lignes. Évite les décalages de 1–2 %.
-- table = chaque table isolée. seats = chaises / couverts visibles autour, sinon estime d’après le diamètre (cocktail 2, ronde 8, longue 10–14). shape d’après la silhouette. hasCenterpiece=true si vase ou bouquet central.
-- row = chaque rangée de chaises alignées (théâtre, banquettes, gradin). Une rangée visible = un item.
-- chair = fauteuil / tabouret isolé seulement (pas autour d’une table).
-- Les chaises autour d’une table = seats de cette table, jamais des items chair ou row séparés.
-- corridor = couloir / circulation visible. perimeter = bande périphérique seulement si elle se voit.
-- zone = piste de danse, VIP, buffet au sol, grande moquette. zoneKind obligatoire. color + material si la surface se voit.
-- aisle = tapis / allée au sol. aisleStyle seulement si le tapis correspond vraiment. hasPetals / hasSideLanterns seulement s’ils sont visibles.
-- stage / podium / djBooth / screen / buffet / bar / instrument / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo : dès qu’ils se voient, pose-les. Instruments (piano, batterie, micros) SUR le podium s’ils y sont. Bar + bouteilles/verres si un comptoir se voit.
-- door / entrance : seulement si clairement une ouverture d’accès (sinon walls.doors).
-- walls : uniquement les murs / ouvertures VISIBLES. Tableau vide si tu n’es pas sûr — n’invente pas de portes.
-- Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, du plus certain au moins certain. Préfère trop d’objets réels plutôt qu’un items[].
+Item rules (inference allowed):
+- Align tables and rows on a grid: shared X in columns, shared Y in rows. Avoid 1–2% jitter “for neatness”.
+- table = each isolated table. seats = visible chairs/covers around it, else estimate from diameter (cocktail 2, round 8, long 10–14). shape from silhouette. hasCenterpiece=true if a central vase/bouquet is visible.
+- row = each aligned chair row (theater, banquettes, bleachers). One visible row = one item.
+- chair = isolated armchair/stool only (not chairs around a table).
+- Chairs around a table = that table’s seats — never separate chair or row items.
+- corridor = visible hallway / circulation. perimeter = edge band only if visible.
+- zone = dance floor, VIP, floor buffet, large carpet. zoneKind required. color + material if the surface is visible.
+- aisle = floor runner / aisle. aisleStyle only if the carpet truly matches. hasPetals / hasSideLanterns only if visible.
+- stage / podium / djBooth / screen / buffet / bar / instrument / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo: place them as soon as visible. Instruments (piano, drums, mics) ON the podium if they sit there. Bar + bottles/glasses if a counter is visible.
+- door / entrance: only if clearly an access opening (otherwise walls.doors).
+- walls: only VISIBLE walls / openings. Empty array if unsure — do not invent doors.
+- Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, most certain first. Prefer too many real objects over an empty items[].
 
-Si la photo n’est pas une salle, view="unclear", items=[], warnings explicites.`;
+If the photo is not a venue: view="unclear", items=[], explicit warnings.`;
 }
 
 function composeSystemPrompt(): string {
-  return `Tu es l’architecte de réception EventMaster (RDC).
-À partir du BRIEF, tu CONÇOIS un plan de salle habité — pas une grille de logiciel — et tu produis UNIQUEMENT un JSON valide.
+  return `You are EventMaster’s reception architect (Central Africa / RDC).
+From the ENGLISH SCENE BRIEF, DESIGN a lived-in venue floor plan — not a software grid — and return ONLY valid JSON.
 
-Interdit (placement) :
-- Ranger tables, lustres ou fleurs en une seule ligne droite, en damier militaire, ou avec des écarts de 1–2 % « pour faire propre ».
-- Coller le mobilier aux murs. Laisser 1,2–1,8 m de circulation le long des parois.
-- Bloquer une porte, une allée ou la scène.
-- Inventer un amphithéâtre ou une tente si le brief n’en parle pas.
+Placement forbidden:
+- Lining tables, chandeliers or flowers in a single straight file, military checkerboard, or 1–2% “neat” jitter.
+- Pushing furniture against walls. Keep 1.2–1.8 m circulation along walls.
+- Blocking a door, aisle or stage.
+- Inventing an amphitheater or tent if the brief does not ask for one.
 
-Logique de composition (dans cet ordre) :
-1) Murs + portes. Au moins une entrée principale (kind=door + entrance) sur un petit côté, dégagée, souvent face à la table d’honneur ou à la scène. Une issue de service (buffet / cuisine) sur un autre mur si banquet. Pose walls[] avec doors aux bonnes positions (0–1 le long du segment).
-2) Axe de cérémonie. Allée (aisle) depuis la porte principale vers le point focal (table d’honneur, autel, scène). Elle peut être légèrement courbe ou décentrée — pas un trait au milieu par défaut.
-3) Point focal. Scène et/ou podium : fond de salle, face aux convives, stageShape adapté (rect banquet, semiCircle cérémonie). podiumStyle selon le brief (speaker / lectern discours, couple mariage, runway défilé, bandRiser concert, honor table d’honneur). Le podium est DEVANT la scène — jamais collé dans un coin au hasard. Concert : instruments (piano, batterie, micros) POSÉS SUR le podium. Cocktail / gala : un bar (barStyle cocktail|wine|champagne|beer|coffee|whiskey) sur un côté, pas au milieu de l’allée.
-4) Tables. Banquet / mariage : tables RONDES (shape=round, seats 8–10) en quinconce / nid d’abeille, pas en rangées d’école. Table d’honneur ovale ou rectangulaire au fond, plus large, face à la porte. Cocktail : highTop / cocktail en îlots de 3–4, pas une file. Conseil : une seule table longue. hasCenterpiece=true sur chaque table ronde de banquet.
-5) Piste / DJ / écran. Piste (zone dance) comme un plateau composé (souvent près de la scène, pas un carré résiduel). DJ et écran ancrés à la scène, pas au milieu des tables.
-6) Fleurs. Compositions aux seuils (entrée, arche), aux coins d’allée, autour de la table d’honneur et 2–4 jardinières (flower) — jamais une rangée identique le long d’un mur.
-7) Lustres. Un chandelier par nœud d’activité : au-dessus de la piste, au-dessus de la table d’honneur, puis au-dessus des grappes de tables (pas une file au plafond). Style selon l’ambiance (cristal / classic gala, lantern jardin, modern loft).
-8) Couleurs et matières. Palette cohérente tirée du brief (ivoire + parquet clair mariage ; lin + noyer gala ; moquette grise conférence). floorColor, wallColor, tableColor, curtainColor, color des allées/fleurs en #rrggbb réels — pas le vert EventMaster.
+Composition logic (in this order):
+1) Walls + doors. At least one main entrance (kind=door + entrance) on a short side, clear, often facing the honor table or stage. A service exit (buffet / kitchen) on another wall for banquets. Fill walls[] with doors at correct positions (0–1 along the segment).
+2) Ceremonial axis. Aisle from the main door toward the focal point (honor table, altar, stage). Slightly curved or off-center is fine — not a default centerline.
+3) Focal point. Stage and/or podium at the far end, facing guests; stageShape adapted (rect banquet, semiCircle ceremony). podiumStyle from the brief (speaker / lectern, couple wedding, runway, bandRiser concert, honor). Podium sits IN FRONT of the stage — never randomly in a corner. Concert: instruments (piano, drums, mics) ON the podium. Cocktail / gala: a bar (barStyle cocktail|wine|champagne|beer|coffee|whiskey) on one side, not in the aisle middle.
+4) Tables. Banquet / wedding: ROUND tables (shape=round, seats 8–10) in staggered / honeycomb clusters — not school rows. Oval or rectangular honor table at the far end, wider, facing the door. Cocktail: highTop / cocktail in islands of 3–4, not a file. Boardroom: one long table. hasCenterpiece=true on every banquet round.
+5) Dance / DJ / screen. Dance zone as a composed plateau (often near the stage, not leftover square). DJ and screen anchored to the stage, not mid-tables.
+6) Florals. Arrangements at thresholds (entrance, arch), aisle corners, around the honor table and 2–4 planters (flower) — never an identical row along a wall.
+7) Chandeliers. One chandelier per activity node: above the dance floor, above the honor table, then above table clusters (not a ceiling file). Style from mood (crystal / classic gala, lantern garden, modern loft).
+8) Colors and materials. Coherent palette from the brief (ivory + light oak wedding; linen + walnut gala; grey carpet conference). floorColor, wallColor, tableColor, curtainColor, aisle/flower colors as real #rrggbb — not EventMaster green.
 
-Mission de comptage :
-- N tables demandées = N items "table". N rangées = N items "row".
-- Respecte type de salle et mètres pour canvas.widthM / heightM.
-- Or, pétales, allée rouge, lustre cristal : seulement si le brief ou le type d’événement (mariage, gala) le justifie.
+Counting mission:
+- N tables requested = N "table" items. N rows = N "row" items.
+- Respect room type and meters for canvas.widthM / heightM.
+- Gold, petals, red aisle, crystal chandelier: only if the brief or event type (wedding, gala) justifies them.
 - view="top", appearance.imageRole="plan".
-- Tente : roofStyle="tentSwag", canvas = taille réelle. Pas d’item gazebo pour la tente elle-même.
-- w/h = empreinte réelle au sol (ronde 8 couverts ≈ 9–11, cocktail ≈ 5–6, longue ≈ 12–16).
+- Tent: roofStyle="tentSwag", canvas = real size. No gazebo item for the tent itself.
+- w/h = real floor footprint (round 8 seats ≈ 9–11, cocktail ≈ 5–6, long ≈ 12–16).
 
-Schéma JSON :
+JSON schema:
 {
   "view": "top",
   "canvas": { "widthM": number, "heightM": number },
@@ -832,7 +839,56 @@ Schéma JSON :
   "warnings": ["..."]
 }
 
-Sans chevauchement. Circulation continue porte → allée → tables → scène. Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items.`;
+No overlaps. Continuous circulation door → aisle → tables → stage. Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items.`;
+}
+
+async function reformulateRoomPlanBriefToEnglish(input: {
+  brief: string;
+  roomType?: string;
+  widthM: number;
+  heightM: number;
+}): Promise<{ originalBrief: string; englishSceneBrief: string }> {
+  const processed = processRoomPlanBrief(input.brief, {
+    roomType: input.roomType,
+    widthM: input.widthM,
+    heightM: input.heightM,
+  });
+  if (!getGeminiApiKey() || processed.originalBrief.length < 8) {
+    return {
+      originalBrief: processed.originalBrief,
+      englishSceneBrief: processed.englishSceneBrief,
+    };
+  }
+  try {
+    const parsed = await requestGeminiJson({
+      system: ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
+      userText: buildRoomPlanBriefReformulationUserText(processed.originalBrief, {
+        roomType: input.roomType,
+        widthM: input.widthM,
+        heightM: input.heightM,
+      }),
+      temperature: 0.25,
+      timeoutMs: 45_000,
+      failMessage: 'Room-plan brief reformulation failed.',
+    });
+    const english = parseRoomPlanEnglishSceneBriefFromJson(parsed);
+    if (english.length >= 24) {
+      const next = applyRoomPlanEnglishSceneBrief(processed, english);
+      return {
+        originalBrief: next.originalBrief,
+        englishSceneBrief: next.englishSceneBrief,
+      };
+    }
+  } catch (error) {
+    console.warn(
+      '[roomPlanAi] English brief reformulation failed, using local scaffold:',
+      (error as Error)?.message,
+    );
+  }
+  return {
+    originalBrief: processed.originalBrief,
+    englishSceneBrief: processed.englishSceneBrief,
+  };
 }
 
 async function requestRoomPlanJson(input: {
@@ -862,11 +918,33 @@ export async function analyzeRoomPlanPhoto(input: {
   brief?: string;
 }): Promise<RoomPlanVisionDraft> {
   const roomType = input.roomType && ROOM_TYPES.has(input.roomType) ? input.roomType : 'CUSTOM';
-  const brief = (input.brief || '').trim().slice(0, 1500);
-  const userText = `Salle déclarée par l’utilisateur (indice seulement, la PHOTO gagne) : type=${roomType}, largeur=${input.widthM} m, longueur=${input.heightM} m.
-Utilise CES mètres pour canvas.widthM / heightM. Ne change l’échelle que si une cote lisible sur l’image la contredit clairement.
-${brief ? `Note utilisateur : """${brief}"""` : 'Pas de note utilisateur.'}
-Analyse l’image, déduis chaque élément visible, puis produis le JSON du plan à importer.`;
+  const rawBrief = (input.brief || '').trim().slice(0, 1500);
+  let englishNote = '';
+  if (rawBrief.length >= 8) {
+    const reformed = await reformulateRoomPlanBriefToEnglish({
+      brief: rawBrief,
+      roomType,
+      widthM: input.widthM,
+      heightM: input.heightM,
+    });
+    englishNote = reformed.englishSceneBrief;
+  }
+  const userText = `User-declared room (hint only — the PHOTO wins): type=${roomType}, width=${input.widthM} m, length=${input.heightM} m.
+Use THESE meters for canvas.widthM / heightM. Change scale only if a readable dimension on the image clearly contradicts them.
+${
+  englishNote
+    ? `ORIGINAL USER NOTE:
+"""
+${rawBrief}
+"""
+
+ENGLISH SCENE NOTE (décor / layout intent only — never invent furniture missing from the photo):
+"""
+${englishNote.slice(0, 1400)}
+"""`
+    : 'No user note.'
+}
+Analyze the image, infer every visible element, then produce the import JSON.`;
 
   return requestRoomPlanJson({
     system: systemPrompt(),
@@ -890,11 +968,26 @@ export async function composeRoomPlanFromBrief(input: {
     fail(400, 'Décrivez la salle en quelques mots (type d’événement, nombre de tables, ambiance).');
   }
   const roomType = input.roomType && ROOM_TYPES.has(input.roomType) ? input.roomType : 'BANQUET';
-  const userText = `Brief : """${brief.slice(0, 1500)}"""
-Salle : type=${roomType}, largeur=${input.widthM} m, longueur=${input.heightM} m.
-Utilise CES mètres pour canvas.widthM / heightM.
-Compose comme un architecte de réception : portes et issues, podium/scène avec ligne de vue, tables rondes en quinconce (pas une file droite), fleurs aux seuils et à l’honneur, lustres au-dessus des nœuds d’activité, palette de couleurs du brief.
-Produis le JSON à importer.`;
+  const reformed = await reformulateRoomPlanBriefToEnglish({
+    brief,
+    roomType,
+    widthM: input.widthM,
+    heightM: input.heightM,
+  });
+  const userText = `ORIGINAL USER BRIEF (facts to preserve — any language):
+"""
+${reformed.originalBrief.slice(0, 1500)}
+"""
+
+ENGLISH SCENE BRIEF (Nano Banana narrative — use this as the creative layout brief):
+"""
+${reformed.englishSceneBrief.slice(0, 1600)}
+"""
+
+Room: type=${roomType}, width=${input.widthM} m, length=${input.heightM} m.
+Use THESE meters for canvas.widthM / heightM.
+Compose as a reception architect: doors and exits, podium/stage with sightlines, staggered round tables (not a straight file), florals at thresholds and honor, chandeliers above activity nodes, color palette from the brief.
+Produce the import JSON.`;
 
   return requestRoomPlanJson({
     system: composeSystemPrompt(),
