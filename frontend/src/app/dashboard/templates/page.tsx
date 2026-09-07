@@ -40,9 +40,11 @@ import {
  Columns, Eye, CheckSquare, Loader2, XCircle,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
- Undo2, Redo2, History, Download, Tag
+ Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
 } from 'lucide-react';
+import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
+import { cn } from '@/lib/cn';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
 import { getFeatureLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
@@ -324,6 +326,7 @@ export default function TemplatesPage() {
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
+ const [mobilePane, setMobilePane] = useState<'canvas' | 'tools' | 'inspect'>('canvas');
  const [showAllThemes, setShowAllThemes] = useState(false);
  const [showDecorTools, setShowDecorTools] = useState(false);
  const [propsAdvanced, setPropsAdvanced] = useState(false);
@@ -657,12 +660,14 @@ export default function TemplatesPage() {
  setElButtonLink('');
  setElRsvpFields(newElement.rsvpFields || []);
  setElRsvpPlacement(newElement.rsvpPlacement || 'inline');
+ setMobilePane('inspect');
  };
 
  const handleElementSelect = (id: string) => {
  setSelectedElementId(id);
  setStudioRail('content');
  setPropsAdvanced(false);
+ setMobilePane('inspect');
  const el = canvasElements.find(e => e.id === id);
  if (el) {
  setElText(el.text);
@@ -2119,7 +2124,7 @@ export default function TemplatesPage() {
  )}
  </div>
  </Modal>
- <div className="flex flex-col gap-4">
+ <div className="flex flex-col gap-4 max-lg:fixed max-lg:inset-0 max-lg:z-[55] max-lg:bg-background max-lg:px-3 max-lg:pt-[max(0.75rem,env(safe-area-inset-top))] max-lg:overflow-hidden">
  {/* Editor Header — identity left, primary actions right, admin meta secondary */}
  <header className="shrink-0 space-y-3 border-b border-border pb-4">
  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -2172,7 +2177,7 @@ export default function TemplatesPage() {
  </div>
  </div>
  </div>
- <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0 pl-14 sm:pl-0">
+ <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
  {rsvpReportingIssues.length > 0 ? (
  <p
  role="status"
@@ -2191,7 +2196,7 @@ export default function TemplatesPage() {
  type="button"
  onClick={handleStudioUndo}
  disabled={studioHistoryIndex <= 0}
- className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
+ className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
  title="Annuler (Ctrl+Z)"
  aria-label="Annuler la dernière action"
  >
@@ -2201,7 +2206,7 @@ export default function TemplatesPage() {
  type="button"
  onClick={handleStudioRedo}
  disabled={studioHistoryIndex >= studioHistory.length - 1}
- className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
+ className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
  title="Rétablir (Ctrl+Y)"
  aria-label="Rétablir la dernière action"
  >
@@ -2210,7 +2215,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setStudioHistoryModalOpen(true)}
- className="inline-flex h-9 items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition cursor-pointer"
  title="Historique d'actions"
  aria-label="Ouvrir l'historique d'actions"
  >
@@ -2254,7 +2259,8 @@ export default function TemplatesPage() {
  }`}
  >
  <Eye className="w-4 h-4" />
- Aperçu invité
+ <span className="hidden sm:inline">Aperçu invité</span>
+ <span className="sm:hidden">Aperçu</span>
  </button>
  <button
  type="button"
@@ -2350,16 +2356,19 @@ export default function TemplatesPage() {
  )}
 
  {/* Editor Workspace — canvas leads; denser sticky rails support */}
- <div className="grid grid-cols-1 lg:grid-cols-[minmax(13rem,15rem)_minmax(0,1fr)_minmax(14rem,16rem)] gap-4 lg:gap-5 items-start">
+ <div className="grid grid-cols-1 lg:grid-cols-[minmax(13rem,15rem)_minmax(0,1fr)_minmax(14rem,16rem)] gap-4 lg:gap-5 items-start max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-y-auto">
  {/* Left Toolbox — Contenu | Style */}
- <aside className="order-2 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
+ <aside className={cn(
+  'order-2 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4',
+  mobilePane === 'tools' ? 'max-lg:block' : 'max-lg:hidden',
+ )}>
  <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Outils du studio">
  <button
  type="button"
  role="tab"
  aria-selected={studioRail === 'content'}
  onClick={() => setStudioRail('content')}
- className={`py-2 rounded-lg text-[11px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ className={`min-h-11 py-2 rounded-lg text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  studioRail === 'content'
  ? 'bg-surface text-foreground shadow-sm'
  : 'text-muted hover:text-foreground'
@@ -2375,7 +2384,7 @@ export default function TemplatesPage() {
  setStudioRail('style');
  setSelectedElementId(null);
  }}
- className={`py-2 rounded-lg text-[11px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ className={`min-h-11 py-2 rounded-lg text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  studioRail === 'style'
  ? 'bg-surface text-foreground shadow-sm'
  : 'text-muted hover:text-foreground'
@@ -2747,12 +2756,18 @@ export default function TemplatesPage() {
  </aside>
 
  {/* Center Canvas Preview */}
- <div className="order-1 lg:order-2 min-w-0 space-y-3">
+ <div className={cn(
+  'order-1 lg:order-2 min-w-0 space-y-3',
+  mobilePane === 'canvas' ? 'max-lg:block' : 'max-lg:hidden',
+ )}>
  <p className="text-center text-xs text-muted font-semibold tabular-nums">
  {canvasWidth} × {canvasHeight} px
  {canvasSizePreset !== 'custom' ? ` · ${CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset}` : ' · Personnalisé'}
  {showGuestPreview ? ' · Aperçu variables invité' : ''}
  {layoutMode === 'free' ? ' · Placement libre' : ''}
+ </p>
+ <p className="lg:hidden text-center text-xs text-muted">
+ Touchez un texte pour le régler. Ajouter et styles sont dans le dock en bas.
  </p>
 
  <div className="flex flex-col items-center w-full gap-4">
@@ -2762,7 +2777,7 @@ export default function TemplatesPage() {
  ...getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern),
  ...getStudioPreviewStyle({ canvasSizePreset, canvasWidth, canvasHeight }),
  }}
- className={`border border-border p-8 shadow-md relative overflow-hidden transition-all duration-300 ${
+ className={`border border-border p-3 sm:p-8 shadow-md relative overflow-hidden transition-all duration-300 ${
  frameType === 'arch' ? 'rounded-t-[240px] border border-amber-200/60' : 'rounded-3xl'
  }`}
  >
@@ -3455,7 +3470,10 @@ export default function TemplatesPage() {
  </div>
 
  {/* Right Properties Panel */}
- <aside className="order-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
+ <aside className={cn(
+  'order-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4',
+  mobilePane === 'inspect' ? 'max-lg:block' : 'max-lg:hidden',
+ )}>
  {selectedElementId ? (
  // Element Properties Panel
  <div className="space-y-4">
@@ -4256,6 +4274,17 @@ export default function TemplatesPage() {
  )}
  </aside>
  </div>
+
+ <StudioMobileDock
+  className="lg:hidden -mx-3"
+  value={mobilePane}
+  onChange={setMobilePane}
+  panes={[
+    { id: 'canvas', label: 'Carte', icon: LayoutTemplate, hint: 'Voir la carte' },
+    { id: 'tools', label: 'Ajouter', icon: PlusCircle, hint: 'Ajouter un élément ou un style' },
+    { id: 'inspect', label: 'Régler', icon: SlidersHorizontal, hint: 'Régler l’élément ou la carte' },
+  ]}
+ />
 
  {/* Image Cropper Modal */}
  {cropperOpen && (

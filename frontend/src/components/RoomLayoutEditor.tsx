@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -252,6 +252,7 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
+import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { Alert, Button, Input, Modal } from '@/components/ui';
 
 const EDITOR_FIELD =
@@ -410,6 +411,7 @@ export default function RoomLayoutEditor({
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
+  const [mobilePane, setMobilePane] = useState<'plan' | 'tools' | 'edit'>('plan');
   const [isExpanded, setIsExpanded] = useState(false);
   const actionLog = sanitizeLayoutActions(blueprint.metadata.layoutActions);
   const [cropTarget, setCropTarget] = useState<CropTarget>(null);
@@ -669,6 +671,10 @@ export default function RoomLayoutEditor({
     setAccordion('murs-sols');
     window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
   }, [focusPlanImport, seedPlanPhoto]);
+
+  useEffect(() => {
+    if (selection.length > 0) setMobilePane('edit');
+  }, [selection.length]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -7035,22 +7041,44 @@ export default function RoomLayoutEditor({
           <div className="bg-background sm:bg-surface rounded-none sm:rounded-2xl shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
             <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 border-b border-border-subtle shrink-0">
               {header}
-              {templateBar}
-              {toolbar}
-              {quickCreatePanel}
+              <div className="hidden lg:block space-y-2">
+                {templateBar}
+                {toolbar}
+                {quickCreatePanel}
+              </div>
             </div>
             <div className="flex flex-col md:flex-row flex-1 min-h-0 gap-2 sm:gap-3 p-2 sm:p-3 overflow-hidden">
-              <div className="flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col gap-2">
+              {mobilePane === 'tools' ? (
+                <div className="lg:hidden flex-1 min-h-0 overflow-y-auto space-y-2">
+                  {templateBar}
+                  {toolbar}
+                  {quickCreatePanel}
+                </div>
+              ) : null}
+              <div className={cn('flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col gap-2', mobilePane !== 'plan' && 'max-lg:hidden')}>
                 {storyBar}
                 {photoDock}
                 {renderCanvas('flex-1 min-h-0 h-full')}
               </div>
-              <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint">
+              <div className={cn(
+                'md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint',
+                mobilePane !== 'edit' && 'max-lg:hidden',
+              )}>
                 {renderCanvasInventory()}
                 {renderEditPanel()}
               </div>
             </div>
-            <div className="p-2 sm:p-3 border-t border-border-subtle flex justify-end shrink-0">
+            <StudioMobileDock
+              className="lg:hidden shrink-0"
+              value={mobilePane}
+              onChange={setMobilePane}
+              panes={[
+                { id: 'plan', label: 'Plan', icon: LayoutGrid, hint: 'Voir et déplacer le plan' },
+                { id: 'tools', label: 'Ajouter', icon: Plus, hint: 'Modèles et outils' },
+                { id: 'edit', label: 'Régler', icon: SlidersHorizontal, hint: 'Propriétés de la sélection' },
+              ]}
+            />
+            <div className="hidden lg:flex p-2 sm:p-3 border-t border-border-subtle justify-end shrink-0">
               <button type="button" onClick={() => setIsExpanded(false)} className="px-5 py-2.5 bg-surface-muted text-foreground rounded-[var(--radius-card)] text-xs font-bold">Fermer le mode agrandi</button>
             </div>
           </div>
@@ -7074,21 +7102,44 @@ export default function RoomLayoutEditor({
       <div className="space-y-3">
         <div className="sticky top-0 z-20 -mx-1 px-1 pb-2 space-y-2 bg-background/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none md:mx-0 md:px-0 md:pb-0">
           {header}
-          {templateBar}
-          {toolbar}
+          <div className="hidden lg:block space-y-2">
+            {templateBar}
+            {toolbar}
+          </div>
         </div>
-        {quickCreatePanel}
+        {mobilePane === 'tools' ? (
+          <div className="lg:hidden space-y-2">
+            {templateBar}
+            {toolbar}
+            {quickCreatePanel}
+          </div>
+        ) : (
+          <div className="hidden lg:block">{quickCreatePanel}</div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
-          <div className="lg:col-span-2 min-h-0 space-y-2">
+          <div className={cn('lg:col-span-2 min-h-0 space-y-2', mobilePane !== 'plan' && 'max-lg:hidden')}>
             {storyBar}
             {photoDock}
-            {renderCanvas('em-plan-stage min-h-[min(58vh,32rem)] lg:min-h-[min(64vh,40rem)]')}
+            {renderCanvas('em-plan-stage min-h-[min(70dvh,38rem)] lg:min-h-[min(64vh,40rem)]')}
           </div>
-          <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint">
+          <div className={cn(
+            'lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint',
+            mobilePane !== 'edit' && 'max-lg:hidden',
+          )}>
             {renderCanvasInventory()}
             {renderEditPanel()}
           </div>
         </div>
+        <StudioMobileDock
+          className="lg:hidden sticky bottom-[var(--em-dash-bottom-nav)] z-20 -mx-1"
+          value={mobilePane}
+          onChange={setMobilePane}
+          panes={[
+            { id: 'plan', label: 'Plan', icon: LayoutGrid, hint: 'Voir et déplacer le plan' },
+            { id: 'tools', label: 'Ajouter', icon: Plus, hint: 'Modèles et outils' },
+            { id: 'edit', label: 'Régler', icon: SlidersHorizontal, hint: 'Propriétés de la sélection' },
+          ]}
+        />
       </div>
     </>
   );
