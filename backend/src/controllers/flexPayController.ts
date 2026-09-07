@@ -16,8 +16,9 @@ import {
   type FlexPayCheckResult,
   type FlexPayMetadataUpdate,
 } from '../services/flexPayCardService';
+import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from '../services/flexPayChargeCurrency';
 import { finalizeCommercialFlexPayPayout } from '../services/commercialFlexPayPayoutService';
-import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
+import { isOnlinePaymentsEnabled, loadPlatformSettings } from '../services/platformSettingsService';
 import {
   findAiTokenOrderForFlexPay,
   verifyAndFinalizeAiTokenOrder,
@@ -563,10 +564,15 @@ export async function retryFlexPayTicketOrder(req: Request, res: Response) {
 
     try {
       if (method === 'mobile') {
+        const charge = resolveFlexPayCharge(
+          order.amountFc,
+          parseFlexPayChargeCurrency(req.body?.currency, 'mobile'),
+          loadPlatformSettings().usdExchangeRateCdf,
+        );
         const flex = await createFlexPayMobileCheckout({
           reference,
-          amount: order.amountFc,
-          currency: 'CDF',
+          amount: charge.amount,
+          currency: charge.currency,
           phone,
           callbackUrl,
         });

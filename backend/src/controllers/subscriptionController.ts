@@ -674,7 +674,7 @@ export async function checkoutSubscriptionFlexPay(req: AuthenticatedRequest, res
       });
     }
 
-    const { requestedPlan, durationDays, paymentMethod, phone, operator } = req.body || {};
+    const { requestedPlan, durationDays, paymentMethod, phone, operator, currency } = req.body || {};
     const method = paymentMethod === 'mobile' ? 'mobile' : 'card';
 
     if (!requestedPlan || !PAID_PLAN_KEYS.includes(requestedPlan)) {
@@ -731,6 +731,7 @@ export async function checkoutSubscriptionFlexPay(req: AuthenticatedRequest, res
         tenantName: tenant.name,
         method,
         phone,
+        currency,
       });
       return res.status(201).json(result);
     } catch (err: any) {
@@ -805,6 +806,7 @@ export async function retrySubscriptionFlexPay(req: AuthenticatedRequest, res: R
         tenantName: request.tenant.name,
         method: method as 'card' | 'mobile',
         phone,
+        currency: req.body?.currency,
       });
       return res.json({
         ...result,

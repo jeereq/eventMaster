@@ -25,6 +25,7 @@ function SuccessInner() {
   const orderId = search.get('order');
   const provider = search.get('provider');
   const method = search.get('method'); // card | mobile
+  const currency = search.get('currency');
   const rsvpFromQuery = search.get('rsvp');
   const forcePending = search.get('pending') === '1';
 
@@ -65,6 +66,7 @@ function SuccessInner() {
     if (!orderId) return;
     const data = await api.post(`/public/payments/flexpay/orders/${orderId}/retry`, {
       paymentMethod: method === 'card' ? 'card' : 'mobile',
+      ...(method !== 'card' && currency ? { currency } : {}),
     });
     if (data.checkoutUrl && typeof window !== 'undefined') {
       window.location.href = data.checkoutUrl;
@@ -72,7 +74,7 @@ function SuccessInner() {
     }
     setPending(true);
     setError('');
-  }, [orderId, method]);
+  }, [orderId, method, currency]);
 
   const pollSession = useCallback(async () => {
     if (!sessionId) return { status: 'error' as const, message: 'Session manquante.' };

@@ -19,6 +19,7 @@ import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/co
 import SeatSelection3DViewer from '@/components/SeatSelection3DViewer';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import PaymentAccountPicker from '@/components/PaymentAccountPicker';
+import type { FlexPayChargeCurrency } from '@/lib/flexPayCurrency';
 import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 
 type SeatRow = {
@@ -209,6 +210,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   }, [pricingZones]);
 
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'mobile'>('mobile');
+  const [currency, setCurrency] = useState<FlexPayChargeCurrency>('CDF');
   const [mmPhone, setMmPhone] = useState('');
   const [operator, setOperator] = useState<FlexPayMobileOperatorId>('orange');
 
@@ -276,7 +278,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         quantity: seatMode ? selectedSeats.length : quantity,
         ...(event.paid ? { paymentMethod } : {}),
         ...(event.paid && paymentMethod === 'mobile'
-          ? { phone: rawMobilePhone, operator }
+          ? { phone: rawMobilePhone, operator, currency }
           : {}),
         ...(seatMode && selectedSeats.length > 0 ? { seats: selectedSeats } : {}),
         ...(zonePricing && !seatMode && selectedZoneId ? { pricingZoneId: selectedZoneId } : {}),
@@ -296,8 +298,12 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
             ? '&method=card'
             : '';
       const pendingQ = isFlex && data.orderId && !data.rsvpUrl ? '&pending=1' : '';
+      const currencyQ =
+        data.provider === 'flexpay_mobile' && (data.currency === 'USD' || currency === 'USD')
+          ? '&currency=USD'
+          : '';
       router.push(
-        `${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}${provider}${methodQ}${pendingQ}`,
+        `${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}${provider}${methodQ}${pendingQ}${currencyQ}`,
       );
     } catch (err: unknown) {
       void reloadSeats();
@@ -595,6 +601,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
               onPhoneChange={setMmPhone}
               amountFc={totalFc}
               amountHint="Montant du billet prélevé"
+              currency={currency}
+              onCurrencyChange={setCurrency}
             />
           )}
           <Button type="submit" loading={busy} fullWidth className="min-h-11">

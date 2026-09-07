@@ -17,7 +17,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 import { haversineKm, toDateKey } from '../utils/marketplaceDates';
 import { enabledMarketplaceCities, normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
-import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
+import { isOnlinePaymentsEnabled, loadPlatformSettings } from '../services/platformSettingsService';
 import { toPrismaJson } from '../utils/prismaJson';
 import {
   buildFlexPayReference,
@@ -26,6 +26,7 @@ import {
   getPublicApiBaseUrl,
   isFlexPayCardConfigured,
 } from '../services/flexPayCardService';
+import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from '../services/flexPayChargeCurrency';
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 
@@ -509,13 +510,18 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
           return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
         }
         const operator = String(req.body?.operator || '').trim().toLowerCase() || null;
+        const charge = resolveFlexPayCharge(
+          amountFc,
+          parseFlexPayChargeCurrency(req.body?.currency, 'mobile'),
+          loadPlatformSettings().usdExchangeRateCdf,
+        );
         const apiBase = getPublicApiBaseUrl();
         const reference = buildFlexPayReference('tk', order.id);
         try {
           const flex = await createFlexPayMobileCheckout({
             reference,
-            amount: amountFc,
-            currency: 'CDF',
+            amount: charge.amount,
+            currency: charge.currency,
             phone,
             callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
           });
@@ -534,6 +540,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
             provider: 'flexpay_mobile',
             orderId: order.id,
             orderNumber: flex.orderNumber,
+            currency: charge.currency,
             message:
               'Demande envoyée sur votre téléphone. Confirmez le paiement Mobile Money, puis ouvrez la page de succès.',
           });

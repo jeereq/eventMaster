@@ -4,6 +4,13 @@ import React, { useEffect, useRef } from 'react';
 import { CreditCard, Smartphone } from 'lucide-react';
 import { Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  convertFcToUsd,
+  formatUsd,
+  type FlexPayChargeCurrency,
+} from '@/lib/flexPayCurrency';
+import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import {
   FLEXPAY_MOBILE_ACCOUNTS,
   FLEXPAY_MOBILE_OPERATORS_LABEL,
@@ -22,6 +29,8 @@ export default function PaymentAccountPicker({
   onPhoneChange,
   amountFc,
   amountHint,
+  currency = 'CDF',
+  onCurrencyChange,
 }: {
   method: PaymentAccountMethod;
   onMethodChange: (method: PaymentAccountMethod) => void;
@@ -31,7 +40,13 @@ export default function PaymentAccountPicker({
   onPhoneChange: (phone: string) => void;
   amountFc?: number;
   amountHint?: string;
+  currency?: FlexPayChargeCurrency;
+  onCurrencyChange?: (currency: FlexPayChargeCurrency) => void;
 }) {
+  const { site } = usePlatformSite();
+  const rate = resolveUsdExchangeRateCdf(site.usdExchangeRateCdf);
+  const usdAmount = typeof amountFc === 'number' && amountFc > 0 ? convertFcToUsd(amountFc, rate) : 0;
+  const usdAvailable = usdAmount >= 0.01;
   const userPickedOperator = useRef(false);
   const suggested = suggestMobileOperator(phone);
 
@@ -40,12 +55,25 @@ export default function PaymentAccountPicker({
     onOperatorChange(suggested);
   }, [suggested, operator, onOperatorChange]);
 
+  useEffect(() => {
+    if (currency === 'USD' && !usdAvailable) onCurrencyChange?.('CDF');
+  }, [currency, usdAvailable, onCurrencyChange]);
+
   return (
     <div className="space-y-3">
       {typeof amountFc === 'number' && amountFc > 0 ? (
         <div className="p-3 rounded-xl bg-surface-muted border border-border flex items-center justify-between gap-3">
           <p className="text-xs text-muted">{amountHint || 'Montant prélevé'}</p>
-          <p className="text-sm font-black text-foreground tabular-nums">{formatFc(amountFc)}</p>
+          <div className="text-right">
+            <p className="text-sm font-black text-foreground tabular-nums">
+              {method === 'mobile' && currency === 'USD' && usdAmount >= 0.01
+                ? formatUsd(usdAmount)
+                : formatFc(amountFc)}
+            </p>
+            {method === 'mobile' && currency === 'USD' && usdAmount >= 0.01 ? (
+              <p className="text-xs text-muted tabular-nums">{formatFc(amountFc)}</p>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -70,7 +98,10 @@ export default function PaymentAccountPicker({
             type="button"
             role="radio"
             aria-checked={method === 'card'}
-            onClick={() => onMethodChange('card')}
+            onClick={() => {
+              onMethodChange('card');
+              onCurrencyChange?.('CDF');
+            }}
             className={`min-h-11 p-2.5 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center gap-1 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               method === 'card'
                 ? 'border-primary bg-primary/10 text-primary shadow-xs'
@@ -85,6 +116,43 @@ export default function PaymentAccountPicker({
 
       {method === 'mobile' ? (
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-foreground">Devise de prélèvement</p>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Devise Mobile Money">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={currency === 'CDF'}
+                onClick={() => onCurrencyChange?.('CDF')}
+                className={`min-h-11 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  currency === 'CDF'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-surface text-muted hover:text-foreground'
+                }`}
+              >
+                Francs (FC)
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={currency === 'USD'}
+                disabled={!usdAvailable}
+                onClick={() => onCurrencyChange?.('USD')}
+                className={`min-h-11 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed ${
+                  currency === 'USD'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-surface text-muted hover:text-foreground'
+                }`}
+              >
+                Dollars (USD)
+              </button>
+            </div>
+            <p className="text-xs text-muted">
+              {currency === 'USD' && usdAmount >= 0.01
+                ? `Prélèvement : ${formatUsd(usdAmount)} · 1 $ = ${rate.toLocaleString('fr-FR')} FC`
+                : `Prélèvement : ${typeof amountFc === 'number' ? formatFc(amountFc) : 'montant catalogue'} · 1 $ = ${rate.toLocaleString('fr-FR')} FC`}
+            </p>
+          </div>
           <div className="space-y-1.5">
             <p className="text-xs font-bold text-foreground">Compte Mobile Money disponible</p>
             <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Opérateur Mobile Money">
@@ -128,7 +196,11 @@ export default function PaymentAccountPicker({
             onChange={(event) => onPhoneChange(event.target.value)}
             placeholder="Ex. 24389XXXXXXX ou 089XXXXXXX"
             leftIcon={<Smartphone className="w-4 h-4" />}
-            hint="Le montant ci-dessus est prélevé en francs congolais (CDF)."
+            hint={
+              currency === 'USD'
+                ? 'Le montant est prélevé en dollars sur votre Mobile Money.'
+                : 'Le montant est prélevé en francs congolais sur votre Mobile Money.'
+            }
           />
         </div>
       ) : (

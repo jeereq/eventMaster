@@ -24,6 +24,7 @@ import {
   type FlexPayCheckResult,
   type FlexPayMetadataUpdate,
 } from './flexPayCardService';
+import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from './flexPayChargeCurrency';
 
 export const AI_TOKEN_BASE_COUNT = 6;
 export const AI_TOKEN_BASE_PRICE_CDF = 2500;
@@ -50,6 +51,7 @@ export interface InitiateAiTokenPaymentInput {
   operator?: string | null;
   tokensCount?: number;
   amountFc?: number;
+  currency?: string | null;
 }
 
 export interface InitiateAiTokenPaymentResult {
@@ -62,6 +64,7 @@ export interface InitiateAiTokenPaymentResult {
   redirectUrl?: string | null;
   tokensCount: number;
   amountFc: number;
+  currency?: string;
   message?: string;
 }
 
@@ -99,6 +102,7 @@ export async function initiateAiTokenPayment(
   }
 
   let normalizedPhone: string | null = null;
+  const chargeCurrency = parseFlexPayChargeCurrency(input.currency, paymentMethod);
   if (paymentMethod === 'mobile') {
     normalizedPhone = normalizeFlexPayPhone(input.phone || '');
     if (!normalizedPhone) {
@@ -117,7 +121,7 @@ export async function initiateAiTokenPayment(
         deviceId: input.deviceId || null,
         tokensCount,
         amountFc,
-        currency: 'CDF',
+        currency: chargeCurrency,
         status: 'PENDING',
         paymentMethod,
         phone: normalizedPhone || input.phone || null,
@@ -133,7 +137,7 @@ export async function initiateAiTokenPayment(
       deviceId: input.deviceId || null,
       tokensCount,
       amountFc,
-      currency: 'CDF',
+      currency: chargeCurrency,
       status: 'PENDING',
       paymentMethod,
       phone: normalizedPhone || input.phone || null,
@@ -152,10 +156,11 @@ export async function initiateAiTokenPayment(
     let flex: { orderNumber: string; redirectUrl: string | null; raw: Record<string, unknown> };
 
     if (isFlexPayCardConfigured()) {
+      const charge = resolveFlexPayCharge(amountFc, chargeCurrency, loadPlatformSettings().usdExchangeRateCdf);
       flex = await createFlexPayMobileCheckout({
         reference,
-        amount: amountFc,
-        currency: 'CDF',
+        amount: charge.amount,
+        currency: charge.currency,
         phone: normalizedPhone!,
         callbackUrl,
       });
@@ -194,6 +199,7 @@ export async function initiateAiTokenPayment(
       status: 'PENDING',
       tokensCount,
       amountFc,
+      currency: chargeCurrency,
       message:
         'Une demande de paiement a été envoyée sur votre téléphone. Veuillez valider le code secret PIN sur votre mobile.',
     };

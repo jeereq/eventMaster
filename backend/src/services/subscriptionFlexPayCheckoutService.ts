@@ -8,6 +8,12 @@ import {
   assertFlexPayConfigured,
 } from './flexPayCardService';
 import { computeSubscriptionCheckoutAmount } from './subscriptionActivationService';
+import { loadPlatformSettings } from './platformSettingsService';
+import {
+  parseFlexPayChargeCurrency,
+  resolveFlexPayCharge,
+  type FlexPayChargeCurrency,
+} from './flexPayChargeCurrency';
 
 export type FlexPaySubscriptionMethod = 'card' | 'mobile';
 
@@ -20,6 +26,7 @@ export async function initiateFlexPaySessionForRequest(params: {
   tenantName: string;
   method: FlexPaySubscriptionMethod;
   phone?: string | null;
+  currency?: FlexPayChargeCurrency | string | null;
 }): Promise<{
   paid: boolean;
   mock: boolean;
@@ -33,6 +40,7 @@ export async function initiateFlexPaySessionForRequest(params: {
   assertFlexPayConfigured();
 
   const { request, tenantName, method, phone } = params;
+  const chargeCurrency = parseFlexPayChargeCurrency(params.currency, method);
   const days = request.durationDays;
   const plan = request.requestedPlan as PlanType;
   const catalog = computeSubscriptionCheckoutAmount(plan, days);
@@ -74,10 +82,11 @@ export async function initiateFlexPaySessionForRequest(params: {
   const description = `Forfait ${plan} — ${days} jours — ${tenantName}`;
 
   if (method === 'mobile') {
+    const charge = resolveFlexPayCharge(amountFc, chargeCurrency, loadPlatformSettings().usdExchangeRateCdf);
     const flex = await createFlexPayMobileCheckout({
       reference,
-      amount: amountFc,
-      currency: 'CDF',
+      amount: charge.amount,
+      currency: charge.currency,
       phone: String(phone),
       callbackUrl,
     });

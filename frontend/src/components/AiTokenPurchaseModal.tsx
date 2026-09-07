@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Modal, Button, Input, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
+import { formatChargeAmount, type FlexPayChargeCurrency } from '@/lib/flexPayCurrency';
+import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import {
   aiTokenAmountPresets,
   aiTokenCostLegend,
@@ -48,6 +50,7 @@ export default function AiTokenPurchaseModal({
   const presets = aiTokenAmountPresets(pricing);
   const [step, setStep] = useState<CheckoutStep>('form');
   const [paymentMethod, setPaymentMethod] = useState<'mobile' | 'card'>('mobile');
+  const [currency, setCurrency] = useState<FlexPayChargeCurrency>('CDF');
   const [operator, setOperator] = useState<FlexPayMobileOperatorId>('orange');
   const [phone, setPhone] = useState('');
   const [amountInput, setAmountInput] = useState('');
@@ -203,6 +206,7 @@ export default function AiTokenPurchaseModal({
         paymentMethod,
         phone: cleanPhone || undefined,
         operator: paymentMethod === 'mobile' ? operator : undefined,
+        currency: paymentMethod === 'mobile' ? currency : undefined,
         amountFc,
         deviceId,
       })) as {
@@ -459,7 +463,9 @@ export default function AiTokenPurchaseModal({
             phone={phone}
             onPhoneChange={setPhone}
             amountFc={isValidAmount ? parsedAmount : pricing.minAmountCdf}
-            amountHint="Montant prélevé en francs congolais"
+            amountHint="Montant de la recharge"
+            currency={currency}
+            onCurrencyChange={setCurrency}
           />
 
           {error ? (
@@ -491,7 +497,11 @@ export default function AiTokenPurchaseModal({
             >
               {paymentMethod === 'card'
                 ? `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(pricing.minAmountCdf)} par carte`
-                : `Payer ${isValidAmount ? formatFc(parsedAmount) : formatFc(pricing.minAmountCdf)} par Mobile Money`}
+                : `Payer ${formatChargeAmount(
+                    isValidAmount ? parsedAmount : pricing.minAmountCdf,
+                    currency,
+                    resolveUsdExchangeRateCdf(site.usdExchangeRateCdf),
+                  )} par Mobile Money`}
             </Button>
 
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center pt-1">

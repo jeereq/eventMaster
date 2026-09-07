@@ -2,6 +2,7 @@ import {
   loadPlatformSettings,
   type TicketPaymentProvider,
 } from './platformSettingsService';
+import { formatFlexPayApiAmount } from './flexPayChargeCurrency';
 
 export type FlexPayCurrency = 'CDF' | 'USD';
 export type FlexPayMethod = 'card' | 'mobile';
@@ -274,7 +275,7 @@ export async function createFlexPayMobileCheckout(
     type: '1',
     phone,
     reference: safeReference,
-    amount: String(Math.max(1, Math.round(input.amount))),
+    amount: formatFlexPayApiAmount(input.amount, input.currency || 'CDF'),
     currency: input.currency || 'CDF',
     callbackUrl: input.callbackUrl,
   };

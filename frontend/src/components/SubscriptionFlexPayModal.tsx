@@ -16,6 +16,9 @@ import type { BillingCycle, PlanId } from '@/config/landingPricing';
 import { durationDaysForPlan } from '@/config/landingPricing';
 import PaymentPendingView from '@/components/PaymentPendingView';
 import PaymentAccountPicker from '@/components/PaymentAccountPicker';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { formatChargeAmount, type FlexPayChargeCurrency } from '@/lib/flexPayCurrency';
+import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 
 export type FlexPayMethod = 'mobile' | 'card';
 
@@ -48,8 +51,16 @@ export default function SubscriptionFlexPayModal({
 }) {
   const [step, setStep] = useState<CheckoutStep>('form');
   const [paymentMethod, setPaymentMethod] = useState<FlexPayMethod>(initialMethod);
+  const [currency, setCurrency] = useState<FlexPayChargeCurrency>('CDF');
   const [operator, setOperator] = useState<FlexPayMobileOperatorId>('orange');
   const [phone, setPhone] = useState('');
+  const { site } = usePlatformSite();
+  const exchangeRate = resolveUsdExchangeRateCdf(site.usdExchangeRateCdf);
+  const amountFc = parseInt(priceLabel.replace(/\D/g, ''), 10) || 0;
+  const chargeLabel =
+    paymentMethod === 'mobile' && amountFc > 0
+      ? formatChargeAmount(amountFc, currency, exchangeRate)
+      : priceLabel;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [requestId, setRequestId] = useState<string | null>(retryRequestId);
@@ -59,6 +70,7 @@ export default function SubscriptionFlexPayModal({
     if (!open) return;
     setError('');
     setPaymentMethod(initialMethod);
+    setCurrency('CDF');
     setRequestId(retryRequestId);
     if (startPending && retryRequestId) {
       setStep('waiting');
@@ -116,13 +128,13 @@ export default function SubscriptionFlexPayModal({
       const data = retryId
         ? await api.post(`/subscriptions/requests/${retryId}/retry-payment`, {
             paymentMethod,
-            ...(paymentMethod === 'mobile' ? { phone: cleanPhone, operator } : {}),
+            ...(paymentMethod === 'mobile' ? { phone: cleanPhone, operator, currency } : {}),
           })
         : await api.post('/subscriptions/checkout', {
             requestedPlan: planId,
             durationDays: planId ? durationDaysForPlan(planId, billingCycle) : undefined,
             paymentMethod,
-            ...(paymentMethod === 'mobile' ? { phone: cleanPhone, operator } : {}),
+            ...(paymentMethod === 'mobile' ? { phone: cleanPhone, operator, currency } : {}),
           });
 
       if (data.checkoutUrl) {
@@ -157,7 +169,7 @@ export default function SubscriptionFlexPayModal({
       onClose={onClose}
       size="sm"
       title={retryRequestId ? 'Reprendre le paiement' : isRenew ? 'Renouveler le forfait' : 'Payer l’abonnement'}
-      description={`${planName}${priceLabel ? ` · ${priceLabel}` : ''} · FlexPay (CDF)`}
+      description={`${planName}${priceLabel ? ` · ${priceLabel}` : ''} · FlexPay`}
     >
       {step === 'success' && (
         <div className="py-8 text-center space-y-3 animate-fade-in">
@@ -175,7 +187,7 @@ export default function SubscriptionFlexPayModal({
           title="Paiement FlexPay en cours"
           description={
             paymentMethod === 'mobile'
-              ? `Confirmez ${priceLabel} sur votre téléphone (USSD / app). Cette fenêtre se met à jour automatiquement.`
+              ? `Confirmez ${chargeLabel || priceLabel} sur votre téléphone (USSD / app). Cette fenêtre se met à jour automatiquement.`
               : 'Nous confirmons votre paiement carte. Cette fenêtre se met à jour automatiquement.'
           }
           onPoll={pollRequest}
@@ -198,8 +210,10 @@ export default function SubscriptionFlexPayModal({
             </div>
             {priceLabel ? (
               <div className="text-right shrink-0">
-                <span className="text-sm font-black text-primary block">{priceLabel}</span>
-                <span className="text-[10px] text-muted">TTC (CDF)</span>
+                <span className="text-sm font-black text-primary block">{chargeLabel || priceLabel}</span>
+                <span className="text-xs text-muted">
+                  {paymentMethod === 'mobile' && currency === 'USD' ? 'TTC (USD)' : 'TTC (FC)'}
+                </span>
               </div>
             ) : null}
           </div>
@@ -211,8 +225,10 @@ export default function SubscriptionFlexPayModal({
             onOperatorChange={setOperator}
             phone={phone}
             onPhoneChange={setPhone}
-            amountFc={parseInt(priceLabel.replace(/\D/g, ''), 10) || undefined}
+            amountFc={amountFc || undefined}
             amountHint="Montant du forfait prélevé"
+            currency={currency}
+            onCurrencyChange={setCurrency}
           />
 
           {error ? (
@@ -242,7 +258,7 @@ export default function SubscriptionFlexPayModal({
             >
               {paymentMethod === 'card'
                 ? `Payer ${priceLabel || 'par carte'}`
-                : `Payer ${priceLabel || 'par Mobile Money'}`}
+                : `Payer ${chargeLabel || priceLabel || 'par Mobile Money'}`}
             </Button>
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
