@@ -269,6 +269,64 @@ h1, h2, h3, h4 {
   }
 }
 
+@keyframes em-studio-scan {
+  0% { top: 12%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 88%; opacity: 0; }
+}
+
+@keyframes em-studio-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes em-studio-dot-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes em-studio-shimmer {
+  0% { background-position: 120% 0; }
+  100% { background-position: -20% 0; }
+}
+
+.em-studio-scan {
+  animation: em-studio-scan 2.8s ease-in-out infinite;
+}
+
+.em-studio-float {
+  animation: em-studio-float 3.6s ease-in-out infinite;
+}
+
+.em-studio-dot-in {
+  animation: em-studio-dot-in 0.55s ease-out both;
+}
+
+.em-studio-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in srgb, var(--festive-on-stage) 35%, transparent) 50%,
+    transparent 80%
+  );
+  background-size: 220% 100%;
+  animation: em-studio-shimmer 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-studio-scan,
+  .em-studio-float,
+  .em-studio-dot-in,
+  .em-studio-shimmer {
+    animation: none !important;
+  }
+  .em-studio-dot-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .em-reveal {
     opacity: 0;

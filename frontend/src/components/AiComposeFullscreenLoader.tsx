@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Sparkles, type LucideIcon } from 'lucide-react';
+import { Check, Sparkles, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+export type AiLoaderVariant = 'invitation' | 'room' | 'budget';
 
 export type AiProcessStep = {
   id: string;
@@ -49,6 +51,97 @@ export function nextAiLoaderProgress(current: number): number {
   return Math.min(PROGRESS_CAP, current + Math.max(1.2, remaining * 0.09));
 }
 
+const WAIT_LINES = [
+  'L’atelier pose les détails un à un.',
+  'On ne précipite pas la fête.',
+  'Encore un instant — le rendu se précise.',
+];
+
+function InvitationVignette({ progress, stepIndex }: { progress: number; stepIndex: number }) {
+  return (
+    <div className="relative h-[4.75rem] w-[3.15rem] rounded-t-[1.35rem] rounded-b-lg border border-festive-on-stage/35 bg-stage-elevated overflow-hidden">
+      <div className="absolute inset-x-1.5 top-2.5 space-y-1">
+        <div className={cn('mx-auto h-1 w-6 rounded-full transition-colors duration-500', stepIndex >= 1 ? 'bg-stage-foreground/55' : 'bg-stage-foreground/15')} />
+        <div className={cn('h-0.5 rounded-full transition-colors duration-500', stepIndex >= 2 ? 'bg-stage-foreground/40' : 'bg-stage-foreground/10')} />
+        <div className={cn('h-0.5 w-3/4 rounded-full transition-colors duration-500', stepIndex >= 3 ? 'bg-stage-foreground/35' : 'bg-stage-foreground/10')} />
+      </div>
+      <div
+        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary/40 to-transparent transition-[height] duration-700 ease-out"
+        style={{ height: `${Math.max(14, progress)}%` }}
+      />
+      <div className="em-studio-scan absolute inset-x-0 h-px bg-festive-on-stage/80 shadow-[0_0_12px_var(--festive-on-stage)]" />
+    </div>
+  );
+}
+
+function RoomVignette({ progress }: { progress: number }) {
+  const tables: Array<{ style: React.CSSProperties; showAt: number }> = [
+    { showAt: 22, style: { left: '18%', top: '20%', animationDelay: '0ms' } },
+    { showAt: 38, style: { right: '18%', top: '20%', animationDelay: '90ms' } },
+    { showAt: 54, style: { left: '18%', bottom: '18%', animationDelay: '180ms' } },
+    { showAt: 70, style: { right: '18%', bottom: '18%', animationDelay: '270ms' } },
+  ];
+  return (
+    <div className="relative h-[4.75rem] w-[4.75rem] rounded-xl border border-primary/30 bg-stage-elevated overflow-hidden">
+      <div className="absolute inset-2 rounded-md border border-dashed border-stage-foreground/15" />
+      <div className="absolute left-1/2 top-2 bottom-2 w-px -translate-x-1/2 bg-festive-on-stage/25" />
+      {tables.map((table, index) =>
+        progress > table.showAt ? (
+          <span
+            key={index}
+            className="em-studio-dot-in absolute h-2.5 w-2.5 rounded-full bg-primary-solid/90 ring-2 ring-primary/30"
+            style={table.style}
+          />
+        ) : null,
+      )}
+    </div>
+  );
+}
+
+function BudgetVignette({ stepIndex }: { stepIndex: number }) {
+  return (
+    <div className="relative flex h-[4.75rem] w-[4.75rem] items-end justify-center gap-1">
+      {[40, 64, 50].map((height, index) => (
+        <span
+          key={index}
+          className={cn(
+            'w-3 rounded-t-md border transition-all duration-700',
+            stepIndex >= index
+              ? 'border-primary/45 bg-primary/35'
+              : 'border-stage-foreground/10 bg-stage-foreground/5',
+          )}
+          style={{ height: `${height}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StudioVignette({
+  variant,
+  progress,
+  stepIndex,
+  Icon,
+}: {
+  variant: AiLoaderVariant;
+  progress: number;
+  stepIndex: number;
+  Icon: LucideIcon;
+}) {
+  return (
+    <div className="em-studio-float relative flex h-full w-full items-center justify-center">
+      {variant === 'invitation' ? (
+        <InvitationVignette progress={progress} stepIndex={stepIndex} />
+      ) : variant === 'room' ? (
+        <RoomVignette progress={progress} />
+      ) : (
+        <BudgetVignette stepIndex={stepIndex} />
+      )}
+      <Icon className="absolute -bottom-0.5 -right-0.5 h-4 w-4 text-festive-on-stage drop-shadow" aria-hidden />
+    </div>
+  );
+}
+
 export function AiProcessFullscreenLoader({
   active,
   eyebrow,
@@ -57,6 +150,7 @@ export function AiProcessFullscreenLoader({
   steps,
   stageHint,
   icon: Icon = Sparkles,
+  variant = 'invitation',
 }: {
   active: boolean;
   eyebrow: string;
@@ -65,18 +159,25 @@ export function AiProcessFullscreenLoader({
   steps: AiProcessStep[];
   stageHint?: string | null;
   icon?: LucideIcon;
+  variant?: AiLoaderVariant;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [waitLine, setWaitLine] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!active) {
       setStepIndex(0);
       setProgress(0);
+      setElapsed(0);
+      setWaitLine(0);
       return;
     }
     setProgress(PROGRESS_START);
+    setElapsed(0);
+    setWaitLine(0);
     const reduced =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -91,9 +192,17 @@ export function AiProcessFullscreenLoader({
     const progressTimer = window.setInterval(() => {
       setProgress((value) => nextAiLoaderProgress(value));
     }, PROGRESS_TICK_MS);
+    const elapsedTimer = window.setInterval(() => {
+      setElapsed((value) => value + 1);
+    }, 1000);
+    const waitTimer = window.setInterval(() => {
+      setWaitLine((value) => (value + 1) % WAIT_LINES.length);
+    }, 4200);
     return () => {
       window.clearInterval(stepTimer);
       window.clearInterval(progressTimer);
+      window.clearInterval(elapsedTimer);
+      window.clearInterval(waitTimer);
     };
   }, [active, steps.length]);
 
@@ -141,12 +250,13 @@ export function AiProcessFullscreenLoader({
 
   const current = steps[stepIndex] || steps[0];
   const shownProgress = Math.round(progress);
+  const elapsedLabel = elapsed < 60 ? `${elapsed} s` : `${Math.floor(elapsed / 60)} min ${elapsed % 60} s`;
 
   return (
     <div
       ref={rootRef}
       tabIndex={-1}
-      className="fixed inset-0 z-[12000] flex items-center justify-center bg-[#0b0907]/92 px-5"
+      className="em-stage fixed inset-0 z-[12000] flex items-center justify-center px-5"
       role="alertdialog"
       aria-modal="true"
       aria-busy="true"
@@ -154,38 +264,39 @@ export function AiProcessFullscreenLoader({
       aria-describedby="ai-process-loader-desc"
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-        <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/25 blur-3xl motion-safe:animate-pulse" />
-        <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-primary/10 blur-3xl motion-safe:animate-pulse" />
+        <div className="absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl motion-safe:animate-pulse" />
+        <div className="absolute bottom-[-3rem] right-[-2rem] h-72 w-72 rounded-full bg-festive-accent/15 blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-md text-center text-white">
-        <div className="relative mx-auto mb-7 h-28 w-28">
+      <div className="relative w-full max-w-md text-center text-stage-foreground">
+        <div className="relative mx-auto mb-7 h-36 w-36">
           <div
-            className="absolute inset-0 rounded-full border border-white/10"
+            className="absolute inset-0 rounded-full"
             style={{
-              background:
-                'conic-gradient(from 180deg, color-mix(in oklab, var(--primary) 85%, white), transparent 55%, color-mix(in oklab, var(--primary) 40%, transparent))',
+              background: `conic-gradient(from -90deg, var(--primary-solid) ${shownProgress}%, color-mix(in srgb, var(--stage-foreground) 12%, transparent) 0)`,
             }}
+            aria-hidden
           />
-          <div className="absolute inset-[7px] rounded-full bg-[#110e0b] border border-white/10 shadow-2xl flex items-center justify-center">
-            <Icon className="w-8 h-8 text-primary motion-safe:animate-pulse" />
+          <div className="absolute inset-[8px] rounded-full bg-stage-elevated border border-stage-foreground/10 flex items-center justify-center overflow-hidden">
+            <StudioVignette variant={variant} progress={shownProgress} stepIndex={stepIndex} Icon={Icon} />
           </div>
-          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary motion-safe:animate-spin motion-reduce:animate-none" />
-          <div className="absolute inset-3 rounded-full border border-transparent border-b-white/40 motion-safe:animate-spin motion-reduce:animate-none [animation-direction:reverse] [animation-duration:2.4s]" />
         </div>
 
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary/90">{eyebrow}</p>
-        <h2 id="ai-process-loader-title" className="mt-2 text-xl sm:text-2xl font-bold tracking-tight">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">{eyebrow}</p>
+        <h2
+          id="ai-process-loader-title"
+          className="mt-2 font-display text-2xl sm:text-3xl font-semibold tracking-tight text-stage-foreground"
+        >
           {title}
         </h2>
-        <p id="ai-process-loader-desc" className="mt-2 text-sm text-white/70 leading-relaxed">
+        <p id="ai-process-loader-desc" className="mt-2 text-sm text-stage-foreground/75 leading-relaxed">
           {stageHint || current.label}
         </p>
-        {footnote ? <p className="mt-1 text-xs text-white/45">{footnote}</p> : null}
+        {footnote ? <p className="mt-1 text-xs text-stage-foreground/50">{footnote}</p> : null}
 
         <div className="mt-5 space-y-1.5">
           <div
-            className="h-1.5 overflow-hidden rounded-full bg-white/10"
+            className="h-1.5 overflow-hidden rounded-full bg-stage-foreground/10"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
@@ -197,7 +308,9 @@ export function AiProcessFullscreenLoader({
               style={{ width: `${shownProgress}%` }}
             />
           </div>
-          <p className="text-xs text-white/45 tabular-nums">{shownProgress} %</p>
+          <p className="text-xs text-stage-foreground/50 tabular-nums">
+            {shownProgress} % · {elapsedLabel}
+          </p>
         </div>
 
         <ol className="mt-6 space-y-2 text-left" aria-label="Étapes en cours">
@@ -208,32 +321,32 @@ export function AiProcessFullscreenLoader({
               <li
                 key={step.id}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl border px-3 py-2 text-xs transition-colors',
+                  'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-xs transition-colors duration-500',
                   isCurrent
-                    ? 'border-primary/45 bg-primary/15 text-white'
+                    ? 'border-primary/45 bg-primary/15 text-stage-foreground'
                     : isDone
-                      ? 'border-white/10 bg-white/5 text-white/70'
-                      : 'border-white/5 bg-white/[0.03] text-white/40',
+                      ? 'border-stage-foreground/10 bg-stage-foreground/5 text-stage-foreground/70'
+                      : 'border-stage-foreground/5 bg-stage-foreground/[0.03] text-stage-foreground/40',
                 )}
               >
                 <span
                   className={cn(
-                    'w-5 h-5 rounded-full inline-flex items-center justify-center text-[10px] font-bold shrink-0',
+                    'w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0',
                     isCurrent
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-primary-solid text-primary-foreground'
                       : isDone
-                        ? 'bg-white/20 text-white'
-                        : 'bg-white/10 text-white/50',
+                        ? 'bg-primary/25 text-primary'
+                        : 'bg-stage-foreground/10 text-stage-foreground/50',
                   )}
                 >
-                  {index + 1}
+                  {isDone ? <Check className="w-3.5 h-3.5" aria-hidden /> : index + 1}
                 </span>
                 <span className="font-semibold">{step.label}</span>
                 {isCurrent ? (
                   <span className="ml-auto flex gap-1" aria-hidden>
-                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse" />
-                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse [animation-delay:120ms]" />
-                    <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse [animation-delay:240ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary motion-safe:animate-pulse [animation-delay:120ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary motion-safe:animate-pulse [animation-delay:240ms]" />
                   </span>
                 ) : null}
               </li>
@@ -241,7 +354,9 @@ export function AiProcessFullscreenLoader({
           })}
         </ol>
 
-        <p className="mt-6 text-xs text-white/40">La génération continue jusqu’à la fin. Merci de patienter.</p>
+        <p className="mt-6 text-xs text-stage-foreground/45" aria-live="polite">
+          {WAIT_LINES[waitLine]} La génération continue jusqu’à la fin.
+        </p>
       </div>
     </div>
   );
@@ -271,6 +386,7 @@ export default function AiComposeFullscreenLoader({
   return (
     <AiProcessFullscreenLoader
       active={active}
+      variant="invitation"
       eyebrow="Invitation"
       title="Votre carte se prépare"
       stageHint={stageHint}
@@ -294,6 +410,7 @@ export function AiBudgetFullscreenLoader({
   return (
     <AiProcessFullscreenLoader
       active={active}
+      variant="budget"
       eyebrow="Simulation IA"
       title="Calcul des formules"
       stageHint={stageHint}
@@ -318,6 +435,7 @@ export function AiRoomPlanFullscreenLoader({
   return (
     <AiProcessFullscreenLoader
       active={active}
+      variant="room"
       eyebrow="Plan de salle"
       title="Le studio compose votre plan"
       stageHint={stageHint}

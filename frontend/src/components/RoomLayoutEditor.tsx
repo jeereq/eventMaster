@@ -24,6 +24,7 @@ const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import { ChairTypePicker, SeatMaterialPicker, RoomAmbienceCard, TableSurfacePicker, ZoneMaterialPicker } from '@/components/room/RoomMaterialPreviews';
 import RoomAmbiencePreviewModal from '@/components/room/RoomAmbiencePreviewModal';
+import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import {
   ChairType,
   ColumnShape,
@@ -6944,6 +6945,10 @@ export default function RoomLayoutEditor({
         }}
       />
     ) : null}
+    <AiRoomPlanFullscreenLoader
+      active={aiPlanReading}
+      hasPhoto={Boolean(lastPlanPhotoUrl || retryPlanPhoto)}
+    />
     <RoomAmbiencePreviewModal
       open={Boolean(ambiencePreviewPreset)}
       onClose={() => setAmbiencePreviewPreset(null)}
