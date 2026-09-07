@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Sparkles, UserPlus } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
+import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { isServiceRentalCategory, sizedMediaUrl } from '@/lib/marketplace';
@@ -142,6 +143,9 @@ export default function AiSimulationPackModal({
                       Créer l’événement
                     </Button>
                   ) : null}
+                  {onBuyTokens ? (
+                    <AiTokenBuyButton compact variant="secondary" onClick={onBuyTokens} />
+                  ) : null}
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -155,9 +159,7 @@ export default function AiSimulationPackModal({
                     Créer un compte
                   </Button>
                   {onBuyTokens ? (
-                    <Button size="sm" variant="secondary" onClick={onBuyTokens}>
-                      Recharger dès 2 500 FC
-                    </Button>
+                    <AiTokenBuyButton compact variant="secondary" onClick={onBuyTokens} />
                   ) : null}
                 </div>
               )}

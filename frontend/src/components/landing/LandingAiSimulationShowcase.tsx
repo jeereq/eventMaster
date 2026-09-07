@@ -30,6 +30,7 @@ import {
   type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
+import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import EventPrepAiSimulator, { type EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
 
@@ -200,6 +201,15 @@ export default function LandingAiSimulationShowcase() {
               Indiquez votre budget en dollars : il est converti au taux affiché, puis l’IA compose 3 formules dans votre enveloppe.
             </span>
           </p>
+
+          {!allowance.unlimited && !isAiSimulationThresholdReached(allowance) ? (
+            <div className="flex justify-center pt-1">
+              <AiTokenBuyButton
+                variant="secondary"
+                onClick={() => setPurchaseModalOpen(true)}
+              />
+            </div>
+          ) : null}
 
           <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2" role="group" aria-label="Mode de vue simulateur">
             <button

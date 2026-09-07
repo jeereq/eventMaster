@@ -6,6 +6,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Building2, Mail, Sparkles, Wand2 } from 'lucide-react';
 import { Modal } from '@/components/ui';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
+import AiTokenBuyButton from '@/components/AiTokenBuyButton';
+import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -30,6 +32,7 @@ export default function GlobalAiSimulatorFab() {
   const router = useRouter();
   const { user, tenant, planFeatures, access } = useAuth();
   const [open, setOpen] = useState(false);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
 
   const hidden =
@@ -74,6 +77,10 @@ export default function GlobalAiSimulatorFab() {
       : Wand2;
 
   const handleClick = () => {
+    if (!allowance.unlimited && allowance.totalRemaining <= 0) {
+      setPurchaseOpen(true);
+      return;
+    }
     if (placement.click === 'scroll' && placement.scrollId) {
       if (scrollToPageSection(placement.scrollId)) return;
       if (placement.href) {
@@ -146,6 +153,23 @@ export default function GlobalAiSimulatorFab() {
         description={placement.modalDescription}
       >
         <div className="space-y-4">
+          {!allowance.unlimited ? (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-[var(--radius-card)] border border-primary/25 bg-primary/8 px-3.5 py-3">
+              <p className="text-xs text-foreground leading-snug min-w-0">
+                {allowance.totalRemaining <= 0
+                  ? 'Plus de jetons pour lancer une simulation budget.'
+                  : `${allowance.totalRemaining} jeton${allowance.totalRemaining > 1 ? 's' : ''} restant${allowance.totalRemaining > 1 ? 's' : ''} · 1 jeton = 1 simulation.`}
+              </p>
+              <AiTokenBuyButton
+                compact
+                variant={allowance.totalRemaining <= 0 ? 'primary' : 'secondary'}
+                onClick={() => {
+                  setOpen(false);
+                  setPurchaseOpen(true);
+                }}
+              />
+            </div>
+          ) : null}
           <div className="grid gap-2 sm:grid-cols-3">
             <ShortcutCard
               href={placement.catalogueHref}
@@ -210,6 +234,16 @@ export default function GlobalAiSimulatorFab() {
           )}
         </div>
       </Modal>
+
+      <AiTokenPurchaseModal
+        open={purchaseOpen}
+        onClose={() => setPurchaseOpen(false)}
+        onSuccess={() => {
+          void syncDeviceAiTokensWithBackend(api).then((serverAllowance) => {
+            setAllowance(serverAllowance);
+          });
+        }}
+      />
     </>
   );
 }

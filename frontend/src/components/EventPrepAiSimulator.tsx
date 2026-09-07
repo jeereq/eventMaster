@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
+import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import { AiBudgetFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import AiSimulationCounter from '@/components/AiSimulationCounter';
 import AiSimulationHistoryList from '@/components/AiSimulationHistoryList';
@@ -419,15 +420,24 @@ export default function EventPrepAiSimulator({
               Décrivez votre événement : l’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs budget</strong> — économique, équilibré, confort. Ce n’est pas un plan de salle.
             </p>
           </div>
-          <Button
-            size="sm"
-            variant={open ? 'secondary' : 'primary'}
-            onClick={() => setOpen((value) => !value)}
-            className="shrink-0"
-            aria-expanded={open}
-          >
-            {open ? 'Masquer le brief' : 'Ouvrir le brief'}
-          </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+            {!allowance.unlimited ? (
+              <AiTokenBuyButton
+                compact
+                variant={allowance.canSimulate ? 'secondary' : 'primary'}
+                onClick={() => setPurchaseModalOpen(true)}
+              />
+            ) : null}
+            <Button
+              size="sm"
+              variant={open ? 'secondary' : 'primary'}
+              onClick={() => setOpen((value) => !value)}
+              className="shrink-0"
+              aria-expanded={open}
+            >
+              {open ? 'Masquer le brief' : 'Ouvrir le brief'}
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -477,16 +487,27 @@ export default function EventPrepAiSimulator({
           </button>
         </div>
 
-        {activeTab === 'history' && history.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('create')}
-            className="min-h-11 px-3 text-xs font-semibold text-primary-solid hover:underline inline-flex items-center gap-1.5 self-start sm:self-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>Nouvelle simulation</span>
-          </button>
-        )}
+        {(embedded && !allowance.unlimited) || (activeTab === 'history' && history.length > 0) ? (
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+            {embedded && !allowance.unlimited ? (
+              <AiTokenBuyButton
+                compact
+                variant={allowance.canSimulate ? 'secondary' : 'primary'}
+                onClick={() => setPurchaseModalOpen(true)}
+              />
+            ) : null}
+            {activeTab === 'history' && history.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setActiveTab('create')}
+                className="min-h-11 px-3 text-xs font-semibold text-primary-solid hover:underline inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Nouvelle simulation</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {activeTab === 'history' ? (
@@ -772,16 +793,25 @@ export default function EventPrepAiSimulator({
             ) : null}
           </div>
 
-          <Button
-            onClick={() => void run()}
-            loading={loading}
-            leftIcon={<Sparkles className="w-4 h-4" />}
-            disabled={!allowance.canSimulate && !loading}
-          >
-            {allowance.canSimulate
-              ? `Lancer la simulation (${allowance.unlimited ? 'illimité' : `${aiTokenBalanceLabel(allowance)} restante${allowance.totalRemaining > 1 ? 's' : ''}`})`
-              : 'Recharger pour simuler'}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => void run()}
+              loading={loading}
+              leftIcon={<Sparkles className="w-4 h-4" />}
+              disabled={!allowance.canSimulate && !loading}
+            >
+              {allowance.canSimulate
+                ? `Lancer la simulation (${allowance.unlimited ? 'illimité' : `${aiTokenBalanceLabel(allowance)} restante${allowance.totalRemaining > 1 ? 's' : ''}`})`
+                : 'Lancer la simulation (0 jeton)'}
+            </Button>
+            {!allowance.unlimited && !allowance.canSimulate ? (
+              <AiTokenBuyButton
+                variant="primary"
+                size="md"
+                onClick={() => setPurchaseModalOpen(true)}
+              />
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -793,6 +823,13 @@ export default function EventPrepAiSimulator({
               <p className="text-[11px] opacity-90">
                 Essayez une autre commune, toute la ville, ou un budget plus large.
               </p>
+            ) : null}
+            {!allowance.unlimited && /jeton|simulation|recharge/i.test(error) ? (
+              <AiTokenBuyButton
+                variant="primary"
+                size="sm"
+                onClick={() => setPurchaseModalOpen(true)}
+              />
             ) : null}
           </div>
         </Alert>
