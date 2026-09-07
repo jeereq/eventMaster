@@ -97,7 +97,7 @@ export default function ProtocolTasksPanel({
     <div className="space-y-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="space-y-1.5">
-          <h2 className="text-xl font-display font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-primary" />
             Tâches protocole
           </h2>
@@ -124,7 +124,7 @@ export default function ProtocolTasksPanel({
                 type="button"
                 onClick={() => setFilter(opt.id)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+                  'px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
                   filter === opt.id
                     ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
                     : 'text-muted hover:text-foreground',
@@ -136,7 +136,7 @@ export default function ProtocolTasksPanel({
           </div>
           <Link
             href={eventDashboardHref(eventId, { tab: 'protocol', protocol: true })}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 rounded-[var(--radius-button)] border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground touch-manipulation"
           >
             <ScanLine className="w-3.5 h-3.5" />
             Accueil

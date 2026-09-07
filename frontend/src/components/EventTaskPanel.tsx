@@ -158,13 +158,13 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     );
   }
 
-  const selectClass = 'px-2.5 py-1 min-h-[36px] sm:min-h-[32px] rounded-xl border border-border bg-surface text-xs font-medium text-foreground hover:bg-surface-muted transition-colors outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer';
+  const selectClass = 'px-2.5 py-1 min-h-11 rounded-xl border border-border bg-surface text-xs font-medium text-foreground hover:bg-surface-muted transition-colors outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer';
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="space-y-1.5">
-          <h2 className="text-xl font-display font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-primary" />
             Ce qui requiert votre attention
           </h2>
@@ -185,7 +185,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               type="button"
               onClick={() => setFilter('open')}
               className={cn(
-                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+                'px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
                 filter === 'open' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
@@ -195,7 +195,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               type="button"
               onClick={() => setFilter('all')}
               className={cn(
-                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+                'px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
                 filter === 'all' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
@@ -241,7 +241,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 )}
               >
                 <p className="text-xs font-semibold truncate">{person.label}</p>
-                <p className={cn('text-[11px] mt-1', active ? 'text-background/80' : 'text-muted')}>
+                <p className={cn('text-xs mt-1', active ? 'text-background/80' : 'text-muted')}>
                   {remaining} ouverte{remaining > 1 ? 's' : ''}
                   {person.overdue > 0 ? ` · ${person.overdue} en retard` : ''}
                   {' · '}
@@ -423,7 +423,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                   {task.mine ? <StatusPill tone="sky">Moi</StatusPill> : null}
 
                   {canManage ? (
-                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-[36px] sm:min-h-[32px]">
+                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-11">
                       <UserRound className="w-3.5 h-3.5 text-muted shrink-0" />
                       <select
                         value={task.assignee?.id || ''}
@@ -447,7 +447,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                   )}
 
                   {canManage ? (
-                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-[36px] sm:min-h-[32px]">
+                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-11">
                       <Link2 className="w-3.5 h-3.5 text-muted shrink-0" />
                       <select
                         value={task.blockedById || ''}
@@ -548,7 +548,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               Ajouter
             </Button>
           </div>
-          <p className="text-[11px] text-muted">
+          <p className="text-xs text-muted">
             Une tâche dépendante passe en « bloquée » tant que la précédente n’est pas faite. Avec une échéance, l’assigné reçoit un rappel la veille / le jour J.
           </p>
         </form>
@@ -558,7 +558,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center space-y-4">
           <Sparkles className="w-8 h-8 text-primary mx-auto" />
           <div>
-            <h3 className="font-display font-semibold text-foreground text-lg">Générer une checklist type</h3>
+            <h3 className="font-semibold text-foreground text-lg">Générer une checklist type</h3>
             <p className="text-sm text-muted max-w-sm mx-auto mt-1">
               Commencez rapidement avec une liste de tâches pré-configurée (communication, logistique, relances).
             </p>

@@ -49,13 +49,13 @@ export default function EventWorkflowPanel({
 
   // Auto-scroll pour garder l'étape active toujours visible au centre sur mobile
   useEffect(() => {
-    if (activeBtnRef.current) {
-      activeBtnRef.current.scrollIntoView({
-        inline: 'center',
-        block: 'nearest',
-        behavior: 'smooth',
-      });
-    }
+    if (!activeBtnRef.current) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    activeBtnRef.current.scrollIntoView({
+      inline: 'center',
+      block: 'nearest',
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
   }, [activeTab]);
 
   return (
@@ -74,9 +74,16 @@ export default function EventWorkflowPanel({
           ) : null}
         </div>
         <div className="flex items-center gap-2.5">
-          <div className="w-24 sm:w-32 h-1.5 bg-surface-muted rounded-full overflow-hidden border border-border/40">
+          <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={workflow.progressPercent}
+            aria-label="Progression de l’événement"
+            className="w-24 sm:w-32 h-1.5 bg-surface-muted rounded-full overflow-hidden border border-border/40"
+          >
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+              className="h-full bg-primary rounded-full transition-all duration-300 motion-reduce:transition-none"
               style={{ width: `${workflow.progressPercent}%` }}
             />
           </div>
@@ -109,7 +116,7 @@ export default function EventWorkflowPanel({
                 >
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-2xs",
-                    isActive ? "border-primary bg-primary text-white scale-105" 
+                    isActive ? "border-primary bg-primary text-white motion-reduce:scale-100 scale-105" 
                     : isCompleted ? "border-emerald-500 bg-emerald-500 text-white"
                     : isCurrent ? "border-primary/50 text-primary bg-primary/10"
                     : "border-border bg-surface-muted text-muted"
@@ -151,9 +158,11 @@ export default function EventWorkflowPanel({
           {SUPPORT_TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
+              type="button"
               onClick={() => onNavigateTab(id)}
+              aria-current={activeTab === id ? 'page' : undefined}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[38px] sm:min-h-[34px] rounded-full text-xs font-semibold transition-colors border touch-manipulation",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 rounded-full text-xs font-semibold transition-colors border touch-manipulation",
                 activeTab === id 
                   ? "bg-foreground text-background border-foreground shadow-2xs" 
                   : "bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted"

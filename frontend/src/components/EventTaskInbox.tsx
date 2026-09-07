@@ -35,7 +35,7 @@ export default function EventTaskInbox({ protocol }: { protocol?: boolean }) {
       <p className="text-sm font-semibold inline-flex items-center gap-2">
         <ClipboardList className="w-4 h-4 text-primary" />
         Mes tâches ouvertes
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{tasks.length}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted tabular-nums">{tasks.length}</span>
         {overdue > 0 ? (
           <StatusPill tone="rose">{overdue} en retard</StatusPill>
         ) : null}
@@ -45,7 +45,7 @@ export default function EventTaskInbox({ protocol }: { protocol?: boolean }) {
           <li key={task.id}>
             <Link
               href={eventDashboardHref(task.eventId, { tab: 'tasks', protocol })}
-              className="flex items-center justify-between gap-2 text-sm hover:text-primary"
+              className="flex items-center justify-between gap-2 text-sm hover:text-primary min-h-11"
             >
               <span className="truncate">{task.title}</span>
               <span className="flex items-center gap-1.5 shrink-0">
@@ -57,7 +57,7 @@ export default function EventTaskInbox({ protocol }: { protocol?: boolean }) {
                     {taskDueLabel(task.dueAt, task.status)}
                   </StatusPill>
                 ) : null}
-                <span className="text-[11px] text-muted truncate max-w-[10rem]">{task.event.title}</span>
+                <span className="text-xs text-muted truncate max-w-[10rem]">{task.event.title}</span>
               </span>
             </Link>
           </li>

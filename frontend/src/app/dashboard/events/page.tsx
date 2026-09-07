@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import * as XLSX from 'xlsx';
 import { 
  Calendar, MapPin, Users, PlusCircle, Trash2, Edit3,
  ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
@@ -37,7 +36,7 @@ import {
  applyInvitationGuidelineVariables,
  formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -1437,9 +1436,10 @@ Merci de confirmer votre présence :
  setImportingFile(true);
 
  const reader = new FileReader();
- reader.onload = (e: any) => {
+ reader.onload = async (e: ProgressEvent<FileReader>) => {
  try {
- const data = e.target.result;
+ const XLSX = await import('xlsx');
+ const data = e.target?.result;
  const workbook = XLSX.read(data, { type: 'binary' });
  const firstSheetName = workbook.SheetNames[0];
  const worksheet = workbook.Sheets[firstSheetName];
@@ -1574,10 +1574,13 @@ Merci de confirmer votre présence :
  ];
 
  if (type === 'excel') {
+ void (async () => {
+ const XLSX = await import('xlsx');
  const wb = XLSX.utils.book_new();
  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
  XLSX.utils.book_append_sheet(wb, ws, 'Modèle Invités');
  XLSX.writeFile(wb, 'modele_invites_eventmaster.xlsx');
+ })();
  } else {
  const csvContent = [headers.join(','), ...sampleRows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1871,7 +1874,7 @@ Merci de confirmer votre présence :
  Créer un événement
  </Button>
  {eventsAtLimit && (
- <Link href="/dashboard/billing" className="text-[11px] font-semibold text-amber-700 hover:underline">
+ <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline">
  Quota atteint — voir les forfaits
  </Link>
  )}
@@ -1889,7 +1892,7 @@ Merci de confirmer votre présence :
  type="button"
  onClick={() => setListView('events')}
  className={cn(
- 'inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all',
+ 'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
  listView === 'events'
  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
  : 'text-muted hover:text-foreground',
@@ -1902,7 +1905,7 @@ Merci de confirmer votre présence :
  type="button"
  onClick={() => setListView('tasks')}
  className={cn(
- 'inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all',
+ 'inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
  listView === 'tasks'
  ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
  : 'text-muted hover:text-foreground',
@@ -2008,7 +2011,7 @@ Merci de confirmer votre présence :
  {protocolDesk ? 'Tous les accueils' : 'Tous les événements'}
  </button>
  <div className="flex items-center justify-between gap-3">
- <h1 className="text-xl sm:text-2xl font-display font-semibold text-foreground tracking-tight truncate">
+ <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight truncate">
  {selectedEvent.title}
  </h1>
  <button
@@ -2126,17 +2129,11 @@ Merci de confirmer votre présence :
  )}
 
  {error && (
- <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
- <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
- <span>{error}</span>
- </div>
+ <Alert variant="error">{error}</Alert>
  )}
 
  {success && (
- <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 text-sm">
- <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
- <span>{success}</span>
- </div>
+ <Alert variant="success">{success}</Alert>
  )}
 
  {/* Event List View */}
@@ -2181,7 +2178,7 @@ Merci de confirmer votre présence :
  Créer mon premier événement
  </Button>
  {eventsAtLimit && (
- <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 hover:underline">
+ <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline">
  Quota atteint — voir les forfaits
  </Link>
  )}
@@ -2346,7 +2343,7 @@ Merci de confirmer votre présence :
  </div>
  <div className="flex flex-wrap gap-2">
  {selectedGuestIds.length > 0 && (
- <button 
+ <Button
  onClick={() => {
  if (invitations.length === 0) {
  alert("Configurez d'abord une invitation dans l'onglet Invitations.");
@@ -2356,13 +2353,14 @@ Merci de confirmer votre présence :
  setBulkSelectedChannel(invitations[0]?.channel || 'EMAIL');
  setShowBulkInviteModal(true);
  }}
- className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-[var(--radius-button)] text-sm transition"
+ size="sm"
+ variant="success"
+ leftIcon={<Send className="w-4 h-4" />}
  >
- <Send className="w-4 h-4" />
  Inviter ({selectedGuestIds.length})
- </button>
+ </Button>
  )}
- <button 
+ <Button
  onClick={() => {
  if (guestsAtLimit) {
  setError(getQuotaActionMessage('guests', planQuota, tenant?.plan));
@@ -2372,30 +2370,32 @@ Merci de confirmer votre présence :
  }}
  disabled={guestsAtLimit}
  title={guestsQuotaMsg || undefined}
- className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-[var(--radius-button)] text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+ size="sm"
+ variant="secondary"
+ leftIcon={<FileSpreadsheet className="w-4 h-4" />}
  >
- <FileSpreadsheet className="w-4 h-4" />
  Importer
- </button>
+ </Button>
  {guests.length > 0 && (
- <button 
+ <Button
  onClick={handleExportGuests}
- className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-[var(--radius-button)] text-sm transition"
+ size="sm"
+ variant="secondary"
  title="Exporter tous les invités en fichier CSV"
+ leftIcon={<Download className="w-4 h-4" />}
  >
- <Download className="w-4 h-4" />
  Exporter
- </button>
+ </Button>
  )}
- <button 
+ <Button
  onClick={openAddGuestModal}
  disabled={guestsAtLimit}
  title={guestsQuotaMsg || undefined}
- className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+ size="sm"
+ leftIcon={<PlusCircle className="w-4 h-4" />}
  >
- <PlusCircle className="w-4 h-4" />
  Ajouter
- </button>
+ </Button>
  </div>
  </div>
  {guestsAtLimit && (
@@ -2405,28 +2405,28 @@ Merci de confirmer votre présence :
  {/* Insights / Vue d'ensemble */}
  {guests.length > 0 && (
    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center shadow-sm">
-       <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Total Invités</p>
-       <p className="text-3xl font-bold text-foreground">{guests.length}</p>
+     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center">
+       <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Total Invités</p>
+       <p className="text-3xl font-bold text-foreground tabular-nums">{guests.length}</p>
      </div>
-     <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-2xl flex flex-col justify-center shadow-sm">
-       <p className="text-[11px] font-bold text-emerald-600/80 uppercase tracking-wider mb-1">Présences (RSVP)</p>
-       <p className="text-3xl font-bold text-emerald-700">
+     <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex flex-col justify-center">
+       <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider mb-1">Présences (RSVP)</p>
+       <p className="text-3xl font-bold text-emerald-800 dark:text-emerald-200 tabular-nums">
          {guests.filter(g => g.rsvp === 'ACCEPTED').length}
-         <span className="text-sm text-emerald-600/60 font-medium ml-2">
+         <span className="text-sm text-emerald-700/70 dark:text-emerald-400/80 font-medium ml-2">
            ({Math.round((guests.filter(g => g.rsvp === 'ACCEPTED').length / guests.length) * 100) || 0}%)
          </span>
        </p>
      </div>
-     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center shadow-sm">
-       <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Spéc. Alim.</p>
-       <p className="text-3xl font-bold text-foreground">
+     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center">
+       <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Spéc. Alim.</p>
+       <p className="text-3xl font-bold text-foreground tabular-nums">
          {guests.filter(g => g.preferences?.specialMeal && g.preferences.specialMeal !== 'none').length}
        </p>
      </div>
-     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center shadow-sm">
-       <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Check-in (Jour J)</p>
-       <p className="text-3xl font-bold text-foreground">
+     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center">
+       <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Check-in (Jour J)</p>
+       <p className="text-3xl font-bold text-foreground tabular-nums">
          {guests.filter(g => g.checkedInAt).length}
          <span className="text-sm text-muted font-medium ml-2">
            / {guests.filter(g => g.rsvp === 'ACCEPTED').length || guests.length}
@@ -2455,7 +2455,7 @@ Merci de confirmer votre présence :
  <select
  value={rsvpFilter}
  onChange={(e) => setRsvpFilter(e.target.value as any)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous les statuts RSVP</option>
  <option value="ACCEPTED">Présent uniquement</option>
@@ -2468,7 +2468,7 @@ Merci de confirmer votre présence :
  <select
  value={checkinFilter}
  onChange={(e) => setCheckinFilter(e.target.value as 'ALL' | 'in' | 'out')}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Présence jour J</option>
  <option value="in">Enregistrés</option>
@@ -2480,7 +2480,7 @@ Merci de confirmer votre présence :
  <select
  value={categoryFilter}
  onChange={(e) => setCategoryFilter(e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Toutes les catégories</option>
  {uniqueCategories.map(cat => (
@@ -2494,7 +2494,7 @@ Merci de confirmer votre présence :
  type="button"
  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
  className={cn(
- 'px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center gap-1.5 border',
+ 'px-3 py-2 min-h-11 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center gap-1.5 border touch-manipulation',
  showAdvancedFilters
  ? 'bg-primary/10 border-primary/30 text-primary'
  : 'bg-surface-muted border-border text-muted hover:bg-surface-muted/80',
@@ -2537,11 +2537,11 @@ Merci de confirmer votre présence :
  {showAdvancedFilters && (
  <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in">
  <div className="space-y-1">
- <label className="text-[10px] font-semibold text-muted uppercase tracking-wider">Régime alimentaire</label>
+ <label className="text-xs font-semibold text-muted uppercase tracking-wider">Régime alimentaire</label>
  <select
  value={dietFilter}
  onChange={(e) => setDietFilter(e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous les régimes</option>
  <option value="none">Standard</option>
@@ -2556,14 +2556,14 @@ Merci de confirmer votre présence :
  const currentValue = customFilters[field.label] || 'ALL';
  return (
  <div key={field.id} className="space-y-1">
- <label className="text-[10px] font-semibold text-muted uppercase tracking-wider truncate block max-w-full" title={field.label}>
+ <label className="text-xs font-semibold text-muted uppercase tracking-wider truncate block max-w-full" title={field.label}>
  {field.label}
  </label>
  {isBooleanFieldType(field.type) ? (
  <select
  value={currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous</option>
  <option value="Oui">Coché (Oui)</option>
@@ -2573,7 +2573,7 @@ Merci de confirmer votre présence :
  <select
  value={currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous</option>
  {field.options.map(opt => (
@@ -2586,7 +2586,7 @@ Merci de confirmer votre présence :
  value={currentValue === 'ALL' ? '' : currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value || 'ALL' })}
  placeholder="Filtrer par réponse..."
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  />
  )}
  </div>
@@ -2683,11 +2683,11 @@ Merci de confirmer votre présence :
 
  const inviteStatusNote =
  g.preferences?.invitationLastStatus === 'FAILED' ? (
- <span className="text-[11px] text-rose-600" title={g.preferences?.invitationLastError || 'Échec d’envoi'}>
+ <span className="text-xs text-rose-600 dark:text-rose-400" title={g.preferences?.invitationLastError || 'Échec d’envoi'}>
  Envoi échoué
  </span>
  ) : g.preferences?.invitationLastStatus === 'SENT' && g.preferences?.invitationSentAt ? (
- <span className="text-[11px] text-emerald-600">Invitation envoyée</span>
+ <span className="text-xs text-emerald-700 dark:text-emerald-400">Invitation envoyée</span>
  ) : null;
 
  const prefsLine = g.preferences ? (
@@ -2713,8 +2713,9 @@ Merci de confirmer votre présence :
  <button
  type="button"
  onClick={() => setSelectedGuestDetails(g)}
- className="inline-flex items-center"
+ className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation"
  title="Voir les détails et choix de l'invité"
+ aria-label="Voir les détails de l'invité"
  >
  <ListRowAction />
  </button>
@@ -2722,8 +2723,9 @@ Merci de confirmer votre présence :
  <button
  type="button"
  onClick={() => setSelectedGuestDetails(g)}
- className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
+ className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
  title="Voir les détails et choix de l'invité"
+ aria-label="Voir les détails de l'invité"
  >
  <Eye className="w-4 h-4" />
  </button>
@@ -2731,24 +2733,27 @@ Merci de confirmer votre présence :
  <button
  type="button"
  onClick={() => handleEditGuestClick(g)}
- className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
+ className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
  title="Modifier l'invité"
+ aria-label="Modifier l'invité"
  >
  <Edit3 className="w-4 h-4" />
  </button>
  <button
  type="button"
  onClick={() => setSharingGuest(g)}
- className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
+ className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
  title="Partager l'invitation (WhatsApp, X, Instagram)"
+ aria-label="Partager l'invitation"
  >
  <Share2 className="w-4 h-4" />
  </button>
  <button
  type="button"
  onClick={() => handleDeleteGuest(g.id)}
- className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+ className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition touch-manipulation"
  title="Supprimer l'invité"
+ aria-label="Supprimer l'invité"
  >
  <Trash2 className="w-4 h-4" />
  </button>
@@ -2868,7 +2873,7 @@ Merci de confirmer votre présence :
  {invitations.length > 0 && guests.length > 0 && (
    <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm relative overflow-hidden">
      <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none" />
-     <h3 className="text-[11px] font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+     <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
        <BarChart2 className="w-3.5 h-3.5" />
        Performances de la campagne
      </h3>
@@ -2890,7 +2895,7 @@ Merci de confirmer votre présence :
            {guests.filter(g => g.preferences?.invitationSentAt).length}
          </div>
          <p className="text-xs font-semibold text-foreground">Invitations délivrées</p>
-         <p className="text-[10px] text-muted mt-0.5">
+         <p className="text-xs text-muted mt-0.5">
            {Math.round((guests.filter(g => g.preferences?.invitationSentAt).length / guests.length) * 100) || 0}% de la liste
          </p>
        </div>
@@ -2899,11 +2904,11 @@ Merci de confirmer votre présence :
 
        {/* 3. RSVP */}
        <div className="flex-1 flex flex-col items-center text-center relative z-10">
-         <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center font-bold text-lg mb-2 border border-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+         <div className="w-12 h-12 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full flex items-center justify-center font-bold text-lg mb-2 border border-emerald-500/20">
            {guests.filter(g => g.rsvp !== 'PENDING').length}
          </div>
          <p className="text-xs font-semibold text-foreground">Réponses RSVP</p>
-         <p className="text-[10px] text-emerald-600/70 font-medium mt-0.5">
+         <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
            {guests.filter(g => g.preferences?.invitationSentAt).length > 0 
              ? `${Math.round((guests.filter(g => g.rsvp !== 'PENDING').length / guests.filter(g => g.preferences?.invitationSentAt).length) * 100) || 0}% de conversion` 
              : '0% de conversion'}
@@ -2960,7 +2965,7 @@ Merci de confirmer votre présence :
  >
  {getChannelLabel(invite.channel)}
  </StatusPill>
- <span className="text-[11px] font-semibold uppercase tracking-wider text-muted truncate">
+ <span className="text-xs font-semibold uppercase tracking-wider text-muted truncate">
  {invite.template?.name || 'Sans modèle'}
  </span>
  </div>
