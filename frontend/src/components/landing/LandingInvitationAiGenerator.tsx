@@ -65,6 +65,7 @@ import {
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
 function contentToLandingTemplate(
   content: TemplateAiComposeContent,
@@ -458,6 +459,7 @@ export default function LandingInvitationAiGenerator({
 
     const seq = ++generationSeq.current;
     setError('');
+    unlockAudioNotifications();
     setBusy(true);
     setResult(null);
     setLastStageMeta(null);
@@ -498,6 +500,7 @@ export default function LandingInvitationAiGenerator({
       saveAiTemplateDraft(data.content, prompt.trim());
       void fetchAiTemplateComposeHistory().then(setHistory);
       logAction('generate_success', 'Carte créée', `Invitation composée : « ${prompt.slice(0, 50)}… »`);
+      playAiGenerationCompleteSound();
       setActiveStep(3);
       setStage(null);
       scrollResultIntoView();

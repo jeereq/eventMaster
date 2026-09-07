@@ -146,3 +146,45 @@ export function playFamilyNotificationSound(
   const preset = family === 'account' ? settings.default : settings[family];
   playAudioNotificationPreset(preset, settings.volume);
 }
+
+let liveAudioSettings: AudioNotificationsSettings = DEFAULT_AUDIO_NOTIFICATIONS;
+
+export function syncAudioNotificationSettings(settings: AudioNotificationsSettings) {
+  liveAudioSettings = sanitizeAudioNotifications(settings);
+}
+
+function completeTones(): Tone[] {
+  return [
+    { freq: 523, start: 0, duration: 0.12, type: 'sine', gain: 0.16 },
+    { freq: 659, start: 0.1, duration: 0.14, type: 'sine', gain: 0.18 },
+    { freq: 784, start: 0.22, duration: 0.2, type: 'sine', gain: 0.2 },
+    { freq: 1046, start: 0.34, duration: 0.32, type: 'triangle', gain: 0.12 },
+  ];
+}
+
+/** Carillon de fin de génération IA (invitation, plan de salle, simulation budget). */
+export function playAiGenerationCompleteSound() {
+  if (!liveAudioSettings.enabled || isLocalAudioMuted()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    void ctx.resume().then(() => playAiGenerationCompleteSound());
+    return;
+  }
+
+  const master = Math.max(0, Math.min(1, liveAudioSettings.volume / 100));
+  const now = ctx.currentTime;
+  for (const tone of completeTones()) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = tone.type;
+    osc.frequency.setValueAtTime(tone.freq, now + tone.start);
+    gain.gain.setValueAtTime(0.0001, now + tone.start);
+    gain.gain.exponentialRampToValueAtTime(tone.gain * master, now + tone.start + 0.016);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.start + tone.duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + tone.start);
+    osc.stop(now + tone.start + tone.duration + 0.03);
+  }
+}

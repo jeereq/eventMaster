@@ -48,6 +48,7 @@ import {
 } from '@/lib/aiSimulationCriteria';
 import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import { EVENT_PREP_PROMPT_MODELS } from '@/config/eventPrepPromptModels';
+import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
 const VENUE_PARAM_AMENITIES = VENUE_AMENITIES.filter((item) =>
   ['parking', 'ac', 'generator', 'garden', 'sound', 'wifi', 'stage', 'security'].includes(item.id),
@@ -299,6 +300,7 @@ export default function EventPrepAiSimulator({
       setError('Vous semblez hors ligne. Vérifiez votre connexion Internet puis réessayez.');
       return;
     }
+    unlockAudioNotifications();
     setLoading(true);
     setError('');
     setSaveMessage('');
@@ -349,6 +351,7 @@ export default function EventPrepAiSimulator({
       });
       if (data.historyId) setActiveHistoryId(data.historyId);
       void fetchAiSimulationHistory().then(setHistory);
+      playAiGenerationCompleteSound();
     } catch (err: unknown) {
       const status = err && typeof err === 'object' && 'status' in err
         ? Number((err as { status?: number }).status)

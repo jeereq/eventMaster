@@ -42,9 +42,11 @@ import {
   type AiRoomPlanComposeHistoryItem,
 } from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
+import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
 const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 
@@ -86,6 +88,7 @@ export default function LandingRoomPlanAiStudio({
   const [lastImageUrl, setLastImageUrl] = useState<string>();
   const [history, setHistory] = useState<AiRoomPlanComposeHistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [studioTab, setStudioTab] = useState<StudioAiTabId>('create');
 
   useEffect(() => {
     void fetchAiRoomPlanComposeHistory().then(setHistory);
@@ -139,6 +142,7 @@ export default function LandingRoomPlanAiStudio({
     }
 
     setError('');
+    unlockAudioNotifications();
     setBusy(true);
     try {
       const imageUrl = file ? await roomPlanFileToDataUrl(file) : undefined;
@@ -157,6 +161,7 @@ export default function LandingRoomPlanAiStudio({
       void fetchAiRoomPlanComposeHistory().then(setHistory);
       const applied = previewRoomPlanDraft(result.draft, roomType, { imageUrl });
       onBlueprintChange?.(applied.blueprint);
+      playAiGenerationCompleteSound();
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };
       if (e?.status === 402) {
@@ -209,6 +214,7 @@ export default function LandingRoomPlanAiStudio({
     setPrompt(model.prompt);
     setRoomType(model.roomType);
     setIntent('brief');
+    setStudioTab('create');
   };
 
   return (
@@ -277,7 +283,7 @@ export default function LandingRoomPlanAiStudio({
                   <h2 id={`${id}-title`} className="text-base sm:text-xl font-display font-semibold text-foreground">
                     Studio IA — plan de salle
                   </h2>
-                  <p className="text-xs sm:text-sm text-muted">
+                  <p className="hidden sm:block text-xs sm:text-sm text-muted">
                     Brief ou photo → tables, rangées et décor posés sur le plan 2D / 3D.
                   </p>
                 </div>
@@ -318,6 +324,15 @@ export default function LandingRoomPlanAiStudio({
                 }}
               />
 
+              <StudioAiTabs
+                value={studioTab}
+                onChange={setStudioTab}
+                historyCount={history.length}
+                disabled={busy}
+              />
+
+              {studioTab === 'create' ? (
+              <>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -330,7 +345,7 @@ export default function LandingRoomPlanAiStudio({
                   )}
                 >
                   <span className="block text-xs font-bold text-foreground">Décrire la salle</span>
-                  <span className="block text-xs text-muted mt-0.5">Brief seul</span>
+                  <span className="hidden sm:block text-xs text-muted mt-0.5">Brief seul</span>
                 </button>
                 <button
                   type="button"
@@ -343,7 +358,7 @@ export default function LandingRoomPlanAiStudio({
                   )}
                 >
                   <span className="block text-xs font-bold text-foreground">Depuis une photo</span>
-                  <span className="block text-xs text-muted mt-0.5">Analyse + import</span>
+                  <span className="hidden sm:block text-xs text-muted mt-0.5">Analyse + import</span>
                 </button>
               </div>
 
@@ -370,7 +385,7 @@ export default function LandingRoomPlanAiStudio({
                 <p className="text-sm font-bold text-foreground">
                   {intent === 'photo' ? 'Photo de la salle' : 'Photo optionnelle'}
                 </p>
-                <p className="text-xs text-muted mt-0.5">JPEG, PNG ou WebP, 8 Mo max.</p>
+                <p className="hidden sm:block text-xs text-muted mt-0.5">JPEG, PNG ou WebP, 8 Mo max.</p>
               </button>
 
               {previewUrl ? (
@@ -403,10 +418,8 @@ export default function LandingRoomPlanAiStudio({
                   placeholder="Ex. Mariage 120 convives, 12 tables rondes, allée, table d’honneur…"
                   className="w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
                 />
-                <p className="text-xs text-muted tabular-nums text-right">{prompt.trim().length}/1500</p>
+                <p className="hidden sm:block text-xs text-muted tabular-nums text-right">{prompt.trim().length}/1500</p>
               </div>
-
-              <RoomPlanPromptSelector onSelect={applyPreset} selectedPrompt={prompt} disabled={busy} />
 
               {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
               {error ? <Alert variant="error">{error}</Alert> : null}
@@ -420,13 +433,31 @@ export default function LandingRoomPlanAiStudio({
               >
                 {busy ? 'Composition…' : `Générer (${AI_ROOM_PLAN_TOKEN_COST} jetons)`}
               </Button>
+              </>
+              ) : null}
 
-              <AiRoomPlanComposeHistoryList
-                items={history}
-                activeId={activeHistoryId}
-                onOpen={openHistoryItem}
-                listClassName="max-h-64 sm:max-h-72"
-              />
+              {studioTab === 'history' ? (
+                <AiRoomPlanComposeHistoryList
+                  items={history}
+                  activeId={activeHistoryId}
+                  onOpen={openHistoryItem}
+                  listClassName="max-h-[min(28rem,52vh)]"
+                  showEmpty
+                  emptyAction={(
+                    <button
+                      type="button"
+                      onClick={() => setStudioTab('create')}
+                      className="min-h-11 px-3 text-xs font-semibold text-primary hover:underline"
+                    >
+                      Nouveau plan
+                    </button>
+                  )}
+                />
+              ) : null}
+
+              {studioTab === 'prompts' ? (
+                <RoomPlanPromptSelector onSelect={applyPreset} selectedPrompt={prompt} disabled={busy} />
+              ) : null}
             </div>
 
             <div className="p-4 sm:p-6 space-y-3 bg-stage/40 min-h-[320px]">

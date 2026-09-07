@@ -33,6 +33,7 @@ import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button, Modal } from '@/components/ui';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { cn } from '@/lib/cn';
+import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
 async function readImageFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -139,6 +140,7 @@ export default function RoomPlanAiStudioModal({
     }
 
     setError('');
+    unlockAudioNotifications();
     setBusy(true);
     try {
       let imageUrl: string | undefined;
@@ -166,6 +168,7 @@ export default function RoomPlanAiStudioModal({
       });
       setActiveHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
       void fetchAiRoomPlanComposeHistoryStudio().then(setHistory);
+      playAiGenerationCompleteSound();
       onClose();
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };

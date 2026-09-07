@@ -72,6 +72,7 @@ import {
  INVITATION_GOOGLE_FONTS_ID,
  useHeadStylesheet,
 } from '@/lib/headStylesheet';
+import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
 interface TemplateItem {
  id: string;
@@ -1097,6 +1098,7 @@ export default function TemplatesPage() {
  }
 
  setError('');
+ unlockAudioNotifications();
  setAiComposeBusy(true);
  setAiComposeStage(aiComposeFiles.length ? 'Envoi des images…' : 'Lecture du brief…');
  try {
@@ -1160,6 +1162,7 @@ export default function TemplatesPage() {
  void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
  setAiComposeModalOpen(false);
  resetAiComposeModal();
+ playAiGenerationCompleteSound();
  setSuccess(
  result.stage?.backgroundReady
  ? result.stage?.imageMode === 'edit'

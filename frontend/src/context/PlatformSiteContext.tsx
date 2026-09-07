@@ -13,6 +13,7 @@ import {
 import {
   DEFAULT_AUDIO_NOTIFICATIONS,
   sanitizeAudioNotifications,
+  syncAudioNotificationSettings,
   type AudioNotificationsSettings,
 } from '@/lib/audioNotifications';
 
@@ -175,6 +176,10 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
+
+  useEffect(() => {
+    syncAudioNotificationSettings(site.audioNotifications);
+  }, [site.audioNotifications]);
 
   const value = useMemo(() => ({ site, ready, refresh }), [site, ready]);
 
