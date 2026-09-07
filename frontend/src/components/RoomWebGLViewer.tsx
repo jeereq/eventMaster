@@ -2053,19 +2053,20 @@ function SceneContent({
   const { camera } = useThree();
   useEffect(() => {
     if (walkthroughActive) return;
+    const isTopDown = depthAmount === 0;
     const tilt = (depthAmount / 100) * 55;
     const buildingH = stackView ? topStoryElev + wallHeightM : wallHeightM;
     const dist = Math.max(widthM, heightM, buildingH * 1.2) * (1.15 + (100 - depthAmount) * 0.008);
     const elev = Math.cos((tilt * Math.PI) / 180) * dist + (stackView ? focusY * 0.35 : 0);
-    const back = Math.sin((tilt * Math.PI) / 180) * dist;
+    const back = isTopDown ? 0.001 : Math.sin((tilt * Math.PI) / 180) * dist + heightM * (stackView ? 0.35 : 0.15);
     camera.position.set(
       stackView ? dist * 0.35 : 0,
       Math.max(elev, stackView ? focusY + 4 : 4),
-      back + heightM * (stackView ? 0.35 : 0.15),
+      back,
     );
     camera.lookAt(0, focusY, 0);
     if ('fov' in camera) {
-      (camera as THREE.PerspectiveCamera).fov = qualitySettings.fov;
+      (camera as THREE.PerspectiveCamera).fov = isTopDown ? Math.min(32, qualitySettings.fov) : qualitySettings.fov;
     }
     camera.updateProjectionMatrix();
   }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM]);
