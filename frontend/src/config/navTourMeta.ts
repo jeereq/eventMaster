@@ -199,6 +199,12 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Catalogue acheteur (comme le client) : salles, prestataires, matériel & équipements et événements — filtres, carte Focus, grille ou liste, favoris et packs budget.',
     route: '/dashboard/catalogue',
   },
+  'nav-publications': {
+    title: 'Réalisations',
+    description:
+      'Photos et actualités publiées par les salles et les prestations. Ouvrez une réalisation pour voir le détail et la fiche du partenaire.',
+    route: '/dashboard/publications',
+  },
   'nav-agenda': {
     title: 'Agenda',
     description:

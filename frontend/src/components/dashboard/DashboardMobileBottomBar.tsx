@@ -20,6 +20,7 @@ import {
   X,
   Sparkles,
   Bookmark,
+  Rss,
 } from 'lucide-react';
 import type { OrgAccess } from '@/context/AuthContext';
 import type { TenantAccountKind } from '@/lib/marketplace';
@@ -158,8 +159,8 @@ export function buildMobileBottomItems({
     return [
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
       { id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine },
+      { id: 'publications', name: 'Réalisations', href: '/dashboard/publications', icon: Rss },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
-      { id: 'bookings', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
       { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }

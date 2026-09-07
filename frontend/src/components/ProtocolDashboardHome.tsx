@@ -18,6 +18,7 @@ import {
   ClipboardList,
   Inbox,
   Loader2,
+  Rss,
   ScanLine,
   Store,
 } from 'lucide-react';
@@ -103,21 +104,30 @@ export default function ProtocolDashboardHome() {
         <p className="text-sm text-muted">Aucune statistique disponible pour le moment.</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         <Link
           href="/dashboard/protocol"
           className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
         >
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <ScanLine className="w-3.5 h-3.5 text-primary" /> Accueil
           </p>
           <p className="text-sm font-semibold mt-1">Événements du jour J</p>
         </Link>
         <Link
+          href="/dashboard/publications"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
+        >
+          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
+            <Rss className="w-3.5 h-3.5 text-primary" /> Réalisations
+          </p>
+          <p className="text-sm font-semibold mt-1">Photos des salles et prestations</p>
+        </Link>
+        <Link
           href="/dashboard/bookings?tab=quotes"
           className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
         >
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <Inbox className="w-3.5 h-3.5 text-primary" /> Devis
           </p>
           <p className="text-sm font-semibold mt-1">Suivi des demandes</p>
@@ -126,7 +136,7 @@ export default function ProtocolDashboardHome() {
           href="/dashboard/bookings?tab=bookings"
           className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
         >
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <CalendarCheck className="w-3.5 h-3.5 text-primary" /> Réservations
           </p>
           <p className="text-sm font-semibold mt-1">Dates confirmées</p>

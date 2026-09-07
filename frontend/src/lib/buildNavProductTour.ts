@@ -180,6 +180,7 @@ export function buildFirstLoginTour(
       push('nav-dashboard');
       push('nav-protocol');
       push('nav-catalogue');
+      push('nav-publications');
       push('nav-quotes');
       steps.push(firstLoginFinish(home, 'Ensuite : ouvrez un événement le jour J et testez le scan QR.'));
       return steps;

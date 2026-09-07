@@ -132,6 +132,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Notifications: 'Alertes tâches, devis, factures et réservations',
  'Journal d’audit': 'Actions Super Admin et Commercial',
  Catalogue: 'Fiches, demandes et réservations publiques',
+ Réalisations: 'Fil des réalisations des salles et prestations',
 };
 
 function withNavTips(sections: NavSection[]): NavSection[] {
@@ -237,6 +238,7 @@ function buildDashboardNav(opts: {
    ]),
    navSection('Marketplace', [
     { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et matériel & équipements — comme le catalogue client' },
+    { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Photos et actualités des salles et prestations' },
     { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
     { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
    ]),

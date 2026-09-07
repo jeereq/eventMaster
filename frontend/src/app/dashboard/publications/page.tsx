@@ -76,8 +76,17 @@ function DashboardPublicationsPageInner() {
   const [tab, setTabState] = useState<DeskTab>(parseTab(searchParams.get('tab')));
 
   useEffect(() => {
-    setTabState(parseTab(searchParams.get('tab')));
-  }, [searchParams]);
+    const next = parseTab(searchParams.get('tab'));
+    if (!canPublish && next === 'create') {
+      setTabState('grid');
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('tab');
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      return;
+    }
+    setTabState(next);
+  }, [searchParams, canPublish, pathname, router]);
 
   const setTab = (next: DeskTab) => {
     setTabState(next);
@@ -92,44 +101,50 @@ function DashboardPublicationsPageInner() {
     <div className="space-y-6 w-full max-w-5xl">
       <PageHeader
         title="Réalisations"
-        description="Fil des réalisations des salles et prestations — grille type réseau social, et création liée à vos fiches."
+        description={
+          canPublish
+            ? 'Fil des réalisations des salles et prestations — grille type réseau social, et création liée à vos fiches.'
+            : 'Photos et actualités publiées par les salles et les prestations.'
+        }
         breadcrumbs={
           <Breadcrumbs
             items={[
               { label: 'Réalisations', href: '/dashboard/publications' },
-              { label: tab === 'create' ? 'Créer' : 'Grille' },
+              { label: canPublish && tab === 'create' ? 'Créer' : 'Découvrir' },
             ]}
           />
         }
       />
 
-      <div
-        role="tablist"
-        aria-label="Réalisations"
-        className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
-      >
-        {[
-          { id: 'grid' as const, label: 'Découvrir', icon: Rss },
-          { id: 'create' as const, label: 'Créer', icon: Plus },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            onClick={() => setTab(item.id)}
-            className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
-              tab === item.id
-                ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                : 'text-muted hover:bg-surface/70 hover:text-foreground',
-            )}
-          >
-            <item.icon className="w-4 h-4 shrink-0" />
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {canPublish ? (
+        <div
+          role="tablist"
+          aria-label="Réalisations"
+          className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
+        >
+          {[
+            { id: 'grid' as const, label: 'Découvrir', icon: Rss },
+            { id: 'create' as const, label: 'Créer', icon: Plus },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              onClick={() => setTab(item.id)}
+              className={cn(
+                'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
+                tab === item.id
+                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                  : 'text-muted hover:bg-surface/70 hover:text-foreground',
+              )}
+            >
+              <item.icon className="w-4 h-4 shrink-0" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {tab === 'grid' ? (
         <PublicationsGrid canPublish={canPublish} onCreate={() => setTab('create')} />
