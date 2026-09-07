@@ -299,7 +299,7 @@ export default function GuestTablePlanView({
               <button
                 type="button"
                 onClick={() => setIsFullscreen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border text-[10px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+                className="inline-flex items-center gap-1.5 px-3 py-2 min-h-11 rounded-xl border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation"
               >
                 <Maximize2 className="w-3.5 h-3.5" /> Agrandir
               </button>
@@ -325,7 +325,7 @@ export default function GuestTablePlanView({
               {/* Beacon HUD 3D "Mon emplacement" */}
               <div className="absolute top-3 left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-foreground/90 backdrop-blur-md px-3.5 py-2 text-background shadow-lg border border-background/20 animate-fade-in pointer-events-none max-w-[85%]">
                 <span className="relative flex h-3 w-3 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
                 <div className="min-w-0">
@@ -334,7 +334,7 @@ export default function GuestTablePlanView({
                       Mon emplacement 3D
                     </p>
                     {tableDetails?.zoneName && (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate">
+                      <span className="px-1.5 py-0.5 rounded text-[10.5px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate">
                         {tableDetails.zoneName}
                       </span>
                     )}
@@ -351,7 +351,7 @@ export default function GuestTablePlanView({
                 <button
                   type="button"
                   onClick={() => setPlanView('2d')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface/90 backdrop-blur-md text-foreground border border-border text-xs font-semibold hover:bg-surface shadow-sm transition active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-11 rounded-xl bg-surface/95 backdrop-blur-md text-foreground border border-border text-xs font-semibold hover:bg-surface shadow-sm transition active:scale-95 touch-manipulation"
                 >
                   <MapPin className="w-3.5 h-3.5 text-primary" />
                   <span>Voir en 2D</span>

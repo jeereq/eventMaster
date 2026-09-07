@@ -150,19 +150,42 @@ export function RowSeatsLOD({
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           return (
             <group key={i} position={[p.localX, p.y, p.localZ]} rotation={[0, p.faceY, 0]}>
-              <mesh position={[0, 0.42, 0]} castShadow={castShadow}>
-                <boxGeometry args={[0.38, 0.08, 0.38]} />
+              {/* Assise rembourrée */}
+              <mesh position={[0, 0.44, 0.01]} castShadow={castShadow}>
+                <boxGeometry args={[0.38, 0.08, 0.36]} />
                 <meshStandardMaterial color={color} roughness={0.85} />
               </mesh>
-              <mesh position={[0, 0.68, -0.16]} castShadow={castShadow}>
-                <boxGeometry args={[0.36, 0.42, 0.05]} />
+              {/* Dossier rembourré */}
+              <mesh position={[0, 0.70, -0.16]} castShadow={castShadow}>
+                <boxGeometry args={[0.36, 0.44, 0.06]} />
                 <meshStandardMaterial color={color} roughness={0.85} />
               </mesh>
+              {/* Coque arrière de dossier */}
+              <mesh position={[0, 0.70, -0.195]} castShadow={castShadow}>
+                <boxGeometry args={[0.37, 0.44, 0.015]} />
+                <meshStandardMaterial color="#1c1917" roughness={0.5} />
+              </mesh>
+              {/* Pied central et platine */}
+              <mesh position={[0, 0.21, -0.02]} castShadow={castShadow}>
+                <cylinderGeometry args={[0.025, 0.035, 0.42, 8]} />
+                <meshStandardMaterial color={frame} metalness={0.55} roughness={0.35} />
+              </mesh>
+              <mesh position={[0, 0.01, -0.02]} receiveShadow>
+                <cylinderGeometry args={[0.10, 0.12, 0.02, 10]} />
+                <meshStandardMaterial color="#111827" metalness={0.65} roughness={0.3} />
+              </mesh>
+              {/* Accoudoirs latéraux */}
               {([-1, 1] as const).map((s) => (
-                <mesh key={s} position={[s * 0.14, 0.22, 0.12]} castShadow={castShadow}>
-                  <cylinderGeometry args={[0.018, 0.02, 0.42, 6]} />
-                  <meshStandardMaterial color={frame} metalness={0.4} roughness={0.4} />
-                </mesh>
+                <group key={s}>
+                  <mesh position={[s * 0.19, 0.48, -0.04]} castShadow={castShadow}>
+                    <boxGeometry args={[0.025, 0.22, 0.04]} />
+                    <meshStandardMaterial color={frame} metalness={0.5} roughness={0.35} />
+                  </mesh>
+                  <mesh position={[s * 0.19, 0.58, -0.04]} castShadow={castShadow}>
+                    <boxGeometry args={[0.045, 0.025, 0.28]} />
+                    <meshStandardMaterial color="#1c1917" roughness={0.8} />
+                  </mesh>
+                </group>
               ))}
             </group>
           );

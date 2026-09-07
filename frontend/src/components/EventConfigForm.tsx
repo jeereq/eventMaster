@@ -1451,12 +1451,14 @@ export default function EventConfigForm({
                     Déterminez si les participants peuvent voir les identités des personnes assises à leur table, allée ou zone sur les plans 2D/3D.
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1" role="radiogroup" aria-label="Mode de visibilité des voisins">
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={neighborSharingMode === 'first_name'}
                       onClick={() => setNeighborSharingMode('first_name')}
                       className={cn(
-                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                         neighborSharingMode === 'first_name'
                           ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
                           : 'border-border bg-surface hover:bg-surface-muted'
@@ -1473,9 +1475,11 @@ export default function EventConfigForm({
 
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={neighborSharingMode === 'hidden'}
                       onClick={() => setNeighborSharingMode('hidden')}
                       className={cn(
-                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                         neighborSharingMode === 'hidden'
                           ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
                           : 'border-border bg-surface hover:bg-surface-muted'
@@ -1492,9 +1496,11 @@ export default function EventConfigForm({
 
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={neighborSharingMode === 'full'}
                       onClick={() => setNeighborSharingMode('full')}
                       className={cn(
-                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                         neighborSharingMode === 'full'
                           ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
                           : 'border-border bg-surface hover:bg-surface-muted'

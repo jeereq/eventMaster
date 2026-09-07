@@ -126,27 +126,62 @@ export function CatalogueChair({
   if (chairType === 'THEATER') {
     return (
       <group position={position} rotation={[0, rotationY, 0]}>
-        <mesh position={[0, seatH * 0.35, 0]} castShadow>
-          <boxGeometry args={[sw * 1.05, seatH * 0.7, sd * 0.95]} />
-          <Mat color="#1c1917" metalness={0.2} roughness={0.6} />
+        {/* Pied central en fonte d'acier & platine de fixation au sol */}
+        <mesh position={[0, seatH * 0.45, -sd * 0.05]} castShadow>
+          <cylinderGeometry args={[0.032, 0.042, seatH * 0.9, 12]} />
+          <Mat color="#1f2937" metalness={0.65} roughness={0.35} />
         </mesh>
-        <mesh position={[0, seatH + 0.04, 0.02]} rotation={[-0.12, 0, 0]} castShadow receiveShadow>
-          <boxGeometry args={[sw * 0.92, sh * 1.3, sd * 0.85]} />
+        <mesh position={[0, 0.015, -sd * 0.05]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.12, 0.14, 0.03, 14]} />
+          <Mat color="#111827" metalness={0.7} roughness={0.3} />
+        </mesh>
+        {/* Mécanisme d'articulation sous assise */}
+        <mesh position={[0, seatH - 0.02, -sd * 0.12]} castShadow>
+          <boxGeometry args={[sw * 0.78, 0.045, sd * 0.32]} />
+          <Mat color="#1f2937" metalness={0.6} roughness={0.4} />
+        </mesh>
+        {/* Coque inférieure d'assise */}
+        <mesh position={[0, seatH + 0.01, 0.02]} rotation={[-0.1, 0, 0]} castShadow>
+          <boxGeometry args={[sw * 0.94, 0.025, sd * 0.86]} />
+          <Mat color="#1c1917" metalness={0.2} roughness={0.55} />
+        </mesh>
+        {/* Coussin d'assise rembourré ergonomique */}
+        <mesh position={[0, seatH + 0.04, 0.02]} rotation={[-0.1, 0, 0]} castShadow receiveShadow>
+          <boxGeometry args={[sw * 0.92, sh * 1.35, sd * 0.85]} />
           <Mat color={seatTint} map={map} roughness={0.88} metalness={0.04} />
         </mesh>
-        <mesh position={[0, seatH + backH * 0.5, -sd * 0.38]} castShadow>
-          <boxGeometry args={[sw * 0.95, backH, 0.09]} />
+        {/* Dossier rembourré face avant */}
+        <mesh position={[0, seatH + backH * 0.5, -sd * 0.37]} rotation={[0.06, 0, 0]} castShadow>
+          <boxGeometry args={[sw * 0.94, backH * 0.98, 0.08]} />
           <Mat color={seatTint} map={map} roughness={0.9} metalness={0.03} />
         </mesh>
+        {/* Coque arrière rigide de protection acoustique */}
+        <mesh position={[0, seatH + backH * 0.5, -sd * 0.42]} rotation={[0.06, 0, 0]} castShadow>
+          <boxGeometry args={[sw * 0.96, backH, 0.025]} />
+          <Mat color="#1c1917" metalness={0.25} roughness={0.45} />
+        </mesh>
+        {/* Plaque numéro de siège en laiton au dos */}
+        <mesh position={[0, seatH + backH * 0.92, -sd * 0.435]} rotation={[0.06, 0, 0]}>
+          <boxGeometry args={[0.065, 0.026, 0.006]} />
+          <Mat color="#c4a35a" metalness={0.75} roughness={0.2} />
+        </mesh>
+        {/* Accoudoirs latéraux avec porte-gobelet intégré */}
         {([-1, 1] as const).map((side) => (
-          <group key={side} position={[side * sw * 0.48, seatH + 0.16, 0]}>
-            <mesh castShadow>
-              <boxGeometry args={[0.07, 0.12, sd * 0.7]} />
-              <Mat color={seatTint} map={map} roughness={0.85} />
+          <group key={side}>
+            {/* Montant vertical d'accoudoir */}
+            <mesh position={[side * sw * 0.48, seatH * 0.65, -sd * 0.05]} castShadow>
+              <boxGeometry args={[0.045, seatH * 0.7, sd * 0.42]} />
+              <Mat color="#1f2937" metalness={0.6} roughness={0.35} />
             </mesh>
-            <mesh position={[0, 0.02, sd * 0.15]} castShadow>
-              <cylinderGeometry args={[0.035, 0.035, 0.04, 12]} />
-              <Mat color="#292524" metalness={0.5} roughness={0.4} />
+            {/* Coussin d'accoudoir */}
+            <mesh position={[side * sw * 0.48, seatH + 0.18, -sd * 0.05]} castShadow>
+              <boxGeometry args={[0.065, 0.04, sd * 0.65]} />
+              <Mat color={seatTint} map={map} roughness={0.82} />
+            </mesh>
+            {/* Porte-gobelet avant */}
+            <mesh position={[side * sw * 0.48, seatH + 0.17, sd * 0.24]} castShadow>
+              <cylinderGeometry args={[0.032, 0.032, 0.035, 12]} />
+              <Mat color="#111827" metalness={0.65} roughness={0.3} />
             </mesh>
           </group>
         ))}

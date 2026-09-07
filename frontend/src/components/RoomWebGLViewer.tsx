@@ -2370,7 +2370,13 @@ function SceneContent({
           );
           const curve = item.curve ?? 0;
           const spacing = 0.55;
-          const [fx, fz] = pctToWorld(item.focusX ?? item.x, item.focusY ?? Math.max(4, item.y - 25), widthM, heightM);
+          // Si aucun focus explicite n'est défini sur la rangée, orienter vers la scène ou le podium du plan
+          const stageFixture = !item.focusX && !item.focusY
+            ? blueprint.fixtures.find((f) => f.kind === 'stage' || f.kind === 'podium')
+            : undefined;
+          const targetFocusX = item.focusX ?? (stageFixture ? stageFixture.x + stageFixture.w / 2 : item.x);
+          const targetFocusY = item.focusY ?? (stageFixture ? stageFixture.y + stageFixture.h / 2 : Math.max(4, item.y - 25));
+          const [fx, fz] = pctToWorld(targetFocusX, targetFocusY, widthM, heightM);
           const rowRot = ((item.rotation ?? 0) * Math.PI) / 180;
 
           return (
@@ -2404,9 +2410,10 @@ function SceneContent({
               {(() => {
                 const dx = fx - wx;
                 const dz = fz - wz;
+                // Transformation inverse R_y(-rowRot) du vecteur monde (dx, dz) dans le repère local de la rangée
                 const focusLocal = {
-                  x: Math.cos(rowRot) * dx + Math.sin(rowRot) * dz,
-                  z: -Math.sin(rowRot) * dx + Math.cos(rowRot) * dz,
+                  x: Math.cos(rowRot) * dx - Math.sin(rowRot) * dz,
+                  z: Math.sin(rowRot) * dx + Math.cos(rowRot) * dz,
                 };
                 return (
                   <RowSeatsLOD

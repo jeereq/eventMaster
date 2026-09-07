@@ -1288,6 +1288,10 @@ export function generateAmphitheaterRows(options: {
   seatMaterial?: SeatMaterial;
   centerX?: number;
   startY?: number;
+  focusX?: number;
+  focusY?: number;
+  radiusStart?: number;
+  radiusStep?: number;
   aisleSplit?: boolean;
   groupId?: string;
 }): Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> {
@@ -1299,18 +1303,19 @@ export function generateAmphitheaterRows(options: {
     chairStyle = 'napoleon',
     seatMaterial = 'velvet',
     centerX = 50,
+    focusX = centerX,
+    focusY = 12,
     aisleSplit = true,
     groupId = makeLayoutId('amphi'),
   } = options;
 
-  const focusY = 12;
   const spanCurve =
     style === 'romanSemiCircle' ? 72 :
     style === 'horseshoeU' ? 58 :
     style === 'modernFan' ? 42 :
     0;
-  const radiusStart = style === 'romanSemiCircle' ? 20 : 23;
-  const radiusStep = style === 'tieredSteps' ? 9 : 8.2;
+  const radiusStart = options.radiusStart ?? (style === 'romanSemiCircle' ? 20 : 23);
+  const radiusStep = options.radiusStep ?? (style === 'tieredSteps' ? 9 : 8.2);
   const risePerTierM = style === 'tieredSteps' ? 0.32 : 0.26;
 
   const rows: Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> = [];
@@ -1343,7 +1348,7 @@ export function generateAmphitheaterRows(options: {
       aisleSplit: style === 'horseshoeU' ? opts.suffix === 'fond' : aisleSplit,
       aisleWidthPct: 14,
       elevationM: opts.elevationM,
-      focusX: centerX,
+      focusX,
       focusY,
       showSeatNumbers: true,
       amphitheaterStyle: style,
@@ -3286,6 +3291,11 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
         chairStyle: 'modern',
         seatMaterial: 'wood',
         aisleSplit: true,
+        centerX: 50,
+        focusX: 50,
+        focusY: 50,
+        radiusStart: 17,
+        radiusStep: 6.8,
       });
       return refreshBlueprintMetadata({
         version: 1,

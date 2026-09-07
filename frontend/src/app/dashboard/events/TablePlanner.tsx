@@ -2595,12 +2595,14 @@ export default function TablePlanner({
               <label className="text-xs font-bold text-foreground block">
                 Mode de visibilité des noms des voisins
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Mode de visibilité des voisins">
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={neighborSharingPolicy.mode === 'first_name'}
                   onClick={() => setNeighborSharingPolicy((p) => ({ ...p, mode: 'first_name' }))}
                   className={cn(
-                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     neighborSharingPolicy.mode === 'first_name'
                       ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
                       : 'border-border bg-surface hover:bg-surface-muted'
@@ -2617,9 +2619,11 @@ export default function TablePlanner({
 
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={neighborSharingPolicy.mode === 'hidden'}
                   onClick={() => setNeighborSharingPolicy((p) => ({ ...p, mode: 'hidden' }))}
                   className={cn(
-                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     neighborSharingPolicy.mode === 'hidden'
                       ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
                       : 'border-border bg-surface hover:bg-surface-muted'
@@ -2636,9 +2640,11 @@ export default function TablePlanner({
 
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={neighborSharingPolicy.mode === 'full'}
                   onClick={() => setNeighborSharingPolicy((p) => ({ ...p, mode: 'full' }))}
                   className={cn(
-                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11',
+                    'p-3 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     neighborSharingPolicy.mode === 'full'
                       ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
                       : 'border-border bg-surface hover:bg-surface-muted'
@@ -2695,7 +2701,7 @@ export default function TablePlanner({
               <button
                 type="button"
                 onClick={() => setShowPrivacyModal(false)}
-                className="px-4 py-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted text-xs font-semibold transition"
+                className="px-4 py-2 min-h-11 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Fermer
               </button>
@@ -2705,7 +2711,7 @@ export default function TablePlanner({
                   setShowPrivacyModal(false);
                   void handleSavePlan();
                 }}
-                className="px-5 py-2 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-xs font-bold transition shadow-xs flex items-center gap-2"
+                className="px-5 py-2 min-h-11 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-xs font-bold transition shadow-xs flex items-center gap-2 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <Save className="w-4 h-4" />
                 Enregistrer la politique

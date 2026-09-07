@@ -207,7 +207,7 @@ export function getSeatCoordinates(
     return {
       x: Math.sin(a) * radius * 1.15,
       y: Math.cos(a) * radius * 0.7,
-      rotationDeg: (a * 180) / Math.PI,
+      rotationDeg: (a * 180) / Math.PI + 180,
     };
   }
 
@@ -230,10 +230,10 @@ export function getSeatCoordinates(
     const step = 80 / (seatsPerSide + 1);
     const offset = -40 + step * (indexOnSide + 1);
 
-    if (side === 0) return { x: offset, y: -40, rotationDeg: 180 };
-    if (side === 1) return { x: 40, y: offset, rotationDeg: 270 };
-    if (side === 2) return { x: -offset, y: 40, rotationDeg: 0 };
-    return { x: -40, y: -offset, rotationDeg: 90 };
+    if (side === 0) return { x: offset, y: -40, rotationDeg: 0 };
+    if (side === 1) return { x: 40, y: offset, rotationDeg: 90 };
+    if (side === 2) return { x: -offset, y: 40, rotationDeg: 180 };
+    return { x: -40, y: -offset, rotationDeg: 270 };
   }
 
   const seatsPerSide = Math.ceil(capacity / 2);
@@ -243,7 +243,7 @@ export function getSeatCoordinates(
   const step = width / (seatsPerSide + 1);
   const x = -width / 2 + step * (sideIndex + 1);
   const y = isTopSide ? -35 : 35;
-  return { x, y, rotationDeg: isTopSide ? 180 : 0 };
+  return { x, y, rotationDeg: isTopSide ? 0 : 180 };
 }
 
 /**

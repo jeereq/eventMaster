@@ -243,7 +243,7 @@ export default function GuestRoomPlanCanvas({
           <button
             type="button"
             onClick={handleCenterOnGuestTable}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/25 text-xs font-bold text-primary transition active:scale-95 shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/25 text-xs font-bold text-primary transition active:scale-95 shadow-2xs min-h-11 touch-manipulation"
             title="Centrer le plan sur mon emplacement"
           >
             <MapPin className="w-3.5 h-3.5 text-primary" />
@@ -377,10 +377,10 @@ export default function GuestRoomPlanCanvas({
                 >
                   {/* Pin / Beacon flottant au-dessus de la table de l'invité */}
                   {isGuest && (
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-bounce motion-reduce:animate-none">
-                      <div className="px-2.5 py-1 rounded-full bg-primary text-white text-[9.5px] font-black tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary/40">
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-pulse motion-reduce:animate-none">
+                      <div className="px-2.5 py-1 rounded-full bg-primary text-white text-[11px] font-extrabold tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary/40">
                         <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75 motion-reduce:hidden"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300"></span>
                         </span>
                         <span>Vous êtes ici</span>

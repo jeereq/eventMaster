@@ -263,7 +263,7 @@ function ThumbPreview({
               style={{
                 left: `${item.x}%`,
                 top: `${item.y}%`,
-                transform: `translate(-50%, -50%) scale(0.45) rotate(${item.rotation ?? 0}deg)`,
+                transform: `translate(-50%, -50%) scale(0.45) rotate(${(item.rotation ?? 0) + 180}deg)`,
               }}
             >
               {Array.from({ length: Math.min(item.seatCount, 10) }).map((_, i) => (
@@ -382,7 +382,7 @@ function FlatShowcasePreview({
                 {Array.from({ length: count }).map((_, i) => {
                   const offset = half > 0 ? (i - half) / half : 0;
                   const arcY = Math.abs(curveVal) * (offset * offset) * 28;
-                  const chairRot = curveVal * offset * 36;
+                  const chairRot = 180 - curveVal * offset * 36;
 
                   return (
                     <div
