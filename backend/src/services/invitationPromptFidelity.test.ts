@@ -10,8 +10,11 @@ import {
   type InvitationComposeContext,
 } from './invitationComposeContextUtils.ts';
 import {
+  applyEnglishSceneBrief,
+  buildEnglishSceneBriefScaffold,
   buildHonestFaceIdentityHeader,
   buildReferenceRoles,
+  parseEnglishSceneBriefFromJson,
   processUserPromptForHonestFaces,
   stripFaceBeautifyLanguage,
 } from './invitationPromptFidelity.ts';
@@ -147,7 +150,8 @@ describe('processUserPromptForHonestFaces', () => {
     assert.match(processed.identityHeader, /completely unchanged/);
     assert.match(processed.referenceRoles, /Image 1/);
     assert.match(processed.referenceRoles, /Image 2/);
-    assert.match(processed.imageBrief, /décor \/ card/);
+    assert.match(processed.imageBrief, /English scene/);
+    assert.match(processed.englishSceneBrief, /Compose|Clone|Design|Create/i);
     assert.doesNotMatch(processed.decorBrief, /visages plus beaux/i);
   });
 
@@ -157,7 +161,8 @@ describe('processUserPromptForHonestFaces', () => {
     });
     assert.equal(processed.identityHeader, '');
     assert.equal(processed.referenceRoles, '');
-    assert.equal(processed.imageBrief, 'Gala entreprise bleu nuit');
+    assert.match(processed.imageBrief, /Gala entreprise bleu nuit|Compose/i);
+    assert.match(processed.englishSceneBrief, /\[Subject\]|\[Style\]|Compose/i);
   });
 
   it('détecte un changement explicite de tenue', () => {
@@ -167,6 +172,39 @@ describe('processUserPromptForHonestFaces', () => {
     );
     assert.equal(processed.explicitAppearanceChange, true);
     assert.match(processed.imageBrief, /explicitly asked to change hair or clothing/i);
+  });
+
+  it('reformule le brief en scène narrative anglaise (scaffold local)', () => {
+    const scaffold = buildEnglishSceneBriefScaffold(
+      'Mariage floral or ivoire à Kinshasa, Jean & Amina, 12 octobre 2026',
+      { referenceCount: 0 },
+    );
+    assert.match(scaffold, /Compose/);
+    assert.match(scaffold, /\[Subject\]/);
+    assert.match(scaffold, /\[Style\]/);
+    assert.match(scaffold, /Jean & Amina/);
+    assert.match(scaffold, /Kinshasa/);
+  });
+
+  it('applique une reformulation Gemini anglaise sur le brief traité', () => {
+    const base = processUserPromptForHonestFaces('Dot Kuba ocre et cuivre', { referenceCount: 0 });
+    const next = applyEnglishSceneBrief(
+      base,
+      'Compose a Kuba Dot invitation. [Subject] Ceremonial stationery. [Action] Presenting warm ochre and copper geometry. [Location/context] Congolese customary celebration. [Composition] Tall 9:16. [Style] Photoreal print.',
+    );
+    assert.match(next.englishSceneBrief, /Compose a Kuba Dot/);
+    assert.equal(next.imageBrief, next.englishSceneBrief);
+    assert.match(next.visionBrief, /Compose a Kuba Dot/);
+  });
+
+  it('parse le JSON de reformulation Gemini', () => {
+    assert.match(
+      parseEnglishSceneBriefFromJson({
+        englishSceneBrief: '  Compose a gala card. [Subject] Hosts.  ',
+      }),
+      /Compose a gala card/,
+    );
+    assert.equal(parseEnglishSceneBriefFromJson(null), '');
   });
 });
 

@@ -4,13 +4,16 @@ import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import {
   formatContextForImage,
-  formatContextForVision,
   hasUsableComposeContext,
   loadInvitationComposeContext,
   parseInvitationContextSource,
 } from './invitationComposeContext.ts';
 import {
+  BRIEF_REFORMULATION_SYSTEM,
+  applyEnglishSceneBrief,
+  buildBriefReformulationUserText,
   buildGeminiSceneSteps,
+  parseEnglishSceneBriefFromJson,
   processUserPromptForHonestFaces,
   type ProcessedInvitationPrompt,
 } from './invitationPromptFidelity.ts';
@@ -52,57 +55,56 @@ function requireAiConfigured(): string {
   return key;
 }
 
-const STRUCTURE_SYSTEM = `Tu es un designer d'invitations EventMaster (RDC / Afrique centrale).
-Tu ANALYSES les images de référence fournies, puis tu produis UNIQUEMENT un JSON valide (response_format json_object).
+const STRUCTURE_SYSTEM = `You are EventMaster’s invitation designer for Central Africa / RDC.
+Analyze any reference images, then return ONLY valid JSON (json_object).
 
-Principe de fidélité et de vérité visuelle (non négociable) :
-- DÉTECTE uniquement ce qui est RÉELLEMENT VISIBLE dans les images. Ne déduis pas, n’invente pas, n’idéalise pas, ne blanchis pas.
-- Interdit : inventer des traits, une ethnie, un âge, une coiffure, une tenue, une teinte de peau, ou des personnes absentes.
-- Carnation & morphologie : analyse avec exactitude le teint de peau (teinte mélanée, sous-tons dorés/chauds/acajou/ébène, échelle Fitzpatrick IV/V/VI), les formes faciales (arête nasale, arc des lèvres, pommettes, mâchoire) et les textures capillaires (crépus naturels 4A/4B/4C, dégradé fondu / taper fade soigné, tresses, locks, chignons, perruques soignées).
-- Si un détail est flou / hors cadre / indiscernable : écris "unclear" — ne comble PAS le vide.
+Visual truth (non-negotiable):
+- Detect ONLY what is actually visible. Do not invent, idealize, lighten, or guess missing details.
+- Forbidden: inventing ethnicity, age, hairstyle, outfit, skin tone, or people who are not in the photos.
+- Skin & morphology: record exact melanin tone (golden / warm / mahogany / ebony, Fitzpatrick IV–VI when visible), facial structure, and hair texture (4A–4C, taper fade, braids, locs, bun, wig) as observed.
+- If a detail is blurry, cropped, or unclear: write "unclear" — never fill gaps.
 
-Réalisme photographique absolu (non négociable) :
-- Tout rendu de personne ou de décor doit avoir une qualité photographique 35mm authentique, avec micro-texture de peau réelle (pores fins visibles, sous-tons mélanés naturels avec reflets lumineux doux, ombres volumétriques).
-- INTERDIT : rendu plastique, peau lissée artificiellement (airbrush), effet poupée de cire, esthétique 3D CGI ou dessin animé.
+Photographic realism (non-negotiable):
+- People and décor must read as authentic 35mm photography: visible fine pores, natural melanin undertones, soft specular highlights, volumetric shadows.
+- Forbidden: plastic skin, airbrush beauty, wax-doll faces, CGI / cartoon looks.
 
-Clonage & copie d'invitation (priorité si une carte est fournie) :
-- Si l'une des images de référence est une CARTE D'INVITATION (ou si le brief mentionne 'copier', 'cloner', 'reproduire' une invitation) :
-  1) Analyse la disposition exacte : cadre, double bordure dorée, arche florale, ornementations baroques ou géométriques (Kuba/art déco), marges, fond papier/texturé.
-  2) Extrais la palette chromatique exacte (fond, textes, ornements, dorures).
-  3) Reproduis fidèlement la structure dans le JSON (elements, global.frameType, global.palette, fontTheme) et documente ces détails dans clonedCardFeatures et isInvitationClone=true.
-  4) Si des photos de personnes sont également fournies avec une invitation modèle : intègre ces personnes de façon ultra-réaliste dans le cadre de l'invitation clonée !
+Invitation cloning (when a card is present or the brief says copy / clone / reproduce):
+1) Read exact layout: frame, double gold border, floral arch, baroque or Kuba / art-deco ornaments, margins, paper texture.
+2) Extract the exact palette (background, type, ornaments, foils).
+3) Mirror that structure in JSON (elements, global.frameType, global.palette, fontTheme) and set isInvitationClone=true with clonedCardFeatures filled.
+4) If people photos are also attached, place those exact people photorealistically inside the cloned card frame.
 
-Priorité absolue :
-1) Les images de référence = VÉRITÉ VISUELLE pour les personnes (visages, teintes de peau exactes, textures de cheveux, habits, posture) ET pour la carte à cloner (mise en page, ornements, palette).
-2) Le BRIEF UTILISATEUR = besoins expressément demandés (ambiance, décor d'invitation, couleurs florales, ce qu’il faut changer dans l'environnement).
-3) Ne change habits / cheveux / peau / visages QUE si le brief le demande EXPLICITEMENT. Sinon, REPRODUIS à l’identique.
-4) EventMaster / RDC : SANS photo de référence, toute personne générée = homme et/ou femme noirs africains (carnation mélanée naturelle). Interdit : couple blanc inventé, visages caucasiens « luxe générique ».
+Priority order:
+1) Reference images = visual truth for people (faces, skin, hair, clothes, pose) AND for any card to clone (layout, ornaments, palette).
+2) User brief = explicit décor / mood / floral / environment requests only.
+3) Change clothes / hair / skin / faces ONLY when the brief asks explicitly. Otherwise keep identical.
+4) EventMaster / RDC default without people photos: any generated person MUST be a Black African man and/or woman with natural melanin. Forbidden: invented white couples or generic Caucasian “luxury” faces.
 
-Mission :
-1) Détecte : visages précis, points de repère anatomiques (faceLandmarks), teintes de peau réelles, styles de cheveux, styles d’habits, couleurs, motifs, composition, et si une carte d'invitation est présente à cloner.
-2) Parse le brief : besoins exprimés (mustKeep / mustChange) — seulement ce qui est écrit, rien d’implicite inventé.
-3) Prépare un prompt anglais DÉTAILLÉ pour créer une NOUVELLE image d'invitation d'un luxe exceptionnel, fidèle aux refs + au brief.
+Mission:
+1) Detect faces, faceLandmarks, real skin tones, hair, clothing, colors, motifs, composition, and whether an invitation card should be cloned.
+2) Parse the brief into mustKeep / mustChange — only what is written.
+3) Write backgroundPrompt as a detailed ENGLISH décor narrative for a luxury print invitation (Nano Banana style: Subject + Action + Location + Composition + Style).
 
-Schéma exact :
+Exact schema:
 {
   "visualAnalysis": {
     "colors": ["#hex", "..."],
-    "style": "style décoratif observé (papier, luxe, floral…) — sans inventer",
-    "motifs": "motifs / textures / décor observés",
-    "composition": "layout / cadrage observé",
+    "style": "observed decorative style (paper, luxury, floral…) — do not invent",
+    "motifs": "observed motifs / textures / décor",
+    "composition": "observed layout / framing",
     "hasPeople": true | false,
     "peopleCount": 0,
-    "peopleFaces": "none | PERSON 1 / PERSON 2 (label left-to-right): sex if visible, apparent age, face shape, EYES (iris color, crease, gaze, catchlights), SMILE (closed/half/teeth, dimples, lip asymmetry), CHEEKS, brows, nose, jaw, marks — OBSERVED pixels only, never idealized",
-    "faceLandmarks": "none | lock list: bone structure, eye spacing & slant, smile geometry, cheek volume, facial hair, scars/moles — enough to refuse lookalikes; if a trait is unclear write unclear",
-    "skinTones": "none | precise observed skin tone(s) per person (e.g. rich warm mahogany Fitzpatrick VI, golden warm caramel, deep ebony) — STRICT FIDELITY, NEVER lighten or shift tone",
-    "hairStyles": "none | hair length, texture (4C curls, precise taper fade, braids bun, dreadlocks), hairline OBSERVED per person",
-    "clothingStyles": "none | garment cuts, fabrics (wax pagne, tailored tux, royal satin, embroidery), colors, accessories OBSERVED — preserve faithfully",
+    "peopleFaces": "none | PERSON 1 / PERSON 2 (left-to-right): sex if visible, apparent age, face shape, EYES, SMILE, CHEEKS, brows, nose, jaw, marks — OBSERVED pixels only",
+    "faceLandmarks": "none | lock list: bone structure, eye spacing & slant, smile geometry, cheek volume, facial hair, scars/moles — refuse lookalikes; unclear if unsure",
+    "skinTones": "none | precise observed skin tone(s) per person — NEVER lighten",
+    "hairStyles": "none | length, texture, hairline OBSERVED per person",
+    "clothingStyles": "none | cuts, fabrics (wax pagne, tux, satin, embroidery), colors, accessories OBSERVED",
     "isInvitationClone": true | false,
-    "clonedCardFeatures": "none | detailed breakdown of borders, frame, ornaments, typography, textures to clone from the reference card",
-    "briefNeeds": ["besoin explicite 1 du brief", "..."],
-    "briefInterpretation": "comment chaque besoin du brief s’applique aux refs, point par point",
-    "briefMustKeep": ["à conserver : refs (visages/peau/cheveux/habits/carte) + éléments du brief"],
-    "briefMustChange": ["UNIQUEMENT ce que le brief demande explicitement de modifier"]
+    "clonedCardFeatures": "none | borders, frame, ornaments, typography, textures to clone",
+    "briefNeeds": ["explicit need 1", "..."],
+    "briefInterpretation": "how each brief need applies to the references, point by point",
+    "briefMustKeep": ["keep: refs (faces/skin/hair/clothes/card) + brief facts"],
+    "briefMustChange": ["ONLY explicit brief change requests"]
   },
   "global": {
     "bgType": "color" | "pattern",
@@ -133,30 +135,30 @@ Schéma exact :
       "imageUrl": "https://..."
     }
   ],
-  "backgroundPrompt": "English décor-only notes. If card clone: cloned borders/textures. If people: USER BRIEF (décor) only — do not rewrite faces. If no people: USER BRIEF then décor."
+  "backgroundPrompt": "English décor-only narrative. Card clone: replicate borders/textures. With people: décor only — never rewrite faces. Without people: full scene then décor."
 }
 
-Règles brief :
-- Si copie/clonage de carte : backgroundPrompt DOIT intégrer la réplication des bordures, dorures et fonds de la carte de référence.
-- S’il y a des personnes : backgroundPrompt = DÉCOR SEULEMENT (papier, floraux, lumière, cadre). N’y décris PAS les visages — l’identité vient des pixels des photos. Commence par "USER BRIEF (décor):".
-- S’il n’y a PAS de personnes : commence par "USER BRIEF:" puis décor somptueux sans présence humaine.
-- Applique chaque besoin du brief pour le décor (ambiance, couleurs, fioritures, sobriété, luxe, floral).
-- Si le brief et les refs divergent : brief = décor & ambiance ; refs = visages / peau / cheveux / habits (sauf demande EXPLICITE contraire sur habits/cheveux).
-- CONTEXTE CONNECTÉ / REQUÊTES : s’il est fourni, il sert uniquement à compléter type d’événement, langue, noms/date/lieu et goût décoratif. Interdit d’en déduire un visage.
-- Le brief utilisateur peut avoir été nettoyé (embellir / lisser / blanchir ignorés). Ne réintroduis PAS d’idéalisation faciale. Gemini : « face and features remain completely unchanged ».
+Brief rules:
+- Card clone: backgroundPrompt MUST replicate reference borders, foils and paper.
+- With people: backgroundPrompt = DÉCOR ONLY (paper, florals, light, frame). Do NOT describe faces. Start with "USER BRIEF (décor):".
+- Without people: start with "USER BRIEF:" then sumptuous décor without inventing unwanted humans unless the brief implies hosts.
+- Apply every brief need for décor (mood, colors, ornaments, sobriety, luxury, florals).
+- If brief and refs conflict: brief wins for décor & mood; refs win for faces / skin / hair / clothes (unless explicit wardrobe/hair change).
+- Connected organizer context (if provided) may only fill event type, language, names/date/venue and décor taste — never invent a face from it.
+- Beautify / smooth / lighten requests may already be stripped. Do not reintroduce facial idealization. Gemini: "face and features remain completely unchanged".
 
-Règles personnes (non négociables) :
-- Si hasPeople=true : les PIXELS des photos = vérité. peopleFaces / faceLandmarks = liste de verrouillage, pas un brief de « joli visage ».
-- Interdit : lookalike, célébrité, stock model, embellissement, lissage, blanchiment, autre âge/ethnie, sourire inventé.
-- Si hasPeople=false : aucune personne, aucun visage, aucune silhouette. Décor uniquement.
+People rules (non-negotiable):
+- hasPeople=true: photo pixels are truth. peopleFaces / faceLandmarks are lock lists, not “pretty face” briefs.
+- Forbidden: lookalike, celebrity, stock model, beautify, smooth, lighten, wrong age/ethnicity, invented smile.
+- hasPeople=false: no people, no faces, no silhouettes unless the English scene brief explicitly asks for hosts — then RDC Black African default applies.
 
-Règles layout :
-- Palette et style des éléments = couleurs réelles extraites des images (ou de la carte clonée) + brief.
-- 6 à 12 éléments max, disposition empilée (flow), centrée.
-- Variables {{title}}, {{date}}, {{location}}, {{firstName}} dans les textes quand pertinent.
-- Exactement un élément "rsvp-block" avec rsvpPlacement "outside" et text "Confirmer votre présence".
-- Image print-ready verticale, SANS texte lisible, noms, dates, logos, watermarks (l’éditeur ajoute le texte).
-- Ne mets pas de markdown. JSON uniquement.`;
+Layout rules:
+- Palette and element style = colors from images (or cloned card) + brief.
+- 6–12 elements max, stacked flow, centered.
+- Use {{title}}, {{date}}, {{location}}, {{firstName}} in text when relevant.
+- Exactly one "rsvp-block" with rsvpPlacement "outside" and text "Confirmer votre présence".
+- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).
+- No markdown. JSON only.`;
 
 function asHex(value: unknown, fallback: string): string {
   if (typeof value !== 'string') return fallback;
@@ -336,7 +338,11 @@ function buildImagePrompt(
   },
 ): string {
   const processed = options?.processed;
-  const brief = (processed?.imageBrief || userPrompt).trim().slice(0, 1200);
+  const brief = (
+    processed?.imageBrief ||
+    processed?.englishSceneBrief ||
+    userPrompt
+  ).trim().slice(0, 1200);
   const hasPeople = Boolean(analysis?.hasPeople);
   const isClone = Boolean(
     analysis?.isInvitationClone ||
@@ -443,10 +449,10 @@ function buildImagePrompt(
 
 function structureSystemPrompt(embedText: boolean): string {
   return STRUCTURE_SYSTEM.replace(
-    '- Image print-ready verticale, SANS texte lisible, noms, dates, logos, watermarks (l’éditeur ajoute le texte).',
+    '- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).',
     embedText
-      ? '- Image print-ready verticale AVEC typographie d’invitation incrustée (noms, date, lieu extraits du brief), nette, orthographiée, sans recouvrir les visages.'
-      : '- Image print-ready verticale, SANS texte lisible, noms, dates, logos, watermarks (l’éditeur ajoute le texte).',
+      ? '- Vertical print-ready image WITH sharp embedded invitation typography (names, date, venue from the brief), correctly spelled, never covering faces.'
+      : '- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).',
   );
 }
 
@@ -460,14 +466,14 @@ function visionUserText(
   },
 ): string {
   const original = options?.processed?.originalBrief || prompt;
-  const decor = options?.processed?.decorBrief || prompt;
+  const englishScene = options?.processed?.englishSceneBrief || options?.processed?.decorBrief || prompt;
   const honesty = hasRefs
-    ? `PHOTOS FOURNIES : les visages = vérité pixel (reco Gemini high-fidelity). ${
+    ? `REFERENCE PHOTOS ATTACHED: faces = pixel truth (Gemini high-fidelity). ${
         options?.processed?.beautifyStripped
-          ? 'Le brief demandait d’embellir/lisser/blanchir : IGNORE ces demandes.'
-          : 'N’idéalise pas, n’embellis pas.'
+          ? 'The brief asked to beautify / smooth / lighten faces — IGNORE those requests.'
+          : 'Do not idealize or beautify.'
       }`
-    : 'AUCUNE IMAGE DE RÉFÉRENCE : compose uniquement à partir du brief (décor + textes). hasPeople=false.';
+    : 'NO REFERENCE IMAGES: compose from the English scene brief only (décor + text facts). hasPeople=false unless the brief explicitly asks for hosts.';
   const contextBlock = options?.organizerContext
     ? `\n${options.organizerContext}\n`
     : '';
@@ -475,25 +481,57 @@ function visionUserText(
     ? `\n${options.processed.referenceRoles}\n`
     : '';
 
-  return `BRIEF UTILISATEUR ORIGINAL (besoins exprimés — analyse-les sans inventer d’intentions) :
+  return `ORIGINAL USER BRIEF (facts to preserve — any language):
 """
 ${original.slice(0, 1500)}
 """
 
-BRIEF DÉCOR TRAITÉ (sans idéalisation faciale) :
+ENGLISH SCENE BRIEF (Nano Banana narrative — use this as the creative brief):
 """
-${decor.slice(0, 1200)}
+${englishScene.slice(0, 1400)}
 """
 ${contextBlock}${roles}
 ${honesty}
 
-Tâches (fidélité stricte — PRIORITÉ VISAGES) :
-1) S’il y a des personnes : inventaire facial OBSERVÉ (peopleFaces + faceLandmarks) — une fiche par personne, gauche → droite. Yeux, sourire exact, joues, peau, cheveux, habits. Ne déduis rien d’invisible. Ne « préttifie » pas. Gemini : face and features remain completely unchanged.
-2) Liste briefNeeds = besoins EXPLICITEMENT écrits ; briefMustKeep / briefMustChange (décor vs personnes). Ignore embellir/lisser/blanchir.
-3) Renseigne hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
-4) Produis le JSON (structure éditeur + backgroundPrompt).
-5) backgroundPrompt : si personnes → DÉCOR UNIQUEMENT ("USER BRIEF (décor):"). L’identité faciale ne doit PAS être réécrite dans ce champ. Sinon → "USER BRIEF:" puis décor. Complète noms/date/lieu depuis le contexte connecté seulement si le brief est incomplet.
-${options?.embedText ? '6) INCRUSTER le texte du brief (noms, date, lieu) dans backgroundPrompt comme typographie d’invitation.' : ''}`;
+Tasks (strict fidelity — faces first):
+1) If people are present: OBSERVED face inventory (peopleFaces + faceLandmarks) — one card per person, left→right. Eyes, exact smile, cheeks, skin, hair, clothes. Do not infer the invisible. Do not prettify. Gemini: face and features remain completely unchanged.
+2) briefNeeds = EXPLICITLY written needs; briefMustKeep / briefMustChange (décor vs people). Ignore beautify / smooth / lighten.
+3) Fill hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
+4) Produce the JSON (editor structure + backgroundPrompt).
+5) backgroundPrompt: with people → DÉCOR ONLY ("USER BRIEF (décor):"). Do NOT rewrite facial identity there. Without people → "USER BRIEF:" then décor. Complete names/date/venue from connected context only if the brief is incomplete.
+${options?.embedText ? '6) Embed brief text (names, date, venue) in backgroundPrompt as invitation typography.' : ''}`;
+}
+
+async function reformulateUserBriefToEnglish(
+  processed: ProcessedInvitationPrompt,
+  options?: { referenceCount?: number; embedText?: boolean },
+): Promise<ProcessedInvitationPrompt> {
+  if (!getGeminiApiKey()) return processed;
+  try {
+    const parsed = await requestGeminiJson({
+      system: BRIEF_REFORMULATION_SYSTEM,
+      userText: buildBriefReformulationUserText(
+        processed.originalBrief,
+        processed.decorBrief,
+        {
+          referenceCount: options?.referenceCount,
+          embedText: options?.embedText,
+        },
+      ),
+      temperature: 0.25,
+      timeoutMs: 45_000,
+      failMessage: 'Brief reformulation failed.',
+    });
+    const english = parseEnglishSceneBriefFromJson(parsed);
+    if (!english || english.length < 24) return processed;
+    return applyEnglishSceneBrief(processed, english);
+  } catch (error) {
+    console.warn(
+      '[invitationTemplateAi] English brief reformulation failed, using local scaffold:',
+      (error as Error)?.message,
+    );
+    return processed;
+  }
 }
 
 function visionResultFromParsed(
@@ -1335,8 +1373,13 @@ export async function composeInvitationTemplateAi(input: {
     .map((u) => u.trim())
     .slice(0, 4);
 
-  const processed = processUserPromptForHonestFaces(prompt, {
+  const processedBase = processUserPromptForHonestFaces(prompt, {
     referenceCount: imageUrls.length,
+    embedText,
+  });
+  const processed = await reformulateUserBriefToEnglish(processedBase, {
+    referenceCount: imageUrls.length,
+    embedText,
   });
   const contextSource = parseInvitationContextSource(input.contextSource);
   const composeContext = await loadInvitationComposeContext({
@@ -1346,13 +1389,12 @@ export async function composeInvitationTemplateAi(input: {
     currentPrompt: prompt,
     source: contextSource,
   });
-  const organizerVision = formatContextForVision(composeContext, contextSource);
-  const organizerImage = formatContextForImage(composeContext, contextSource);
+  const organizerContextEn = formatContextForImage(composeContext, contextSource);
 
   const key = requireAiConfigured();
   const structured = await visionStructure(key, processed.visionBrief, imageUrls, {
     embedText,
-    organizerContext: organizerVision,
+    organizerContext: organizerContextEn,
     processed,
   });
   if (!imageUrls.length && structured.visualAnalysis) {
@@ -1365,7 +1407,7 @@ export async function composeInvitationTemplateAi(input: {
     structured.visualAnalysis,
     {
       embedText,
-      organizerContext: organizerImage,
+      organizerContext: organizerContextEn,
       processed,
     },
   );
@@ -1413,6 +1455,8 @@ export async function composeInvitationTemplateAi(input: {
   if (processed.beautifyStripped) {
     (global as Record<string, unknown>).aiFaceHonesty = 'beautify-stripped';
   }
+  (global as Record<string, unknown>).aiEnglishSceneBrief = processed.englishSceneBrief;
+  (global as Record<string, unknown>).aiOriginalBrief = processed.originalBrief;
   let elements = sanitizeElements(structured.elements);
   if (embedText) {
     elements = elements.filter((el) => el.type === 'rsvp-block');

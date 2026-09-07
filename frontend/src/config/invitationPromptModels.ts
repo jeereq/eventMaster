@@ -6,6 +6,7 @@ export interface PromptModel {
   category: PromptCategory;
   badge: string;
   summary: string;
+  /** Brief envoyé au modèle — anglais narratif (recommandations Nano Banana). */
   prompt: string;
   isClone?: boolean;
 }
@@ -26,7 +27,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Clonage exact',
     summary: 'Reproduit la mise en page, les bordures ornementales dorées et le style typographique de l’image fournie.',
     prompt:
-      'Copier fidèlement l’invitation fournie : reproduire à l’identique la mise en page, les bordures ornementales dorées, la texture du fond, la hiérarchie visuelle et le style typographique de la carte de référence. Rendu ultra-net de qualité impression prestige.',
+      'Clone faithfully the attached invitation card. [Subject] A vertical prestige stationery piece matching the reference. [Action] Reproduce the exact layout, ornamental gold borders, paper texture, visual hierarchy and typographic style of the reference card. [Location/context] Print-ready invitation for a Central African celebration. [Composition] Tall 9:16 frame, centered ceremonial focus, generous margins. [Style] Ultra-sharp prestige print look, cotton paper grain, gold foil accents, photoreal stationery photography.',
     isClone: true,
   },
   {
@@ -36,7 +37,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Clonage + Visages',
     summary: 'Duplique le cadre et le décor de l’invitation en intégrant vos photos telles quelles, sans embellir les visages.',
     prompt:
-      'Cloner la composition et les ornements de l’invitation de référence en y intégrant les personnes de mes photos telles qu’elles apparaissent — visages honnêtes, sans embellissement ni lissage. Rendu 35mm, carnation, sourire et cheveux identiques aux photos, fondu dans le cadre doré.',
+      'Clone the composition and ornaments of the reference invitation while integrating the people from my photos exactly as photographed. [Subject] Luxury invitation card with the real hosts from the attached portraits. [Action] Place those exact individuals inside the cloned gold frame without beautifying faces. [Location/context] Prestige printed card for a Kinshasa / RDC event. [Composition] 9:16 portrait, hosts centered in the ornamental frame, décor around them. [Style] 35mm photoreal print, natural skin texture and hair matching the photos, soft gold foil blend — faces remain completely unchanged.',
     isClone: true,
   },
   {
@@ -46,7 +47,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Modernisation',
     summary: 'Conserve la disposition et les informations, en modernisant les bordures avec un or brossé contemporain.',
     prompt:
-      'Reprendre la structure et l’esprit de cette invitation en la modernisant : cadre aux lignes épurées en or brossé, fond texturé ivoire haut de gamme, fleurs discrètes et typographie contemporaine raffinée.',
+      'Modernize this invitation while keeping its structure and spirit. [Subject] A refined contemporary invitation card. [Action] Refresh the borders into clean brushed-gold lines, keep the information hierarchy readable. [Location/context] High-end stationery for a Central African celebration. [Composition] Tall 9:16, balanced margins, discreet florals. [Style] Ivory textured paper, contemporary refined typography, soft luxury lighting, photoreal print finish.',
     isClone: true,
   },
 
@@ -58,7 +59,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Ultra-réaliste',
     summary: 'Photo ultra-réaliste des mariés, éclairage chaud naturel, ivoire, or et pagne wax royal brodé.',
     prompt:
-      'Mariage d’exception à Kinshasa : photo ultra-réaliste des mariés avec texture de peau naturelle et mélanine éclatante, éclairage chaud cinématographique, arche florale blanche et or, pagne wax royal de prestige brodé.',
+      'Compose a princely Kinshasa wedding invitation. [Subject] A Black African bride and groom with rich natural melanin. [Action] Standing together in ceremonial elegance beneath a white-and-gold floral arch. [Location/context] Prestige celebration in Kinshasa. [Composition] Vertical 9:16 medium-full shot, couple centered, generous lower margin for lettering. [Style] Warm cinematic daylight, ivory and gold palette, royal embroidered wax pagne, authentic 35mm skin texture — no airbrush.',
   },
   {
     id: 'wedding-dot-kuba',
@@ -67,7 +68,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Tradition & Luxe',
     summary: 'Motifs géométriques Kuba raffinés, teintes chaudes ocre, cuivre et or, visages fidèles à 100%.',
     prompt:
-      'Dot traditionnelle et moderne : motifs géométriques Kuba raffinés, tons ocre chaud, cuivre et touches dorées, visages fidèles à 100%, tenues d’apparat en velours du Kasaï et ambiance feutrée et authentique.',
+      'Design a traditional-meets-modern Dot invitation. [Subject] Black African hosts in Kasai velvet ceremonial attire. [Action] Presented within a refined Kuba geometric frame as honored couple of the Dot. [Location/context] Congolese customary celebration with contemporary luxury. [Composition] Tall 9:16, ornamental border focus, soft atmospheric depth. [Style] Warm ochre, copper and gold accents, authentic faces at 100% fidelity, hushed intimate lighting, photoreal print.',
   },
   {
     id: 'wedding-romantic-floral',
@@ -76,7 +77,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Romantique',
     summary: 'Lumière naturelle dorée, arche de roses blanches et eucalyptus, reflets dorés délicats.',
     prompt:
-      'Mariage romantique féerique : couple noir africain (homme et femme, carnation mélanée naturelle), douce lumière de fin d’après-midi, arche de roses blanches et d’eucalyptus, reflets dorés délicats, rendu photo pur sans lissage artificiel.',
+      'Compose a romantic floral wedding invitation. [Subject] A Black African couple with natural melanin complexions. [Action] Standing gently beneath an arch of white roses and eucalyptus. [Location/context] Fairy-tale garden ceremony mood. [Composition] Soft 9:16 portrait, couple mid-frame, floral arch framing the edges. [Style] Late-afternoon golden light, delicate gold reflections, pure photographic finish without artificial smoothing.',
   },
 
   // --- Catégorie : Galas & Entreprises ---
@@ -87,7 +88,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Business VIP',
     summary: 'Noir satiné profond, typographie serif élégante, accents champagne pétillant, minimaliste.',
     prompt:
-      'Soirée gala prestige à Gombe : hôtes et invités noirs africains en tenue de soirée, fond noir satiné profond, typographie serif élégante, accents champagne pétillant, design minimaliste et luxueux.',
+      'Design a prestige Gombe gala invitation. [Subject] Black African hosts and guests in evening formalwear. [Action] Arriving into a champagne-accent VIP evening atmosphere. [Location/context] Upscale business gala in Gombe, Kinshasa. [Composition] Minimal tall 9:16 layout, deep negative space, centered ceremonial focus. [Style] Deep satin black, elegant serif hierarchy, sparkling champagne accents, luxurious minimal print photography.',
   },
   {
     id: 'gala-diplomatic',
@@ -96,7 +97,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Institutionnel',
     summary: 'Bleu nuit impérial, double filet d’or brossé, texture papier coton et typographie majestueuse.',
     prompt:
-      'Cocktail officiel et remise de prix : bleu nuit impérial, double filet d’or brossé, texture papier coton luxueux, typographie classique majestueuse et mise en page équilibrée.',
+      'Compose an official awards cocktail invitation. [Subject] A vertical institutional stationery card. [Action] Presenting a formal ceremony mood with balanced ceremonial hierarchy. [Location/context] Diplomatic cocktail and prize evening. [Composition] Tall 9:16, double brushed-gold fillet frame, generous centered margins. [Style] Imperial midnight blue, luxurious cotton-paper texture, majestic classical typography, photoreal print finish.',
   },
 
   // --- Catégorie : Anniversaires & Soirées ---
@@ -107,7 +108,7 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Festif VIP',
     summary: 'Portrait photo éclatant et réaliste de l’hôte, ambiance cocktail avec lumières bokeh scintillantes.',
     prompt:
-      'Anniversaire VIP chic : portrait photo éclatant et ultra-réaliste d’un hôte ou d’une hôtesse noire africaine (carnation mélanée naturelle), ambiance cocktail champagne avec lumières bokeh scintillantes, teintes or rose et noir profond.',
+      'Compose a VIP birthday cocktail invitation. [Subject] A Black African host or hostess with natural melanin complexion. [Action] Celebrating under sparkling champagne bokeh lights. [Location/context] Chic evening cocktail party. [Composition] Tall 9:16 portrait focus, soft bokeh background, lower third clear for type. [Style] Rose-gold and deep black palette, ultra-real photographic portrait, festive prestige lighting — no plastic beauty filter.',
   },
   {
     id: 'birthday-royal-jubilee',
@@ -116,6 +117,6 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     badge: 'Grandeur',
     summary: 'Fond vert émeraude riche, volutes dorées baroques ciselées, arche florale tropicale somptueuse.',
     prompt:
-      'Célébration royale de jubilé : fond vert émeraude riche, volutes dorées baroques ciselées, arche florale tropicale somptueuse, atmosphère festive prestigieuse et chaleureuse.',
+      'Design a royal jubilee celebration invitation. [Subject] A sumptuous vertical stationery card. [Action] Opening onto a grand festive tropical floral arch. [Location/context] Prestigious jubilee party atmosphere. [Composition] Tall 9:16, ornate baroque gold scrollwork framing a rich emerald field. [Style] Deep emerald, chiseled gold volutes, tropical floral abundance, warm prestigious print photography.',
   },
 ];
