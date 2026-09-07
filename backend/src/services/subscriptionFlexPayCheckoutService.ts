@@ -35,7 +35,15 @@ export async function initiateFlexPaySessionForRequest(params: {
   const { request, tenantName, method, phone } = params;
   const days = request.durationDays;
   const plan = request.requestedPlan as PlanType;
-  const { baseAmount, amountFc } = computeSubscriptionCheckoutAmount(plan, days);
+  const catalog = computeSubscriptionCheckoutAmount(plan, days);
+  const preserveQuote =
+    request.status === 'QUOTED' ||
+    (typeof request.approvedAmount === 'number' &&
+      request.approvedAmount > 0 &&
+      ((request.specialDiscountPercent ?? 0) > 0 || request.requestKind === 'discount'));
+
+  const baseAmount = preserveQuote && request.baseAmount != null ? request.baseAmount : catalog.baseAmount;
+  const amountFc = preserveQuote && request.approvedAmount != null ? request.approvedAmount : catalog.amountFc;
 
   if (amountFc <= 0) {
     throw new Error('Montant de forfait invalide.');
@@ -50,14 +58,14 @@ export async function initiateFlexPaySessionForRequest(params: {
   await prisma.subscriptionRequest.update({
     where: { id: request.id },
     data: {
-      status: 'PENDING',
+      status: request.status === 'QUOTED' ? 'QUOTED' : 'PENDING',
       baseAmount,
       approvedAmount: amountFc,
       paymentProvider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
       flexPayOrderNumber: null,
       flexPayReference: reference,
       paidAt: null,
-      specialDiscountPercent: null,
+      specialDiscountPercent: preserveQuote ? request.specialDiscountPercent : null,
     },
   });
 

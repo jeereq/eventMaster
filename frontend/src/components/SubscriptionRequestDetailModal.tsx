@@ -9,7 +9,12 @@ export interface AdminSubscriptionRequestItem {
   id: string;
   requestedPlan: string;
   durationDays: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
+  status: 'PENDING' | 'QUOTED' | 'APPROVED' | 'REJECTED' | string;
+  requestKind?: string | null;
+  discountRequestNote?: string | null;
+  requestedDiscountPercent?: number | null;
+  requestedAmount?: number | null;
+  quoteExpiresAt?: string | null;
   proofOfPayment?: string | null;
   createdAt: string;
   updatedAt?: string;
@@ -36,15 +41,17 @@ export interface AdminSubscriptionRequestItem {
   } | null;
 }
 
-function statusVariant(status: string): 'warning' | 'success' | 'danger' {
+function statusVariant(status: string): 'warning' | 'success' | 'danger' | 'primary' {
   if (status === 'APPROVED') return 'success';
   if (status === 'REJECTED') return 'danger';
+  if (status === 'QUOTED') return 'primary';
   return 'warning';
 }
 
 function statusLabel(status: string) {
   if (status === 'APPROVED') return 'Approuvée';
   if (status === 'REJECTED') return 'Rejetée';
+  if (status === 'QUOTED') return 'Devis envoyé';
   return 'En attente';
 }
 
@@ -79,7 +86,7 @@ export default function SubscriptionRequestDetailModal({
   onApprove?: (request: AdminSubscriptionRequestItem) => void;
   onReject?: (id: string) => void;
 }) {
-  const pending = request?.status === 'PENDING';
+  const pending = request?.status === 'PENDING' || request?.status === 'QUOTED';
   const commercials: Array<{ name: string; email?: string; kind: string }> = [];
   if (request?.tenant?.referredByCommercial) {
     commercials.push({
@@ -115,7 +122,7 @@ export default function SubscriptionRequestDetailModal({
             )}
             {onApprove && request && (
               <Button type="button" onClick={() => onApprove(request)}>
-                Approuver
+                {request.requestKind === 'discount' ? 'Valider le rabais' : 'Approuver'}
               </Button>
             )}
           </div>
@@ -192,6 +199,26 @@ export default function SubscriptionRequestDetailModal({
               <Row label="Réf. opérateur">{request.flexPayProviderReference}</Row>
             )}
           </div>
+
+          {(request.requestKind === 'discount' || request.discountRequestNote) && (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted mb-1">Demande de rabais</p>
+              {request.requestedDiscountPercent != null && (
+                <Row label="Rabais demandé">{request.requestedDiscountPercent} %</Row>
+              )}
+              {request.requestedAmount != null && (
+                <Row label="Montant souhaité">{formatFc(request.requestedAmount)}</Row>
+              )}
+              {request.quoteExpiresAt && (
+                <Row label="Devis expire">{formatDate(request.quoteExpiresAt)}</Row>
+              )}
+              {request.discountRequestNote && (
+                <p className="text-sm text-foreground whitespace-pre-wrap break-words rounded-xl border border-border bg-surface-muted px-3 py-2 mt-1">
+                  {request.discountRequestNote}
+                </p>
+              )}
+            </div>
+          )}
 
           {request.proofOfPayment && (
             <div>

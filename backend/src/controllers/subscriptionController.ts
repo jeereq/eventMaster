@@ -24,6 +24,12 @@ import {
 } from '../services/subscriptionActivationService';
 import { initiateFlexPaySessionForRequest } from '../services/subscriptionFlexPayCheckoutService';
 import {
+  approveDiscountQuote,
+  computeCatalogBaseAmount,
+  notifyDiscountRequestSubmitted,
+  statusAfterFailedQuotedPayment,
+} from '../services/subscriptionDiscountQuoteService';
+import {
   checkFlexPayCardOrder,
   buildFlexPayMetadataUpdate,
   isFlexPayCardConfigured,
@@ -98,6 +104,176 @@ export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: 
   } catch (error: any) {
     console.error('Erreur lors de la soumission de la demande d\'abonnement:', error);
     return res.status(500).json({ error: 'Erreur lors de la soumission de la demande.' });
+  }
+}
+
+export async function submitDiscountRequest(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(403).json({ error: 'Tenant non identifié.' });
+    }
+
+    const { requestedPlan, durationDays, requestedDiscountPercent, requestedAmount, note } = req.body || {};
+    if (!requestedPlan || !PAID_PLAN_KEYS.includes(requestedPlan)) {
+      return res.status(400).json({ error: 'Le forfait demandé est invalide.' });
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { accountKind: true, name: true },
+    });
+    if (!tenant || !isPlanAllowedForAccountKind(requestedPlan, tenant.accountKind)) {
+      return res.status(403).json({
+        error: planAudienceMismatchMessage(requestedPlan, tenant?.accountKind),
+      });
+    }
+
+    const days = resolveDurationDaysForPlan(
+      requestedPlan,
+      durationDays != null ? parseInt(String(durationDays), 10) : null,
+    );
+    if (isNaN(days) || days <= 0) {
+      return res.status(400).json({ error: 'La durée demandée est invalide.' });
+    }
+
+    const parsedPercent =
+      requestedDiscountPercent !== undefined && requestedDiscountPercent !== null && requestedDiscountPercent !== ''
+        ? parseFloat(String(requestedDiscountPercent))
+        : undefined;
+    const parsedAmount =
+      requestedAmount !== undefined && requestedAmount !== null && requestedAmount !== ''
+        ? parseFloat(String(requestedAmount))
+        : undefined;
+
+    if (parsedPercent !== undefined && (isNaN(parsedPercent) || parsedPercent < 1 || parsedPercent > 80)) {
+      return res.status(400).json({ error: 'Le rabais demandé doit être compris entre 1 et 80 %.' });
+    }
+    if (parsedAmount !== undefined && (isNaN(parsedAmount) || parsedAmount < 0)) {
+      return res.status(400).json({ error: 'Le montant souhaité est invalide.' });
+    }
+    if (parsedPercent === undefined && parsedAmount === undefined) {
+      return res.status(400).json({ error: 'Indiquez un pourcentage de rabais ou un montant souhaité.' });
+    }
+
+    const noteText = String(note || '').trim();
+    if (noteText.length < 8) {
+      return res.status(400).json({ error: 'Expliquez brièvement le motif de votre demande de rabais (8 caractères min.).' });
+    }
+
+    const existing = await prisma.subscriptionRequest.findFirst({
+      where: { tenantId, requestKind: 'discount', status: { in: ['PENDING', 'QUOTED'] } },
+      select: { id: true, status: true },
+    });
+    if (existing) {
+      return res.status(409).json({
+        error:
+          existing.status === 'QUOTED'
+            ? 'Un devis de rabais est déjà en attente de paiement. Ouvrez votre historique pour payer.'
+            : 'Une demande de rabais est déjà en cours d’examen.',
+        requestId: existing.id,
+      });
+    }
+
+    const baseAmount = computeCatalogBaseAmount(requestedPlan, days);
+    const request = await prisma.subscriptionRequest.create({
+      data: {
+        tenantId,
+        requestedPlan: requestedPlan as PlanType,
+        durationDays: days,
+        status: 'PENDING',
+        requestKind: 'discount',
+        discountRequestNote: noteText.slice(0, 800),
+        requestedDiscountPercent: parsedPercent ?? null,
+        requestedAmount: parsedAmount ?? null,
+        baseAmount,
+      },
+    });
+
+    void notifyDiscountRequestSubmitted({
+      tenantId,
+      tenantName: tenant.name,
+      requestId: request.id,
+      requestedPlan,
+      durationDays: days,
+      requestedDiscountPercent: parsedPercent ?? null,
+      requestedAmount: parsedAmount ?? null,
+    });
+
+    return res.status(201).json({
+      message: 'Votre demande de rabais a été envoyée. Le Superadmin ou le commercial global la validera, puis vous recevrez un lien de paiement.',
+      request,
+    });
+  } catch (error: any) {
+    console.error('Erreur demande de rabais:', error);
+    return res.status(500).json({ error: 'Impossible de soumettre la demande de rabais.' });
+  }
+}
+
+export async function quoteSubscriptionDiscount(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+    }
+
+    const requestId = req.params.id as string;
+    const { discountPercent, approvedAmount } = req.body ?? {};
+    const parsedDiscount =
+      discountPercent !== undefined && discountPercent !== null && discountPercent !== ''
+        ? parseFloat(String(discountPercent))
+        : undefined;
+    const parsedApproved =
+      approvedAmount !== undefined && approvedAmount !== null && approvedAmount !== ''
+        ? parseFloat(String(approvedAmount))
+        : undefined;
+
+    if (parsedDiscount !== undefined && (isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100)) {
+      return res.status(400).json({ error: 'La réduction doit être entre 0 et 100 %.' });
+    }
+    if (parsedApproved !== undefined && (isNaN(parsedApproved) || parsedApproved < 0)) {
+      return res.status(400).json({ error: 'Le montant approuvé est invalide.' });
+    }
+
+    const request = await prisma.subscriptionRequest.findUnique({
+      where: { id: requestId },
+      select: { tenantId: true },
+    });
+    if (!request) {
+      return res.status(404).json({ error: 'Demande d\'abonnement non trouvée.' });
+    }
+    if (isPlatformCommercial(req.user?.role) && req.user?.id) {
+      const owns = await assertCommercialOwnsTenant(req.user.id, request.tenantId);
+      if (!owns) {
+        return res.status(403).json({ error: 'Vous ne pouvez valider que les demandes des organisations que vous avez parrainées.' });
+      }
+    }
+
+    const result = await approveDiscountQuote({
+      requestId,
+      reviewerId: req.user!.id,
+      discountPercent: parsedDiscount,
+      approvedAmount: parsedApproved,
+    });
+
+    await auditReq(req, {
+      action: 'SUBSCRIPTION_DISCOUNT_QUOTED',
+      targetType: 'SubscriptionRequest',
+      targetId: requestId,
+      tenantId: request.tenantId,
+      summary: `Rabais validé · ${Math.round(result.pricing.finalAmount)} FC`,
+      metadata: { approvedAmount: result.pricing.finalAmount, payHref: result.payHref },
+    });
+
+    return res.json({
+      message: `Rabais validé (${Math.round(result.pricing.finalAmount).toLocaleString('fr-FR')} FC). Un lien de paiement a été envoyé à l’organisation.`,
+      request: result.request,
+      payHref: result.payHref,
+      canPayOnline: result.canPayOnline,
+      quoteExpiresAt: result.quoteExpiresAt,
+    });
+  } catch (error: any) {
+    console.error('Erreur validation rabais:', error);
+    return res.status(400).json({ error: error?.message || 'Impossible de valider le rabais.' });
   }
 }
 
@@ -216,8 +392,14 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       return res.status(404).json({ error: 'Demande d\'abonnement non trouvée.' });
     }
 
-    if (request.status !== 'PENDING') {
+    if (request.status !== 'PENDING' && request.status !== 'QUOTED') {
       return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
+    }
+
+    if (request.requestKind === 'discount' && request.status === 'PENDING') {
+      return res.status(400).json({
+        error: 'Validez d’abord le rabais pour envoyer le lien de paiement. L’activation n’est possible qu’après paiement, ou manuellement une fois le devis envoyé.',
+      });
     }
 
     if (!isPlanAllowedForAccountKind(request.requestedPlan, request.tenant.accountKind)) {
@@ -401,7 +583,7 @@ export async function rejectSubscriptionRequest(req: AuthenticatedRequest, res: 
       return res.status(404).json({ error: 'Demande d\'abonnement non trouvée.' });
     }
 
-    if (request.status !== 'PENDING') {
+    if (request.status !== 'PENDING' && request.status !== 'QUOTED') {
       return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
     }
 
@@ -561,7 +743,17 @@ export async function retrySubscriptionFlexPay(req: AuthenticatedRequest, res: R
     const requestId = String(req.params.id || '');
     if (!tenantId) return res.status(403).json({ error: 'Tenant non identifié.' });
 
-    if (getSaasPaymentMode() !== 'flexpay') {
+    const request = await prisma.subscriptionRequest.findFirst({
+      where: { id: requestId, tenantId },
+      include: { tenant: { select: { name: true } } },
+    });
+    if (!request) return res.status(404).json({ error: 'Demande introuvable.' });
+    if (request.status === 'APPROVED') {
+      return res.status(400).json({ error: 'Cette demande est déjà payée et approuvée.' });
+    }
+
+    const isQuotedPay = request.status === 'QUOTED';
+    if (!isQuotedPay && getSaasPaymentMode() !== 'flexpay') {
       return res.status(400).json({
         error: 'Le paiement FlexPay des forfaits est désactivé.',
         saasPaymentMode: 'manual',
@@ -571,16 +763,11 @@ export async function retrySubscriptionFlexPay(req: AuthenticatedRequest, res: R
       return res.status(503).json({ error: 'Les paiements en ligne sont temporairement désactivés.' });
     }
 
-    const request = await prisma.subscriptionRequest.findFirst({
-      where: { id: requestId, tenantId },
-      include: { tenant: { select: { name: true } } },
-    });
-    if (!request) return res.status(404).json({ error: 'Demande introuvable.' });
-    if (request.status === 'APPROVED') {
-      return res.status(400).json({ error: 'Cette demande est déjà payée et approuvée.' });
-    }
-    if (request.status !== 'PENDING' && request.status !== 'REJECTED') {
+    if (request.status !== 'PENDING' && request.status !== 'REJECTED' && request.status !== 'QUOTED') {
       return res.status(400).json({ error: 'Cette demande ne peut pas être relancée.' });
+    }
+    if (isQuotedPay && request.quoteExpiresAt && request.quoteExpiresAt < new Date()) {
+      return res.status(410).json({ error: 'Ce devis a expiré. Déposez une nouvelle demande de rabais.' });
     }
 
     const rawMethod = String(req.body?.paymentMethod || '').toLowerCase();
@@ -611,7 +798,7 @@ export async function retrySubscriptionFlexPay(req: AuthenticatedRequest, res: R
     } catch (err: any) {
       await prisma.subscriptionRequest.update({
         where: { id: request.id },
-        data: { status: 'REJECTED' },
+        data: { status: statusAfterFailedQuotedPayment(request.status) },
       });
       return res.status(502).json({
         error: err?.message || 'Impossible de relancer le paiement FlexPay.',
@@ -682,7 +869,7 @@ export async function verifySubscriptionFlexPay(req: AuthenticatedRequest, res: 
     if (checked.status === 'failed') {
       await prisma.subscriptionRequest.update({
         where: { id: request.id },
-        data: { status: 'REJECTED', ...meta },
+        data: { status: statusAfterFailedQuotedPayment(request.status), ...meta },
       });
       return res.json({
         paid: false,

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  Check, Globe, Loader2, Mail, MapPin, MessageSquare, ShieldAlert, Wallet,
+  Check, Globe, Loader2, Mail, MapPin, MessageSquare, ShieldAlert, Volume2, Wallet,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -22,6 +22,16 @@ import {
   type WelcomeGrantMoment,
   type WelcomeGrantUnit,
 } from '@/lib/welcomeAiGrants';
+import {
+  AUDIO_NOTIFICATION_FAMILIES,
+  AUDIO_NOTIFICATION_PRESETS,
+  AUDIO_PRESET_LABELS,
+  DEFAULT_AUDIO_NOTIFICATIONS,
+  playAudioNotificationPreset,
+  sanitizeAudioNotifications,
+  type AudioNotificationFamily,
+  type AudioNotificationPreset,
+} from '@/lib/audioNotifications';
 
 export type AdminPlatformSettingsValues = Record<string, unknown> & {
   platformName?: string;
@@ -60,6 +70,7 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   twilioAccountSid?: string;
   twilioAuthToken?: string;
   twilioPhoneNumber?: string;
+  audioNotifications?: typeof DEFAULT_AUDIO_NOTIFICATIONS;
 };
 
 type SettingsSectionId =
@@ -69,7 +80,8 @@ type SettingsSectionId =
   | 'marketplace'
   | 'cities'
   | 'contact'
-  | 'messaging';
+  | 'messaging'
+  | 'audio';
 
 const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'identity', label: 'Identité', icon: Globe },
@@ -79,6 +91,7 @@ const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.Compon
   { id: 'cities', label: 'Villes', icon: MapPin },
   { id: 'contact', label: 'Contact', icon: Mail },
   { id: 'messaging', label: 'Messagerie', icon: MessageSquare },
+  { id: 'audio', label: 'Sons', icon: Volume2 },
 ];
 
 const fieldClass =
@@ -766,6 +779,102 @@ export default function AdminPlatformSettings({
             </div>
           </div>
         )}
+
+        {section === 'audio' && (() => {
+          const audio = sanitizeAudioNotifications(value.audioNotifications);
+          const familyLabels: Record<AudioNotificationFamily, string> = {
+            billing: 'Facturation & abonnements',
+            commissions: 'Commissions',
+            catalog: 'Catalogue / marketplace',
+            tasks: 'Tâches événement',
+          };
+          const patchAudio = (partial: Partial<typeof audio>) => {
+            patch({ audioNotifications: { ...audio, ...partial } });
+          };
+          return (
+            <div className={sectionCardClass}>
+              <SectionTitle icon={Volume2}>Notifications audio in-app</SectionTitle>
+              <p className="text-xs text-muted -mt-2 leading-relaxed">
+                Quand une nouvelle notification arrive dans la cloche du tableau de bord, EventMaster joue un son court.
+                Les utilisateurs peuvent encore couper le son localement. Aucun fichier audio n’est hébergé : les sons sont
+                synthétisés dans le navigateur.
+              </p>
+              <label className="flex items-center justify-between gap-3 min-h-11">
+                <span className="text-sm font-medium text-foreground">Activer les sons plateforme</span>
+                <input
+                  type="checkbox"
+                  checked={audio.enabled}
+                  onChange={(e) => patchAudio({ enabled: e.target.checked })}
+                  className="accent-primary w-4 h-4"
+                />
+              </label>
+              <div className="space-y-1.5">
+                <label className={labelClass}>Volume ({audio.volume} %)</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={audio.volume}
+                  onChange={(e) => patchAudio({ volume: Number(e.target.value) })}
+                  className="w-full accent-primary"
+                  disabled={!audio.enabled}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {AUDIO_NOTIFICATION_FAMILIES.map((family) => (
+                  <div key={family} className="space-y-1.5">
+                    <label className={labelClass}>{familyLabels[family]}</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={audio[family]}
+                        onChange={(e) => patchAudio({ [family]: e.target.value as AudioNotificationPreset })}
+                        className={fieldClass}
+                        disabled={!audio.enabled}
+                      >
+                        {AUDIO_NOTIFICATION_PRESETS.map((preset) => (
+                          <option key={preset} value={preset}>
+                            {AUDIO_PRESET_LABELS[preset]}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="px-3 min-h-11 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-surface-muted"
+                        onClick={() => playAudioNotificationPreset(audio[family], audio.volume)}
+                      >
+                        Écouter
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <label className={labelClass}>Son par défaut (autres notifications)</label>
+                <div className="flex gap-2">
+                  <select
+                    value={audio.default}
+                    onChange={(e) => patchAudio({ default: e.target.value as AudioNotificationPreset })}
+                    className={fieldClass}
+                    disabled={!audio.enabled}
+                  >
+                    {AUDIO_NOTIFICATION_PRESETS.map((preset) => (
+                      <option key={preset} value={preset}>
+                        {AUDIO_PRESET_LABELS[preset]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="px-3 min-h-11 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-surface-muted"
+                    onClick={() => playAudioNotificationPreset(audio.default, audio.volume)}
+                  >
+                    Écouter
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex justify-end gap-3 sticky bottom-2 z-10">
           <Button type="submit" disabled={saving} loading={saving} leftIcon={!saving ? <Check className="w-4 h-4" /> : undefined}>

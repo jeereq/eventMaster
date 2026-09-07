@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { fulfillTicketOrder } from '../services/ticketOrderService';
 import { activateSubscriptionRequest } from '../services/subscriptionActivationService';
+import { statusAfterFailedQuotedPayment } from '../services/subscriptionDiscountQuoteService';
 import {
   buildFlexPayMetadataUpdate,
   buildFlexPayReference,
@@ -172,7 +173,7 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       if (!success) {
         await prisma.subscriptionRequest.update({
           where: { id: sub.id },
-          data: { status: 'REJECTED', ...meta },
+          data: { status: statusAfterFailedQuotedPayment(sub.status), ...meta },
         });
         return res.json({ ok: true, paid: false, kind: 'subscription', requestId: sub.id });
       }

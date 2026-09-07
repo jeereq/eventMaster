@@ -10,6 +10,11 @@ export interface SubscriptionApprovalRequest {
   id: string;
   requestedPlan: string;
   durationDays: number;
+  requestKind?: string | null;
+  discountRequestNote?: string | null;
+  requestedDiscountPercent?: number | null;
+  requestedAmount?: number | null;
+  status?: string | null;
   tenant?: {
     name?: string;
     plan?: string;
@@ -32,6 +37,7 @@ interface SubscriptionApprovalModalProps {
   onConfirm: (
     requestId: string,
     params: { discountPercent: number; approvedAmount?: number },
+    action: 'activate' | 'quote',
   ) => Promise<SubscriptionApprovalResult>;
   catalogPrices?: Record<string, number>;
   promoByPlan?: Record<string, { price: number; label?: string }>;
@@ -86,7 +92,15 @@ export default function SubscriptionApprovalModal({
     setFeedback(null);
     setSubmitting(false);
     const period = getPlanPriceFc(request.requestedPlan, catalogPrices);
-    if (activePromo?.price != null) {
+    if (request.requestedAmount != null && request.requestedAmount > 0) {
+      setDiscountMode('amount');
+      setApprovedAmount(String(Math.round(request.requestedAmount)));
+      setDiscountPercent('0');
+    } else if (request.requestedDiscountPercent != null && request.requestedDiscountPercent > 0) {
+      setDiscountMode('percent');
+      setDiscountPercent(String(request.requestedDiscountPercent));
+      setApprovedAmount('');
+    } else if (activePromo?.price != null) {
       setDiscountMode('amount');
       const payable = isAnnualDurationDays(request.durationDays)
         ? annualPromoPayableFromPeriod(period, activePromo.price, request.requestedPlan)
@@ -137,17 +151,23 @@ export default function SubscriptionApprovalModal({
     return list;
   }, [request]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitAction = async (action: 'activate' | 'quote') => {
     if (!request?.id) return;
     setSubmitting(true);
     setFeedback(null);
     try {
-      const result = await onConfirm(request.id, {
-        discountPercent: pricing.discountPercent,
-        approvedAmount: discountMode === 'amount' ? pricing.finalAmount : undefined,
+      const result = await onConfirm(
+        request.id,
+        {
+          discountPercent: pricing.discountPercent,
+          approvedAmount: discountMode === 'amount' ? pricing.finalAmount : undefined,
+        },
+        action,
+      );
+      setFeedback({
+        type: 'success',
+        message: result.message || (action === 'quote' ? 'Rabais validé. Lien de paiement envoyé.' : 'Demande approuvée avec succès.'),
       });
-      setFeedback({ type: 'success', message: result.message || 'Demande approuvée avec succès.' });
       window.setTimeout(() => {
         onClose();
         setFeedback(null);
@@ -171,7 +191,13 @@ export default function SubscriptionApprovalModal({
       containerClassName="z-[10000]"
     >
       {request && (
-        <form onSubmit={handleSubmit} className="space-y-5 -mt-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitAction(request.requestKind === 'discount' ? 'quote' : 'activate');
+          }}
+          className="space-y-5 -mt-2"
+        >
           {feedback && (
             <div
               className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm ${
@@ -191,6 +217,22 @@ export default function SubscriptionApprovalModal({
 
           <div className="text-sm space-y-2">
             <p className="font-bold text-foreground dark:text-white">{request.tenant?.name || 'Organisation'}</p>
+            {request.requestKind === 'discount' && (
+              <div className="rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 space-y-1">
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-200">Demande de rabais</p>
+                {request.requestedDiscountPercent != null && (
+                  <p className="text-xs text-amber-800/90">Rabais demandé : {request.requestedDiscountPercent} %</p>
+                )}
+                {request.requestedAmount != null && (
+                  <p className="text-xs text-amber-800/90">
+                    Montant souhaité : {Math.round(request.requestedAmount).toLocaleString('fr-FR')} FC
+                  </p>
+                )}
+                {request.discountRequestNote && (
+                  <p className="text-xs text-amber-900/80 whitespace-pre-wrap">{request.discountRequestNote}</p>
+                )}
+              </div>
+            )}
 
             {currentPlan && (
               <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -329,23 +371,46 @@ export default function SubscriptionApprovalModal({
             <p className="text-xs text-muted italic">Aucun commercial rattaché à cette organisation.</p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
+            {request.requestKind === 'discount' ? (
+              <Button
+                type="button"
+                disabled={submitting || feedback?.type === 'success'}
+                loading={submitting}
+                className="w-full bg-primary hover:bg-primary-hover"
+                onClick={() => void submitAction('quote')}
+              >
+                Valider le rabais et envoyer le lien de paiement
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="submit"
+                  disabled={submitting || feedback?.type === 'success'}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {isPlanChange ? 'Changer le forfait maintenant' : 'Approuver & activer maintenant'}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={submitting || feedback?.type === 'success'}
+                  loading={submitting}
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => void submitAction('quote')}
+                >
+                  Envoyer un lien de paiement (sans activer)
+                </Button>
+              </>
+            )}
             <Button
               type="button"
               variant="secondary"
               onClick={onClose}
               disabled={submitting}
-              className="flex-1"
+              className="w-full"
             >
               {feedback?.type === 'success' ? 'Fermer' : 'Annuler'}
-            </Button>
-            <Button
-              type="submit"
-              disabled={submitting || feedback?.type === 'success'}
-              loading={submitting}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-            >
-              {isPlanChange ? 'Changer le forfait' : 'Approuver & facturer'}
             </Button>
           </div>
         </form>

@@ -38,7 +38,8 @@ import {
 import { 
   getAdminSubscriptionRequests, 
   approveSubscriptionRequest, 
-  rejectSubscriptionRequest 
+  rejectSubscriptionRequest,
+  quoteSubscriptionDiscount,
 } from '../controllers/subscriptionController';
 import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
 import {
@@ -91,6 +92,7 @@ router.post('/invoices/:id/send', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), se
 router.patch('/invoices/:id/paid', requireRole(['SUPER_ADMIN']), markAdminInvoicePaid);
 router.get('/subscriptions/requests', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminSubscriptionRequests);
 router.post('/subscriptions/requests/:id/approve', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), approveSubscriptionRequest);
+router.post('/subscriptions/requests/:id/quote', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), quoteSubscriptionDiscount);
 router.post('/subscriptions/requests/:id/reject', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), rejectSubscriptionRequest);
 router.post('/tenants', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), createTenant);
 router.get('/tenants/:id/subscription-history', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getTenantSubscriptionHistory);

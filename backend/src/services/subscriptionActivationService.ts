@@ -45,7 +45,7 @@ export async function activateSubscriptionRequest(
   });
 
   if (!request) throw new Error('Demande d’abonnement introuvable.');
-  if (request.status !== 'PENDING') {
+  if (request.status !== 'PENDING' && request.status !== 'QUOTED') {
     return { alreadyProcessed: true as const, request };
   }
 

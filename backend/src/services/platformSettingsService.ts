@@ -24,6 +24,47 @@ let memoryCache: PlatformSettings | null = null;
 export type AuthOtpChannels = 'EMAIL' | 'WHATSAPP' | 'BOTH';
 export type AuthOtpMethod = 'EMAIL' | 'WHATSAPP';
 
+export const AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent'] as const;
+export type AudioNotificationPreset = (typeof AUDIO_NOTIFICATION_PRESETS)[number];
+
+export interface AudioNotificationsSettings {
+  enabled: boolean;
+  volume: number;
+  billing: AudioNotificationPreset;
+  commissions: AudioNotificationPreset;
+  catalog: AudioNotificationPreset;
+  tasks: AudioNotificationPreset;
+  default: AudioNotificationPreset;
+}
+
+export const DEFAULT_AUDIO_NOTIFICATIONS: AudioNotificationsSettings = {
+  enabled: true,
+  volume: 70,
+  billing: 'urgent',
+  commissions: 'chime',
+  catalog: 'bell',
+  tasks: 'soft',
+  default: 'chime',
+};
+
+function isAudioPreset(value: unknown): value is AudioNotificationPreset {
+  return typeof value === 'string' && (AUDIO_NOTIFICATION_PRESETS as readonly string[]).includes(value);
+}
+
+export function sanitizeAudioNotifications(raw: unknown): AudioNotificationsSettings {
+  const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const volume = Number(src.volume);
+  return {
+    enabled: src.enabled !== false,
+    volume: Number.isFinite(volume) ? Math.max(0, Math.min(100, Math.round(volume))) : DEFAULT_AUDIO_NOTIFICATIONS.volume,
+    billing: isAudioPreset(src.billing) ? src.billing : DEFAULT_AUDIO_NOTIFICATIONS.billing,
+    commissions: isAudioPreset(src.commissions) ? src.commissions : DEFAULT_AUDIO_NOTIFICATIONS.commissions,
+    catalog: isAudioPreset(src.catalog) ? src.catalog : DEFAULT_AUDIO_NOTIFICATIONS.catalog,
+    tasks: isAudioPreset(src.tasks) ? src.tasks : DEFAULT_AUDIO_NOTIFICATIONS.tasks,
+    default: isAudioPreset(src.default) ? src.default : DEFAULT_AUDIO_NOTIFICATIONS.default,
+  };
+}
+
 export interface PlatformSettings {
   platformName: string;
   platformTagline: string;
@@ -87,6 +128,8 @@ export interface PlatformSettings {
   aiTokenMinPurchaseCdf: number;
   /** Offres de jetons IA par type de compte et moment de crédit. */
   welcomeAiGrants: WelcomeGrantRules;
+  /** Sons in-app des notifications plateforme (cloche web). */
+  audioNotifications: AudioNotificationsSettings;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -126,6 +169,7 @@ export interface PublicSiteConfig {
   aiTokenPriceCdf: number;
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
+  audioNotifications: AudioNotificationsSettings;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -171,6 +215,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   aiTokenPriceCdf: DEFAULT_AI_TOKEN_PRICE_CDF,
   aiTokenMinPurchaseCdf: DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
   welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
+  audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -326,6 +371,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
       sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     ),
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
+    audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
   };
 }
 
@@ -354,6 +400,7 @@ function buildNextSettings(
   next.aiTokenPriceCdf = sanitizeAiTokenPriceCdf(next.aiTokenPriceCdf);
   next.aiTokenMinPurchaseCdf = sanitizeAiTokenMinPurchaseCdf(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
   next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
+  next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -463,6 +510,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
       sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     ),
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
+    audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
   };
 }
 

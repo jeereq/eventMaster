@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
 import {
   submitSubscriptionRequest,
+  submitDiscountRequest,
   getMySubscriptionRequests,
   getSubscriptionPlans,
   checkoutSubscriptionFlexPay,
@@ -15,6 +16,7 @@ router.use(requireAuth);
 
 router.get('/plans', getSubscriptionPlans);
 router.post('/request', submitSubscriptionRequest);
+router.post('/request-discount', submitDiscountRequest);
 router.post('/checkout', checkoutSubscriptionFlexPay);
 router.get('/requests/:id/verify', verifySubscriptionFlexPay);
 router.post('/requests/:id/retry-payment', retrySubscriptionFlexPay);

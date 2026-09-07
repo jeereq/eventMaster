@@ -100,7 +100,14 @@ export default function SubscriptionRequestListPanel({
       ? [{
           id: 'status',
           label: 'Statut',
-          value: status === 'APPROVED' ? 'Approuvée' : status === 'REJECTED' ? 'Rejetée' : 'En attente',
+          value:
+            status === 'APPROVED'
+              ? 'Approuvée'
+              : status === 'REJECTED'
+                ? 'Rejetée'
+                : status === 'QUOTED'
+                  ? 'Devis envoyé'
+                  : 'En attente',
         }]
       : []),
     ...(cycle && cycle !== 'all'
@@ -166,6 +173,7 @@ export default function SubscriptionRequestListPanel({
                   options={[
                     { id: 'all', label: 'Tous' },
                     { id: 'PENDING', label: 'En attente' },
+                    { id: 'QUOTED', label: 'Devis envoyés' },
                     { id: 'APPROVED', label: 'Approuvées' },
                     { id: 'REJECTED', label: 'Rejetées' },
                   ]}
@@ -224,10 +232,24 @@ export default function SubscriptionRequestListPanel({
           <div className={layout === 'grid' ? gridClassName : listStackClass}>
             {paginated.map((req) => {
               const statusTone =
-                req.status === 'APPROVED' ? 'emerald' : req.status === 'REJECTED' ? 'rose' : 'amber';
+                req.status === 'APPROVED'
+                  ? 'emerald'
+                  : req.status === 'REJECTED'
+                    ? 'rose'
+                    : req.status === 'QUOTED'
+                      ? 'primary'
+                      : 'amber';
               const statusChip = (
                 <StatusPill tone={statusTone}>
-                  {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
+                  {req.status === 'APPROVED'
+                    ? 'Approuvée'
+                    : req.status === 'REJECTED'
+                      ? 'Rejetée'
+                      : req.status === 'QUOTED'
+                        ? 'Devis envoyé'
+                        : req.requestKind === 'discount'
+                          ? 'Rabais en examen'
+                          : 'En attente'}
                 </StatusPill>
               );
               const planChip = (
@@ -241,7 +263,7 @@ export default function SubscriptionRequestListPanel({
                   ? req.tenant.referredByOrgUser.name
                   : null);
               const actions =
-                req.status === 'PENDING' ? (
+                req.status === 'PENDING' || req.status === 'QUOTED' ? (
                   <>
                     <button
                       type="button"
@@ -252,7 +274,7 @@ export default function SubscriptionRequestListPanel({
                       }}
                       className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition"
                     >
-                      Approuver
+                      {req.requestKind === 'discount' ? 'Valider le rabais' : 'Approuver'}
                     </button>
                     <button
                       type="button"

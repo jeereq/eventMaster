@@ -2,9 +2,17 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, Loader2 } from 'lucide-react';
+import { Bell, Check, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { notificationFamily } from '@/config/platformNotifications';
+import {
+  isLocalAudioMuted,
+  playFamilyNotificationSound,
+  setLocalAudioMuted,
+  unlockAudioNotifications,
+} from '@/lib/audioNotifications';
 
 export interface PlatformNotificationItem {
  id: string;
@@ -34,22 +42,46 @@ function formatRelativeTime(iso: string): string {
 
 export function NotificationBell({ className }: { className?: string }) {
  const router = useRouter();
+ const { site } = usePlatformSite();
  const [open, setOpen] = useState(false);
  const [loading, setLoading] = useState(false);
  const [data, setData] = useState<NotificationsResponse | null>(null);
+ const [muted, setMuted] = useState(false);
  const panelRef = useRef<HTMLDivElement>(null);
+ const knownIdsRef = useRef<Set<string> | null>(null);
+
+ useEffect(() => {
+   setMuted(isLocalAudioMuted());
+   const unlock = () => unlockAudioNotifications();
+   window.addEventListener('pointerdown', unlock, { once: true });
+   return () => window.removeEventListener('pointerdown', unlock);
+ }, []);
 
  const load = useCallback(async () => {
  setLoading(true);
  try {
  const result = await api.get('/notifications?limit=20');
+ const items: PlatformNotificationItem[] = Array.isArray(result.items) ? result.items : [];
+ if (knownIdsRef.current === null) {
+   knownIdsRef.current = new Set(items.map((n) => n.id));
+ } else {
+   const newcomers = items.filter((n) => !n.readAt && !knownIdsRef.current!.has(n.id));
+   if (newcomers.length > 0 && !isLocalAudioMuted()) {
+     const family = notificationFamily(newcomers[0].type);
+     playFamilyNotificationSound(
+       site.audioNotifications,
+       family === 'account' ? 'account' : family,
+     );
+   }
+   for (const n of items) knownIdsRef.current.add(n.id);
+ }
  setData(result);
  } catch {
  // silencieux
  } finally {
  setLoading(false);
  }
- }, []);
+ }, [site.audioNotifications]);
 
  useEffect(() => {
  load();
@@ -124,6 +156,7 @@ export function NotificationBell({ className }: { className?: string }) {
  <button
  type="button"
  onClick={() => {
+ unlockAudioNotifications();
  setOpen((v) => !v);
  if (!open) load();
  }}
@@ -144,6 +177,20 @@ export function NotificationBell({ className }: { className?: string }) {
  <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle dark:border-border">
  <p className="font-semibold text-sm">Notifications</p>
  <div className="flex items-center gap-2">
+ <button
+   type="button"
+   onClick={() => {
+     const next = !muted;
+     setMuted(next);
+     setLocalAudioMuted(next);
+     if (!next) unlockAudioNotifications();
+   }}
+   className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted"
+   aria-label={muted ? 'Activer les sons de notification' : 'Couper les sons de notification'}
+   title={muted ? 'Sons coupés' : 'Sons activés'}
+ >
+   {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+ </button>
  {unreadCount > 0 && (
  <button
  type="button"

@@ -1138,9 +1138,14 @@ function DashboardPageContent() {
   const handleApproveSubscription = async (
     id: string,
     options?: { discountPercent?: number; approvedAmount?: number },
+    action: 'activate' | 'quote' = 'activate',
   ) => {
     try {
-      const response = await api.post(`/admin/subscriptions/requests/${id}/approve`, {
+      const endpoint =
+        action === 'quote'
+          ? `/admin/subscriptions/requests/${id}/quote`
+          : `/admin/subscriptions/requests/${id}/approve`;
+      const response = await api.post(endpoint, {
         discountPercent: options?.discountPercent ?? 0,
         approvedAmount: options?.approvedAmount,
       });
@@ -2966,6 +2971,11 @@ function DashboardPageContent() {
                             id: req.id,
                             requestedPlan: req.requestedPlan,
                             durationDays: req.durationDays,
+                            requestKind: req.requestKind,
+                            discountRequestNote: req.discountRequestNote,
+                            requestedDiscountPercent: req.requestedDiscountPercent,
+                            requestedAmount: req.requestedAmount,
+                            status: req.status,
                             tenant: req.tenant,
                           })
                         }
@@ -4961,8 +4971,8 @@ function DashboardPageContent() {
           onClose={() => setApprovalModalRequest(null)}
           catalogPrices={planCatalogPrices}
           promoByPlan={planPromoByPlan}
-          onConfirm={async (requestId, { discountPercent, approvedAmount }) =>
-            handleApproveSubscription(requestId, { discountPercent, approvedAmount })
+          onConfirm={async (requestId, { discountPercent, approvedAmount }, action) =>
+            handleApproveSubscription(requestId, { discountPercent, approvedAmount }, action)
           }
         />
       </>

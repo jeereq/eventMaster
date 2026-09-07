@@ -14,6 +14,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
+import SubscriptionDiscountRequestModal from '@/components/SubscriptionDiscountRequestModal';
 import { formatQuotaRemaining } from '@/lib/quotaDisplay';
 import {
   LANDING_PLANS,
@@ -24,6 +25,7 @@ import {
   paidPlanIdsForAccountKind,
   ANNUAL_DISCOUNT_PERCENT,
   formatFc,
+  getPlanBaseAmountFc,
   getPlanDisplayPrice,
   durationDaysForPlan,
   planPricePeriodSuffix,
@@ -79,10 +81,12 @@ interface SubscriptionRequest {
   id: string;
   requestedPlan: PlanId;
   durationDays: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'QUOTED' | 'APPROVED' | 'REJECTED';
+  requestKind?: string | null;
   createdAt: string;
   paymentProvider?: string | null;
   approvedAmount?: number | null;
+  quoteExpiresAt?: string | null;
   flexPayChannel?: string | null;
 }
 
@@ -127,6 +131,12 @@ function BillingPageInner() {
     startPending?: boolean;
     initialMethod?: 'mobile' | 'card';
   } | null>(null);
+  const [discountTarget, setDiscountTarget] = useState<{
+    planId: PlanId;
+    planName: string;
+    catalogAmount: number;
+  } | null>(null);
+  const [discountSubmitting, setDiscountSubmitting] = useState(false);
 
   const loadBillingStatus = async () => {
     try {
@@ -183,6 +193,28 @@ function BillingPageInner() {
       setSuccessMsg('');
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const payRequest = searchParams.get('payRequest');
+    if (!payRequest || loading) return;
+    const match = requests.find((r) => r.id === payRequest);
+    if (!match) return;
+    if (match.status === 'QUOTED' || match.status === 'PENDING' || match.status === 'REJECTED') {
+      setFlexPayCheckout({
+        planId: match.requestedPlan,
+        planName: match.requestedPlan,
+        priceLabel: match.approvedAmount ? formatFc(match.approvedAmount) : '',
+        retryRequestId: match.id,
+        startPending: false,
+        initialMethod: match.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card',
+      });
+      setSuccessMsg(
+        match.status === 'QUOTED'
+          ? 'Votre rabais a été validé. Finalisez le paiement pour activer le forfait.'
+          : '',
+      );
+    }
+  }, [searchParams, requests, loading]);
 
   const allowedPaidIds = useMemo(
     () => paidPlanIdsForAccountKind(tenant?.accountKind),
@@ -577,6 +609,29 @@ function BillingPageInner() {
                         `Demander ${plan.displayName}`
                       )}
                     </button>
+                    {plan.id !== 'FREE' && allowedPaidIds.includes(plan.id) && (
+                      <button
+                        type="button"
+                        disabled={actionLoading !== null}
+                        onClick={() => {
+                          const durationDays = durationDaysForPlan(plan.id, billingCycle);
+                          const periodFc = Number(db?.monthlyPriceFc);
+                          const catalogAmount = getPlanBaseAmountFc(
+                            Number.isFinite(periodFc) && periodFc > 0 ? periodFc : plan.monthlyPriceFc,
+                            plan.id,
+                            durationDays,
+                          );
+                          setDiscountTarget({
+                            planId: plan.id,
+                            planName: plan.displayName,
+                            catalogAmount,
+                          });
+                        }}
+                        className="w-full py-2 mt-2 text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                      >
+                        Demander un rabais
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -657,9 +712,10 @@ function BillingPageInner() {
             <div className="md:hidden space-y-3 mt-4">
               {requests.map((req) => {
                 const canRetryFlex =
-                  saasPaymentMode === 'flexpay' &&
-                  (req.status === 'PENDING' || req.status === 'REJECTED') &&
-                  (req.paymentProvider === 'flexpay_card' || req.paymentProvider === 'flexpay_mobile');
+                  (req.status === 'QUOTED' ||
+                    (saasPaymentMode === 'flexpay' &&
+                      (req.status === 'PENDING' || req.status === 'REJECTED') &&
+                      (req.paymentProvider === 'flexpay_card' || req.paymentProvider === 'flexpay_mobile')));
                 return (
                   <div key={req.id} className="rounded-xl border border-border p-4 space-y-2">
                     <div className="flex items-center justify-between gap-2">
@@ -670,10 +726,20 @@ function BillingPageInner() {
                             ? 'bg-emerald-50 text-emerald-700'
                             : req.status === 'REJECTED'
                               ? 'bg-rose-50 text-rose-700'
-                              : 'bg-amber-50 text-amber-700'
+                              : req.status === 'QUOTED'
+                                ? 'bg-sky-50 text-sky-700'
+                                : 'bg-amber-50 text-amber-700'
                         }`}
                       >
-                        {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
+                        {req.status === 'APPROVED'
+                          ? 'Approuvée'
+                          : req.status === 'REJECTED'
+                            ? 'Refusée'
+                            : req.status === 'QUOTED'
+                              ? 'Rabais validé — à payer'
+                              : req.requestKind === 'discount'
+                                ? 'Rabais en examen'
+                                : 'En attente'}
                       </span>
                     </div>
                     <p className="text-xs text-muted">
@@ -695,7 +761,7 @@ function BillingPageInner() {
                           setSuccessMsg('');
                         }}
                       >
-                        Reprendre / relancer le paiement
+                        {req.status === 'QUOTED' ? 'Payer le tarif négocié' : 'Reprendre / relancer le paiement'}
                       </button>
                     )}
                   </div>
@@ -716,9 +782,10 @@ function BillingPageInner() {
                 <tbody>
                   {requests.map((req) => {
                     const canRetryFlex =
-                      saasPaymentMode === 'flexpay' &&
-                      (req.status === 'PENDING' || req.status === 'REJECTED') &&
-                      (req.paymentProvider === 'flexpay_card' || req.paymentProvider === 'flexpay_mobile');
+                      req.status === 'QUOTED' ||
+                      (saasPaymentMode === 'flexpay' &&
+                        (req.status === 'PENDING' || req.status === 'REJECTED') &&
+                        (req.paymentProvider === 'flexpay_card' || req.paymentProvider === 'flexpay_mobile'));
                     return (
                       <tr key={req.id} className="border-t border-border">
                         <td className="py-2 font-bold">{req.requestedPlan}</td>
@@ -731,10 +798,20 @@ function BillingPageInner() {
                                 ? 'bg-emerald-50 text-emerald-700'
                                 : req.status === 'REJECTED'
                                   ? 'bg-rose-50 text-rose-700'
-                                  : 'bg-amber-50 text-amber-700'
+                                  : req.status === 'QUOTED'
+                                    ? 'bg-sky-50 text-sky-700'
+                                    : 'bg-amber-50 text-amber-700'
                             }`}
                           >
-                            {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
+                            {req.status === 'APPROVED'
+                              ? 'Approuvée'
+                              : req.status === 'REJECTED'
+                                ? 'Refusée'
+                                : req.status === 'QUOTED'
+                                  ? 'Rabais validé — à payer'
+                                  : req.requestKind === 'discount'
+                                    ? 'Rabais en examen'
+                                    : 'En attente'}
                           </span>
                         </td>
                         <td className="py-2">
@@ -753,7 +830,7 @@ function BillingPageInner() {
                                 setSuccessMsg('');
                               }}
                             >
-                              Relancer
+                              {req.status === 'QUOTED' ? 'Payer le tarif négocié' : 'Relancer'}
                             </button>
                           ) : (
                             <span className="text-muted">—</span>
@@ -769,7 +846,7 @@ function BillingPageInner() {
         )}
       </div>
 
-      {flexPayCheckout && saasPaymentMode === 'flexpay' ? (
+      {flexPayCheckout && (saasPaymentMode === 'flexpay' || Boolean(flexPayCheckout.retryRequestId)) ? (
         <SubscriptionFlexPayModal
           open
           onClose={() => setFlexPayCheckout(null)}
@@ -787,6 +864,30 @@ function BillingPageInner() {
           }}
         />
       ) : null}
+
+      <SubscriptionDiscountRequestModal
+        open={Boolean(discountTarget)}
+        onClose={() => setDiscountTarget(null)}
+        planName={discountTarget?.planName || ''}
+        catalogAmount={discountTarget?.catalogAmount || 0}
+        submitting={discountSubmitting}
+        onSubmit={async (payload) => {
+          if (!discountTarget) return;
+          setDiscountSubmitting(true);
+          try {
+            await api.post('/subscriptions/request-discount', {
+              requestedPlan: discountTarget.planId,
+              durationDays: durationDaysForPlan(discountTarget.planId, billingCycle),
+              ...payload,
+            });
+            setDiscountTarget(null);
+            setSuccessMsg('Demande de rabais envoyée. Vous recevrez une notification avec un lien de paiement dès validation.');
+            await loadBillingStatus();
+          } finally {
+            setDiscountSubmitting(false);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -10,6 +10,11 @@ import {
   sanitizeWelcomeAiGrants,
   type WelcomeGrantRules,
 } from '@/lib/welcomeAiGrants';
+import {
+  DEFAULT_AUDIO_NOTIFICATIONS,
+  sanitizeAudioNotifications,
+  type AudioNotificationsSettings,
+} from '@/lib/audioNotifications';
 
 export interface PublicSiteConfig {
   platformName: string;
@@ -44,6 +49,7 @@ export interface PublicSiteConfig {
   aiTokenPriceCdf: number;
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
+  audioNotifications: AudioNotificationsSettings;
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -80,6 +86,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   aiTokenPriceCdf: 416,
   aiTokenMinPurchaseCdf: 2500,
   welcomeAiGrants: DEFAULT_WELCOME_AI_GRANTS,
+  audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
 };
 
 interface PlatformSiteContextValue {
@@ -116,6 +123,7 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
           ? Math.round(Number(data.aiTokenMinPurchaseCdf))
           : DEFAULT_PUBLIC_SITE.aiTokenMinPurchaseCdf,
         welcomeAiGrants: sanitizeWelcomeAiGrants(data.welcomeAiGrants),
+        audioNotifications: sanitizeAudioNotifications(data.audioNotifications),
       };
       setSite(next);
 

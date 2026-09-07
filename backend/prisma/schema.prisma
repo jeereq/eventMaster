@@ -574,6 +574,7 @@ model EventComment {
 
 enum SubscriptionRequestStatus {
   PENDING
+  QUOTED
   APPROVED
   REJECTED
 }
@@ -586,6 +587,14 @@ model SubscriptionRequest {
   durationDays           Int                       @default(30)
   proofOfPayment         String?
   status                 SubscriptionRequestStatus @default(PENDING)
+  /** standard = paiement / demande classique · discount = demande de rabais */
+  requestKind            String                    @default("standard")
+  discountRequestNote    String?
+  requestedDiscountPercent Float?
+  requestedAmount        Float?
+  quoteExpiresAt         DateTime?
+  quoteReviewedAt        DateTime?
+  quoteReviewedById      String?
   specialDiscountPercent Float?
   baseAmount             Float?
   approvedAmount         Float?
