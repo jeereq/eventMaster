@@ -104,45 +104,49 @@ function DashboardGuidePageContent() {
           <div className="inline-flex w-full gap-1 p-1 bg-surface-muted border border-border rounded-[var(--radius-button)]">
             <button
               type="button"
+              aria-pressed={activeTab === 'doc'}
               onClick={() => setTab('doc')}
               className={cn(
                 'flex-1 inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 activeTab === 'doc'
                   ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <BookOpen className="w-3.5 h-3.5" />
+              <BookOpen className="w-3.5 h-3.5" aria-hidden />
               Doc
             </button>
             <button
               type="button"
+              aria-pressed={activeTab === 'tour'}
               onClick={() => setTab('tour')}
               className={cn(
                 'flex-1 inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 activeTab === 'tour'
                   ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <Map className="w-3.5 h-3.5" />
+              <Map className="w-3.5 h-3.5" aria-hidden />
               Visite
             </button>
           </div>
 
           <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Votre profil</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Votre profil</p>
             <p className="text-sm font-semibold text-foreground leading-snug">{resolved.label}</p>
             {isSuperAdmin && (
               <div className="pt-2 border-t border-border space-y-1.5">
-                <label htmlFor="guide-select" className="text-[10px] font-medium text-muted block">
+                <label htmlFor="guide-select" className="text-xs font-medium text-muted block">
                   Consulter un autre profil
                 </label>
                 <select
                   id="guide-select"
                   value={activeGuideId}
                   onChange={(e) => setSelectedGuideId(e.target.value as UserGuideId)}
-                  className="w-full px-2.5 py-2 bg-background border border-border rounded-[var(--radius-button)] text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                  className="w-full min-h-11 px-2.5 py-2 bg-background border border-border rounded-[var(--radius-button)] text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
                 >
                   {DASHBOARD_GUIDE_IDS.map((id) => (
                     <option key={id} value={id}>
@@ -156,7 +160,7 @@ function DashboardGuidePageContent() {
 
           <Link
             href="/faq"
-            className="hidden lg:flex items-center gap-2 text-xs font-medium text-muted hover:text-primary transition px-1"
+            className="hidden lg:inline-flex items-center gap-2 min-h-11 text-xs font-medium text-muted hover:text-primary transition px-1 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <HelpCircle className="w-3.5 h-3.5" />
             FAQ publique

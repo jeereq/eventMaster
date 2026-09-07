@@ -206,6 +206,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Suivre séparément les demandes de devis et les réservations',
       'Publier vos offres vendeur (Mes offres) : prestations / matériel & équipements ; salles via Salles',
       'Accéder à la facturation, au forfait et aux factures',
+      'Changer le type de compte de l’organisation (Mon compte)',
       'Personnaliser modèles d’invitation et messages invités',
     ],
     cannotDo: [
@@ -234,7 +235,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'whats-new',
         title: 'Nouveautés à connaître',
         content:
-          '1. Marketplace séparé : Explorer = catalogue acheteur (comme le client) ; Mes offres = publication vendeur.\n2. Devis et Réservations sont deux entrées de menu distinctes (même page, onglets synchronisés avec l’URL).\n3. Événements : sous-onglets Liste | Tâches ; en mode Protocole, Accueil | Tâches sur un événement.\n4. Salles : modèles d’étages (Duplex…), escaliers / balcons dès Premium — détail dans « Éditeur de salles selon le forfait » et la FAQ.',
+          '1. Marketplace séparé : Explorer = catalogue acheteur (comme le client) ; Mes offres = publication vendeur.\n2. Devis et Réservations sont deux entrées de menu distinctes (même page, onglets synchronisés avec l’URL).\n3. Événements : sous-onglets Liste | Tâches ; en mode Protocole, Accueil | Tâches sur un événement.\n4. Salles : modèles d’étages (Duplex…), escaliers / balcons dès Premium — détail dans « Éditeur de salles selon le forfait » et la FAQ.\n5. Type de compte : vous seul pouvez le changer (Mon compte). Managers et protocole voient le type en lecture seule.',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
           { label: 'FAQ éditeur', href: '/faq' },
@@ -274,7 +275,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'manage-team',
         title: 'Inviter un membre d\'équipe',
         content:
-          '1. Ouvrez Équipe.\n2. Rôle : Manager, Protocole ou Commercial org.\n3. E-mail + mot de passe temporaire.\n4. Le protocole voit Tableau de bord, Protocole (événements + tâches), Explorer, devis et réservations.',
+          '1. Ouvrez Équipe.\n2. Rôle : Manager, Protocole ou Commercial org.\n3. E-mail + mot de passe temporaire.\n4. Le manager pilote le quotidien (événements, réalisations, simulateur) mais ne change ni le forfait ni le type de compte.\n5. Le protocole voit Tableau de bord, Protocole, Réalisations, Explorer, devis et réservations.',
         links: [{ label: 'Équipe', href: '/dashboard/team' }],
       },
       {
@@ -283,6 +284,16 @@ export const USER_GUIDES: UserGuide[] = [
         content:
           '1. Facturation & plan.\n2. Comparez quotas et niveau d’éditeur de salles (Essentiel → Complet).\n3. Période de base ou annuel (−10 %).\n4. Demande + preuve si requis ; suivi dans Factures.',
         links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
+      },
+      {
+        id: 'account-kind',
+        title: 'Changer le type de compte',
+        content:
+          '1. Mon compte → Type de compte.\n2. Organisateur, prestataire / salles, mixte, ou client.\n3. Un type incompatible avec le forfait actuel repasse l’espace à l’essai Essentials : choisissez ensuite un forfait dans Facturation.\n4. Managers et protocole ne peuvent pas modifier ce champ.',
+        links: [
+          { label: 'Mon compte', href: '/dashboard/profile' },
+          { label: 'Facturation', href: '/dashboard/billing' },
+        ],
       },
       {
         id: 'org-payouts',
@@ -338,7 +349,7 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Manager organisation',
     badge: 'Organisation',
     summary:
-      'Vous pilotez le quotidien : équipe, événements, salles 2D/3D, modèles, réalisations, simulateur IA, Explorer, devis / réservations et Mes offres. La facturation et le changement de forfait restent au propriétaire.',
+      'Vous pilotez le quotidien : équipe, événements, salles 2D/3D, modèles, réalisations, simulateur IA, Explorer, devis / réservations et Mes offres. Le type de compte, la facturation et le forfait restent au propriétaire.',
     canDo: [
       'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
       'Créer salles (étages, plan 3D selon forfait) et événements (privés / publics)',
@@ -351,6 +362,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Consulter les factures et les quotas (sans changer de forfait)',
     ],
     cannotDo: [
+      'Changer le type de compte de l’organisation',
       'Accéder à Facturation & plan ni changer de forfait',
       'Supprimer l\'organisation ou transférer la propriété',
       'Voir les autres organisations',
@@ -378,7 +390,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'whats-new',
         title: 'Nouveautés à connaître',
         content:
-          '1. Réalisations : grille élargie — publiez photos et actualités liées aux salles / prestations.\n2. Simulateur IA : bouton Acheter des jetons toujours visible (1 jeton = 1 simulation).\n3. Explorer = catalogue acheteur ; Mes offres = publication vendeur.\n4. Devis et Réservations sont deux menus distincts.\n5. Le forfait se change uniquement chez le propriétaire (Facturation).',
+          '1. Réalisations : grille élargie — publiez photos et actualités liées aux salles / prestations.\n2. Simulateur IA : bouton Acheter des jetons toujours visible (1 jeton = 1 simulation).\n3. Explorer = catalogue acheteur ; Mes offres = publication vendeur.\n4. Devis et Réservations sont deux menus distincts.\n5. Type de compte et forfait : uniquement le propriétaire (Mon compte / Facturation).',
         links: [
           { label: 'Réalisations', href: '/dashboard/publications' },
           { label: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai' },
@@ -464,6 +476,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     tips: [
       'Explorer pour acheter / retenir ; Mes offres pour vendre ; Réalisations pour montrer le travail.',
+      'Le type de compte est en lecture seule : seul le propriétaire le change dans Mon compte.',
       'Achetez des jetons depuis le simulateur — le bouton n’attend plus que le solde soit bas.',
       'Déléguez le protocole et des tâches avant le jour J.',
       'Escaliers / balcons = Premium+ (forfait de l’organisation, changé par le propriétaire).',
@@ -610,6 +623,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     cannotDo: [
       'Créer de nouveaux événements ou salles (sauf manager org.)',
+      'Changer le type de compte de l’organisation',
       'Gérer l\'équipe ou la facturation',
       'Voir les événements hors affectation',
     ],

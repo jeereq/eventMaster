@@ -8,7 +8,11 @@ import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
 import { isPlanAllowedForAccountKind, resolvePendingSignupPlan } from '../config/plansConfig';
 import { PlanType } from '@prisma/client';
 import { recordUserLegalAcceptance } from '../services/legalService';
-import { PROTOCOL_ACCOUNT_KIND_DENIED, resolveOrgAccess } from '../services/permissionsService';
+import {
+  ACCOUNT_KIND_OWNER_ONLY,
+  PROTOCOL_ACCOUNT_KIND_DENIED,
+  resolveOrgAccess,
+} from '../services/permissionsService';
 import { resolveCommercialByReferralCode } from '../services/commercialService';
 import {
   generateOtpCode,
@@ -554,13 +558,10 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
     const profileAccess = req.user.tenantId
       ? await resolveOrgAccess(req.user.id, req.user.tenantId)
       : null;
-    if (profileAccess?.isProtocolOnly && wantsAccountKind) {
-      return res.status(403).json({ error: PROTOCOL_ACCOUNT_KIND_DENIED });
-    }
-    if (wantsAccountKind && req.user.tenantId && profileAccess) {
-      if (!profileAccess.isOwner && profileAccess.level !== 'manager' && profileAccess.level !== 'client') {
-        return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent changer le type de compte.' });
-      }
+    if (wantsAccountKind && req.user.tenantId && profileAccess && !profileAccess.isOwner) {
+      return res.status(403).json({
+        error: profileAccess.isProtocolOnly ? PROTOCOL_ACCOUNT_KIND_DENIED : ACCOUNT_KIND_OWNER_ONLY,
+      });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -582,7 +583,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
           plan?: PlanType;
         } = {};
         if (tenantName && !profileAccess?.isProtocolOnly) tenantData.name = tenantName;
-        if (wantsAccountKind && !profileAccess?.isProtocolOnly) {
+        if (wantsAccountKind && profileAccess?.isOwner) {
           const nextKind = parseAccountKind(accountKind);
           tenantData.accountKind = nextKind;
           const currentPlan = currentTenant?.plan || 'FREE';

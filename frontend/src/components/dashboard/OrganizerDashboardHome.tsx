@@ -35,7 +35,6 @@ import {
   Check,
   Smartphone,
   Sliders,
-  FileText,
   Rss,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -167,7 +166,7 @@ export default function OrganizerDashboardHome({
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">
-                {greetingLabel}{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋
+                {greetingLabel}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
               </h1>
               <p className="text-xs sm:text-sm text-muted leading-relaxed">
                 {isManager
@@ -182,16 +181,18 @@ export default function OrganizerDashboardHome({
             <form onSubmit={handleSearchSubmit} className="relative">
               <div className="relative flex items-center">
                 <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
+                <label htmlFor="org-home-search" className="sr-only">Rechercher un événement, un invité ou une salle</label>
                 <input
-                  type="text"
+                  id="org-home-search"
+                  type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Rechercher parmi vos événements, un invité, une salle…"
-                  className="w-full pl-11 pr-32 py-3.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
+                  className="w-full min-h-11 pl-11 pr-32 py-3.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
                 />
                 <button
                   type="submit"
-                  className="absolute right-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition flex items-center gap-1.5 touch-manipulation cursor-pointer"
+                  className="absolute right-2 min-h-11 px-4 py-2 rounded-lg bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary-solid"
                 >
                   <span>Rechercher</span>
                   <ArrowRight className="w-3.5 h-3.5" />

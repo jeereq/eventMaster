@@ -294,6 +294,9 @@ export const PROTOCOL_CREATIVE_DENIED =
 export const PROTOCOL_ACCOUNT_KIND_DENIED =
   'Le rôle protocole ne peut pas changer le type de compte de l’organisation.';
 
+export const ACCOUNT_KIND_OWNER_ONLY =
+  'Seul le propriétaire de l’organisation peut changer le type de compte.';
+
 /** Bloque la création / composition IA de modèles et de plans si l’utilisateur est protocole. */
 export async function protocolCreativeDeniedMessage(
   userId?: string | null,

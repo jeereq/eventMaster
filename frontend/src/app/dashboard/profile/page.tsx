@@ -41,7 +41,8 @@ function ProfilePageContent() {
 
   const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
   const isProtocol = isProtocolUser(access);
-  const canEditOrgKind = user?.role === 'USER' && Boolean(tenant) && !isProtocol;
+  const canEditAccountKind = Boolean(access?.isOwner);
+  const canEditTenantName = Boolean(user?.role === 'USER' && tenant && !isProtocol);
   const currentPlan = tenant?.plan || 'FREE';
   const kindChangeResetsPlan =
     Boolean(tenant) &&
@@ -142,8 +143,8 @@ function ProfilePageContent() {
         phoneCountryCode,
         nationalNumber: phoneNational,
         avatarUrl: null,
-        tenantName: canEditOrgKind ? tenantName : undefined,
-        accountKind: canEditOrgKind ? accountKind : undefined,
+        tenantName: canEditTenantName ? tenantName : undefined,
+        accountKind: canEditAccountKind ? accountKind : undefined,
       });
       setAvatarUrl(null);
       updateUserAndTenant({ ...data.user, avatarUrl: null }, data.tenant);
@@ -176,8 +177,8 @@ function ProfilePageContent() {
         nationalNumber: phoneNational,
         avatarUrl,
         password: password || undefined,
-        tenantName: canEditOrgKind ? tenantName : undefined,
-        accountKind: canEditOrgKind ? accountKind : undefined,
+        tenantName: canEditTenantName ? tenantName : undefined,
+        accountKind: canEditAccountKind ? accountKind : undefined,
       });
 
       updateUserAndTenant(data.user, data.tenant);
@@ -314,27 +315,19 @@ function ProfilePageContent() {
                     <Input
                       label={isClient ? 'Nom affiché' : 'Nom de l\'organisation'}
                       leftIcon={<Building className="w-4 h-4" />}
-                      required={!isProtocol}
+                      required={canEditTenantName}
                       value={tenantName}
                       onChange={(e) => setTenantName(e.target.value)}
-                      disabled={isProtocol}
-                      readOnly={isProtocol}
-                      hint={isProtocol ? 'Le nom de l’organisation est géré par le propriétaire.' : undefined}
+                      disabled={!canEditTenantName}
+                      readOnly={!canEditTenantName}
+                      hint={!canEditTenantName ? 'Le nom de l’organisation est géré par le propriétaire.' : undefined}
                     />
-                    <label className="block space-y-1.5">
+                    <label htmlFor="profile-account-kind" className="block space-y-1.5">
                       <span className="text-xs font-medium text-muted">Type de compte</span>
-                      {isProtocol ? (
-                        <>
-                          <p className="w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground flex items-center">
-                            {ACCOUNT_KIND_LABELS[accountKind] || accountKind}
-                          </p>
-                          <p className="text-xs text-muted">
-                            Votre rôle protocole ne permet pas de changer le type de compte de l’organisation.
-                          </p>
-                        </>
-                      ) : (
+                      {canEditAccountKind ? (
                         <>
                           <select
+                            id="profile-account-kind"
                             value={accountKind}
                             onChange={(e) => setAccountKind(e.target.value as TenantAccountKind)}
                             className="w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
@@ -346,8 +339,6 @@ function ProfilePageContent() {
                           <p className="text-xs text-muted">
                             {isClient
                               ? 'Passez organisateur pour créer des événements, ou prestataire pour publier des offres.'
-                              : access?.level === 'manager' && !access?.isOwner
-                              ? 'Un changement de type peut réinitialiser le forfait. Seul le propriétaire choisit ensuite un plan dans Facturation.'
                               : (
                                 <>
                                   Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
@@ -365,6 +356,20 @@ function ProfilePageContent() {
                           {ACCOUNT_KIND_DESCRIPTIONS[accountKind] && (
                             <p className="text-xs text-muted">{ACCOUNT_KIND_DESCRIPTIONS[accountKind]}</p>
                           )}
+                        </>
+                      ) : (
+                        <>
+                          <p
+                            id="profile-account-kind"
+                            className="w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground flex items-center"
+                          >
+                            {ACCOUNT_KIND_LABELS[accountKind] || accountKind}
+                          </p>
+                          <p className="text-xs text-muted">
+                            {isProtocol
+                              ? 'Votre rôle protocole ne permet pas de changer le type de compte de l’organisation.'
+                              : 'Seul le propriétaire de l’organisation peut changer le type de compte.'}
+                          </p>
                         </>
                       )}
                     </label>
