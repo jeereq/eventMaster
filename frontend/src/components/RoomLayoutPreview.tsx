@@ -10,6 +10,7 @@ import {
   resolveZonePreviewBackground,
   roomTypeLabels,
   ensureBlueprintDefaults,
+  resolveBlueprintWalls,
 } from '@/lib/roomLayoutUtils';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -22,6 +23,8 @@ import FloorDepthFrame from '@/components/FloorDepthFrame';
 import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
 import RoomWebGLViewer from '@/components/RoomWebGLViewer';
+import Room2DPlanWalls from '@/components/Room2DPlanWalls';
+import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { cn } from '@/lib/cn';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 
@@ -101,6 +104,7 @@ function ThumbPreview({
       ? { backgroundColor: blueprint.metadata.floorColor }
       : {}),
   };
+  const walls = resolveBlueprintWalls(blueprint);
 
   return (
     <div
@@ -124,6 +128,15 @@ function ThumbPreview({
             boxShadow: theme.roomOutline.innerGlow,
             background: outline.fill ?? 'rgba(248,250,252,0.12)',
           }}
+        />
+      )}
+      {walls.length > 0 && (
+        <Room2DPlanWalls
+          walls={walls}
+          canvasWidthM={blueprint.canvas.widthM}
+          canvasHeightM={blueprint.canvas.heightM}
+          activeStoryId={blueprint.metadata.activeStoryId}
+          showDoorSwings={true}
         />
       )}
       {blueprint.fixtures.map((f) => (
@@ -176,7 +189,11 @@ function ThumbPreview({
                 transform: `translate(-50%, -50%) scale(0.38)${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
               }}
             >
-              <div className={`${tableClass} origin-center`} style={tableStyle} />
+              <div className={`${tableClass} origin-center relative shadow-sm`} style={tableStyle}>
+                {item.hasCenterpiece && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 absolute inset-1/2 -translate-x-1/2 -translate-y-1/2" />
+                )}
+              </div>
             </div>
           );
         }
@@ -214,8 +231,10 @@ function ThumbPreview({
         }
         return null;
       })}
-      <div className="absolute bottom-1 left-1 rounded bg-black/50 px-1.5 py-0.5 text-[8px] font-bold text-white/80">
-        3D · {blueprint.metadata.totalSeats} pl.
+      <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold text-white/90 backdrop-blur-xs flex items-center gap-1 shadow-2xs">
+        <span>{blueprint.metadata.totalSeats} pl.</span>
+        <span>·</span>
+        <span>{blueprint.canvas.widthM}×{blueprint.canvas.heightM}m</span>
       </div>
     </div>
   );
@@ -235,159 +254,184 @@ function FlatShowcasePreview({
   const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
   const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
   const amount = 62;
+  const walls = resolveBlueprintWalls(blueprint);
 
   return (
-    <FloorDepthFrame
-      amount={amount}
-      floorStyle={{
-        ...floorStyle,
-        ...(blueprint.metadata.floorColor ? { backgroundColor: blueprint.metadata.floorColor } : {}),
-      }}
-      maxTilt={44}
-      className={cn('aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden', className)}
-    >
-      {outline && (
-        <div
-          className="absolute pointer-events-none z-0 overflow-hidden"
-          style={{
-            left: `${outline.x}%`,
-            top: `${outline.y}%`,
-            width: `${outline.w}%`,
-            height: `${outline.h}%`,
-            border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
-            borderRadius: outline.shape === 'circle' ? '50%' : '4px',
-            clipPath,
-            boxShadow: theme.roomOutline.innerGlow,
-          }}
-        />
-      )}
-      {blueprint.fixtures.map((f) => (
-        <div
-          key={f.id}
-          className="absolute z-[1]"
-          style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}%`, height: `${f.h}%`, ...furnitureDepthStyle(f.y, amount) }}
-        >
-          <FixtureRenderer fixture={f} />
-        </div>
-      ))}
-      {blueprint.furniture.map((item) => {
-        if (item.kind === 'zone') {
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[1] rounded border border-white/30"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                width: `${item.w}%`,
-                height: `${item.h}%`,
-                background: resolveZonePreviewBackground(item, item.color ?? 'rgba(49,46,129,0.45)'),
-                transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
-                ...furnitureDepthStyle(item.y + item.h / 2, amount),
-              }}
-            />
-          );
-        }
-        if (item.kind === 'row') {
-          const count = Math.min(item.seatCount, 48);
-          const curveVal = Math.abs(item.curve ?? 0) > 1.5 ? (item.curve ?? 0) / 100 : (item.curve ?? 0);
-          const half = (count - 1) / 2;
-          const hasAisle = !!item.aisleSplit;
-          const midIdx = Math.floor(count / 2);
-
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[2] flex items-center justify-center pointer-events-none"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                transform: `translate(-50%, -50%) scale(${0.7 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
-                ...furnitureDepthStyle(item.y, amount),
-              }}
-            >
-              {Array.from({ length: count }).map((_, i) => {
-                const offset = half > 0 ? (i - half) / half : 0;
-                const arcY = Math.abs(curveVal) * (offset * offset) * 28;
-                const chairRot = curveVal * offset * 36;
-
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      transform: `translateY(${arcY}px) rotate(${chairRot}deg)`,
-                      marginRight: hasAisle && i === midIdx - 1 ? '14px' : '2px',
-                    }}
-                  >
-                    <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
-                  </div>
-                );
-              })}
-            </div>
-          );
-        }
-        if (item.kind === 'chair') {
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[2]"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                transform: `translate(-50%, -50%) scale(${0.75 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
-                ...furnitureDepthStyle(item.y, amount),
-              }}
-            >
-              <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
-            </div>
-          );
-        }
-        if (item.kind !== 'table') return null;
-        const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
-        const { className: tableClass, style: tableStyle } = getTableVisualStyle(
-          item.shape,
-          false,
-          tableColor,
-          item.tableImageUrl,
-          item.tableSurface ?? blueprint.metadata.defaultTableSurface,
-        );
-        const depthScale = depthScaleForY(item.y, amount);
-        return (
+    <div className={cn('relative aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden bg-[#1a1410]', className)}>
+      <FloorDepthFrame
+        amount={amount}
+        floorStyle={{
+          ...floorStyle,
+          ...(blueprint.metadata.floorColor ? { backgroundColor: blueprint.metadata.floorColor } : {}),
+        }}
+        maxTilt={44}
+        className="w-full h-full"
+      >
+        {outline && (
           <div
-            key={item.id}
-            className="absolute z-[2] flex flex-col items-center"
+            className="absolute pointer-events-none z-0 overflow-hidden"
             style={{
-              left: `${item.x}%`,
-              top: `${item.y}%`,
-              transform: `translate(-50%, -50%) scale(${0.85 * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
-              ...furnitureDepthStyle(item.y, amount),
+              left: `${outline.x}%`,
+              top: `${outline.y}%`,
+              width: `${outline.w}%`,
+              height: `${outline.h}%`,
+              border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
+              borderRadius: outline.shape === 'circle' ? '50%' : '4px',
+              clipPath,
+              boxShadow: theme.roomOutline.innerGlow,
             }}
+          />
+        )}
+        {walls.length > 0 && (
+          <Room2DPlanWalls
+            walls={walls}
+            canvasWidthM={blueprint.canvas.widthM}
+            canvasHeightM={blueprint.canvas.heightM}
+            activeStoryId={blueprint.metadata.activeStoryId}
+            showDoorSwings={true}
+          />
+        )}
+        {blueprint.fixtures.map((f) => (
+          <div
+            key={f.id}
+            className="absolute z-[1]"
+            style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}%`, height: `${f.h}%`, ...furnitureDepthStyle(f.y, amount) }}
           >
-            <div className="relative flex items-center justify-center">
-              <div className={`${tableClass} origin-center flex items-center justify-center`} style={tableStyle}>
-                <span className="text-[8px] font-bold px-1 truncate max-w-[72px]">{item.name}</span>
-              </div>
-              {Array.from({ length: Math.min(item.capacity, 10) }).map((_, seatIndex) => {
-                const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44);
-                return (
-                  <span
-                    key={seatIndex}
-                    className="absolute"
-                    style={{
-                      left: `calc(50% + ${coords.x}px)`,
-                      top: `calc(50% + ${coords.y}px)`,
-                      transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
-                    }}
-                  >
-                    <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
-                  </span>
-                );
-              })}
-            </div>
+            <FixtureRenderer fixture={f} />
           </div>
-        );
-      })}
-    </FloorDepthFrame>
+        ))}
+        {blueprint.furniture.map((item) => {
+          if (item.kind === 'zone') {
+            return (
+              <div
+                key={item.id}
+                className="absolute z-[1] rounded border border-white/30"
+                style={{
+                  left: `${item.x}%`,
+                  top: `${item.y}%`,
+                  width: `${item.w}%`,
+                  height: `${item.h}%`,
+                  background: resolveZonePreviewBackground(item, item.color ?? 'rgba(49,46,129,0.45)'),
+                  transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
+                  ...furnitureDepthStyle(item.y + item.h / 2, amount),
+                }}
+              />
+            );
+          }
+          if (item.kind === 'row') {
+            const count = Math.min(item.seatCount, 48);
+            const curveVal = Math.abs(item.curve ?? 0) > 1.5 ? (item.curve ?? 0) / 100 : (item.curve ?? 0);
+            const half = (count - 1) / 2;
+            const hasAisle = !!item.aisleSplit;
+            const midIdx = Math.floor(count / 2);
+
+            return (
+              <div
+                key={item.id}
+                className="absolute z-[2] flex items-center justify-center pointer-events-none"
+                style={{
+                  left: `${item.x}%`,
+                  top: `${item.y}%`,
+                  transform: `translate(-50%, -50%) scale(${0.7 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
+                  ...furnitureDepthStyle(item.y, amount),
+                }}
+              >
+                {Array.from({ length: count }).map((_, i) => {
+                  const offset = half > 0 ? (i - half) / half : 0;
+                  const arcY = Math.abs(curveVal) * (offset * offset) * 28;
+                  const chairRot = curveVal * offset * 36;
+
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        transform: `translateY(${arcY}px) rotate(${chairRot}deg)`,
+                        marginRight: hasAisle && i === midIdx - 1 ? '14px' : '2px',
+                      }}
+                    >
+                      <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+          if (item.kind === 'chair') {
+            return (
+              <div
+                key={item.id}
+                className="absolute z-[2]"
+                style={{
+                  left: `${item.x}%`,
+                  top: `${item.y}%`,
+                  transform: `translate(-50%, -50%) scale(${0.75 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
+                  ...furnitureDepthStyle(item.y, amount),
+                }}
+              >
+                <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
+              </div>
+            );
+          }
+          if (item.kind !== 'table') return null;
+          const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
+          const { className: tableClass, style: tableStyle } = getTableVisualStyle(
+            item.shape,
+            false,
+            tableColor,
+            item.tableImageUrl,
+            item.tableSurface ?? blueprint.metadata.defaultTableSurface,
+          );
+          const depthScale = depthScaleForY(item.y, amount);
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[2] flex flex-col items-center"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                transform: `translate(-50%, -50%) scale(${0.85 * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+                ...furnitureDepthStyle(item.y, amount),
+              }}
+            >
+              <div className="relative flex items-center justify-center">
+                <div className={`${tableClass} origin-center flex items-center justify-center relative shadow-sm`} style={tableStyle}>
+                  <span className="text-[8px] font-bold px-1 truncate max-w-[72px] drop-shadow-xs">{item.name}</span>
+                  {item.hasCenterpiece && (
+                    <span
+                      className="absolute w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-600 shadow-2xs flex items-center justify-center pointer-events-none"
+                      title="Centre de table"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-white" />
+                    </span>
+                  )}
+                </div>
+                {Array.from({ length: Math.min(item.capacity, 10) }).map((_, seatIndex) => {
+                  const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44);
+                  return (
+                    <span
+                      key={seatIndex}
+                      className="absolute"
+                      style={{
+                        left: `calc(50% + ${coords.x}px)`,
+                        top: `calc(50% + ${coords.y}px)`,
+                        transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
+                      }}
+                    >
+                      <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </FloorDepthFrame>
+      <Room2DScaleCompass
+        widthM={blueprint.canvas.widthM}
+        heightM={blueprint.canvas.heightM}
+        showGrid={true}
+      />
+    </div>
   );
 }
 

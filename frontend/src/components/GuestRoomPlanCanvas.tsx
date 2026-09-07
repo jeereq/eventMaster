@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { getRoomOutlineClipPath } from '@/lib/roomLayoutUtils';
+import { getRoomOutlineClipPath, wallsFromRoomOutline, type RoomWallSegment } from '@/lib/roomLayoutUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import {
   resolveFloorStyle,
@@ -21,6 +21,8 @@ import {
   resolveGuestTablePositions,
 } from '@/lib/guestPlanLayoutUtils';
 import FixtureRenderer from '@/components/FixtureRenderer';
+import Room2DPlanWalls from '@/components/Room2DPlanWalls';
+import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { getTableShapeLabel } from '@/lib/tablePlanUtils';
 import { PlanZoomControls } from '@/components/PlanViewChrome';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
@@ -29,6 +31,9 @@ interface GuestRoomPlanCanvasProps {
   tables: GuestTablePlanOverviewItem[];
   fixtures?: GuestPlanFixture[] | null;
   roomOutline?: GuestRoomOutline | null;
+  walls?: RoomWallSegment[] | null;
+  canvasWidthM?: number;
+  canvasHeightM?: number;
   roomThemeId?: string | null;
   floorType?: string | null;
   floorImageUrl?: string | null;
@@ -79,6 +84,9 @@ export default function GuestRoomPlanCanvas({
   tables,
   fixtures,
   roomOutline,
+  walls,
+  canvasWidthM,
+  canvasHeightM,
   roomThemeId,
   floorType,
   floorImageUrl,
@@ -105,6 +113,12 @@ export default function GuestRoomPlanCanvas({
   });
   const outline = roomOutline;
   const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
+
+  const effectiveWalls = useMemo(() => {
+    if (walls && walls.length > 0) return walls;
+    if (outline) return wallsFromRoomOutline(outline, { withEntrance: true });
+    return [];
+  }, [walls, outline]);
 
   const displayPositions = useMemo(
     () => resolveGuestTablePositions(tables.map((t) => ({ id: t.id, x: t.x, y: t.y }))),
@@ -235,6 +249,15 @@ export default function GuestRoomPlanCanvas({
               </div>
             )}
 
+            {effectiveWalls.length > 0 && (
+              <Room2DPlanWalls
+                walls={effectiveWalls}
+                canvasWidthM={canvasWidthM ?? 20}
+                canvasHeightM={canvasHeightM ?? 16}
+                showDoorSwings={true}
+              />
+            )}
+
             {(fixtures ?? []).map((fixture) => {
               const size = logicalSizeFromPct(fixture.w, fixture.h);
               const pos = pctToLogical(fixture.x, fixture.y);
@@ -339,6 +362,11 @@ export default function GuestRoomPlanCanvas({
               );
             })}
           </FloorDepthFrame>
+          <Room2DScaleCompass
+            widthM={canvasWidthM ?? 20}
+            heightM={canvasHeightM ?? 16}
+            showGrid={true}
+          />
         </div>
       </div>
 

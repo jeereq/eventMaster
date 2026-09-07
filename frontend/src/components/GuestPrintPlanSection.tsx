@@ -229,6 +229,9 @@ export default function GuestPrintPlanSection({
           tables={tables}
           fixtures={fixtures}
           roomOutline={roomOutline}
+          walls={previewBlueprint?.walls}
+          canvasWidthM={previewBlueprint?.canvas.widthM}
+          canvasHeightM={previewBlueprint?.canvas.heightM}
           roomThemeId={roomThemeId}
           floorType={floorType}
           floorImageUrl={floorImageUrl}

@@ -3,11 +3,12 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
+import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import type { RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
 
 const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
@@ -671,6 +672,14 @@ export default function RoomLayoutEditor({
       } else if (key === 'l') {
         e.preventDefault();
         setLockOrbit((v) => !v);
+      } else if (key === '2') {
+        e.preventDefault();
+        setDepthAmount(0);
+        log('Vue Plan 2D d’architecte activée (Ctrl+2)', 'info');
+      } else if (key === '3') {
+        e.preventDefault();
+        setDepthAmount(60);
+        log('Vue 3D perspective activée (Ctrl+3)', 'info');
       } else if ((key === 'o' || key === 'e') && (e.altKey || e.shiftKey)) {
         e.preventDefault();
         optimizeClearances();
@@ -1889,25 +1898,35 @@ export default function RoomLayoutEditor({
   };
 
   const renderCanvas = (className: string) => (
-    <RoomWebGLViewer
-      ref={webglRef}
-      blueprint={blueprint}
-      selected={selection}
-      onSelect={handleCanvasSelect}
-      onMoveItem={handleWebGLMove}
-      onMoveEnd={handleWebGLMoveEnd}
-      readOnly={readOnly}
-      wallEditMode={wallEditMode}
-      lockOrbit={lockOrbit}
-      renderQuality={renderQuality}
-      lightingPreset={lightingPreset}
-      presentationMode={blueprint.metadata.presentationMode === true}
-      walkthroughActive={walkthroughActive}
-      onWalkthroughProgress={handleWalkthroughProgress}
-      onWalkthroughComplete={handleWalkthroughComplete}
-      paused={paused}
-      className={className}
-    />
+    <div className={cn('relative w-full h-full min-h-0', className)}>
+      <RoomWebGLViewer
+        ref={webglRef}
+        blueprint={blueprint}
+        selected={selection}
+        onSelect={handleCanvasSelect}
+        onMoveItem={handleWebGLMove}
+        onMoveEnd={handleWebGLMoveEnd}
+        readOnly={readOnly}
+        wallEditMode={wallEditMode}
+        lockOrbit={lockOrbit}
+        renderQuality={renderQuality}
+        lightingPreset={lightingPreset}
+        presentationMode={blueprint.metadata.presentationMode === true}
+        walkthroughActive={walkthroughActive}
+        onWalkthroughProgress={handleWalkthroughProgress}
+        onWalkthroughComplete={handleWalkthroughComplete}
+        paused={paused}
+        className="w-full h-full"
+      />
+      {depthAmount === 0 && (
+        <Room2DScaleCompass
+          widthM={blueprint.canvas.widthM}
+          heightM={blueprint.canvas.heightM}
+          showGrid={false}
+          className="z-10"
+        />
+      )}
+    </div>
   );
 
   const selectWall = useCallback((id: string | null) => {
@@ -5240,6 +5259,23 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={() => {
+          if (depthAmount === 0) {
+            setDepthAmount(60);
+            log('Vue 3D perspective activée (Ctrl+3)', 'info');
+          } else {
+            setDepthAmount(0);
+            log('Vue Plan 2D d’architecte activée (Ctrl+2)', 'info');
+          }
+        }}
+        title={depthAmount === 0 ? 'Passer en perspective 3D (Ctrl+3)' : 'Passer en plan 2D d’architecte zénithal (Ctrl+2)'}
+        className={cn(EDITOR_TOOL, depthAmount === 0 ? 'bg-primary/20 text-primary border-primary/50 font-bold' : EDITOR_TOOL_IDLE)}
+      >
+        {depthAmount === 0 ? <LayoutGrid className="w-3.5 h-3.5 text-primary" aria-hidden /> : <Box className="w-3.5 h-3.5" aria-hidden />}
+        {depthAmount === 0 ? 'Plan 2D' : 'Plan 2D / 3D'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
           if (walkthroughActive) {
             setWalkthroughActive(false);
             setWalkthroughLabel('');
@@ -6358,6 +6394,13 @@ export default function RoomLayoutEditor({
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Caméra libre / bloquée</span>
             <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Ctrl+L</kbd>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Plan 2D zénithal / Vue 3D</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+2</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+3</kbd>
+            </div>
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Dupliquer l’élément</span>

@@ -14,7 +14,7 @@ import {
  getTableVisualStyle,
  TableShape,
 } from '@/lib/tablePlanUtils';
-import { chairTypeLabels, getFixtureClass, type ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
+import { chairTypeLabels, getFixtureClass, type ChairType, type RoomLayoutBlueprint, resolveBlueprintWalls, wallsFromRoomOutline } from '@/lib/roomLayoutUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
@@ -23,6 +23,8 @@ import type { PricingZone, TicketPricingMode } from '@/lib/ticketPricing';
 import { pricingZonesFromTablePlan } from '@/lib/ticketPricing';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
+import Room2DPlanWalls from '@/components/Room2DPlanWalls';
+import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import Link from 'next/link';
 
@@ -165,6 +167,19 @@ export default function TablePlanner({
    () => buildTablePlanPreviewBlueprint(initialTablePlan, tables, roomLayoutBlueprint),
    [initialTablePlan, tables, roomLayoutBlueprint],
  );
+
+ const tablePlannerWalls = useMemo(() => {
+   if (roomLayoutBlueprint) {
+     return resolveBlueprintWalls(roomLayoutBlueprint);
+   }
+   if (initialTablePlan?.roomOutline) {
+     return wallsFromRoomOutline(initialTablePlan.roomOutline, { withEntrance: true });
+   }
+   return [];
+ }, [roomLayoutBlueprint, initialTablePlan?.roomOutline]);
+
+ const plannerWidthM = roomLayoutBlueprint?.canvas.widthM ?? 20;
+ const plannerHeightM = roomLayoutBlueprint?.canvas.heightM ?? 16;
 
  const previewQuality = caps.canShowcaseRender ? 'showcase' as const : 'standard' as const;
 
@@ -672,13 +687,27 @@ export default function TablePlanner({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         className={cn(
-          'em-floor-canvas em-floor-canvas--photo touch-none select-none',
+          'em-floor-canvas em-floor-canvas--photo touch-none select-none relative',
           heightClass,
           'w-full flex-1 min-h-[400px]',
           draggingTableId && 'em-floor-canvas--dragging',
         )}
         style={{ ...floorStyle, touchAction: 'none' }}
       >
+        {tablePlannerWalls.length > 0 && (
+          <Room2DPlanWalls
+            walls={tablePlannerWalls}
+            canvasWidthM={plannerWidthM}
+            canvasHeightM={plannerHeightM}
+            activeStoryId={roomLayoutBlueprint?.metadata.activeStoryId}
+            showDoorSwings={true}
+          />
+        )}
+        <Room2DScaleCompass
+          widthM={plannerWidthM}
+          heightM={plannerHeightM}
+          showGrid={true}
+        />
  {zonePricing && pricingZones.map((zone) => {
    if (zone.x == null || zone.y == null || zone.w == null || zone.h == null) return null;
    return (
