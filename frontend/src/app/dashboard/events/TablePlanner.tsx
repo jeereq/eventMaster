@@ -29,6 +29,7 @@ import {
   autoDistributeTablesToZones,
   TICKETING_ZONE_PRESETS,
   createEmptyPricingZone,
+  isLightHexColor,
 } from '@/lib/ticketPricing';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
@@ -767,8 +768,11 @@ export default function TablePlanner({
               title={`${zone.name} (${zone.priceFc > 0 ? formatFc(zone.priceFc) : 'Gratuit'})`}
             >
               <span
-                className="absolute top-1.5 left-2 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-2xs text-white tabular-nums flex items-center gap-1.5"
-                style={{ backgroundColor: zone.color || '#c4a35a' }}
+                className="absolute top-1.5 left-2 text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-2xs tabular-nums flex items-center gap-1.5"
+                style={{
+                  backgroundColor: zone.color || '#c4a35a',
+                  color: isLightHexColor(zone.color || '#c4a35a') ? '#1c1917' : '#ffffff',
+                }}
               >
                 <span>{zone.name}</span>
                 {zone.priceFc > 0 && <span className="opacity-90 font-normal">· {formatFc(zone.priceFc)}</span>}
@@ -900,8 +904,11 @@ export default function TablePlanner({
                     {zonePricing && (
                       zone ? (
                         <div
-                          className="text-[8px] font-bold mt-0.5 px-1.5 py-0.5 rounded text-white truncate max-w-[85px] shadow-2xs"
-                          style={{ backgroundColor: zone.color || '#c4a35a' }}
+                          className="text-[8px] font-bold mt-0.5 px-1.5 py-0.5 rounded truncate max-w-[85px] shadow-2xs"
+                          style={{
+                            backgroundColor: zone.color || '#c4a35a',
+                            color: isLightHexColor(zone.color || '#c4a35a') ? '#1c1917' : '#ffffff',
+                          }}
                           title={`${zone.name}${zone.priceFc > 0 ? ` · ${formatFc(zone.priceFc)}` : ''}`}
                         >
                           {zone.name}
@@ -1150,7 +1157,7 @@ export default function TablePlanner({
                     </div>
                   </div>
                   {isPaintActive ? (
-                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-black bg-primary text-white tracking-wide animate-pulse">
+                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-black bg-primary text-white tracking-wide animate-pulse motion-reduce:animate-none">
                       Actif
                     </span>
                   ) : (
@@ -1180,9 +1187,9 @@ export default function TablePlanner({
 
           {/* Active paint banner feedback */}
           {paintZoneId && (
-            <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-medium animate-fade-in">
+            <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-medium animate-fade-in motion-reduce:animate-none">
               <div className="flex items-center gap-2">
-                <Paintbrush className="w-4 h-4 animate-pulse text-primary shrink-0" />
+                <Paintbrush className="w-4 h-4 animate-pulse motion-reduce:animate-none text-primary shrink-0" />
                 <span>
                   Pinceau actif sur <strong className="font-bold underline">{pricingZones.find((z) => z.id === paintZoneId)?.name}</strong> : cliquez sur une table du plan pour lui assigner cette zone.
                 </span>
@@ -1411,9 +1418,9 @@ export default function TablePlanner({
                     >
                       <div className="flex items-start justify-between">
                         <span className="font-semibold text-foreground text-xs leading-tight">{g.firstName} {g.lastName}</span>
-                        <span className="text-[9px] uppercase tracking-wider font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 shrink-0">Confirmé</span>
+                        <span className="text-xs uppercase tracking-wider font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25 px-1.5 py-0.5 rounded shrink-0">Confirmé</span>
                       </div>
-                      <div className="text-[10px] text-muted flex items-center gap-1.5 mt-0.5">
+                      <div className="text-xs text-muted flex items-center gap-1.5 mt-0.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
                         {g.category || 'Général'}
                       </div>
@@ -1825,11 +1832,11 @@ export default function TablePlanner({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground">Scène & Devant</span>
-                    <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
                       Populaire
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted leading-relaxed">
                     VIP en premier rang devant la scène / estrade, puis Carré d’Or et Standard vers le fond.
                   </p>
                 </button>
@@ -1847,7 +1854,7 @@ export default function TablePlanner({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground">Cercles concentriques</span>
                   </div>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted leading-relaxed">
                     Tables d’honneur VIP au cœur de la salle, tables standard sur tout le pourtour.
                   </p>
                 </button>
@@ -1865,7 +1872,7 @@ export default function TablePlanner({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground">Quotas de capacité</span>
                   </div>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted leading-relaxed">
                     Répartition proportionnelle équilibrée selon les pourcentages de jauges de places.
                   </p>
                 </button>
@@ -1905,14 +1912,14 @@ export default function TablePlanner({
                         />
                         <div>
                           <p className="font-semibold text-foreground">{stat.zone.name}</p>
-                          <p className="text-[11px] text-muted">{stat.zone.priceFc > 0 ? formatFc(stat.zone.priceFc) : 'Gratuit'} / place</p>
+                          <p className="text-xs text-muted">{stat.zone.priceFc > 0 ? formatFc(stat.zone.priceFc) : 'Gratuit'} / place</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-foreground tabular-nums">
                           {stat.tableCount} table{stat.tableCount > 1 ? 's' : ''} · {stat.seatCount} place{stat.seatCount > 1 ? 's' : ''} ({stat.percentageOfSeats}%)
                         </p>
-                        <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                           {formatFc(stat.totalRevenueFc)}
                         </p>
                       </div>
@@ -1993,7 +2000,7 @@ export default function TablePlanner({
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-foreground">{preset.label}</span>
                     </div>
-                    <p className="text-[10px] text-muted truncate">{preset.description}</p>
+                    <p className="text-xs text-muted truncate">{preset.description}</p>
                     <div className="flex gap-1 pt-1">
                       {preset.zones.map((z) => (
                         <span
@@ -2043,7 +2050,7 @@ export default function TablePlanner({
                       aria-label={`Couleur de la zone ${zone.name}`}
                     />
                     <div>
-                      <label className="text-[10px] font-semibold text-muted block mb-0.5">Nom de la zone</label>
+                      <label className="text-xs font-semibold text-muted block mb-0.5">Nom de la zone</label>
                       <input
                         type="text"
                         value={zone.name}
@@ -2057,7 +2064,7 @@ export default function TablePlanner({
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-muted block mb-0.5">Tarif par place (FC)</label>
+                      <label className="text-xs font-semibold text-muted block mb-0.5">Tarif par place (FC)</label>
                       <input
                         type="number"
                         min={0}

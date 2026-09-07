@@ -14,6 +14,26 @@ export type PricingZone = {
 
 export const PRICING_ZONE_COLORS = ['#c4a35a', '#5b8def', '#e85d5d', '#6bbd6e', '#9b6bcc', '#f59e42'];
 
+/**
+ * Détermine si une couleur hexadécimale est claire ou sombre pour garantir un contraste de texte AA (WCAG).
+ * Renvoie true pour les teintes claires (texte noir recommandé), false pour les teintes sombres (texte blanc recommandé).
+ */
+export function isLightHexColor(hex?: string): boolean {
+  if (!hex || typeof hex !== 'string') return false;
+  let clean = hex.trim().replace(/^#/, '');
+  if (clean.length === 3) {
+    clean = clean.split('').map((c) => c + c).join('');
+  }
+  if (clean.length !== 6) return false;
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return false;
+  // Formule de luminance relative perçue (ITU-R BT.709 standard)
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 160;
+}
+
 export function makePricingZoneId(): string {
   return `zone-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }

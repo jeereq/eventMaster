@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   autoDistributeTablesToZones,
   computeTicketingRevenueSummary,
+  isLightHexColor,
   TICKETING_ZONE_PRESETS,
   type PricingZone,
 } from './ticketPricing.ts';
@@ -84,5 +85,25 @@ describe('ticketPricing zone distribution', () => {
       assert.ok(preset.zones.length >= 2);
       assert.ok(preset.zones[0].priceFc > preset.zones[1].priceFc);
     }
+  });
+
+  it('determines contrast luminance correctly with isLightHexColor', () => {
+    // Light colors needing dark text
+    assert.equal(isLightHexColor('#ffffff'), true);
+    assert.equal(isLightHexColor('#fef08a'), true); // bright yellow
+    assert.equal(isLightHexColor('#bbf7d0'), true); // pale green
+    assert.equal(isLightHexColor('#fff'), true);
+
+    // Dark or saturated colors needing white text
+    assert.equal(isLightHexColor('#000000'), false);
+    assert.equal(isLightHexColor('#1e293b'), false);
+    assert.equal(isLightHexColor('#e85d5d'), false);
+    assert.equal(isLightHexColor('#5b8def'), false);
+    assert.equal(isLightHexColor('#9b6bcc'), false);
+
+    // Invalid values fallback to false
+    assert.equal(isLightHexColor(''), false);
+    assert.equal(isLightHexColor(undefined), false);
+    assert.equal(isLightHexColor('invalid'), false);
   });
 });

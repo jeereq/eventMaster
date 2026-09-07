@@ -6823,7 +6823,7 @@ export default function RoomLayoutEditor({
               </p>
               <span
                 className={cn(
-                  'text-[10px] font-bold px-2 py-0.5 rounded-full border',
+                  'text-xs font-bold px-2.5 py-0.5 rounded-full border',
                   clearanceReport.isCompliant
                     ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
                     : 'bg-amber-500/20 border-amber-500/30 text-amber-800 dark:text-amber-300',
@@ -6856,7 +6856,7 @@ export default function RoomLayoutEditor({
                 )}
               >
                 <span className="block text-xs text-foreground">{p.label}</span>
-                <span className="block text-[10px] text-muted">{p.desc}</span>
+                <span className="block text-xs text-muted">{p.desc}</span>
               </button>
             ))}
           </div>
