@@ -29,6 +29,52 @@ function InstrumentPlanGlyph({ style }: { style: InstrumentStyle }) {
       </div>
     );
   }
+  if (style === 'upright') {
+    return (
+      <div className="w-[72%] h-[70%] rounded-sm bg-zinc-950 border border-zinc-500 relative">
+        <span className="absolute bottom-1 inset-x-[10%] h-[18%] bg-zinc-100 rounded-sm" />
+      </div>
+    );
+  }
+  if (style === 'harp') {
+    return (
+      <div className="relative w-[55%] h-[78%]">
+        <span className="absolute left-0 inset-y-1 w-1.5 bg-amber-800 rounded-full" />
+        <span className="absolute right-0 top-0 w-8 h-full border-l-2 border-amber-700 rounded-l-full" />
+      </div>
+    );
+  }
+  if (style === 'cello' || style === 'doubleBass') {
+    return (
+      <div className="relative w-[34%] h-[82%] flex flex-col items-center">
+        <span className="w-[22%] h-[36%] bg-amber-950 rounded-sm" />
+        <span className="w-full h-[64%] rounded-[45%] bg-amber-900 border border-amber-800" />
+      </div>
+    );
+  }
+  if (style === 'trumpet') {
+    return <div className="w-[70%] h-2 rounded-full bg-amber-400 relative"><span className="absolute -right-1 -top-1 w-3 h-3 rounded-full border-2 border-amber-400" /></div>;
+  }
+  if (style === 'conga') {
+    return (
+      <div className="flex items-end gap-1 h-[70%]">
+        <span className="w-4 h-full rounded-t-full bg-amber-900 border border-amber-700" />
+        <span className="w-3.5 h-[80%] rounded-t-full bg-amber-800 border border-amber-700" />
+      </div>
+    );
+  }
+  if (style === 'cajon') {
+    return <div className="w-[42%] h-[48%] bg-amber-900 border border-amber-700 rounded-sm" />;
+  }
+  if (style === 'mixer') {
+    return (
+      <div className="w-[80%] h-[36%] bg-zinc-800 border border-zinc-500 rounded-sm flex justify-around items-end px-0.5 pb-0.5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <span key={i} className="w-[6%] bg-zinc-300" style={{ height: `${40 + (i % 3) * 18}%` }} />
+        ))}
+      </div>
+    );
+  }
   if (style === 'keyboard') {
     return (
       <div className="w-[86%] h-[28%] rounded-sm bg-zinc-800 border border-zinc-500">
@@ -463,6 +509,26 @@ export default function FixtureRenderer({
             <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-neutral-900 to-zinc-950 border-x border-amber-400/50 shadow-inner" />
           )}
 
+          {aisleStyle === 'sequinGold' && (
+            <div className="absolute inset-0 bg-gradient-to-b from-amber-400 via-yellow-600 to-amber-700 shadow-inner" />
+          )}
+
+          {aisleStyle === 'marbleInlay' && (
+            <div className="absolute inset-0 bg-gradient-to-b from-stone-50 via-stone-200 to-stone-100 border-x-2 border-amber-400 shadow-inner" />
+          )}
+
+          {aisleStyle === 'fairyLight' && (
+            <div className="absolute inset-0 bg-slate-950 border-x border-amber-300/70 shadow-inner" />
+          )}
+
+          {aisleStyle === 'herringbone' && (
+            <div className="absolute inset-0 bg-[repeating-linear-gradient(135deg,#78350f_0_6px,#92400e_6px_12px)] shadow-inner" />
+          )}
+
+          {aisleStyle === 'silkIvory' && (
+            <div className="absolute inset-0 bg-gradient-to-b from-amber-50 via-stone-100 to-amber-50 border border-stone-200 shadow-inner" />
+          )}
+
           {/* Bordure Dorée / Liseré Prestige */}
           {hasGoldBorder && (
             <>
@@ -617,6 +683,10 @@ export default function FixtureRenderer({
       style === 'beer' ? ['#b45309', '#92400e'] :
       style === 'coffee' ? ['#292524', '#44403c'] :
       style === 'whiskey' ? ['#9a3412', '#7c2d12'] :
+      style === 'juice' ? ['#ea580c', '#65a30d', '#eab308'] :
+      style === 'mocktail' ? ['#db2777', '#7c3aed', '#06b6d4'] :
+      style === 'tapas' ? ['#7f1d1d', '#854d0e'] :
+      style === 'tea' ? ['#78716c', '#a8a29e'] :
       ['#14532d', '#7f1d1d', '#1e3a5f', '#854d0e'];
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>

@@ -940,10 +940,33 @@ export function CatalogueAisle({
   const isRed = style === 'royalRed';
   const isMirror = style === 'whiteMirror';
   const isBotanical = style === 'botanicalRunner';
-  const isWood = style === 'rusticWood';
+  const isWood = style === 'rusticWood' || style === 'herringbone';
   const isDamask = style === 'damaskGold';
   const isLed = style === 'ledRunway';
   const isBlack = style === 'blackVelvet';
+  const isSequin = style === 'sequinGold';
+  const isMarble = style === 'marbleInlay';
+  const isFairy = style === 'fairyLight';
+  const isSilk = style === 'silkIvory';
+  const aisleColor = selected
+    ? '#c7d2fe'
+    : isRed
+      ? '#881337'
+      : isMirror
+        ? '#ffffff'
+        : isBotanical || isSilk
+          ? '#fef3c7'
+          : isWood
+            ? '#78350f'
+            : isDamask || isSequin
+              ? '#d97706'
+              : isLed || isFairy
+                ? '#0f172a'
+                : isBlack
+                  ? '#18181b'
+                  : isMarble
+                    ? '#f5f5f4'
+                    : '#881337';
 
   return (
     <group>
@@ -951,27 +974,9 @@ export function CatalogueAisle({
       <mesh position={[0, 0.015, 0]} receiveShadow>
         <boxGeometry args={[w, 0.025, d]} />
         <meshStandardMaterial
-          color={
-            selected
-              ? '#c7d2fe'
-              : isRed
-                ? '#881337'
-                : isMirror
-                  ? '#ffffff'
-                  : isBotanical
-                    ? '#fef3c7'
-                    : isWood
-                      ? '#78350f'
-                      : isDamask
-                        ? '#d97706'
-                        : isLed
-                          ? '#0f172a'
-                          : isBlack
-                            ? '#18181b'
-                            : '#881337'
-          }
-          roughness={isMirror ? 0.08 : isLed ? 0.2 : isWood ? 0.62 : 0.94}
-          metalness={isMirror ? 0.75 : isDamask ? 0.35 : 0.04}
+          color={aisleColor}
+          roughness={isMirror || isSilk ? 0.08 : isLed ? 0.2 : isWood || isMarble ? 0.55 : isSequin ? 0.18 : 0.94}
+          metalness={isMirror ? 0.75 : isDamask || isSequin ? 0.45 : isMarble ? 0.22 : 0.04}
         />
       </mesh>
 
@@ -1038,6 +1043,78 @@ export function CatalogueAisle({
           })}
         </group>
       )}
+
+      {isWood &&
+        Array.from({ length: Math.max(6, Math.round(d / 0.35)) }).map((_, i) => {
+          const z = ((i + 0.5) / Math.max(6, Math.round(d / 0.35)) - 0.5) * d;
+          return (
+            <mesh key={`plank-${i}`} position={[0, 0.028, z]} receiveShadow>
+              <boxGeometry args={[w * 0.92, 0.004, 0.018]} />
+              <meshStandardMaterial color={i % 2 ? '#92400e' : '#451a03'} roughness={0.7} />
+            </mesh>
+          );
+        })}
+
+      {isDamask &&
+        Array.from({ length: 8 }).map((_, i) => {
+          const z = ((i + 0.5) / 8 - 0.5) * d * 0.85;
+          return (
+            <mesh key={`damask-${i}`} position={[0, 0.03, z]} rotation={[-Math.PI / 2, 0, i % 2 ? 0.78 : 0]}>
+              <circleGeometry args={[w * 0.12, 4]} />
+              <meshStandardMaterial color="#fde68a" metalness={0.45} roughness={0.35} transparent opacity={0.35} />
+            </mesh>
+          );
+        })}
+
+      {isSequin &&
+        Array.from({ length: 22 }).map((_, i) => {
+          const px = ((i % 5) / 4 - 0.5) * w * 0.7;
+          const pz = (Math.floor(i / 5) / 4 - 0.5) * d * 0.85;
+          return (
+            <mesh key={`sq-${i}`} position={[px, 0.032, pz]} rotation={[-Math.PI / 2, 0, i]}>
+              <circleGeometry args={[0.028, 6]} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.12} emissive="#f59e0b" emissiveIntensity={0.25} />
+            </mesh>
+          );
+        })}
+
+      {isMarble && (
+        <>
+          <mesh position={[0, 0.028, 0]} receiveShadow>
+            <boxGeometry args={[w * 0.18, 0.006, d]} />
+            <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.25} />
+          </mesh>
+          {([-0.22, 0.22] as const).map((x) => (
+            <mesh key={x} position={[x * w, 0.026, 0]}>
+              <boxGeometry args={[0.02, 0.004, d * 0.95]} />
+              <meshStandardMaterial color="#a8a29e" roughness={0.4} />
+            </mesh>
+          ))}
+        </>
+      )}
+
+      {isFairy &&
+        Array.from({ length: 14 }).map((_, i) => {
+          const side = i % 2 === 0 ? -1 : 1;
+          const z = ((Math.floor(i / 2) + 0.5) / 7 - 0.5) * d * 0.9;
+          return (
+            <mesh key={`fairy-${i}`} position={[side * (w / 2 - 0.04), 0.06, z]}>
+              <sphereGeometry args={[0.018, 8, 8]} />
+              <meshStandardMaterial color="#fef08a" emissive="#fde047" emissiveIntensity={1.15} />
+            </mesh>
+          );
+        })}
+
+      {isLed &&
+        Array.from({ length: 9 }).map((_, i) => {
+          const z = ((i + 0.5) / 9 - 0.5) * d * 0.88;
+          return (
+            <mesh key={`led-c-${i}`} position={[0, 0.032, z]}>
+              <boxGeometry args={[0.06, 0.008, 0.08]} />
+              <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={1.1} />
+            </mesh>
+          );
+        })}
     </group>
   );
 }

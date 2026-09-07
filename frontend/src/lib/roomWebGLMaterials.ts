@@ -1074,6 +1074,9 @@ const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
   panton: { backHeight: 0.55, seatSize: [0.46, 0.08, 0.44], scale: 1.05, hasArms: false, cushion: false },
   louis: { backHeight: 0.7, seatSize: [0.42, 0.07, 0.4], scale: 1.05, hasArms: false, cushion: true },
   ovalBack: { backHeight: 0.68, seatSize: [0.44, 0.08, 0.42], scale: 1.08, hasArms: false, cushion: true },
+  wishbone: { backHeight: 0.62, seatSize: [0.4, 0.04, 0.38], scale: 1, hasArms: false, cushion: false },
+  tiffany: { backHeight: 0.6, seatSize: [0.38, 0.05, 0.36], scale: 0.98, hasArms: false, cushion: true },
+  phoenix: { backHeight: 0.72, seatSize: [0.44, 0.07, 0.42], scale: 1.08, hasArms: false, cushion: true },
 };
 
 export function resolveChairVisual(
@@ -1106,6 +1109,21 @@ export function resolveChairVisual(
     base.frameColor = '#c9a227';
     base.seatColor = '#f8fafc';
     base.cushion = true;
+  }
+  if (style === 'tiffany' && !material) {
+    base.frameColor = '#d4af37';
+    base.seatColor = '#f8fafc';
+    base.cushion = true;
+  }
+  if (style === 'phoenix' && !material) {
+    base.frameColor = '#c9a227';
+    base.seatColor = '#4c1d95';
+    base.cushion = true;
+  }
+  if (style === 'wishbone' && !material) {
+    base.frameColor = '#92400e';
+    base.seatColor = '#e7e5e4';
+    base.cushion = false;
   }
   if (style === 'ovalBack' && (!material || material === 'velvet' || material === 'linen' || material === 'fabric')) {
     base.seatColor = '#c4a4a4';

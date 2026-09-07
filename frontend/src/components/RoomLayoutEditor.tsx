@@ -6347,7 +6347,7 @@ export default function RoomLayoutEditor({
                 <Wine className="w-4 h-4 text-primary" aria-hidden />
                 Bars & verrerie
               </h4>
-              <p className="text-xs text-muted">Bouteilles et verres adaptés au service : cocktail, vin, champagne, bière, café, whisky.</p>
+              <p className="text-xs text-muted">Cocktail, vin, champagne, bière, café, whisky, îlot, bar en L, jus, mocktails, tapas, thé.</p>
             </div>
             <button type="button" onClick={() => setQuickCreate(null)} className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}>
               Fermer

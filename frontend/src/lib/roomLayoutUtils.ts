@@ -32,7 +32,10 @@ export type ChairStyle =
   | 'ghost'
   | 'panton'
   | 'louis'
-  | 'ovalBack';
+  | 'ovalBack'
+  | 'wishbone'
+  | 'tiffany'
+  | 'phoenix';
 /** Matériau d’assise. */
 export type SeatMaterial =
   | 'velvet'
@@ -62,17 +65,37 @@ export type PodiumStyle =
 /** Instruments de concert posables au sol ou sur un podium. */
 export type InstrumentStyle =
   | 'piano'
+  | 'upright'
   | 'keyboard'
   | 'drums'
   | 'guitar'
   | 'bass'
+  | 'doubleBass'
+  | 'cello'
+  | 'harp'
   | 'micStand'
   | 'sax'
+  | 'trumpet'
   | 'violin'
+  | 'conga'
+  | 'cajon'
+  | 'mixer'
   | 'amp'
   | 'speaker';
 /** Comptoir de bar et verrerie associée. */
-export type BarStyle = 'cocktail' | 'wine' | 'champagne' | 'beer' | 'coffee' | 'whiskey';
+export type BarStyle =
+  | 'cocktail'
+  | 'wine'
+  | 'champagne'
+  | 'beer'
+  | 'coffee'
+  | 'whiskey'
+  | 'island'
+  | 'lShaped'
+  | 'juice'
+  | 'mocktail'
+  | 'tapas'
+  | 'tea';
 export type RoofStyle = 'flat' | 'tentSwag' | 'gabled' | 'coffered';
 export type RoomFixtureKind =
   | 'stage'
@@ -216,7 +239,12 @@ export type AisleStyle =
   | 'rusticWood'
   | 'damaskGold'
   | 'ledRunway'
-  | 'blackVelvet';
+  | 'blackVelvet'
+  | 'sequinGold'
+  | 'marbleInlay'
+  | 'fairyLight'
+  | 'herringbone'
+  | 'silkIvory';
 
 export const aisleStyleLabels: Record<AisleStyle, string> = {
   royalRed: 'Tapis rouge royal (ganse or)',
@@ -226,6 +254,11 @@ export const aisleStyleLabels: Record<AisleStyle, string> = {
   damaskGold: 'Brocart jacquard or & ivoire',
   ledRunway: 'Catwalk lumineux LED',
   blackVelvet: 'Velours noir haute couture',
+  sequinGold: 'Paillettes or cinéma',
+  marbleInlay: 'Marbre incrusté & filet or',
+  fairyLight: 'Guirlande fairy lights',
+  herringbone: 'Chevron chêne cérémonie',
+  silkIvory: 'Soie ivoire nacrée',
 };
 
 export const aisleStyleHints: Record<AisleStyle, string> = {
@@ -236,6 +269,11 @@ export const aisleStyleHints: Record<AisleStyle, string> = {
   damaskGold: 'Motifs baroques grand siècle',
   ledRunway: 'Podium moderne avec bande néon',
   blackVelvet: 'Gala contemporain contrasté',
+  sequinGold: 'Tapis scintillant première / gala',
+  marbleInlay: 'Dallage blanc veiné, liseré laiton',
+  fairyLight: 'Bordure de micro-LED chaudes',
+  herringbone: 'Lames en V, allure manoir',
+  silkIvory: 'Reflet satiné mariage jour',
 };
 
 /** Styles de lustres et suspensions décoratives. */
@@ -1435,6 +1473,9 @@ export const chairStyleLabels: Record<ChairStyle, string> = {
   panton: 'Panton',
   louis: 'Louis XVI',
   ovalBack: 'Dossier ovale (rose)',
+  wishbone: 'Wishbone (Y)',
+  tiffany: 'Tiffany or',
+  phoenix: 'Phoenix prestige',
 };
 
 export const seatMaterialLabels: Record<SeatMaterial, string> = {
@@ -6045,39 +6086,63 @@ export const podiumStylePresets: Record<PodiumStyle, { w: number; h: number; hei
 
 export const instrumentStyleLabels: Record<InstrumentStyle, string> = {
   piano: 'Piano à queue',
+  upright: 'Piano droit',
   keyboard: 'Clavier / synthé',
   drums: 'Batterie',
   guitar: 'Guitare',
   bass: 'Basse',
+  doubleBass: 'Contrebasse',
+  cello: 'Violoncelle',
+  harp: 'Harpe',
   micStand: 'Pied de micro',
   sax: 'Saxophone',
+  trumpet: 'Trompette',
   violin: 'Violon',
+  conga: 'Congas',
+  cajon: 'Cajón',
+  mixer: 'Table de mixage',
   amp: 'Ampli',
   speaker: 'Enceinte de scène',
 };
 
 export const instrumentStyleHints: Record<InstrumentStyle, string> = {
-  piano: 'Piano à queue, à poser sur scène',
-  keyboard: 'Clavier sur pied',
-  drums: 'Kit batterie concert',
-  guitar: 'Guitare sur stand',
-  bass: 'Basse électrique',
-  micStand: 'Micro + pied',
-  sax: 'Saxophone sur support',
-  violin: 'Violon + pupitre',
-  amp: 'Ampli combo',
+  piano: 'Queue, couvercle relevé, pédalier',
+  upright: 'Piano vertical, pupitre et pedales',
+  keyboard: 'Clavier 61 touches sur pied X',
+  drums: 'Grosse caisse, toms, cymbales, siège',
+  guitar: 'Guitare sur stand, table cintrée',
+  bass: 'Basse électrique 4 cordes',
+  doubleBass: 'Contrebasse sur pique',
+  cello: 'Violoncelle + pique',
+  harp: 'Harpe de concert, cordes dorées',
+  micStand: 'Pied perche + grille',
+  sax: 'Saxophone alto sur support',
+  trumpet: 'Trompette + sourdine',
+  violin: 'Violon + archet',
+  conga: 'Paire de congas',
+  cajon: 'Caisse péruvienne',
+  mixer: 'Console DJ / FOH',
+  amp: 'Combo ampli avec grille',
   speaker: 'Retour / enceinte PA',
 };
 
 export const instrumentStylePresets: Record<InstrumentStyle, { w: number; h: number; label: string }> = {
-  piano: { w: 10, h: 6, label: 'Piano à queue' },
+  piano: { w: 12, h: 7, label: 'Piano à queue' },
+  upright: { w: 8, h: 5, label: 'Piano droit' },
   keyboard: { w: 8, h: 4, label: 'Clavier' },
-  drums: { w: 8, h: 8, label: 'Batterie' },
+  drums: { w: 10, h: 9, label: 'Batterie' },
   guitar: { w: 4, h: 6, label: 'Guitare' },
   bass: { w: 4, h: 7, label: 'Basse' },
+  doubleBass: { w: 5, h: 6, label: 'Contrebasse' },
+  cello: { w: 4, h: 5, label: 'Violoncelle' },
+  harp: { w: 6, h: 5, label: 'Harpe' },
   micStand: { w: 3, h: 3, label: 'Micro' },
   sax: { w: 3, h: 4, label: 'Saxophone' },
+  trumpet: { w: 3, h: 3, label: 'Trompette' },
   violin: { w: 3, h: 4, label: 'Violon' },
+  conga: { w: 6, h: 5, label: 'Congas' },
+  cajon: { w: 3, h: 3, label: 'Cajón' },
+  mixer: { w: 8, h: 5, label: 'Table de mixage' },
   amp: { w: 4, h: 4, label: 'Ampli' },
   speaker: { w: 4, h: 4, label: 'Enceinte' },
 };
@@ -6089,6 +6154,12 @@ export const barStyleLabels: Record<BarStyle, string> = {
   beer: 'Bar bières',
   coffee: 'Coffee bar',
   whiskey: 'Bar whisky',
+  island: 'Îlot bar central',
+  lShaped: 'Bar en L',
+  juice: 'Bar à jus',
+  mocktail: 'Bar mocktails',
+  tapas: 'Bar tapas',
+  tea: 'Salon de thé',
 };
 
 export const barStyleHints: Record<BarStyle, string> = {
@@ -6098,6 +6169,12 @@ export const barStyleHints: Record<BarStyle, string> = {
   beer: 'Tireuses et chopes',
   coffee: 'Machine espresso et tasses',
   whiskey: 'Carafes, tumblers, étagère ambrée',
+  island: 'Comptoir 360°, siège tout autour',
+  lShaped: 'Retour d’angle, plus de linéaire',
+  juice: 'Carafes, blender, fruits',
+  mocktail: 'Sirop, agrumes, sans alcool',
+  tapas: 'Planches et petites assiettes',
+  tea: 'Urne, théière, tasses porcelaine',
 };
 
 export const barStylePresets: Record<BarStyle, { w: number; h: number; label: string; color: string }> = {
@@ -6107,6 +6184,12 @@ export const barStylePresets: Record<BarStyle, { w: number; h: number; label: st
   beer: { w: 26, h: 10, label: 'Bar bières', color: '#5b4030' },
   coffee: { w: 22, h: 9, label: 'Coffee bar', color: '#2c2118' },
   whiskey: { w: 24, h: 10, label: 'Bar whisky', color: '#3b2416' },
+  island: { w: 18, h: 16, label: 'Îlot bar', color: '#3d2b1f' },
+  lShaped: { w: 32, h: 16, label: 'Bar en L', color: '#4a3728' },
+  juice: { w: 22, h: 9, label: 'Bar à jus', color: '#3f4a28' },
+  mocktail: { w: 24, h: 10, label: 'Bar mocktails', color: '#3a3048' },
+  tapas: { w: 26, h: 10, label: 'Bar tapas', color: '#4a3020' },
+  tea: { w: 22, h: 9, label: 'Salon de thé', color: '#4a4034' },
 };
 
 /** Conserve un libellé perso ; n’écrase que s’il vaut encore le défaut précédent. */

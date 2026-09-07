@@ -244,12 +244,14 @@ const WALL_TEXTURES = new Set<WallTextureStyle>([
 ]);
 const CHAIR_STYLES = new Set<ChairStyle>([
   'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback', 'louis', 'ovalBack',
+  'wishbone', 'tiffany', 'phoenix', 'panton', 'tolix', 'club', 'bergere', 'modern',
 ]);
 const SEAT_MATERIALS = new Set<SeatMaterial>([
   'velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen',
 ]);
 const AISLE_STYLES = new Set<AisleStyle>([
   'royalRed', 'whiteMirror', 'botanicalRunner', 'rusticWood', 'damaskGold', 'ledRunway', 'blackVelvet',
+  'sequinGold', 'marbleInlay', 'fairyLight', 'herringbone', 'silkIvory',
 ]);
 
 const FLOOR_ALIASES: Record<string, FloorType> = {
@@ -932,7 +934,8 @@ function applyFixtureLook(
   }
   if (item.kind === 'instrument' && item.instrumentStyle) {
     const allowed: RoomLayoutBlueprint['fixtures'][number]['instrumentStyle'][] = [
-      'piano', 'keyboard', 'drums', 'guitar', 'bass', 'micStand', 'sax', 'violin', 'amp', 'speaker',
+      'piano', 'upright', 'keyboard', 'drums', 'guitar', 'bass', 'doubleBass', 'cello', 'harp',
+      'micStand', 'sax', 'trumpet', 'violin', 'conga', 'cajon', 'mixer', 'amp', 'speaker',
     ];
     if (allowed.includes(item.instrumentStyle as typeof allowed[number])) {
       next = { ...next, instrumentStyle: item.instrumentStyle as typeof allowed[number] };
@@ -941,6 +944,7 @@ function applyFixtureLook(
   if (item.kind === 'bar' && item.barStyle) {
     const allowed: RoomLayoutBlueprint['fixtures'][number]['barStyle'][] = [
       'cocktail', 'wine', 'champagne', 'beer', 'coffee', 'whiskey',
+      'island', 'lShaped', 'juice', 'mocktail', 'tapas', 'tea',
     ];
     if (allowed.includes(item.barStyle as typeof allowed[number])) {
       next = { ...next, barStyle: item.barStyle as typeof allowed[number] };
