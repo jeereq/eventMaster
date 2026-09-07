@@ -12,6 +12,7 @@ import { claimAiSimulationHistory } from '@/lib/aiSimulationHistory';
 import { claimAiTemplateComposeHistory } from '@/lib/aiTemplateComposeHistory';
 import { claimAiRoomPlanComposeHistory } from '@/lib/aiRoomPlanComposeHistory';
 import { setAiTokenSessionUnlimited } from '@/lib/aiTokens';
+import { SESSION_EXPIRED_EVENT } from '@/lib/sessionEvents';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -128,6 +129,7 @@ interface AuthContextType {
   verifyOtp: (email: string, otp: string, options?: { next?: string | null }) => Promise<void>;
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
   logout: () => void;
+  sessionExpired: boolean;
   refreshBilling: () => Promise<void>;
   refreshPlanFeatures: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -211,7 +213,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [supportSession, setSupportSession] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const onExpired = () => setSessionExpired(true);
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
@@ -242,7 +251,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             persistAccess(data.access);
           }
         })
-        .catch((err) => console.error('Error auto-refreshing profile on mount:', err));
+        .catch((err: Error & { status?: number }) => {
+          if (err?.status === 401) {
+            setSessionExpired(true);
+            return;
+          }
+          console.error('Error auto-refreshing profile on mount:', err);
+        });
     }
     setLoading(false);
   }, []);
@@ -266,6 +281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTenant(data.tenant ?? null);
       setAccess(data.access ?? null);
       setSupportSession(false);
+      setSessionExpired(false);
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
       void claimAiSimulationHistory();
@@ -349,6 +365,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTenant(data.tenant ?? null);
       setAccess(data.access ?? null);
       setSupportSession(false);
+      setSessionExpired(false);
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
       void claimAiSimulationHistory();
@@ -392,6 +409,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPlanFeatures(null);
     setPlanQuota(null);
     setSupportSession(false);
+    setSessionExpired(false);
     router.push('/login');
   };
 
@@ -557,7 +575,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, tenant, access, planFeatures, planQuota, token, loading, supportSession, login, register, verifyOtp, resendOtp,
+      user, tenant, access, planFeatures, planQuota, token, loading, supportSession, sessionExpired,
+      login, register, verifyOtp, resendOtp,
       logout, refreshBilling, refreshPlanFeatures, refreshProfile, updateUserAndTenant, updateBranding,
       enterSupportSession, exitSupportSession,
     }}>

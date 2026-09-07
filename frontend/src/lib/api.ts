@@ -1,3 +1,5 @@
+import { isAuthExemptPath, notifySessionExpired } from '@/lib/sessionEvents';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5001/api';
 // const API_URL = "https://eventmaster-backend-ysgk.onrender.com/api"
 // API_URL=http://localhost:5001/api var environnement local
@@ -44,6 +46,9 @@ async function request(path: string, options: FetchOptions = {}) {
     } else {
       const text = await response.text();
       if (!response.ok) {
+        if (response.status === 401 && token && !isAuthExemptPath(path)) {
+          notifySessionExpired();
+        }
         throw new Error(text || `Erreur serveur (${response.status})`);
       }
       return null;
@@ -58,6 +63,9 @@ async function request(path: string, options: FetchOptions = {}) {
       err.data = data;
       if (data.details && typeof data.details === 'string') {
         err.message = `${data.error} (${data.details})`;
+      }
+      if (response.status === 401 && token && !isAuthExemptPath(path)) {
+        notifySessionExpired();
       }
       throw err;
     }
@@ -94,6 +102,9 @@ export const api = {
         message = data.error || message;
       } catch {
         // binaire
+      }
+      if (response.status === 401 && token) {
+        notifySessionExpired();
       }
       throw new Error(message);
     }

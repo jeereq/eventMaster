@@ -14,6 +14,7 @@ import BrandFaviconSync from "@/components/BrandFaviconSync";
 import GlobalAiSimulatorFab from "@/components/GlobalAiSimulatorFab";
 import MobileSplashScreen from "@/components/MobileSplashScreen";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
+import SessionExpiredDialog from "@/components/SessionExpiredDialog";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
@@ -108,6 +109,7 @@ export default function RootLayout({
         <ThemeProvider>
           <PlatformSiteProvider>
             <AuthProvider>
+              <SessionExpiredDialog />
               <PwaInstallProvider>
                 <ViewPreferencesBridge>
                   <BrandFaviconSync />

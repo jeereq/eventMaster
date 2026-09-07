@@ -13,9 +13,24 @@ import {
 } from '@/components/ui';
 import MarketplaceGlobalActivityFeed from '@/components/marketplace/MarketplaceGlobalActivityFeed';
 import {
-  Building2, Heart, Loader2, MessageCircle, Plus, Rss, Send, Sparkles,
-  Trash2, X, Image as ImageIcon, ArrowRight,
+  Building2, ChevronLeft, ChevronRight, Heart, Images, Loader2, MessageCircle,
+  Play, Plus, Rss, Send, Sparkles, Trash2, X, Image as ImageIcon, ArrowRight,
 } from 'lucide-react';
+
+function formatRelativeDate(dateStr: string) {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return 'Récemment';
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 0) return "À l'instant";
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return "À l'instant";
+  if (diffMins < 60) return `Il y a ${diffMins} min`;
+  if (diffHours < 24) return `Il y a ${diffHours} h`;
+  if (diffDays < 7) return `Il y a ${diffDays} j`;
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
 
 type DeskTab = 'grid' | 'create';
 
@@ -117,7 +132,7 @@ function DashboardPublicationsPageInner() {
       </div>
 
       {tab === 'grid' ? (
-        <PublicationsGrid />
+        <PublicationsGrid canPublish={canPublish} onCreate={() => setTab('create')} />
       ) : canPublish ? (
         <CreatePublicationPanel
           onCreated={() => setTab('grid')}
@@ -133,7 +148,13 @@ function DashboardPublicationsPageInner() {
   );
 }
 
-function PublicationsGrid() {
+function PublicationsGrid({
+  canPublish,
+  onCreate,
+}: {
+  canPublish: boolean;
+  onCreate: () => void;
+}) {
   const { user } = useAuth();
   const [posts, setPosts] = useState<MyPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +212,7 @@ function PublicationsGrid() {
               type="button"
               onClick={() => setKind(id)}
               className={cn(
-                'min-h-9 px-3.5 rounded-lg text-xs font-semibold transition',
+                'min-h-11 px-3.5 rounded-lg text-xs font-semibold transition touch-manipulation',
                 kind === id
                   ? cn('bg-surface shadow-xs font-bold border', activeStyle)
                   : 'text-muted hover:text-foreground',
@@ -208,7 +229,7 @@ function PublicationsGrid() {
             type="button"
             onClick={() => setDisplayMode('tiles')}
             className={cn(
-              'min-h-9 px-3 rounded-lg text-xs font-semibold transition',
+              'min-h-11 px-3 rounded-lg text-xs font-semibold transition touch-manipulation',
               displayMode === 'tiles' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
             )}
           >
@@ -218,7 +239,7 @@ function PublicationsGrid() {
             type="button"
             onClick={() => setDisplayMode('feed')}
             className={cn(
-              'min-h-9 px-3 rounded-lg text-xs font-semibold transition',
+              'min-h-11 px-3 rounded-lg text-xs font-semibold transition touch-manipulation',
               displayMode === 'feed' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
             )}
           >
@@ -242,44 +263,81 @@ function PublicationsGrid() {
           icon={<Rss className="w-5 h-5" />}
           title="Aucune réalisation"
           description="Dès que des salles ou prestations partagent une actualité, elle apparaîtra ici."
+          action={
+            canPublish ? (
+              <Button onClick={onCreate} leftIcon={<Plus className="w-4 h-4" />}>
+                Créer une réalisation
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {tiles.map((post) => {
-            const media = post.mediaUrls?.[0];
-            const video = media && (media.type === 'VIDEO' || isVideoUrl(media.url));
+            const mediaList = post.mediaUrls || [];
+            const media = mediaList[0];
+            const video = Boolean(media && (media.type === 'VIDEO' || isVideoUrl(media.url)));
+            const extraCount = Math.max(0, mediaList.length - 1);
+            const likes = post.likeCount ?? post.likes?.length ?? 0;
+            const comments = post.comments?.length ?? 0;
             return (
               <button
                 key={post.id}
                 type="button"
                 onClick={() => setSelected(post)}
-                className="group relative aspect-square overflow-hidden rounded-xl bg-surface-muted border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:shadow-md transition-all duration-200 text-left"
+                className="group flex flex-col overflow-hidden rounded-2xl bg-surface border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:border-border transition text-left"
                 aria-label={`Ouvrir la réalisation de ${post.author?.name || 'ce partenaire'}`}
               >
-                {media ? (
-                  video ? (
-                    <video src={media.url} muted className="h-full w-full object-cover" />
+                <span className="relative aspect-square overflow-hidden bg-surface-muted">
+                  {media ? (
+                    video ? (
+                      <video src={media.url} muted playsInline className="h-full w-full object-cover" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={sizedMediaUrl(media.url, 480)}
+                        alt={post.content ? `Photo : ${post.content.slice(0, 60)}` : `Réalisation de ${post.author?.name || 'partenaire'}`}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                      />
+                    )
                   ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={sizedMediaUrl(media.url, 480)}
-                      alt={post.content ? `Photo : ${post.content.slice(0, 60)}` : `Réalisation de ${post.author?.name || 'partenaire'}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                    />
-                  )
-                ) : (
-                  <div className="h-full w-full p-4 flex flex-col justify-between bg-gradient-to-br from-primary/10 via-surface to-surface-muted">
-                    <p className="text-xs font-semibold text-primary">{post.author?.name || 'Réalisation'}</p>
-                    <p className="text-xs text-foreground line-clamp-4">{post.content}</p>
-                  </div>
-                )}
-                <span className="absolute inset-0 bg-black/40 backdrop-blur-2xs transition opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 flex items-center justify-center gap-4 text-white text-xs font-bold tabular-nums">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Heart className="w-4 h-4 fill-white" /> {post.likeCount ?? post.likes?.length ?? 0}
+                    <span className="h-full w-full p-4 flex flex-col justify-between bg-emerald-500/8">
+                      <span className="text-xs font-semibold text-primary">{post.author?.name || 'Réalisation'}</span>
+                      <span className="text-xs text-foreground line-clamp-4">{post.content}</span>
+                    </span>
+                  )}
+                  {video ? (
+                    <span className="absolute top-2 left-2 inline-flex min-h-8 items-center gap-1 rounded-full bg-stage/70 px-2 text-xs font-semibold text-stage-foreground">
+                      <Play className="w-3 h-3 fill-current" aria-hidden />
+                      Vidéo
+                    </span>
+                  ) : extraCount > 0 ? (
+                    <span className="absolute top-2 left-2 inline-flex min-h-8 items-center gap-1 rounded-full bg-stage/70 px-2 text-xs font-semibold text-stage-foreground">
+                      <Images className="w-3 h-3" aria-hidden />
+                      +{extraCount}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="flex flex-col gap-1 p-2.5 sm:p-3">
+                  <span className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-xs font-semibold text-foreground truncate">
+                      {post.author?.name || 'Réalisation'}
+                    </span>
+                    <span className="text-xs text-muted shrink-0 tabular-nums">
+                      {formatRelativeDate(post.createdAt)}
+                    </span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <MessageCircle className="w-4 h-4" /> {post.comments?.length ?? 0}
+                  {post.content ? (
+                    <span className="text-xs text-muted line-clamp-2">{post.content}</span>
+                  ) : null}
+                  <span className="inline-flex items-center gap-3 text-xs text-muted tabular-nums pt-0.5">
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="w-3.5 h-3.5" aria-hidden /> {likes}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MessageCircle className="w-3.5 h-3.5" aria-hidden /> {comments}
+                    </span>
                   </span>
                 </span>
               </button>
@@ -307,21 +365,42 @@ function PublicationsGrid() {
 
 function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void }) {
   const media = post.mediaUrls || [];
+  const [index, setIndex] = useState(0);
+  const current = media[index] || media[0];
   const href = post.author?.href
     ? post.author.href.replace(/^\/marketplace\//, '/dashboard/catalogue/')
     : null;
 
+  const goPrev = useCallback(() => {
+    setIndex((i) => (media.length ? (i - 1 + media.length) % media.length : 0));
+  }, [media.length]);
+
+  const goNext = useCallback(() => {
+    setIndex((i) => (media.length ? (i + 1) % media.length : 0));
+  }, [media.length]);
+
   useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') goPrev();
+      if (e.key === 'ArrowRight') goNext();
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [onClose, goPrev, goNext]);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [post.id]);
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+      className="fixed inset-0 z-[100] bg-stage/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Détail de la réalisation"
@@ -333,19 +412,22 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
       >
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
           <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-bold text-foreground truncate">{post.author?.name || 'Réalisation'}</h3>
-            <div className="flex items-center gap-2 mt-1">
+            <h3 className="text-sm sm:text-base font-semibold text-foreground truncate">
+              {post.author?.name || 'Réalisation'}
+            </h3>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <span
                 className={cn(
-                  'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border',
+                  'inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border',
                   post.author?.kind === 'vendor'
                     ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
                     : 'bg-primary/10 text-primary border-primary/30',
                 )}
               >
-                {post.author?.kind === 'vendor' ? <Sparkles className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
-                {post.author?.kind === 'venue' ? 'Salle & Espace' : 'Prestataire certifié'}
+                {post.author?.kind === 'vendor' ? <Sparkles className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                {post.author?.kind === 'venue' ? 'Salle' : 'Prestation'}
               </span>
+              <span className="text-xs text-muted tabular-nums">{formatRelativeDate(post.createdAt)}</span>
             </div>
           </div>
           <button
@@ -358,27 +440,62 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
           </button>
         </div>
 
-        {media[0] ? (
-          <div className="rounded-2xl overflow-hidden border border-border/60 bg-black aspect-16/10 max-h-[420px]">
-            {media[0].type === 'VIDEO' || isVideoUrl(media[0].url) ? (
-              <video src={media[0].url} controls className="w-full h-full object-cover" />
+        {current ? (
+          <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-stage aspect-16/10 max-h-[420px]">
+            {current.type === 'VIDEO' || isVideoUrl(current.url) ? (
+              <video src={current.url} controls playsInline className="w-full h-full object-contain" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={sizedMediaUrl(media[0].url, 1200)}
+                src={sizedMediaUrl(current.url, 1200)}
                 alt={post.content ? `Photo de réalisation : ${post.content.slice(0, 60)}` : 'Photo de la réalisation'}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             )}
+            {media.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-surface/90 text-foreground border border-border shadow-2xs touch-manipulation"
+                  aria-label="Média précédent"
+                >
+                  <ChevronLeft className="w-5 h-5" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-surface/90 text-foreground border border-border shadow-2xs touch-manipulation"
+                  aria-label="Média suivant"
+                >
+                  <ChevronRight className="w-5 h-5" aria-hidden />
+                </button>
+                <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1.5">
+                  {media.map((item, i) => (
+                    <button
+                      key={`${item.url}-${i}`}
+                      type="button"
+                      onClick={() => setIndex(i)}
+                      className={cn(
+                        'h-2 rounded-full transition',
+                        i === index ? 'w-5 bg-primary' : 'w-2 bg-white/60',
+                      )}
+                      aria-label={`Média ${i + 1} sur ${media.length}`}
+                      aria-current={i === index ? 'true' : undefined}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
         ) : null}
 
         <div className="space-y-4">
           {post.content ? (
-            <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed font-normal">{post.content}</p>
+            <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
           ) : null}
 
-          <div className="flex items-center gap-4 text-xs text-muted pt-2 border-t border-border/60 tabular-nums">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted pt-2 border-t border-border/60 tabular-nums">
             <span className="inline-flex items-center gap-1.5 font-semibold text-rose-600 dark:text-rose-400">
               <Heart className="w-4 h-4 fill-current" /> {post.likeCount ?? post.likes?.length ?? 0}
             </span>
@@ -388,7 +505,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
             {href ? (
               <Link
                 href={href}
-                className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:opacity-95 active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="ml-auto inline-flex min-h-11 items-center gap-1.5 px-3 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:opacity-95 active:scale-[0.98] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <span>Voir la fiche</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -588,7 +705,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
               aria-label="Description de la réalisation"
               aria-describedby="publication-desc-hint"
             />
-            <div className="flex justify-between items-center text-[11px] text-muted">
+            <div className="flex justify-between items-center text-xs text-muted">
               <span id="publication-desc-hint">Partagez vos nouveautés ou réalisations.</span>
               <span className={cn(content.length > 3800 && 'text-amber-600 font-semibold')}>{content.length} / 4000</span>
             </div>
@@ -597,7 +714,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
           {media.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {media.map((m, i) => (
-                <div key={`${m.url}-${i}`} className="relative w-20 h-20 rounded-xl overflow-hidden border border-border">
+                <div key={`${m.url}-${i}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-border">
                   {m.type === 'VIDEO' || isVideoUrl(m.url) ? (
                     <video src={m.url} className="w-full h-full object-cover" muted />
                   ) : (
@@ -607,10 +724,10 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
                   <button
                     type="button"
                     onClick={() => setMedia((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+                    className="absolute top-1 right-1 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-stage/70 text-white hover:bg-stage transition touch-manipulation"
                     aria-label="Retirer ce média"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -655,8 +772,8 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
         ) : (
           <ul className="space-y-2">
             {myPosts.slice(0, 12).map((p) => (
-              <li key={p.id} className="rounded-xl border border-border bg-surface p-3 flex gap-3">
-                <div className="w-14 h-14 rounded-lg overflow-hidden bg-surface-muted shrink-0">
+              <li key={p.id} className="rounded-xl border border-border bg-surface p-3 flex items-center gap-3">
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface-muted shrink-0">
                   {p.mediaUrls?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={p.mediaUrls[0].url} alt="" className="w-full h-full object-cover" />
@@ -666,15 +783,16 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
                     </div>
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 space-y-1">
                   <p className="text-xs font-semibold text-foreground truncate">{p.author?.name}</p>
-                  <p className="text-[11px] text-muted line-clamp-2">{p.content || 'Média'}</p>
+                  <p className="text-xs text-muted line-clamp-2">{p.content || 'Média'}</p>
+                  <p className="text-xs text-muted tabular-nums">{formatRelativeDate(p.createdAt)}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => void remove(p.id)}
-                  className="p-2 text-muted hover:text-rose-600"
-                  aria-label="Supprimer"
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted hover:text-rose-600 hover:bg-rose-500/10 touch-manipulation"
+                  aria-label="Supprimer cette réalisation"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

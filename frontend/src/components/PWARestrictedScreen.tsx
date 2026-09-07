@@ -122,33 +122,33 @@ export default function PWARestrictedScreen() {
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
 
-      <header className="border-b border-border bg-surface/50 backdrop-blur-md px-6 py-4 flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-3">
+      <header className="border-b border-border bg-surface/50 backdrop-blur-md px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 relative z-10">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="bg-primary p-2 rounded-xl text-white">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
             <span className="font-bold text-lg text-foreground block">EventMaster</span>
-            <span className="text-[10px] text-muted font-semibold uppercase tracking-wider">Accès restreint</span>
+            <span className="text-xs text-muted font-semibold">Accès restreint</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={handleRefreshStatus}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary hover:bg-primary/10 transition border border-primary/20 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 min-h-11 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold text-primary hover:bg-primary/10 transition border border-primary/20 disabled:opacity-50 touch-manipulation"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Rafraîchissement...' : 'Rafraîchir mon statut'}
+            <span className="hidden sm:inline">{refreshing ? 'Rafraîchissement…' : 'Rafraîchir'}</span>
           </button>
           <button
             type="button"
             onClick={logout}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition border border-rose-500/20"
+            className="inline-flex items-center justify-center gap-2 min-h-11 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition border border-rose-500/20 touch-manipulation"
           >
             <LogOut className="w-4 h-4" />
-            Déconnexion
+            <span>Déconnexion</span>
           </button>
         </div>
       </header>
