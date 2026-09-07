@@ -2,7 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   invitationArtStyleCompositionNote,
+  invitationArtStyleCraftNotes,
   invitationArtStyleImageDirective,
+  invitationArtStyleLightNote,
   invitationArtStyleScaffoldLine,
   parseInvitationArtStyle,
 } from './invitationArtStyle.ts';
@@ -26,5 +28,8 @@ describe('invitationArtStyle', () => {
     assert.match(invitationArtStyleImageDirective('stylise-3d'), /volume|bokeh|depth of field/i);
     assert.match(invitationArtStyleCompositionNote('dessin-anime'), /three readable planes|IMMERSION/);
     assert.match(invitationArtStyleCompositionNote('realiste'), /real space/);
+    assert.match(invitationArtStyleCraftNotes(), /museum-grade|9:16/);
+    assert.match(invitationArtStyleLightNote('stylise-3d'), /rim/);
+    assert.match(invitationArtStyleLightNote('realiste'), /Kinshasa|85mm/);
   });
 });

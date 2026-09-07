@@ -19,8 +19,10 @@ import {
 } from './invitationPromptFidelity.ts';
 import {
   invitationArtStyleCompositionNote,
+  invitationArtStyleCraftNotes,
   invitationArtStyleFaceLockNote,
   invitationArtStyleImageDirective,
+  invitationArtStyleLightNote,
   invitationArtStyleScaffoldLine,
   invitationArtStyleStructureRules,
   parseInvitationArtStyle,
@@ -369,6 +371,8 @@ function buildImagePrompt(
     'Create ONE vertical print-ready invitation artwork (9:16, 1024x1536). Purpose: luxury printed invitation card for a real event in Central Africa / RDC.',
     invitationArtStyleImageDirective(artStyle),
     invitationArtStyleCompositionNote(artStyle),
+    invitationArtStyleLightNote(artStyle),
+    invitationArtStyleCraftNotes(),
   );
   if (hasPeople) {
     parts.push(invitationArtStyleFaceLockNote(artStyle));
@@ -458,7 +462,7 @@ function buildImagePrompt(
       'No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).',
     );
   }
-  return parts.join('\n').slice(0, hasPeople ? 5200 : 5000);
+  return parts.join('\n').slice(0, hasPeople ? 5800 : 5400);
 }
 
 function structureSystemPrompt(embedText: boolean, artStyle?: InvitationArtStyleId): string {
@@ -1140,7 +1144,7 @@ async function generateImageWithNanoBanana(
 
   const promptText = hasPeople
     ? imagePrompt
-    : `Vertical 9:16 luxury invitation. ${invitationArtStyleImageDirective(parseInvitationArtStyle(options?.artStyle))} If people appear, Black African hosts only — never Caucasian stock faces.
+    : `Vertical 9:16 luxury invitation. ${invitationArtStyleImageDirective(parseInvitationArtStyle(options?.artStyle))} ${invitationArtStyleCraftNotes()} If people appear, Black African hosts only — never Caucasian stock faces.
 ${options?.embedText ? 'Embed invitation typography from the brief.\n' : ''}
 ${imagePrompt}`;
 

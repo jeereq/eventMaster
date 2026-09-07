@@ -15,27 +15,27 @@ export const INVITATION_ART_STYLES: Array<{
   {
     id: 'realiste',
     label: 'Réaliste',
-    summary: 'Photo ultra-réelle : grain, or, lumière volume.',
+    summary: 'Photo 85 mm : pores, or, lumière Kinshasa.',
   },
   {
     id: 'dessin-anime',
     label: 'Dessin animé',
-    summary: '2D immersif, plans et profondeur.',
+    summary: 'Long métrage 2D, plans, lumière unique.',
   },
   {
     id: 'illustration',
     label: 'Illustration',
-    summary: 'Peinture en volume, scène où l’on entre.',
+    summary: 'Affiche peinte, clair-obscur, volume.',
   },
   {
     id: 'aquarelle',
     label: 'Aquarelle',
-    summary: 'Lavis en profondeur, papier coton.',
+    summary: 'Lavis en profondeur, pigment et or.',
   },
   {
     id: 'stylise-3d',
     label: '3D stylisé',
-    summary: 'Volume cinéma, on tourne autour.',
+    summary: 'Cinéma 3D, halo, ombres au sol.',
   },
 ];
 

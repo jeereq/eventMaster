@@ -40,6 +40,12 @@ export function invitationArtStyleLabel(id: InvitationArtStyleId): string {
 const DEPTH_IMMERSE =
   'deep spatial immersion: clear foreground / midground / background, atmospheric perspective, overlapping planes, volumetric light shafts, soft far haze, camera depth of field so the card feels walk-into, not flat';
 
+const CRAFT_FINISH =
+  'CRAFT FINISH: museum-grade 9:16 print still. One coherent light direction. Color-graded (warm African golds, never grey sludge). Sharp where it must be, soft where it recedes. No extra fingers, no melted ornaments, no duplicate faces, no watermark, no UI chrome, no stock-template look.';
+
+const MATERIALS_RDC =
+  'MATERIALS: tactile cotton or laid paper; anisotropic gold foil; fresh tropical florals (not plastic roses); authentic wax, kasai velvet or raffia only when the brief asks — never generic European ballroom stock.';
+
 /** Clause [Style] pour le scaffold Nano Banana. */
 export function invitationArtStyleScaffoldLine(id: InvitationArtStyleId): string {
   switch (id) {
@@ -65,6 +71,7 @@ export function invitationArtStyleImageDirective(id: InvitationArtStyleId): stri
         `${DEPTH_IMMERSE}. Atmospheric perspective: distant ornaments cooler and softer; near gold and wax more saturated and detailed. Soft cinematic depth of field on far florals. Volumetric god-rays through the frame.`,
         'Clean feature-animation line, dimensional cel-shading (form shadows, bounce light, specular on satin and gold), expressive but controlled faces, designed fabrics (wax, satin, gold as painted materials with thickness).',
         'If reference photos exist: keep EACH person as the same individual (bone structure, eyes, smile, cheeks, skin tone, hair) but draw them as animated characters standing in real space. Do not stay photoreal. Do not caricature ethnicity or lighten skin.',
+        'Light: upper-left cinematic key, warm bounce from gold, painted god-rays, form shadows that turn the face. Line weight varies (thicker in shade). Eyes catch a drawn highlight.',
         'Forbidden: live-action photography, plastic 3D, airbrush beauty, Caucasian stock faces, flat graphic icons, empty white backdrop, paper-cut silhouettes without depth.',
       ].join(' ');
     case 'illustration':
@@ -73,6 +80,7 @@ export function invitationArtStyleImageDirective(id: InvitationArtStyleId): stri
         `${DEPTH_IMMERSE}. Overlapping brush masses, aerial perspective, warm near / cooler far, a narrow depth of field as if a painter staged a scene.`,
         'Visible brush or ink, rich editorial color, tactile paper and foil as painted matter, print-ready 9:16.',
         'If reference photos exist: paint the same people (identity locked) occupying volume in the scene, without turning the image into a photograph.',
+        'Light: poster chiaroscuro — warm key, cooler receding air, foil as painted metal with a single hard glint. Faces have painted planes, not smudge.',
         'Forbidden: photoreal 35mm, cheap clipart, airbrush beauty, Caucasian stock faces, sticker collage, single flat layer.',
       ].join(' ');
     case 'aquarelle':
@@ -80,6 +88,7 @@ export function invitationArtStyleImageDirective(id: InvitationArtStyleId): stri
         'ART STYLE — AQUARELLE IMMERSIVE (MANDATORY): Watercolor and gouache on cotton paper with real wet depth — receding washes, granulation in the distance, sharper pigment and gold gouache in the foreground.',
         `${DEPTH_IMMERSE}. Wet-in-wet atmosphere behind the couple or décor; dry-brush detail only on near faces, foil and flowers.`,
         'If reference photos exist: watercolor the same faces (identity locked), never a photo collage.',
+        'Light: north-window diffusion; wet bloom in far shadows; dry-brush sparkle on near gold and petals. Skin as layered transparent pigment, not a photo tint.',
         'Forbidden: photoreal pores, CGI, cartoon slapstick, Caucasian stock faces, postcard-flat single wash.',
       ].join(' ');
     case 'stylise-3d':
@@ -88,20 +97,23 @@ export function invitationArtStyleImageDirective(id: InvitationArtStyleId): stri
         `${DEPTH_IMMERSE}. Strong foreground occlusion (petals, foil edge, fabric), midground figures, deep background architecture. Anamorphic bokeh, rim light separating bodies from the set, contact shadows on the paper plane, subsurface scattering on melanin skin, micro-scratches on gold.`,
         'Rounded but believable forms, designed cloth with thickness and fold weight, prestige lighting (warm key, cool fill, practicals).',
         'If reference photos exist: sculpt the same people (identity locked) as volumetric characters in the set, not a photographed double glued on a render.',
+        'Light: three-point prestige (warm key, cool fill, tight rim), practicals in the set, anamorphic highlights. Skin SSS on melanin; gold micro-scratches; cloth gravity.',
         'Forbidden: raw live-action photoreal, ugly game-engine look, Caucasian default avatars, toy-flat orthographic, empty studio infinity backdrop.',
       ].join(' ');
     default:
       return [
         'ART STYLE — RÉALISTE ULTRA (MANDATORY): Authentic 35mm / 85mm editorial photography of a real printed invitation held in space — cotton-paper tooth, deckled edges if fitting, gold foil catching a true specular, wax and satin with weave and drape, fresh florals with pollen and dew.',
         'Skin: real melanin, visible pores, peach fuzz, natural oil sheen, no airbrush. Eyes wet, lashes individual, smile muscles working. Volumetric daylight or tungsten with catchlights and true contact shadows.',
-        'The card sits in shallow real depth: table or hands implied, background softly out of focus. No CGI, no cartoon, no wax-doll faces, no plastic beauty filter.',
+        'Optics: 85mm feel, f/2-ish, real chromatic fringe at foil edges, true contact shadows. The card sits in shallow space — table or linen implied, background softly out of focus.',
+        'No CGI, no cartoon, no wax-doll faces, no plastic beauty filter.',
       ].join(' ');
   }
 }
 
 /** Règles injectées dans le system prompt de structure JSON. */
 export function invitationArtStyleStructureRules(id: InvitationArtStyleId): string {
-  const depth = `- backgroundPrompt [Composition] MUST stage foreground / midground / background, atmospheric perspective and volumetric light so the card feels immersive, never a flat graphic.`;
+  const depth = `- backgroundPrompt [Composition] MUST stage foreground / midground / background, atmospheric perspective and volumetric light so the card feels immersive, never a flat graphic.
+- backgroundPrompt [Style] MUST name a single light direction, tactile paper/foil, and a print-sharp 9:16 finish (no watermark, no extra limbs).`;
   switch (id) {
     case 'dessin-anime':
       return `Chosen art style: DESSIN ANIMÉ IMMERSIF (multiplane 2D).
@@ -140,6 +152,25 @@ export function invitationArtStyleCompositionNote(id: InvitationArtStyleId): str
     return 'COMPOSITION: Photograph the invitation in real space — slight paper perspective, tactile near-field foil or florals, background falling out of focus. Ultra-real materials, never a CG flatbed scan.';
   }
   return 'COMPOSITION — IMMERSION: Stage three readable planes (near ornament, hosts, receding décor). Overlap silhouettes. Use atmospheric perspective and a hint of camera depth of field. The viewer stands inside the fête, not in front of a sticker.';
+}
+
+export function invitationArtStyleCraftNotes(): string {
+  return `${CRAFT_FINISH} ${MATERIALS_RDC}`;
+}
+
+export function invitationArtStyleLightNote(id: InvitationArtStyleId): string {
+  switch (id) {
+    case 'dessin-anime':
+      return 'LIGHT RIG: multiplane key from upper-left, gold bounce, painted shafts — one sun, no random glow.';
+    case 'illustration':
+      return 'LIGHT RIG: poster key + cooler air behind; one foil glint; painted planes on the face.';
+    case 'aquarelle':
+      return 'LIGHT RIG: soft north-window; wet far, dry-brush near; no harsh CGI spotlight.';
+    case 'stylise-3d':
+      return 'LIGHT RIG: warm key, cool fill, rim separating heads from the set; practicals; real contact shadows.';
+    default:
+      return 'LIGHT RIG: single window or late-afternoon Kinshasa daylight, warm bounce, 85mm shallow focus, true specular on foil.';
+  }
 }
 
 export function invitationArtStyleFaceLockNote(id: InvitationArtStyleId): string {

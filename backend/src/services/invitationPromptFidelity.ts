@@ -41,7 +41,7 @@ Rules (non-negotiable):
 2) Write englishSceneBrief in clear English as a directorial scene narrative — NOT a keyword list.
 3) Follow Nano Banana formula: [Subject] + [Action] + [Location/context] + [Composition] + [Style].
 4) Start with a strong verb (Compose / Design / Create / Clone / Modernize…).
-5) Be specific about paper, florals, lighting, materials, and framing.
+5) Be specific about paper, florals, lighting, materials, framing, and print finish (one light direction, tactile foil, 9:16 sharpness).
 6) Use positive framing (describe what to show, not what to avoid).
 7) Preserve every factual detail from the user: names, dates, venues, cities, colors, cultural motifs (Kuba, wax, pagne), event type, and any Congolese national language phrases (Lingala, Swahili, Kikongo, Tshiluba) without translating them into French or English.
 8) If reference photos of people will be attached: describe DÉCOR and CARD only — never rewrite faces, skin, smile, age, or ethnicity. Say hosts keep their photographed likeness.
