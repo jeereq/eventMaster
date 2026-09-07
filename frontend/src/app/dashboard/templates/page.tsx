@@ -40,7 +40,7 @@ import {
  Columns, Eye, CheckSquare, Loader2, XCircle,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
- Undo2, Redo2, History, Download
+ Undo2, Redo2, History, Download, Tag
 } from 'lucide-react';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
@@ -317,6 +317,7 @@ export default function TemplatesPage() {
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
  const [aiComposeContextSource, setAiComposeContextSource] = useState<InvitationContextSource>('none');
+ const [aiComposeDragging, setAiComposeDragging] = useState(false);
  const [aiImageDownloading, setAiImageDownloading] = useState(false);
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
@@ -1035,9 +1036,7 @@ export default function TemplatesPage() {
  await openAiComposeModal();
  };
 
- const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
- const list = Array.from(e.target.files || []);
- e.target.value = '';
+ const addAiComposeFiles = (list: File[]) => {
  if (!list.length) return;
  const images = list.filter((f) => f.type.startsWith('image/')).slice(0, 4);
  if (!images.length) {
@@ -1048,6 +1047,16 @@ export default function TemplatesPage() {
  const merged = [...aiComposeFiles, ...images].slice(0, 4);
  setAiComposeFiles(merged);
  setAiComposePreviewUrls(merged.map((f) => URL.createObjectURL(f)));
+ };
+
+ const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+ const list = Array.from(e.target.files || []);
+ e.target.value = '';
+ addAiComposeFiles(list);
+ };
+
+ const insertAiComposeVariable = (tag: string) => {
+ setAiComposePrompt((prev) => (prev ? `${prev.trim()} ${tag}` : tag));
  };
 
  const removeAiComposeFile = (index: number) => {
@@ -1216,15 +1225,28 @@ export default function TemplatesPage() {
  className="hidden"
  onChange={handleAiComposeFilesSelected}
  />
- <button
- type="button"
- disabled={aiComposeBusy || aiComposeFiles.length >= 4}
+ <div
+ onDragOver={(e) => {
+ e.preventDefault();
+ setAiComposeDragging(true);
+ }}
+ onDragLeave={() => setAiComposeDragging(false)}
+ onDrop={(e) => {
+ e.preventDefault();
+ setAiComposeDragging(false);
+ const dropped = Array.from(e.dataTransfer.files || []);
+ if (dropped.length) addAiComposeFiles(dropped);
+ }}
  onClick={() => aiComposeInputRef.current?.click()}
- className="mt-1.5 w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-primary/30 rounded-2xl hover:border-primary hover:bg-primary/10 text-primary font-bold text-xs transition disabled:opacity-50"
+ className={`mt-1.5 w-full flex items-center justify-center gap-2 p-3.5 border-2 border-dashed rounded-2xl cursor-pointer text-xs font-bold transition ${
+ aiComposeDragging
+ ? 'border-primary bg-primary/15 text-primary'
+ : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
+ }`}
  >
  <Upload className="w-4 h-4" />
- Ajouter des photos (optionnel)
- </button>
+ {aiComposeFiles.length > 0 ? `Ajouter d'autres photos (${aiComposeFiles.length}/4)` : 'Glisser ou cliquer pour ajouter des photos (1–4)'}
+ </div>
  {aiComposePreviewUrls.length > 0 && (
  <div className="mt-2 flex flex-wrap gap-2">
  {aiComposePreviewUrls.map((url, i) => (
@@ -1247,9 +1269,14 @@ export default function TemplatesPage() {
  </div>
 
  <div>
+ <div className="flex items-center justify-between">
  <label htmlFor="ai-compose-prompt" className="text-xs font-bold text-muted uppercase tracking-wider">
- Brief style ou demande de clonage
+ Brief de style ou demande de clonage
  </label>
+ <span className="text-[11px] text-muted font-mono">
+ {aiComposePrompt.length} car. · {aiComposePrompt.trim().split(/\s+/).filter(Boolean).length} mot{aiComposePrompt.trim().split(/\s+/).filter(Boolean).length > 1 ? 's' : ''}
+ </span>
+ </div>
  <textarea
  id="ai-compose-prompt"
  rows={3}
@@ -1259,6 +1286,31 @@ export default function TemplatesPage() {
  placeholder="Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…"
  className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
  />
+
+ <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+ <span className="text-[11px] font-semibold text-muted flex items-center gap-1">
+ <Tag className="w-3 h-3 text-primary" />
+ Insérer :
+ </span>
+ {[
+ { tag: '{{firstName}}', label: 'Prénom' },
+ { tag: '{{lastName}}', label: 'Nom' },
+ { tag: '{{date}}', label: 'Date' },
+ { tag: '{{location}}', label: 'Lieu' },
+ { tag: '{{title}}', label: 'Événement' },
+ ].map((v) => (
+ <button
+ key={v.tag}
+ type="button"
+ disabled={aiComposeBusy}
+ onClick={() => insertAiComposeVariable(v.tag)}
+ className="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-foreground transition"
+ title={`Insérer ${v.tag}`}
+ >
+ {v.label}
+ </button>
+ ))}
+ </div>
 
  <div className="mt-2.5">
  <PromptModelSelector

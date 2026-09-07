@@ -180,7 +180,7 @@ import {
   type AlignMode,
   type LayoutSelectionItem,
 } from '@/lib/roomSelectionUtils';
-import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry } from '@/lib/layoutActionLog';
+import { prependLayoutAction, sanitizeLayoutActions, type LayoutActionEntry, type RoomActionContext } from '@/lib/layoutActionLog';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import PlanCreationPath, { type PlanCreationPathId } from '@/components/PlanCreationPath';
@@ -530,10 +530,32 @@ export default function RoomLayoutEditor({
 
   const withLoggedAction = useCallback((
     next: RoomLayoutBlueprint,
-    action?: { message: string; kind?: LayoutActionEntry['kind'] },
+    action?: { message: string; kind?: LayoutActionEntry['kind']; context?: RoomActionContext },
   ): RoomLayoutBlueprint => {
     const prepared = ensureBlueprintDefaults(next);
     if (!action) return prepared;
+
+    const previousSeats = latestBlueprintRef.current.metadata.totalSeats ?? 0;
+    const nextSeats = prepared.metadata.totalSeats ?? 0;
+    const computedSeatsDelta = nextSeats - previousSeats;
+
+    const activeStoryId = resolveActiveStoryId(prepared);
+    const activeStoryObj = resolveStories(prepared).find((s) => s.id === activeStoryId);
+
+    const mergedContext: RoomActionContext = {
+      source: action.context?.source ?? 'manual',
+      category: action.context?.category,
+      targetLabel: action.context?.targetLabel,
+      targetId: action.context?.targetId,
+      itemCount: action.context?.itemCount,
+      storyId: action.context?.storyId ?? activeStoryId,
+      storyLabel: action.context?.storyLabel ?? activeStoryObj?.label ?? 'RDC',
+      seatsDelta: action.context?.seatsDelta ?? (computedSeatsDelta !== 0 ? computedSeatsDelta : undefined),
+      totalSeats: nextSeats,
+      authorName: action.context?.authorName ?? user?.name ?? user?.email ?? undefined,
+      authorRole: action.context?.authorRole ?? user?.role ?? undefined,
+    };
+
     return {
       ...prepared,
       metadata: {
@@ -542,10 +564,12 @@ export default function RoomLayoutEditor({
           sanitizeLayoutActions(latestBlueprintRef.current.metadata.layoutActions),
           action.message,
           action.kind ?? 'info',
+          undefined,
+          mergedContext,
         ),
       },
     };
-  }, []);
+  }, [user]);
 
   const emitBlueprint = useCallback((next: RoomLayoutBlueprint) => {
     const prepared = refreshBlueprintMetadata(ensureBlueprintDefaults(next));
@@ -553,13 +577,16 @@ export default function RoomLayoutEditor({
     onChange(prepared);
   }, [onChange]);
 
-  const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
+  const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info', context?: RoomActionContext) => {
     skipHistoryRef.current = true;
-    emitBlueprint(withLoggedAction(latestBlueprintRef.current, { message, kind }));
+    emitBlueprint(withLoggedAction(latestBlueprintRef.current, { message, kind, context }));
     skipHistoryRef.current = false;
   }, [emitBlueprint, withLoggedAction]);
 
-  const updateBlueprint = (next: RoomLayoutBlueprint, action?: { message: string; kind?: LayoutActionEntry['kind'] }) => {
+  const updateBlueprint = (
+    next: RoomLayoutBlueprint,
+    action?: { message: string; kind?: LayoutActionEntry['kind']; context?: RoomActionContext },
+  ) => {
     if (!skipHistoryRef.current) {
       pushHistory(latestBlueprintRef.current);
     }
@@ -571,7 +598,7 @@ export default function RoomLayoutEditor({
     if (!prev) return;
     futureRef.current = [...futureRef.current, structuredClone(latestBlueprintRef.current)];
     skipHistoryRef.current = true;
-    emitBlueprint(withLoggedAction(prev, { message: 'Annuler (Ctrl+Z)', kind: 'info' }));
+    emitBlueprint(withLoggedAction(prev, { message: 'Annuler (Ctrl+Z)', kind: 'info', context: { source: 'shortcut' } }));
     skipHistoryRef.current = false;
     syncHistoryFlags();
   }, [emitBlueprint, syncHistoryFlags, withLoggedAction]);
@@ -581,7 +608,7 @@ export default function RoomLayoutEditor({
     if (!next) return;
     pastRef.current = [...pastRef.current, structuredClone(latestBlueprintRef.current)];
     skipHistoryRef.current = true;
-    emitBlueprint(withLoggedAction(next, { message: 'Rétablir (Ctrl+Y)', kind: 'info' }));
+    emitBlueprint(withLoggedAction(next, { message: 'Rétablir (Ctrl+Y)', kind: 'info', context: { source: 'shortcut' } }));
     skipHistoryRef.current = false;
     syncHistoryFlags();
   }, [emitBlueprint, syncHistoryFlags, withLoggedAction]);
@@ -6315,6 +6342,12 @@ export default function RoomLayoutEditor({
           updateBlueprint(next, {
             message: `Studio IA (${next.furniture.length + next.fixtures.length} éléments)`,
             kind: 'template',
+            context: {
+              source: 'ai_studio',
+              category: 'all',
+              itemCount: next.furniture.length + next.fixtures.length,
+              totalSeats: next.metadata.totalSeats,
+            },
           });
           setSelection(nextSelection);
           setAiPlanWarnings(warnings);
