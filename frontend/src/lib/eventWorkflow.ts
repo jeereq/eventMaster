@@ -11,7 +11,8 @@ export type EventWorkflowTab =
   | 'prep'
   | 'analytics'
   | 'tasks'
-  | 'staff';
+  | 'staff'
+  | 'ticketing';
 
 export type EventWorkflowStepId =
   | 'event'

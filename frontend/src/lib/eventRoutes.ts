@@ -7,10 +7,12 @@ export type EventWorkspaceTab =
   | 'staff'
   | 'protocol'
   | 'prep'
-  | 'tasks';
+  | 'tasks'
+  | 'ticketing';
 
 export const EVENT_WORKSPACE_TABS: EventWorkspaceTab[] = [
   'prep',
+  'ticketing',
   'guestInfo',
   'guests',
   'invitations',

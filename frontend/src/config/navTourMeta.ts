@@ -235,6 +235,12 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Retrouvez vos inscriptions et achats, filtrez (date, entrée, lieu), passez en grille ou liste, puis ouvrez le badge QR. L’agenda mène au marketplace.',
     route: '/dashboard/tickets',
   },
+  'nav-tickets-org': {
+    title: 'Billetterie',
+    description:
+      'Suivez les ventes de billets, les recettes Mobile Money et Carte, les commandes par zone et contrôlez les entrées au guichet.',
+    route: '/dashboard/tickets',
+  },
 };
 
 export const WELCOME_STEP = {

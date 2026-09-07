@@ -512,6 +512,199 @@ export async function importRoomLayout(req: AuthenticatedRequest, res: Response)
   }
 }
 
+export async function getOrgTicketingSummary(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Tenant non identifié' });
+
+    const accessible = await getAccessibleEventIds(userId, tenantId);
+    if (Array.isArray(accessible) && accessible.length === 0) {
+      return res.json({
+        summary: {
+          totalRevenueFc: 0,
+          paidTicketsCount: 0,
+          pendingTicketsCount: 0,
+          paidOrdersCount: 0,
+          pendingOrdersCount: 0,
+          totalOrdersCount: 0,
+          checkedInGuestsCount: 0,
+        },
+        events: [],
+      });
+    }
+
+    const eventFilter: Record<string, unknown> = {
+      tenantId,
+      ...(Array.isArray(accessible) ? { id: { in: accessible } } : {}),
+      OR: [{ ticketingEnabled: true }, { ticketOrders: { some: {} } }],
+    };
+
+    const events = await prisma.event.findMany({
+      where: eventFilter,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        date: true,
+        location: true,
+        isPublic: true,
+        ticketingEnabled: true,
+        ticketPriceFc: true,
+        ticketPricingMode: true,
+        ticketsSold: true,
+        ticketsTotal: true,
+        tablePlan: true,
+        _count: {
+          select: {
+            ticketOrders: true,
+            guests: true,
+          },
+        },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const orderWhere: Record<string, unknown> = {
+      event: { tenantId },
+      ...(Array.isArray(accessible) ? { eventId: { in: accessible } } : {}),
+    };
+
+    const [paidAggregate, pendingAggregate, totalOrdersCount, checkedInGuestsCount] = await Promise.all([
+      prisma.ticketOrder.aggregate({
+        where: { ...orderWhere, status: 'PAID' },
+        _sum: { amountFc: true, quantity: true },
+        _count: { _all: true },
+      }),
+      prisma.ticketOrder.aggregate({
+        where: { ...orderWhere, status: 'PENDING' },
+        _sum: { amountFc: true, quantity: true },
+        _count: { _all: true },
+      }),
+      prisma.ticketOrder.count({ where: orderWhere }),
+      prisma.guest.count({
+        where: {
+          ticketOrderId: { not: null },
+          checkedInAt: { not: null },
+          event: { tenantId, ...(Array.isArray(accessible) ? { id: { in: accessible } } : {}) },
+        },
+      }),
+    ]);
+
+    return res.json({
+      summary: {
+        totalRevenueFc: paidAggregate._sum.amountFc || 0,
+        paidTicketsCount: paidAggregate._sum.quantity || 0,
+        pendingTicketsCount: pendingAggregate._sum.quantity || 0,
+        paidOrdersCount: paidAggregate._count._all || 0,
+        pendingOrdersCount: pendingAggregate._count._all || 0,
+        totalOrdersCount,
+        checkedInGuestsCount,
+      },
+      events,
+    });
+  } catch (error: any) {
+    console.error('getOrgTicketingSummary', error);
+    return res.status(500).json({ error: 'Impossible de calculer la synthèse billetterie.' });
+  }
+}
+
+export async function listOrgTicketOrders(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Tenant non identifié' });
+
+    const accessible = await getAccessibleEventIds(userId, tenantId);
+    if (Array.isArray(accessible) && accessible.length === 0) {
+      return res.json({ orders: [], total: 0 });
+    }
+
+    const { eventId, status, q, page, limit } = req.query;
+    const where: Record<string, unknown> = {
+      event: { tenantId },
+      ...(Array.isArray(accessible) ? { eventId: { in: accessible } } : {}),
+    };
+
+    if (eventId && typeof eventId === 'string' && eventId !== 'all') {
+      if (Array.isArray(accessible) && !accessible.includes(eventId)) {
+        return res.status(403).json({ error: 'Accès non autorisé à cet événement.' });
+      }
+      where.eventId = eventId;
+    }
+
+    if (status && typeof status === 'string' && status !== 'all') {
+      where.status = status.toUpperCase();
+    }
+
+    if (q && typeof q === 'string' && q.trim()) {
+      const query = q.trim();
+      where.OR = [
+        { buyerName: { contains: query, mode: 'insensitive' } },
+        { buyerEmail: { contains: query, mode: 'insensitive' } },
+        { buyerPhone: { contains: query } },
+        { flexPayOrderNumber: { contains: query, mode: 'insensitive' } },
+        { flexPayReference: { contains: query, mode: 'insensitive' } },
+        {
+          guests: {
+            some: {
+              OR: [
+                { firstName: { contains: query, mode: 'insensitive' } },
+                { lastName: { contains: query, mode: 'insensitive' } },
+                { phone: { contains: query } },
+              ],
+            },
+          },
+        },
+      ];
+    }
+
+    const pageSize = Math.min(200, Math.max(1, Number(limit) || 50));
+    const pageNum = Math.max(1, Number(page) || 1);
+
+    const [orders, total] = await Promise.all([
+      prisma.ticketOrder.findMany({
+        where,
+        include: {
+          event: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              date: true,
+              location: true,
+              ticketPricingMode: true,
+              tablePlan: true,
+            },
+          },
+          guests: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              rsvp: true,
+              checkedInAt: true,
+              seatVerified: true,
+              category: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: pageSize,
+        skip: (pageNum - 1) * pageSize,
+      }),
+      prisma.ticketOrder.count({ where }),
+    ]);
+
+    return res.json({ orders, total });
+  } catch (error: any) {
+    console.error('listOrgTicketOrders', error);
+    return res.status(500).json({ error: 'Impossible de charger les billets.' });
+  }
+}
+
 export async function listEventTicketOrders(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
@@ -523,7 +716,21 @@ export async function listEventTicketOrders(req: AuthenticatedRequest, res: Resp
     }
     const orders = await prisma.ticketOrder.findMany({
       where: { eventId, event: { tenantId } },
-      include: { guests: { select: { id: true, email: true, firstName: true, lastName: true, rsvp: true } } },
+      include: {
+        guests: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            rsvp: true,
+            checkedInAt: true,
+            seatVerified: true,
+            category: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 200,
     });

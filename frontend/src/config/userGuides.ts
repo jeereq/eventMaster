@@ -217,6 +217,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Tableau de bord', href: '/dashboard' },
       { label: 'Événements', href: '/dashboard/events' },
       { label: 'Protocole', href: '/dashboard/protocol' },
+      { label: 'Billetterie', href: '/dashboard/tickets' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Facturation & plan', href: '/dashboard/billing' },
@@ -371,6 +372,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Tableau de bord', href: '/dashboard' },
       { label: 'Événements', href: '/dashboard/events' },
       { label: 'Protocole', href: '/dashboard/protocol' },
+      { label: 'Billetterie', href: '/dashboard/tickets' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Factures', href: '/dashboard/invoices' },
@@ -508,6 +510,7 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
       { label: 'Protocole', href: '/dashboard/protocol' },
+      { label: 'Billetterie', href: '/dashboard/tickets' },
       { label: 'Tâches', href: '/dashboard/protocol?view=tasks' },
       { label: 'Réalisations', href: '/dashboard/publications' },
       { label: 'Explorer', href: '/dashboard/catalogue' },

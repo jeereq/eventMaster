@@ -211,6 +211,13 @@ export default function OrganizerDashboardHome({
                 {isVendor ? 'Nouvelle prestation' : 'Créer un événement'}
               </Link>
               <Link
+                href="/dashboard/tickets"
+                className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+              >
+                <Ticket className="w-3.5 h-3.5" />
+                Billetterie
+              </Link>
+              <Link
                 href="/dashboard/rooms"
                 className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center"
               >

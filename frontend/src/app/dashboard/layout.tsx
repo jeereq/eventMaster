@@ -276,6 +276,17 @@ function buildDashboardNav(opts: {
   ...(workspace.showProtocol
    ? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine }]
    : []),
+  ...(workspace.showEvents || workspace.showProtocol || access?.isProtocolOnly
+   ? [
+      {
+        name: 'Billetterie',
+        href: '/dashboard/tickets',
+        tourId: 'nav-tickets-org',
+        icon: Ticket,
+        description: 'Commandes, entrées, ventes par zone et contrôle d’accès',
+      },
+     ]
+   : []),
   ...(workspace.showAnalytics
    ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
    : []),

@@ -21,6 +21,7 @@ import {
   Rss,
   ScanLine,
   Store,
+  Ticket,
 } from 'lucide-react';
 
 export default function ProtocolDashboardHome() {
@@ -85,6 +86,11 @@ export default function ProtocolDashboardHome() {
                 Mes tâches du jour
               </Button>
             </Link>
+            <Link href="/dashboard/tickets">
+              <Button size="sm" variant="secondary" leftIcon={<Ticket className="w-4 h-4" />}>
+                Billetterie
+              </Button>
+            </Link>
           </div>
         }
       />
@@ -115,13 +121,22 @@ export default function ProtocolDashboardHome() {
           <p className="text-sm font-semibold mt-1">Événements du jour J</p>
         </Link>
         <Link
+          href="/dashboard/tickets"
+          className="rounded-2xl border border-primary/25 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
+        >
+          <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
+            <Ticket className="w-3.5 h-3.5 text-primary" /> Billetterie
+          </p>
+          <p className="text-sm font-semibold mt-1">Commandes, ventes & entrées</p>
+        </Link>
+        <Link
           href="/dashboard/publications"
-          className="sm:col-span-2 lg:col-span-2 rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
         >
           <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <Rss className="w-3.5 h-3.5 text-primary" /> Réalisations
           </p>
-          <p className="text-sm font-semibold mt-1">Photos et actualités des salles et prestations</p>
+          <p className="text-sm font-semibold mt-1">Photos et actualités</p>
         </Link>
         <Link
           href="/dashboard/bookings?tab=quotes"

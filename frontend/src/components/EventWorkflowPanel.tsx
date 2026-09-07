@@ -8,6 +8,7 @@ import {
   Shirt,
   MessageSquare,
   Sparkles,
+  Ticket,
 } from 'lucide-react';
 import {
   type EventWorkflowState,
@@ -26,6 +27,7 @@ interface EventWorkflowPanelProps {
 }
 
 const SUPPORT_TABS: Array<{ id: EventWorkflowTab; label: string; icon: any }> = [
+  { id: 'ticketing', label: 'Billetterie', icon: Ticket },
   { id: 'guestInfo', label: 'Infos invités', icon: Shirt },
   { id: 'feed', label: 'Feed', icon: MessageSquare },
   { id: 'tasks', label: 'Tâches', icon: ClipboardList },
@@ -150,7 +152,7 @@ export default function EventWorkflowPanel({
       </div>
 
       {/* Support / Navigation secondaire */}
-      {showSupport && (
+      {showSupport ? (
         <div className="flex flex-wrap gap-2 items-center pt-1">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider mr-1">
             Paramètres & Support :
@@ -164,7 +166,7 @@ export default function EventWorkflowPanel({
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 rounded-full text-xs font-semibold transition-colors border touch-manipulation",
                 activeTab === id 
-                  ? "bg-foreground text-background border-foreground shadow-2xs" 
+                  ? "bg-foreground text-background border-foreground shadow-2xs font-bold" 
                   : "bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted"
               )}
             >
@@ -173,7 +175,34 @@ export default function EventWorkflowPanel({
             </button>
           ))}
         </div>
-      )}
+      ) : protocolDesk ? (
+        <div className="flex flex-wrap gap-2 items-center pt-1">
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider mr-1">
+            Desk protocole :
+          </span>
+          {[
+            { id: 'protocol' as const, label: 'Accueil jour J (QR)', icon: Sparkles },
+            { id: 'ticketing' as const, label: 'Billetterie & Entrées', icon: Ticket },
+            { id: 'tasks' as const, label: 'Tâches', icon: ClipboardList },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onNavigateTab(id)}
+              aria-current={activeTab === id ? 'page' : undefined}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-11 rounded-full text-xs font-semibold transition-colors border touch-manipulation",
+                activeTab === id 
+                  ? "bg-foreground text-background border-foreground shadow-2xs font-bold" 
+                  : "bg-surface text-muted border-border hover:text-foreground hover:bg-surface-muted"
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,15 @@
 import { Router } from 'express';
-import { getEvents, createEvent, getEventById, updateEvent, deleteEvent, importRoomLayout, listEventTicketOrders } from '../controllers/eventController';
+import {
+  getEvents,
+  createEvent,
+  getEventById,
+  updateEvent,
+  deleteEvent,
+  importRoomLayout,
+  listEventTicketOrders,
+  getOrgTicketingSummary,
+  listOrgTicketOrders,
+} from '../controllers/eventController';
 import { getEventStaff, assignEventStaff, removeEventStaff } from '../controllers/eventStaffController';
 import {
   listMyEventTasks,
@@ -34,6 +44,10 @@ router.get('/', getEvents);
 router.post('/', createEvent);
 router.get('/tasks/inbox', listMyEventTasks);
 router.get('/workspace-stats', getWorkspaceStats);
+// Ticketing (Billetterie organisation & protocole)
+router.get('/ticketing/summary', getOrgTicketingSummary);
+router.get('/ticketing/orders', listOrgTicketOrders);
+
 router.get('/:id', getEventById);
 router.put('/:id', updateEvent);
 router.post('/:id/import-room-layout', importRoomLayout);

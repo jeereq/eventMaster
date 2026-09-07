@@ -54,6 +54,7 @@ import {
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
 import EventPrepPanel from '@/components/EventPrepPanel';
+import OrgTicketingView from '@/components/OrgTicketingView';
 import { isB2cPlanId } from '@/config/landingPricing';
 import type { EventConfigPayload } from '@/lib/eventConfig';
 import { eventPrepSummary, hasEventPrepShortlist, parseEventPrep } from '@/lib/eventPrep';
@@ -632,7 +633,7 @@ function EventsPageInner() {
  if (modeParam === 'protocol') return;
  if (eventIdFromRoute) {
   router.replace(eventDashboardHref(eventIdFromRoute, {
-    tab: tabParam === 'tasks' ? 'tasks' : 'protocol',
+    tab: tabParam === 'tasks' ? 'tasks' : tabParam === 'ticketing' ? 'ticketing' : 'protocol',
     protocol: true,
   }), { scroll: false });
   return;
@@ -652,7 +653,7 @@ function EventsPageInner() {
 
  useEffect(() => {
  if (!protocolDesk || !selectedEvent) return;
- setActiveTab(tabParam === 'tasks' ? 'tasks' : 'protocol');
+ setActiveTab(tabParam === 'tasks' ? 'tasks' : tabParam === 'ticketing' ? 'ticketing' : 'protocol');
  }, [protocolDesk, selectedEvent?.id, tabParam]);
 
  const filteredEventsList = events.filter((event) => {
@@ -696,12 +697,14 @@ function EventsPageInner() {
  [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, selectedEvent?.eventPrep, guestGuidelines, isProtocolOnly, protocolDesk],
  );
 
- /** En desk protocole, seuls Accueil / Tâches sont valides (évite panneau vide ou prep). */
+ /** En desk protocole, Accueil / Billetterie / Tâches sont valides. */
  const deskTab: EventWorkspaceTab =
    protocolDesk && selectedEvent
      ? activeTab === 'tasks'
        ? 'tasks'
-       : 'protocol'
+       : activeTab === 'ticketing'
+         ? 'ticketing'
+         : 'protocol'
      : activeTab;
 
  const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
@@ -719,7 +722,7 @@ function EventsPageInner() {
 
  const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
  if (!isEventWorkspaceTab(tab)) return;
- if (protocolDesk && tab !== 'protocol' && tab !== 'tasks') return;
+ if (protocolDesk && tab !== 'protocol' && tab !== 'tasks' && tab !== 'ticketing') return;
  setActiveTab(tab);
  if (eventIdFromRoute) {
  router.replace(eventDashboardHref(eventIdFromRoute, { tab, protocol: protocolDesk }), { scroll: false });
@@ -1135,7 +1138,7 @@ Merci de confirmer votre présence :
  useEffect(() => {
  const tab = tabParam;
  if (!isEventWorkspaceTab(tab)) return;
- if (protocolDesk && tab !== 'protocol' && tab !== 'tasks') {
+ if (protocolDesk && tab !== 'protocol' && tab !== 'tasks' && tab !== 'ticketing') {
   setActiveTab('protocol');
   return;
  }
@@ -2314,6 +2317,14 @@ Merci de confirmer votre présence :
  <GuestProtocolPanel eventId={selectedEvent.id} />
  )}
  </>
+ )}
+
+ {deskTab === 'ticketing' && selectedEvent && (
+   <OrgTicketingView
+     eventId={selectedEvent.id}
+     eventTitle={selectedEvent.title}
+     protocolMode={protocolDesk}
+   />
  )}
 
  {deskTab === 'prep' && !protocolDesk && (

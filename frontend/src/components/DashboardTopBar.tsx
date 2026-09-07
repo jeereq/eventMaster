@@ -15,7 +15,7 @@ import { Sun, Moon, User, PanelLeft, PanelLeftClose } from 'lucide-react';
 export function useDashboardTitle(): { title: string; subtitle?: string } {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, access, tenant } = useAuth();
   const tab = searchParams.get('tab');
 
   return useMemo(() => {
@@ -31,7 +31,12 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
     if (pathname.startsWith('/dashboard/audit')) return { title: 'Journal d’audit', subtitle: 'Actions plateforme' };
-    if (pathname.startsWith('/dashboard/tickets')) return { title: 'Mes billets', subtitle: 'Pass d’accès et QR codes' };
+    if (pathname.startsWith('/dashboard/tickets')) {
+      const isOrg = Boolean(access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || tenant?.accountKind === 'ORGANIZER');
+      return isOrg
+        ? { title: 'Billetterie', subtitle: 'Commandes, entrées et contrôle d’accès' }
+        : { title: 'Mes billets', subtitle: 'Pass d’accès et QR codes' };
+    }
     if (pathname.startsWith('/dashboard/catalogue/salles')) return { title: 'Salle', subtitle: 'Fiche du lieu' };
     if (pathname.startsWith('/dashboard/catalogue/prestataires')) return { title: 'Prestation', subtitle: 'Fiche professionnelle' };
     if (pathname.startsWith('/dashboard/catalogue/locations')) return { title: 'Matériel & Équipements', subtitle: 'Fiche équipement' };
