@@ -4,7 +4,7 @@ import {
   fulfillTicketOrder,
   ticketsRemaining,
 } from '../services/ticketOrderService';
-import { createSeatHold, createMultipleSeatHolds, listSeatInventory } from '../services/seatSelectionService';
+import { assertSeatAvailable, checkSeatsAvailability, listSeatInventory } from '../services/seatSelectionService';
 import {
   normalizeTicketPricingMode,
   priceFromFcForEvent,
@@ -261,6 +261,33 @@ export async function listPublicEventSeats(req: Request, res: Response) {
   }
 }
 
+export async function checkEventSeatsAvailability(req: Request, res: Response) {
+  try {
+    const slug = String(req.params.slug || '').trim();
+    const event = await prisma.event.findFirst({
+      where: { slug },
+      select: { id: true, seatSelectionEnabled: true, tablePlan: true },
+    });
+    if (!event) return res.status(404).json({ error: 'Événement introuvable ou privé.' });
+    if (!event.seatSelectionEnabled) {
+      return res.json({ allAvailable: true, unavailable: [] });
+    }
+    const rawSeats = Array.isArray(req.body?.seats) ? req.body.seats : [];
+    const seats = rawSeats
+      .map((s: any) => ({
+        tableId: String(s.tableId || ''),
+        seatIndex: Number(s.seatIndex),
+      }))
+      .filter((s: any) => s.tableId && Number.isFinite(s.seatIndex) && s.seatIndex >= 0);
+
+    const result = await checkSeatsAvailability(event.id, seats);
+    return res.json(result);
+  } catch (error) {
+    console.error('[Public events] check seats', error);
+    return res.status(500).json({ error: 'Impossible de vérifier la disponibilité des places.' });
+  }
+}
+
 export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user?.id) {
@@ -422,6 +449,19 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       ? (paymentMethod === 'mobile' ? 'flexpay_mobile' : 'flexpay_card')
       : null;
 
+    // Règle d'or : Vérifier la disponibilité de la place AVANT d'initier tout paiement
+    if (event.seatSelectionEnabled && requestedSeats.length > 0) {
+      try {
+        for (const s of requestedSeats) {
+          await assertSeatAvailable(event.id, s.tableId, s.seatIndex);
+        }
+      } catch (err: any) {
+        return res.status(409).json({
+          error: err?.message || 'Un ou plusieurs sièges sélectionnés ne sont plus disponibles. Veuillez choisir une autre place.',
+        });
+      }
+    }
+
     const order = await prisma.ticketOrder.create({
       data: {
         eventId: event.id,
@@ -441,20 +481,6 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         selectedSeats: seatsWithPricing.length > 0 ? toPrismaJson(seatsWithPricing) : undefined,
       },
     });
-
-    if (event.seatSelectionEnabled && requestedSeats.length > 0) {
-      try {
-        await createMultipleSeatHolds({
-          eventId: event.id,
-          seats: requestedSeats,
-          buyerEmail,
-          orderId: order.id,
-        });
-      } catch (err: any) {
-        await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
-        return res.status(409).json({ error: err?.message || 'Un ou plusieurs sièges sélectionnés sont indisponibles.' });
-      }
-    }
 
     if (!paid) {
       const fulfilled = await fulfillTicketOrder(order.id);

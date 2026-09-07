@@ -27,11 +27,13 @@ import { getTableShapeLabel } from '@/lib/tablePlanUtils';
 import { PlanZoomControls } from '@/components/PlanViewChrome';
 import { MapPin, Sparkles } from 'lucide-react';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
+import type { PricingZone } from '@/lib/ticketPricing';
 
 interface GuestRoomPlanCanvasProps {
   tables: GuestTablePlanOverviewItem[];
   fixtures?: GuestPlanFixture[] | null;
   roomOutline?: GuestRoomOutline | null;
+  pricingZones?: PricingZone[] | null;
   walls?: RoomWallSegment[] | null;
   canvasWidthM?: number;
   canvasHeightM?: number;
@@ -52,12 +54,16 @@ interface GuestRoomPlanCanvasProps {
 function TableDetailPopover({
   table,
   guestNames,
+  pricingZones,
   onClose,
 }: {
   table: GuestTablePlanOverviewItem;
   guestNames?: string[];
+  pricingZones?: PricingZone[] | null;
   onClose: () => void;
 }) {
+  const zone = table.pricingZoneId ? pricingZones?.find((z) => z.id === table.pricingZoneId) : null;
+
   return (
     <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-3 w-64 max-w-[90vw] pointer-events-auto animate-fade-in">
       <div className="bg-surface border border-border rounded-2xl p-3.5 shadow-xl text-left space-y-2">
@@ -65,6 +71,19 @@ function TableDetailPopover({
           <div className="min-w-0">
             <p className="font-bold text-foreground text-xs truncate">{table.name}</p>
             <p className="text-[10px] text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
+            {zone && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold mt-1 shadow-2xs"
+                style={{
+                  backgroundColor: zone.color ? `${zone.color}22` : 'rgba(196,163,90,0.15)',
+                  color: zone.color || '#c4a35a',
+                  border: `1px solid ${zone.color ? `${zone.color}55` : 'rgba(196,163,90,0.3)'}`,
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: zone.color || '#c4a35a' }} />
+                <span>Zone {zone.name}</span>
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -115,6 +134,7 @@ export default function GuestRoomPlanCanvas({
   tables,
   fixtures,
   roomOutline,
+  pricingZones,
   walls,
   canvasWidthM,
   canvasHeightM,
@@ -318,6 +338,56 @@ export default function GuestRoomPlanCanvas({
               />
             )}
 
+            {(pricingZones ?? []).map((zone) => {
+              let zx = zone.x;
+              let zy = zone.y;
+              let zw = zone.w;
+              let zh = zone.h;
+              if (zx == null || zy == null || zw == null || zh == null) {
+                const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
+                if (assigned.length > 0) {
+                  const xs = assigned.map((t) => t.x);
+                  const ys = assigned.map((t) => t.y);
+                  const minX = Math.max(2, Math.min(...xs) - 8);
+                  const maxX = Math.min(98, Math.max(...xs) + 8);
+                  const minY = Math.max(2, Math.min(...ys) - 7);
+                  const maxY = Math.min(98, Math.max(...ys) + 7);
+                  zx = Math.round(minX);
+                  zy = Math.round(minY);
+                  zw = Math.round(maxX - minX);
+                  zh = Math.round(maxY - minY);
+                }
+              }
+              if (zx == null || zy == null || zw == null || zh == null) return null;
+              const pos = pctToLogical(zx, zy);
+              const size = logicalSizeFromPct(zw, zh);
+              return (
+                <div
+                  key={zone.id}
+                  className="absolute pointer-events-none z-[1] rounded-2xl border-2 border-dashed transition-all"
+                  style={{
+                    left: pos.x,
+                    top: pos.y,
+                    width: size.w,
+                    height: size.h,
+                    backgroundColor: zone.color ? `${zone.color}14` : 'rgba(196,163,90,0.08)',
+                    borderColor: zone.color ? `${zone.color}66` : 'rgba(196,163,90,0.3)',
+                  }}
+                  title={zone.name}
+                >
+                  <span
+                    className="absolute top-1.5 left-2 text-[8.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded shadow-2xs tabular-nums"
+                    style={{
+                      backgroundColor: zone.color || '#c4a35a',
+                      color: '#ffffff',
+                    }}
+                  >
+                    {zone.name}
+                  </span>
+                </div>
+              );
+            })}
+
             {(fixtures ?? []).map((fixture) => {
               const size = logicalSizeFromPct(fixture.w, fixture.h);
               const pos = pctToLogical(fixture.x, fixture.y);
@@ -392,6 +462,7 @@ export default function GuestRoomPlanCanvas({
                   {isSelected && (
                     <TableDetailPopover
                       table={table}
+                      pricingZones={pricingZones}
                       guestNames={isGuest ? [guestFullName ?? '', ...neighborNames].filter(Boolean) : undefined}
                       onClose={() => setSelectedTableId(null)}
                     />

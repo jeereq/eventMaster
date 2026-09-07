@@ -14,6 +14,7 @@ import type { PublicEventCard } from '@/lib/marketplace';
 import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventProgram';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
 import { normalizeTicketPricingMode, type PricingZone } from '@/lib/ticketPricing';
+import { resolveBlueprintWalls } from '@/lib/roomLayoutUtils';
 import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
 import SeatSelection3DViewer from '@/components/SeatSelection3DViewer';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
@@ -61,6 +62,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const [planMeta, setPlanMeta] = useState<SeatInventoryMeta | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<Array<{ tableId: string; seatIndex: number }>>([]);
   const [selectedZoneId, setSelectedZoneId] = useState('');
+  const [activeTableId, setActiveTableId] = useState<string | null>(null);
   const [seatsLoading, setSeatsLoading] = useState(false);
   const [planViewMode, setPlanViewMode] = useState<PlanViewMode>('3d');
 
@@ -68,6 +70,16 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const zonePricing = pricingMode === 'by_zone';
   const seatMode = Boolean(event.seatSelectionEnabled);
   const pricingZones = event.pricingZones ?? [];
+
+  const planWalls = useMemo(() => {
+    if (planMeta?.roomLayoutBlueprint) {
+      return resolveBlueprintWalls(planMeta.roomLayoutBlueprint);
+    }
+    return [];
+  }, [planMeta?.roomLayoutBlueprint]);
+
+  const planCanvasWidthM = planMeta?.roomLayoutBlueprint?.canvas?.widthM ?? 20;
+  const planCanvasHeightM = planMeta?.roomLayoutBlueprint?.canvas?.heightM ?? 16;
 
   const programHint = useMemo(() => {
     const lighting = resolveLightingFromProgram(
@@ -83,6 +95,26 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     setBuyerName((prev) => prev || user.name || '');
     setBuyerPhone((prev) => prev || user.phone || '');
   }, [user]);
+
+  const reloadSeats = React.useCallback(async () => {
+    if (!seatMode || !slug) return;
+    try {
+      const data = await api.get(`/public/events/${slug}/seats`);
+      setSeats(Array.isArray(data.seats) ? data.seats : []);
+      setPlanMeta({
+        fixtures: Array.isArray(data.fixtures) ? data.fixtures : [],
+        roomOutline: data.roomOutline ?? null,
+        roomThemeId: data.roomThemeId ?? null,
+        floorType: data.floorType ?? null,
+        floorImageUrl: data.floorImageUrl ?? null,
+        pricingZones: Array.isArray(data.pricingZones) ? data.pricingZones : [],
+        roomLayoutBlueprint: data.roomLayoutBlueprint ?? null,
+        roomType: data.roomType ?? null,
+      });
+    } catch {
+      // Ignorer
+    }
+  }, [seatMode, slug]);
 
   useEffect(() => {
     if (!seatMode || !slug) return;
@@ -214,6 +246,30 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         setBusy(false);
         return;
       }
+
+      // Règle d'or : vérifier la disponibilité des places en temps réel AVANT d'initier le paiement
+      if (seatMode && selectedSeats.length > 0) {
+        try {
+          const check = await api.post(`/public/events/${slug}/check-seats`, {
+            seats: selectedSeats,
+          });
+          if (check && check.allAvailable === false) {
+            setError(
+              'Une ou plusieurs places sélectionnées viennent d’être réservées par un autre participant. Le plan a été actualisé.',
+            );
+            await reloadSeats();
+            if (Array.isArray(check.unavailable)) {
+              const unavailKeys = new Set(check.unavailable.map((u: any) => `${u.tableId}:${u.seatIndex}`));
+              setSelectedSeats((prev) => prev.filter((s) => !unavailKeys.has(`${s.tableId}:${s.seatIndex}`)));
+            }
+            setBusy(false);
+            return;
+          }
+        } catch {
+          // Si le pre-check échoue, le backend re-vérifie strictement avant de créer la commande
+        }
+      }
+
       const data = await api.post(`/public/events/${slug}/checkout`, {
         buyerName: cleanBuyerName,
         buyerPhone: cleanBuyerPhone,
@@ -244,6 +300,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         `${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}${provider}${methodQ}${pendingQ}`,
       );
     } catch (err: unknown) {
+      void reloadSeats();
       setError(err instanceof Error ? err.message : 'Inscription impossible.');
     } finally {
       setBusy(false);
@@ -371,6 +428,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                       pricingZones={pricingZones.length > 0 ? pricingZones : (planMeta?.pricingZones as PricingZone[]) || []}
                       zoneColorById={zoneColorById}
                       planMeta={planMeta}
+                      activeTableId={activeTableId}
+                      onActiveTableChange={setActiveTableId}
                       lightingPreset={resolveLightingFromProgram(
                         normalizeEventProgram(event.eventProgram),
                         new Date(),
@@ -382,10 +441,15 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                       seats={seats}
                       fixtures={planMeta?.fixtures as SeatSelectionPlanCanvasProps['fixtures']}
                       roomOutline={planMeta?.roomOutline as SeatSelectionPlanCanvasProps['roomOutline']}
+                      walls={planWalls}
+                      canvasWidthM={planCanvasWidthM}
+                      canvasHeightM={planCanvasHeightM}
                       roomThemeId={planMeta?.roomThemeId}
                       floorType={planMeta?.floorType}
                       floorImageUrl={planMeta?.floorImageUrl}
                       pricingZones={pricingZones.length > 0 ? pricingZones : (planMeta?.pricingZones as PricingZone[]) || []}
+                      activeTableId={activeTableId}
+                      onSelectTable={setActiveTableId}
                       selectedSeats={selectedSeats}
                       onSelect={(tableId, seatIndex) => toggleSeat(tableId, seatIndex)}
                       zoneColorById={zoneColorById}

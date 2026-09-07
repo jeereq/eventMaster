@@ -28,6 +28,7 @@ import {
   listPublicEvents,
   getPublicEvent,
   checkoutPublicEvent,
+  checkEventSeatsAvailability,
   getTicketOrderBySession,
   listPublicEventSeats,
 } from '../controllers/publicEventController';
@@ -134,6 +135,7 @@ router.get('/activity', getPublicMarketplaceFeed);
 router.get('/events', listPublicEvents);
 router.get('/events/:slug', getPublicEvent);
 router.get('/events/:slug/seats', listPublicEventSeats);
+router.post('/events/:slug/check-seats', optionalAuth, checkEventSeatsAvailability);
 router.post('/events/:slug/checkout', requireAuth, checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
 router.post('/event-plan-ai', optionalAuth, publicPlanEventAi);

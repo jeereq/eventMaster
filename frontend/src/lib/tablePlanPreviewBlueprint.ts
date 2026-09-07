@@ -21,6 +21,7 @@ export type TablePlanPreviewTable = {
   rotation?: number;
   sourceFurnitureId?: string;
   pricingZoneId?: string;
+  rowMeta?: { tier?: number; curve?: number; elevationM?: number };
 };
 
 export type TablePlanPreviewInput = {
@@ -87,11 +88,24 @@ function pricingZonesToFurniture(
   return result;
 }
 
-function tablesToFurniture(tables: TablePlanPreviewTable[], zones?: PricingZone[]) {
+function tablesToFurniture(
+  tables: TablePlanPreviewTable[],
+  zones?: PricingZone[],
+  roomBlueprint?: RoomLayoutBlueprint | null,
+): RoomLayoutBlueprint['furniture'] {
   const zoneColorMap = new Map<string, string>();
   if (zones) {
     for (const z of zones) {
       if (z.color) zoneColorMap.set(z.id, z.color);
+    }
+  }
+
+  const existingRowMap = new Map<string, Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>>();
+  if (roomBlueprint?.furniture) {
+    for (const f of roomBlueprint.furniture) {
+      if (f.kind === 'row') {
+        existingRowMap.set(f.id, f);
+      }
     }
   }
 
@@ -101,6 +115,40 @@ function tablesToFurniture(tables: TablePlanPreviewTable[], zones?: PricingZone[
       table.tableColor && table.tableColor !== '#ffffff' && table.tableColor !== '#f3e6c8'
         ? table.tableColor
         : (zoneColor || table.tableColor);
+
+    // Si la table correspond à une rangée / gradin de la salle
+    const existingRow = existingRowMap.get(table.id) || (table.sourceFurnitureId ? existingRowMap.get(table.sourceFurnitureId) : undefined);
+    if (existingRow) {
+      return {
+        ...existingRow,
+        id: table.id,
+        x: table.x,
+        y: table.y,
+        rotation: table.rotation ?? existingRow.rotation,
+        label: table.name || existingRow.label,
+        seatCount: table.capacity || existingRow.seatCount,
+      };
+    }
+
+    if (table.rowMeta) {
+      return {
+        id: table.id,
+        kind: 'row' as const,
+        label: table.name,
+        rowName: table.name,
+        seatCount: table.capacity,
+        chairType: (table.chairType as ChairType) || 'THEATER',
+        chairStyle: 'modern',
+        seatMaterial: 'velvet',
+        tier: table.rowMeta.tier ?? 0,
+        x: table.x,
+        y: table.y,
+        curve: table.rowMeta.curve ?? 0,
+        rotation: table.rotation ?? 0,
+        elevationM: table.rowMeta.elevationM ?? (table.rowMeta.tier ? table.rowMeta.tier * 0.28 : 0),
+        showSeatNumbers: true,
+      };
+    }
 
     return {
       id: table.id,
@@ -177,16 +225,17 @@ export function buildTablePlanPreviewBlueprint(
   }
 
   const zoneFurniture = pricingZonesToFurniture(resolvedZones, tables);
-  const tableFurniture = tablesToFurniture(tables, resolvedZones);
+  const tableFurniture = tablesToFurniture(tables, resolvedZones, roomBlueprint);
   const meta = metadataFromPlan(tablePlan, tables);
 
   if (roomBlueprint) {
     const base = ensureBlueprintDefaults(structuredClone(roomBlueprint));
-    // Conserver le mobilier non-table de la salle (bars, scène, podium, etc.)
-    const existingDecor = base.furniture.filter((f) => f.kind !== 'table' && f.kind !== 'zone');
+    // Conserver le mobilier décoratif non-table et non-rangée de la salle (bars, scène, podium, etc.)
+    // Les rangées et tables sont déjà incluses et synchronisées dans tableFurniture
+    const existingDecor = base.furniture.filter((f) => f.kind !== 'table' && f.kind !== 'row' && f.kind !== 'zone');
     const combinedFurniture = [
       ...zoneFurniture,
-      ...(tableFurniture.length > 0 ? tableFurniture : base.furniture.filter((f) => f.kind === 'table')),
+      ...(tableFurniture.length > 0 ? tableFurniture : base.furniture.filter((f) => f.kind === 'table' || f.kind === 'row')),
       ...existingDecor,
     ];
 

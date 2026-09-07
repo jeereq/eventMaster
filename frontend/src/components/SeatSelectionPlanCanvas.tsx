@@ -14,6 +14,9 @@ import {
 } from '@/lib/tablePlanUtils';
 import { formatFc } from '@/config/landingPricing';
 import type { PricingZone } from '@/lib/ticketPricing';
+import Room2DPlanWalls from '@/components/Room2DPlanWalls';
+import Room2DScaleCompass from '@/components/Room2DScaleCompass';
+import type { RoomWallSegment } from '@/lib/roomLayoutUtils';
 
 export type SeatSelectionSeat = {
   tableId: string;
@@ -57,6 +60,11 @@ export interface SeatSelectionPlanCanvasProps {
   floorType?: string | null;
   floorImageUrl?: string | null;
   pricingZones?: PricingZone[];
+  walls?: RoomWallSegment[] | null;
+  canvasWidthM?: number;
+  canvasHeightM?: number;
+  activeTableId?: string | null;
+  onSelectTable?: (tableId: string) => void;
   selected?: { tableId: string; seatIndex: number } | null;
   selectedSeats?: Array<{ tableId: string; seatIndex: number }>;
   onSelect: (tableId: string, seatIndex: number) => void;
@@ -85,6 +93,11 @@ export default function SeatSelectionPlanCanvas({
   floorType,
   floorImageUrl,
   pricingZones = [],
+  walls,
+  canvasWidthM = 20,
+  canvasHeightM = 16,
+  activeTableId,
+  onSelectTable,
   selected,
   selectedSeats,
   onSelect,
@@ -194,6 +207,20 @@ export default function SeatSelectionPlanCanvas({
             />
           )}
 
+          {walls && walls.length > 0 && (
+            <Room2DPlanWalls
+              walls={walls}
+              canvasWidthM={canvasWidthM}
+              canvasHeightM={canvasHeightM}
+              showDoorSwings={true}
+            />
+          )}
+          <Room2DScaleCompass
+            widthM={canvasWidthM}
+            heightM={canvasHeightM}
+            showGrid={true}
+          />
+
           {pricingZones.map((zone) => {
             let x = zone.x;
             let y = zone.y;
@@ -262,7 +289,10 @@ export default function SeatSelectionPlanCanvas({
             const tableHasSelection =
               (selectedSeats && selectedSeats.some((s) => s.tableId === table.id)) ||
               selected?.tableId === table.id;
-            const visual = getTableVisualStyle(table.shape, Boolean(tableHasSelection), undefined);
+            const isFocused = activeTableId === table.id;
+            const zoneColor = table.pricingZoneId ? zoneColorById?.get(table.pricingZoneId) : undefined;
+            const visual = getTableVisualStyle(table.shape, Boolean(tableHasSelection || isFocused), undefined);
+            const availableSeatsCount = table.seats.filter((s) => s.available).length;
 
             return (
               <div
@@ -275,40 +305,69 @@ export default function SeatSelectionPlanCanvas({
                 }}
               >
                 <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelectTable?.(table.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectTable?.(table.id);
+                    }
+                  }}
                   className={cn(
-                    'relative flex items-center justify-center text-center',
+                    'relative flex items-center justify-center text-center cursor-pointer transition-shadow',
                     visual.className,
                     tableHasSelection && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+                    isFocused && !tableHasSelection && 'ring-2 ring-amber-500 ring-offset-1 ring-offset-background',
                   )}
                   style={visual.style}
+                  title={`${table.name} (${availableSeatsCount}/${table.capacity} places libres)`}
                 >
-                  <div className="px-1 relative z-10">
+                  <div className="px-1 relative z-10 pointer-events-none">
                     <div className="truncate max-w-[72px] font-semibold text-[10px]">{table.name}</div>
+                    {table.seats[0]?.pricingZoneName && (
+                      <div
+                        className="text-[7.5px] px-1 py-0.2 rounded font-semibold truncate max-w-[68px] mx-auto mt-0.5 shadow-2xs"
+                        style={{
+                          backgroundColor: zoneColor ? `${zoneColor}22` : 'rgba(0,0,0,0.08)',
+                          color: zoneColor || 'inherit',
+                          border: zoneColor ? `1px solid ${zoneColor}66` : undefined,
+                        }}
+                      >
+                        {table.seats[0].pricingZoneName}
+                      </div>
+                    )}
                   </div>
 
                   {table.seats.map((seat) => {
                     const coords = getSeatCoordinates(table.shape, table.capacity, seat.seatIndex);
                     const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
                     const badge = getSeatBadge(seat.tableId, seat.seatIndex);
-                    const zoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : undefined;
+                    const seatZoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : zoneColor;
 
                     return (
                       <button
                         key={seat.seatIndex}
                         type="button"
                         disabled={!seat.available}
-                        onClick={() => seat.available && onSelect(seat.tableId, seat.seatIndex)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (seat.available) {
+                            onSelectTable?.(seat.tableId);
+                            onSelect(seat.tableId, seat.seatIndex);
+                          }
+                        }}
                         style={{
                           left: `calc(50% + ${coords.x}px)`,
                           top: `calc(50% + ${coords.y}px)`,
                           transform: 'translate(-50%, -50%)',
-                          ...(zoneColor && !isSelected ? { borderColor: zoneColor, boxShadow: `0 0 0 1px ${zoneColor}55` } : {}),
+                          ...(seatZoneColor && !isSelected ? { borderColor: seatZoneColor, boxShadow: `0 0 0 1px ${seatZoneColor}55` } : {}),
                         }}
                         className={cn(
                           'absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2 before:rounded-full',
                           !seat.available && 'opacity-35 cursor-not-allowed bg-muted text-muted border-border',
                           seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
-                          isSelected && 'bg-primary text-white border-primary scale-110 shadow-md font-extrabold',
+                          isSelected && 'bg-primary text-white border-primary scale-110 shadow-md font-extrabold ring-2 ring-primary/40',
                         )}
                         title={
                           seat.available
@@ -316,9 +375,23 @@ export default function SeatSelectionPlanCanvas({
                             : 'Occupé'
                         }
                       >
-                        {seat.seatIndex + 1}
+                        {/* Dossier de chaise orienté vers l'extérieur (le corps regarde vers la table) */}
+                        <span
+                          className="absolute pointer-events-none rounded-full"
+                          style={{
+                            width: '16px',
+                            height: '3px',
+                            top: '-3px',
+                            left: 'calc(50% - 8px)',
+                            transformOrigin: '8px 15px',
+                            transform: `rotate(${coords.rotationDeg ?? 0}deg)`,
+                            backgroundColor: isSelected ? 'var(--primary)' : (seatZoneColor || '#94a3b8'),
+                            opacity: seat.available ? 0.85 : 0.35,
+                          }}
+                        />
+                        <span className="relative z-10">{seat.seatIndex + 1}</span>
                         {badge != null && (
-                          <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] font-black flex items-center justify-center border border-white">
+                          <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] font-black flex items-center justify-center border border-white z-20">
                             {badge}
                           </span>
                         )}

@@ -77,8 +77,8 @@ export async function listSeatInventory(eventId: string): Promise<{
   for (const table of tables) {
     const cap = Math.max(0, Number(table.capacity) || 0);
     for (let i = 0; i < cap; i++) {
+      // Tant que le paiement n'est pas validé, la place est toujours libre
       const taken = Boolean(table.seats?.[i] ?? table.seats?.[String(i)]);
-      const held = holdKeys.has(`${table.id}:${i}`);
       const pricing = event
         ? resolveSeatPrice(
             {
@@ -98,7 +98,7 @@ export async function listSeatInventory(eventId: string): Promise<{
         y: table.y,
         shape: table.shape || 'round',
         capacity: cap,
-        available: !taken && !held,
+        available: !taken,
         priceFc: pricing.priceFc,
         pricingZoneId: pricing.pricingZoneId,
         pricingZoneName: pricing.pricingZoneName,
@@ -133,14 +133,42 @@ export async function assertSeatAvailable(eventId: string, tableId: string, seat
   if (!table) throw new Error('Table introuvable sur le plan.');
   if (seatIndex < 0 || seatIndex >= table.capacity) throw new Error('Siège invalide.');
   const occupied = Boolean(table.seats?.[seatIndex] ?? table.seats?.[String(seatIndex)]);
-  if (occupied) throw new Error('Ce siège est déjà occupé.');
-  const hold = await prisma.seatHold.findUnique({
-    where: { eventId_tableId_seatIndex: { eventId, tableId, seatIndex } },
-  });
-  if (hold && hold.expiresAt > new Date()) {
-    throw new Error('Ce siège est temporairement réservé par un autre acheteur.');
+  if (occupied) {
+    throw new Error(`Le siège n°${seatIndex + 1} à la table « ${table.name || tableId} » est déjà réservé.`);
   }
   return table;
+}
+
+export async function checkSeatsAvailability(
+  eventId: string,
+  seats: Array<{ tableId: string; seatIndex: number }>,
+): Promise<{
+  allAvailable: boolean;
+  unavailable: Array<{ tableId: string; seatIndex: number; tableName?: string }>;
+}> {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { tablePlan: true },
+  });
+  const tables = planTables(event?.tablePlan);
+  const unavailable: Array<{ tableId: string; seatIndex: number; tableName?: string }> = [];
+
+  for (const s of seats) {
+    const table = tables.find((t) => t.id === s.tableId);
+    if (!table) {
+      unavailable.push({ ...s });
+      continue;
+    }
+    const isOccupied = Boolean(table.seats?.[s.seatIndex] ?? table.seats?.[String(s.seatIndex)]);
+    if (isOccupied || s.seatIndex < 0 || s.seatIndex >= table.capacity) {
+      unavailable.push({ tableId: s.tableId, seatIndex: s.seatIndex, tableName: table.name });
+    }
+  }
+
+  return {
+    allAvailable: unavailable.length === 0,
+    unavailable,
+  };
 }
 
 export async function createSeatHold(opts: {

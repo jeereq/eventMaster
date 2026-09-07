@@ -885,62 +885,78 @@ export default function TablePlanner({
             </div>
 
             {/* Carte de la table 3D active sélectionnée */}
-            {active3DTable && (
-              <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 backdrop-blur-md border border-border p-2.5 shadow-lg flex flex-wrap items-center justify-between gap-2 animate-in fade-in slide-in-from-bottom-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs text-foreground">{active3DTable.name}</span>
-                  <span className="text-[11px] text-muted">({active3DTable.capacity} places)</span>
-                  {active3DTable.pricingZoneId && (
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs"
-                      style={{
-                        backgroundColor:
-                          pricingZones.find((z) => z.id === active3DTable.pricingZoneId)?.color || DEFAULT_ZONE_COLOR,
-                      }}
-                    >
-                      {pricingZones.find((z) => z.id === active3DTable.pricingZoneId)?.name}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  {zonePricing && pricingZones.length > 0 && (
-                    <div className="flex items-center gap-1 mr-1">
-                      <span className="text-[10px] text-muted">Zone :</span>
-                      {pricingZones.map((z) => (
-                        <button
-                          key={z.id}
-                          type="button"
-                          onClick={() =>
-                            setTables((prev) =>
-                              prev.map((t) => (t.id === active3DTable.id ? { ...t, pricingZoneId: z.id } : t))
-                            )
-                          }
-                          className={cn(
-                            'w-5 h-5 rounded-full border transition hover:scale-110 active:scale-95',
-                            active3DTable.pricingZoneId === z.id
-                              ? 'ring-2 ring-primary border-white'
-                              : 'border-border'
-                          )}
-                          style={{ backgroundColor: z.color || DEFAULT_ZONE_COLOR }}
-                          title={`Assigner à ${z.name}`}
-                          aria-label={`Assigner la table ${active3DTable.name} à la zone ${z.name}`}
-                        />
-                      ))}
+            {active3DTable && (() => {
+              const assignedGuests = getTableAssignedGuests(active3DTable);
+              const freeSeats = active3DTable.capacity - assignedGuests.length;
+              const zone = pricingZones.find((z) => z.id === active3DTable.pricingZoneId);
+              return (
+                <div className="absolute bottom-2 left-2 right-2 z-20 rounded-xl bg-background/95 backdrop-blur-md border border-border p-2.5 sm:p-3 shadow-lg flex flex-wrap items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-xs sm:text-sm text-foreground">{active3DTable.name}</span>
+                      <span className="text-[11px] font-medium text-muted">
+                        {assignedGuests.length}/{active3DTable.capacity} places assignées
+                        {freeSeats > 0 ? ` (${freeSeats} libre${freeSeats > 1 ? 's' : ''})` : ' (complète)'}
+                      </span>
+                      {zone && (
+                        <span
+                          className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs"
+                          style={{ backgroundColor: zone.color || DEFAULT_ZONE_COLOR }}
+                        >
+                          {zone.name}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    {assignedGuests.length > 0 ? (
+                      <p className="text-[11px] text-muted truncate max-w-md sm:max-w-xl">
+                        <span className="font-medium text-foreground">Invités : </span>
+                        {assignedGuests.slice(0, 4).map((g) => g.name).join(', ')}
+                        {assignedGuests.length > 4 ? ` et ${assignedGuests.length - 4} autre(s)` : ''}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted italic">Aucun invité assigné à cette table pour l&apos;instant</p>
+                    )}
+                  </div>
 
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setEditingTable(active3DTable)}
-                    className="text-xs h-7 px-2"
-                  >
-                    Détails table
-                  </Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {zonePricing && pricingZones.length > 0 && (
+                      <div className="flex items-center gap-1 mr-1">
+                        <span className="text-[10px] text-muted hidden sm:inline">Zone :</span>
+                        {pricingZones.map((z) => (
+                          <button
+                            key={z.id}
+                            type="button"
+                            onClick={() =>
+                              setTables((prev) =>
+                                prev.map((t) => (t.id === active3DTable.id ? { ...t, pricingZoneId: z.id } : t))
+                              )
+                            }
+                            className={cn(
+                              'w-5 h-5 rounded-full border transition hover:scale-110 active:scale-95',
+                              active3DTable.pricingZoneId === z.id
+                                ? 'ring-2 ring-primary border-white'
+                                : 'border-border'
+                            )}
+                            style={{ backgroundColor: z.color || DEFAULT_ZONE_COLOR }}
+                            title={`Assigner à ${z.name}`}
+                            aria-label={`Assigner la table ${active3DTable.name} à la zone ${z.name}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setEditingTable(active3DTable)}
+                      className="text-xs h-7 px-2.5"
+                    >
+                      Détails table
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           <p className="text-[11px] text-muted leading-relaxed">
@@ -1120,16 +1136,35 @@ export default function TablePlanner({
           showGrid={true}
         />
         {zonePricing && pricingZones.map((zone) => {
-          if (zone.x == null || zone.y == null || zone.w == null || zone.h == null) return null;
+          let zx = zone.x;
+          let zy = zone.y;
+          let zw = zone.w;
+          let zh = zone.h;
+          if (zx == null || zy == null || zw == null || zh == null) {
+            const assigned = tables.filter((t) => t.pricingZoneId === zone.id);
+            if (assigned.length > 0) {
+              const xs = assigned.map((t) => t.x);
+              const ys = assigned.map((t) => t.y);
+              const minX = Math.max(2, Math.min(...xs) - 8);
+              const maxX = Math.min(98, Math.max(...xs) + 8);
+              const minY = Math.max(2, Math.min(...ys) - 7);
+              const maxY = Math.min(98, Math.max(...ys) + 7);
+              zx = Math.round(minX);
+              zy = Math.round(minY);
+              zw = Math.round(maxX - minX);
+              zh = Math.round(maxY - minY);
+            }
+          }
+          if (zx == null || zy == null || zw == null || zh == null) return null;
           return (
             <div
               key={zone.id}
               className="absolute pointer-events-none z-[1] rounded-2xl border-2 border-dashed transition-all"
               style={{
-                left: `${zone.x}%`,
-                top: `${zone.y}%`,
-                width: `${zone.w}%`,
-                height: `${zone.h}%`,
+                left: `${zx}%`,
+                top: `${zy}%`,
+                width: `${zw}%`,
+                height: `${zh}%`,
                 backgroundColor: zone.color ? `${zone.color}18` : 'rgba(196,163,90,0.1)',
                 borderColor: zone.color ? `${zone.color}80` : 'rgba(196,163,90,0.4)',
               }}

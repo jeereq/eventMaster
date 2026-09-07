@@ -50,6 +50,8 @@ export interface SeatSelection3DViewerProps {
   zoneColorById?: Map<string, string>;
   planMeta?: SeatSelection3DMeta | null;
   lightingPreset?: LightingPreset;
+  activeTableId?: string | null;
+  onActiveTableChange?: (tableId: string | null) => void;
   className?: string;
 }
 
@@ -61,10 +63,18 @@ export default function SeatSelection3DViewer({
   zoneColorById,
   planMeta,
   lightingPreset = 'dusk',
+  activeTableId,
+  onActiveTableChange,
   className = '',
 }: SeatSelection3DViewerProps) {
-  const [focusedTableId, setFocusedTableId] = useState<string | null>(null);
+  const [internalFocusedTableId, setInternalFocusedTableId] = useState<string | null>(null);
   const [quality, setQuality] = useState<RoomPreviewQuality>('standard');
+
+  const focusedTableId = activeTableId !== undefined ? activeTableId : internalFocusedTableId;
+  const setFocusedTableId = (id: string | null) => {
+    setInternalFocusedTableId(id);
+    onActiveTableChange?.(id);
+  };
 
   // Regroupe les sièges par table
   const tablesMap = useMemo(() => {

@@ -241,6 +241,12 @@ export default function GuestTablePlanView({
   const effectivePlanView: GuestPlanView = canShow3d ? planView : '2d';
   const previewLighting = previewLightingPreset ?? 'dusk';
 
+  const [inspectedTableId, setInspectedTableId] = useState<string | null>(guestTableId ?? null);
+  const inspectedTable = useMemo(() => {
+    if (!inspectedTableId || !tablePlanOverview) return null;
+    return tablePlanOverview.find((t) => t.id === inspectedTableId) ?? null;
+  }, [inspectedTableId, tablePlanOverview]);
+
   useEffect(() => {
     const update = () => {
       const h = window.innerHeight;
@@ -315,7 +321,8 @@ export default function GuestTablePlanView({
                 quality="showcase"
                 lightingPreset={previewLighting}
                 showMeta={false}
-                selectedTableId={guestTableId}
+                selectedTableId={inspectedTableId || guestTableId}
+                onSelectTable={(tableId) => setInspectedTableId(tableId)}
                 className={cn(
                   opts.fill ? 'flex-1 min-h-[300px] h-full' : 'min-h-[300px] h-[360px] sm:h-[420px]',
                   '[&_.em-floor-canvas]:min-h-[300px] [&_.em-floor-canvas]:rounded-xl',
@@ -346,6 +353,45 @@ export default function GuestTablePlanView({
                 </div>
               </div>
 
+              {/* Carte d'inspection d'une table sélectionnée en 3D */}
+              {inspectedTable && inspectedTable.id !== guestTableId && (
+                <div className="absolute bottom-16 left-3 right-3 sm:right-auto z-20 rounded-2xl bg-foreground/90 backdrop-blur-md p-3 text-background shadow-lg border border-background/20 animate-fade-in max-w-sm flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xs font-bold text-white truncate">{inspectedTable.name}</p>
+                      <span className="text-[10.5px] text-emerald-400 font-semibold tabular-nums">
+                        ({inspectedTable.occupiedCount}/{inspectedTable.capacity} pl.)
+                      </span>
+                      {inspectedTable.pricingZoneId && (
+                        <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase bg-white/20 text-white truncate">
+                          {pricingZones?.find((z) => z.id === inspectedTable.pricingZoneId)?.name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-background/80 mt-0.5">{getTableShapeLabel(inspectedTable.shape)}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {guestTableId && (
+                      <button
+                        type="button"
+                        onClick={() => setInspectedTableId(guestTableId)}
+                        className="px-2.5 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold shadow-xs hover:bg-primary-hover transition active:scale-95"
+                      >
+                        Mon siège
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setInspectedTableId(null)}
+                      className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10"
+                      aria-label="Fermer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Bouton pour basculer en 2D */}
               <div className="absolute bottom-3 right-3 z-20">
                 <button
@@ -360,7 +406,7 @@ export default function GuestTablePlanView({
             </div>
 
             <p className="text-[10px] text-muted leading-relaxed shrink-0 px-1 flex items-center justify-between">
-              <span>Orbitez pour explorer la salle. Votre table est mise en avant avec un halo doré.</span>
+              <span>Orbitez pour explorer la salle. Touchez une table pour voir ses détails ou revenez à votre place.</span>
               <button type="button" onClick={() => setPlanView('2d')} className="font-semibold text-primary hover:underline ml-2 shrink-0">
                 Voir en 2D →
               </button>
@@ -371,6 +417,7 @@ export default function GuestTablePlanView({
             tables={tablePlanOverview}
             fixtures={planFixtures}
             roomOutline={roomOutline}
+            pricingZones={pricingZones}
             walls={previewBlueprint?.walls}
             canvasWidthM={previewBlueprint?.canvas.widthM}
             canvasHeightM={previewBlueprint?.canvas.heightM}
