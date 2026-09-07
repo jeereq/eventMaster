@@ -24,13 +24,13 @@ function applyThemeClass(next: Theme) {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof document === 'undefined') return 'dark';
+    if (typeof document === 'undefined') return 'light';
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   });
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const initialTheme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark';
+    const initialTheme = savedTheme === 'dark' ? 'dark' : 'light';
     setThemeState(initialTheme);
     applyThemeClass(initialTheme);
   }, []);

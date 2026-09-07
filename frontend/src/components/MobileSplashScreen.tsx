@@ -158,7 +158,7 @@ export default function MobileSplashScreen() {
       aria-busy={!leaving}
       className={cn(
         'fixed inset-0 z-[10050] flex flex-col items-center justify-center',
-        'bg-[radial-gradient(120%_80%_at_50%_18%,color-mix(in_oklab,var(--primary)_32%,transparent),transparent_58%),var(--background)]',
+        'bg-[radial-gradient(120%_80%_at_50%_18%,color-mix(in_oklab,var(--primary)_20%,transparent),transparent_58%),var(--background)]',
         'px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]',
         'transition-opacity duration-300 ease-out motion-reduce:transition-none',
         leaving ? 'opacity-0 pointer-events-none' : 'opacity-100',
@@ -170,9 +170,9 @@ export default function MobileSplashScreen() {
           leaving ? 'scale-[0.98] opacity-0' : 'scale-100 opacity-100',
         )}
       >
-        <span className="w-16 h-16 rounded-[1.25rem] bg-primary-solid text-primary-foreground shadow-md flex items-center justify-center overflow-hidden">
+        <span className="w-16 h-16 rounded-[1.25rem] shadow-lg flex items-center justify-center overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element -- marque PWA, pas de hop next/image */}
-          <img src="/icon.svg" alt="" width={36} height={36} className="w-9 h-9" />
+          <img src="/icon.svg" alt={name} width={64} height={64} className="w-16 h-16 rounded-[1.25rem]" />
         </span>
         <div className="space-y-1.5 w-full">
           <p id={titleId} className="text-xl font-display font-semibold tracking-tight text-foreground leading-tight break-words">

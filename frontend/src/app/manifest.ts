@@ -7,14 +7,20 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Plateforme SaaS Multi-tenant d\'organisation d\'événements, RSVP et invitations personnalisées',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0f172a',
+    background_color: '#ffffff',
     theme_color: '#059669',
     icons: [
       {
-        src: '/icon',
-        sizes: '64x64',
-        type: 'image/png',
+        src: '/icon.svg',
+        sizes: 'any',
+        type: 'image/svg+xml',
         purpose: 'any',
+      },
+      {
+        src: '/icon.svg',
+        sizes: 'any',
+        type: 'image/svg+xml',
+        purpose: 'maskable',
       },
       {
         src: '/apple-icon',
@@ -23,9 +29,9 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any',
       },
       {
-        src: '/icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
+        src: '/icon',
+        sizes: '64x64',
+        type: 'image/png',
         purpose: 'any',
       },
     ],

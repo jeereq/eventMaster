@@ -61,7 +61,7 @@ export async function generateMetadata({
     },
     appleWebApp: {
       capable: true,
-      statusBarStyle: 'black-translucent',
+      statusBarStyle: 'default',
       title: site.platformName,
     },
   };
