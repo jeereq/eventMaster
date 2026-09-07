@@ -23,6 +23,7 @@ import {
   Download,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { isProtocolUser, PROTOCOL_CREATIVE_DENIED } from '@/lib/protocolAccess';
 import { api } from '@/lib/api';
 import {
   getAiSimulationAllowance,
@@ -158,7 +159,8 @@ export default function LandingInvitationAiGenerator({
   id?: string;
   defaultExpanded?: boolean;
 }) {
-  const { user, tenant } = useAuth();
+  const { user, tenant, access } = useAuth();
+  const protocolLocked = isProtocolUser(access);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -385,6 +387,10 @@ export default function LandingInvitationAiGenerator({
 
   const requestGenerate = () => {
     if (busy) return;
+    if (protocolLocked) {
+      setError(PROTOCOL_CREATIVE_DENIED);
+      return;
+    }
     if (prompt.trim().length < 8) {
       setError(
         studioIntent === 'clone'
@@ -414,6 +420,10 @@ export default function LandingInvitationAiGenerator({
 
   const handleGenerate = async () => {
     if (busy) return;
+    if (protocolLocked) {
+      setError(PROTOCOL_CREATIVE_DENIED);
+      return;
+    }
     if (prompt.trim().length < 8) {
       setError(
         studioIntent === 'clone'
@@ -512,6 +522,10 @@ export default function LandingInvitationAiGenerator({
   };
 
   const continueToStudio = () => {
+    if (protocolLocked) {
+      setError(PROTOCOL_CREATIVE_DENIED);
+      return;
+    }
     if (result) saveAiTemplateDraft(result, prompt.trim());
     if (user) {
       router.push('/dashboard/templates?aiDraft=1');
@@ -917,11 +931,13 @@ export default function LandingInvitationAiGenerator({
                 </Alert>
               ) : null}
 
+              {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
+
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button
                   type="button"
                   onClick={requestGenerate}
-                  disabled={busy || prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0)}
+                  disabled={protocolLocked || busy || prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0)}
                   leftIcon={
                     busy ? (
                       <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
@@ -1267,6 +1283,7 @@ export default function LandingInvitationAiGenerator({
                 <Button
                   type="button"
                   onClick={continueToStudio}
+                  disabled={protocolLocked}
                   rightIcon={<ArrowRight className="w-4 h-4" />}
                   fullWidth
                 >

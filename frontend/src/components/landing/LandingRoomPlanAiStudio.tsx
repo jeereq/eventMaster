@@ -15,6 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { isProtocolUser, PROTOCOL_CREATIVE_DENIED } from '@/lib/protocolAccess';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
   canAffordAiAction,
@@ -65,7 +66,8 @@ export default function LandingRoomPlanAiStudio({
   onBlueprintChange?: (blueprint: RoomLayoutBlueprint | null) => void;
   className?: string;
 }) {
-  const { user } = useAuth();
+  const { user, access } = useAuth();
+  const protocolLocked = isProtocolUser(access);
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -118,6 +120,10 @@ export default function LandingRoomPlanAiStudio({
 
   const generate = async () => {
     if (busy) return;
+    if (protocolLocked) {
+      setError(PROTOCOL_CREATIVE_DENIED);
+      return;
+    }
     if (intent === 'brief' && prompt.trim().length < ROOM_PLAN_BRIEF_MIN) {
       setError('Décrivez la salle en quelques mots (mariage, 10 tables, piste…).');
       return;
@@ -165,6 +171,10 @@ export default function LandingRoomPlanAiStudio({
   };
 
   const openEditor = () => {
+    if (protocolLocked) {
+      setError(PROTOCOL_CREATIVE_DENIED);
+      return;
+    }
     if (draft) saveRoomPlanAiDraft(draft, { prompt: prompt.trim(), roomType, widthM: 20, heightM: 16, imageUrl: lastImageUrl });
     if (user) {
       router.push('/dashboard/rooms?aiDraft=1');
@@ -398,12 +408,13 @@ export default function LandingRoomPlanAiStudio({
 
               <RoomPlanPromptSelector onSelect={applyPreset} selectedPrompt={prompt} disabled={busy} />
 
+              {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
               {error ? <Alert variant="error">{error}</Alert> : null}
 
               <Button
                 type="button"
                 className="w-full min-h-11"
-                disabled={busy}
+                disabled={protocolLocked || busy}
                 onClick={() => void generate()}
                 leftIcon={busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
               >
@@ -478,7 +489,7 @@ export default function LandingRoomPlanAiStudio({
                     {preview.blueprint.furniture.length + preview.blueprint.fixtures.length} éléments
                     {preview.warnings[0] ? ` · ${preview.warnings[0]}` : ''}
                   </p>
-                  <Button type="button" size="sm" onClick={openEditor}>
+                  <Button type="button" size="sm" onClick={openEditor} disabled={protocolLocked}>
                     Ouvrir dans l’éditeur
                   </Button>
                 </div>

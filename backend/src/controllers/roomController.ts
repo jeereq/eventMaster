@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { MarketplaceBookingStatus } from '@prisma/client';
-import { resolveOrgAccess, canManageRoom, canAccessRoom } from '../services/permissionsService';
+import { resolveOrgAccess, canManageRoom, canAccessRoom, protocolCreativeDeniedMessage } from '../services/permissionsService';
 import {
   assertRoomQuota,
   assertRoomTypeForPlan,
@@ -569,6 +569,10 @@ export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) 
 export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Response) {
   try {
     const user = req.user;
+    if (user?.id && user.tenantId) {
+      const denied = await protocolCreativeDeniedMessage(user.id, user.tenantId);
+      if (denied) return res.status(403).json({ error: denied });
+    }
     const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
     const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
     if (!deviceId) {

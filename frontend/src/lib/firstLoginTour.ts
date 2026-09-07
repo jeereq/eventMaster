@@ -95,7 +95,7 @@ export function getFirstLoginWelcome(input: {
     case 'org_protocol':
       return {
         title: hello,
-        body: 'Votre accès protocole est prêt. On vous montre le tableau de bord, puis le desk Protocole (scan QR et tâches).',
+        body: 'Votre accès protocole est prêt. On vous montre le tableau de bord, le desk Protocole (scan QR et tâches), puis les réalisations à consulter.',
         cta: 'Lancer la visite',
       };
     case 'org_commercial':

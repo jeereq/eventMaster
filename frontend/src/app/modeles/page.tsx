@@ -27,7 +27,8 @@ const CATEGORIES = [
 ];
 
 export default function ModelesPage() {
-  const { user } = useAuth();
+  const { user, access } = useAuth();
+  const protocolLocked = Boolean(access?.isProtocolOnly);
   const [templates, setTemplates] = useState<LandingTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -301,8 +302,14 @@ export default function ModelesPage() {
           { icon: Sparkles, label: 'RSVP live' },
           { icon: ScanLine, label: 'Pass QR' },
         ]}
-        primaryHref={user ? '/dashboard/templates?aiDraft=1' : '/register?kind=ORGANIZER&intent=personal&action=template'}
-        primaryLabel="Commencer maintenant"
+        primaryHref={
+          protocolLocked
+            ? '/dashboard/protocol'
+            : user
+              ? '/dashboard/templates?aiDraft=1'
+              : '/register?kind=ORGANIZER&intent=personal&action=template'
+        }
+        primaryLabel={protocolLocked ? 'Retour au desk protocole' : 'Commencer maintenant'}
         secondaryHref="/tarifs"
         secondaryLabel="Voir les forfaits"
       />
@@ -319,15 +326,19 @@ export default function ModelesPage() {
             <Button type="button" variant="secondary" size="sm" onClick={() => setModalTemplate(null)}>
               Fermer
             </Button>
-            <Link
-              href={
-                modalTemplate
-                  ? `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(modalTemplate.id)}`
-                  : '/register?kind=ORGANIZER&intent=personal&action=template'
-              }
-            >
-              <Button size="sm">Utiliser ce modèle</Button>
-            </Link>
+            {protocolLocked ? null : (
+              <Link
+                href={
+                  user
+                    ? '/dashboard/templates'
+                    : modalTemplate
+                      ? `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(modalTemplate.id)}`
+                      : '/register?kind=ORGANIZER&intent=personal&action=template'
+                }
+              >
+                <Button size="sm">Utiliser ce modèle</Button>
+              </Link>
+            )}
           </div>
         }
       >

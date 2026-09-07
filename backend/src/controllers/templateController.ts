@@ -20,6 +20,7 @@ import {
 } from '../services/aiTemplateComposeHistoryService';
 import { uploadDataUrl } from '../services/cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
+import { protocolCreativeDeniedMessage } from '../services/permissionsService';
 
 async function persistTemplateCompose(
   opts: {
@@ -135,6 +136,11 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
+    if (!isSuperAdmin && req.user?.id && tenantId) {
+      const denied = await protocolCreativeDeniedMessage(req.user.id, tenantId);
+      if (denied) return res.status(403).json({ error: denied });
+    }
+
     if (!name || !content) {
       return res.status(400).json({ error: 'Les champs name et content sont requis' });
     }
@@ -233,6 +239,11 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
+    if (!isSuperAdmin && req.user?.id && tenantId) {
+      const denied = await protocolCreativeDeniedMessage(req.user.id, tenantId);
+      if (denied) return res.status(403).json({ error: denied });
+    }
+
     const existingTemplate = await prisma.template.findFirst({
       where: isSuperAdmin ? { id } : { id, tenantId },
     });
@@ -296,6 +307,11 @@ export async function duplicateTemplate(req: AuthenticatedRequest, res: Response
 
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    if (!isSuperAdmin && req.user?.id && tenantId) {
+      const denied = await protocolCreativeDeniedMessage(req.user.id, tenantId);
+      if (denied) return res.status(403).json({ error: denied });
     }
 
     const source = await prisma.template.findFirst({
@@ -399,6 +415,11 @@ export async function deleteTemplate(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
+    if (!isSuperAdmin && req.user?.id && tenantId) {
+      const denied = await protocolCreativeDeniedMessage(req.user.id, tenantId);
+      if (denied) return res.status(403).json({ error: denied });
+    }
+
     const existingTemplate = await prisma.template.findFirst({
       where: isSuperAdmin ? { id } : { id, tenantId },
     });
@@ -426,6 +447,10 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const tenantId = req.user.tenantId || null;
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+    if (!isSuperAdmin && req.user.id && tenantId) {
+      const denied = await protocolCreativeDeniedMessage(req.user.id, tenantId);
+      if (denied) return res.status(403).json({ error: denied });
     }
     if (!isSuperAdmin && tenantId) {
       await assertPlanFeature(tenantId, 'customTemplates');
@@ -498,6 +523,10 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
 export async function publicComposeTemplateWithAi(req: Request, res: Response) {
   try {
     const user = (req as AuthenticatedRequest).user;
+    if (user?.id && user.tenantId) {
+      const denied = await protocolCreativeDeniedMessage(user.id, user.tenantId);
+      if (denied) return res.status(403).json({ error: denied });
+    }
     const body = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
     const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
     if (!deviceId) {

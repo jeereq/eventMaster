@@ -28,11 +28,12 @@ export default function GlobalAiSimulatorFab() {
   const pathname = usePathname() || '/';
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, tenant, planFeatures } = useAuth();
+  const { user, tenant, planFeatures, access } = useAuth();
   const [open, setOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
 
   const hidden =
+    Boolean(access?.isProtocolOnly) ||
     HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
     LISTING_DETAIL.test(pathname);
 

@@ -8,7 +8,7 @@ import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
 import { isPlanAllowedForAccountKind, resolvePendingSignupPlan } from '../config/plansConfig';
 import { PlanType } from '@prisma/client';
 import { recordUserLegalAcceptance } from '../services/legalService';
-import { resolveOrgAccess } from '../services/permissionsService';
+import { PROTOCOL_ACCOUNT_KIND_DENIED, resolveOrgAccess } from '../services/permissionsService';
 import { resolveCommercialByReferralCode } from '../services/commercialService';
 import {
   generateOtpCode,
@@ -551,9 +551,14 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
 
     const wantsAccountKind =
       accountKind === 'ORGANIZER' || accountKind === 'VENDOR' || accountKind === 'BOTH' || accountKind === 'CLIENT';
-    if (wantsAccountKind && req.user.tenantId) {
-      const access = await resolveOrgAccess(req.user.id, req.user.tenantId);
-      if (!access.isOwner && access.level !== 'manager' && access.level !== 'client') {
+    const profileAccess = req.user.tenantId
+      ? await resolveOrgAccess(req.user.id, req.user.tenantId)
+      : null;
+    if (profileAccess?.isProtocolOnly && wantsAccountKind) {
+      return res.status(403).json({ error: PROTOCOL_ACCOUNT_KIND_DENIED });
+    }
+    if (wantsAccountKind && req.user.tenantId && profileAccess) {
+      if (!profileAccess.isOwner && profileAccess.level !== 'manager' && profileAccess.level !== 'client') {
         return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent changer le type de compte.' });
       }
     }
@@ -576,8 +581,8 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
           accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
           plan?: PlanType;
         } = {};
-        if (tenantName) tenantData.name = tenantName;
-        if (wantsAccountKind) {
+        if (tenantName && !profileAccess?.isProtocolOnly) tenantData.name = tenantName;
+        if (wantsAccountKind && !profileAccess?.isProtocolOnly) {
           const nextKind = parseAccountKind(accountKind);
           tenantData.accountKind = nextKind;
           const currentPlan = currentTenant?.plan || 'FREE';

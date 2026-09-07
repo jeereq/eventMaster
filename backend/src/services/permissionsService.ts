@@ -288,6 +288,22 @@ export async function assertCanCreateRoom(userId: string, tenantId: string): Pro
   return access.canCreateRooms;
 }
 
+export const PROTOCOL_CREATIVE_DENIED =
+  'Le rôle protocole ne peut pas créer de modèles d’invitation ni de plans de salle.';
+
+export const PROTOCOL_ACCOUNT_KIND_DENIED =
+  'Le rôle protocole ne peut pas changer le type de compte de l’organisation.';
+
+/** Bloque la création / composition IA de modèles et de plans si l’utilisateur est protocole. */
+export async function protocolCreativeDeniedMessage(
+  userId?: string | null,
+  tenantId?: string | null,
+): Promise<string | null> {
+  if (!userId || !tenantId) return null;
+  const access = await resolveOrgAccess(userId, tenantId);
+  return access.isProtocolOnly ? PROTOCOL_CREATIVE_DENIED : null;
+}
+
 export async function assertCanViewBilling(userId: string, tenantId: string): Promise<boolean> {
   const access = await resolveOrgAccess(userId, tenantId);
   return access.canViewBilling;

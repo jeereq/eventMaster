@@ -15,6 +15,7 @@ import UserAvatar from '@/components/UserAvatar';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { paidPlanIdsForAccountKind } from '@/config/landingPricing';
+import { isProtocolUser } from '@/lib/protocolAccess';
 
 function ProfilePageContent() {
   const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile } = useAuth();
@@ -39,6 +40,8 @@ function ProfilePageContent() {
   const [success, setSuccess] = useState('');
 
   const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
+  const isProtocol = isProtocolUser(access);
+  const canEditOrgKind = user?.role === 'USER' && Boolean(tenant) && !isProtocol;
   const currentPlan = tenant?.plan || 'FREE';
   const kindChangeResetsPlan =
     Boolean(tenant) &&
@@ -139,8 +142,8 @@ function ProfilePageContent() {
         phoneCountryCode,
         nationalNumber: phoneNational,
         avatarUrl: null,
-        tenantName: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? tenantName : undefined,
-        accountKind: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? accountKind : undefined,
+        tenantName: canEditOrgKind ? tenantName : undefined,
+        accountKind: canEditOrgKind ? accountKind : undefined,
       });
       setAvatarUrl(null);
       updateUserAndTenant({ ...data.user, avatarUrl: null }, data.tenant);
@@ -173,8 +176,8 @@ function ProfilePageContent() {
         nationalNumber: phoneNational,
         avatarUrl,
         password: password || undefined,
-        tenantName: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? tenantName : undefined,
-        accountKind: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? accountKind : undefined,
+        tenantName: canEditOrgKind ? tenantName : undefined,
+        accountKind: canEditOrgKind ? accountKind : undefined,
       });
 
       updateUserAndTenant(data.user, data.tenant);
@@ -305,40 +308,56 @@ function ProfilePageContent() {
                     <Input
                       label={isClient ? 'Nom affiché' : 'Nom de l\'organisation'}
                       leftIcon={<Building className="w-4 h-4" />}
-                      required
+                      required={!isProtocol}
                       value={tenantName}
                       onChange={(e) => setTenantName(e.target.value)}
+                      disabled={isProtocol}
+                      readOnly={isProtocol}
+                      hint={isProtocol ? 'Le nom de l’organisation est géré par le propriétaire.' : undefined}
                     />
                     <label className="block space-y-1.5">
                       <span className="text-xs font-medium text-muted">Type de compte</span>
-                      <select
-                        value={accountKind}
-                        onChange={(e) => setAccountKind(e.target.value as TenantAccountKind)}
-                        className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-                      >
-                        {(Object.keys(ACCOUNT_KIND_LABELS) as TenantAccountKind[]).map((kind) => (
-                          <option key={kind} value={kind}>{ACCOUNT_KIND_LABELS[kind]}</option>
-                        ))}
-                      </select>
-                      <p className="text-[11px] text-muted">
-                        {isClient
-                          ? 'Passez organisateur pour créer des événements, ou prestataire pour publier des offres.'
-                          : (
-                            <>
-                              Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
-                              <Link href="/marketplace" className="text-primary font-semibold hover:underline">marketplace</Link>
-                              {' '}et gérez devis et réservations dans{' '}
-                              <Link href="/dashboard/marketplace" className="text-primary font-semibold hover:underline">Marketplace</Link>.
-                            </>
+                      {isProtocol ? (
+                        <>
+                          <p className="w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground flex items-center">
+                            {ACCOUNT_KIND_LABELS[accountKind] || accountKind}
+                          </p>
+                          <p className="text-xs text-muted">
+                            Votre rôle protocole ne permet pas de changer le type de compte de l’organisation.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <select
+                            value={accountKind}
+                            onChange={(e) => setAccountKind(e.target.value as TenantAccountKind)}
+                            className="w-full min-h-11 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                          >
+                            {(Object.keys(ACCOUNT_KIND_LABELS) as TenantAccountKind[]).map((kind) => (
+                              <option key={kind} value={kind}>{ACCOUNT_KIND_LABELS[kind]}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-muted">
+                            {isClient
+                              ? 'Passez organisateur pour créer des événements, ou prestataire pour publier des offres.'
+                              : (
+                                <>
+                                  Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
+                                  <Link href="/marketplace" className="text-primary font-semibold hover:underline">marketplace</Link>
+                                  {' '}et gérez devis et réservations dans{' '}
+                                  <Link href="/dashboard/marketplace" className="text-primary font-semibold hover:underline">Marketplace</Link>.
+                                </>
+                              )}
+                          </p>
+                          {kindChangeResetsPlan && (
+                            <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-[var(--radius-button)] p-2">
+                              Le forfait actuel n’est pas destiné à ce type de compte. L’enregistrement passera l’espace à l’essai Essentials ; choisissez ensuite un forfait adapté dans Facturation.
+                            </p>
                           )}
-                      </p>
-                      {kindChangeResetsPlan && (
-                        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-[var(--radius-button)] p-2">
-                          Le forfait actuel n’est pas destiné à ce type de compte. L’enregistrement passera l’espace à l’essai Essentials ; choisissez ensuite un forfait adapté dans Facturation.
-                        </p>
-                      )}
-                      {ACCOUNT_KIND_DESCRIPTIONS[accountKind] && (
-                        <p className="text-[11px] text-muted">{ACCOUNT_KIND_DESCRIPTIONS[accountKind]}</p>
+                          {ACCOUNT_KIND_DESCRIPTIONS[accountKind] && (
+                            <p className="text-xs text-muted">{ACCOUNT_KIND_DESCRIPTIONS[accountKind]}</p>
+                          )}
+                        </>
                       )}
                     </label>
                     </>

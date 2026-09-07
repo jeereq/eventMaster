@@ -538,7 +538,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (user.role !== 'USER') return;
   if (!planQuota) return;
   // Les comptes protocole doivent pouvoir ouvrir le desk (événements + stats)
-  if (access?.isProtocolOnly) return;
+  if (access?.isProtocolOnly) {
+    if (
+      pathname.startsWith('/dashboard/templates') ||
+      pathname.startsWith('/dashboard/rooms')
+    ) {
+      router.replace('/dashboard');
+    }
+    return;
+  }
   const fallback = workspace.showMarketplace
     ? '/dashboard/marketplace'
     : workspace.showRooms

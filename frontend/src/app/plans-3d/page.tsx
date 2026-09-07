@@ -59,7 +59,8 @@ const CATEGORIES = [
 ];
 
 export default function Plans3DPage() {
-  const { user } = useAuth();
+  const { user, access } = useAuth();
+  const protocolLocked = Boolean(access?.isProtocolOnly);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('banquet-honor');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [force2d, setForce2d] = useState(false);
@@ -88,9 +89,11 @@ export default function Plans3DPage() {
     });
   }, [selectedCategory]);
 
-  const editorUrl = user
-    ? '/dashboard/rooms'
-    : '/register?kind=ORGANIZER&intent=personal&action=room_editor';
+  const editorUrl = protocolLocked
+    ? '/dashboard/protocol'
+    : user
+      ? '/dashboard/rooms'
+      : '/register?kind=ORGANIZER&intent=personal&action=room_editor';
 
   // Statistiques du blueprint actif
   const stats = useMemo(() => {
@@ -191,7 +194,7 @@ export default function Plans3DPage() {
 
               <Link href={editorUrl}>
                 <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                  Personnaliser
+                  {protocolLocked ? 'Desk protocole' : 'Personnaliser'}
                 </Button>
               </Link>
             </div>
@@ -402,7 +405,7 @@ export default function Plans3DPage() {
           { icon: ScanLine, label: 'Accueil QR' },
         ]}
         primaryHref={editorUrl}
-        primaryLabel="Lancer l’éditeur maintenant"
+        primaryLabel={protocolLocked ? 'Retour au desk protocole' : 'Lancer l’éditeur maintenant'}
         secondaryHref="/tarifs"
         secondaryLabel="Voir les forfaits"
       />
