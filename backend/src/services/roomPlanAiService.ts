@@ -99,6 +99,7 @@ const ITEM_KINDS = new Set([
 
 /** Vocabulaire courant renvoyé par les modèles vision → kind EventMaster. */
 const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
+  // Tables et mobilier restaurant
   table: 'table',
   tables: 'table',
   diningtable: 'table',
@@ -110,6 +111,23 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   hightoptable: 'table',
   mangeedebout: 'table',
   desk: 'table',
+  bureau: 'table',
+  twotop: 'table',
+  fourtop: 'table',
+  sixtop: 'table',
+  eighttop: 'table',
+  communaltable: 'table',
+  communal: 'table',
+  umbrellatable: 'table',
+  umbrella: 'table',
+  parasol: 'table',
+  mesas: 'table',
+  mesassala: 'table',
+  mesa: 'table',
+  bed: 'table',
+  lit: 'table',
+
+  // Rangées, banquettes, cabines & canapés
   row: 'row',
   rows: 'row',
   chairrow: 'row',
@@ -119,25 +137,91 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   benches: 'row',
   banquette: 'row',
   banquettes: 'row',
+  booth: 'row',
+  booths: 'row',
+  box: 'row',
+  alcove: 'row',
+  sofa: 'row',
+  couch: 'row',
+  canape: 'row',
+  canapé: 'row',
   pew: 'row',
   pews: 'row',
   bleacher: 'row',
   bleachers: 'row',
   theaterseats: 'row',
-  chairs: 'chair',
-  chaises: 'chair',
-  chaise: 'chair',
   rangee: 'row',
   rangees: 'row',
   gradin: 'row',
   gradins: 'row',
   amphitheater: 'row',
   amphitheatre: 'row',
+  waiting: 'row',
+  attente: 'row',
+
+  // Chaises et tabourets
+  chairs: 'chair',
+  chaises: 'chair',
+  chaise: 'chair',
   chair: 'chair',
   fauteuil: 'chair',
   armchair: 'chair',
   loungechair: 'chair',
   stool: 'chair',
+  stools: 'chair',
+  barstool: 'chair',
+  barstools: 'chair',
+  tabouret: 'chair',
+  tabourets: 'chair',
+  stylist: 'chair',
+  shampoo: 'chair',
+
+  // Bars, comptoirs, buffets et stations
+  bar: 'bar',
+  barra: 'bar',
+  comptoir: 'bar',
+  counter: 'bar',
+  servicecounter: 'bar',
+  ordercounter: 'bar',
+  pickupcounter: 'bar',
+  pickup: 'bar',
+  order: 'bar',
+  sushibar: 'bar',
+  winebar: 'bar',
+  buffet: 'buffet',
+  catering: 'buffet',
+  station: 'buffet',
+  waterstation: 'buffet',
+  condiments: 'buffet',
+  condimentstation: 'buffet',
+  credenza: 'buffet',
+  dispensary: 'buffet',
+  showcase: 'buffet',
+  vitrine: 'buffet',
+  pastrydisplay: 'buffet',
+  oven: 'buffet',
+  pizzaoven: 'buffet',
+  four: 'buffet',
+  fourpizza: 'buffet',
+
+  // Accueil, caisse, podiums et estrades
+  podium: 'podium',
+  lectern: 'podium',
+  speaker: 'podium',
+  hostess: 'podium',
+  hostessstand: 'podium',
+  reception: 'podium',
+  receptiondesk: 'podium',
+  frontdesk: 'podium',
+  cashier: 'podium',
+  caisse: 'podium',
+  pos: 'podium',
+  stage: 'stage',
+  scene: 'stage',
+  escenario: 'stage',
+  platform: 'stage',
+
+  // Zones, cuisines, terrasses et espaces spécialisés
   zone: 'zone',
   dancefloor: 'zone',
   dance: 'zone',
@@ -145,21 +229,54 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   pistededanse: 'zone',
   vip: 'zone',
   lounge: 'zone',
-  stage: 'stage',
-  scene: 'stage',
-  platform: 'stage',
-  podium: 'podium',
-  lectern: 'podium',
-  speaker: 'podium',
+  livingroom: 'zone',
+  patio: 'zone',
+  terrace: 'zone',
+  terraza: 'zone',
+  terrasse: 'zone',
+  outdoor: 'zone',
+  kitchen: 'zone',
+  cuisine: 'zone',
+  cocina: 'zone',
+  workzone: 'zone',
+  zonadetrabajo: 'zone',
+  prep: 'zone',
+  dishwash: 'zone',
+  storage: 'zone',
+  almacen: 'zone',
+  stockage: 'zone',
+  restroom: 'zone',
+  restrooms: 'zone',
+  toilet: 'zone',
+  toilets: 'zone',
+  wc: 'zone',
+  aseo: 'zone',
+  aseos: 'zone',
+  bathroom: 'zone',
+  salledebain: 'zone',
+  cloakroom: 'zone',
+  vestiaire: 'zone',
+  bedroom: 'zone',
+  chambre: 'zone',
+  laundry: 'zone',
+  buanderie: 'zone',
+  massage: 'zone',
+  facial: 'zone',
+  waxing: 'zone',
+  washstation: 'zone',
+  shampoostation: 'zone',
+  stylingstation: 'table',
+  coiffeuse: 'table',
+
+  // Instruments
   piano: 'instrument',
   keyboard: 'instrument',
   drums: 'instrument',
   batterie: 'instrument',
   guitar: 'instrument',
   instrument: 'instrument',
-  bar: 'bar',
-  comptoir: 'bar',
-  winebar: 'bar',
+
+  // Circulations, allées et périmètres
   aisle: 'aisle',
   allee: 'aisle',
   runner: 'aisle',
@@ -169,16 +286,18 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   hallway: 'corridor',
   perimeter: 'perimeter',
   perimetre: 'perimeter',
+
+  // Portes & accès
   door: 'door',
   porte: 'door',
   entrance: 'entrance',
   entree: 'entrance',
   lobby: 'entrance',
+
+  // Sols & décors
   carpet: 'carpet',
   tapis: 'carpet',
   moquette: 'carpet',
-  buffet: 'buffet',
-  catering: 'buffet',
   column: 'column',
   colonne: 'column',
   pillar: 'column',
@@ -202,6 +321,7 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   partition: 'partition',
   cloison: 'partition',
   hedge: 'partition',
+  retail: 'partition',
   decal: 'decal',
   motif: 'decal',
   floordecal: 'decal',
@@ -231,6 +351,8 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   screen: 'screen',
   ecran: 'screen',
   tv: 'screen',
+  television: 'screen',
+  curvedscreen: 'screen',
   projector: 'screen',
 };
 
@@ -333,7 +455,8 @@ function resolveZoneKind(raw: unknown, kindHint?: string): string | undefined {
 function inferTableSeats(w?: number, h?: number, shape?: string): number {
   if (shape === 'cocktail' || shape === 'highTop') return 2;
   const span = Math.max(w ?? 10, h ?? 10);
-  if (span <= 6) return 4;
+  if (span <= 5.5) return 2;
+  if (span <= 8.5) return 4;
   if (span <= 11) return 8;
   if (span <= 14) return 10;
   return 12;
@@ -687,6 +810,7 @@ export function parseRoomPlanVisionDraft(
     else if (kind === 'table' && item.w != null && item.h != null) {
       const ratio = item.w / Math.max(item.h, 0.1);
       if (ratio > 1.45 || ratio < 0.7) item.shape = 'rectangular';
+      else if (Math.abs(ratio - 1) < 0.25 && (item.w <= 8 || item.h <= 8)) item.shape = 'square';
     }
     if (row.seats != null) {
       item.seats = Math.round(clamp(asNumber(row.seats, kind === 'row' ? 10 : 8), 2, kind === 'row' ? 40 : 16));
@@ -849,16 +973,22 @@ Appearance rules:
 Item rules (inference allowed):
 - ZERO OVERLAP / ZERO STACKING: Never place multiple chairs or tables at the same or overlapping coordinates. Each chair must have its own distinct physical floor location. Maintain realistic real-world clearances: minimum 0.7m center-to-center between chairs, minimum 1.4m edge-to-edge between tables for pulled-back chairs, minimum 1.2m along perimeter walls.
 - Align tables and rows on a grid: shared X in columns, shared Y in rows. Avoid 1–2% jitter “for neatness”.
-- table = each isolated table. seats = visible chairs/covers around it, else estimate from diameter (cocktail 2, round 8, long 10–14). shape from silhouette. hasCenterpiece=true if a central vase/bouquet is visible.
-- row = each aligned chair row (theater, banquettes, bleachers). One visible row = one item.
-- chair = isolated armchair/stool only (not chairs around a table).
+- table = each isolated table. seats = visible chairs/covers around it, else estimate from diameter (cocktail/2-top: 2, 4-top square/round: 4, round 8 seats ≈ 8, communal/long: 8–14). shape="square"|"round"|"rectangular"|"oval"|"cocktail". hasCenterpiece=true if a central vase/candle is visible.
+- row = each aligned chair row, banquette, booth or continuous sofa. One visible booth/banquette = one "row" item (label="Banquette" or "Booth").
+- chair = isolated armchair or counter stool only (not chairs around a table). Bar stools along a bar counter = individual "chair" items along the counter edge.
 - Chairs around a table = that table’s seats — never separate chair or row items.
 - corridor = visible hallway / circulation. perimeter = edge band only if visible.
-- zone = dance floor, VIP, floor buffet, large carpet. zoneKind required. color + material if the surface is visible.
+- zone = dance floor, VIP lounge, outdoor terrace, or distinct functional area. Back-of-house areas (Kitchen / Cuisine / Cocina, Toilets / Restrooms / Aseos, Storage / Almacén, Wash area) should be represented as "zone" items with zoneKind="custom" and explicit label.
+- bar = any service counter, bar counter, barista order counter, pickup counter, or sushi bar (label="Comptoir Bar", "Comptoir Commande", "Sushi Bar").
+- podium = hostess stand, reception desk, cashier/checkout counter, or speaker pulpit (label="Accueil", "Caisse", "Hostess", "Réception").
+- buffet = buffet tables, condiment stations, water stations, pastry showcases, credenzas, or pizza ovens.
+- stairs = visible indoor/outdoor stairs, spiral staircases, or container stairs.
 - aisle = floor runner / aisle. aisleStyle only if the carpet truly matches. hasPetals / hasSideLanterns only if visible.
-- stage / podium / djBooth / screen / buffet / bar / instrument / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo: place them as soon as visible. Instruments (piano, drums, mics) ON the podium if they sit there. Bar + bottles/glasses if a counter is visible.
+- stage / podium / djBooth / screen / buffet / bar / instrument / column / stairs / balcony / chandelier / flower / arch / partition / decal / pedestal / stringLight / fountain / gazebo: place them as soon as visible. Instruments (piano, drums, guitar) ON or near the stage.
 - door / entrance: only if clearly an access opening (otherwise walls.doors).
 - walls: only VISIBLE walls / openings. Empty array if unsure — do not invent doors.
+- Architectural Blueprints & CAD plans: Ignore dimension callouts, dimension lines (e.g. 50'-0", 36'-0", arrows) and focus strictly on physical walls, furniture footprints, counters, and booths.
+- Hand-drawn sketches & 3D isometric cutaways: Project observed items into top-down floor coordinates (0-100%).
 - Maximum ${ROOM_PLAN_VISION_ITEM_MAX} items, most certain first. Prefer too many real objects over an empty items[].
 
 If the photo is not a venue: view="unclear", items=[], explicit warnings.`;

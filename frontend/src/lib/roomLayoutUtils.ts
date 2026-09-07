@@ -3343,6 +3343,468 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     outlineShape: 'trapezoid',
     build: (p) => emptyRoomTemplate('empty-trapezoid', 'trapezoid', p),
   },
+  {
+    id: 'restaurant-bistrot',
+    name: 'Restaurant & Bistrot — Banquettes & Bar',
+    description: 'Comptoir bar avec tabourets, banquettes murales, tables carrées 4 places, tables 2 places et zone cuisine',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const furniture: RoomLayoutBlueprint['furniture'] = [];
+      for (let i = 0; i < 4; i++) {
+        furniture.push({
+          ...createBlueprintRow(i + 1, { seatCount: 4, chairType: 'BANQUET', x: 88, y: 25 + i * 16, label: `Banquette ${i + 1}` }),
+        });
+      }
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 3; c++) {
+          const idx = r * 3 + c + 1;
+          furniture.push({
+            ...createBlueprintTable(idx, { shape: 'square', capacity: 4, chairType: 'BANQUET' }),
+            name: `Table ${idx}`,
+            x: 42 + c * 16,
+            y: 35 + r * 26,
+            tableSurface: 'wood',
+            tableColor: '#8b5cf6',
+          });
+        }
+      }
+      for (let c = 0; c < 4; c++) {
+        furniture.push({
+          ...createBlueprintTable(7 + c, { shape: 'square', capacity: 2, chairType: 'BANQUET' }),
+          name: `Duo ${c + 1}`,
+          x: 25 + c * 18,
+          y: 88,
+          tableSurface: 'wood',
+        });
+      }
+      for (let s = 0; s < 5; s++) {
+        furniture.push(
+          createBlueprintChair(s + 1, {
+            chairType: 'STOOL',
+            x: 28,
+            y: 28 + s * 10,
+          }),
+        );
+      }
+      furniture.push({
+        ...createBlueprintZone('Cuisine & Préparation', 1, { zoneKind: 'custom', material: 'epoxy', color: '#64748b', w: 32, h: 18 }),
+        x: 4,
+        y: 4,
+      });
+      furniture.push({
+        ...createBlueprintZone('Sanitaires', 2, { zoneKind: 'custom', material: 'epoxy', color: '#94a3b8', w: 18, h: 14 }),
+        x: 78,
+        y: 4,
+      });
+
+      return refreshBlueprintMetadata({
+        version: 1,
+        roomType: 'BANQUET',
+        canvas: { widthM: 22, heightM: 16 },
+        roomOutline: defaultRoomOutline('rectangle'),
+        furniture,
+        fixtures: [
+          {
+            ...createBlueprintFixture('bar'),
+            id: makeLayoutId('bar'),
+            x: 20,
+            y: 24,
+            w: 6,
+            h: 52,
+            label: 'Comptoir Bar',
+            material: 'wood',
+            color: '#334155',
+          },
+          {
+            ...createBlueprintFixture('podium'),
+            id: makeLayoutId('podium'),
+            x: 8,
+            y: 84,
+            w: 8,
+            h: 6,
+            label: 'Accueil / Caisse',
+          },
+          {
+            ...createBlueprintFixture('entrance'),
+            id: makeLayoutId('entrance'),
+            x: 4,
+            y: 90,
+            w: 8,
+            h: 8,
+            label: 'Entrée',
+          },
+        ],
+        metadata: {
+          totalSeats: 0,
+          floorType: 'parquet',
+          lightingPreset: 'banquet',
+          defaultTableSurface: 'wood',
+        },
+      });
+    },
+  },
+  {
+    id: 'fast-casual-communal',
+    name: 'Fast-Casual — Tables Communales & Flux',
+    description: 'Comptoir commande & retrait, grandes tables d’hôtes rectangulaires, banquettes et station condiments',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const furniture: RoomLayoutBlueprint['furniture'] = [];
+      furniture.push({
+        ...createBlueprintTable(1, { shape: 'rectangular', capacity: 10, chairType: 'BANQUET' }),
+        name: 'Grande Table 1',
+        x: 50,
+        y: 42,
+        tableSurface: 'wood',
+      });
+      furniture.push({
+        ...createBlueprintTable(2, { shape: 'rectangular', capacity: 10, chairType: 'BANQUET' }),
+        name: 'Grande Table 2',
+        x: 50,
+        y: 56,
+        tableSurface: 'wood',
+      });
+      for (let c = 0; c < 4; c++) {
+        furniture.push({
+          ...createBlueprintTable(3 + c, { shape: 'square', capacity: 2, chairType: 'BANQUET' }),
+          name: `Duo ${c + 1}`,
+          x: 42 + (c % 2) * 16,
+          y: 72 + Math.floor(c / 2) * 12,
+          tableSurface: 'wood',
+        });
+      }
+      for (let b = 0; b < 3; b++) {
+        furniture.push({
+          ...createBlueprintRow(b + 1, { seatCount: 4, chairType: 'BANQUET', x: 88, y: 32 + b * 22, label: `Banquette ${b + 1}` }),
+        });
+        furniture.push({
+          ...createBlueprintTable(7 + b, { shape: 'square', capacity: 4, chairType: 'BANQUET' }),
+          name: `Table Banquette ${b + 1}`,
+          x: 82,
+          y: 32 + b * 22,
+          tableSurface: 'wood',
+        });
+      }
+      furniture.push({
+        ...createBlueprintZone('Cuisine & Préparation', 1, { zoneKind: 'custom', material: 'epoxy', color: '#475569', w: 60, h: 18 }),
+        x: 10,
+        y: 2,
+      });
+      furniture.push({
+        ...createBlueprintZone('Toilettes & Sanitaires', 2, { zoneKind: 'custom', material: 'epoxy', color: '#64748b', w: 24, h: 18 }),
+        x: 72,
+        y: 2,
+      });
+
+      return refreshBlueprintMetadata({
+        version: 1,
+        roomType: 'BANQUET',
+        canvas: { widthM: 20, heightM: 24 },
+        roomOutline: defaultRoomOutline('rectangle'),
+        furniture,
+        fixtures: [
+          {
+            ...createBlueprintFixture('bar'),
+            id: makeLayoutId('bar'),
+            x: 20,
+            y: 22,
+            w: 52,
+            h: 7,
+            label: 'Comptoir Commande & Retrait',
+            color: '#1e293b',
+          },
+          {
+            ...createBlueprintFixture('buffet'),
+            id: makeLayoutId('buffet'),
+            x: 6,
+            y: 46,
+            w: 8,
+            h: 18,
+            label: 'Station Condiments & Couverts',
+          },
+          {
+            ...createBlueprintFixture('entrance'),
+            id: makeLayoutId('entrance'),
+            x: 42,
+            y: 92,
+            w: 16,
+            h: 6,
+            label: 'Entrée Principale',
+          },
+        ],
+        metadata: {
+          totalSeats: 0,
+          floorType: 'beton',
+          lightingPreset: 'day',
+          defaultTableSurface: 'wood',
+        },
+      });
+    },
+  },
+  {
+    id: 'cafe-lounge',
+    name: 'Café & Coffee Shop — Salon & Barista',
+    description: 'Comptoir barista avec tabourets, salon lounge avec canapé et tables bistrot',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const furniture: RoomLayoutBlueprint['furniture'] = [];
+      furniture.push({
+        ...createBlueprintRow(1, { seatCount: 4, chairType: 'ARMCHAIR', x: 74, y: 32, label: 'Canapé Lounge' }),
+      });
+      furniture.push(createBlueprintChair(1, { chairType: 'ARMCHAIR', x: 62, y: 40 }));
+      furniture.push(createBlueprintChair(2, { chairType: 'ARMCHAIR', x: 86, y: 40 }));
+      furniture.push({
+        ...createBlueprintTable(1, { shape: 'cocktail', capacity: 2, chairType: 'ARMCHAIR' }),
+        name: 'Table Basse Lounge',
+        x: 74,
+        y: 40,
+        tableSurface: 'wood',
+      });
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 2; c++) {
+          const idx = r * 2 + c + 2;
+          furniture.push({
+            ...createBlueprintTable(idx, { shape: 'square', capacity: 4, chairType: 'BANQUET' }),
+            name: `Table ${idx - 1}`,
+            x: 44 + c * 22,
+            y: 58 + r * 18,
+            tableSurface: 'wood',
+          });
+        }
+      }
+      for (let s = 0; s < 4; s++) {
+        furniture.push(createBlueprintChair(s + 3, { chairType: 'STOOL', x: 26, y: 32 + s * 9 }));
+      }
+      furniture.push({
+        ...createBlueprintZone('Sanitaires', 1, { zoneKind: 'custom', material: 'epoxy', color: '#94a3b8', w: 18, h: 14 }),
+        x: 78,
+        y: 4,
+      });
+
+      return refreshBlueprintMetadata({
+        version: 1,
+        roomType: 'BANQUET',
+        canvas: { widthM: 18, heightM: 16 },
+        roomOutline: defaultRoomOutline('rectangle'),
+        furniture,
+        fixtures: [
+          {
+            ...createBlueprintFixture('bar'),
+            id: makeLayoutId('bar'),
+            x: 18,
+            y: 28,
+            w: 6,
+            h: 38,
+            label: 'Comptoir Barista & Espresso',
+            color: '#451a03',
+          },
+          {
+            ...createBlueprintFixture('buffet'),
+            id: makeLayoutId('buffet'),
+            x: 16,
+            y: 14,
+            w: 24,
+            h: 8,
+            label: 'Vitrine Pâtisserie & Caisse',
+            color: '#78350f',
+          },
+          {
+            ...createBlueprintFixture('entrance'),
+            id: makeLayoutId('entrance'),
+            x: 20,
+            y: 90,
+            w: 14,
+            h: 6,
+            label: 'Entrée vitrée',
+          },
+          {
+            ...createBlueprintFixture('flower'),
+            id: makeLayoutId('flower'),
+            x: 88,
+            y: 84,
+            w: 8,
+            h: 8,
+            label: 'Plantes d’intérieur',
+          },
+        ],
+        metadata: {
+          totalSeats: 0,
+          floorType: 'bois',
+          lightingPreset: 'day',
+          defaultTableSurface: 'wood',
+        },
+      });
+    },
+  },
+  {
+    id: 'restaurant-terrasse',
+    name: 'Restaurant avec Terrasse & Parasols',
+    description: 'Salle intérieure avec bar et baie vitrée donnant sur terrasse extérieure avec tables parasols',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const furniture: RoomLayoutBlueprint['furniture'] = [];
+      for (let i = 0; i < 4; i++) {
+        furniture.push({
+          ...createBlueprintTable(i + 1, { shape: 'square', capacity: 4, chairType: 'BANQUET' }),
+          name: `Table Salle ${i + 1}`,
+          x: 44 + (i % 2) * 20,
+          y: 24 + Math.floor(i / 2) * 16,
+          tableSurface: 'wood',
+        });
+      }
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 3; c++) {
+          const idx = r * 3 + c + 5;
+          furniture.push({
+            ...createBlueprintTable(idx, { shape: 'round', capacity: 4, chairType: 'FOLDING' }),
+            name: `Terrasse ${r * 3 + c + 1}`,
+            x: 20 + c * 30,
+            y: 68 + r * 18,
+            tableSurface: 'wood',
+          });
+        }
+      }
+      for (let s = 0; s < 4; s++) {
+        furniture.push(createBlueprintChair(s + 1, { chairType: 'STOOL', x: 28, y: 18 + s * 8 }));
+      }
+      furniture.push({
+        ...createBlueprintZone('Terrasse Extérieure', 1, { zoneKind: 'custom', material: 'concrete', color: '#78716c', w: 92, h: 36 }),
+        x: 4,
+        y: 60,
+      });
+
+      return refreshBlueprintMetadata({
+        version: 1,
+        roomType: 'BANQUET',
+        canvas: { widthM: 22, heightM: 18 },
+        roomOutline: defaultRoomOutline('rectangle'),
+        furniture,
+        fixtures: [
+          {
+            ...createBlueprintFixture('bar'),
+            id: makeLayoutId('bar'),
+            x: 20,
+            y: 16,
+            w: 6,
+            h: 34,
+            label: 'Comptoir Bar',
+            color: '#1e293b',
+          },
+          {
+            ...createBlueprintFixture('stage'),
+            id: makeLayoutId('stage'),
+            x: 74,
+            y: 14,
+            w: 18,
+            h: 12,
+            label: 'Petite Scène Live',
+          },
+          {
+            ...createBlueprintFixture('partition'),
+            id: makeLayoutId('partition'),
+            x: 4,
+            y: 56,
+            w: 92,
+            h: 2,
+            label: 'Baie vitrée coulissante',
+          },
+        ],
+        metadata: {
+          totalSeats: 0,
+          floorType: 'carrelage',
+          lightingPreset: 'day',
+        },
+      });
+    },
+  },
+  {
+    id: 'salon-coiffure-beaute',
+    name: 'Salon de Coiffure & Espace Beauté',
+    description: 'Postes de coiffage circulaires avec fauteuils, espace bacs de lavage, accueil caisse et salon d’attente',
+    roomType: 'CUSTOM',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const furniture: RoomLayoutBlueprint['furniture'] = [];
+      for (let c = 0; c < 2; c++) {
+        for (let r = 0; r < 4; r++) {
+          const idx = c * 4 + r + 1;
+          const x = c === 0 ? 18 : 82;
+          const y = 35 + r * 13;
+          furniture.push({
+            ...createBlueprintTable(idx, { shape: 'round', capacity: 2, chairType: 'ARMCHAIR' }),
+            name: `Poste ${idx}`,
+            x,
+            y,
+            tableSurface: 'glass',
+          });
+        }
+      }
+      furniture.push({
+        ...createBlueprintRow(1, { seatCount: 4, chairType: 'ARMCHAIR', x: 26, y: 88, label: 'Espace Attente' }),
+      });
+      furniture.push({
+        ...createBlueprintZone('Cabines Massages & Soins', 1, { zoneKind: 'custom', material: 'wood', color: '#d97706', w: 88, h: 16 }),
+        x: 6,
+        y: 4,
+      });
+
+      return refreshBlueprintMetadata({
+        version: 1,
+        roomType: 'CUSTOM',
+        canvas: { widthM: 18, heightM: 24 },
+        roomOutline: defaultRoomOutline('rectangle'),
+        furniture,
+        fixtures: [
+          {
+            ...createBlueprintFixture('podium'),
+            id: makeLayoutId('podium'),
+            x: 42,
+            y: 84,
+            w: 16,
+            h: 6,
+            label: 'Accueil & Caisse',
+          },
+          {
+            ...createBlueprintFixture('buffet'),
+            id: makeLayoutId('buffet'),
+            x: 32,
+            y: 28,
+            w: 36,
+            h: 8,
+            label: 'Bacs Shampoing & Rangement',
+            color: '#334155',
+          },
+          {
+            ...createBlueprintFixture('partition'),
+            id: makeLayoutId('partition'),
+            x: 49,
+            y: 42,
+            w: 2,
+            h: 30,
+            label: 'Cloison centrale présentoir',
+          },
+          {
+            ...createBlueprintFixture('entrance'),
+            id: makeLayoutId('entrance'),
+            x: 68,
+            y: 92,
+            w: 14,
+            h: 6,
+            label: 'Entrée Salon',
+          },
+        ],
+        metadata: {
+          totalSeats: 0,
+          floorType: 'epoxy',
+          lightingPreset: 'day',
+        },
+      });
+    },
+  },
 ];
 
 export interface ApplyTemplateOptions {

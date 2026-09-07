@@ -276,23 +276,142 @@ const DEFAULT_FOOTPRINT: Record<string, { w: number; h: number }> = {
 };
 
 const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
+  // Tables & restaurant
+  table: 'table',
   tables: 'table',
+  diningtable: 'table',
+  twotop: 'table',
+  fourtop: 'table',
+  sixtop: 'table',
+  eighttop: 'table',
+  communaltable: 'table',
+  communal: 'table',
+  umbrellatable: 'table',
+  umbrella: 'table',
+  parasol: 'table',
+  mesas: 'table',
+  mesassala: 'table',
+  mesa: 'table',
+  desk: 'table',
+  bureau: 'table',
+  stylingstation: 'table',
+  bed: 'table',
+  lit: 'table',
+
+  // Sièges, banquettes & rangées
   chairs: 'chair',
   chaises: 'chair',
   chaise: 'chair',
+  chair: 'chair',
+  stool: 'chair',
+  stools: 'chair',
+  barstool: 'chair',
+  barstools: 'chair',
+  tabouret: 'chair',
+  tabourets: 'chair',
+  fauteuil: 'chair',
+  armchair: 'chair',
+  loungechair: 'chair',
+  stylist: 'chair',
+  shampoo: 'chair',
+  row: 'row',
+  rows: 'row',
   rangee: 'row',
   rangees: 'row',
+  banquette: 'row',
   banquettes: 'row',
+  booth: 'row',
+  booths: 'row',
+  box: 'row',
+  alcove: 'row',
+  sofa: 'row',
+  couch: 'row',
+  canape: 'row',
+  canapé: 'row',
   amphitheater: 'row',
   amphitheatre: 'row',
+  waiting: 'row',
+  attente: 'row',
+
+  // Bars & comptoirs
+  bar: 'bar',
+  barra: 'bar',
+  comptoir: 'bar',
+  counter: 'bar',
+  servicecounter: 'bar',
+  ordercounter: 'bar',
+  pickupcounter: 'bar',
+  pickup: 'bar',
+  order: 'bar',
+  sushibar: 'bar',
+  winebar: 'bar',
+
+  // Buffets & stations
+  buffet: 'buffet',
+  station: 'buffet',
+  waterstation: 'buffet',
+  condiments: 'buffet',
+  credenza: 'buffet',
+  dispensary: 'buffet',
+  showcase: 'buffet',
+  vitrine: 'buffet',
+  oven: 'buffet',
+  pizzaoven: 'buffet',
+
+  // Accueil, caisse, podium
+  podium: 'podium',
+  lectern: 'podium',
+  speaker: 'podium',
+  hostess: 'podium',
+  hostessstand: 'podium',
+  reception: 'podium',
+  receptiondesk: 'podium',
+  frontdesk: 'podium',
+  cashier: 'podium',
+  caisse: 'podium',
+  pos: 'podium',
+
+  // Scène
+  stage: 'stage',
+  scene: 'stage',
+  escenario: 'stage',
+
+  // Zones & espaces
+  zone: 'zone',
   dancefloor: 'zone',
   dance: 'zone',
   piste: 'zone',
+  vip: 'zone',
+  lounge: 'zone',
+  livingroom: 'zone',
+  patio: 'zone',
+  terrace: 'zone',
+  terraza: 'zone',
+  terrasse: 'zone',
+  kitchen: 'zone',
+  cuisine: 'zone',
+  cocina: 'zone',
+  storage: 'zone',
+  almacen: 'zone',
+  restroom: 'zone',
+  restrooms: 'zone',
+  toilet: 'zone',
+  toilets: 'zone',
+  wc: 'zone',
+  aseo: 'zone',
+  aseos: 'zone',
+  bathroom: 'zone',
+  cloakroom: 'zone',
+  bedroom: 'zone',
+  washstation: 'zone',
+  massage: 'zone',
+
+  // Décor & structure
   dj: 'djBooth',
+  djbooth: 'djBooth',
   lights: 'stringLight',
   lighting: 'stringLight',
   guirlandes: 'stringLight',
-  scene: 'stage',
   allee: 'aisle',
   corridor: 'corridor',
   couloir: 'corridor',
@@ -302,6 +421,8 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   porte: 'door',
   entree: 'entrance',
   ecran: 'screen',
+  television: 'screen',
+  tv: 'screen',
   fontaine: 'fountain',
   lustre: 'chandelier',
   tent: 'gazebo',
@@ -310,8 +431,17 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   piano: 'instrument',
   batterie: 'instrument',
   instrument: 'instrument',
-  bar: 'bar',
-  comptoir: 'bar',
+  stairs: 'stairs',
+  escalier: 'stairs',
+  balcony: 'balcony',
+  column: 'column',
+  colonne: 'column',
+  flower: 'flower',
+  plant: 'flower',
+  arch: 'arch',
+  partition: 'partition',
+  cloison: 'partition',
+  retail: 'partition',
 };
 
 const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
@@ -325,6 +455,18 @@ const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
   tapis: 'carpet',
   moquette: 'carpet',
   custom: 'custom',
+  kitchen: 'custom',
+  cuisine: 'custom',
+  cocina: 'custom',
+  terrace: 'custom',
+  terraza: 'custom',
+  terrasse: 'custom',
+  patio: 'custom',
+  restroom: 'custom',
+  toilet: 'custom',
+  wc: 'custom',
+  storage: 'custom',
+  salon: 'vip',
 };
 
 const CANVAS_MIN_M = 5;
@@ -472,12 +614,17 @@ function inferTableCapacity(item: RoomPlanVisionItem, shape: TableShape): number
   if (shape === 'cocktail' || shape === 'highTop') return 2;
   const w = item.w ?? DEFAULT_FOOTPRINT.table.w;
   const h = item.h ?? DEFAULT_FOOTPRINT.table.h;
+  if (shape === 'square') {
+    const span = Math.max(w, h);
+    return span <= 6 ? 2 : 4;
+  }
   if (shape === 'rectangular' || shape === 'arc') {
     if (w >= 15) return 14;
     if (w >= 12) return 10;
     return 8;
   }
   const span = Math.max(w, h);
+  if (span <= 6) return 4;
   const fromSpan = Math.round((span - 5) / 0.55);
   return Math.max(4, Math.min(16, fromSpan || 8));
 }
@@ -494,6 +641,9 @@ function inferTableShape(item: RoomPlanVisionItem, allowed: TableShape[]): Table
   const h = item.h ?? 10;
   const ratio = w / Math.max(h, 0.1);
   if (ratio > 1.45 || ratio < 0.7) return asTableShape('rectangular', allowed);
+  if (Math.abs(ratio - 1) < 0.25 && (w <= 8 || h <= 8) && allowed.includes('square')) {
+    return 'square';
+  }
   return allowed[0] ?? 'round';
 }
 

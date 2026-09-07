@@ -242,6 +242,13 @@ describe('normalizeRoomPlanVisionKind', () => {
     assert.equal(normalizeRoomPlanVisionKind('guirlandes'), 'stringLight');
     assert.equal(normalizeRoomPlanVisionKind('tente'), 'gazebo');
     assert.equal(normalizeRoomPlanVisionKind('Bar'), 'bar');
+    assert.equal(normalizeRoomPlanVisionKind('booth'), 'row');
+    assert.equal(normalizeRoomPlanVisionKind('banquette'), 'row');
+    assert.equal(normalizeRoomPlanVisionKind('barstool'), 'chair');
+    assert.equal(normalizeRoomPlanVisionKind('ordercounter'), 'bar');
+    assert.equal(normalizeRoomPlanVisionKind('kitchen'), 'zone');
+    assert.equal(normalizeRoomPlanVisionKind('restroom'), 'zone');
+    assert.equal(normalizeRoomPlanVisionKind('stylingstation'), 'table');
     assert.equal(normalizeRoomPlanVisionKind('spaceship'), undefined);
   });
 });
