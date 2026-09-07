@@ -1459,14 +1459,16 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-plan-stage {
-  height: min(62dvh, 520px);
+  height: min(72dvh, 640px);
+  min-height: 520px;
   touch-action: none;
   overscroll-behavior: none;
 }
 
 @media (min-width: 1280px) {
   .em-plan-stage {
-    height: 520px;
+    height: 640px;
+    min-height: 580px;
   }
 }
 

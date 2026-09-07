@@ -4,7 +4,8 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
   HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box,
-  Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal
+  Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal,
+  ZoomIn, ZoomOut, Columns
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
@@ -95,6 +96,38 @@ interface TablePlannerProps {
   ticketPricingMode?: TicketPricingMode;
 }
 
+export type PlannerHeightPreset = 'standard' | 'comfort' | 'expanded' | 'screen';
+
+export const HEIGHT_PRESET_CONFIG: Record<
+  PlannerHeightPreset,
+  { id: PlannerHeightPreset; label: string; heightClass: string; px: number }
+> = {
+  standard: {
+    id: 'standard',
+    label: 'Standard',
+    heightClass: 'h-[580px] min-h-[500px]',
+    px: 580,
+  },
+  comfort: {
+    id: 'comfort',
+    label: 'Confort',
+    heightClass: 'h-[720px] min-h-[620px]',
+    px: 720,
+  },
+  expanded: {
+    id: 'expanded',
+    label: 'Grand',
+    heightClass: 'h-[860px] min-h-[740px]',
+    px: 860,
+  },
+  screen: {
+    id: 'screen',
+    label: 'Écran',
+    heightClass: 'h-[calc(100vh-210px)] min-h-[700px]',
+    px: 920,
+  },
+};
+
 export default function TablePlanner({
   guests,
   initialTablePlan,
@@ -146,6 +179,45 @@ export default function TablePlanner({
   const [guestsOpen, setGuestsOpen] = useState(false);
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
   const [plannerView, setPlannerView] = useState<PlannerView>('2d');
+
+  // Dimensions & Liberté d'espace de travail pour les utilisateurs
+  const [heightPreset, setHeightPreset] = useState<PlannerHeightPreset>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('em-planner-height-preset') as PlannerHeightPreset | null;
+      if (saved && HEIGHT_PRESET_CONFIG[saved]) {
+        return saved;
+      }
+    }
+    return 'comfort'; // Standard de confort agrandi par défaut (720px)
+  });
+
+  const [isPanoramic, setIsPanoramic] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('em-planner-panoramic') === 'true';
+    }
+    return false;
+  });
+
+  const [canvasZoom, setCanvasZoom] = useState<number>(1);
+
+  const handleSetHeightPreset = (preset: PlannerHeightPreset) => {
+    setHeightPreset(preset);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('em-planner-height-preset', preset);
+    }
+  };
+
+  const handleTogglePanoramic = () => {
+    setIsPanoramic((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('em-planner-panoramic', String(next));
+      }
+      return next;
+    });
+  };
+
+  const currentHeightClass = HEIGHT_PRESET_CONFIG[heightPreset]?.heightClass || 'h-[720px] min-h-[620px]';
 
   // Zone distribution and management states
   const [paintZoneId, setPaintZoneId] = useState<string | null>(null);
@@ -866,6 +938,37 @@ export default function TablePlanner({
             Enregistrer
           </Button>
 
+          {/* Zoom 2D */}
+          <div className="inline-flex items-center gap-1 bg-surface-muted/70 p-1 rounded-xl border border-border">
+            <button
+              type="button"
+              onClick={() => setCanvasZoom((z) => Math.max(1, Number((z - 0.25).toFixed(2))))}
+              disabled={canvasZoom <= 1}
+              className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface disabled:opacity-40 transition"
+              title="Dézoomer"
+              aria-label="Dézoomer"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span
+              onClick={() => setCanvasZoom(1)}
+              className="px-1 text-[11px] font-bold text-foreground cursor-pointer hover:text-primary transition tabular-nums"
+              title="Cliquer pour réinitialiser le zoom à 100%"
+            >
+              {Math.round(canvasZoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => setCanvasZoom((z) => Math.min(2, Number((z + 0.25).toFixed(2))))}
+              disabled={canvasZoom >= 2}
+              className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface disabled:opacity-40 transition"
+              title="Zoomer"
+              aria-label="Zoomer"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
@@ -878,18 +981,29 @@ export default function TablePlanner({
       </div>
 
       <div
-        ref={canvasRef}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
         className={cn(
-          'em-floor-canvas em-floor-canvas--photo touch-none select-none relative',
+          'relative w-full rounded-2xl border border-border bg-surface overflow-hidden shadow-[var(--shadow-soft)] flex flex-col',
           heightClass,
-          'w-full flex-1 min-h-[400px]',
-          draggingTableId && 'em-floor-canvas--dragging',
         )}
-        style={{ ...floorStyle, touchAction: 'none' }}
       >
+        <div className="absolute inset-0 overflow-auto scrollbar-thin">
+          <div
+            ref={canvasRef}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className={cn(
+              'em-floor-canvas em-floor-canvas--photo touch-none select-none relative',
+              'min-w-full min-h-full transition-[width,height] duration-150',
+              draggingTableId && 'em-floor-canvas--dragging',
+            )}
+            style={{
+              ...floorStyle,
+              touchAction: 'none',
+              width: `${canvasZoom * 100}%`,
+              height: `${canvasZoom * 100}%`,
+            }}
+          >
         {tablePlannerWalls.length > 0 && (
           <Room2DPlanWalls
             walls={tablePlannerWalls}
@@ -1186,6 +1300,8 @@ export default function TablePlanner({
             );
           })
         )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1446,8 +1562,67 @@ export default function TablePlanner({
       </div>
 
       {/* Grid Layout for Planner — canvas first on mobile */}
-      <div className="flex flex-col xl:grid xl:grid-cols-4 gap-3 xl:gap-6">
-        <div className="order-1 xl:order-2 xl:col-span-3 flex flex-col space-y-3">
+      <div className={cn('flex flex-col gap-3 xl:gap-6', isPanoramic ? 'w-full' : 'xl:grid xl:grid-cols-4')}>
+        <div className={cn('order-1 flex flex-col space-y-3', isPanoramic ? 'w-full' : 'xl:order-2 xl:col-span-3')}>
+          {/* Barre d'espace & dimensionnement du plan de salle */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 p-2.5 bg-surface border border-border rounded-2xl shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted flex items-center gap-1.5 mr-0.5">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+                Taille du plan :
+              </span>
+              <div className="inline-flex items-center gap-1 p-0.5 bg-surface-muted rounded-xl border border-border">
+                {(['standard', 'comfort', 'expanded', 'screen'] as PlannerHeightPreset[]).map((pKey) => {
+                  const cfg = HEIGHT_PRESET_CONFIG[pKey];
+                  const isActive = heightPreset === pKey;
+                  return (
+                    <button
+                      key={pKey}
+                      type="button"
+                      onClick={() => handleSetHeightPreset(pKey)}
+                      className={cn(
+                        'px-2.5 py-1 min-h-[32px] rounded-lg text-xs font-bold transition-all touch-manipulation',
+                        isActive
+                          ? 'bg-foreground text-background shadow-xs'
+                          : 'text-muted hover:text-foreground hover:bg-surface'
+                      )}
+                      title={`Hauteur du plan : ${cfg.label} (${cfg.px}px)`}
+                    >
+                      {cfg.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Mode Panoramique 100% largeur */}
+              <button
+                type="button"
+                onClick={handleTogglePanoramic}
+                className={cn(
+                  'inline-flex min-h-[36px] items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold transition touch-manipulation',
+                  isPanoramic
+                    ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/30 font-bold'
+                    : 'border-border bg-surface text-muted hover:text-foreground hover:bg-surface-muted'
+                )}
+                title="Occuper toute la largeur de l'écran (100% largeur)"
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span>Panoramique (100%)</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={() => setIsExpanded(true)}
+                className="inline-flex min-h-[36px] items-center gap-1.5 px-3 py-1 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 transition"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                Plein écran
+              </button>
+            </div>
+          </div>
+
           {plannerView === '2d' ? (
             <div className="bg-surface border border-border rounded-[var(--radius-card)] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-1.5 sm:gap-2 overflow-x-auto">
               <Move className="w-3.5 h-3.5 text-muted shrink-0" />
@@ -1493,34 +1668,22 @@ export default function TablePlanner({
                   Tout déverrouiller
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setIsExpanded(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 min-h-11 sm:min-h-[36px] bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-primary hover:bg-primary/10 transition"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                Plein écran
-              </button>
             </div>
           ) : (
             <div className="bg-surface border border-border rounded-[var(--radius-card)] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-2">
               <Box className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span>Vue 3D en lecture seule · molette = zoom · glisser = orbit</span>
-              <button
-                type="button"
-                onClick={() => setIsExpanded(true)}
-                className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 min-h-11 sm:min-h-[36px] bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-primary hover:bg-primary/10 transition"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                Plein écran
-              </button>
+              <span>Vue 3D interactive · orbitez, zoomez et sélectionnez ou peignez les zones de tables en 3D</span>
             </div>
           )}
 
-          {!isExpanded && (plannerView === '3d' ? render3DPreview('em-plan-stage') : renderCanvas('em-plan-stage'))}
+          {!isExpanded && (plannerView === '3d' ? render3DPreview(currentHeightClass) : renderCanvas(currentHeightClass))}
         </div>
 
-        <div className="order-2 xl:order-1 xl:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-4 flex flex-col xl:h-[600px] shadow-sm">
+        <div className={cn(
+          'order-2 bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-4 flex flex-col shadow-sm transition-all',
+          isPanoramic ? 'w-full mt-2' : 'xl:order-1 xl:col-span-1',
+          !isPanoramic && (heightPreset === 'expanded' || heightPreset === 'screen' ? 'xl:h-[860px]' : heightPreset === 'comfort' ? 'xl:h-[720px]' : 'xl:h-[600px]')
+        )}>
           <button
             type="button"
             onClick={() => setGuestsOpen((open) => !open)}
