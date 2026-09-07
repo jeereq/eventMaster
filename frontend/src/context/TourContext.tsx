@@ -115,12 +115,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     if (currentStep.route && !pathsMatch(currentPath, currentStep.route)) {
       if (tourNavigatingRef.current) {
-        tourNavigatingRef.current = false;
         return;
       }
       stopTour();
       return;
     }
+
+    tourNavigatingRef.current = false;
 
     if (!currentStep.target) {
       setTargetRect(null);

@@ -98,7 +98,7 @@ function DashboardPublicationsPageInner() {
   };
 
   return (
-    <div className="space-y-6 w-full max-w-5xl">
+    <div className="space-y-6 w-full">
       <PageHeader
         title="Réalisations"
         description={
@@ -268,8 +268,8 @@ function PublicationsGrid({
       {displayMode === 'feed' ? (
         <MarketplaceGlobalActivityFeed linkBase="dashboard" compactLoginHint={Boolean(user)} />
       ) : loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="aspect-square rounded-2xl bg-surface-muted animate-pulse" />
           ))}
         </div>
@@ -287,7 +287,7 @@ function PublicationsGrid({
           }
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {tiles.map((post) => {
             const mediaList = post.mediaUrls || [];
             const media = mediaList[0];
@@ -334,7 +334,7 @@ function PublicationsGrid({
                     </span>
                   ) : null}
                 </span>
-                <span className="flex flex-col gap-1 p-2.5 sm:p-3">
+                <span className="flex flex-col gap-1 p-3 sm:p-3.5">
                   <span className="flex items-center justify-between gap-2 min-w-0">
                     <span className="text-xs font-semibold text-foreground truncate">
                       {post.author?.name || 'Réalisation'}
@@ -422,7 +422,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-auto border border-border shadow-2xl space-y-4 p-4 sm:p-6"
+        className="bg-surface rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-auto border border-border shadow-2xl space-y-4 p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
@@ -456,7 +456,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
         </div>
 
         {current ? (
-          <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-stage aspect-16/10 max-h-[420px]">
+          <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-stage aspect-16/10 max-h-[min(72vh,560px)]">
             {current.type === 'VIDEO' || isVideoUrl(current.url) ? (
               <video src={current.url} controls playsInline className="w-full h-full object-contain" />
             ) : (

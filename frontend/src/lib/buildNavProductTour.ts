@@ -278,6 +278,7 @@ export function buildNavProductTour(
         { tourId: 'nav-dashboard' },
         { tourId: 'nav-protocol' },
         { tourId: 'nav-catalogue' },
+        { tourId: 'nav-publications' },
         { tourId: 'nav-quotes' },
         { tourId: 'nav-reservations' },
         { tourId: 'nav-guide' },

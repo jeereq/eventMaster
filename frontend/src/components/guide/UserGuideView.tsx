@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
@@ -39,6 +39,13 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
   const { site } = usePlatformSite();
   const [openWorkflowId, setOpenWorkflowId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [accordionTouched, setAccordionTouched] = useState(false);
+
+  useEffect(() => {
+    setOpenWorkflowId(null);
+    setAccordionTouched(false);
+    setQuery('');
+  }, [guideId]);
 
   const filteredWorkflows = useMemo(() => {
     if (!guide) return [];
@@ -58,9 +65,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
   }
 
   const firstWorkflowId = filteredWorkflows[0]?.id ?? null;
-  const effectiveOpen = openWorkflowId === null && firstWorkflowId
-    ? firstWorkflowId
-    : openWorkflowId;
+  const effectiveOpen = accordionTouched ? openWorkflowId : firstWorkflowId;
 
   return (
     <div className="space-y-6">
@@ -179,8 +184,11 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
                 >
                   <button
                     type="button"
-                    onClick={() => setOpenWorkflowId(open ? null : wf.id)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-surface-muted/60 transition"
+                    onClick={() => {
+                      setAccordionTouched(true);
+                      setOpenWorkflowId(open ? null : wf.id);
+                    }}
+                    className="w-full min-h-11 flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-surface-muted/60 transition"
                     aria-expanded={open}
                   >
                     <span className="flex items-center gap-3 min-w-0">

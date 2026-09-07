@@ -104,10 +104,10 @@ export default function ProtocolDashboardHome() {
         <p className="text-sm text-muted">Aucune statistique disponible pour le moment.</p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         <Link
           href="/dashboard/protocol"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
         >
           <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <ScanLine className="w-3.5 h-3.5 text-primary" /> Accueil
@@ -116,16 +116,16 @@ export default function ProtocolDashboardHome() {
         </Link>
         <Link
           href="/dashboard/publications"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
+          className="sm:col-span-2 lg:col-span-2 rounded-2xl border border-primary/25 bg-primary/5 hover:bg-primary/10 px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
         >
           <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <Rss className="w-3.5 h-3.5 text-primary" /> Réalisations
           </p>
-          <p className="text-sm font-semibold mt-1">Photos des salles et prestations</p>
+          <p className="text-sm font-semibold mt-1">Photos et actualités des salles et prestations</p>
         </Link>
         <Link
           href="/dashboard/bookings?tab=quotes"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
         >
           <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <Inbox className="w-3.5 h-3.5 text-primary" /> Devis
@@ -134,7 +134,7 @@ export default function ProtocolDashboardHome() {
         </Link>
         <Link
           href="/dashboard/bookings?tab=bookings"
-          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3 hover:border-primary/50 hover:shadow-xs transition"
+          className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
         >
           <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">
             <CalendarCheck className="w-3.5 h-3.5 text-primary" /> Réservations

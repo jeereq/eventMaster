@@ -73,7 +73,7 @@ function DashboardGuidePageContent() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Guide utilisateur"
-        description="Documentation à jour selon votre rôle : accueil jour J, catalogue, devis et limites de chaque compte."
+        description={`Documentation et visite guidée pour le profil « ${resolved.label} ».`}
         breadcrumbs={
           <Breadcrumbs
             items={[
@@ -106,7 +106,7 @@ function DashboardGuidePageContent() {
               type="button"
               onClick={() => setTab('doc')}
               className={cn(
-                'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                'flex-1 inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
                 activeTab === 'doc'
                   ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                   : 'text-muted hover:text-foreground',
@@ -119,7 +119,7 @@ function DashboardGuidePageContent() {
               type="button"
               onClick={() => setTab('tour')}
               className={cn(
-                'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                'flex-1 inline-flex min-h-11 items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
                 activeTab === 'tour'
                   ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                   : 'text-muted hover:text-foreground',

@@ -19,6 +19,7 @@ export function renewalPercent(site?: Pick<PublicSiteConfig, 'commercialRenewalC
 
 /** Remplace {depositPercent}, {commissionPercent}, {commercialPercent}, {renewalPercent}, {platformName}. */
 export function interpolateRates(text: string, site?: PublicSiteConfig | null) {
+  if (typeof text !== 'string') return '';
   return text
     .replaceAll('{depositPercent}', String(depositPercent(site)))
     .replaceAll('{commissionPercent}', String(commissionPercent(site)))
