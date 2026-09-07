@@ -847,6 +847,7 @@ Appearance rules:
 - Table w/h = real floor footprint in % (small cocktail ≈ 5–6, round 8 seats ≈ 10, long ≈ 12–16).
 
 Item rules (inference allowed):
+- ZERO OVERLAP / ZERO STACKING: Never place multiple chairs or tables at the same or overlapping coordinates. Each chair must have its own distinct physical floor location. Maintain realistic real-world clearances: minimum 0.7m center-to-center between chairs, minimum 1.4m edge-to-edge between tables for pulled-back chairs, minimum 1.2m along perimeter walls.
 - Align tables and rows on a grid: shared X in columns, shared Y in rows. Avoid 1–2% jitter “for neatness”.
 - table = each isolated table. seats = visible chairs/covers around it, else estimate from diameter (cocktail 2, round 8, long 10–14). shape from silhouette. hasCenterpiece=true if a central vase/bouquet is visible.
 - row = each aligned chair row (theater, banquettes, bleachers). One visible row = one item.
@@ -868,8 +869,9 @@ function composeSystemPrompt(): string {
 From the ENGLISH SCENE BRIEF, DESIGN a lived-in venue floor plan — not a software grid — and return ONLY valid JSON.
 
 Placement forbidden:
+- Stacking or overlapping chairs, tables or fixtures in the same space. NEVER output identical or overlapping (x, y) coordinates for multiple objects. Each chair and piece of furniture must occupy its own distinct physical footprint.
+- Crowding furniture without realistic human circulation: maintain at least 0.7m center-to-center between chairs, at least 1.4m to 1.8m edge-to-edge between tables for pulled chairs and service aisles, and at least 1.2m to 1.8m circulation corridors along perimeter walls.
 - Lining tables, chandeliers or flowers in a single straight file, military checkerboard, or 1–2% “neat” jitter.
-- Pushing furniture against walls. Keep 1.2–1.8 m circulation along walls.
 - Blocking a door, aisle or stage.
 - Inventing an amphitheater or tent if the brief does not ask for one.
 

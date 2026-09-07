@@ -1,4 +1,4 @@
-export type PromptCategory = 'clone' | 'wedding' | 'gala' | 'birthday';
+export type PromptCategory = 'clone' | 'wedding' | 'gala' | 'birthday' | 'rdc-langues';
 
 export interface PromptModel {
   id: string;
@@ -16,6 +16,7 @@ export const PROMPT_CATEGORIES: Array<{ id: PromptCategory; label: string; iconN
   { id: 'wedding', label: 'Mariages & Dots' },
   { id: 'gala', label: 'Galas & Entreprises' },
   { id: 'birthday', label: 'Anniversaires & Soirées' },
+  { id: 'rdc-langues', label: '4 Langues nationales RDC' },
 ];
 
 export const INVITATION_PROMPT_MODELS: PromptModel[] = [
@@ -118,5 +119,86 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     summary: 'Fond vert émeraude riche, volutes dorées baroques ciselées, arche florale tropicale somptueuse.',
     prompt:
       'Design a royal jubilee celebration invitation. [Subject] A sumptuous vertical stationery card. [Action] Opening onto a grand festive tropical floral arch. [Location/context] Prestigious jubilee party atmosphere. [Composition] Tall 9:16, ornate baroque gold scrollwork framing a rich emerald field. [Style] Deep emerald, chiseled gold volutes, tropical floral abundance, warm prestigious print photography.',
+  },
+
+  // --- Catégorie : 4 Langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba) ---
+  // 1. LINGALA (Kinshasa, Équateur, Fleuve Congo)
+  {
+    id: 'lingala-libala-royal',
+    title: 'Libala ya Lokumu (Mariage en Lingala)',
+    category: 'rdc-langues',
+    badge: 'Lingala',
+    summary: 'Invitation de mariage en Lingala (« Libyangi ya Libala : Boya tosepela elongo »), ivoire, or chaud et pagne wax royal brodé.',
+    prompt:
+      'Compose a royal Kinshasa wedding invitation in authentic Lingala. [Subject] A Black African Congolese bride and groom in prestigious embroidered ivory wax attire. [Action] Presenting a joyous wedding invitation card titled "Libyangi ya Libala : Boya tosepela elongo na libala ya bana na biso". The card text elements must be in authentic Lingala: "Mokolo : {{date}}", "Esika : {{location}}", "Kondima kozala elongo na biso". [Location/context] Kinshasa festive celebration with warm hospitality and Rumba elegance. [Composition] Tall 9:16 portrait card, ornate gold filigree and ivory border, centered ceremonial typography. [Style] Warm volumetric daylight, authentic 35mm skin tones, gold foil reflections, luxury cotton paper grain finish.',
+  },
+  {
+    id: 'lingala-dot-bonkoko',
+    title: 'Kobala ya Bonkoko (Dot coutumière en Lingala)',
+    category: 'rdc-langues',
+    badge: 'Lingala (Dot)',
+    summary: 'Invitation de dot traditionnelle en Lingala (« Eyenga ya Kobala »), teintes chaudes ocre, cuivre et dorures ciselées.',
+    prompt:
+      'Design a traditional Congolese dowry (Dot) invitation in Lingala. [Subject] Black African Congolese hosts in customary ceremonial attire with natural melanin skin. [Action] Announcing the customary union with header "Eyenga ya Kobala ya Bonkoko : Libyangi na baboti mpe baninga". Details in Lingala: "Mokolo : {{date}}", "Esika : {{location}}", "Eyenga ya libota". [Location/context] Kinshasa customary wedding with prestigious traditional ornaments. [Composition] Tall 9:16 vertical stationery frame, refined Kuba border details, centered text layout. [Style] Warm terracotta, copper and gold palette, authentic facial features at 100% fidelity, photoreal editorial print look.',
+  },
+
+  // 2. SWAHILI (Grand Kivu, Grand Katanga, Maniema, Kisangani)
+  {
+    id: 'swahili-harusi-kifahari',
+    title: 'Harusi ya Kifahari (Mariage en Swahili)',
+    category: 'rdc-langues',
+    badge: 'Kiswahili',
+    summary: 'Invitation d’honneur en Swahili (« Mwaliko wa Harusi : Karibuni sana tusherehekee »), pourpre royal, or brossé et fleurs tropicales.',
+    prompt:
+      'Compose a luxurious wedding invitation card in authentic Swahili (Kiswahili). [Subject] An elegant Black African Congolese couple from Eastern RDC / Katanga in bespoke formal attire. [Action] Welcoming guests with the Swahili title "Mwaliko wa Harusi ya Kifahari : Karibuni sana tusherehekee pamoja muungano huu mtakatifu". Text blocks in Swahili: "Tarehe : {{date}}", "Mahali : {{location}}", "Thibitisha uwepo wako kwa furaha". [Location/context] Grand celebration in Goma / Lubumbashi. [Composition] 9:16 vertical card with royal purple and brushed gold fillet borders, centered ceremonial typography. [Style] Rich atmospheric lighting, deep copper and gold accents, photoreal skin texture, tactile fine-art paper grain.',
+  },
+  {
+    id: 'swahili-sikukuu-sherehe',
+    title: 'Sikukuu ya Ushindi (Gala & Fête en Swahili)',
+    category: 'rdc-langues',
+    badge: 'Kiswahili (Fête)',
+    summary: 'Invitation officielle et solennelle en Swahili (« Mwaliko Rasmi : Sikukuu ya Furaha »), bleu nuit et dorures fines.',
+    prompt:
+      'Design an official ceremonial gala invitation in Swahili. [Subject] A prestigious vertical invitation card for an honored celebration. [Action] Presenting the event with official Swahili lettering: "Mwaliko Rasmi wa Sherehe : Karibuni kwenye Sikukuu ya heshima na furaha". Details in Swahili: "Tarehe : {{date}}", "Ukumbi : {{location}}", "Kujumuika kwa heshima". [Location/context] High-level Congolese reception in Lubumbashi or Goma. [Composition] Elegant 9:16 layout, midnight blue and champagne gold geometric framing, clear typographic hierarchy. [Style] Luxury stationery finish, gold foil stamping reflections, sharp print photography.',
+  },
+
+  // 3. KIKONGO (Kongo Central, Bandundu, Kwilu, Kwango)
+  {
+    id: 'kikongo-makwela-lukumu',
+    title: 'Nkinsi ya Makwela (Mariage en Kikongo)',
+    category: 'rdc-langues',
+    badge: 'Kikongo',
+    summary: 'Invitation solennelle en Kikongo (« Mbila ya Nkinsi ya Makwela : Kwizeno beto sepela »), raphia noble du Royaume Kongo, vert forêt et or.',
+    prompt:
+      'Compose an authentic customary wedding invitation in Kikongo (Kituba). [Subject] A distinguished Congolese couple in royal Kongo textile patterns and ceremonial gold accessories. [Action] Presenting a solemn wedding invitation titled "Mbila ya Nkinsi ya Makwela : Kwizeno beto sepela kintwadi na dikwela yayi". Card text in Kikongo: "Kilumbu : {{date}}", "Kisika : {{location}}", "Tula kimbangi ya kukwiza kwaku". [Location/context] Kongo Central celebration inspired by noble ancestral heritage. [Composition] Tall 9:16 format with forest green and burnished gold scrollwork, centered ceremonial layout. [Style] Warm natural lighting, 100% natural melanin fidelity, fine embossed paper grain, photoreal luxury print look.',
+  },
+  {
+    id: 'kikongo-nkinsi-kiese',
+    title: 'Nkinsi ya Kiese (Célébration en Kikongo)',
+    category: 'rdc-langues',
+    badge: 'Kikongo (Jubilé)',
+    summary: 'Invitation de fête et d’action de grâce en Kikongo (« Nkinsi ya Lukumu mpe Kiese »), ivoire pur, or poli et motifs ancestraux.',
+    prompt:
+      'Design an honored celebration invitation in Kikongo. [Subject] A vertical luxury invitation for a landmark milestone or jubilee. [Action] Inviting relatives and friends with authentic Kikongo phrasing: "Mbila ya Nkinsi ya Lukumu : Kwisa kusangana na kiese ya libota na beto". Details in Kikongo: "Kilumbu : {{date}}", "Kisika : {{location}}", "Beto ke vingila beno na kiese". [Location/context] Elegant traditional-meets-modern event in Kongo Central or Bandundu. [Composition] Tall 9:16, delicate gold border inspired by Congolese geometric art, clear margins. [Style] Pure ivory, polished gold, natural warm shadows, photoreal stationery finish.',
+  },
+
+  // 4. TSHILUBA (Grand Kasaï : Mbuji-Mayi, Kananga, Tshikapa)
+  {
+    id: 'tshiluba-dibaka-kanemu',
+    title: 'Tshibilu tshia Dibaka (Mariage en Tshiluba)',
+    category: 'rdc-langues',
+    badge: 'Tshiluba',
+    summary: 'Invitation princière en Tshiluba (« Dibikila dia Dibaka : Luayi tusankidile pamue »), velours du Kasaï (Madiba), ocre chaud et or royal.',
+    prompt:
+      'Design a princely wedding invitation in authentic Tshiluba (Ciluba). [Subject] A noble Black African Congolese couple adorned in authentic Kasai velvet (Madiba) and royal beaded accents. [Action] Inviting guests with traditional Kasai dignity: "Dibikila dia Kanemu ku Tshibilu tshia Dibaka : Luayi tusankidile pamue dibaka dia bana betu". Text elements in Tshiluba: "Dituku : {{date}}", "Muaba : {{location}}", "Jadika dikalapu diebe ku tshibilu". [Location/context] Prestige Kasai celebration honoring cultural royalty and contemporary elegance. [Composition] Tall 9:16 format, framed with refined Kuba/Kasai geometric borders, spacious lower area for lettering. [Style] Warm ochre, copper and royal gold, unblemished natural skin texture, photoreal luxury stationery finish.',
+  },
+  {
+    id: 'tshiluba-tshibilu-banjelu',
+    title: 'Tshibilu tshia Butumbi (Fête d’honneur en Tshiluba)',
+    category: 'rdc-langues',
+    badge: 'Tshiluba (Honneur)',
+    summary: 'Invitation de fête d’honneur en Tshiluba (« Tshibilu tshia Butumbi ne Disanka »), rouge bordeaux, or ciselé et perles royales.',
+    prompt:
+      'Compose a high-prestige celebration invitation in Tshiluba. [Subject] An honored Congolese host or couple celebrated by their community. [Action] Announcing a grand reception with customary Tshiluba title: "Dibikila dia Butumbi : Luayi tuakidile tshibilu tshia disanka ne bunene". Details in Tshiluba: "Dituku : {{date}}", "Muaba : {{location}}", "Kudisangisha mu disanka". [Location/context] Grand Kasai banquet in Mbuji-Mayi or Kananga. [Composition] 9:16 vertical card with burgundy and chiseled gold fillet borders, centered hierarchy. [Style] Rich burgundy velvet texture, warm gold foil reflections, authentic African melanin portrait fidelity, photoreal editorial print look.',
   },
 ];

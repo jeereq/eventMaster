@@ -20,6 +20,12 @@ import {
   type AlignBox,
   type AlignMode as SharedAlignMode,
 } from '@/lib/layoutAlignMath';
+import {
+  enforceRealLayoutClearances,
+  REAL_CLEARANCE_METERS,
+} from '@/lib/roomLayoutClearance';
+
+export { enforceRealLayoutClearances, REAL_CLEARANCE_METERS };
 
 export type LayoutSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'chair' | 'wall';
 
@@ -218,6 +224,26 @@ function applyClusterAxis(
   let next = blueprint;
   for (const group of groups) {
     if (group.length < 2) continue;
+
+    // Ne pas aligner des éléments qui se chevauchent déjà sur l'axe perpendiculaire
+    // pour éviter de les empiler au même point
+    const hasPerpOverlap = group.some((i, idx) => {
+      const b1 = boxes[i];
+      return group.slice(idx + 1).some((j) => {
+        const b2 = boxes[j];
+        if (axis === 'y') {
+          const dist = Math.abs(cxOf(toAlignBox(b1)) - cxOf(toAlignBox(b2)));
+          const minSep = (b1.w + b2.w) / 2;
+          return dist < minSep;
+        } else {
+          const dist = Math.abs(cyOf(toAlignBox(b1)) - cyOf(toAlignBox(b2)));
+          const minSep = (b1.h + b2.h) / 2;
+          return dist < minSep;
+        }
+      });
+    });
+    if (hasPerpOverlap) continue;
+
     const target = snapPct(median(group.map((index) => values[index])), IMPORT_SNAP_STEP);
     for (const index of group) {
       const box = boxes[index];
@@ -230,7 +256,7 @@ function applyClusterAxis(
   return next;
 }
 
-/** Grille + alignement des éléments au sol après un import photo / studio IA. */
+/** Grille + alignement + dés-empilement et écartements réels du mobilier au sol. */
 export function tidyImportedFloorLayout(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
   let next: RoomLayoutBlueprint = {
     ...blueprint,
@@ -246,14 +272,15 @@ export function tidyImportedFloorLayout(blueprint: RoomLayoutBlueprint): RoomLay
   const rows: LayoutSelectionItem[] = next.furniture
     .filter((item) => item.kind === 'row')
     .map((item) => ({ kind: 'row' as const, id: item.id }));
-  const chairs: LayoutSelectionItem[] = next.furniture
-    .filter((item) => item.kind === 'chair')
-    .map((item) => ({ kind: 'chair' as const, id: item.id }));
 
-  for (const group of [tables, rows, chairs]) {
+  // Seules les tables et rangées peuvent être alignées en rangée/colonne si non chevauchantes
+  for (const group of [tables, rows]) {
     next = applyClusterAxis(next, group, 'y');
     next = applyClusterAxis(next, group, 'x');
   }
+
+  // Dés-empilement strict des chaises et application des écartements physiques réels
+  next = enforceRealLayoutClearances(next);
 
   return refreshBlueprintMetadata(next);
 }

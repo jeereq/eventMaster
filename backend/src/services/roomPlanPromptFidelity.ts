@@ -21,7 +21,7 @@ Rules (non-negotiable):
 5) Be specific about: guest count, table count/shape, rows, doors, aisle, stage/podium, dance floor, DJ/screen, buffet/bar, florals, chandeliers, materials and hex colors when given.
 6) Use positive framing (describe the layout to build, not a list of prohibitions).
 7) Preserve every factual detail: dimensions, room type, colors (#hex), chair styles, aisle styles, cultural motifs.
-8) Prefer staggered / honeycomb round tables for banquets; ceremony aisle toward honor table or stage; clear circulation along walls.
+8) Prefer staggered / honeycomb round tables for banquets with at least 1.4m edge-to-edge clearance between tables; ceremony aisle toward honor table or stage; clear 1.2m circulation along walls; never stack or overlap chairs (keep at least 0.7m center distance).
 9) Do not invent amphitheater seating or a tent roof unless the brief asks for them.
 10) Keep englishSceneBrief under 450 words. No markdown.`;
 

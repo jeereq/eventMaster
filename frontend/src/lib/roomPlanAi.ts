@@ -1053,11 +1053,24 @@ export function applyRoomPlanVisionDraft(
       }
       chairCount += 1;
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.chair);
+
+      // Si une chaise est empilée au même endroit qu'une autre chaise déjà ajoutée, décaler initialement
+      let initialCx = box.cx;
+      let initialCy = box.cy;
+      const duplicateCount = furniture.filter(
+        (f) => f.kind === 'chair' && Math.hypot(f.x - initialCx, f.y - initialCy) < 0.5,
+      ).length;
+      if (duplicateCount > 0) {
+        const offsetAngle = (((duplicateCount * 3) % 8) * Math.PI) / 4;
+        initialCx = Math.max(2, Math.min(98, initialCx + Math.cos(offsetAngle) * 2.5));
+        initialCy = Math.max(2, Math.min(98, initialCy + Math.sin(offsetAngle) * 2.5));
+      }
+
       const chair = {
         ...createBlueprintChair(chairCount, {
           chairType,
-          x: box.cx,
-          y: box.cy,
+          x: initialCx,
+          y: initialCy,
           rotation: item.rotation,
         }),
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),

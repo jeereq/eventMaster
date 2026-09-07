@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info } from 'lucide-react';
+import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages } from 'lucide-react';
 import {
   INVITATION_PROMPT_MODELS,
   PROMPT_CATEGORIES,
@@ -58,6 +58,8 @@ export default function PromptModelSelector({
         return <Building2 className="w-3.5 h-3.5" />;
       case 'birthday':
         return <PartyPopper className="w-3.5 h-3.5" />;
+      case 'rdc-langues':
+        return <Languages className="w-3.5 h-3.5" />;
       default:
         return <Sparkles className="w-3.5 h-3.5" />;
     }
@@ -126,6 +128,20 @@ export default function PromptModelSelector({
         </div>
       )}
 
+      {/* Conseil contextuel pour les 4 langues nationales de la RDC */}
+      {activeCategory === 'rdc-langues' && (
+        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-200 text-xs flex items-start gap-2 animate-fade-in">
+          <Languages className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">4 Langues nationales de la RDC :</p>
+            <p className="text-[11px] opacity-90 mt-0.5">
+              Lingala (Kinshasa & Fleuve), Kiswahili (Est & Grand Katanga), Kikongo (Kongo Central & Bandundu), Tshiluba (Grand Kasaï).
+              Les titres, textes et formulations cérémoniales sont générés fidèlement dans la langue choisie.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Grille des modèles de prompt */}
       <div
         className={cn(
@@ -162,7 +178,9 @@ export default function PromptModelSelector({
                       'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
                       model.isClone
                         ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20'
-                        : 'bg-primary/15 text-primary border border-primary/20',
+                        : model.category === 'rdc-langues'
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                          : 'bg-primary/15 text-primary border border-primary/20',
                     )}
                   >
                     {model.badge}

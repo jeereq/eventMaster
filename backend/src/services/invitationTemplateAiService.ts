@@ -156,7 +156,8 @@ Layout rules:
 - Palette and element style = colors from images (or cloned card) + brief.
 - 6–12 elements max, stacked flow, centered.
 - Use {{title}}, {{date}}, {{location}}, {{firstName}} in text when relevant.
-- Exactly one "rsvp-block" with rsvpPlacement "outside" and text "Confirmer votre présence".
+- Exactly one "rsvp-block" with rsvpPlacement "outside" and text "Confirmer votre présence" (or the appropriate Congolese national language equivalent: e.g. "Kondima kozala wana" in Lingala, "Thibitisha uwepo wako" in Swahili, "Tula kimbangi ya kukwiza" in Kikongo, "Jadika dikalapu diebe" in Tshiluba).
+- Language fidelity (RDC): If the brief, title or prompt specifies or is written in one of the Congolese national languages (Lingala, Swahili, Kikongo, Tshiluba), generate all invitation text elements in that exact language (e.g. Lingala: "Libyangi ya Libala", "Boya tosepela elongo", "Mokolo : {{date}}", "Esika : {{location}}"; Swahili: "Mwaliko wa Harusi", "Karibuni sana tusherehekee", "Tarehe : {{date}}", "Mahali : {{location}}"; Kikongo: "Mbila ya Nkinsi ya Makwela", "Kwizeno beto sepela kintwadi", "Kilumbu : {{date}}", "Kisika : {{location}}"; Tshiluba: "Dibikila dia Tshibilu tshia Dibaka", "Luayi tusankidile pamue", "Dituku : {{date}}", "Muaba : {{location}}"). Do not revert to French when a national language is requested.
 - Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).
 - No markdown. JSON only.`;
 
