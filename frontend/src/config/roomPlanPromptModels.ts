@@ -1,4 +1,4 @@
-export type RoomPlanPromptCategory = 'wedding' | 'banquet' | 'pro' | 'cocktail';
+export type RoomPlanPromptCategory = 'coutumier' | 'wedding' | 'banquet' | 'pro' | 'cocktail';
 
 export type RoomPlanPromptModel = {
   id: string;
@@ -12,6 +12,7 @@ export type RoomPlanPromptModel = {
 };
 
 export const ROOM_PLAN_PROMPT_CATEGORIES: Array<{ id: RoomPlanPromptCategory; label: string }> = [
+  { id: 'coutumier', label: 'Coutumiers' },
   { id: 'wedding', label: 'Mariages' },
   { id: 'banquet', label: 'Banquets' },
   { id: 'pro', label: 'Conférences' },
@@ -19,6 +20,46 @@ export const ROOM_PLAN_PROMPT_CATEGORIES: Array<{ id: RoomPlanPromptCategory; la
 ];
 
 export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
+  {
+    id: 'coutumier-kongo',
+    title: 'Makwela Kongo',
+    category: 'coutumier',
+    badge: 'Kongo',
+    summary: 'Palabre des familles, allée raphia, honneur.',
+    prompt:
+      'Compose a customary Bakongo wedding reception for 180 guests. [Subject] Banquet hall with family palaver zone, raffia aisle and honor table. [Action] South public entrance; a west family-seating cluster for the two lineages facing a low palaver table; run a raffia-green aisle to a north oval honor table (12 seats); 16 round tables of 10 in a honeycomb stagger. [Location/context] Kongo Central customary makwela. [Composition] Floral/raffia arch at the door, planters at aisle bends; no dance floor in the palaver third. [Style] Light parquet, forest-green drapes, ivory linens, gold Chiavari chairs.',
+    roomType: 'BANQUET',
+  },
+  {
+    id: 'coutumier-luba',
+    title: 'Tshibilu Luba',
+    category: 'coutumier',
+    badge: 'Luba',
+    summary: 'Velours Kasaï, allée d’honneur, rondes.',
+    prompt:
+      'Lay out a customary Baluba tshibilu banquet for 200 guests. [Subject] Kasai prestige hall with honor table and staggered rounds. [Action] Entrance mid-south; ivory-and-ochre aisle to a north honor table of 14; 18 rounds of 10 with 1.4 m service gaps; buffet along the east wall behind circulation. [Location/context] Grand Kasaï customary dibaka. [Composition] Twin flower columns framing honor, Kuba-inspired planter accents at aisle heads. [Style] Warm ochre walls, copper drapes, madiba-inspired linen, wood chairs.',
+    roomType: 'BANQUET',
+  },
+  {
+    id: 'coutumier-mongo',
+    title: 'Bonkoko Mongo',
+    category: 'coutumier',
+    badge: 'Mongo',
+    summary: 'Libota, allée fleuve, tables en quinconce.',
+    prompt:
+      'Compose a customary Mongo bonkoko reception for 160 guests. [Subject] Equatorial banquet with libota family wings and river-aisle. [Action] South entrance; two family wings left/right of a terracotta aisle leading to a north honor oval (12); 14 rounds of 10 in a gentle stagger; service exit west. [Location/context] Équateur / Cuvette customary union. [Composition] Leafy planters at aisle bends, lanterns over honor and first third. [Style] Terracotta and forest-green drapes, raffia accents, ivory cloths, light oak parquet.',
+    roomType: 'BANQUET',
+  },
+  {
+    id: 'coutumier-lunda',
+    title: 'Alliance Lunda',
+    category: 'coutumier',
+    badge: 'Lunda',
+    summary: 'Prestige cuivre, honneur, rondes Katanga.',
+    prompt:
+      'Design a customary Lunda alliance banquet for 170 guests. [Subject] Katanga prestige hall with copper-ivory honor and honeycomb rounds. [Action] South-east entrance; copper-toned aisle to a north honor table of 12; 15 rounds of 10 staggered; discreet west service. [Location/context] Lubumbashi / Lualaba customary celebration. [Composition] Copper-foil planter accents, one chandelier over honor and two over table clusters. [Style] Ivory walls, copper drapes, champagne linens, dark wood chairs.',
+    roomType: 'BANQUET',
+  },
   {
     id: 'wedding-honor',
     title: 'Mariage — table d’honneur',

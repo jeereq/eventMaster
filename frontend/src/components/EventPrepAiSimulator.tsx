@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle } from 'lucide-react';
+import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -46,6 +46,8 @@ import {
   type AiMomentId,
   type AiSettingId,
 } from '@/lib/aiSimulationCriteria';
+import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { EVENT_PREP_PROMPT_MODELS } from '@/config/eventPrepPromptModels';
 
 const VENUE_PARAM_AMENITIES = VENUE_AMENITIES.filter((item) =>
   ['parking', 'ac', 'generator', 'garden', 'sound', 'wifi', 'stage', 'security'].includes(item.id),
@@ -104,7 +106,7 @@ export default function EventPrepAiSimulator({
   const isLoggedIn = Boolean(user);
   const canCreateEvents = Boolean(access?.canCreateEvents);
   const [open, setOpen] = useState(defaultOpen || embedded);
-  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
+  const [activeTab, setActiveTab] = useState<StudioAiTabId>('create');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const { site } = usePlatformSite();
@@ -448,46 +450,14 @@ export default function EventPrepAiSimulator({
         onBuy={() => setPurchaseModalOpen(true)}
       />
 
-      {/* ─── Barre d'onglets : Créer vs Historiques ─── */}
+      {/* ─── Barre d'onglets : Création / Historiques / Prompts ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
-        <div className="inline-flex p-1 rounded-xl bg-surface-muted border border-border/80 w-full sm:w-auto" aria-label="Modes du simulateur">
-          <button
-            type="button"
-            aria-pressed={activeTab === 'create'}
-            onClick={() => setActiveTab('create')}
-            className={cn(
-              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              activeTab === 'create'
-                ? 'bg-surface text-foreground shadow-xs border border-border/70'
-                : 'text-muted hover:text-foreground hover:bg-surface/50',
-            )}
-          >
-            <Wand2 className="w-3.5 h-3.5 text-primary" />
-            <span>Créer un scénario</span>
-          </button>
-          <button
-            type="button"
-            aria-pressed={activeTab === 'history'}
-            onClick={() => setActiveTab('history')}
-            className={cn(
-              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              activeTab === 'history'
-                ? 'bg-surface text-foreground shadow-xs border border-border/70'
-                : 'text-muted hover:text-foreground hover:bg-surface/50',
-            )}
-          >
-            <Clock className="w-3.5 h-3.5 text-primary" />
-            <span>Historiques</span>
-            {history.length > 0 && (
-              <span className={cn(
-                'ml-1 px-1.5 py-0.5 text-xs rounded-full font-bold tabular-nums',
-                activeTab === 'history' ? 'bg-primary/10 text-primary-solid' : 'bg-surface border border-border text-muted',
-              )}>
-                {history.length}
-              </span>
-            )}
-          </button>
-        </div>
+        <StudioAiTabs
+          value={activeTab}
+          onChange={setActiveTab}
+          historyCount={history.length}
+          className="w-full sm:w-auto sm:min-w-[22rem]"
+        />
 
         {(embedded && !allowance.unlimited) || (activeTab === 'history' && history.length > 0) ? (
           <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
@@ -512,7 +482,54 @@ export default function EventPrepAiSimulator({
         ) : null}
       </div>
 
-      {activeTab === 'history' ? (
+      {activeTab === 'prompts' ? (
+        <div className="space-y-3 pt-1">
+          <p className="text-xs text-muted">
+            Un bouton préremplit le brief, le type d’événement et le budget. Ajustez ensuite ville et date.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {EVENT_PREP_PROMPT_MODELS.map((model) => {
+              const selected = prompt.trim() === model.prompt.trim();
+              return (
+                <button
+                  key={model.id}
+                  type="button"
+                  onClick={() => {
+                    setCommune('');
+                    applyDefaults({
+                      eventType: model.eventType,
+                      city: model.city,
+                      guestCount: model.guestCount,
+                      budgetMaxUsd: model.budgetMaxUsd,
+                      prompt: model.prompt,
+                    });
+                    setActiveTab('create');
+                  }}
+                  className={cn(
+                    'text-left min-h-11 p-3 rounded-[var(--radius-card)] border transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    selected
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-surface hover:border-primary/40',
+                  )}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-foreground">{model.title}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 shrink-0">
+                      {model.badge}
+                    </span>
+                  </span>
+                  <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
+                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                    {selected ? <Check className="w-3.5 h-3.5" /> : null}
+                    {selected ? 'Prérempli' : 'Préremplir'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : activeTab === 'history' ? (
         <div className="space-y-3 pt-1">
           {history.length > 0 ? (
             <AiSimulationHistoryList
@@ -558,6 +575,13 @@ export default function EventPrepAiSimulator({
               placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
               className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
             />
+            <p className="text-xs text-muted">
+              Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
+              <button type="button" className="font-bold text-primary hover:underline" onClick={() => setActiveTab('prompts')}>
+                onglet Prompts
+              </button>
+              .
+            </p>
           </label>
 
           <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1">

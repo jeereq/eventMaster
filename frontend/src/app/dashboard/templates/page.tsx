@@ -19,6 +19,7 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
+import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
 import {
  persistInvitationContextSource,
@@ -323,6 +324,7 @@ export default function TemplatesPage() {
  const [aiImageDownloading, setAiImageDownloading] = useState(false);
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
+ const [aiComposeStudioTab, setAiComposeStudioTab] = useState<StudioAiTabId>('create');
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
@@ -983,6 +985,7 @@ export default function TemplatesPage() {
  setAiComposeStage(null);
  setAiComposeBusy(false);
  setAiComposeHistoryId(null);
+ setAiComposeStudioTab('create');
  };
 
  const openAiComposeModal = async () => {
@@ -1177,7 +1180,7 @@ export default function TemplatesPage() {
  role="dialog"
  aria-modal="true"
  aria-labelledby="ai-compose-title"
- className="w-full sm:max-w-lg bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl border border-border overflow-hidden"
+ className="w-full sm:max-w-xl bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl border border-border overflow-hidden"
  >
  <div className="px-5 pt-5 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
  <div>
@@ -1203,7 +1206,7 @@ export default function TemplatesPage() {
  </button>
  </div>
 
- <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+ <div className="px-5 pt-3 space-y-3">
  <div className="flex items-center justify-between gap-2 text-[11px]">
  <span className="inline-flex items-center gap-1.5 font-bold text-muted">
  <Coins className="w-3.5 h-3.5" />
@@ -1219,7 +1222,17 @@ export default function TemplatesPage() {
  </button>
  )}
  </div>
+ <StudioAiTabs
+ value={aiComposeStudioTab}
+ onChange={setAiComposeStudioTab}
+ historyCount={aiComposeHistory.length}
+ disabled={aiComposeBusy}
+ />
+ </div>
 
+ <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+ {aiComposeStudioTab === 'create' ? (
+ <>
  <div>
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Images optionnelles (1–4)</label>
  <input
@@ -1317,14 +1330,9 @@ export default function TemplatesPage() {
  ))}
  </div>
 
- <div className="mt-2.5">
- <PromptModelSelector
- onSelectPrompt={(selected) => setAiComposePrompt(selected)}
- selectedPrompt={aiComposePrompt}
- disabled={aiComposeBusy}
- compact
- />
- </div>
+ <p className="mt-2 text-[11px] text-muted">
+ Besoin d’un brief prêt ? Ouvrez l’onglet <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Prompts</button> — les 4 mariages coutumiers sont en un tap.
+ </p>
 
  <div className="mt-3">
  <InvitationContextSourcePicker
@@ -1378,13 +1386,40 @@ export default function TemplatesPage() {
  {aiComposeStage}
  </p>
  )}
+ </>
+ ) : null}
 
+ {aiComposeStudioTab === 'history' ? (
  <AiTemplateComposeHistoryList
  items={aiComposeHistory}
  activeId={aiComposeHistoryId}
  onOpen={applyAiComposeHistoryItem}
- listClassName="max-h-48"
+ listClassName="max-h-[min(28rem,52vh)]"
+ showEmpty
+ emptyAction={(
+ <button
+ type="button"
+ onClick={() => setAiComposeStudioTab('create')}
+ className="min-h-11 px-3 text-xs font-semibold text-primary hover:underline"
+ >
+ Nouvelle création
+ </button>
+ )}
  />
+ ) : null}
+
+ {aiComposeStudioTab === 'prompts' ? (
+ <PromptModelSelector
+ onSelectPrompt={(selected) => {
+ setAiComposePrompt(selected);
+ setAiComposeStudioTab('create');
+ }}
+ selectedPrompt={aiComposePrompt}
+ disabled={aiComposeBusy}
+ layout="panel"
+ defaultCategory="coutumier"
+ />
+ ) : null}
  </div>
 
  <div className="px-5 py-4 border-t border-border-subtle flex justify-end gap-2 bg-surface-muted/40">

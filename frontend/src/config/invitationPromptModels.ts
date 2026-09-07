@@ -1,4 +1,4 @@
-export type PromptCategory = 'clone' | 'wedding' | 'gala' | 'birthday' | 'rdc-langues';
+export type PromptCategory = 'coutumier' | 'clone' | 'wedding' | 'gala' | 'birthday' | 'rdc-langues';
 
 export interface PromptModel {
   id: string;
@@ -12,6 +12,7 @@ export interface PromptModel {
 }
 
 export const PROMPT_CATEGORIES: Array<{ id: PromptCategory; label: string; iconName?: string }> = [
+  { id: 'coutumier', label: '4 Tribus — mariages coutumiers' },
   { id: 'clone', label: 'Copier une invitation' },
   { id: 'wedding', label: 'Mariages & Dots' },
   { id: 'gala', label: 'Galas & Entreprises' },
@@ -20,6 +21,44 @@ export const PROMPT_CATEGORIES: Array<{ id: PromptCategory; label: string; iconN
 ];
 
 export const INVITATION_PROMPT_MODELS: PromptModel[] = [
+  // --- 4 grandes tribus : mariages coutumiers (Kongo, Luba, Mongo, Lunda) ---
+  {
+    id: 'coutumier-kongo-makwela',
+    title: 'Mariage coutumier Kongo (Bakongo)',
+    category: 'coutumier',
+    badge: 'Kongo',
+    summary: 'Makwela, raphia noble, vert forêt et or. Préremplit le brief en un clic.',
+    prompt:
+      'Compose a customary Bakongo wedding invitation (makwela). [Subject] A distinguished Black Congolese couple from the Kongo nation in royal Kongo textiles, raffia prestige cloth and ceremonial gold. [Action] Announcing the family palaver and customary union with Kikongo header "Mbila ya Nkinsi ya Makwela : Kwizeno beto sepela kintwadi na dikwela yayi". Card text in Kikongo: "Kilumbu : {{date}}", "Kisika : {{location}}", "Tula kimbangi ya kukwiza kwaku". Show kola, palm-wine calabash and folded pagnes as discreet ceremonial still-life in the lower margin — not caricature. [Location/context] Kongo Central / Bandundu customary wedding honoring Bakongo lineage. [Composition] Tall 9:16 prestige card, forest-green field, raffia and ancestral geometric border, generous lower lettering band. [Style] Burnished gold, ivory cotton paper, warm natural light, 100% natural melanin fidelity, photoreal stationery photography.',
+  },
+  {
+    id: 'coutumier-luba-dibaka',
+    title: 'Mariage coutumier Luba (Baluba)',
+    category: 'coutumier',
+    badge: 'Luba',
+    summary: 'Tshibilu tshia dibaka, velours du Kasaï, ocre et or royal.',
+    prompt:
+      'Compose a customary Baluba wedding invitation (dibaka). [Subject] A noble Black Congolese couple from the Luba nation adorned in authentic Kasai velvet (madiba), refined Kuba raffia geometry and royal beaded accents. [Action] Inviting the families to the tshibilu with Tshiluba title "Dibikila dia Tshibilu tshia Dibaka : Luayi tusankidile pamue dibaka dia bana betu". Text in Tshiluba: "Dituku : {{date}}", "Muaba : {{location}}", "Jadika dikalapu diebe ku tshibilu". [Location/context] Grand Kasaï customary celebration — Mbuji-Mayi or Kananga — honoring Luba dignity. [Composition] Tall 9:16, Kuba/Kasai geometric frame, spacious lower band for ceremonial lettering. [Style] Warm ochre, copper and royal gold, unblemished natural skin texture, photoreal luxury print finish.',
+  },
+  {
+    id: 'coutumier-mongo-bonkoko',
+    title: 'Mariage coutumier Mongo',
+    category: 'coutumier',
+    badge: 'Mongo',
+    summary: 'Bonkoko et libota, fleuve Congo, forêt équatoriale, terracotta.',
+    prompt:
+      'Compose a customary Mongo wedding invitation (bonkoko). [Subject] A Black Congolese couple of the Mongo nation in ceremonial wax and raffia, standing as honored children of the libota. [Action] Calling the extended family with Lingala ceremonial header "Eyenga ya Kobala ya Bonkoko : Libyangi na baboti, libota mpe baninga". Details in Lingala: "Mokolo : {{date}}", "Esika : {{location}}", "Eyenga ya libota". Suggest river-Congo and equatorial-forest atmosphere through warm terracotta, deep leaf green and discreet raffia weave — no jungle cliché. [Location/context] Équateur / Cuvette customary union around Mbandaka and the river. [Composition] Tall 9:16, terracotta and forest-green ornamental frame, centered ceremonial typography. [Style] Soft river-evening light, copper accents, authentic 35mm skin texture, photoreal cotton-paper grain.',
+  },
+  {
+    id: 'coutumier-lunda-mwadi',
+    title: 'Mariage coutumier Lunda',
+    category: 'coutumier',
+    badge: 'Lunda',
+    summary: 'Alliance Lunda du Katanga, cuivre, ivoire et or ciselé.',
+    prompt:
+      'Compose a customary Lunda wedding invitation. [Subject] A distinguished Black Congolese couple of the Lunda nation in ivory-and-copper ceremonial dress with refined Lunda–Chokwe textile geometry — geometric cloth and copper prestige only, no ritual masks. [Action] Announcing the family alliance with a solemn bilingual header: French "Mariage coutumier Lunda" and ceremonial line "Twakundama mwadi na mwana : luayi kusangana na disanka". Details: "Date : {{date}}", "Lieu : {{location}}", "Les familles vous attendent". Subtle Katanga copper-cross motif as a discreet foil corner mark. [Location/context] Lubumbashi / Lualaba customary celebration honoring Lunda lineage. [Composition] Tall 9:16, copper-red and ivory fillet frame, generous margins for lettering. [Style] Burnished copper, ivory paper, chiseled gold, authentic melanin fidelity, photoreal editorial stationery.',
+  },
+
   // --- Catégorie : Copie & Clonage d'invitation ---
   {
     id: 'clone-exact',

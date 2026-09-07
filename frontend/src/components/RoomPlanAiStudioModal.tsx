@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, Upload, Wand2, XCircle, Coins, Sparkles, Users, FileImage } from 'lucide-react';
+import { Loader2, Upload, Wand2, XCircle, Coins, Users } from 'lucide-react';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
   canAffordAiAction,
@@ -28,6 +28,7 @@ import {
   type AiRoomPlanComposeHistoryItem,
 } from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
+import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button, Modal } from '@/components/ui';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
@@ -80,11 +81,13 @@ export default function RoomPlanAiStudioModal({
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [history, setHistory] = useState<AiRoomPlanComposeHistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [studioTab, setStudioTab] = useState<StudioAiTabId>('create');
   const [aiAllowance, setAiAllowance] = useState<AiAllowance>(getAiSimulationAllowance());
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setStudioTab('create');
     setAiAllowance(getAiSimulationAllowance());
     void fetchAiRoomPlanComposeHistoryStudio().then(setHistory);
   }, [open]);
@@ -194,6 +197,7 @@ export default function RoomPlanAiStudioModal({
   const applyPreset = (model: RoomPlanPromptModel) => {
     setPrompt(model.prompt);
     setIntent('brief');
+    setStudioTab('create');
   };
 
   return (
@@ -240,6 +244,15 @@ export default function RoomPlanAiStudioModal({
             )}
           </div>
 
+          <StudioAiTabs
+            value={studioTab}
+            onChange={setStudioTab}
+            historyCount={history.length}
+            disabled={busy}
+          />
+
+          {studioTab === 'create' ? (
+          <>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -269,29 +282,13 @@ export default function RoomPlanAiStudioModal({
             </button>
           </div>
 
-          {/* Inspirations en 1 clic */}
-          <div className="space-y-1.5">
-            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              Inspirations d’aménagement en 1 clic :
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {ROOM_SCENARIOS.map((sc) => (
-                <button
-                  key={sc.label}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setPrompt(sc.prompt);
-                    setIntent('brief');
-                  }}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 text-foreground transition shadow-2xs"
-                >
-                  {sc.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="text-xs text-muted">
+            Inspirations prêtes à coller : onglet{' '}
+            <button type="button" className="font-bold text-primary hover:underline" onClick={() => setStudioTab('prompts')}>
+              Prompts
+            </button>
+            .
+          </p>
 
           {/* Jauge rapide de convives */}
           <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
@@ -386,16 +383,52 @@ export default function RoomPlanAiStudioModal({
             />
           </label>
 
-          <RoomPlanPromptSelector onSelect={applyPreset} selectedPrompt={prompt} disabled={busy} />
+          </>
+          ) : null}
 
-          <AiRoomPlanComposeHistoryList
-            items={history}
-            activeId={activeHistoryId}
-            onOpen={openHistoryItem}
-            listClassName="max-h-48"
-          />
+          {studioTab === 'history' ? (
+            <AiRoomPlanComposeHistoryList
+              items={history}
+              activeId={activeHistoryId}
+              onOpen={openHistoryItem}
+              listClassName="max-h-[min(28rem,52vh)]"
+              showEmpty
+              emptyAction={(
+                <button
+                  type="button"
+                  onClick={() => setStudioTab('create')}
+                  className="min-h-11 px-3 text-xs font-semibold text-primary hover:underline"
+                >
+                  Nouveau plan
+                </button>
+              )}
+            />
+          ) : null}
 
-          {error ? <Alert variant="error">{error}</Alert> : null}
+          {studioTab === 'prompts' ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {ROOM_SCENARIOS.map((sc) => (
+                  <button
+                    key={sc.label}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setPrompt(sc.prompt);
+                      setIntent('brief');
+                      setStudioTab('create');
+                    }}
+                    className="min-h-11 px-2.5 text-xs font-semibold rounded-lg border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 text-foreground transition"
+                  >
+                    {sc.label}
+                  </button>
+                ))}
+              </div>
+              <RoomPlanPromptSelector onSelect={applyPreset} selectedPrompt={prompt} disabled={busy} />
+            </div>
+          ) : null}
+
+          {error && studioTab === 'create' ? <Alert variant="error">{error}</Alert> : null}
 
           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-border">
             <Button type="button" variant="secondary" disabled={busy} onClick={onClose} className="min-h-11">

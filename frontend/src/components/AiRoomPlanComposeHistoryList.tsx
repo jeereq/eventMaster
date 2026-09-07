@@ -4,6 +4,7 @@ import React from 'react';
 import { Clock, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { AiRoomPlanComposeHistoryItem } from '@/lib/aiRoomPlanComposeHistory';
+import { StudioAiEmpty } from '@/components/StudioAiTabs';
 
 function relativeTime(iso: string) {
   const date = new Date(iso);
@@ -57,6 +58,8 @@ export default function AiRoomPlanComposeHistoryList({
   className,
   listClassName,
   title = 'Plans générés',
+  showEmpty = false,
+  emptyAction,
 }: {
   items: AiRoomPlanComposeHistoryItem[];
   onOpen: (item: AiRoomPlanComposeHistoryItem) => void;
@@ -64,8 +67,20 @@ export default function AiRoomPlanComposeHistoryList({
   className?: string;
   listClassName?: string;
   title?: string;
+  showEmpty?: boolean;
+  emptyAction?: React.ReactNode;
 }) {
-  if (!items.length) return null;
+  if (!items.length) {
+    if (!showEmpty) return null;
+    return (
+      <StudioAiEmpty
+        icon={Clock}
+        title="Aucun plan enregistré"
+        hint="Les plans composés ici apparaîtront dans cet onglet pour les rouvrir plus tard."
+        action={emptyAction}
+      />
+    );
+  }
 
   return (
     <div className={cn('space-y-2', className)}>

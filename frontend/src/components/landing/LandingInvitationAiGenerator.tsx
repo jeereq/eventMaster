@@ -16,7 +16,6 @@ import {
   Palette,
   ChevronDown,
   ChevronUp,
-  History,
   Undo2,
   Redo2,
   Clock,
@@ -50,6 +49,7 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
+import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
 import {
   persistInvitationContextSource,
@@ -170,6 +170,7 @@ export default function LandingInvitationAiGenerator({
   const [promptHistoryIndex, setPromptHistoryIndex] = useState<number>(0);
   const [studioIntent, setStudioIntent] = useState<'create' | 'clone'>('create');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [studioTab, setStudioTab] = useState<StudioAiTabId>('create');
   const [historySubTab, setHistorySubTab] = useState<'generations' | 'actions'>('generations');
   const [actionHistory, setActionHistory] = useState<FormActionItem[]>([]);
   const [coverFitMode, setCoverFitMode] = useState<'cover' | 'contain'>('cover');
@@ -697,6 +698,15 @@ export default function LandingInvitationAiGenerator({
             onChange={onPickFiles}
           />
 
+          <StudioAiTabs
+            value={studioTab}
+            onChange={setStudioTab}
+            historyCount={history.length}
+            disabled={busy}
+          />
+
+          {studioTab === 'create' ? (
+          <>
           <div
             role="radiogroup"
             aria-label="Comment créer la carte"
@@ -955,40 +965,19 @@ export default function LandingInvitationAiGenerator({
                 ) : null}
               </div>
 
-              <details className="rounded-xl border border-border bg-surface-muted/40 open:bg-surface">
-                <summary className="min-h-11 px-3.5 py-2.5 text-xs font-bold text-foreground cursor-pointer list-none flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
-                    Voir des exemples
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-muted" aria-hidden />
-                </summary>
-                <div className="px-3 pb-3">
-                  <PromptModelSelector
-                    intent={studioIntent}
-                    onSelectPrompt={(selected) => {
-                      updatePromptWithHistory(selected, 'Exemple de brief appliqué');
-                    }}
-                    selectedPrompt={prompt}
-                    disabled={busy}
-                  />
-                </div>
-              </details>
+              <p className="text-xs text-muted">
+                Briefs coutumiers Kongo, Luba, Mongo et Lunda :{' '}
+                <button type="button" className="font-bold text-primary hover:underline" onClick={() => setStudioTab('prompts')}>
+                  onglet Prompts
+                </button>
+                .
+              </p>
+              </div>
+              </>
+              ) : null}
 
-              <details className="rounded-xl border border-border bg-surface-muted/40 open:bg-surface">
-                <summary className="min-h-11 px-3.5 py-2.5 text-xs font-bold text-foreground cursor-pointer list-none flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl">
-                  <span className="inline-flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5 text-primary" aria-hidden />
-                    Historique
-                    {history.length > 0 ? (
-                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-foreground font-bold">
-                        {history.length}
-                      </span>
-                    ) : null}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-muted" aria-hidden />
-                </summary>
-                <div className="px-3 pb-3 space-y-3">
+              {studioTab === 'history' ? (
+                <div className="space-y-3">
                   <div className="flex items-center gap-1 p-0.5 rounded-lg bg-surface border border-border text-xs font-semibold">
                     <button
                       type="button"
@@ -1023,6 +1012,16 @@ export default function LandingInvitationAiGenerator({
                       onOpen={openHistoryItem}
                       className="pt-1"
                       listClassName="max-h-72 sm:max-h-80"
+                      showEmpty
+                      emptyAction={(
+                        <button
+                          type="button"
+                          onClick={() => setStudioTab('create')}
+                          className="min-h-11 px-3 text-xs font-semibold text-primary hover:underline"
+                        >
+                          Créer une carte
+                        </button>
+                      )}
                     />
                   )}
 
@@ -1054,6 +1053,7 @@ export default function LandingInvitationAiGenerator({
                                 type="button"
                                 onClick={() => {
                                   updatePromptWithHistory(act.snapshotPrompt!, 'Rétablissement depuis action');
+                                  setStudioTab('create');
                                 }}
                                 className="shrink-0 min-h-11 text-xs font-bold text-primary hover:underline px-2 py-1 rounded bg-primary/10 border border-primary/20"
                                 title="Rétablir ce brief"
@@ -1067,8 +1067,21 @@ export default function LandingInvitationAiGenerator({
                     </div>
                   )}
                 </div>
-              </details>
-            </div>
+              ) : null}
+
+              {studioTab === 'prompts' ? (
+                <PromptModelSelector
+                  intent={studioIntent}
+                  layout="panel"
+                  defaultCategory={studioIntent === 'clone' ? 'clone' : 'coutumier'}
+                  onSelectPrompt={(selected) => {
+                    updatePromptWithHistory(selected, 'Exemple de brief appliqué');
+                    setStudioTab('create');
+                  }}
+                  selectedPrompt={prompt}
+                  disabled={busy}
+                />
+              ) : null}
         </div>
 
         {/* Preview rail */}

@@ -4,6 +4,7 @@ import React from 'react';
 import { Clock, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { AiTemplateComposeHistoryItem } from '@/lib/aiTemplateComposeHistory';
+import { StudioAiEmpty } from '@/components/StudioAiTabs';
 
 function relativeTime(iso: string) {
   const date = new Date(iso);
@@ -57,6 +58,8 @@ export default function AiTemplateComposeHistoryList({
   className,
   listClassName,
   title = 'Générations précédentes',
+  showEmpty = false,
+  emptyAction,
 }: {
   items: AiTemplateComposeHistoryItem[];
   onOpen: (item: AiTemplateComposeHistoryItem) => void;
@@ -64,8 +67,20 @@ export default function AiTemplateComposeHistoryList({
   className?: string;
   listClassName?: string;
   title?: string;
+  showEmpty?: boolean;
+  emptyAction?: React.ReactNode;
 }) {
-  if (!items.length) return null;
+  if (!items.length) {
+    if (!showEmpty) return null;
+    return (
+      <StudioAiEmpty
+        icon={Clock}
+        title="Aucun historique"
+        hint="Vos cartes générées dans ce studio s’afficheront ici. Vous pourrez les rouvrir d’un tap."
+        action={emptyAction}
+      />
+    );
+  }
 
   return (
     <div className={cn('space-y-2', className)}>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Building2, PartyPopper, Sparkles } from 'lucide-react';
+import { Heart, Building2, PartyPopper, Sparkles, Crown } from 'lucide-react';
 import {
   ROOM_PLAN_PROMPT_CATEGORIES,
   ROOM_PLAN_PROMPT_MODELS,
@@ -19,12 +19,13 @@ export default function RoomPlanPromptSelector({
   selectedPrompt?: string;
   disabled?: boolean;
 }) {
-  const [category, setCategory] = useState<RoomPlanPromptCategory | 'all'>('all');
+  const [category, setCategory] = useState<RoomPlanPromptCategory | 'all'>('coutumier');
   const models = category === 'all'
     ? ROOM_PLAN_PROMPT_MODELS
     : ROOM_PLAN_PROMPT_MODELS.filter((model) => model.category === category);
 
   const iconFor = (id: RoomPlanPromptCategory) => {
+    if (id === 'coutumier') return <Crown className="w-3.5 h-3.5" aria-hidden />;
     if (id === 'wedding') return <Heart className="w-3.5 h-3.5" aria-hidden />;
     if (id === 'banquet') return <Sparkles className="w-3.5 h-3.5" aria-hidden />;
     if (id === 'pro') return <Building2 className="w-3.5 h-3.5" aria-hidden />;
@@ -35,7 +36,7 @@ export default function RoomPlanPromptSelector({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-foreground">Exemples de brief</p>
-        <p className="text-xs text-muted hidden sm:block">Cliquez pour remplir</p>
+        <p className="text-xs text-muted hidden sm:block">Un bouton préremplit le brief</p>
       </div>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Types d’événement">
         <button
@@ -94,6 +95,9 @@ export default function RoomPlanPromptSelector({
                 <span className="text-xs font-semibold text-primary-solid shrink-0">{model.badge}</span>
               </span>
               <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
+              <span className="mt-2 block text-[11px] font-semibold text-primary">
+                {active ? 'Prérempli' : 'Préremplir'}
+              </span>
             </button>
           );
         })}

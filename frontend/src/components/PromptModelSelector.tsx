@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages } from 'lucide-react';
+import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages, Crown } from 'lucide-react';
 import {
   INVITATION_PROMPT_MODELS,
   PROMPT_CATEGORIES,
@@ -16,7 +16,10 @@ interface PromptModelSelectorProps {
   disabled?: boolean;
   className?: string;
   compact?: boolean;
+  /** Grille plus haute pour l’onglet Prompts. */
+  layout?: 'inline' | 'panel';
   intent?: 'create' | 'clone';
+  defaultCategory?: PromptCategory | 'all';
 }
 
 export default function PromptModelSelector({
@@ -25,16 +28,19 @@ export default function PromptModelSelector({
   disabled = false,
   className,
   compact = false,
+  layout = 'inline',
   intent = 'create',
+  defaultCategory,
 }: PromptModelSelectorProps) {
-  const [activeCategory, setActiveCategory] = useState<PromptCategory | 'all'>(
-    intent === 'clone' ? 'clone' : 'all',
-  );
+  const initialCategory: PromptCategory | 'all' =
+    defaultCategory ?? (intent === 'clone' ? 'clone' : 'coutumier');
+  const [activeCategory, setActiveCategory] = useState<PromptCategory | 'all'>(initialCategory);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const isPanel = layout === 'panel';
 
   useEffect(() => {
-    setActiveCategory(intent === 'clone' ? 'clone' : 'all');
-  }, [intent]);
+    setActiveCategory(defaultCategory ?? (intent === 'clone' ? 'clone' : 'coutumier'));
+  }, [intent, defaultCategory]);
 
   const filteredModels =
     activeCategory === 'all'
@@ -50,6 +56,8 @@ export default function PromptModelSelector({
 
   const getCategoryIcon = (catId: PromptCategory) => {
     switch (catId) {
+      case 'coutumier':
+        return <Crown className="w-3.5 h-3.5" />;
       case 'clone':
         return <Copy className="w-3.5 h-3.5" />;
       case 'wedding':
@@ -73,7 +81,7 @@ export default function PromptModelSelector({
           Exemples de brief
         </span>
         <span className="text-[11px] text-muted hidden sm:inline">
-          Cliquez pour remplir le brief
+          Un bouton préremplit le brief
         </span>
       </div>
 
@@ -115,6 +123,18 @@ export default function PromptModelSelector({
         ))}
       </div>
 
+      {activeCategory === 'coutumier' && (
+        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-950 dark:text-amber-100 text-xs flex items-start gap-2">
+          <Crown className="w-4 h-4 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">4 grandes tribus — mariages coutumiers</p>
+            <p className="text-[11px] opacity-90 mt-0.5">
+              Kongo (Bakongo), Luba (Baluba), Mongo et Lunda. Appuyez sur « Préremplir » puis ajustez date, lieu et noms.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Conseil contextuel pour le mode copie / clonage */}
       {activeCategory === 'clone' && (
         <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 animate-fade-in">
@@ -145,8 +165,9 @@ export default function PromptModelSelector({
       {/* Grille des modèles de prompt */}
       <div
         className={cn(
-          'grid gap-2 max-h-56 sm:max-h-64 overflow-y-auto overscroll-contain pr-1 no-scrollbar',
-          compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2',
+          'grid gap-2 overflow-y-auto overscroll-contain pr-1 no-scrollbar',
+          isPanel ? 'max-h-[min(28rem,52vh)]' : 'max-h-56 sm:max-h-64',
+          compact && !isPanel ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2',
         )}
       >
         {filteredModels.map((model) => {
@@ -161,7 +182,7 @@ export default function PromptModelSelector({
               aria-pressed={isSelected}
               onClick={() => handleSelect(model)}
               className={cn(
-                'group min-h-11 p-2.5 sm:p-3 rounded-xl border transition-all text-left touch-manipulation flex flex-col justify-between space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                'group min-h-11 p-2.5 sm:p-3 rounded-xl border transition-all text-left touch-manipulation flex flex-col justify-between space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer',
                 isSelected
                   ? 'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40'
                   : 'border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/60',
@@ -178,9 +199,11 @@ export default function PromptModelSelector({
                       'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
                       model.isClone
                         ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20'
-                        : model.category === 'rdc-langues'
-                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
-                          : 'bg-primary/15 text-primary border border-primary/20',
+                        : model.category === 'coutumier'
+                          ? 'bg-amber-600/15 text-amber-800 dark:text-amber-200 border border-amber-600/25'
+                          : model.category === 'rdc-langues'
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                            : 'bg-primary/15 text-primary border border-primary/20',
                     )}
                   >
                     {model.badge}
@@ -204,10 +227,10 @@ export default function PromptModelSelector({
                   {justCopied ? (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>Appliqué</span>
+                      <span>Prérempli</span>
                     </>
                   ) : (
-                    <span>Appliquer</span>
+                    <span>Préremplir</span>
                   )}
                 </span>
               </div>
