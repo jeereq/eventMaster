@@ -59,9 +59,11 @@ import {
   createEmptyPricingZone,
   normalizeTicketPricingMode,
   pricingZonesFromTablePlan,
+  TICKETING_ZONE_PRESETS,
   type PricingZone,
   type TicketPricingMode,
 } from '@/lib/ticketPricing';
+import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
@@ -1084,6 +1086,31 @@ export default function EventConfigForm({
                           >
                             + Ajouter une zone
                           </button>
+                        </div>
+                        {/* Modèles rapides de zones */}
+                        <div className="flex flex-wrap items-center gap-1.5 pb-1">
+                          <span className="text-[10px] text-muted font-medium mr-0.5">Modèles rapides :</span>
+                          {TICKETING_ZONE_PRESETS.map((preset) => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => {
+                                setPricingZones(
+                                  preset.zones.map((z, idx) => ({
+                                    id: `zone-${preset.id}-${idx}`,
+                                    name: z.name,
+                                    priceFc: z.priceFc,
+                                    color: z.color,
+                                  }))
+                                );
+                              }}
+                              className="px-2 py-1 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition shadow-2xs flex items-center gap-1.5"
+                              title={`${preset.description} (${preset.zones.map((z) => `${z.name} ${formatFc(z.priceFc)}`).join(' · ')})`}
+                            >
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: preset.zones[0].color }} />
+                              <span>{preset.badge}</span>
+                            </button>
+                          ))}
                         </div>
                         <p className="text-[11px] text-muted">
                           Les tables du plan sont associées automatiquement selon leur position. Prix par défaut si non assignée :

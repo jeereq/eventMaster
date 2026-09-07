@@ -55,23 +55,23 @@ export default function Room2DScaleCompass({
       )}
 
       {/* Rose des vents / Boussole NORD (Haut gauche) */}
-      <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-[10px] font-bold tracking-wider">
-        <Compass className="w-3.5 h-3.5 text-amber-400" />
+      <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-bold tracking-wider">
+        <Compass className="w-4 h-4 text-amber-400" />
         <span>N</span>
       </div>
 
       {/* Dimensions réelles de la salle (Haut droite) */}
-      <div className="absolute top-2.5 right-2.5 z-10 px-2 py-1 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-[10px] font-mono font-semibold tabular-nums">
+      <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-mono font-semibold tabular-nums">
         {safeW.toFixed(1)} m × {safeH.toFixed(1)} m ({areaM2} m²)
       </div>
 
       {/* Barre d'échelle métrique (Bas droite) */}
-      <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-0.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10">
-        <div className="flex items-center justify-between text-[9px] font-mono font-bold w-full gap-2">
+      <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-0.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10">
+        <div className="flex items-center justify-between text-xs font-mono font-bold w-full gap-2.5">
           <span>0</span>
           <span>{scaleM} m</span>
         </div>
-        <div className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${Math.max(40, Math.min(100, scalePct * 2.5))}px` }}>
+        <div className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${Math.max(48, Math.min(100, scalePct * 2.5))}px` }}>
           <div className="w-1/2 h-full bg-white" />
           <div className="w-1/2 h-full bg-black/80" />
         </div>

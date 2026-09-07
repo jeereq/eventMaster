@@ -62,7 +62,14 @@ function TableDetailPopover({
       <div className="bg-surface border border-border rounded-[var(--radius-card)] p-3 shadow-[var(--shadow-soft)] text-left space-y-2">
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-foreground text-xs">{table.name}</p>
-          <button type="button" onClick={onClose} className="text-muted hover:text-foreground text-xs shrink-0">✕</button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted hover:text-foreground text-xs shrink-0 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center rounded-md hover:bg-surface-muted transition"
+            aria-label="Fermer les détails de la table"
+          >
+            ✕
+          </button>
         </div>
         <p className="text-[10px] text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
         {table.isGuestTable && (
