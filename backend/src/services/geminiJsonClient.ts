@@ -54,9 +54,14 @@ export function parseGeminiJson(raw: string): unknown {
 }
 
 function parseDataImage(url: string): { mimeType: string; base64: string } | null {
-  const match = url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s);
+  const trimmed = url.trim();
+  const match = trimmed.match(/^data:([^;,]+)(?:;[^,]+)*;base64,(.+)$/is);
   if (!match?.[1] || !match[2]) return null;
-  return { mimeType: match[1], base64: match[2] };
+  const rawMime = match[1].trim().toLowerCase();
+  const mimeType = rawMime.startsWith('image/') ? rawMime : 'image/jpeg';
+  const cleanBase64 = match[2].replace(/\s+/g, '');
+  if (!cleanBase64) return null;
+  return { mimeType, base64: cleanBase64 };
 }
 
 export async function loadGeminiInlineImage(
@@ -98,12 +103,24 @@ export async function requestGeminiJson(input: {
   const model = getGeminiTextModel();
   const failMessage = input.failMessage || 'L’IA Gemini n’a pas renvoyé de JSON utilisable.';
   const parts: Array<Record<string, unknown>> = [{ text: input.userText }];
-  for (const url of (input.imageUrls || []).slice(0, 4)) {
+  const validImages: Array<{ inline_data: { mime_type: string; data: string } }> = [];
+  const imageUrls = (input.imageUrls || []).slice(0, 4);
+
+  for (const url of imageUrls) {
     try {
-      parts.unshift(await loadGeminiInlineImage(url));
+      const img = await loadGeminiInlineImage(url);
+      validImages.push(img);
     } catch (error) {
       console.warn('[geminiJson] skip image:', (error as Error)?.message);
     }
+  }
+
+  if (imageUrls.length > 0 && validImages.length === 0) {
+    fail(400, 'Impossible de charger l’image pour l’analyse IA. Vérifiez que le format est valide (JPEG, PNG, WebP) et réessayez.');
+  }
+
+  for (const img of validImages) {
+    parts.unshift(img);
   }
 
   const controller = new AbortController();

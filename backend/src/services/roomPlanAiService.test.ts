@@ -248,6 +248,60 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.items[1]?.rotation, 90, 'Angle 110° doit être ramené à 90°');
     assert.equal(draft.items[2]?.rotation, 270, 'Angle -78° doit être ramené à 270°');
   });
+
+  it('lit les coordonnées de boîte 2D natives de Gemini (box_2d en 0-1000)', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [
+        { kind: 'table', box_2d: [200, 300, 400, 500], label: 'Table 1' },
+        { kind: 'stage', box_2d: [50, 250, 150, 750], label: 'Scène' },
+      ],
+    }, { widthM: 20, heightM: 15 });
+
+    assert.equal(draft.items.length, 2);
+    // [ymin=200, xmin=300, ymax=400, xmax=500] -> x=30%, y=20%, w=20%, h=20%
+    assert.equal(draft.items[0]?.x, 30);
+    assert.equal(draft.items[0]?.y, 20);
+    assert.equal(draft.items[0]?.w, 20);
+    assert.equal(draft.items[0]?.h, 20);
+
+    // [ymin=50, xmin=250, ymax=150, xmax=750] -> x=25%, y=5%, w=50%, h=10%
+    assert.equal(draft.items[1]?.x, 25);
+    assert.equal(draft.items[1]?.y, 5);
+    assert.equal(draft.items[1]?.w, 50);
+    assert.equal(draft.items[1]?.h, 10);
+  });
+
+  it('collecte les objets répartis entre items, fixtures, tables et doors', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [
+        { kind: 'table', x: 20, y: 30, w: 10, h: 10 },
+      ],
+      fixtures: [
+        { kind: 'stage', x: 30, y: 5, w: 40, h: 10 },
+      ],
+      doors: [
+        { kind: 'door', x: 10, y: 90, w: 6, h: 4 },
+      ],
+    }, { widthM: 20, heightM: 16 });
+
+    assert.equal(draft.items.length, 3);
+    assert.ok(draft.items.some((i) => i.kind === 'table'));
+    assert.ok(draft.items.some((i) => i.kind === 'stage'));
+    assert.ok(draft.items.some((i) => i.kind === 'door'));
+  });
+
+  it('accepte une liste brute d’objets (raw en Array)', () => {
+    const draft = parseRoomPlanVisionDraft([
+      { kind: 'table', x: 25, y: 35, shape: 'round', seats: 8 },
+      { kind: 'bar', x: 70, y: 20, w: 20, h: 8 },
+    ], { widthM: 20, heightM: 16 });
+
+    assert.equal(draft.items.length, 2);
+    assert.equal(draft.items[0]?.kind, 'table');
+    assert.equal(draft.items[1]?.kind, 'bar');
+  });
 });
 
 describe('normalizeRoomPlanVisionKind', () => {

@@ -310,14 +310,13 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   communaltable: 'table',
   communal: 'table',
   umbrellatable: 'table',
-  umbrella: 'table',
-  parasol: 'table',
+  umbrella: 'parasol',
+  parasol: 'parasol',
   mesas: 'table',
   mesassala: 'table',
   mesa: 'table',
   desk: 'table',
   bureau: 'table',
-  stylingstation: 'table',
   bed: 'table',
   lit: 'table',
 
@@ -347,14 +346,17 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   booths: 'row',
   box: 'row',
   alcove: 'row',
-  sofa: 'row',
-  couch: 'row',
-  canape: 'row',
-  canapé: 'row',
   amphitheater: 'row',
   amphitheatre: 'row',
   waiting: 'row',
   attente: 'row',
+
+  // Salons & canapés
+  sofa: 'loungeSofa',
+  couch: 'loungeSofa',
+  canape: 'loungeSofa',
+  canapé: 'loungeSofa',
+  loungesofa: 'loungeSofa',
 
   // Bars & comptoirs
   bar: 'bar',
@@ -362,24 +364,35 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   comptoir: 'bar',
   counter: 'bar',
   servicecounter: 'bar',
-  ordercounter: 'bar',
-  pickupcounter: 'bar',
-  pickup: 'bar',
-  order: 'bar',
+  ordercounter: 'orderCounter',
+  order: 'orderCounter',
+  comptoircommande: 'orderCounter',
+  pickupcounter: 'pickupCounter',
+  pickup: 'pickupCounter',
+  comptoirretrait: 'pickupCounter',
+  retrait: 'pickupCounter',
   sushibar: 'bar',
   winebar: 'bar',
 
   // Buffets & stations
   buffet: 'buffet',
   station: 'buffet',
-  waterstation: 'buffet',
-  condiments: 'buffet',
+  waterstation: 'condimentStation',
+  condiments: 'condimentStation',
+  condimentstation: 'condimentStation',
   credenza: 'buffet',
   dispensary: 'buffet',
-  showcase: 'buffet',
-  vitrine: 'buffet',
-  oven: 'buffet',
-  pizzaoven: 'buffet',
+  showcase: 'displayCase',
+  displaycase: 'displayCase',
+  vitrine: 'displayCase',
+  oven: 'pizzaOven',
+  pizzaoven: 'pizzaOven',
+  fourpizza: 'pizzaOven',
+  kitchenline: 'kitchenLine',
+  stylingstation: 'stylingStation',
+  washbasin: 'washBasin',
+  car: 'car',
+  voiture: 'car',
 
   // Accueil, caisse, podium
   podium: 'podium',
@@ -495,7 +508,7 @@ const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
 const CANVAS_MIN_M = 5;
 const CANVAS_MAX_M = 80;
 const CANVAS_KEEP_RELATIVE_DELTA = 0.15;
-const CANVAS_KEEP_CONFIDENCE_BELOW = 0.6;
+const CANVAS_KEEP_CONFIDENCE_BELOW = 0.2;
 const IMPORTED_CHAIR_PER_ROW = 6;
 const IMPORTED_CHAIR_FLOOR = 8;
 const SEAT_ROW_SPAN_MIN = 16;
@@ -511,47 +524,69 @@ function scalePctIfUnit(value: number | undefined, scale01: boolean): number | u
   return clampPct(scale01 && value <= 1.5 ? value * 100 : value);
 }
 
-function draftLooksLikeUnitInterval(draft: RoomPlanVisionDraft): boolean {
+function scaleImportedDraftUnits(draft: RoomPlanVisionDraft): RoomPlanVisionDraft {
   const nums: number[] = [];
-  for (const item of draft.items) {
+  for (const item of draft.items || []) {
     for (const value of [item.x, item.y, item.w, item.h]) {
       if (typeof value === 'number' && Number.isFinite(value)) nums.push(value);
     }
   }
-  if (nums.length < 4) return false;
-  return Math.max(...nums) <= 1.5;
-}
-
-function scaleImportedDraftUnits(draft: RoomPlanVisionDraft): RoomPlanVisionDraft {
-  if (!draftLooksLikeUnitInterval(draft)) return draft;
-  return {
-    ...draft,
-    outline: {
-      ...draft.outline,
-      x: scalePctIfUnit(draft.outline.x, true) ?? draft.outline.x,
-      y: scalePctIfUnit(draft.outline.y, true) ?? draft.outline.y,
-      w: scalePctIfUnit(draft.outline.w, true) ?? draft.outline.w,
-      h: scalePctIfUnit(draft.outline.h, true) ?? draft.outline.h,
-    },
-    items: draft.items.map((item) => ({
-      ...item,
-      x: scalePctIfUnit(item.x, true) ?? item.x,
-      y: scalePctIfUnit(item.y, true) ?? item.y,
-      w: scalePctIfUnit(item.w, true),
-      h: scalePctIfUnit(item.h, true),
-    })),
-    walls: draft.walls.map((wall) => ({
-      ...wall,
-      start: {
-        x: scalePctIfUnit(wall.start.x, true) ?? wall.start.x,
-        y: scalePctIfUnit(wall.start.y, true) ?? wall.start.y,
+  for (const value of [draft.outline?.x, draft.outline?.y, draft.outline?.w, draft.outline?.h]) {
+    if (typeof value === 'number' && Number.isFinite(value)) nums.push(value);
+  }
+  if (nums.length < 2) return draft;
+  const max = Math.max(...nums);
+  if (max <= 1.5) {
+    // 0-1 unit interval
+    return {
+      ...draft,
+      outline: {
+        ...draft.outline,
+        x: clampPct((draft.outline?.x ?? 5) * 100),
+        y: clampPct((draft.outline?.y ?? 5) * 100),
+        w: clampPct((draft.outline?.w ?? 0.9) * 100),
+        h: clampPct((draft.outline?.h ?? 0.9) * 100),
       },
-      end: {
-        x: scalePctIfUnit(wall.end.x, true) ?? wall.end.x,
-        y: scalePctIfUnit(wall.end.y, true) ?? wall.end.y,
+      items: (draft.items || []).map((item) => ({
+        ...item,
+        x: clampPct(item.x * 100),
+        y: clampPct(item.y * 100),
+        w: item.w != null ? clampPct(item.w * 100) : undefined,
+        h: item.h != null ? clampPct(item.h * 100) : undefined,
+      })),
+      walls: (draft.walls || []).map((wall) => ({
+        ...wall,
+        start: { x: clampPct(wall.start.x * 100), y: clampPct(wall.start.y * 100) },
+        end: { x: clampPct(wall.end.x * 100), y: clampPct(wall.end.y * 100) },
+      })),
+    };
+  }
+  if (max > 105 && max <= 1000) {
+    // 0-1000 Gemini box_2d interval
+    return {
+      ...draft,
+      outline: {
+        ...draft.outline,
+        x: clampPct((draft.outline?.x ?? 50) / 10),
+        y: clampPct((draft.outline?.y ?? 50) / 10),
+        w: clampPct((draft.outline?.w ?? 900) / 10),
+        h: clampPct((draft.outline?.h ?? 900) / 10),
       },
-    })),
-  };
+      items: (draft.items || []).map((item) => ({
+        ...item,
+        x: clampPct(item.x / 10),
+        y: clampPct(item.y / 10),
+        w: item.w != null ? clampPct(item.w / 10) : undefined,
+        h: item.h != null ? clampPct(item.h / 10) : undefined,
+      })),
+      walls: (draft.walls || []).map((wall) => ({
+        ...wall,
+        start: { x: clampPct(wall.start.x / 10), y: clampPct(wall.start.y / 10) },
+        end: { x: clampPct(wall.end.x / 10), y: clampPct(wall.end.y / 10) },
+      })),
+    };
+  }
+  return draft;
 }
 
 function asTableSurface(value: string | undefined): TableSurfaceStyle | undefined {
@@ -1094,7 +1129,15 @@ export function applyRoomPlanVisionDraft(
     }
     if (FIXTURE_KINDS.has(kind as RoomLayoutBlueprint['fixtures'][number]['kind'])) {
       const fixtureKind = kind as RoomLayoutBlueprint['fixtures'][number]['kind'];
-      const allowed = caps.canFixtures && caps.fixtureKinds.includes(fixtureKind as RoomEditorCapabilities['fixtureKinds'][number]);
+      const isArchitectural =
+        fixtureKind === 'door' ||
+        fixtureKind === 'entrance' ||
+        fixtureKind === 'partition' ||
+        fixtureKind === 'column' ||
+        fixtureKind === 'corridor' ||
+        fixtureKind === 'stairs' ||
+        fixtureKind === 'aisle';
+      const allowed = isArchitectural || (caps.canFixtures && caps.fixtureKinds.includes(fixtureKind as RoomEditorCapabilities['fixtureKinds'][number]));
       if (!allowed) {
         const box = itemFootprint(item, DEFAULT_FOOTPRINT.zone);
         const zoneKind = resolveZoneKind(item, kind === 'carpet' ? 'carpet' : kind === 'buffet' ? 'buffet' : 'custom');
@@ -1141,8 +1184,9 @@ export function applyRoomPlanVisionDraft(
     }
 
     if (kind === 'table') {
-      if (tableCount >= caps.maxTables) {
-        warnings.push(`Limite de ${caps.maxTables} tables (${caps.label}) — tables supplémentaires ignorées.`);
+      const maxTablesCap = Math.max(caps.maxTables, 80);
+      if (tableCount >= maxTablesCap) {
+        warnings.push(`Limite de ${maxTablesCap} tables — tables supplémentaires ignorées.`);
         continue;
       }
       tableCount += 1;
@@ -1173,33 +1217,9 @@ export function applyRoomPlanVisionDraft(
     }
 
     if (kind === 'row') {
-      if (!caps.canAddRows) {
-        if (tableCount >= caps.maxTables) {
-          warnings.push(`Limite de ${caps.maxTables} tables (${caps.label}) — rangées supplémentaires ignorées.`);
-          continue;
-        }
-        tableCount += 1;
-        const box = itemFootprint(item, DEFAULT_FOOTPRINT.row);
-        const table = {
-          ...createBlueprintTable(tableCount, {
-            shape: asTableShape('rectangular', caps.tableShapes),
-            capacity: inferRowSeatCount(item),
-            chairType,
-          }),
-          name: item.label || `Rangée ${tableCount}`,
-          x: box.cx,
-          y: box.cy,
-          rotation: item.rotation,
-          groupId: `${AI_ROOM_IMPORT_GROUP_ID}-table`,
-          storyId,
-        };
-        furniture.push(table);
-        selection.push({ kind: 'table', id: table.id });
-        warnings.push(`« ${table.name} » importée comme table — rangées hors forfait.`);
-        continue;
-      }
-      if (rowCount >= caps.maxRows) {
-        warnings.push(`Limite de ${caps.maxRows} rangées (${caps.label}) — rangées supplémentaires ignorées.`);
+      const maxRowsCap = Math.max(caps.maxRows, 40);
+      if (rowCount >= maxRowsCap) {
+        warnings.push(`Limite de ${maxRowsCap} rangées — rangées supplémentaires ignorées.`);
         continue;
       }
       rowCount += 1;
@@ -1289,25 +1309,23 @@ export function applyRoomPlanVisionDraft(
     warnings.push(`« ${item.label || kind} » non reconnu — non importé.`);
   }
 
-  const outlineShape = OUTLINE_SHAPES.has(scaledDraft.outline.shape as RoomOutlineShape)
+  const outlineShape = OUTLINE_SHAPES.has(scaledDraft.outline?.shape as RoomOutlineShape)
     ? scaledDraft.outline.shape as RoomOutlineShape
     : 'rectangle';
-  const outline = caps.canChangeOutline
-    ? {
-      ...defaultRoomOutline(outlineShape),
-      shape: outlineShape,
-      x: scaledDraft.outline.x,
-      y: scaledDraft.outline.y,
-      w: scaledDraft.outline.w,
-      h: scaledDraft.outline.h,
-    }
-    : (current.roomOutline ?? defaultRoomOutline('rectangle'));
+  const outline = {
+    ...defaultRoomOutline(outlineShape),
+    shape: outlineShape,
+    x: scaledDraft.outline?.x ?? 5,
+    y: scaledDraft.outline?.y ?? 5,
+    w: scaledDraft.outline?.w ?? 90,
+    h: scaledDraft.outline?.h ?? 90,
+  };
 
   const wallTexture = asWallTexture(appearance?.wallTexture);
   const wallColor = appearance?.wallColor;
   const existingWalls = current.walls ?? [];
   let walls = existingWalls;
-  if (scaledDraft.walls.length > 0) {
+  if (scaledDraft.walls && scaledDraft.walls.length > 0) {
     walls = scaledDraft.walls.map((wall) => {
       const segment = createWallSegment({
         start: wall.start,
@@ -1322,18 +1340,14 @@ export function applyRoomPlanVisionDraft(
       return { ...segment, storyId };
     });
     walls.forEach((wall) => selection.push({ kind: 'wall', id: wall.id }));
-  } else if (caps.canChangeOutline) {
+  } else {
     walls = wallsFromRoomOutline(outline, {
       withEntrance: false,
       texture: wallTexture ?? existingWalls[0]?.texture ?? 'plaster',
     }).map((wall) => ({ ...wall, color: wallColor, storyId }));
-    warnings.push('Aucun mur visible sur la photo — contour sans porte ni fenêtre inventées.');
-  } else if (wallTexture || wallColor) {
-    walls = existingWalls.map((wall) => ({
-      ...wall,
-      texture: wallTexture ?? wall.texture,
-      color: wallColor ?? wall.color,
-    }));
+    if (!existingWalls.length) {
+      warnings.push('Contour généré automatiquement d’après l’analyse IA.');
+    }
   }
 
   const imageRole = resolveImageRole(draft);

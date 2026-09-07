@@ -168,6 +168,17 @@ const FLOOR_FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kin
   'gazebo',
   'instrument',
   'bar',
+  'orderCounter',
+  'pickupCounter',
+  'pizzaOven',
+  'kitchenLine',
+  'displayCase',
+  'stylingStation',
+  'washBasin',
+  'condimentStation',
+  'loungeSofa',
+  'car',
+  'parasol',
 ]);
 
 function applyPosition(

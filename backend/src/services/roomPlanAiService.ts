@@ -13,7 +13,7 @@ export const ROOM_PLAN_AI_GROUP_ID = 'ai-import';
 export const ROOM_PLAN_VISION_ITEM_MAX = 120;
 export const ROOM_PLAN_CANVAS_MIN_M = 5;
 export const ROOM_PLAN_CANVAS_MAX_M = 80;
-export const ROOM_PLAN_DATA_URL_MAX_CHARS = 2_500_000;
+export const ROOM_PLAN_DATA_URL_MAX_CHARS = 12_000_000;
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 4;
@@ -130,8 +130,8 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   communaltable: 'table',
   communal: 'table',
   umbrellatable: 'table',
-  umbrella: 'table',
-  parasol: 'table',
+  umbrella: 'parasol',
+  parasol: 'parasol',
   mesas: 'table',
   mesassala: 'table',
   mesa: 'table',
@@ -674,16 +674,25 @@ function clampPct(value: unknown, fallback: number): number {
 }
 
 function unwrapVisionRoot(raw: unknown): Record<string, unknown> {
-  let source = raw && typeof raw === 'object' && !Array.isArray(raw)
+  if (Array.isArray(raw)) {
+    return { items: raw };
+  }
+  let source = raw && typeof raw === 'object'
     ? { ...(raw as Record<string, unknown>) }
     : {};
-  for (const key of ['plan', 'layout', 'data', 'draft', 'result', 'roomPlan', 'floorPlan']) {
+  for (const key of [
+    'plan', 'layout', 'data', 'draft', 'result', 'roomPlan', 'floorPlan',
+    'room', 'room_plan', 'floor_plan', 'venue', 'event', 'layout_plan',
+    'roomLayout', 'floorLayout', 'response', 'output',
+  ]) {
     const nested = source[key];
     if (!nested || typeof nested !== 'object' || Array.isArray(nested)) continue;
     const nestedObj = nested as Record<string, unknown>;
     if (
       nestedObj.items != null
       || nestedObj.furniture != null
+      || nestedObj.fixtures != null
+      || nestedObj.tables != null
       || nestedObj.elements != null
       || nestedObj.outline != null
       || nestedObj.canvas != null
@@ -696,41 +705,144 @@ function unwrapVisionRoot(raw: unknown): Record<string, unknown> {
 
 function collectVisionItemRows(source: Record<string, unknown>): unknown[] {
   const rows: unknown[] = [];
+  const seen = new Set<unknown>();
+
   const push = (value: unknown) => {
+    if (!value) return;
     if (Array.isArray(value)) {
-      rows.push(...value);
+      for (const item of value) {
+        if (item && typeof item === 'object' && !seen.has(item)) {
+          seen.add(item);
+          rows.push(item);
+        }
+      }
       return;
     }
-    if (value && typeof value === 'object') {
+    if (typeof value === 'object') {
       for (const nested of Object.values(value as Record<string, unknown>)) {
-        if (Array.isArray(nested)) rows.push(...nested);
+        if (Array.isArray(nested)) {
+          for (const item of nested) {
+            if (item && typeof item === 'object' && !seen.has(item)) {
+              seen.add(item);
+              rows.push(item);
+            }
+          }
+        }
       }
     }
   };
+
+  // Push all relevant object collections
   push(source.items);
-  if (rows.length === 0) {
-    push(source.furniture);
-    push(source.elements);
-    push(source.objects);
-    push(source.fixtures);
-  }
+  push(source.furniture);
+  push(source.fixtures);
+  push(source.elements);
+  push(source.objects);
+  push(source.tables);
+  push(source.chairs);
+  push(source.rows);
+  push(source.zones);
+  push(source.doors);
+  push(source.decorations);
+  push(source.installations);
+  push(source.equipment);
+
   return rows;
 }
 
-function readItemGeometry(row: Record<string, unknown>): { x: unknown; y: unknown; w: unknown; h: unknown } {
-  const pos = row.position && typeof row.position === 'object' && !Array.isArray(row.position)
+function readItemGeometry(row: Record<string, unknown>): { x: unknown; y: unknown; w: unknown; h: unknown; anchor?: 'box' | 'center' } {
+  // 1. Google Gemini standard vision 2D bounding box [ymin, xmin, ymax, xmax]
+  const box2d = row.box_2d || row.box2d;
+  if (Array.isArray(box2d) && box2d.length >= 4) {
+    const [ymin, xmin, ymax, xmax] = box2d.map((v) => Number(v) || 0);
+    return {
+      x: xmin,
+      y: ymin,
+      w: Math.max(0.1, xmax - xmin),
+      h: Math.max(0.1, ymax - ymin),
+      anchor: 'box',
+    };
+  }
+
+  // 2. Bounding box array: [ymin, xmin, ymax, xmax] or [x, y, w, h] or [xmin, ymin, xmax, ymax]
+  const bboxArr = Array.isArray(row.bbox) ? row.bbox : Array.isArray(row.box) ? row.box : Array.isArray(row.rect) ? row.rect : null;
+  if (bboxArr && bboxArr.length >= 4) {
+    const [a, b, c, d] = bboxArr.map((v) => Number(v) || 0);
+    if (c > a && d > b && c <= 1000 && d <= 1000) {
+      return {
+        x: b,
+        y: a,
+        w: Math.max(0.1, d - b),
+        h: Math.max(0.1, c - a),
+        anchor: 'box',
+      };
+    }
+    return {
+      x: a,
+      y: b,
+      w: c,
+      h: d,
+      anchor: 'box',
+    };
+  }
+
+  // 3. Object-based nested geometry
+  const posObj = (row.position && typeof row.position === 'object' && !Array.isArray(row.position))
     ? row.position as Record<string, unknown>
     : null;
-  const boxCandidate = row.bbox || row.box || row.rect;
-  const box = boxCandidate && typeof boxCandidate === 'object' && !Array.isArray(boxCandidate)
-    ? boxCandidate as Record<string, unknown>
-    : null;
-  const from = box || pos || row;
+  const boxObj = (row.bbox && typeof row.bbox === 'object' && !Array.isArray(row.bbox))
+    ? row.bbox as Record<string, unknown>
+    : (row.box && typeof row.box === 'object' && !Array.isArray(row.box))
+      ? row.box as Record<string, unknown>
+      : (row.rect && typeof row.rect === 'object' && !Array.isArray(row.rect))
+        ? row.rect as Record<string, unknown>
+        : (row.bounds && typeof row.bounds === 'object' && !Array.isArray(row.bounds))
+          ? row.bounds as Record<string, unknown>
+          : null;
+  const coordObj = (row.coordinates && typeof row.coordinates === 'object' && !Array.isArray(row.coordinates))
+    ? row.coordinates as Record<string, unknown>
+    : (row.coords && typeof row.coords === 'object' && !Array.isArray(row.coords))
+      ? row.coords as Record<string, unknown>
+      : (row.location && typeof row.location === 'object' && !Array.isArray(row.location))
+        ? row.location as Record<string, unknown>
+        : (row.point && typeof row.point === 'object' && !Array.isArray(row.point))
+          ? row.point as Record<string, unknown>
+          : null;
+
+  const from = boxObj || posObj || coordObj || row;
+
+  // Horizontal coordinate (supports left, xmin, cx, posX)
+  const x = from.x ?? from.left ?? from.xmin ?? from.posX ?? from.cx ?? row.x ?? row.left ?? row.xmin ?? row.cx;
+  // Vertical coordinate (supports top, ymin, cy, posY)
+  const y = from.y ?? from.top ?? from.ymin ?? from.posY ?? from.cy ?? row.y ?? row.top ?? row.ymin ?? row.cy;
+
+  // Span
+  let w = from.w ?? from.width ?? from.spanX ?? row.w ?? row.width;
+  let h = from.h ?? from.height ?? from.spanY ?? row.h ?? row.height;
+
+  if (w == null && from.xmax != null && from.xmin != null) {
+    w = Number(from.xmax) - Number(from.xmin);
+  }
+  if (h == null && from.ymax != null && from.ymin != null) {
+    h = Number(from.ymax) - Number(from.ymin);
+  }
+
+  // Array coordinates [x, y]
+  if (x == null && Array.isArray(row.position) && row.position.length >= 2) {
+    return { x: row.position[0], y: row.position[1], w, h, anchor: 'box' };
+  }
+  if (x == null && Array.isArray(row.coordinates) && row.coordinates.length >= 2) {
+    return { x: row.coordinates[0], y: row.coordinates[1], w, h, anchor: 'box' };
+  }
+
+  const isCenter = from.cx != null || row.cx != null || row.anchor === 'center';
+
   return {
-    x: from.x ?? row.x,
-    y: from.y ?? row.y,
-    w: from.w ?? from.width ?? row.w ?? row.width,
-    h: from.h ?? from.height ?? row.h ?? row.height,
+    x,
+    y,
+    w,
+    h,
+    anchor: isCenter ? 'center' : 'box',
   };
 }
 
@@ -738,14 +850,32 @@ function takeFiniteNumbers(values: unknown[]): number[] {
   return values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
 }
 
+type UnitScaleMode = 'pct' | 'unit01' | 'unit1000';
+
 function shouldScaleUnitInterval(values: number[]): boolean {
-  if (values.length < 4) return false;
+  if (values.length < 2) return false;
   return Math.max(...values) <= 1.5;
 }
 
-function clampPctMaybeUnit(value: unknown, fallback: number, scale01: boolean): number {
+function detectUnitScaleMode(values: number[]): UnitScaleMode {
+  if (values.length < 2) return 'pct';
+  const max = Math.max(...values);
+  if (max <= 1.5) return 'unit01';
+  if (max > 105 && max <= 1000) return 'unit1000';
+  return 'pct';
+}
+
+function clampPctMaybeUnit(value: unknown, fallback: number, scaleModeOrScale01: UnitScaleMode | boolean): number {
   const n = asNumber(value, fallback);
-  return clampPct(scale01 && n <= 1.5 ? n * 100 : n, fallback);
+  let pct = n;
+  if (typeof scaleModeOrScale01 === 'boolean') {
+    if (scaleModeOrScale01 && n <= 1.5) pct = n * 100;
+  } else if (scaleModeOrScale01 === 'unit01' && n <= 1.5) {
+    pct = n * 100;
+  } else if (scaleModeOrScale01 === 'unit1000' && n > 1) {
+    pct = n / 10;
+  }
+  return clampPct(pct, fallback);
 }
 
 function clampMeters(value: unknown, fallback: number): number {
@@ -834,7 +964,7 @@ export function parseRoomPlanVisionDraft(
   const geometryByIndex = itemsRaw.map((entry) => (
     entry && typeof entry === 'object' ? readItemGeometry(entry as Record<string, unknown>) : { x: undefined, y: undefined, w: undefined, h: undefined }
   ));
-  const scale01 = shouldScaleUnitInterval(takeFiniteNumbers([
+  const scaleMode = detectUnitScaleMode(takeFiniteNumbers([
     ...geometryByIndex.flatMap((geo) => [geo.x, geo.y, geo.w, geo.h]),
     outlineRaw.x,
     outlineRaw.y,
@@ -852,13 +982,13 @@ export function parseRoomPlanVisionDraft(
     const kindRaw = normalizeRoomPlanVisionKind(row.kind ?? row.type ?? row.category ?? row.object);
     if (!kindRaw) continue;
     const geo = geometryByIndex[index] ?? readItemGeometry(row);
-    const w = geo.w != null ? clampPctMaybeUnit(geo.w, 10, scale01) : undefined;
-    const h = geo.h != null ? clampPctMaybeUnit(geo.h, 8, scale01) : undefined;
+    const w = geo.w != null ? clampPctMaybeUnit(geo.w, 10, scaleMode) : undefined;
+    const h = geo.h != null ? clampPctMaybeUnit(geo.h, 8, scaleMode) : undefined;
     const kind = refineSeatKindFromFootprint(kindRaw, w, h);
     const item: RoomPlanVisionItem = {
       kind,
-      x: clampPctMaybeUnit(geo.x, 50, scale01),
-      y: clampPctMaybeUnit(geo.y, 50, scale01),
+      x: clampPctMaybeUnit(geo.x, 50, scaleMode),
+      y: clampPctMaybeUnit(geo.y, 50, scaleMode),
     };
     if (w != null) item.w = w;
     if (h != null) item.h = h;
@@ -915,7 +1045,8 @@ export function parseRoomPlanVisionDraft(
     if (row.pedestalStyle === 'squareWhite' || row.pedestalStyle === 'columnGold') {
       item.pedestalStyle = row.pedestalStyle;
     }
-    if (row.anchor === 'center' || row.anchor === 'box') item.anchor = row.anchor;
+    if (geo.anchor === 'center' || geo.anchor === 'box') item.anchor = geo.anchor;
+    else if (row.anchor === 'center' || row.anchor === 'box') item.anchor = row.anchor;
     else item.anchor = 'box';
     items.push(item);
   }
@@ -929,8 +1060,8 @@ export function parseRoomPlanVisionDraft(
     const end = row.end && typeof row.end === 'object' ? row.end as Record<string, unknown> : null;
     if (!start || !end) continue;
     walls.push({
-      start: { x: clampPctMaybeUnit(start.x, 8, scale01), y: clampPctMaybeUnit(start.y, 8, scale01) },
-      end: { x: clampPctMaybeUnit(end.x, 92, scale01), y: clampPctMaybeUnit(end.y, 8, scale01) },
+      start: { x: clampPctMaybeUnit(start.x, 8, scaleMode), y: clampPctMaybeUnit(start.y, 8, scaleMode) },
+      end: { x: clampPctMaybeUnit(end.x, 92, scaleMode), y: clampPctMaybeUnit(end.y, 8, scaleMode) },
       doors: asRatioList(row.doors, 3),
       windows: asRatioList(row.windows, 4),
     });
@@ -955,10 +1086,10 @@ export function parseRoomPlanVisionDraft(
     },
     outline: {
       shape: outlineShape,
-      x: clampPctMaybeUnit(outlineRaw.x, 5, scale01),
-      y: clampPctMaybeUnit(outlineRaw.y, 5, scale01),
-      w: clampPctMaybeUnit(outlineRaw.w, 90, scale01),
-      h: clampPctMaybeUnit(outlineRaw.h, 90, scale01),
+      x: clampPctMaybeUnit(outlineRaw.x, 5, scaleMode),
+      y: clampPctMaybeUnit(outlineRaw.y, 5, scaleMode),
+      w: clampPctMaybeUnit(outlineRaw.w, 90, scaleMode),
+      h: clampPctMaybeUnit(outlineRaw.h, 90, scaleMode),
     },
     appearance: parseAppearance(source.appearance, view),
     items,

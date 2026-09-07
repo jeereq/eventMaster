@@ -1042,7 +1042,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
       for (const wall of wallSegments) {
         if (!sameStory(item.storyId, wall.storyId)) continue;
 
-        const { distM, nx, ny } = distancePointToSegmentM(
+        let { distM, nx, ny } = distancePointToSegmentM(
           item.cxM,
           item.cyM,
           wall.x1M,
@@ -1051,7 +1051,15 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
           wall.y2M,
         );
 
-        const requiredWallDist = item.radiusM + wall.thicknessM / 2 + clearances.wallMargin * 0.75;
+        // Si la normale pousse vers l'extérieur de la salle (loin du centre), la retourner vers l'intérieur
+        const centerDirX = widthM / 2 - item.cxM;
+        const centerDirY = heightM / 2 - item.cyM;
+        if (nx * centerDirX + ny * centerDirY < 0) {
+          nx = -nx;
+          ny = -ny;
+        }
+
+        const requiredWallDist = item.radiusM + wall.thicknessM / 2 + 0.15;
         if (distM < requiredWallDist) {
           const pushM = requiredWallDist - distM;
           item.cxM += nx * pushM;
@@ -1069,9 +1077,13 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
 
       if (maxX >= minX) {
         item.cxM = Math.max(minX, Math.min(maxX, item.cxM));
+      } else {
+        item.cxM = widthM / 2;
       }
       if (maxY >= minY) {
         item.cyM = Math.max(minY, Math.min(maxY, item.cyM));
+      } else {
+        item.cyM = heightM / 2;
       }
     }
   }
