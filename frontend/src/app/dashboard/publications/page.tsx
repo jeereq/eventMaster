@@ -485,19 +485,24 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
                 >
                   <ChevronRight className="w-5 h-5" aria-hidden />
                 </button>
-                <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1.5">
+                <div className="absolute bottom-1 inset-x-0 flex justify-center gap-0.5">
                   {media.map((item, i) => (
                     <button
                       key={`${item.url}-${i}`}
                       type="button"
                       onClick={() => setIndex(i)}
-                      className={cn(
-                        'h-2 rounded-full transition',
-                        i === index ? 'w-5 bg-primary' : 'w-2 bg-white/60',
-                      )}
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center touch-manipulation"
                       aria-label={`Média ${i + 1} sur ${media.length}`}
                       aria-current={i === index ? 'true' : undefined}
-                    />
+                    >
+                      <span
+                        className={cn(
+                          'h-2 rounded-full transition',
+                          i === index ? 'w-5 bg-primary' : 'w-2 bg-stage-foreground/60',
+                        )}
+                        aria-hidden
+                      />
+                    </button>
                   ))}
                 </div>
               </>

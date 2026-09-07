@@ -147,7 +147,7 @@ export default function ProtocolDashboardHome() {
         <ProtocolTasksInbox protocol />
       </div>
 
-      <p className="text-[11px] text-muted">
+      <p className="text-xs text-muted">
         Besoin d’une salle ou d’un prestataire ?{' '}
         <Link href="/dashboard/catalogue" className="font-semibold text-primary hover:underline inline-flex items-center gap-1">
           <Store className="w-3.5 h-3.5" /> Explorer le catalogue

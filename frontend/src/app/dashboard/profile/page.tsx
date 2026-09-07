@@ -212,13 +212,19 @@ function ProfilePageContent() {
         <div className="flex items-center gap-3.5 min-w-0">
           <div className="relative shrink-0">
             <UserAvatar name={name} src={avatarUrl} size="lg" className="rounded-[var(--radius-button)] w-14 h-14" />
-            <label className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white cursor-pointer shadow-sm">
-              {avatarUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+            <label
+              htmlFor="profile-avatar-input"
+              className="absolute -bottom-1.5 -right-1.5 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-primary-solid text-primary-foreground cursor-pointer shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background"
+            >
+              {avatarUploading ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <Camera className="w-4 h-4" aria-hidden />}
+              <span className="sr-only">Changer la photo de profil</span>
               <input
+                id="profile-avatar-input"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                 className="sr-only"
                 disabled={avatarUploading}
+                aria-label="Changer la photo de profil"
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
                   e.target.value = '';
@@ -230,7 +236,7 @@ function ProfilePageContent() {
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-foreground tracking-tight truncate">{name || 'Utilisateur'}</h2>
             <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-muted">
-              <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-medium uppercase tracking-wide text-[10px]">
+              <span className="px-2 py-0.5 rounded-md bg-surface-muted border border-border font-medium uppercase tracking-wide text-xs">
                 {user?.role}
               </span>
               {tenant && (
@@ -254,12 +260,12 @@ function ProfilePageContent() {
             <div>
               <div className="text-xs font-semibold text-foreground">Plan {tenant.plan}</div>
               {tenant.licenseExpiresAt ? (
-                <div className="flex items-center gap-1 text-[11px] text-muted">
+                <div className="flex items-center gap-1 text-xs text-muted">
                   <Calendar className="w-3 h-3" />
                   Expire le {new Date(tenant.licenseExpiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
               ) : (
-                <div className="text-[11px] text-emerald-600 font-medium">Licence active</div>
+                <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Licence active</div>
               )}
             </div>
           </div>
@@ -296,7 +302,7 @@ function ProfilePageContent() {
                     onNationalChange={setPhoneNational}
                     hint="Indicatif pays + numéro national (sans le 0). Requis pour les alertes WhatsApp."
                   />
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     Canaux e-mail / WhatsApp / push :{' '}
                     <Link href="/dashboard/notifications" className="text-primary font-medium hover:underline">
                       Notifications
