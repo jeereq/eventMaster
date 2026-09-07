@@ -18,6 +18,7 @@ import {
   type ProcessedInvitationPrompt,
 } from './invitationPromptFidelity.ts';
 import {
+  invitationArtStyleCompositionNote,
   invitationArtStyleFaceLockNote,
   invitationArtStyleImageDirective,
   invitationArtStyleScaffoldLine,
@@ -367,6 +368,7 @@ function buildImagePrompt(
   parts.push(
     'Create ONE vertical print-ready invitation artwork (9:16, 1024x1536). Purpose: luxury printed invitation card for a real event in Central Africa / RDC.',
     invitationArtStyleImageDirective(artStyle),
+    invitationArtStyleCompositionNote(artStyle),
   );
   if (hasPeople) {
     parts.push(invitationArtStyleFaceLockNote(artStyle));

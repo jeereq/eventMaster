@@ -15,27 +15,27 @@ export const INVITATION_ART_STYLES: Array<{
   {
     id: 'realiste',
     label: 'Réaliste',
-    summary: 'Photo 35 mm, papier, or et visages fidèles.',
+    summary: 'Photo ultra-réelle : grain, or, lumière volume.',
   },
   {
     id: 'dessin-anime',
     label: 'Dessin animé',
-    summary: '2D, aplats, traits nets, même identité.',
+    summary: '2D immersif, plans et profondeur.',
   },
   {
     id: 'illustration',
     label: 'Illustration',
-    summary: 'Affiche peinte, pinceau, prestige éditorial.',
+    summary: 'Peinture en volume, scène où l’on entre.',
   },
   {
     id: 'aquarelle',
     label: 'Aquarelle',
-    summary: 'Pigments, papier coton, bords fondus.',
+    summary: 'Lavis en profondeur, papier coton.',
   },
   {
     id: 'stylise-3d',
     label: '3D stylisé',
-    summary: 'Rendu cinéma, matières dessinées.',
+    summary: 'Volume cinéma, on tourne autour.',
   },
 ];
 

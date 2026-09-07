@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  invitationArtStyleCompositionNote,
   invitationArtStyleImageDirective,
   invitationArtStyleScaffoldLine,
   parseInvitationArtStyle,
@@ -17,9 +18,13 @@ describe('invitationArtStyle', () => {
 
   it('ne force plus le photoréalisme pour le dessin animé', () => {
     const cartoon = invitationArtStyleImageDirective('dessin-anime');
-    assert.match(cartoon, /DESSIN ANIMÉ/);
-    assert.doesNotMatch(cartoon, /Photoreal 35mm/);
-    assert.match(invitationArtStyleScaffoldLine('dessin-anime'), /2D animated/);
-    assert.match(invitationArtStyleImageDirective('realiste'), /Photoreal 35mm/);
+    assert.match(cartoon, /DESSIN ANIMÉ IMMERSIF/);
+    assert.match(cartoon, /Multiplane|parallax|depth/i);
+    assert.doesNotMatch(cartoon, /Photoreal 35mm \/ 85mm portrait language/);
+    assert.match(invitationArtStyleScaffoldLine('dessin-anime'), /multiplane|immersion|depth/i);
+    assert.match(invitationArtStyleImageDirective('realiste'), /35mm \/ 85mm/);
+    assert.match(invitationArtStyleImageDirective('stylise-3d'), /volume|bokeh|depth of field/i);
+    assert.match(invitationArtStyleCompositionNote('dessin-anime'), /three readable planes|IMMERSION/);
+    assert.match(invitationArtStyleCompositionNote('realiste'), /real space/);
   });
 });
