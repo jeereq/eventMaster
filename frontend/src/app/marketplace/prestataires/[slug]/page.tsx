@@ -10,6 +10,7 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
+import ListingDetailIntro from '@/components/ListingDetailIntro';
 import ListingMapPanel from '@/components/ListingMapPanel';
 import ListingRelationStatus from '@/components/ListingRelationStatus';
 import {
@@ -70,6 +71,9 @@ export default function MarketplaceServiceDetailPage() {
   const item = service ? serviceToCatalogueItem(service) : null;
   const quotaLabel = service ? formatQuotaLabel(service.quotaMin, service.quotaMax) : null;
   const isRental = pathname.includes('/locations') || isServiceRentalCategory(service?.category);
+  const mobilityLabel = service
+    ? serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)
+    : '';
 
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
@@ -99,28 +103,18 @@ export default function MarketplaceServiceDetailPage() {
         activityPreview={service?.activityPreview}
         relatedServices={service?.relatedServices}
         relatedVenues={service?.relatedVenues}
+        listingKind={isRental ? 'rental' : 'service'}
         details={service && item ? (
         <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-3 max-w-prose">
-            <p className="text-sm text-muted leading-relaxed">
-              {[
-                formatLocationLine(service),
-                serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm),
-              ].filter(Boolean).join(' · ')}
-              {service.latitude != null && service.longitude != null ? (
-                <>
-                  {' · '}
-                  <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
-                    Itinéraire
-                  </button>
-                </>
-              ) : null}
-            </p>
-            {service.description ? (
-              <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{service.description}</p>
-            ) : null}
-            </div>
-            <ListingPublicDetails details={service.details} kind="service" />
+            <ListingDetailIntro
+              facts={[
+                formatLocationLine(service) ? { label: 'Zone', value: formatLocationLine(service) } : null,
+                mobilityLabel ? { label: 'Déplacement', value: mobilityLabel } : null,
+              ].filter(Boolean) as Array<{ label: string; value: string }>}
+              description={service.description}
+              onItinerary={service.latitude != null && service.longitude != null ? () => startRoute(item.id) : undefined}
+            />
+            <ListingPublicDetails details={service.details} kind={isRental ? 'rental' : 'service'} />
           </div>
         ) : null}
         availability={service ? (
@@ -152,7 +146,7 @@ export default function MarketplaceServiceDetailPage() {
               }}
             />
           ) : (
-            <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette prestation.</p>
+            <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour {isRental ? 'ce matériel' : 'cette prestation'}.</p>
           )
         ) : null}
         activity={service?.orgSlug ? (

@@ -98,16 +98,14 @@ export default function ListingRelationStatus({
             : 'Réservation annulée';
 
   return (
-    <div className={cn('rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2.5', className)}>
-      <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
-        Suivi devis & réservation
-      </p>
+    <div className={cn('rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3', className)}>
+      <h2 className="text-sm font-semibold text-foreground">Suivi devis & réservation</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <StatusTile
           icon={inquiry?.status === 'CONTACTED' ? <CheckCircle2 className="w-4 h-4" /> : inquiry ? <FileText className="w-4 h-4" /> : <Inbox className="w-4 h-4" />}
           title={inquiryLabel || 'Aucun devis'}
           detail={inquiry ? (inquiryDate ? `Pour le ${inquiryDate}` : 'Demande enregistrée') : 'Pas encore de demande envoyée'}
-          tone={inquiry?.status === 'CONTACTED' ? 'sky' : inquiry ? 'amber' : 'slate'}
+          tone={inquiry?.status === 'CONTACTED' ? 'ok' : inquiry ? 'pending' : 'idle'}
         />
         <StatusTile
           icon={booking && booking.status !== 'CANCELLED' && booking.status !== 'REQUESTED'
@@ -121,18 +119,16 @@ export default function ListingRelationStatus({
             : 'Pas encore de date bloquée'}
           tone={
             !booking || booking.status === 'CANCELLED'
-              ? 'slate'
+              ? 'idle'
               : booking.status === 'REQUESTED'
-                ? 'amber'
-                : booking.status === 'COMPLETED' || booking.status === 'CONFIRMED'
-                  ? 'emerald'
-                  : 'sky'
+                ? 'pending'
+                : 'ok'
           }
         />
       </div>
       <Link
         href={asVendor ? '/dashboard/marketplace' : '/dashboard/bookings'}
-        className="text-[11px] font-semibold text-primary hover:underline"
+        className="inline-flex min-h-11 items-center text-xs font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
       >
         Voir tout le suivi
       </Link>
@@ -149,29 +145,27 @@ function StatusTile({
   icon: React.ReactNode;
   title: string;
   detail: string;
-  tone: 'slate' | 'amber' | 'sky' | 'emerald';
+  tone: 'ok' | 'pending' | 'idle';
 }) {
   return (
     <div
       className={cn(
-        'rounded-xl border px-3 py-2.5 min-w-0',
-        tone === 'emerald' && 'border-emerald-500/25 bg-emerald-500/8',
-        tone === 'sky' && 'border-sky-500/25 bg-sky-500/8',
-        tone === 'amber' && 'border-amber-500/25 bg-amber-500/8',
-        tone === 'slate' && 'border-border bg-surface-muted/60',
+        'rounded-[var(--radius-card)] border px-3 py-2.5 min-w-0',
+        tone === 'ok' && 'border-primary/20 bg-primary/10',
+        tone === 'pending' && 'border-festive-accent/20 bg-festive-accent/10',
+        tone === 'idle' && 'border-border bg-surface-muted',
       )}
     >
       <p className={cn(
-        'text-xs font-bold inline-flex items-center gap-1.5',
-        tone === 'emerald' && 'text-emerald-700 dark:text-emerald-300',
-        tone === 'sky' && 'text-sky-700 dark:text-sky-300',
-        tone === 'amber' && 'text-amber-800 dark:text-amber-300',
-        tone === 'slate' && 'text-muted',
+        'text-xs font-semibold inline-flex items-center gap-1.5',
+        tone === 'ok' && 'text-primary',
+        tone === 'pending' && 'text-festive-accent',
+        tone === 'idle' && 'text-muted',
       )}>
         {icon}
         {title}
       </p>
-      <p className="text-[11px] text-muted mt-0.5 leading-relaxed">{detail}</p>
+      <p className="text-xs text-muted mt-1 leading-relaxed">{detail}</p>
     </div>
   );
 }

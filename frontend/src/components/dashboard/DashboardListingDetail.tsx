@@ -10,6 +10,7 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
+import ListingDetailIntro from '@/components/ListingDetailIntro';
 import ListingMapPanel from '@/components/ListingMapPanel';
 import ListingRelationStatus from '@/components/ListingRelationStatus';
 import { Badge } from '@/components/ui';
@@ -32,7 +33,7 @@ import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { listingPublicUrl } from '@/lib/share';
 import { useListingFavorites } from '@/lib/listingFavorites';
-import { Building2, Sparkles } from 'lucide-react';
+import { Building2, KeyRound, Sparkles } from 'lucide-react';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
@@ -113,6 +114,17 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
   }, [defaultBackHref]);
   const isRental = isServiceRentalCategory(service?.category);
   const backLabel = catalogueReturnBackLabel(backHref);
+  const listingKind = kind === 'venue' ? 'venue' : isRental ? 'rental' : 'service';
+  const listingIcon = kind === 'venue'
+    ? <Building2 className="w-10 h-10 text-muted mx-auto mb-3" />
+    : isRental
+      ? <KeyRound className="w-10 h-10 text-muted mx-auto mb-3" />
+      : <Sparkles className="w-10 h-10 text-muted mx-auto mb-3" />;
+  const listingFallback = kind === 'venue'
+    ? <Building2 className="w-12 h-12" />
+    : isRental
+      ? <KeyRound className="w-12 h-12" />
+      : <Sparkles className="w-12 h-12" />;
 
   const item = venue
     ? withDashboardListingHref(venueToCatalogueItem(venue))
@@ -129,6 +141,9 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
   const shareKind = kind === 'venue' ? 'venue' : isRental ? 'rental' : 'service';
   const lat = venue?.latitude ?? service?.latitude ?? null;
   const lng = venue?.longitude ?? service?.longitude ?? null;
+  const mobilityLabel = service
+    ? serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)
+    : '';
 
   return (
     <ListingDetailLayout
@@ -137,15 +152,11 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       embedded
       loading={loading}
       error={error || (!loading && !venue && !service ? 'Fiche introuvable.' : '')}
-      errorIcon={
-        kind === 'venue'
-          ? <Building2 className="w-10 h-10 text-muted mx-auto mb-3" />
-          : <Sparkles className="w-10 h-10 text-muted mx-auto mb-3" />
-      }
-      errorMessage={kind === 'venue' ? 'Salle introuvable.' : 'Prestation introuvable.'}
+      errorIcon={listingIcon}
+      errorMessage={kind === 'venue' ? 'Salle introuvable.' : isRental ? 'Fiche matériel introuvable.' : 'Prestation introuvable.'}
       onRetry={() => setReloadNonce((n) => n + 1)}
       heroUrl={(venue?.photos || service?.photos || [])[0]}
-      fallbackIcon={kind === 'venue' ? <Building2 className="w-12 h-12" /> : <Sparkles className="w-12 h-12" />}
+      fallbackIcon={listingFallback}
       chip={
         venue
           ? (roomTypeLabels[venue.roomType as RoomType] || venue.roomType)
@@ -174,39 +185,31 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         <FavoriteHeart
           active={isFavorite(kind, slug)}
           onToggle={() => void toggleFavorite(kind, slug)}
-          className="bg-white/95"
+          className="bg-surface/95"
         />
       ) : undefined}
+      listingKind={listingKind}
       details={item ? (
         <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-3 max-w-prose">
-          {isBlockedByAdmin && (
-            <Badge variant="danger">Bloqué — masqué du marketplace public</Badge>
-          )}
-          {!isPublic && !isBlockedByAdmin && (
-            <Badge variant="default">Brouillon — non visible sur le marketplace public</Badge>
-          )}
-          <p className="text-sm text-muted leading-relaxed">
-            {[
-              venue ? [formatLocationLine(venue), venue.address, venue.capacity ? `${venue.capacity} places` : null].filter(Boolean).join(' · ') : null,
-              service ? [formatLocationLine(service), serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)].filter(Boolean).join(' · ') : null,
-            ].filter(Boolean).join(' · ')}
-            {lat != null && lng != null ? (
-              <>
-                {' · '}
-                <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
-                  Itinéraire
-                </button>
-              </>
+          <ListingDetailIntro
+            facts={[
+              venue ? (formatLocationLine(venue) ? { label: 'Lieu', value: formatLocationLine(venue) } : null) : null,
+              venue?.address ? { label: 'Adresse', value: venue.address } : null,
+              venue?.capacity ? { label: 'Capacité', value: `${venue.capacity} places` } : null,
+              service ? (formatLocationLine(service) ? { label: 'Zone', value: formatLocationLine(service) } : null) : null,
+              mobilityLabel ? { label: 'Déplacement', value: mobilityLabel } : null,
+            ].filter(Boolean) as Array<{ label: string; value: string }>}
+            description={venue?.description || service?.description}
+            onItinerary={lat != null && lng != null ? () => startRoute(item.id) : undefined}
+          >
+            {isBlockedByAdmin ? (
+              <Badge variant="danger">Bloqué — masqué du marketplace public</Badge>
             ) : null}
-          </p>
-          {(venue?.description || service?.description) ? (
-            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
-              {venue?.description || service?.description}
-            </p>
-          ) : null}
-          </div>
-          <ListingPublicDetails details={venue?.details || service?.details} kind={kind === 'venue' ? 'venue' : 'service'} />
+            {!isPublic && !isBlockedByAdmin ? (
+              <Badge variant="default">Brouillon — non visible sur le marketplace public</Badge>
+            ) : null}
+          </ListingDetailIntro>
+          <ListingPublicDetails details={venue?.details || service?.details} kind={listingKind} />
           {venue?.layoutPreview ? (
             <div>
               <h2 className="text-sm font-semibold mb-2">Plan de la salle</h2>

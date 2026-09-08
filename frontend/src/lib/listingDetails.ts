@@ -213,3 +213,20 @@ export function amenityLabel(id: string) {
 export function eventTypeLabel(id: string) {
   return LISTING_EVENT_TYPES.find((item) => item.id === id)?.label || id;
 }
+
+export function listingConditionLabel(value?: string | null) {
+  if (value === 'new') return 'Neuf';
+  if (value === 'very_good') return 'Très bon état';
+  if (value === 'good') return 'Bon état';
+  if (value === 'vintage') return 'Vintage';
+  return '';
+}
+
+export function listingDeliveryLabel(value?: string | null) {
+  if (value === 'pickup') return 'Retrait sur place';
+  if (value === 'included') return 'Livraison incluse';
+  if (value === 'extra_fee') return 'Livraison en supplément';
+  return '';
+}
+
+export type ListingPublicKind = 'venue' | 'service' | 'rental';

@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, ConfirmDialog, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui';
 import { useIsLgUp } from '@/hooks/useIsMobile';
@@ -10,11 +9,19 @@ import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
 import { CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem, type PublicService, type PublicVenue } from '@/lib/marketplace';
-import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { ArrowLeft, Play, Sparkles, Building2, ArrowRight, MapPin, Users } from 'lucide-react';
+import MarketplaceFormTabs, { listingTabPanelId, type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import { ArrowLeft, Play } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 import ListingActivityHighlights from '@/components/marketplace/ListingActivityHighlights';
+import {
+  RelatedOfferCard,
+  RelatedOfferRow,
+  RelatedOffersSection,
+  relatedServiceHref,
+  relatedVenueHref,
+  splitRelatedServices,
+} from '@/components/marketplace/ListingRelatedOffers';
 
 function ListingPhotoThumbs({
   photos,
@@ -53,8 +60,8 @@ function ListingPhotoThumbs({
             className="w-full h-full object-cover"
           />
           {isVideoUrl(url) && (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/35">
-              <Play className="w-3.5 h-3.5 text-white fill-white" />
+            <span className="absolute inset-0 flex items-center justify-center bg-stage/50">
+              <Play className="w-3.5 h-3.5 text-stage-foreground fill-stage-foreground" />
             </span>
           )}
         </button>
@@ -106,6 +113,7 @@ export default function ListingDetailLayout({
   relatedVenues,
   onRetry,
   paymentInProgress = false,
+  listingKind = 'venue',
 }: {
   backHref: string;
   backLabel: string;
@@ -151,12 +159,14 @@ export default function ListingDetailLayout({
   shareKind?: 'venue' | 'service' | 'event' | 'rental';
   onRetry?: () => void;
   paymentInProgress?: boolean;
+  listingKind?: 'venue' | 'service' | 'rental' | 'event';
 }) {
   const router = useRouter();
   const isLgUp = useIsLgUp();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
   const [mobileModalOpen, setMobileModalOpen] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const commerceTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const shareHref = shareUrl || (shareSlug ? listingPublicUrl(shareKind, shareSlug) : undefined);
   const priceLabel = priceCaption ?? (priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis');
   const showCommerce = !preview && Boolean(inquiry || booking);
@@ -225,35 +235,65 @@ export default function ListingDetailLayout({
       active ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]' : 'text-muted hover:text-foreground',
     );
 
+  const commerceActions = showBooking ? (['inquire', 'book'] as const) : [];
+  const onCommerceTabKey = (index: number, event: React.KeyboardEvent) => {
+    if (!commerceActions.length) return;
+    let next = index;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = index + 1;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = index - 1;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = commerceActions.length - 1;
+    else return;
+    event.preventDefault();
+    const action = commerceActions[(next + commerceActions.length) % commerceActions.length];
+    setMobileAction(action);
+    commerceTabRefs.current[commerceActions.indexOf(action)]?.focus();
+  };
+
   const commercePanel = showCommerce ? (
     <>
       {showBooking ? (
         <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Devis ou réservation">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mobileAction === 'inquire'}
-            onClick={() => setMobileAction('inquire')}
-            className={commerceTabClass(mobileAction === 'inquire')}
-          >
-            {inquireLabel}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mobileAction === 'book'}
-            onClick={() => setMobileAction('book')}
-            className={commerceTabClass(mobileAction === 'book')}
-          >
-            {bookLabel}
-          </button>
+          {commerceActions.map((action, index) => (
+            <button
+              key={action}
+              type="button"
+              role="tab"
+              id={`listing-commerce-tab-${action}`}
+              aria-selected={mobileAction === action}
+              aria-controls={`listing-commerce-panel-${action}`}
+              tabIndex={mobileAction === action ? 0 : -1}
+              ref={(node) => {
+                commerceTabRefs.current[index] = node;
+              }}
+              onClick={() => setMobileAction(action)}
+              onKeyDown={(event) => onCommerceTabKey(index, event)}
+              className={commerceTabClass(mobileAction === action)}
+            >
+              {action === 'inquire' ? inquireLabel : bookLabel}
+            </button>
+          ))}
         </div>
       ) : null}
-      <div className={cn(!showBooking || mobileAction === 'inquire' ? 'block' : 'hidden')}>
+      <div
+        id="listing-commerce-panel-inquire"
+        role={showBooking ? 'tabpanel' : undefined}
+        aria-labelledby={showBooking ? 'listing-commerce-tab-inquire' : undefined}
+        hidden={showBooking && mobileAction !== 'inquire'}
+        className={cn(!showBooking || mobileAction === 'inquire' ? 'block' : 'hidden')}
+      >
         {inquiry}
       </div>
       {showBooking ? (
-        <div className={cn(mobileAction === 'book' ? 'block' : 'hidden')}>{booking}</div>
+        <div
+          id="listing-commerce-panel-book"
+          role="tabpanel"
+          aria-labelledby="listing-commerce-tab-book"
+          hidden={mobileAction !== 'book'}
+          className={cn(mobileAction === 'book' ? 'block' : 'hidden')}
+        >
+          {booking}
+        </div>
       ) : null}
     </>
   ) : null;
@@ -269,8 +309,26 @@ export default function ListingDetailLayout({
   const heroSrc = (photoIndex > 0 && photos[photoIndex]) || heroUrl || photos[0] || null;
   const viewTab = tab === 'medias' ? 'details' : tab;
   const showActivity = Boolean(activity);
-  const hasRelatedServices = Boolean(relatedServices && relatedServices.length > 0);
+  const { prestations, rentals } = splitRelatedServices(relatedServices);
+  const hasPrestations = prestations.length > 0;
+  const hasRentals = rentals.length > 0;
+  const hasRelatedServices = hasPrestations || hasRentals;
   const hasRelatedVenues = Boolean(relatedVenues && relatedVenues.length > 0);
+  const relatedOwner = subtitle || title || 'cet établissement';
+  const servicesTabLabel = hasPrestations && hasRentals
+    ? 'Offres'
+    : hasRentals
+      ? 'Matériel'
+      : 'Prestations';
+  const activityAuthor = title || (
+    listingKind === 'rental'
+      ? 'Cette location'
+      : listingKind === 'service'
+        ? 'Ce prestataire'
+        : listingKind === 'event'
+          ? 'Cet événement'
+          : 'Cette salle'
+  );
 
   const tabInclude: MarketplaceFormTab[] = [
     'details',
@@ -282,177 +340,164 @@ export default function ListingDetailLayout({
 
   const resolvedActivityCount = activityCount ?? (activityPreview ? activityPreview.length : undefined);
   const tabBadges: Partial<Record<MarketplaceFormTab, number | string>> = {
-    ...(hasRelatedServices ? { services: relatedServices!.length } : {}),
+    ...(hasRelatedServices ? { services: (relatedServices || []).length } : {}),
     ...(hasRelatedVenues ? { venues: relatedVenues!.length } : {}),
     ...(resolvedActivityCount != null && resolvedActivityCount > 0 ? { activity: resolvedActivityCount } : {}),
   };
 
   const isWideTab = viewTab === 'map' || viewTab === 'activity' || viewTab === 'services' || viewTab === 'venues';
 
+  const offerGridClass = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+  const offerRowClass = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+
   const servicesPanel = (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-4">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-festive-accent" />
-            <span>Prestations & Métiers ({relatedServices?.length || 0})</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-muted">
-            Découvrez toutes les offres et spécialités proposées par {subtitle || title || 'ce prestataire'}.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {relatedServices?.map((srv) => {
-          const cover = srv.photos?.[0] || srv.coverUrl;
-          const href = srv.category?.startsWith('RENTAL_')
-            ? (embedded ? `/dashboard/catalogue/locations/${srv.slug}` : `/marketplace/locations/${srv.slug}`)
-            : (embedded ? `/dashboard/catalogue/prestataires/${srv.slug}` : `/marketplace/prestataires/${srv.slug}`);
-
-          return (
-            <article
-              key={srv.slug}
-              className="group rounded-xl border border-border/80 bg-surface shadow-xs hover:shadow-md hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col justify-between"
-            >
-              <div>
-                <div className="relative aspect-[16/10] bg-stage overflow-hidden">
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={sizedMediaUrl(cover, 360)}
-                      alt={srv.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted">
-                      <Sparkles className="w-8 h-8 text-festive-accent/50" />
-                    </div>
-                  )}
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-stage/80 text-stage-foreground border border-stage-foreground/20">
-                    {srv.categoryLabel || 'Prestation'}
-                  </span>
-                </div>
-                <div className="p-3 sm:p-4 space-y-1.5">
-                  <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                    {srv.title}
-                  </h3>
-                  {srv.city && (
-                    <p className="text-xs text-muted flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-muted shrink-0" />
-                      <span className="truncate">{[srv.city, srv.commune].filter(Boolean).join(' · ')}</span>
-                    </p>
-                  )}
-                  {srv.description && (
-                    <p className="text-xs text-muted line-clamp-2 leading-relaxed">
-                      {srv.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-3 sm:p-4 pt-0 border-t border-border/60 mt-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-foreground tabular-nums">
-                  {srv.priceFromFc != null ? formatFc(srv.priceFromFc) : 'Sur devis'}
-                  {srv.priceUnitLabel ? <span className="text-xs font-normal text-muted"> {srv.priceUnitLabel}</span> : null}
-                </span>
-                <Link
-                  href={href}
-                  className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <span>Voir l'offre</span>
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+    <div className="space-y-10">
+      {hasPrestations ? (
+        <RelatedOffersSection
+          title={`Prestations (${prestations.length})`}
+          subtitle={`Métiers proposés par ${relatedOwner}.`}
+        >
+          <div className={offerGridClass}>
+            {prestations.map((srv) => (
+              <RelatedOfferCard
+                key={srv.slug}
+                href={relatedServiceHref(srv, embedded)}
+                cover={srv.photos?.[0] || srv.coverUrl}
+                title={srv.title}
+                meta={[srv.categoryLabel, srv.city, srv.commune].filter(Boolean).join(' · ')}
+                priceFromFc={srv.priceFromFc}
+                priceUnitLabel={srv.priceUnitLabel}
+                kind="service"
+                cta="Voir l’offre"
+              />
+            ))}
+          </div>
+        </RelatedOffersSection>
+      ) : null}
+      {hasRentals ? (
+        <RelatedOffersSection
+          title={`Matériel & équipements (${rentals.length})`}
+          subtitle={`Locations proposées par ${relatedOwner}.`}
+        >
+          <div className={offerGridClass}>
+            {rentals.map((srv) => (
+              <RelatedOfferCard
+                key={srv.slug}
+                href={relatedServiceHref(srv, embedded)}
+                cover={srv.photos?.[0] || srv.coverUrl}
+                title={srv.title}
+                meta={[srv.categoryLabel, srv.city, srv.commune].filter(Boolean).join(' · ')}
+                priceFromFc={srv.priceFromFc}
+                priceUnitLabel={srv.priceUnitLabel}
+                kind="rental"
+                cta="Voir le matériel"
+              />
+            ))}
+          </div>
+        </RelatedOffersSection>
+      ) : null}
     </div>
   );
 
   const venuesPanel = (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-4">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-primary" />
-            <span>Salles & Espaces de réception ({relatedVenues?.length || 0})</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-muted">
-            Découvrez les salles d'événements et lieux gérés par {subtitle || title || 'cette organisation'}.
-          </p>
-        </div>
+    <RelatedOffersSection
+      title={`Salles (${relatedVenues?.length || 0})`}
+      subtitle={`Espaces gérés par ${relatedOwner}.`}
+    >
+      <div className={offerGridClass}>
+        {relatedVenues?.map((vn) => (
+          <RelatedOfferCard
+            key={vn.slug}
+            href={relatedVenueHref(vn, embedded)}
+            cover={vn.photos?.[0] || vn.coverUrl}
+            title={vn.headline || vn.name}
+            meta={[vn.capacity ? `${vn.capacity} places` : null, vn.city, vn.commune].filter(Boolean).join(' · ')}
+            priceFromFc={vn.priceFromFc}
+            priceUnitLabel={vn.priceUnitLabel}
+            kind="venue"
+            cta="Voir la salle"
+          />
+        ))}
       </div>
+    </RelatedOffersSection>
+  );
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {relatedVenues?.map((vn) => {
-          const cover = vn.photos?.[0] || vn.coverUrl;
-          const href = embedded ? `/dashboard/catalogue/salles/${vn.slug}` : `/marketplace/salles/${vn.slug}`;
-
-          return (
-            <article
-              key={vn.slug}
-              className="group rounded-xl border border-border/80 bg-surface shadow-xs hover:shadow-md hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col justify-between"
-            >
-              <div>
-                <div className="relative aspect-[16/10] bg-stage overflow-hidden">
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={sizedMediaUrl(cover, 360)}
-                      alt={vn.headline || vn.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted">
-                      <Building2 className="w-8 h-8 text-primary/50" />
-                    </div>
-                  )}
-                  {vn.capacity ? (
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-stage/80 text-stage-foreground border border-stage-foreground/20 flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      <span>{vn.capacity} places</span>
-                    </span>
-                  ) : null}
-                </div>
-                <div className="p-3 sm:p-4 space-y-1.5">
-                  <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                    {vn.headline || vn.name}
-                  </h3>
-                  {vn.city && (
-                    <p className="text-xs text-muted flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-muted shrink-0" />
-                      <span className="truncate">{[vn.city, vn.commune].filter(Boolean).join(' · ')}</span>
-                    </p>
-                  )}
-                  {vn.description && (
-                    <p className="text-xs text-muted line-clamp-2 leading-relaxed">
-                      {vn.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-3 sm:p-4 pt-0 border-t border-border/60 mt-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-foreground tabular-nums">
-                  {vn.priceFromFc != null ? formatFc(vn.priceFromFc) : 'Sur devis'}
-                  {vn.priceUnitLabel ? <span className="text-xs font-normal text-muted"> {vn.priceUnitLabel}</span> : null}
-                </span>
-                <Link
-                  href={href}
-                  className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <span>Voir la salle</span>
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+  const detailsPanel = (
+    <div className="flex flex-col gap-8">
+      {details}
+      {hasPrestations ? (
+        <RelatedOffersSection
+          className="pt-4 border-t border-border"
+          title="Prestations"
+          subtitle={`Autres métiers de ${relatedOwner}.`}
+          onViewAll={() => onTab('services')}
+        >
+          <div className={offerRowClass}>
+            {prestations.slice(0, 4).map((srv) => (
+              <RelatedOfferRow
+                key={srv.slug}
+                href={relatedServiceHref(srv, embedded)}
+                cover={srv.photos?.[0] || srv.coverUrl}
+                title={srv.title}
+                meta={srv.categoryLabel}
+                priceFromFc={srv.priceFromFc}
+                kind="service"
+              />
+            ))}
+          </div>
+        </RelatedOffersSection>
+      ) : null}
+      {hasRentals ? (
+        <RelatedOffersSection
+          className="pt-4 border-t border-border"
+          title="Matériel & équipements"
+          subtitle={`Locations proposées par ${relatedOwner}.`}
+          onViewAll={() => onTab('services')}
+        >
+          <div className={offerRowClass}>
+            {rentals.slice(0, 4).map((srv) => (
+              <RelatedOfferRow
+                key={srv.slug}
+                href={relatedServiceHref(srv, embedded)}
+                cover={srv.photos?.[0] || srv.coverUrl}
+                title={srv.title}
+                meta={srv.categoryLabel}
+                priceFromFc={srv.priceFromFc}
+                kind="rental"
+              />
+            ))}
+          </div>
+        </RelatedOffersSection>
+      ) : null}
+      {hasRelatedVenues ? (
+        <RelatedOffersSection
+          className="pt-4 border-t border-border"
+          title="Salles"
+          subtitle={`Espaces gérés par ${relatedOwner}.`}
+          onViewAll={() => onTab('venues')}
+        >
+          <div className={offerRowClass}>
+            {relatedVenues!.slice(0, 4).map((vn) => (
+              <RelatedOfferRow
+                key={vn.slug}
+                href={relatedVenueHref(vn, embedded)}
+                cover={vn.photos?.[0] || vn.coverUrl}
+                title={vn.headline || vn.name}
+                meta={vn.capacity ? `${vn.capacity} places` : vn.city}
+                priceFromFc={vn.priceFromFc}
+                kind="venue"
+              />
+            ))}
+          </div>
+        </RelatedOffersSection>
+      ) : null}
+      {activityPreview && activityPreview.length > 0 ? (
+        <ListingActivityHighlights
+          activityPreview={activityPreview}
+          authorLabel={activityAuthor}
+          onViewAllActivity={showActivity ? () => onTab('activity') : undefined}
+        />
+      ) : null}
     </div>
   );
 
@@ -465,148 +510,7 @@ export default function ListingDetailLayout({
           ? servicesPanel
           : viewTab === 'venues' && hasRelatedVenues
             ? venuesPanel
-            : (
-              <div className="flex flex-col gap-8">
-                {details}
-
-                {/* Bloc d'aperçu des autres prestations du prestataire */}
-                {hasRelatedServices && (
-                  <section className="space-y-3 pt-4 border-t border-border/70">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                          <Sparkles className="w-4 h-4 text-festive-accent" />
-                          <span>Autres prestations proposées ({relatedServices!.length})</span>
-                        </h2>
-                        <p className="text-xs text-muted">
-                          Services complémentaires proposés par {subtitle || 'ce prestataire'}.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onTab('services')}
-                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 focus-visible:outline-none"
-                      >
-                        <span>Tout voir</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {relatedServices!.slice(0, 4).map((srv) => {
-                        const cover = srv.photos?.[0] || srv.coverUrl;
-                        const href = srv.category?.startsWith('RENTAL_')
-                          ? (embedded ? `/dashboard/catalogue/locations/${srv.slug}` : `/marketplace/locations/${srv.slug}`)
-                          : (embedded ? `/dashboard/catalogue/prestataires/${srv.slug}` : `/marketplace/prestataires/${srv.slug}`);
-
-                        return (
-                          <Link
-                            key={srv.slug}
-                            href={href}
-                            className="group p-2.5 rounded-xl border border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs transition flex gap-3 items-center"
-                          >
-                            <div className="w-14 h-14 rounded-lg bg-surface-muted overflow-hidden shrink-0 relative">
-                              {cover ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={sizedMediaUrl(cover, 160)} alt={srv.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-muted">
-                                  <Sparkles className="w-5 h-5 text-festive-accent/60" />
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="text-xs font-bold text-muted uppercase tracking-wider block truncate">
-                                {srv.categoryLabel}
-                              </span>
-                              <h3 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                                {srv.title}
-                              </h3>
-                              <p className="text-xs font-semibold text-muted tabular-nums">
-                                {srv.priceFromFc != null ? formatFc(srv.priceFromFc) : 'Sur devis'}
-                              </p>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                {/* Bloc d'aperçu des salles selon les rôles de l'organisation */}
-                {hasRelatedVenues && (
-                  <section className="space-y-3 pt-4 border-t border-border/70">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                          <Building2 className="w-4 h-4 text-primary" />
-                          <span>Salles & Lieux de réception ({relatedVenues!.length})</span>
-                        </h2>
-                        <p className="text-xs text-muted">
-                          Espaces et salles gérés par {subtitle || 'cet établissement'}.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onTab('venues')}
-                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 focus-visible:outline-none"
-                      >
-                        <span>Tout voir</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {relatedVenues!.slice(0, 4).map((vn) => {
-                        const cover = vn.photos?.[0] || vn.coverUrl;
-                        const href = embedded ? `/dashboard/catalogue/salles/${vn.slug}` : `/marketplace/salles/${vn.slug}`;
-
-                        return (
-                          <Link
-                            key={vn.slug}
-                            href={href}
-                            className="group p-2.5 rounded-xl border border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs transition flex gap-3 items-center"
-                          >
-                            <div className="w-14 h-14 rounded-lg bg-surface-muted overflow-hidden shrink-0 relative">
-                              {cover ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={sizedMediaUrl(cover, 160)} alt={vn.headline || vn.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-muted">
-                                  <Building2 className="w-5 h-5 text-primary/60" />
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              {vn.capacity && (
-                                <span className="text-xs font-bold text-muted uppercase tracking-wider block truncate">
-                                  {vn.capacity} places
-                                </span>
-                              )}
-                              <h3 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                                {vn.headline || vn.name}
-                              </h3>
-                              <p className="text-xs font-semibold text-muted tabular-nums">
-                                {vn.priceFromFc != null ? formatFc(vn.priceFromFc) : 'Sur devis'}
-                              </p>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                {/* Réalisations & Stories récentes */}
-                {activityPreview && activityPreview.length > 0 ? (
-                  <ListingActivityHighlights
-                    activityPreview={activityPreview}
-                    authorLabel={title || 'Cette salle'}
-                    onViewAllActivity={showActivity ? () => onTab('activity') : undefined}
-                  />
-                ) : null}
-              </div>
-            );
+            : detailsPanel;
 
   return (
     <div
@@ -649,7 +553,7 @@ export default function ListingDetailLayout({
       ) : (
         <>
           <div className="flex flex-col gap-2 mb-8 lg:mb-10">
-            <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-black/80 shadow-[var(--shadow-soft)]">
+            <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-stage shadow-[var(--shadow-soft)]">
               {heroSrc ? (
                 isVideoUrl(heroSrc) ? (
                   <video
@@ -679,7 +583,7 @@ export default function ListingDetailLayout({
                   {fallbackIcon}
                 </div>
               )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-stage via-stage/70 to-transparent" />
               {heroAction || title ? (
                 <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
                   {heroAction}
@@ -693,12 +597,12 @@ export default function ListingDetailLayout({
                   ) : null}
                 </div>
               ) : null}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5 pt-16 sm:px-7 sm:pb-8 sm:pt-24 text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5 pt-16 sm:px-7 sm:pb-8 sm:pt-24 text-stage-foreground [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
                 <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words line-clamp-3">
                   {title}
                 </h1>
                 {(chip || subtitle) ? (
-                  <p className="mt-2 text-sm sm:text-base text-white line-clamp-2">
+                  <p className="mt-2 text-sm sm:text-base text-stage-foreground/90 line-clamp-2">
                     {[chip, subtitle].filter(Boolean).join(' · ')}
                   </p>
                 ) : null}
@@ -726,6 +630,8 @@ export default function ListingDetailLayout({
                   include={tabInclude}
                   icons={false}
                   badges={tabBadges}
+                  labels={{ services: servicesTabLabel }}
+                  labelledPanels
                 />
               </div>
 
@@ -733,7 +639,13 @@ export default function ListingDetailLayout({
                 <div className="lg:hidden">{relationStatus}</div>
               ) : null}
 
-              {mainPanel}
+              <div
+                role="tabpanel"
+                id={listingTabPanelId(viewTab)}
+                aria-labelledby={`listing-tab-${viewTab}`}
+              >
+                {mainPanel}
+              </div>
             </div>
 
             {isWideTab ? null : (

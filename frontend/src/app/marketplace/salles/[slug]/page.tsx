@@ -11,6 +11,7 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
+import ListingDetailIntro from '@/components/ListingDetailIntro';
 import ListingMapPanel from '@/components/ListingMapPanel';
 import ListingRelationStatus from '@/components/ListingRelationStatus';
 import {
@@ -101,28 +102,18 @@ export default function MarketplaceVenueDetailPage() {
         activityPreview={venue?.activityPreview}
         relatedServices={venue?.relatedServices}
         relatedVenues={venue?.relatedVenues}
+        listingKind="venue"
         details={venue && item ? (
           <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-3 max-w-prose">
-            <p className="text-sm text-muted leading-relaxed">
-              {[
-                formatLocationLine(venue),
-                venue.address,
-                venue.capacity ? `${venue.capacity} places` : null,
-              ].filter(Boolean).join(' · ')}
-              {venue.latitude != null && venue.longitude != null ? (
-                <>
-                  {' · '}
-                  <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
-                    Itinéraire
-                  </button>
-                </>
-              ) : null}
-            </p>
-            {venue.description ? (
-              <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{venue.description}</p>
-            ) : null}
-            </div>
+            <ListingDetailIntro
+              facts={[
+                formatLocationLine(venue) ? { label: 'Lieu', value: formatLocationLine(venue) } : null,
+                venue.address ? { label: 'Adresse', value: venue.address } : null,
+                venue.capacity ? { label: 'Capacité', value: `${venue.capacity} places` } : null,
+              ].filter(Boolean) as Array<{ label: string; value: string }>}
+              description={venue.description}
+              onItinerary={venue.latitude != null && venue.longitude != null ? () => startRoute(item.id) : undefined}
+            />
             <ListingPublicDetails details={venue.details} kind="venue" />
             {venue.layoutPreview ? (
               <div>
