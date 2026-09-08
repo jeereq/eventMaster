@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Store, Rss, LayoutGrid, FileText } from 'lucide-react';
+import { Home, Store, Rss, LayoutGrid, FileText, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 
@@ -31,6 +31,13 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     icon: Store,
   },
   {
+    id: 'simulator',
+    label: 'Simulateur',
+    shortLabel: 'Simul.',
+    href: '/#simulateur-ia',
+    icon: Sparkles,
+  },
+  {
     id: 'publications',
     label: 'Réalisations',
     shortLabel: 'Réalis.',
@@ -55,6 +62,13 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
 function isItemActive(itemHref: string, pathname: string, currentHash: string): boolean {
   if (itemHref === '/') {
     return pathname === '/' && (!currentHash || currentHash === '#' || currentHash === '');
+  }
+  if (itemHref === '/#simulateur-ia') {
+    return (
+      pathname === '/simulateur' ||
+      pathname.startsWith('/simulateur/') ||
+      (pathname === '/' && currentHash === '#simulateur-ia')
+    );
   }
   if (itemHref === '/plans-3d') {
     return pathname === '/plans-3d' || pathname === '/editeur' || pathname.startsWith('/plans-3d/');
@@ -104,6 +118,18 @@ export default function SiteMobileBottomBar({
       }
       return;
     }
+    if (item.id === 'simulator' && pathname === '/') {
+      e.preventDefault();
+      const el = document.getElementById('simulateur-ia');
+      if (el) {
+        el.scrollIntoView({
+          behavior: motionSafeScrollBehavior(),
+          block: 'start',
+        });
+        window.history.replaceState(null, '', '/#simulateur-ia');
+        setCurrentHash('#simulateur-ia');
+      }
+    }
   };
 
   const nav = (
@@ -114,7 +140,7 @@ export default function SiteMobileBottomBar({
         className,
       )}
     >
-      <div className="grid grid-cols-5 gap-0.5 items-center max-w-lg mx-auto">
+      <div className="grid grid-cols-6 gap-0 items-center max-w-xl mx-auto">
         {SITE_MOBILE_NAV_ITEMS.map((item) => {
           const active = isItemActive(item.href, pathname, currentHash);
           const Icon = item.icon;
@@ -145,7 +171,7 @@ export default function SiteMobileBottomBar({
                   <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary" />
                 )}
               </div>
-              <span className="text-[11px] tracking-tight leading-tight truncate max-w-full text-center">
+              <span className="text-xs tracking-tight leading-tight truncate max-w-full text-center">
                 {item.shortLabel ? (
                   <>
                     <span className="hidden min-[400px]:inline">{item.label}</span>
