@@ -25,6 +25,7 @@ import {
 } from '../services/aiTokenFlexPayService';
 import { notifyAiTokenPayment, notifyTicketPaymentFailed } from '../services/paymentTraceService';
 import { creditPaidAiTokenOrder } from '../services/aiSimulationWalletService';
+import type { AuthenticatedRequest } from '../middleware/auth';
 
 function frontendBaseUrl(): string {
   return (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
@@ -382,10 +383,14 @@ export async function flexPayCardReturn(req: Request, res: Response) {
     const slug = order.event.slug;
 
     if (result === 'cancel') {
-      return res.redirect(`${FRONTEND_URL}/marketplace/evenements/${slug}?canceled=1`);
+      return res.redirect(
+        `${FRONTEND_URL}/marketplace/evenements/${slug}?payment=paused&order=${encodeURIComponent(order.id)}`,
+      );
     }
     if (result === 'decline') {
-      return res.redirect(`${FRONTEND_URL}/marketplace/evenements/${slug}?declined=1`);
+      return res.redirect(
+        `${FRONTEND_URL}/marketplace/evenements/${slug}?payment=paused&order=${encodeURIComponent(order.id)}&declined=1`,
+      );
     }
 
     if (order.status !== 'PAID' && order.flexPayOrderNumber) {
@@ -653,5 +658,58 @@ export async function retryFlexPayTicketOrder(req: Request, res: Response) {
   } catch (error: any) {
     console.error('[FlexPay] retry ticket', error);
     return res.status(500).json({ error: error?.message || 'Relance impossible.' });
+  }
+}
+
+/**
+ * Annule une commande billet encore PENDING (fermeture volontaire).
+ * POST /api/public/payments/flexpay/orders/:orderId/cancel
+ */
+export async function cancelFlexPayTicketOrder(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Non authentifié.' });
+
+    const orderId = String(req.params.orderId || '');
+    const order = await prisma.ticketOrder.findUnique({
+      where: { id: orderId },
+      include: { event: { select: { slug: true } } },
+    });
+    if (!order) return res.status(404).json({ error: 'Commande introuvable.' });
+    if (order.status === 'PAID') {
+      return res.status(400).json({ error: 'Cette commande est déjà payée.', paid: true });
+    }
+    if (order.status === 'CANCELLED') {
+      return res.json({ cancelled: true, orderId: order.id, already: true });
+    }
+    if (order.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Cette commande ne peut plus être annulée.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    const email = user?.email?.toLowerCase() || '';
+    const owns =
+      order.userId === userId ||
+      (email && order.buyerEmail.toLowerCase() === email);
+    if (!owns) return res.status(403).json({ error: 'Cette commande ne vous appartient pas.' });
+
+    await prisma.ticketOrder.update({
+      where: { id: order.id },
+      data: { status: 'CANCELLED' },
+    });
+    await prisma.seatHold.deleteMany({ where: { orderId: order.id } }).catch(() => undefined);
+
+    return res.json({
+      cancelled: true,
+      orderId: order.id,
+      eventSlug: order.event.slug,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Annulation impossible.';
+    console.error('[FlexPay] cancel ticket', error);
+    return res.status(500).json({ error: message });
   }
 }

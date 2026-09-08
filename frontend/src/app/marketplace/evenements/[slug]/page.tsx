@@ -75,6 +75,7 @@ function MarketplaceEventDetailInner() {
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
+  const [paymentInProgress, setPaymentInProgress] = useState(false);
 
   useEffect(() => {
     setBackHref(getCatalogueReturn(defaultBackHref, returnScope));
@@ -135,6 +136,7 @@ function MarketplaceEventDetailInner() {
         priceUnitLabel={event?.paid ? '/ personne' : null}
         priceCaption={event && !event.paid ? 'Entrée libre' : undefined}
         hideBooking
+        paymentInProgress={paymentInProgress}
         inquireLabel={event?.paid ? 'Billet' : 'S’inscrire'}
         details={event ? (
           <div className="flex flex-col gap-8">
@@ -197,7 +199,7 @@ function MarketplaceEventDetailInner() {
         ) : null}
         inquiry={event ? (
           <Suspense fallback={<div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface h-48 animate-pulse" />}>
-            <EventTicketCheckoutForm event={event} />
+            <EventTicketCheckoutForm event={event} onPaymentActivityChange={setPaymentInProgress} />
           </Suspense>
         ) : null}
       />

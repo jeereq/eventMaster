@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw, ArrowLeft, XCircle } from 'lucide-react';
 import { Alert, Button } from '@/components/ui';
 import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
+import { CANCEL_PAYMENT_CONFIRM, CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 
 export type PaymentPendingStatus = 'pending' | 'paid' | 'failed' | 'error';
 
@@ -22,6 +22,12 @@ type PaymentPendingViewProps = {
   /** Relancer une nouvelle session de paiement (FlexPay). */
   onRetry?: () => Promise<void> | void;
   retryLabel?: string;
+  /** Annuler volontairement la commande en cours. */
+  onCancelPayment?: () => Promise<void> | void;
+  cancelLabel?: string;
+  /** Confirmer avant de quitter pendant un paiement en cours. */
+  confirmLeave?: boolean;
+  confirmLeaveMessage?: string;
   /** Lien ou action retour */
   backHref?: string;
   backLabel?: string;
@@ -39,6 +45,10 @@ export default function PaymentPendingView({
   onPaid,
   onRetry,
   retryLabel = 'Relancer le paiement',
+  onCancelPayment,
+  cancelLabel = 'Annuler la commande',
+  confirmLeave = true,
+  confirmLeaveMessage = CLOSE_PAYMENT_CONFIRM,
   backHref,
   backLabel = 'Retour',
   onBack,
@@ -49,6 +59,7 @@ export default function PaymentPendingView({
   const [attempts, setAttempts] = useState(0);
   const [checking, setChecking] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const paidRef = useRef(false);
 
   const runCheck = async (manual = false) => {
@@ -108,6 +119,44 @@ export default function PaymentPendingView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- poll on mount + interval
   }, [intervalMs, maxAttempts]);
+
+  useEffect(() => {
+    if (!confirmLeave || status === 'paid' || status === 'failed') return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = confirmLeaveMessage;
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [confirmLeave, confirmLeaveMessage, status]);
+
+  const requestLeave = () => {
+    if (confirmLeave && (status === 'pending' || status === 'error')) {
+      return window.confirm(confirmLeaveMessage);
+    }
+    return true;
+  };
+
+  const handleBack = () => {
+    if (!requestLeave()) return;
+    if (onBack) {
+      onBack();
+      return;
+    }
+    if (backHref) window.location.assign(backHref);
+  };
+
+  const handleCancel = async () => {
+    if (!onCancelPayment) return;
+    if (!window.confirm(CANCEL_PAYMENT_CONFIRM)) return;
+    setCancelling(true);
+    try {
+      await onCancelPayment();
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const isMobile = method === 'mobile' || method === 'flexpay_mobile';
   const waiting = status === 'pending' || status === 'error';
 
@@ -151,6 +200,7 @@ export default function PaymentPendingView({
             <li>Ouvrez la notification ou le menu USSD sur votre téléphone</li>
             <li>Confirmez le montant avec votre code secret</li>
             <li>Attendez la confirmation ici (vérification automatique)</li>
+            <li>Fermer cette fenêtre ne coupe pas le paiement — vous pourrez le reprendre</li>
             <li className="list-none text-xs text-muted pl-0 mt-1">
               Compatible : {FLEXPAY_MOBILE_OPERATORS_LABEL}
             </li>
@@ -160,6 +210,7 @@ export default function PaymentPendingView({
             <li>Terminez le paiement sur la page FlexPay si elle est encore ouverte</li>
             <li>Revenez sur cette page</li>
             <li>La confirmation apparaît dès réception du callback</li>
+            <li>Si vous fermez par erreur, reprenez le paiement depuis la fiche événement</li>
           </>
         )}
       </ol>
@@ -177,7 +228,7 @@ export default function PaymentPendingView({
         <Button
           type="button"
           onClick={() => void runCheck(true)}
-          disabled={checking || retrying}
+          disabled={checking || retrying || cancelling}
           className="inline-flex items-center gap-2"
         >
           {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -187,7 +238,7 @@ export default function PaymentPendingView({
           <Button
             type="button"
             variant="secondary"
-            disabled={checking || retrying}
+            disabled={checking || retrying || cancelling}
             className="inline-flex items-center gap-2"
             onClick={async () => {
               setRetrying(true);
@@ -209,27 +260,28 @@ export default function PaymentPendingView({
             {retrying ? 'Relance…' : retryLabel}
           </Button>
         )}
-        {backHref && (
-          <Link href={backHref} className="inline-flex">
-            <Button
-              type="button"
-              variant="secondary"
-              className="inline-flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              {backLabel}
-            </Button>
-          </Link>
-        )}
-        {onBack && !backHref && (
+        {(backHref || onBack) && (
           <Button
             type="button"
             variant="secondary"
-            onClick={onBack}
+            onClick={handleBack}
+            disabled={checking || retrying || cancelling}
             className="inline-flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
             {backLabel}
+          </Button>
+        )}
+        {onCancelPayment && waiting && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void handleCancel()}
+            disabled={checking || retrying || cancelling}
+            className="inline-flex items-center gap-2 text-rose-700"
+          >
+            {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+            {cancelling ? 'Annulation…' : cancelLabel}
           </Button>
         )}
         {attempts >= maxAttempts && status === 'pending' && (

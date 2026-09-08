@@ -66,6 +66,7 @@ export default function DashboardEventDetail() {
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
+  const [paymentInProgress, setPaymentInProgress] = useState(false);
   const defaultBackHref = CLIENT_AGENDA_HREF;
   const [backHref, setBackHref] = useState(defaultBackHref);
 
@@ -107,6 +108,7 @@ export default function DashboardEventDetail() {
       backHref={backHref}
       backLabel={catalogueReturnBackLabel(backHref)}
       embedded
+      paymentInProgress={paymentInProgress}
       loading={loading}
       error={error || (!loading && !event ? 'Événement introuvable ou privé.' : '')}
       errorIcon={<Ticket className="w-10 h-10 text-muted mx-auto mb-3" />}
@@ -190,7 +192,7 @@ export default function DashboardEventDetail() {
       ) : null}
       inquiry={event ? (
         <Suspense fallback={<div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface h-48 animate-pulse" />}>
-          <EventTicketCheckoutForm event={event} />
+          <EventTicketCheckoutForm event={event} onPaymentActivityChange={setPaymentInProgress} />
         </Suspense>
       ) : null}
     />

@@ -454,17 +454,29 @@ export default function OrgTicketingView({
 
           {/* Filtre de paiement */}
           <div>
-            <label className="block text-xs font-semibold text-muted mb-1">Paiement</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="ALL">Tous les statuts</option>
-              <option value="PAID">Payés (PAID)</option>
-              <option value="PENDING">En attente (PENDING)</option>
-              <option value="CANCELLED">Annulés (CANCELLED)</option>
-            </select>
+            <p className="block text-xs font-semibold text-muted mb-1">Paiement</p>
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Statut de paiement">
+              {([
+                ['ALL', 'Tous'],
+                ['PAID', 'Payés'],
+                ['PENDING', 'En attente'],
+                ['CANCELLED', 'Annulés'],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setStatusFilter(id)}
+                  className={cn(
+                    'px-2.5 min-h-11 rounded-lg text-xs font-semibold border transition',
+                    statusFilter === id
+                      ? 'bg-foreground text-background border-foreground'
+                      : 'border-border bg-surface text-muted hover:text-foreground',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Filtre de check-in */}
@@ -526,37 +538,32 @@ export default function OrgTicketingView({
             const isExpanded = expandedOrderId === order.id;
             const isPaid = order.status === 'PAID';
             const isPending = order.status === 'PENDING';
+            const isCancelled = order.status === 'CANCELLED';
             const guestsList = order.guests || [];
             const checkedInCount = guestsList.filter((g) => Boolean(g.checkedInAt)).length;
             const targetEventId = order.eventId || order.event?.id || eventId || '';
+            const createdLabel = new Date(order.createdAt).toLocaleString('fr-FR', {
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            const seatCount = order.selectedSeats?.length || 0;
 
             return (
               <div
                 key={order.id}
                 className={cn(
                   'rounded-2xl border bg-surface transition shadow-2xs overflow-hidden',
-                  isPaid ? 'border-border' : isPending ? 'border-amber-500/30' : 'border-border opacity-70'
+                  isPaid ? 'border-border' : isPending ? 'border-amber-500/40' : 'border-border opacity-80',
                 )}
               >
-                {/* Ligne principale de la commande */}
                 <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="space-y-1 min-w-0">
+                  <div className="space-y-1.5 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-foreground">
-                        #{order.flexPayOrderNumber || order.flexPayReference || order.id.slice(0, 8)}
-                      </span>
-                      {order.event?.title && (
-                        <Link
-                          href={eventDashboardHref(order.event.id, { tab: 'ticketing', protocol: protocolMode })}
-                          className="text-xs font-bold text-primary hover:underline truncate max-w-[200px]"
-                        >
-                          {order.event.title}
-                        </Link>
-                      )}
-                      <StatusPill
-                        tone={isPaid ? 'emerald' : isPending ? 'amber' : 'slate'}
-                      >
-                        {isPaid ? 'Payé' : isPending ? 'En attente' : order.status}
+                      <span className="font-semibold text-sm text-foreground">{order.buyerName}</span>
+                      <StatusPill tone={isPaid ? 'emerald' : isPending ? 'amber' : 'slate'}>
+                        {isPaid ? 'Payé' : isPending ? 'Paiement en cours' : isCancelled ? 'Annulé' : order.status}
                       </StatusPill>
                       {order.flexPayChannel && (
                         <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-[10px] font-semibold text-muted uppercase">
@@ -564,15 +571,30 @@ export default function OrgTicketingView({
                         </span>
                       )}
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-                      <span className="font-bold text-foreground">{order.buyerName}</span>
-                      {order.buyerPhone && (
-                        <a
-                          href={`tel:${order.buyerPhone}`}
-                          className="hover:text-primary transition inline-flex items-center gap-1"
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                      {order.event?.title && (
+                        <Link
+                          href={eventDashboardHref(order.event.id, { tab: 'ticketing', protocol: protocolMode })}
+                          className="font-semibold text-primary hover:underline truncate max-w-[220px]"
                         >
-                          <Phone className="w-3 h-3 text-muted" />
+                          {order.event.title}
+                        </Link>
+                      )}
+                      <span className="tabular-nums">{createdLabel}</span>
+                      <span className="font-mono text-[11px]">
+                        #{order.flexPayOrderNumber || order.flexPayReference || order.id.slice(0, 8)}
+                      </span>
+                      {seatCount > 0 ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Armchair className="w-3 h-3" />
+                          {seatCount} siège{seatCount > 1 ? 's' : ''}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                      {order.buyerPhone && (
+                        <a href={`tel:${order.buyerPhone}`} className="hover:text-primary transition inline-flex items-center gap-1 min-h-11">
+                          <Phone className="w-3 h-3" />
                           {order.buyerPhone}
                         </a>
                       )}
@@ -581,18 +603,21 @@ export default function OrgTicketingView({
                           href={`https://wa.me/${order.buyerPhone.replace(/[^\d]/g, '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                          className="text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 min-h-11"
                         >
                           <MessageCircle className="w-3 h-3" />
                           WhatsApp
                         </a>
                       )}
                       {order.buyerEmail && (
-                        <span className="hidden sm:inline text-muted truncate max-w-[180px]">
-                          {order.buyerEmail}
-                        </span>
+                        <span className="hidden sm:inline truncate max-w-[200px]">{order.buyerEmail}</span>
                       )}
                     </div>
+                    {isPending ? (
+                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                        L’acheteur a initié FlexPay — en attente de confirmation opérateur.
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">

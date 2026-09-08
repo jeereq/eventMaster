@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Check, ClipboardList, Clock, Flag, Link2, Loader2, Plus, Sparkles, Trash2, UserRound } from 'lucide-react';
+import { AlertCircle, Check, ClipboardList, Clock, Flag, Loader2, Pencil, Plus, Sparkles, Trash2, UserRound } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Alert, Button, EmptyState, Input, StatusPill, ViewModeToggle, useViewMode, listStackClass } from '@/components/ui';
+import { Alert, Button, EmptyState, StatusPill, ViewModeToggle, useViewMode, listStackClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import EventTaskNotifications from '@/components/EventTaskNotifications';
+import EventTaskFormModal, { type EventTaskFormValues } from '@/components/EventTaskFormModal';
 import {
   EVENT_TASK_KIND_LABELS,
-  EVENT_TASK_PRIORITY_LABELS,
   EVENT_TASK_STATUS_LABELS,
   isOpenEventTask,
   summarizeTasksByPerson,
@@ -16,7 +16,6 @@ import {
   taskDueState,
   type EventTaskAssigneeOption,
   type EventTaskItem,
-  type EventTaskKind,
   type EventTaskStatus,
 } from '@/lib/eventTasks';
 
@@ -28,9 +27,6 @@ function statusTone(status: EventTaskStatus): 'amber' | 'emerald' | 'slate' | 's
   return 'amber';
 }
 
-const KIND_OPTIONS = Object.entries(EVENT_TASK_KIND_LABELS) as Array<[EventTaskKind, string]>;
-const STATUS_OPTIONS = Object.entries(EVENT_TASK_STATUS_LABELS) as Array<[EventTaskStatus, string]>;
-
 export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const [tasks, setTasks] = useState<EventTaskItem[]>([]);
   const [assignees, setAssignees] = useState<EventTaskAssigneeOption[]>([]);
@@ -38,16 +34,12 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [filter, setFilter] = useState<'open' | 'all'>('open');
   const [personFilter, setPersonFilter] = useState('all');
   const { mode, setViewMode, columns, setGridColumns, gridClassName } = useViewMode('em-view-event-tasks', 'list', 2);
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const [assigneeId, setAssigneeId] = useState('');
-  const [dueAt, setDueAt] = useState('');
-  const [kind, setKind] = useState<EventTaskKind>('GENERAL');
-  const [priority, setPriority] = useState(1);
-  const [blockedById, setBlockedById] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<EventTaskItem | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -82,43 +74,68 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const openCount = tasks.filter((item) => isOpenEventTask(item.status)).length;
   const personStats = useMemo(() => summarizeTasksByPerson(tasks), [tasks]);
 
+  const openCreate = () => {
+    setFormError('');
+    setEditingTask(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = (task: EventTaskItem) => {
+    if (!canManage) return;
+    setFormError('');
+    setEditingTask(task);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (saving) return;
+    setModalOpen(false);
+    setEditingTask(null);
+    setFormError('');
+  };
+
   const patch = async (taskId: string, body: Record<string, unknown>) => {
     setError('');
     try {
       const data = (await api.patch(`/events/${eventId}/tasks/${taskId}`, body)) as { task?: EventTaskItem };
-      if (data.task) {
-        await load();
-      }
+      if (data.task) await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de mettre à jour la tâche.');
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const handleSave = async (values: EventTaskFormValues) => {
     setSaving(true);
-    setError('');
+    setFormError('');
     try {
-      const data = (await api.post(`/events/${eventId}/tasks`, {
-        title: title.trim(),
-        notes: notes.trim() || undefined,
-        assigneeId: assigneeId || undefined,
-        dueAt: dueAt || undefined,
-        kind,
-        priority,
-        blockedById: blockedById || undefined,
-      })) as { task?: EventTaskItem };
-      if (data.task) setTasks((prev) => [...prev, data.task!]);
-      setTitle('');
-      setNotes('');
-      setAssigneeId('');
-      setDueAt('');
-      setKind('GENERAL');
-      setPriority(1);
-      setBlockedById('');
+      if (editingTask) {
+        await api.patch(`/events/${eventId}/tasks/${editingTask.id}`, {
+          title: values.title,
+          notes: values.notes || null,
+          kind: values.kind,
+          priority: values.priority,
+          status: values.status,
+          assigneeId: values.assigneeId || null,
+          blockedById: values.blockedById || null,
+          dueAt: values.dueAt || null,
+        });
+        await load();
+      } else {
+        const data = (await api.post(`/events/${eventId}/tasks`, {
+          title: values.title,
+          notes: values.notes || undefined,
+          assigneeId: values.assigneeId || undefined,
+          dueAt: values.dueAt || undefined,
+          kind: values.kind,
+          priority: values.priority,
+          blockedById: values.blockedById || undefined,
+        })) as { task?: EventTaskItem };
+        if (data.task) setTasks((prev) => [...prev, data.task!]);
+      }
+      setModalOpen(false);
+      setEditingTask(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de créer la tâche.');
+      setFormError(err instanceof Error ? err.message : 'Impossible d’enregistrer la tâche.');
     } finally {
       setSaving(false);
     }
@@ -128,10 +145,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     setSaving(true);
     setError('');
     try {
-      const data = (await api.post(`/events/${eventId}/tasks/seed`, {})) as {
-        tasks?: EventTaskItem[];
-        message?: string;
-      };
+      const data = (await api.post(`/events/${eventId}/tasks/seed`, {})) as { tasks?: EventTaskItem[] };
       if (Array.isArray(data.tasks)) setTasks(data.tasks);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de générer la checklist.');
@@ -141,6 +155,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   };
 
   const handleDelete = async (taskId: string) => {
+    if (!window.confirm('Supprimer cette tâche ?')) return;
     setError('');
     try {
       await api.delete(`/events/${eventId}/tasks/${taskId}`);
@@ -158,8 +173,6 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     );
   }
 
-  const selectClass = 'px-2.5 py-1 min-h-11 rounded-xl border border-border bg-surface text-xs font-medium text-foreground hover:bg-surface-muted transition-colors outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer';
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -168,9 +181,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             <ClipboardList className="w-5 h-5 text-primary" />
             Ce qui requiert votre attention
           </h2>
-          <p className="text-sm text-muted">
-            Priorités, dépendances et progression de l'événement.
-          </p>
+          <p className="text-sm text-muted">Priorités, dépendances et progression de l’événement.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ViewModeToggle
@@ -185,7 +196,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               type="button"
               onClick={() => setFilter('open')}
               className={cn(
-                'px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
+                'px-3 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
                 filter === 'open' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
@@ -195,7 +206,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               type="button"
               onClick={() => setFilter('all')}
               className={cn(
-                'px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
+                'px-3 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
                 filter === 'all' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
@@ -203,15 +214,20 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             </button>
           </div>
           {canManage ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              loading={saving}
-              leftIcon={<Sparkles className="w-3.5 h-3.5" />}
-              onClick={() => void handleSeed()}
-            >
-              Checklist
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={saving}
+                leftIcon={<Sparkles className="w-3.5 h-3.5" />}
+                onClick={() => void handleSeed()}
+              >
+                Checklist
+              </Button>
+              <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={openCreate}>
+                Nouvelle tâche
+              </Button>
+            </>
           ) : null}
         </div>
       </div>
@@ -234,7 +250,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 type="button"
                 onClick={() => setPersonFilter(active ? 'all' : person.id)}
                 className={cn(
-                  'text-left rounded-[var(--radius-card)] border px-3 py-2.5 transition',
+                  'text-left rounded-[var(--radius-card)] border px-3 py-2.5 min-h-11 transition',
                   active
                     ? 'border-foreground bg-foreground text-background'
                     : 'border-border bg-surface hover:border-foreground/30',
@@ -249,7 +265,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 </p>
                 <div className={cn('mt-2 h-1.5 rounded-full overflow-hidden', active ? 'bg-background/20' : 'bg-surface-muted')}>
                   <div
-                    className={cn('h-full rounded-full', active ? 'bg-background' : 'bg-emerald-500')}
+                    className={cn('h-full rounded-full', active ? 'bg-background' : 'bg-emerald-600')}
                     style={{ width: `${person.total ? Math.round((person.done / person.total) * 100) : 0}%` }}
                   />
                 </div>
@@ -271,8 +287,15 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
           }
           description={
             canManage
-              ? 'Vous êtes à jour. Générez la checklist depuis la préparation, ou ajoutez une tâche ci-dessous.'
+              ? 'Générez la checklist type, ou créez une première tâche.'
               : 'Le manager n’a pas encore assigné de tâches pour cet événement.'
+          }
+          action={
+            canManage ? (
+              <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />} onClick={openCreate}>
+                Nouvelle tâche
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -282,187 +305,102 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             const canToggle = task.mine || canManage || !task.assignee;
             const due = taskDueState(task.dueAt, task.status);
             const dueText = taskDueLabel(task.dueAt, task.status);
-            const blockers = tasks.filter((item) => item.id !== task.id && item.status !== 'CANCELLED');
             return (
               <li
                 key={task.id}
                 className={cn(
-                  'rounded-2xl border border-border/80 bg-surface p-3.5 sm:p-4 transition-all hover:border-border hover:shadow-2xs flex flex-col gap-3',
+                  'rounded-2xl border border-border/80 bg-surface p-3.5 sm:p-4 flex flex-col gap-3',
                   mode === 'grid' && 'h-full justify-between',
-                  done && 'opacity-65 bg-surface-muted/20 border-border/40',
+                  done && 'opacity-70 bg-surface-muted/20',
                 )}
               >
-                {/* En-tête : Checkbox (touch-target 44px), Titre & Notes, et Action Supprimer */}
-                <div className="flex items-start justify-between gap-3 w-full">
-                  <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
-                    <button
-                      type="button"
-                      disabled={!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED'}
-                      onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
+                <div className="flex items-start gap-2.5">
+                  <button
+                    type="button"
+                    disabled={!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED'}
+                    onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
+                    className={cn(
+                      'min-w-11 min-h-11 -m-2 p-2 inline-flex items-center justify-center shrink-0 touch-manipulation',
+                      (!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED') && 'cursor-not-allowed opacity-40',
+                    )}
+                    aria-label={done ? 'Marquer comme non faite' : 'Marquer comme faite'}
+                  >
+                    <span
                       className={cn(
-                        'min-w-11 min-h-11 -m-2 p-2 inline-flex items-center justify-center shrink-0 transition-transform active:scale-95 touch-manipulation',
-                        (!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED') && 'cursor-not-allowed opacity-40',
+                        'w-6 h-6 rounded-full border-2 inline-flex items-center justify-center',
+                        done
+                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          : 'border-muted/40 text-transparent hover:border-primary',
                       )}
-                      title={done ? 'Rouvrir' : 'Marquer faite'}
-                      aria-label={done ? 'Marquer comme non faite' : 'Marquer comme faite'}
                     >
-                      <span
-                        className={cn(
-                          'w-6 h-6 rounded-full border-2 inline-flex items-center justify-center transition-colors',
-                          done
-                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
-                            : 'border-muted/40 text-transparent hover:border-primary hover:text-primary/70',
-                        )}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </span>
-                    </button>
+                      <Check className="w-3.5 h-3.5" />
+                    </span>
+                  </button>
 
-                    <div className="min-w-0 flex-1 space-y-1 pt-0.5">
-                      <p className={cn('text-sm sm:text-base font-semibold tracking-tight text-foreground break-words leading-snug', done && 'line-through text-muted')}>
-                        {task.title}
-                      </p>
-                      {task.notes ? (
-                        <p className="text-xs text-muted/90 leading-relaxed line-clamp-2">
-                          {task.notes}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(task)}
+                    disabled={!canManage}
+                    className="min-w-0 flex-1 text-left space-y-1 pt-0.5 disabled:cursor-default"
+                  >
+                    <p className={cn('text-sm sm:text-base font-semibold tracking-tight text-foreground break-words leading-snug', done && 'line-through text-muted')}>
+                      {task.title}
+                    </p>
+                    {task.notes ? <p className="text-xs text-muted leading-relaxed line-clamp-2">{task.notes}</p> : null}
+                  </button>
 
                   {canManage ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(task.id)}
-                      className="min-w-11 min-h-11 -m-2 p-2 inline-flex items-center justify-center text-muted/50 hover:text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors shrink-0 touch-manipulation"
-                      title="Supprimer la tâche"
-                      aria-label="Supprimer la tâche"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(task)}
+                        className="min-w-11 min-h-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-xl"
+                        aria-label="Modifier la tâche"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(task.id)}
+                        className="min-w-11 min-h-11 inline-flex items-center justify-center text-muted/50 hover:text-rose-600 hover:bg-rose-500/10 rounded-xl"
+                        aria-label="Supprimer la tâche"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   ) : null}
                 </div>
 
-                {/* Bannière de dépendance bloquante */}
                 {task.blockedBy ? (
-                  <div className="ml-0 sm:ml-9 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 max-w-full truncate">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 max-w-full truncate">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">
-                      Dépend de : <strong className="font-semibold">{task.blockedBy.title}</strong>
-                      {task.blockedBy.status !== 'DONE' ? ' (en cours)' : ' (terminée)'}
+                      Dépend de : <strong>{task.blockedBy.title}</strong>
+                      {task.blockedBy.status !== 'DONE' ? ' (en cours)' : ''}
                     </span>
                   </div>
                 ) : null}
 
-                {/* Ligne inférieure : Statut, Type, Priorité, Échéance, Assignation, Dépendance (responsive wrap fluide) */}
-                <div className={cn(
-                  "flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 sm:border-t-0 sm:pt-0 sm:ml-9",
-                  mode === 'grid' && "mt-auto w-full pt-3 border-t border-border/50 sm:ml-0"
-                )}>
-                  {canManage ? (
-                    <select
-                      value={task.status}
-                      onChange={(e) => void patch(task.id, { status: e.target.value })}
-                      className={cn(selectClass, 'font-semibold')}
-                      aria-label="Statut de la tâche"
-                    >
-                      {STATUS_OPTIONS.map(([id, label]) => (
-                        <option key={id} value={id}>{label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <StatusPill tone={statusTone(task.status)}>{EVENT_TASK_STATUS_LABELS[task.status]}</StatusPill>
-                  )}
-
-                  {canManage ? (
-                    <select
-                      value={task.kind || 'GENERAL'}
-                      onChange={(e) => void patch(task.id, { kind: e.target.value })}
-                      className={selectClass}
-                      aria-label="Catégorie de la tâche"
-                    >
-                      {KIND_OPTIONS.map(([id, label]) => (
-                        <option key={id} value={id}>{label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <StatusPill tone="slate">{EVENT_TASK_KIND_LABELS[task.kind || 'GENERAL']}</StatusPill>
-                  )}
-
-                  {canManage ? (
-                    <select
-                      value={String(task.priority ?? 1)}
-                      onChange={(e) => void patch(task.id, { priority: Number(e.target.value) })}
-                      className={cn(
-                        selectClass,
-                        task.priority === 2 && 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400 font-semibold',
-                      )}
-                      aria-label="Priorité de la tâche"
-                    >
-                      {[0, 1, 2].map((level) => (
-                        <option key={level} value={level}>{EVENT_TASK_PRIORITY_LABELS[level]}</option>
-                      ))}
-                    </select>
-                  ) : task.priority === 2 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <StatusPill tone={statusTone(task.status)}>{EVENT_TASK_STATUS_LABELS[task.status]}</StatusPill>
+                  <StatusPill tone="slate">{EVENT_TASK_KIND_LABELS[task.kind || 'GENERAL']}</StatusPill>
+                  {task.priority === 2 ? (
                     <StatusPill tone="rose" className="gap-1 inline-flex items-center">
                       <Flag className="w-3 h-3" />
                       Haute
                     </StatusPill>
                   ) : null}
-
                   {dueText ? (
-                    <StatusPill
-                      tone={due === 'overdue' ? 'rose' : due === 'today' ? 'amber' : 'slate'}
-                      className="inline-flex items-center gap-1 min-h-[26px]"
-                    >
+                    <StatusPill tone={due === 'overdue' ? 'rose' : due === 'today' ? 'amber' : 'slate'} className="inline-flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {dueText}
                     </StatusPill>
                   ) : null}
-
                   {task.mine ? <StatusPill tone="sky">Moi</StatusPill> : null}
-
-                  {canManage ? (
-                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-11">
-                      <UserRound className="w-3.5 h-3.5 text-muted shrink-0" />
-                      <select
-                        value={task.assignee?.id || ''}
-                        onChange={(e) => void patch(task.id, { assigneeId: e.target.value || null })}
-                        className="bg-transparent border-0 text-xs font-medium text-foreground max-w-[10rem] sm:max-w-[12rem] outline-none cursor-pointer"
-                        aria-label="Assigner la tâche"
-                      >
-                        <option value="">Non assignée</option>
-                        {assignees.map((person) => (
-                          <option key={person.id} value={person.id}>
-                            {person.name || person.email} · {person.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/50 border border-border/60 px-2.5 py-1 rounded-xl">
-                      <UserRound className="w-3.5 h-3.5 text-muted shrink-0" />
-                      {task.assignee ? task.assignee.name || task.assignee.email : 'Non assignée'}
-                    </span>
-                  )}
-
-                  {canManage ? (
-                    <label className="inline-flex items-center gap-1.5 text-xs text-muted bg-surface-muted/60 border border-border px-2.5 py-1 rounded-xl min-h-11">
-                      <Link2 className="w-3.5 h-3.5 text-muted shrink-0" />
-                      <select
-                        value={task.blockedById || ''}
-                        onChange={(e) => void patch(task.id, { blockedById: e.target.value || null })}
-                        className="bg-transparent border-0 text-xs font-medium text-foreground max-w-[10rem] sm:max-w-[12rem] outline-none cursor-pointer"
-                        title="Tâche bloquante"
-                        aria-label="Tâche bloquante"
-                      >
-                        <option value="">Sans dépendance</option>
-                        {blockers.map((item) => (
-                          <option key={item.id} value={item.id}>{item.title}</option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
+                  <span className="inline-flex items-center gap-1 text-xs text-muted">
+                    <UserRound className="w-3.5 h-3.5" />
+                    {task.assignee ? task.assignee.name || task.assignee.email : 'Non assignée'}
+                  </span>
                 </div>
               </li>
             );
@@ -470,104 +408,31 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
         </ul>
       )}
 
-      {canManage ? (
-        <form
-          onSubmit={handleCreate}
-          className="rounded-2xl border border-border/60 bg-surface-muted/10 p-5 space-y-4 shadow-sm"
-        >
-          <p className="text-sm font-semibold inline-flex items-center gap-2">
-            <Plus className="w-4 h-4 text-primary" />
-            Nouvelle tâche
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 min-w-0">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex. Vérifier le parking VIP"
-                className="w-full bg-surface"
-              />
-            </div>
-            <select
-              value={kind}
-              onChange={(e) => setKind(e.target.value as EventTaskKind)}
-              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-            >
-              {KIND_OPTIONS.map(([id, label]) => (
-                <option key={id} value={id}>{label}</option>
-              ))}
-            </select>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(Number(e.target.value))}
-              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-            >
-              {[0, 1, 2].map((level) => (
-                <option key={level} value={level}>{EVENT_TASK_PRIORITY_LABELS[level]}</option>
-              ))}
-            </select>
-          </div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            placeholder="Notes, contexte, livrable attendu… (optionnel)"
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm resize-y min-h-[3rem] focus:ring-2 focus:ring-primary/20 outline-none"
-          />
-          <div className="flex flex-col sm:flex-row gap-3">
-            <select
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm flex-1 focus:ring-2 focus:ring-primary/20 outline-none"
-            >
-              <option value="">Non assignée</option>
-              {assignees.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name || person.email} · {person.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={blockedById}
-              onChange={(e) => setBlockedById(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm flex-1 focus:ring-2 focus:ring-primary/20 outline-none"
-            >
-              <option value="">Sans dépendance</option>
-              {tasks.filter((item) => isOpenEventTask(item.status) || item.status === 'DONE').map((item) => (
-                <option key={item.id} value={item.id}>Après : {item.title}</option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={dueAt}
-              onChange={(e) => setDueAt(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-              title="Échéance — un rappel est envoyé la veille et le jour J"
-            />
-            <Button type="submit" loading={saving} disabled={!title.trim()} className="shrink-0 h-[42px]">
-              Ajouter
-            </Button>
-          </div>
-          <p className="text-xs text-muted">
-            Une tâche dépendante passe en « bloquée » tant que la précédente n’est pas faite. Avec une échéance, l’assigné reçoit un rappel la veille / le jour J.
-          </p>
-        </form>
-      ) : null}
-
-      {canManage && tasks.length === 0 && !loading && (
+      {canManage && tasks.length === 0 && !loading ? (
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center space-y-4">
           <Sparkles className="w-8 h-8 text-primary mx-auto" />
           <div>
             <h3 className="font-semibold text-foreground text-lg">Générer une checklist type</h3>
             <p className="text-sm text-muted max-w-sm mx-auto mt-1">
-              Commencez rapidement avec une liste de tâches pré-configurée (communication, logistique, relances).
+              Communication, logistique et relances, prêtes à assigner.
             </p>
           </div>
-          <Button onClick={handleSeed} variant="secondary" loading={saving}>
+          <Button onClick={() => void handleSeed()} variant="secondary" loading={saving}>
             Générer les tâches de base
           </Button>
         </div>
-      )}
+      ) : null}
+
+      <EventTaskFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        task={editingTask}
+        tasks={tasks}
+        assignees={assignees}
+        saving={saving}
+        error={formError}
+        onSubmit={handleSave}
+      />
     </div>
   );
 }

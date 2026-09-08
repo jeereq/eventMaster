@@ -749,7 +749,7 @@ export async function listMyTickets(req: AuthenticatedRequest, res: Response) {
 
     const orders = await prisma.ticketOrder.findMany({
       where: {
-        status: 'PAID',
+        status: { in: ['PAID', 'PENDING'] },
         OR: [
           { userId: user.id },
           { buyerEmail: { equals: email, mode: 'insensitive' } },
@@ -759,7 +759,7 @@ export async function listMyTickets(req: AuthenticatedRequest, res: Response) {
         event: { select: { title: true, slug: true, date: true, location: true, isPublic: true } },
         guests: { select: { id: true, email: true }, orderBy: { createdAt: 'asc' } },
       },
-      orderBy: { paidAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }],
       take: 100,
     });
 
@@ -769,9 +769,11 @@ export async function listMyTickets(req: AuthenticatedRequest, res: Response) {
           order.guests.find((g) => g.email.toLowerCase() === email) || order.guests[0];
         return {
           orderId: order.id,
+          status: order.status,
           quantity: order.quantity,
           amountFc: order.amountFc,
           paidAt: order.paidAt,
+          createdAt: order.createdAt,
           buyerName: order.buyerName,
           event: order.event,
           guestId: primary?.id || null,

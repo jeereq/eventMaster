@@ -7,6 +7,7 @@ import { Button, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui'
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
+import { CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem, type PublicService, type PublicVenue } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Play, Sparkles, Building2, ArrowRight, MapPin, Users } from 'lucide-react';
@@ -103,6 +104,7 @@ export default function ListingDetailLayout({
   relatedServices,
   relatedVenues,
   onRetry,
+  paymentInProgress = false,
 }: {
   backHref: string;
   backLabel: string;
@@ -147,6 +149,7 @@ export default function ListingDetailLayout({
   shareSlug?: string;
   shareKind?: 'venue' | 'service' | 'event' | 'rental';
   onRetry?: () => void;
+  paymentInProgress?: boolean;
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
@@ -187,6 +190,11 @@ export default function ListingDetailLayout({
       }
     }
     router.push(stored);
+  };
+
+  const closeMobileCommerce = () => {
+    if (paymentInProgress && !window.confirm(CLOSE_PAYMENT_CONFIRM)) return;
+    setMobileModalOpen(false);
   };
 
   const openMobileCommerce = (action: 'inquire' | 'book') => {
@@ -809,7 +817,7 @@ export default function ListingDetailLayout({
       {showCommerce && (
         <Modal
           open={mobileModalOpen}
-          onClose={() => setMobileModalOpen(false)}
+          onClose={closeMobileCommerce}
           title={mobileAction === 'inquire' ? inquireLabel : bookLabel}
           description={title}
           size="lg"

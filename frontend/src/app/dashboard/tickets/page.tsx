@@ -30,9 +30,11 @@ import OrgTicketingView from '@/components/OrgTicketingView';
 
 type MyTicket = {
   orderId: string;
+  status?: string;
   quantity: number;
   amountFc: number;
   paidAt: string | null;
+  createdAt?: string;
   buyerName: string;
   event: {
     title: string;
@@ -140,6 +142,15 @@ export default function TicketsPage() {
       : null;
     return (
     <div className="flex flex-wrap gap-1.5">
+      {ticket.status === 'PENDING' && detailsHref ? (
+        <Link
+          href={detailsHref}
+          className="inline-flex"
+          onClick={() => rememberCatalogueReturn('/dashboard/tickets')}
+        >
+          <Button size="sm">Reprendre le paiement</Button>
+        </Link>
+      ) : null}
       {ticket.guestId ? (
         <Link href={`/rsvp/${ticket.guestId}`} className="inline-flex">
           <Button size="sm" leftIcon={<QrCode className="w-4 h-4" />}>
@@ -390,9 +401,13 @@ export default function TicketsPage() {
                       value={ticket.amountFc > 0 ? formatFc(ticket.amountFc) : 'Libre'}
                       valueMeta={`${ticket.quantity} place${ticket.quantity > 1 ? 's' : ''}`}
                       status={
-                        <StatusPill tone={upcoming ? 'emerald' : 'slate'}>
-                          {upcoming ? 'À venir' : 'Passé'}
-                        </StatusPill>
+                        ticket.status === 'PENDING' ? (
+                          <StatusPill tone="amber">Paiement en cours</StatusPill>
+                        ) : (
+                          <StatusPill tone={upcoming ? 'emerald' : 'slate'}>
+                            {upcoming ? 'À venir' : 'Passé'}
+                          </StatusPill>
+                        )
                       }
                       actions={ticketActions(ticket)}
                     />

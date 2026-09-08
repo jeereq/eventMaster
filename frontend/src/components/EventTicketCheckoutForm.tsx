@@ -19,6 +19,12 @@ import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/co
 import SeatSelection3DViewer from '@/components/SeatSelection3DViewer';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import PaymentAccountPicker from '@/components/PaymentAccountPicker';
+import PaymentPendingView from '@/components/PaymentPendingView';
+import {
+  clearPendingTicketPayment,
+  readPendingTicketPayment,
+  writePendingTicketPayment,
+} from '@/lib/pendingTicketPayment';
 import type { FlexPayChargeCurrency } from '@/lib/flexPayCurrency';
 import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 
@@ -47,7 +53,13 @@ type SeatInventoryMeta = {
   roomType?: string | null;
 };
 
-export default function EventTicketCheckoutForm({ event }: { event: PublicEventCard }) {
+export default function EventTicketCheckoutForm({
+  event,
+  onPaymentActivityChange,
+}: {
+  event: PublicEventCard;
+  onPaymentActivityChange?: (active: boolean) => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -66,6 +78,11 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const [activeTableId, setActiveTableId] = useState<string | null>(null);
   const [seatsLoading, setSeatsLoading] = useState(false);
   const [planViewMode, setPlanViewMode] = useState<PlanViewMode>('3d');
+  const [pendingOrder, setPendingOrder] = useState<{
+    orderId: string;
+    method: 'card' | 'mobile';
+  } | null>(null);
+  const [paidResult, setPaidResult] = useState<{ rsvpUrl?: string } | null>(null);
 
   const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
   const zonePricing = pricingMode === 'by_zone';
@@ -96,6 +113,25 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     setBuyerName((prev) => prev || user.name || '');
     setBuyerPhone((prev) => prev || user.phone || '');
   }, [user]);
+
+  useEffect(() => {
+    const stored = readPendingTicketPayment(slug);
+    const queryOrder = search.get('order');
+    const paused = search.get('payment') === 'paused' || search.get('canceled') === '1' || search.get('declined') === '1';
+    if (stored) {
+      setPendingOrder({ orderId: stored.orderId, method: stored.method });
+      return;
+    }
+    if (paused && queryOrder) {
+      const method = search.get('method') === 'card' ? 'card' : 'mobile';
+      setPendingOrder({ orderId: queryOrder, method });
+      writePendingTicketPayment({ orderId: queryOrder, slug, method, eventTitle: event.title });
+    }
+  }, [slug, search, event.title]);
+
+  useEffect(() => {
+    onPaymentActivityChange?.(Boolean(pendingOrder) && !paidResult);
+  }, [pendingOrder, paidResult, onPaymentActivityChange]);
 
   const reloadSeats = React.useCallback(async () => {
     if (!seatMode || !slug) return;
@@ -284,26 +320,34 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         ...(zonePricing && !seatMode && selectedZoneId ? { pricingZoneId: selectedZoneId } : {}),
       });
       if (data.checkoutUrl) {
+        if (data.orderId) {
+          writePendingTicketPayment({
+            orderId: data.orderId,
+            slug,
+            method: 'card',
+            eventTitle: event.title,
+          });
+          setPendingOrder({ orderId: data.orderId, method: 'card' });
+        }
         window.location.href = data.checkoutUrl;
         return;
       }
-      const rsvp = data.rsvpUrl ? `&rsvp=${encodeURIComponent(data.rsvpUrl)}` : '';
       const isFlex =
         data.provider === 'flexpay_mobile' || data.provider === 'flexpay_card';
-      const provider = isFlex ? '&provider=flexpay' : '';
-      const methodQ =
-        data.provider === 'flexpay_mobile'
-          ? '&method=mobile'
-          : data.provider === 'flexpay_card'
-            ? '&method=card'
-            : '';
-      const pendingQ = isFlex && data.orderId && !data.rsvpUrl ? '&pending=1' : '';
-      const currencyQ =
-        data.provider === 'flexpay_mobile' && (data.currency === 'USD' || currency === 'USD')
-          ? '&currency=USD'
-          : '';
+      if (isFlex && data.orderId && !data.rsvpUrl) {
+        const method = data.provider === 'flexpay_card' ? 'card' : 'mobile';
+        writePendingTicketPayment({
+          orderId: data.orderId,
+          slug,
+          method,
+          eventTitle: event.title,
+        });
+        setPendingOrder({ orderId: data.orderId, method });
+        return;
+      }
+      const rsvp = data.rsvpUrl ? `&rsvp=${encodeURIComponent(data.rsvpUrl)}` : '';
       router.push(
-        `${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}${provider}${methodQ}${pendingQ}${currencyQ}`,
+        `${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}`,
       );
     } catch (err: unknown) {
       void reloadSeats();
@@ -313,10 +357,44 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     }
   };
 
+  const pollPending = async () => {
+    if (!pendingOrder) return { status: 'error' as const, message: 'Commande manquante.' };
+    const data = await api.get(`/public/payments/flexpay/orders/${pendingOrder.orderId}/verify`);
+    if (data.paid) {
+      clearPendingTicketPayment(pendingOrder.orderId);
+      setPaidResult({ rsvpUrl: data.rsvpUrl || '' });
+      return { status: 'paid' as const };
+    }
+    if (data.status === 'failed') {
+      return { status: 'failed' as const, message: data.message || 'Le paiement a échoué ou a été refusé.' };
+    }
+    return { status: 'pending' as const, message: data.message || 'En attente de confirmation FlexPay…' };
+  };
+
+  const retryPending = async () => {
+    if (!pendingOrder) return;
+    const phone = (mmPhone.trim() || buyerPhone.trim()).replace(/\s+/g, '').replace(/^\+/, '');
+    const data = await api.post(`/public/payments/flexpay/orders/${pendingOrder.orderId}/retry`, {
+      paymentMethod: pendingOrder.method,
+      ...(pendingOrder.method === 'mobile' ? { phone, operator, currency } : {}),
+    });
+    if (data.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
+    }
+  };
+
+  const cancelPending = async () => {
+    if (!pendingOrder) return;
+    await api.post(`/public/payments/flexpay/orders/${pendingOrder.orderId}/cancel`, {});
+    clearPendingTicketPayment(pendingOrder.orderId);
+    setPendingOrder(null);
+    setError('Commande annulée. Vous pouvez en créer une nouvelle.');
+  };
+
   const showAuthChoice = !authLoading && !token;
 
   return (
-    <form onSubmit={submit} className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
+    <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
       <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
         <Ticket className="w-4 h-4" />
         {event.paid ? 'Acheter un billet' : 'S’inscrire'}
@@ -334,11 +412,45 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
       {programHint && (
         <p className="text-[10px] text-muted">Ambiance programme actuelle : {programHint}</p>
       )}
-      {search.get('canceled') && (
-        <Alert variant="error">Paiement annulé. Vous pouvez réessayer.</Alert>
+      {(search.get('canceled') || search.get('payment') === 'paused') && !pendingOrder && (
+        <Alert variant="info">
+          Paiement interrompu. La commande reste ouverte quelques heures : vous pouvez la reprendre ou en créer une nouvelle.
+        </Alert>
+      )}
+      {search.get('declined') && (
+        <Alert variant="error">Le paiement a été refusé par l’opérateur. Relancez ou changez de moyen.</Alert>
       )}
       {error && <Alert variant="error">{error}</Alert>}
-      {event.soldOut ? (
+      {paidResult ? (
+        <div className="space-y-3">
+          <Alert variant="success">Paiement confirmé. Votre place est réservée.</Alert>
+          {paidResult.rsvpUrl ? (
+            <Link href={paidResult.rsvpUrl} className="inline-flex">
+              <Button type="button">Ouvrir mon espace invité</Button>
+            </Link>
+          ) : (
+            <Link href="/dashboard/tickets" className="inline-flex">
+              <Button type="button">Voir mes billets</Button>
+            </Link>
+          )}
+        </div>
+      ) : pendingOrder ? (
+        <PaymentPendingView
+          method={pendingOrder.method}
+          title="Paiement en cours"
+          description={
+            pendingOrder.method === 'mobile'
+              ? 'Validez la demande sur votre téléphone. Fermer cette fenêtre ne l’annule pas.'
+              : 'Terminez le paiement chez FlexPay, ou reprenez-le ici si vous avez fermé la page.'
+          }
+          onPoll={pollPending}
+          onRetry={retryPending}
+          onCancelPayment={cancelPending}
+          onPaid={() => {
+            /* pollPending already sets paidResult */
+          }}
+        />
+      ) : event.soldOut ? (
         <p className="text-sm text-muted">Plus de places disponibles.</p>
       ) : showAuthChoice ? (
         <ClientAuthChoice
@@ -346,7 +458,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           description="Un compte est requis pour réserver une place ou acheter un billet. Après connexion, vous revenez à cette fiche."
         />
       ) : (
-        <>
+        <form onSubmit={submit} className="space-y-3">
           {token && user && (
             <p className="text-xs text-muted">
               Connecté en tant que {user.name || user.email}. Les billets apparaîtront dans{' '}
@@ -608,8 +720,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           <Button type="submit" loading={busy} fullWidth className="min-h-11">
             {event.paid ? 'Payer et réserver' : 'Confirmer l’inscription'}
           </Button>
-        </>
+        </form>
       )}
-    </form>
+    </div>
   );
 }

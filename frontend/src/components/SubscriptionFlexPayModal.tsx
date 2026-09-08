@@ -16,6 +16,7 @@ import type { BillingCycle, PlanId } from '@/config/landingPricing';
 import { durationDaysForPlan } from '@/config/landingPricing';
 import PaymentPendingView from '@/components/PaymentPendingView';
 import PaymentAccountPicker from '@/components/PaymentAccountPicker';
+import { CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { formatChargeAmount, type FlexPayChargeCurrency } from '@/lib/flexPayCurrency';
 import { resolveUsdExchangeRateCdf } from '@/lib/platformCities';
@@ -166,7 +167,10 @@ export default function SubscriptionFlexPayModal({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={() => {
+        if (step === 'waiting' && !window.confirm(CLOSE_PAYMENT_CONFIRM)) return;
+        onClose();
+      }}
       size="sm"
       title={retryRequestId ? 'Reprendre le paiement' : isRenew ? 'Renouveler le forfait' : 'Payer l’abonnement'}
       description={`${planName}${priceLabel ? ` · ${priceLabel}` : ''} · FlexPay`}
@@ -193,6 +197,8 @@ export default function SubscriptionFlexPayModal({
           onPoll={pollRequest}
           onRetry={() => setStep('form')}
           retryLabel="Changer de moyen de paiement"
+          backLabel="Garder le paiement en cours"
+          onBack={onClose}
           onPaid={() => {
             void finishPaid();
           }}

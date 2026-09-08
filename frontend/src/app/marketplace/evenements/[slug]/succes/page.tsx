@@ -8,6 +8,7 @@ import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PaymentPendingView from '@/components/PaymentPendingView';
 import { Alert, Button } from '@/components/ui';
 import { eventPublicHref, eventPublicListHref } from '@/lib/safeAppPath';
+import { clearPendingTicketPayment } from '@/lib/pendingTicketPayment';
 import { CheckCircle2, ArrowLeft, QrCode, Ticket, HelpCircle } from 'lucide-react';
 
 type SuccessGuestItem = {
@@ -44,6 +45,7 @@ function SuccessInner() {
     if (data.event?.title) setTitle(data.event.title);
     if (Array.isArray(data.guests)) setGuestsList(data.guests);
     if (data.paid) {
+      if (orderId) clearPendingTicketPayment(orderId);
       setRsvpUrl(data.rsvpUrl || '');
       setPaid(true);
       setPending(false);
@@ -117,13 +119,21 @@ function SuccessInner() {
               method={method || (provider === 'flexpay' ? 'mobile' : 'card')}
               description={
                 method === 'mobile' || (!method && provider === 'flexpay')
-                  ? 'Une demande Mobile Money a été envoyée. Confirmez sur votre téléphone : cette page se met à jour toute seule.'
+                  ? 'Une demande Mobile Money a été envoyée. Confirmez sur votre téléphone : cette page se met à jour toute seule. Fermer ne l’annule pas.'
                   : 'Nous confirmons votre paiement carte FlexPay…'
               }
               backHref={eventPublicHref(slug)}
-              backLabel="Retour à l’événement"
+              backLabel="Revenir à l’événement (paiement en cours)"
               onPoll={orderId && provider === 'flexpay' ? pollFlexPay : pollSession}
               onRetry={orderId && provider === 'flexpay' ? retryFlexPay : undefined}
+              onCancelPayment={
+                orderId && provider === 'flexpay'
+                  ? async () => {
+                      await api.post(`/public/payments/flexpay/orders/${orderId}/cancel`, {});
+                      window.location.assign(eventPublicHref(slug));
+                    }
+                  : undefined
+              }
               onPaid={() => {
                 setPaid(true);
                 setPending(false);
