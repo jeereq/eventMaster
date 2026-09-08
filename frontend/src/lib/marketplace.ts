@@ -98,9 +98,9 @@ export interface VenueListingDraft {
 
 export const ACCOUNT_KIND_LABELS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Organisateur d’événements',
-  VENDOR: 'Prestataire / salles',
-  BOTH: 'Les deux',
-  CLIENT: 'Je cherche une salle ou un prestataire',
+  VENDOR: 'Salle ou prestataire',
+  BOTH: 'Organisateur et vendeur',
+  CLIENT: 'Client (recherche)',
 };
 
 export const ACCOUNT_KIND_FILTER_LABELS: Record<TenantAccountKind, string> = {
@@ -111,10 +111,10 @@ export const ACCOUNT_KIND_FILTER_LABELS: Record<TenantAccountKind, string> = {
 };
 
 export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
-  ORGANIZER: 'Créer, inviter, accueillir. Modèles, plan de table, QR.',
-  VENDOR: 'Salle à réserver, ou métier de service (traiteur, photo, location…).',
-  BOTH: 'Organiser et publier, dans le même compte.',
-  CLIENT: 'Chercher, composer un pack, demander un devis. Gratuit.',
+  ORGANIZER: 'Vous créez l’événement, invitez, et accueillez le jour J.',
+  VENDOR: 'Vous publiez une salle à réserver, ou un métier (traiteur, photo, location…).',
+  BOTH: 'Vous organisez et vous vendez, dans le même compte.',
+  CLIENT: 'Vous cherchez une salle ou un prestataire. Compte gratuit.',
 };
 
 export function isClientAccount(kind?: TenantAccountKind | string | null) {

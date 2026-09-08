@@ -11,7 +11,6 @@ import {
   User,
   Building,
   Building2,
-  Phone,
   MessageSquare,
   ScanLine,
   LayoutGrid,
@@ -22,14 +21,11 @@ import {
   Heart,
   Users,
   ShieldCheck,
-  Zap,
   Eye,
-  Layers,
   ArrowRight,
   CheckCircle2,
   Ticket,
   Briefcase,
-  ChevronDown,
   Scale,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
@@ -46,17 +42,20 @@ import {
 import { interpolateRates } from '@/lib/platformRates';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import {
-  ACCOUNT_KIND_DESCRIPTIONS,
-  ACCOUNT_KIND_LABELS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   type ServiceCategory,
   type TenantAccountKind,
 } from '@/lib/marketplace';
+import {
+  registerAccountFormTitle,
+  registerAccountShortLabel,
+  registerAccountSummary,
+} from '@/lib/registerAccountKinds';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
-import { formatFc, LANDING_PLANS } from '@/config/landingPricing';
+import { LANDING_PLANS } from '@/config/landingPricing';
+import RegisterAccountKindPicker from '@/components/register/RegisterAccountKindPicker';
 import RegisterReferralGate from '@/components/register/RegisterReferralGate';
-import RegisterServiceSpecialty from '@/components/register/RegisterServiceSpecialty';
 import RegisterVendorTrackPicker from '@/components/register/RegisterVendorTrackPicker';
 import {
   planForVendorTrack,
@@ -66,13 +65,6 @@ import {
   type VendorRegisterTrack,
   type VendorServiceGroup,
 } from '@/lib/registerVendorIntent';
-import {
-  DEFAULT_WELCOME_AI_GRANTS,
-  formatWelcomeGrantAmount,
-  sanitizeWelcomeAiGrants,
-  type WelcomeGrantRules,
-} from '@/lib/welcomeAiGrants';
-import { LANDING_SLOGAN } from '@/lib/landingProfiles';
 import { cn } from '@/lib/cn';
 
 interface RegistrationActionConfig {
@@ -416,18 +408,18 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   ORGANIZER: {
     key: 'ORGANIZER',
     badge: 'Organisateur',
-    heroTitle: LANDING_SLOGAN.full,
+    heroTitle: 'Votre espace organisateur',
     heroDescription:
-      'Créez l’événement, invitez, accueillez. Retrouvez la sérénité avec un centre de commande unifié pour toutes vos célébrations.',
-    goalTitle: 'Objectif : Espace Organisateur Événementiel',
-    goalSubtitle: 'Gérez vos célébrations, invitations WhatsApp et plans de salle en toute autonomie.',
+      'Créez l’événement, invitez vos proches, suivez les réponses et accueillez le jour J.',
+    goalTitle: 'Compte organisateur',
+    goalSubtitle: 'Invitations, plan de table et accueil QR.',
     goalTag: 'Organisateur',
     goalIcon: Calendar,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/events',
-    submitButtonLabel: 'S’inscrire gratuitement',
-    orgLabel: 'Nom de l’organisation ou événement',
-    orgPlaceholder: 'Ex: Association / Famille / Entreprise',
+    submitButtonLabel: 'Créer mon compte organisateur',
+    orgLabel: 'Nom de l’événement ou de l’organisation',
+    orgPlaceholder: 'Ex: Mariage Sarah & David / Famille Dupont',
     features: [
       { step: 1, icon: Calendar, title: 'Créer', desc: 'Titre, date, lieu. Un modèle d’invitation prêt en un clic.' },
       { step: 2, icon: Mail, title: 'Inviter', desc: 'Un lien par personne. Suivez les réponses sans aucun stress.' },
@@ -437,64 +429,64 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   CLIENT: {
     key: 'CLIENT',
     badge: 'Client marketplace',
-    heroTitle: 'Trouvez la perle rare, tout simplement',
+    heroTitle: 'Trouvez salle et prestataires',
     heroDescription:
-      'Compte gratuit. Cherchez, comparez et demandez un devis sans engagement.',
-    goalTitle: 'Objectif : Compte Client Gratuit',
-    goalSubtitle: 'Explorez le catalogue, créez des packs budget et demandez des devis sans carte.',
-    goalTag: 'Compte Client',
+      'Compte gratuit. Comparez, gardez des favoris, demandez un devis sans engagement.',
+    goalTitle: 'Compte client',
+    goalSubtitle: 'Recherche, packs budget et devis. Gratuit.',
+    goalTag: 'Client',
     goalIcon: Store,
     defaultAccountKind: 'CLIENT',
     defaultNextPath: '/marketplace',
-    submitButtonLabel: 'Créer mon compte client gratuit',
+    submitButtonLabel: 'Créer mon compte gratuit',
     orgLabel: '',
     orgPlaceholder: '',
     features: [
-      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, prestataires, matériel & équipements. Trouvez exactement ce qu’il vous faut.' },
-      { step: 2, icon: Wallet, title: 'Composer', desc: 'Un pack sur mesure. Rien n’est réservé tant que le devis n’est pas envoyé.' },
-      { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Versez l’acompte directement au pro et sécurisez votre date.' },
+      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, prestataires, matériel. Trouvez ce qu’il vous faut.' },
+      { step: 2, icon: Wallet, title: 'Comparer', desc: 'Favoris et pack budget. Rien n’est réservé tant que le devis n’est pas envoyé.' },
+      { step: 3, icon: CalendarCheck, title: 'Demander un devis', desc: 'Écrivez au pro. L’acompte se verse ensuite, directement.' },
     ],
   },
   VENDOR: {
     key: 'VENDOR',
     badge: 'Salle & Prestataire',
-    heroTitle: 'Donnez de la visibilité à votre activité',
+    heroTitle: 'Publiez votre activité',
     heroDescription:
-      'Publiez votre fiche vitrine, recevez des demandes qualifiées et bloquez vos dates.',
-    goalTitle: 'Objectif : Vitrine Professionnelle',
-    goalSubtitle: 'Publiez vos espaces ou prestations et recevez des demandes sans commission cachée.',
-    goalTag: 'Prestataire / Salle',
+      'Une vitrine pour votre salle ou votre métier. Les organisateurs vous écrivent, vous bloquez la date.',
+    goalTitle: 'Compte salle ou prestataire',
+    goalSubtitle: 'Vitrine, devis, calendrier.',
+    goalTag: 'Vendeur',
     goalIcon: Store,
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/catalogue',
-    submitButtonLabel: 'Référencer mon activité',
-    orgLabel: 'Nom de l’établissement ou entreprise',
+    submitButtonLabel: 'Créer mon compte professionnel',
+    orgLabel: 'Nom de l’établissement ou de l’enseigne',
     orgPlaceholder: 'Ex: Espace Prestige Kinshasa',
     features: [
-      { step: 1, icon: Store, title: 'Publier', desc: 'Photos HD, visite 3D et tarifs pour séduire vos clients.' },
-      { step: 2, icon: MessageSquare, title: 'Répondre', desc: 'Recevez les demandes et discutez avec vos futurs clients.' },
-      { step: 3, icon: CalendarCheck, title: 'Bloquer la date', desc: 'Confirmez les réservations et synchronisez vos plannings.' },
+      { step: 1, icon: Store, title: 'Publier', desc: 'Photos, tarifs, éventuellement visite 3D.' },
+      { step: 2, icon: MessageSquare, title: 'Répondre', desc: 'Demandes de devis d’organisateurs, sans commission cachée.' },
+      { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Bloquez la date et suivez les acomptes.' },
     ],
   },
   BOTH: {
     key: 'BOTH',
     badge: 'Espace complet',
-    heroTitle: 'Le meilleur des deux mondes',
+    heroTitle: 'Organiser et vendre, ensemble',
     heroDescription:
-      'Organisez vos événements et proposez vos propres services. Maîtrisez tout depuis un seul compte.',
-    goalTitle: 'Objectif : Espace Complet (Organisation & Vitrine)',
-    goalSubtitle: 'Gérez à la fois l’organisation d’événements et la vente de vos prestations.',
-    goalTag: 'Compte Mixte',
+      'Un compte pour vos événements et pour votre vitrine salle ou prestataire.',
+    goalTitle: 'Compte organisateur et vendeur',
+    goalSubtitle: 'Événements d’un côté, devis de l’autre.',
+    goalTag: 'Mixte',
     goalIcon: Sparkles,
     defaultAccountKind: 'BOTH',
     defaultNextPath: '/dashboard',
-    submitButtonLabel: 'Créer mon espace complet',
-    orgLabel: 'Nom de l’entreprise ou établissement',
+    submitButtonLabel: 'Créer mon compte',
+    orgLabel: 'Nom de l’entreprise ou de l’établissement',
     orgPlaceholder: 'Ex: Groupe Événementiel & Salles',
     features: [
-      { step: 1, icon: Calendar, title: 'Créer ou publier', desc: 'Un événement privé ou une fiche vitrine publique.' },
-      { step: 2, icon: Mail, title: 'Échanger', desc: 'Gérez vos invitations d’un côté, et vos devis clients de l’autre.' },
-      { step: 3, icon: ScanLine, title: 'Le Jour J', desc: 'Accueil fluide au scan QR, sans aucune application à installer.' },
+      { step: 1, icon: Calendar, title: 'Organiser', desc: 'Invitations, plan de table, accueil QR.' },
+      { step: 2, icon: Store, title: 'Publier', desc: 'Votre salle ou vos prestations, visibles des organisateurs.' },
+      { step: 3, icon: ScanLine, title: 'Le jour J', desc: 'Scan à l’entrée, sans application à installer pour les invités.' },
     ],
   },
 };
@@ -530,6 +522,18 @@ function resolveActionConfig(
   return REGISTRATION_ACTION_CONFIGS.ORGANIZER;
 }
 
+const KIND_STEP_FEATURES = [
+  { step: 1, icon: Calendar, title: 'Choisissez l’usage', desc: 'Organiser, chercher, ou publier une salle / un métier.' },
+  { step: 2, icon: User, title: 'Vos coordonnées', desc: 'Nom, e-mail, mot de passe. Sans carte bancaire.' },
+  { step: 3, icon: Mail, title: 'Un code, puis l’accès', desc: 'Confirmation par e-mail ou WhatsApp, ensuite votre espace s’ouvre.' },
+];
+
+const VENDOR_TRACK_FEATURES = [
+  { step: 1, icon: Building2, title: 'Salle ou métier', desc: 'Un lieu à réserver, ou un service qui se déplace.' },
+  { step: 2, icon: User, title: 'Le compte', desc: 'Nom de la salle ou de l’enseigne, puis e-mail et mot de passe.' },
+  { step: 3, icon: CalendarCheck, title: 'Votre fiche', desc: 'Après le code, vous publiez vitrine, tarifs et disponibilités.' },
+];
+
 export default function RegisterPage() {
  return (
  <Suspense
@@ -553,33 +557,6 @@ export default function RegisterPage() {
  );
 }
 
-const ENTERPRISE_PLAN_KEYS = new Set(['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3']);
-const CATALOG_PLAN_KEYS = new Set(['VENUE', 'SERVICE', 'CATALOG']);
-
-function welcomeSignupGrantLabel(
-  accountKind: TenantAccountKind,
-  intent: string | null,
-  plan: string | null,
-  rules: WelcomeGrantRules = DEFAULT_WELCOME_AI_GRANTS,
-): string {
-  const planKey = (plan || '').toUpperCase();
-  if (accountKind !== 'ORGANIZER' || CATALOG_PLAN_KEYS.has(planKey)) {
-    return formatWelcomeGrantAmount(rules.catalog, formatFc);
-  }
-  if (ENTERPRISE_PLAN_KEYS.has(planKey)) {
-    const later = formatWelcomeGrantAmount(rules.enterprise, formatFc);
-    const now = rules.b2b.moment === 'signup' ? formatWelcomeGrantAmount(rules.b2b, formatFc) : null;
-    if (rules.enterprise.moment === 'plan_activation' && now) {
-      return `${now} à l’ouverture, puis ${later} à l’activation du forfait payant`;
-    }
-    return later;
-  }
-  if (intent === 'pro' || planKey === 'STANDARD' || planKey.startsWith('PREMIUM_')) {
-    return formatWelcomeGrantAmount(rules.b2b, formatFc);
-  }
-  return formatWelcomeGrantAmount(rules.b2c, formatFc);
-}
-
 function RegisterPageContent() {
  const { register } = useAuth();
  const { site, ready } = usePlatformSite();
@@ -594,6 +571,7 @@ function RegisterPageContent() {
   const actionParam = searchParams.get('action');
   const planParam = searchParams.get('plan');
   const templateIdParam = searchParams.get('templateId');
+  const kindFromUrl = Boolean(actionParam || intentParam || planParam || searchParams.get('kind'));
 
  const [email, setEmail] = useState('');
  const [password, setPassword] = useState('');
@@ -616,6 +594,7 @@ function RegisterPageContent() {
  const [loading, setLoading] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy'>('summary');
+  const [kindConfirmed, setKindConfirmed] = useState(kindFromUrl);
 
   useEffect(() => {
     setVerificationMethod(defaultAuthOtpMethod(authChannels));
@@ -626,8 +605,11 @@ function RegisterPageContent() {
     document.getElementById('register-form-error')?.focus();
   }, [error]);
 
-  const hasExplicitAction = Boolean(actionParam || intentParam || planParam || searchParams.get('kind'));
- const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
+  const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
+
+  useEffect(() => {
+    if (kindFromUrl) setKindConfirmed(true);
+  }, [kindFromUrl]);
 
   // Détection et pré-sélection intelligente des paramètres URL
  useEffect(() => {
@@ -673,10 +655,27 @@ function RegisterPageContent() {
   }, [effectiveAction, intentParam, accountKind, isClientFlow, planParam]);
 
   const vendorPlanLocked = planParam === 'VENUE' || planParam === 'SERVICE' || planParam === 'CATALOG';
-  const needsVendorTrack = accountKind === 'VENDOR';
-  const showVendorChooser = needsVendorTrack && !vendorTrack;
-  const showServiceSpecialty = needsVendorTrack && vendorTrack === 'service' && !serviceCategory;
-  const showAccountForm = !showVendorChooser && !showServiceSpecialty;
+  const kindReady = kindFromUrl || kindConfirmed;
+  const showKindChooser = !kindReady;
+  const showVendorChooser = kindReady && accountKind === 'VENDOR' && !vendorTrack;
+  const showAccountForm = kindReady && !showVendorChooser;
+
+  const goBackToKind = () => {
+    if (kindFromUrl) return;
+    setKindConfirmed(false);
+    setVendorTrack(null);
+    setServiceGroup(null);
+    setServiceCategory(null);
+    setError('');
+  };
+
+  const goBackToVendorTrack = () => {
+    if (vendorPlanLocked) return;
+    setVendorTrack(null);
+    setServiceGroup(actionParam === 'rentals' ? 'rental' : null);
+    setServiceCategory(null);
+    setError('');
+  };
 
   // Résolution des détails du forfait éventuel
   const matchedPlan = useMemo(() => {
@@ -776,24 +775,40 @@ function RegisterPageContent() {
  }
  };
 
-  const GoalIcon = config.goalIcon;
+  const layoutTitle = showKindChooser
+    ? 'Que voulez-vous faire ?'
+    : showVendorChooser
+      ? 'Salle à réserver, ou métier de service ?'
+      : config.heroTitle;
+  const layoutDescription = showKindChooser
+    ? 'Trois usages, un compte. Choisissez d’abord : le formulaire s’adapte ensuite.'
+    : showVendorChooser
+      ? 'Une salle est un lieu. Un métier se déplace ou loue du matériel. Choisissez pour commencer.'
+      : interpolateRates(config.heroDescription, site);
 
-  // Caractéristiques enrichies pour le volet marketing
   const layoutFeatures = useMemo(() => {
-    return config.features.map((item) => ({
+    const source = showKindChooser
+      ? KIND_STEP_FEATURES
+      : showVendorChooser
+        ? VENDOR_TRACK_FEATURES
+        : config.features;
+    return source.map((item) => ({
       ...item,
       desc: interpolateRates(item.desc, site),
     }));
-  }, [config.features, site]);
+  }, [showKindChooser, showVendorChooser, config.features, site]);
+
+  const loginHref = targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login';
 
  return (
  <AuthSplitLayout
-      title={config.heroTitle}
-      description={interpolateRates(config.heroDescription, site)}
+      title={layoutTitle}
+      description={layoutDescription}
       features={layoutFeatures}
  backHref="/"
  backLabel="Retour au site"
       maxWidthClassName="max-w-xl"
+      hideMobileTitle={showAccountForm}
  >
       <Card padding="md" className="border-border shadow-sm p-4 sm:p-5">
  {ready && !site.allowRegistration ? (
@@ -838,208 +853,93 @@ function RegisterPageContent() {
  </div>
  ) : (
  <>
-            {showAccountForm && (
-            <div className="mb-3.5 p-2.5 rounded-[var(--radius-card)] bg-primary/8 border border-primary/20 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-md bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                  <GoalIcon className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded">
-                      {config.goalTag}
-                    </span>
-                    {matchedPlan && (
-                      <span className="text-xs font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded">
-                        Forfait : {matchedPlan.ms365Name}
-                      </span>
-                    )}
-                    {templateIdParam && (
-                      <span className="text-xs font-bold text-foreground bg-surface border border-border px-1.5 py-0.5 rounded flex items-center gap-1">
-                        <Sparkles className="w-2.5 h-2.5 text-primary" /> Modèle prêt
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-xs font-bold text-foreground truncate mt-0.5">
-                    {config.goalTitle}
-                  </h2>
- </div>
- </div>
-
-              <div className="hidden sm:flex items-center gap-2 text-xs text-muted shrink-0">
-                <span className="inline-flex items-center gap-1 text-primary font-medium">
-                  <CheckCircle2 className="w-3 h-3" /> Sans carte
-                </span>
- </div>
- </div>
- )}
-
             {error && (
               <Alert variant="error" className="mb-3 py-2 text-xs" id="register-form-error">
                 {error}
               </Alert>
             )}
 
-            {showVendorChooser && (
-              <RegisterVendorTrackPicker onSelect={setVendorTrack} />
+            {showKindChooser && (
+              <RegisterAccountKindPicker
+                loginHref={loginHref}
+                onSelect={(kind) => {
+                  setAccountKind(kind);
+                  setKindConfirmed(true);
+                  setError('');
+                  if (kind !== 'VENDOR') {
+                    setVendorTrack(null);
+                    setServiceGroup(null);
+                    setServiceCategory(null);
+                  }
+                }}
+              />
             )}
 
-            {showServiceSpecialty && (
-              <RegisterServiceSpecialty
-                group={serviceGroup}
-                category={serviceCategory}
-                onGroup={(group) => {
-                  setServiceGroup(group);
-                  setServiceCategory(null);
-                }}
-                onCategory={setServiceCategory}
-                onBack={() => {
-                  if (!vendorPlanLocked) {
-                    setVendorTrack(null);
-                  }
-                  setServiceGroup(actionParam === 'rentals' ? 'rental' : null);
-                  setServiceCategory(null);
-                }}
+            {showVendorChooser && (
+              <RegisterVendorTrackPicker
+                onSelect={setVendorTrack}
+                onBack={kindFromUrl ? undefined : goBackToKind}
+                loginHref={loginHref}
               />
             )}
 
             {showAccountForm && (
             <>
-            {/* En-tête formulaire compact */}
-            <div className="text-left mb-3">
+            <div className="text-left mb-3 space-y-1.5">
               <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
-                {accountKind === 'CLIENT'
-                  ? 'Créer mon compte client'
-                  : vendorTrack === 'venue'
-                    ? 'Créer mon compte salle'
-                    : vendorTrack === 'service'
-                      ? 'Créer mon compte prestataire'
-                      : accountKind === 'VENDOR'
-                        ? 'Créer mon compte professionnel'
-                        : 'Créer mon espace organisateur'}
+                {registerAccountFormTitle(accountKind, vendorTrack)}
               </h2>
-              <p className="mt-0.5 text-xs text-muted">
-                Déjà inscrit ?{' '}
-                <Link
-                  href={targetNextPath ? `/login?next=${encodeURIComponent(targetNextPath)}` : '/login'}
-                  className="font-semibold text-primary hover:underline"
-                >
-                  Connectez-vous
+              <p className="text-sm text-muted leading-relaxed">
+                {registerAccountSummary(accountKind, vendorTrack)}
+              </p>
+              <p className="text-xs text-muted leading-relaxed">
+                Compte : <span className="font-semibold text-foreground">{registerAccountShortLabel(accountKind, vendorTrack)}</span>
+                {!kindFromUrl ? (
+                  <>
+                    {' · '}
+                    <button
+                      type="button"
+                      onClick={vendorTrack && !vendorPlanLocked ? goBackToVendorTrack : goBackToKind}
+                      className="font-semibold text-primary hover:underline min-h-11 inline-flex items-center"
+                    >
+                      Changer
+                    </button>
+                  </>
+                ) : vendorTrack && !vendorPlanLocked ? (
+                  <>
+                    {' · '}
+                    <button
+                      type="button"
+                      onClick={goBackToVendorTrack}
+                      className="font-semibold text-primary hover:underline min-h-11 inline-flex items-center"
+                    >
+                      Salle ou métier
+                    </button>
+                  </>
+                ) : null}
+                {' · '}
+                Déjà un compte ?{' '}
+                <Link href={loginHref} className="font-semibold text-primary hover:underline">
+                  Connexion
                 </Link>
               </p>
-              {vendorTrack === 'service' && serviceCategory && (
-                <button
-                  type="button"
-                  onClick={() => setServiceCategory(null)}
-                  className="mt-2 inline-flex items-center min-h-11 gap-1.5 text-xs font-semibold text-primary hover:underline"
-                >
-                  Métier : {SERVICE_CATEGORY_LABELS[serviceCategory]} — modifier
-                </button>
+              {matchedPlan && matchedPlan.id !== 'FREE' && (
+                <p className="text-xs text-muted">
+                  Forfait choisi : <span className="font-semibold text-foreground">{matchedPlan.ms365Name}</span>
+                  {' — vous pourrez le valider après confirmation.'}
+                </p>
               )}
-              {vendorTrack === 'venue' && !vendorPlanLocked && (
-                <button
-                  type="button"
-                  onClick={() => setVendorTrack(null)}
-                  className="mt-2 inline-flex items-center min-h-11 gap-1.5 text-xs font-semibold text-primary hover:underline"
-                >
-                  Je suis plutôt prestataire
-                </button>
- )}
- </div>
+              {templateIdParam && (
+                <p className="text-xs text-muted">Le modèle d’invitation reste réservé après confirmation.</p>
+              )}
+              {vendorTrack === 'service' && serviceCategory && (
+                <p className="text-xs text-muted">
+                  Métier : {SERVICE_CATEGORY_LABELS[serviceCategory]}. Vous pourrez le préciser après connexion.
+                </p>
+              )}
+            </div>
 
             <form className="space-y-3" onSubmit={handleSubmit}>
-              {/* ─── SÉLECTION DU TYPE DE COMPTE COMPACTE ─── */}
-              {hasExplicitAction || vendorTrack ? (
-                <div className="p-2 rounded-[var(--radius-card)] bg-surface-muted/70 border border-border flex items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-6 h-6 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <GoalIcon className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="font-semibold text-foreground truncate text-xs">
-                      {vendorTrack === 'venue'
-                        ? 'Compte salle'
-                        : vendorTrack === 'service'
-                          ? 'Compte prestataire'
-                          : ACCOUNT_KIND_LABELS[accountKind]}
-                    </span>
-                    <span className="text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                      Offre liée
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <fieldset className="space-y-1 animate-fade-in">
-                  <div className="flex items-center justify-between">
-                    <legend className="text-xs font-semibold text-foreground">
-                      Type de compte souhaité
-                    </legend>
-                    <span className="text-xs text-muted">Modifiable plus tard</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {(['ORGANIZER', 'CLIENT', 'VENDOR', 'BOTH'] as TenantAccountKind[]).map((kind) => {
-                      const isSelected = accountKind === kind;
-                      const isRecommended = config.defaultAccountKind === kind;
-
-                      return (
- <label
- key={kind}
-                          className={cn(
-                            'flex flex-col justify-center gap-0.5 min-h-11 p-2.5 rounded-[var(--radius-card)] border text-xs cursor-pointer transition-all touch-manipulation',
-                            isSelected
-                              ? 'border-primary bg-primary/5 ring-1 ring-primary/40 text-foreground shadow-xs'
-                              : 'border-border text-muted hover:border-primary/40 hover:bg-surface-muted/50',
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-foreground flex items-center gap-1.5 text-xs">
- <input
- type="radio"
- name="accountKind"
-                                className="accent-primary"
-                                checked={isSelected}
-                                onChange={() => {
-                                  setAccountKind(kind);
-                                  if (kind !== 'VENDOR') {
-                                    setVendorTrack(null);
-                                    setServiceGroup(null);
-                                    setServiceCategory(null);
-                                  } else if (!resolveVendorTrackFromParams({ action: actionParam, plan: planParam })) {
-                                    setVendorTrack(null);
-                                    setServiceCategory(null);
-                                  }
-                                }}
-                              />
-                              {ACCOUNT_KIND_LABELS[kind]}
-                            </span>
-                            {isRecommended && (
-                              <span className="text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                Recommandé
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-normal text-xs text-muted leading-tight pl-5">
-                            {ACCOUNT_KIND_DESCRIPTIONS[kind]}
-                          </span>
- </label>
-                      );
-                    })}
- </div>
- </fieldset>
-              )}
-
-              <p className="text-xs text-muted leading-relaxed">
-                À l’ouverture, ce compte reçoit <strong className="text-foreground">{welcomeSignupGrantLabel(accountKind, intentParam, planParam, sanitizeWelcomeAiGrants(site.welcomeAiGrants))}</strong>
-                {accountKind !== 'CLIENT' ? (
-                  <>
-                    . Les managers partagent ce solde ; un compte protocole reçoit 4 jetons à la création.
-                  </>
-                ) : (
-                  <>.</>
-                )}
-              </p>
-
-              {/* ─── IDENTITÉ ET ORGANISATION (2 COLONNES) ─── */}
               <div className={cn('grid gap-2.5', accountKind === 'CLIENT' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')}>
                 <Input
                   label={accountKind === 'CLIENT' ? 'Votre nom complet' : 'Votre nom & prénom'}
@@ -1137,7 +1037,7 @@ function RegisterPageContent() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-foreground flex items-center gap-1 text-xs">
                     <Scale className="w-3.5 h-3.5 text-primary" />
-                    Engagements légaux
+                    Engagements
                   </span>
                   {(!acceptTerms || !acceptPrivacy) && (
                     <button
@@ -1259,9 +1159,8 @@ function RegisterPageContent() {
                   {config.submitButtonLabel}
  </Button>
 
-                <p className="text-center text-xs text-muted flex items-center justify-center gap-1">
-                  <Zap className="w-3 h-3 text-primary shrink-0" />
-                  Accès débloqué immédiatement après validation du code
+                <p className="text-center text-xs text-muted">
+                  Sans carte. Un code de confirmation, puis l’accès.
                 </p>
               </div>
  </form>

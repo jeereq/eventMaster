@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Building2, Store } from 'lucide-react';
+import { Building2, ChevronLeft, Store } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { VendorRegisterTrack } from '@/lib/registerVendorIntent';
 
@@ -14,35 +14,43 @@ const TRACKS: Array<{
 }> = [
   {
     id: 'venue',
-    title: 'Je publie une salle',
-    hint: 'Espace, domaine ou complexe à réserver, avec plan 2D/3D.',
+    title: 'Une salle à réserver',
+    hint: 'Espace, domaine ou complexe. Les organisateurs voient le lieu, demandent un devis, bloquent une date.',
     icon: Building2,
   },
   {
     id: 'service',
-    title: 'Je suis prestataire',
-    hint: 'Traiteur, photo, DJ, décoration, location de matériel…',
+    title: 'Un métier de service',
+    hint: 'Traiteur, photo, DJ, décoration, location de matériel… Vous vous déplacez ou livrez.',
     icon: Store,
   },
 ];
 
 export default function RegisterVendorTrackPicker({
   onSelect,
+  onBack,
+  loginHref = '/login',
 }: {
   onSelect: (track: VendorRegisterTrack) => void;
+  onBack?: () => void;
+  loginHref?: string;
 }) {
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
-          Que souhaitez-vous référencer ?
-        </h2>
-        <p className="mt-1 text-xs text-muted leading-relaxed">
-          Deux inscriptions distinctes : l’une pour les salles, l’autre pour les métiers de service.
-        </p>
-        <p className="mt-1.5 text-xs text-muted">
-          Déjà inscrit ?{' '}
-          <Link href="/login" className="font-semibold text-primary hover:underline">
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 min-h-11 text-xs font-semibold text-muted hover:text-foreground mb-1 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" aria-hidden />
+            Changer de type de compte
+          </button>
+        ) : null}
+        <p className="text-sm text-muted leading-relaxed">
+          Déjà un compte ?{' '}
+          <Link href={loginHref} className="font-semibold text-primary hover:underline">
             Connectez-vous
           </Link>
         </p>
@@ -62,7 +70,7 @@ export default function RegisterVendorTrackPicker({
               )}
             >
               <span className="w-10 h-10 rounded-[var(--radius-button)] bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Icon className="w-5 h-5" />
+                <Icon className="w-5 h-5" aria-hidden />
               </span>
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-foreground">{track.title}</span>
