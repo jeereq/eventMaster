@@ -7,7 +7,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
-import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard } from '@/components/GuestPortalShell';
+import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard, GuestHowTo } from '@/components/GuestPortalShell';
 import Link from 'next/link';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
 import type { GuestGuidelines } from '@/lib/guestGuidelines';
@@ -654,7 +654,7 @@ export default function RsvpPage() {
     return (
       <div className="min-h-screen em-guest-page flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-surface p-8 rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] text-center space-y-4">
-          <div className="bg-rose-50 text-rose-600 p-4 rounded-[var(--radius-card)] w-16 h-16 flex items-center justify-center mx-auto border border-rose-100">
+          <div className="bg-danger/10 text-danger p-4 rounded-[var(--radius-card)] w-16 h-16 flex items-center justify-center mx-auto border border-danger/25">
             <AlertCircle className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-semibold text-foreground tracking-tight">Invitation introuvable</h2>
@@ -673,7 +673,6 @@ export default function RsvpPage() {
       return (
         <GuestPortalShell
           title={guest.event.title}
-          eyebrow="Réponse enregistrée"
           guestId={guestId}
           organizationName={guest.organizationName}
           headerRight={
@@ -698,7 +697,7 @@ export default function RsvpPage() {
               <button
                 type="button"
                 onClick={() => setSubmitted(false)}
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary-hover transition shadow-sm"
+                className="inline-flex items-center justify-center min-h-11 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 Modifier ma réponse
               </button>
@@ -711,9 +710,9 @@ export default function RsvpPage() {
     // Portail invité confirmé — layout plateforme (simple / moderne)
     if (submitted && rsvpStatus === 'ACCEPTED') {
       const guestTabs = [
-        { id: 'badge', label: 'Pass', shortLabel: 'Pass', icon: <Award className="w-4 h-4" /> },
+        { id: 'badge', label: 'Pass QR', shortLabel: 'QR', icon: <Award className="w-4 h-4" /> },
         { id: 'table', label: 'Ma table', shortLabel: 'Table', icon: <LayoutGrid className="w-4 h-4" /> },
-        { id: 'route', label: 'Itinéraire', shortLabel: 'Lieu', icon: <Navigation className="w-4 h-4" /> },
+        { id: 'route', label: 'Lieu', shortLabel: 'Lieu', icon: <Navigation className="w-4 h-4" /> },
         { id: 'guestbook', label: "Livre d'or", shortLabel: 'Livre', icon: <Heart className="w-4 h-4" /> },
         { id: 'feed', label: 'Actualités', shortLabel: 'Actu', icon: <MessageCircle className="w-4 h-4" /> },
       ];
@@ -721,7 +720,6 @@ export default function RsvpPage() {
       return (
         <GuestPortalShell
           title={guest.event.title}
-          eyebrow="Invitation confirmée"
           guestId={guestId}
           organizationName={guest.organizationName}
           swipeTabIds={[...guestTabIds]}
@@ -744,9 +742,16 @@ export default function RsvpPage() {
           }
           contentClassName="space-y-5 pb-[calc(10.75rem+env(safe-area-inset-bottom))]"
         >
+            <GuestHowTo
+              steps={[
+                'Montrez le pass QR à l’accueil',
+                'Ouvrez Table pour votre siège',
+                'Ouvrez Lieu pour l’itinéraire',
+              ]}
+            />
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
-              <div className="space-y-6 animate-fade-in">
+              <div id="guest-panel-badge" role="tabpanel" aria-labelledby="guest-tab-badge" className="space-y-6 animate-fade-in">
                 <div className="em-guest-hero">
                   <div className="em-guest-hero__banner !py-4 !px-5">
                     <div className="relative z-[1] flex flex-wrap items-center justify-between gap-2">
@@ -756,7 +761,7 @@ export default function RsvpPage() {
                         </h2>
                         <p className="text-sm text-white/85 truncate">{guest.event.title}</p>
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 border border-white/25 text-[10px] font-semibold text-white shrink-0">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 border border-white/25 text-xs font-semibold text-white shrink-0">
                         Confirmé
                       </span>
                     </div>
@@ -775,7 +780,7 @@ export default function RsvpPage() {
                         className="w-52 h-52 sm:w-60 sm:h-60"
                       />
                       <span className="absolute inset-0 rounded-2xl bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <span className="bg-primary text-white text-[11px] font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
+                        <span className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
                           <Maximize2 className="w-3.5 h-3.5" aria-hidden />
                           Agrandir pour le scan
                         </span>
@@ -786,7 +791,7 @@ export default function RsvpPage() {
                       <p className="text-sm text-muted leading-snug">
                         Présentez ce QR à l&apos;accueil
                       </p>
-                      <p className="text-[11px] font-mono text-muted/80 tracking-widest">
+                      <p className="text-xs text-muted tracking-widest">
                         {guest.id.split('-')[0]?.toUpperCase()}
                       </p>
                       <div className="flex items-center justify-center gap-4 text-xs text-muted pt-1">
@@ -888,7 +893,8 @@ export default function RsvpPage() {
             )}
 
             {activeGuestTab === 'route' && (
-              guest.event.location ? (
+              <div id="guest-panel-route" role="tabpanel" aria-labelledby="guest-tab-route">
+              {guest.event.location ? (
                 <GuestVenueGuide
                   location={guest.event.location}
                   latitude={guest.event.latitude}
@@ -901,19 +907,24 @@ export default function RsvpPage() {
                   <p className="text-sm font-semibold text-foreground">Lieu non renseigné</p>
                   <p className="text-xs text-muted">L’organisateur n’a pas encore indiqué l’adresse de réception.</p>
                 </GuestPortalCard>
-              )
+              )}
+              </div>
             )}
 
             {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="px-1">
+              <div id="guest-panel-table" role="tabpanel" aria-labelledby="guest-tab-table" className="space-y-4 animate-fade-in">
+                <div className="px-1 space-y-2">
                   <h2 className="text-lg font-display font-semibold leading-snug tracking-tight text-foreground">
                     Votre table
                   </h2>
-                  <p className="text-xs text-muted mt-1">
-                    Plan de la salle, votre table et votre siège une fois le placement confirmé.
-                  </p>
+                  <GuestHowTo
+                    steps={[
+                      'Votre table est marquée sur le plan',
+                      'Basculez 2D ou 3D selon votre préférence',
+                      'Touchez une table pour voir les détails',
+                    ]}
+                  />
                 </div>
                   <GuestTablePlanView
                     guestId={guestId}
@@ -956,7 +967,7 @@ export default function RsvpPage() {
 
             {/* 3. LIVRE D'OR TAB */}
             {activeGuestTab === 'guestbook' && (
-              <div className="space-y-4 animate-fade-in">
+              <div id="guest-panel-guestbook" role="tabpanel" aria-labelledby="guest-tab-guestbook" className="space-y-4 animate-fade-in">
                 <div className="space-y-1 px-1">
                   <h3 className="font-display font-semibold text-foreground text-base">Livre d&apos;or</h3>
                   <p className="text-muted text-xs leading-relaxed">
@@ -972,7 +983,7 @@ export default function RsvpPage() {
                 )}
 
                 {guestbookError && (
-                  <div className="bg-rose-50 border border-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/50 px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold" role="alert">
+                  <div className="bg-danger/10 border border-danger/25 text-danger px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold" role="alert">
                     {guestbookError}
                   </div>
                 )}
@@ -995,7 +1006,7 @@ export default function RsvpPage() {
                   {/* Previews of uploaded guestbook photos */}
                   {guestbookPhotos.length > 0 && (
                     <div className="space-y-2">
-                      <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">
+                      <span className="text-xs font-semibold text-muted uppercase tracking-wider block">
                         Photos sélectionnées ({guestbookPhotos.length})
                       </span>
                       <div className="grid grid-cols-3 gap-2">
@@ -1011,7 +1022,7 @@ export default function RsvpPage() {
                             <button
                               type="button"
                               onClick={() => handleRemoveGuestbookPhoto(idx)}
-                              className="absolute top-1 right-1 p-1.5 min-h-8 min-w-8 inline-flex items-center justify-center bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow-sm"
+                              className="absolute top-1 right-1 p-1.5 min-h-11 min-w-11 inline-flex items-center justify-center bg-danger hover:bg-danger/90 text-primary-foreground rounded-full transition shadow-sm"
                               aria-label={`Retirer la photo ${idx + 1}`}
                             >
                               <X className="w-3 h-3" aria-hidden />
@@ -1072,7 +1083,7 @@ export default function RsvpPage() {
                   {loadingGuestbook && guestbookShares.length === 0 ? (
                     <div className="py-8 flex flex-col items-center justify-center gap-2">
                       <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                      <p className="text-[10px] text-muted">Chargement des messages…</p>
+                      <p className="text-xs text-muted">Chargement des messages…</p>
                     </div>
                   ) : guestbookShares.length === 0 ? (
                     <div className="text-center py-8 bg-surface-muted/40 rounded-[var(--radius-card)] border border-border p-4 space-y-1">
@@ -1151,7 +1162,7 @@ export default function RsvpPage() {
 
             {/* 4. FIL DE L'ÉVÉNEMENT TAB */}
             {activeGuestTab === 'feed' && (
-              <div className="space-y-6 animate-fade-in">
+              <div id="guest-panel-feed" role="tabpanel" aria-labelledby="guest-tab-feed" className="space-y-6 animate-fade-in">
                 <div className="space-y-1">
                   <h3 className="font-semibold text-foreground text-sm">Actualités</h3>
                   <p className="text-muted text-xs leading-relaxed">
@@ -1160,7 +1171,7 @@ export default function RsvpPage() {
                 </div>
 
                 {feedActionError && (
-                  <div className="bg-rose-50 border border-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/50 px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold" role="alert">
+                  <div className="bg-danger/10 border border-danger/25 text-danger px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold" role="alert">
                     {feedActionError}
                   </div>
                 )}
@@ -1259,10 +1270,11 @@ export default function RsvpPage() {
                           {/* Like Bar */}
                           <div className="flex items-center gap-4 pt-1">
                             <button
+                              type="button"
                               onClick={() => handleToggleLike(post.id)}
-                              className={`flex items-center gap-1.5 text-xs font-semibold transition px-3 py-1.5 rounded-full ${
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold transition min-h-11 px-3 py-1.5 rounded-full ${
  post.likes && Array.isArray(post.likes) && post.likes.includes(`guest_${guest?.id}`)
- ? 'text-pink-500 bg-pink-500/10'
+ ? 'text-primary bg-primary/10'
  : 'text-muted hover:text-foreground hover:bg-surface-muted'
  }`}
                             >
@@ -1275,7 +1287,7 @@ export default function RsvpPage() {
 
                           {/* Comments Section */}
                           <div className="border-t border-border pt-3.5 space-y-4">
-                            <h4 className="font-semibold text-muted text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+                            <h4 className="font-semibold text-muted text-xs uppercase tracking-wider flex items-center gap-1.5">
                               <MessageCircle className="w-3.5 h-3.5 text-muted" />
                               Commentaires ({post.comments.length})
                             </h4>
@@ -1286,7 +1298,7 @@ export default function RsvpPage() {
                                   <div key={comment.id} className="bg-surface border border-border shadow-[var(--shadow-soft)] p-3 rounded-[var(--radius-card)] text-[11px] space-y-1">
                                     <div className="flex items-center justify-between">
                                       <span className="font-semibold text-primary">{comment.authorName}</span>
-                                      <span className="text-[8px] text-muted font-medium">
+                                      <span className="text-xs text-muted font-medium">
                                         {new Date(comment.createdAt).toLocaleDateString('fr-FR', {
                                           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                         })}
@@ -1434,7 +1446,7 @@ export default function RsvpPage() {
           <button
             type="button"
             onClick={() => setShowFullScreenQr(true)}
-            className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-between gap-3 border border-primary/40 active:scale-[0.98] transition-all hover:bg-primary-hover cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-between gap-3 border border-primary/40 active:scale-[0.98] transition-all hover:bg-primary-hover cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 shrink-0 rounded-xl bg-white/15 text-white flex items-center justify-center font-bold text-xs ring-1 ring-white/25">
@@ -1449,7 +1461,7 @@ export default function RsvpPage() {
                 </p>
               </div>
             </div>
-            <span className="hidden min-[380px]:inline text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white shrink-0">
+            <span className="hidden min-[380px]:inline text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white shrink-0">
               Ouvrir
             </span>
             <Maximize2 className="w-4 h-4 shrink-0 opacity-90 min-[380px]:hidden" aria-hidden />
@@ -1649,7 +1661,7 @@ export default function RsvpPage() {
               key={label}
               type="button"
               onClick={() => updateCustomField(field.id, val)}
-              className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${
+              className={`min-h-11 py-2 px-3 rounded-xl text-xs font-bold border transition ${
  value === val
  ? 'border-primary bg-primary/10 text-primary'
  : 'border-border text-muted hover:bg-surface-muted'
@@ -1670,9 +1682,9 @@ export default function RsvpPage() {
               key={rating}
               type="button"
               onClick={() => updateCustomField(field.id, rating)}
-              className={`w-9 h-9 rounded-lg text-sm font-bold border transition ${
+              className={`min-h-11 min-w-11 rounded-lg text-sm font-bold border transition ${
  Number(value) === rating
- ? 'border-amber-500 bg-amber-50 text-amber-700'
+ ? 'border-festive-accent bg-festive-accent-soft text-festive-accent'
  : 'border-border text-muted hover:bg-surface-muted'
  }`}
             >
@@ -1708,11 +1720,11 @@ export default function RsvpPage() {
 
   const renderRsvpLockedBanner = () =>
     rsvpLocked ? (
-      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 flex items-start gap-3 text-sm text-amber-900 dark:text-amber-200">
-        <Clock className="w-5 h-5 flex-shrink-0 text-amber-600" />
+      <div className="bg-festive-accent-soft border border-festive-accent/30 rounded-xl p-4 flex items-start gap-3 text-sm text-festive-accent">
+        <Clock className="w-5 h-5 flex-shrink-0" aria-hidden />
         <div>
-          <p className="font-bold">Réponse verrouillée</p>
-          <p className="text-xs mt-0.5 opacity-90">
+          <p className="font-bold text-foreground">Réponse verrouillée</p>
+          <p className="text-xs mt-0.5 text-muted">
             La date de l&apos;événement est passée. Vous ne pouvez plus modifier votre présence.
           </p>
         </div>
@@ -1752,9 +1764,9 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200' : 'border-border hover:bg-surface-muted text-muted'}`}
+            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${rsvpStatus === 'DECLINED' ? 'border-danger bg-danger/10 text-danger' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
-            <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-foreground/80'}`} />
+            <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-danger' : 'text-foreground/80'}`} />
             <span className="text-xs font-semibold">Non, je ne pourrai pas</span>
           </button>
         </div>
@@ -1767,11 +1779,11 @@ export default function RsvpPage() {
               <div key={field.id} className="space-y-1.5">
                 {field.type !== 'checkbox' && (
                   <label className="block text-xs font-bold text-muted uppercase tracking-wider">
-                    {field.label} {field.required && <span className="text-rose-500">*</span>}
+                    {field.label} {field.required && <span className="text-danger">*</span>}
                   </label>
                 )}
                 {field.helpText && (
-                  <p className="text-[10px] text-muted">{field.helpText}</p>
+                  <p className="text-xs text-muted">{field.helpText}</p>
                 )}
                 {renderRsvpFieldInput(field)}
               </div>
@@ -1797,7 +1809,7 @@ export default function RsvpPage() {
         <button
           type="submit"
           disabled={submitting || rsvpLocked}
-          className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
+          className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
         >
           {submitting ? (
             <>
@@ -1828,7 +1840,6 @@ export default function RsvpPage() {
   return (
     <GuestPortalShell
       title={guest.event.title}
-      eyebrow="Invitation"
       guestId={guestId}
       organizationName={guest.organizationName}
       headerRight={
@@ -1841,6 +1852,13 @@ export default function RsvpPage() {
       }
       contentClassName="flex flex-col items-center gap-5 max-w-none w-full overflow-x-clip"
     >
+      <GuestHowTo
+        steps={[
+          'Choisissez présent ou absent',
+          'Envoyez votre réponse',
+          'Après confirmation : pass QR, table et lieu',
+        ]}
+      />
       <InvitationWrapper {...invitationWrapperProps}>
       <div
         style={{
@@ -2472,12 +2490,12 @@ export default function RsvpPage() {
                       className={cn(
                         "py-5 px-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 border-2",
                         rsvpStatus === 'DECLINED' 
-                          ? "border-rose-500 bg-rose-50/50 shadow-sm ring-4 ring-rose-500/10" 
+                          ? "border-danger bg-danger/10 shadow-sm ring-4 ring-danger/10" 
                           : "border-border/50 bg-surface hover:bg-surface-muted hover:border-border"
                       )}
                     >
-                      <XCircle className={cn("w-8 h-8", rsvpStatus === 'DECLINED' ? "text-rose-500" : "text-muted")} />
-                      <span className={cn("text-sm font-semibold", rsvpStatus === 'DECLINED' ? "text-rose-700" : "text-foreground")}>
+                      <XCircle className={cn("w-8 h-8", rsvpStatus === 'DECLINED' ? "text-danger" : "text-muted")} />
+                      <span className={cn("text-sm font-semibold", rsvpStatus === 'DECLINED' ? "text-danger" : "text-foreground")}>
                         Non, je décline
                       </span>
                     </button>
@@ -2497,11 +2515,11 @@ export default function RsvpPage() {
                         <div key={field.id} className="space-y-1.5">
                           {field.type !== 'checkbox' && (
                             <label className="block text-xs font-bold text-muted uppercase tracking-wider">
-                              {field.label} <span className="text-rose-500">*</span>
+                              {field.label} <span className="text-danger">*</span>
                             </label>
                           )}
                           {field.helpText && (
-                            <p className="text-[10px] text-muted">{field.helpText}</p>
+                            <p className="text-xs text-muted">{field.helpText}</p>
                           )}
                           {renderRsvpFieldInput(field)}
                         </div>
@@ -2527,7 +2545,7 @@ export default function RsvpPage() {
                 <button
                   type="submit"
                   disabled={submitting || rsvpLocked}
-                  className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
+                  className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
                 >
                   {submitting ? (
                     <>

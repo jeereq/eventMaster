@@ -18,7 +18,6 @@ export default function GuestGuidePage() {
     <GuestPortalShell
       showBrand
       title="Aide invité"
-      eyebrow="Guide"
       contentClassName="max-w-3xl"
     >
       <div className="mb-4">

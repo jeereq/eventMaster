@@ -347,7 +347,7 @@ export default function GuestVenueGuide({
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
             </div>
           )}
-          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface/95 backdrop-blur-sm text-[10px] font-semibold text-foreground shadow-sm">
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface/95 backdrop-blur-sm text-xs font-semibold text-foreground shadow-sm">
             <MapPin className="w-3 h-3 text-primary" />
             {destinationLabel}
           </div>
@@ -366,7 +366,7 @@ export default function GuestVenueGuide({
           )}
 
           {error && (
-            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-[var(--radius-button)] px-3 py-2 flex items-start gap-2">
+            <p className="text-xs text-festive-accent bg-festive-accent-soft border border-festive-accent/30 rounded-[var(--radius-button)] px-3 py-2 flex items-start gap-2" role="alert">
               <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               {error}
             </p>
@@ -377,7 +377,7 @@ export default function GuestVenueGuide({
               type="button"
               onClick={startGuide}
               disabled={starting}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition disabled:opacity-60 shadow-sm"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground text-sm font-semibold transition disabled:opacity-60 shadow-sm"
             >
               {starting ? (
                 <>
@@ -395,14 +395,14 @@ export default function GuestVenueGuide({
             <button
               type="button"
               onClick={stopGuide}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-foreground text-sm font-semibold hover:bg-surface transition"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-foreground text-sm font-semibold hover:bg-surface transition"
             >
               <Square className="w-3.5 h-3.5" />
               Arrêter l’itinéraire
             </button>
           )}
 
-          <p className="text-[10px] text-muted text-center">
+          <p className="text-xs text-muted text-center">
             Nous utiliserons votre position pour afficher le trajet jusqu’au lieu.
           </p>
         </div>
@@ -416,12 +416,12 @@ export default function GuestVenueGuide({
           <ol className="max-h-56 overflow-y-auto divide-y divide-border">
             {steps.map((step, i) => (
               <li key={`${i}-${step.instruction}`} className="px-4 py-2.5 flex items-start gap-3">
-                <span className="mt-0.5 w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                <span className="mt-0.5 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
                   {i + 1}
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-foreground leading-snug">{step.instruction}</p>
-                  <p className="text-[10px] text-muted mt-0.5">
+                  <p className="text-xs text-muted mt-0.5">
                     {formatDistance(step.distance)} · {formatDuration(step.duration)}
                   </p>
                 </div>

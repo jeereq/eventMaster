@@ -36,7 +36,7 @@ function swipeBlocked(target: EventTarget | null) {
 
 export default function GuestPortalShell({
   title,
-  eyebrow = 'Votre expérience invité',
+  eyebrow,
   guestId,
   showBrand = false,
   organizationName,
@@ -83,7 +83,7 @@ export default function GuestPortalShell({
         <div className="page-container max-w-xl mx-auto min-h-12 sm:min-h-14 flex items-center justify-between gap-2 sm:gap-3 py-2.5 pl-[max(0px,env(safe-area-inset-left))] pr-[max(0px,env(safe-area-inset-right))]">
           {showBrand ? (
             <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-white text-[11px] font-bold shrink-0 shadow-sm">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-primary text-primary-foreground text-xs font-bold shrink-0 shadow-sm">
                 {brandLabel.slice(0, 1).toUpperCase()}
               </span>
               <span className="font-semibold text-foreground truncate tracking-tight">{brandLabel}</span>
@@ -92,7 +92,7 @@ export default function GuestPortalShell({
             <div className="min-w-0 flex-1 space-y-0.5">
               <h1 className="text-sm font-semibold text-foreground truncate tracking-tight">{title}</h1>
               {eyebrow ? (
-                <p className="text-[11px] text-muted truncate leading-snug">{eyebrow}</p>
+                <p className="text-xs text-muted truncate leading-snug">{eyebrow}</p>
               ) : null}
             </div>
           )}
@@ -104,7 +104,7 @@ export default function GuestPortalShell({
               href="/guide/invite"
               aria-label="Aide invité"
               title="Aide invité"
-              className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 sm:min-w-0 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-[11px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 sm:min-w-0 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <HelpCircle className="w-3.5 h-3.5" aria-hidden />
               <span className="hidden sm:inline">Aide</span>
@@ -148,6 +148,19 @@ export default function GuestPortalShell({
   );
 }
 
+export function GuestHowTo({ steps }: { steps: string[] }) {
+  return (
+    <ol className="flex flex-col gap-1.5 text-xs text-muted leading-relaxed">
+      {steps.map((step, index) => (
+        <li key={step} className="inline-flex items-start gap-1.5 min-w-0">
+          <span className="font-semibold text-foreground tabular-nums shrink-0">{index + 1}.</span>
+          <span>{step}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function GuestPortalTabBar({
   tabs,
   activeId,
@@ -157,11 +170,36 @@ export function GuestPortalTabBar({
   activeId: string;
   onChange: (id: string) => void;
 }) {
+  const tabRefs = useRef<Partial<Record<string, HTMLButtonElement | null>>>({});
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    const ids = tabs.map((tab) => tab.id);
+    const current = Math.max(0, ids.indexOf(activeId));
+    let next = current;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      next = (current + 1) % ids.length;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      next = (current - 1 + ids.length) % ids.length;
+    } else if (event.key === 'Home') {
+      next = 0;
+    } else if (event.key === 'End') {
+      next = ids.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    onChange(ids[next]);
+    requestAnimationFrame(() => tabRefs.current[ids[next]]?.focus());
+  };
+
   return (
     <div className="page-container max-w-xl mx-auto px-1.5 sm:px-2.5 py-1.5 sm:py-2 pl-[max(0.375rem,env(safe-area-inset-left))] pr-[max(0.375rem,env(safe-area-inset-right))]">
       <div
+        role="tablist"
+        aria-label="Sections de l’invitation"
         className="grid rounded-2xl border border-border bg-surface-muted/80 p-1 gap-0.5"
         style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        onKeyDown={handleKeyDown}
       >
         {tabs.map((tab) => {
           const active = tab.id === activeId;
@@ -170,20 +208,25 @@ export function GuestPortalTabBar({
             <button
               key={tab.id}
               type="button"
+              role="tab"
+              id={`guest-tab-${tab.id}`}
+              aria-controls={`guest-panel-${tab.id}`}
+              aria-selected={active}
+              tabIndex={active ? 0 : -1}
+              ref={(node) => {
+                tabRefs.current[tab.id] = node;
+              }}
               onClick={() => onChange(tab.id)}
-              aria-pressed={active}
               aria-label={tab.label}
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 min-h-12 sm:min-h-[3.25rem] px-0.5 sm:px-1 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold transition touch-manipulation',
+                'flex flex-col items-center justify-center gap-0.5 min-h-12 sm:min-h-[3.25rem] px-0.5 sm:px-1 py-1.5 rounded-xl text-xs font-semibold transition touch-manipulation',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-muted',
                 active
                   ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
                   : 'text-muted hover:text-foreground active:bg-surface/70',
               )}
             >
-              <span className={cn('transition', active && 'scale-110')} aria-hidden>
-                {tab.icon}
-              </span>
+              <span aria-hidden>{tab.icon}</span>
               <span className="truncate max-w-full leading-tight px-0.5">
                 <span className="sm:hidden">{short}</span>
                 <span className="hidden sm:inline">{tab.label}</span>

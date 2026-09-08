@@ -8,7 +8,7 @@ import {
   Calendar, MapPin, Loader2, AlertCircle, CheckCircle2, XCircle,
   Clock, ArrowRight,
 } from 'lucide-react';
-import GuestPortalShell, { GuestPortalCard } from '@/components/GuestPortalShell';
+import GuestPortalShell, { GuestPortalCard, GuestHowTo } from '@/components/GuestPortalShell';
 import ShareButton from '@/components/ShareButton';
 import { guestRsvpUrl } from '@/lib/share';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -47,21 +47,21 @@ interface GuestInvitationsResponse {
 function RsvpBadge({ status }: { status: string }) {
   if (status === 'ACCEPTED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-primary/10 text-primary border border-primary/20">
-        <CheckCircle2 className="w-3 h-3" /> Confirmé
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-primary/10 text-primary border border-primary/20">
+        <CheckCircle2 className="w-3 h-3" aria-hidden /> Confirmé
       </span>
     );
   }
   if (status === 'DECLINED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-rose-50 text-rose-700 border border-rose-100">
-        <XCircle className="w-3 h-3" /> Décliné
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-danger/10 text-danger border border-danger/25">
+        <XCircle className="w-3 h-3" aria-hidden /> Décliné
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-amber-50 text-amber-800 border border-amber-100">
-      <Clock className="w-3 h-3" /> En attente
+    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-[var(--radius-button)] bg-festive-accent-soft text-festive-accent border border-festive-accent/30">
+      <Clock className="w-3 h-3" aria-hidden /> À répondre
     </span>
   );
 }
@@ -80,8 +80,9 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
     <Link
       href={`/rsvp/${item.guestId}`}
       className={cn(
-        'block py-4 border-b border-border/80 last:border-b-0',
+        'block min-h-11 py-4 border-b border-border/80 last:border-b-0',
         'hover:bg-surface-muted/50 active:bg-surface-muted transition group touch-manipulation -mx-1 px-1 rounded-lg',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         item.isCurrent && 'bg-primary/[0.04]',
       )}
     >
@@ -108,9 +109,9 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
 
       <div className="flex items-center justify-between">
         {item.eventPassed ? (
-          <span className="text-[10px] font-semibold text-muted">Terminé</span>
+          <span className="text-xs font-semibold text-muted">Terminé</span>
         ) : (
-          <span className="text-[10px] font-semibold text-primary">À venir</span>
+          <span className="text-xs font-semibold text-primary">À venir</span>
         )}
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
           {item.rsvp === 'PENDING' ? 'Répondre' : item.rsvp === 'ACCEPTED' ? 'Mon espace' : 'Voir'}
@@ -173,7 +174,7 @@ export default function GuestHomePage() {
     return (
       <div className="em-guest-page flex items-center justify-center px-4">
         <GuestPortalCard className="max-w-md w-full text-center space-y-3">
-          <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
+          <AlertCircle className="w-8 h-8 text-danger mx-auto" />
           <p className="text-sm font-semibold text-foreground">Chargement impossible</p>
           <p className="text-sm text-muted">{error || 'Vérifiez votre connexion, puis rechargez la page.'}</p>
         </GuestPortalCard>
@@ -184,12 +185,12 @@ export default function GuestHomePage() {
   const upcoming = data.invitations.filter((i) => !i.eventPassed);
   const past = data.invitations.filter((i) => i.eventPassed);
   const current = data.invitations.find((i) => i.isCurrent);
+  const pendingInvite = upcoming.find((item) => item.rsvp === 'PENDING');
 
   return (
     <GuestPortalShell
       showBrand
       title={`Bonjour ${data.guest.firstName}`}
-      eyebrow="Espace invité"
       organizationName={current?.organizationName}
       headerRight={
         <ShareButton
@@ -201,7 +202,28 @@ export default function GuestHomePage() {
       }
       contentClassName="space-y-6"
     >
-      <p className="text-sm text-muted -mt-3">
+      <GuestHowTo
+        steps={[
+          'Ouvrez une invitation',
+          'Répondez présent ou absent',
+          'Retrouvez votre pass QR, votre table et le lieu',
+        ]}
+      />
+
+      {pendingInvite ? (
+          <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-4 space-y-2">
+            <p className="text-sm font-semibold text-foreground">À faire : confirmer votre présence</p>
+            <p className="text-xs text-muted leading-relaxed">{pendingInvite.event.title}</p>
+            <Link
+              href={`/rsvp/${pendingInvite.guestId}`}
+              className="inline-flex items-center justify-center min-h-11 px-4 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              Répondre à l’invitation
+            </Link>
+          </div>
+      ) : null}
+
+      <p className="text-sm text-muted">
         Invitations liées à votre e-mail et téléphone, regroupées ici.
       </p>
 
