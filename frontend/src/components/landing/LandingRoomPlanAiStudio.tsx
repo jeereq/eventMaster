@@ -42,7 +42,7 @@ import {
   type AiRoomPlanComposeHistoryItem,
 } from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
-import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -283,7 +283,7 @@ export default function LandingRoomPlanAiStudio({
                   <h2 id={`${id}-title`} className="text-base sm:text-xl font-display font-semibold text-foreground">
                     Studio IA — plan de salle
                   </h2>
-                  <p className="hidden sm:block text-xs sm:text-sm text-muted">
+                  <p className="text-xs sm:text-sm text-muted">
                     Brief ou photo → tables, rangées et décor posés sur le plan 2D / 3D.
                   </p>
                 </div>
@@ -330,6 +330,15 @@ export default function LandingRoomPlanAiStudio({
                 historyCount={history.length}
                 disabled={busy}
               />
+              {studioTab === 'create' ? (
+                <StudioHowTo
+                  steps={[
+                    'Décrivez la salle ou déposez une photo',
+                    'Générez le plan (jetons IA)',
+                    'Ouvrez-le en 2D / 3D dans l’éditeur',
+                  ]}
+                />
+              ) : null}
 
               {studioTab === 'create' ? (
               <>
@@ -345,7 +354,7 @@ export default function LandingRoomPlanAiStudio({
                   )}
                 >
                   <span className="block text-xs font-bold text-foreground">Décrire la salle</span>
-                  <span className="hidden sm:block text-xs text-muted mt-0.5">Brief seul</span>
+                  <span className="block text-xs text-muted mt-0.5">Brief seul</span>
                 </button>
                 <button
                   type="button"
@@ -358,7 +367,7 @@ export default function LandingRoomPlanAiStudio({
                   )}
                 >
                   <span className="block text-xs font-bold text-foreground">Depuis une photo</span>
-                  <span className="hidden sm:block text-xs text-muted mt-0.5">Analyse + import</span>
+                  <span className="block text-xs text-muted mt-0.5">Analyse + import</span>
                 </button>
               </div>
 

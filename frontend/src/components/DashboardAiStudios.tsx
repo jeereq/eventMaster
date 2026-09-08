@@ -92,7 +92,7 @@ export default function DashboardAiStudios({
       <div className="space-y-1.5">
         <h2 className="text-sm font-semibold text-foreground">Studios IA</h2>
         <p className="text-xs text-muted leading-relaxed max-w-2xl">
-          Budget (packs et formules), invitation, puis plan de salle — les trois ateliers au même endroit.
+          Choisissez un atelier. Chaque studio a ses propres étapes : packs budget, carte invitation, ou plan 2D / 3D.
         </p>
       </div>
       <div
@@ -125,7 +125,7 @@ export default function DashboardAiStudios({
               <Icon className={cn('w-4 h-4 shrink-0', selected ? 'text-primary' : '')} aria-hidden />
               <span className="min-w-0">
                 <span className="block text-xs font-semibold">{tab.label}</span>
-                <span className="hidden sm:block text-xs text-muted">{tab.hint}</span>
+                <span className="block text-xs text-muted">{tab.hint}</span>
               </span>
             </button>
           );

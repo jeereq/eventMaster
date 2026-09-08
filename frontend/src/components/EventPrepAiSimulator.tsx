@@ -46,7 +46,7 @@ import {
   type AiMomentId,
   type AiSettingId,
 } from '@/lib/aiSimulationCriteria';
-import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
 import { EVENT_PREP_PROMPT_MODELS } from '@/config/eventPrepPromptModels';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
@@ -423,8 +423,8 @@ export default function EventPrepAiSimulator({
               <Wand2 className="w-4 h-4 text-primary-solid" aria-hidden />
               Simulation IA
             </h3>
-            <p className="hidden sm:block text-xs text-muted leading-relaxed">
-              Décrivez votre événement : l’IA lit le catalogue EventMaster et propose <strong className="font-semibold text-foreground">3 packs budget</strong> — économique, équilibré, confort. Ce n’est pas un plan de salle.
+            <p className="text-xs text-muted leading-relaxed">
+              Ville, date et budget — l’IA propose <strong className="font-semibold text-foreground">3 packs</strong> (éco, équilibré, confort). Ce n’est pas un plan de salle.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
@@ -481,13 +481,23 @@ export default function EventPrepAiSimulator({
                 <span>Nouvelle simulation</span>
               </button>
             ) : null}
-          </div>
-        ) : null}
+        </div>
+      ) : null}
       </div>
+
+      {activeTab === 'create' ? (
+        <StudioHowTo
+          steps={[
+            'Indiquez ville, date et budget',
+            'Générez 3 packs (éco, équilibré, confort)',
+            'Retenez un pack avant de réserver',
+          ]}
+        />
+      ) : null}
 
       {activeTab === 'prompts' ? (
         <div className="space-y-3 pt-1">
-          <p className="hidden sm:block text-xs text-muted">
+          <p className="text-xs text-muted">
             Un bouton préremplit le brief, le type d’événement et le budget. Ajustez ensuite ville et date.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

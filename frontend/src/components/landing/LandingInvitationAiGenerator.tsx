@@ -49,7 +49,7 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
-import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
 import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
 import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
 import {
@@ -658,7 +658,7 @@ export default function LandingInvitationAiGenerator({
                       Carte 9:16
                     </span>
                   </div>
-                  <p className="hidden sm:block text-xs sm:text-sm text-muted leading-relaxed">
+                  <p className="text-xs sm:text-sm text-muted leading-relaxed">
                     Décrivez la fête, ou déposez une carte à reproduire. Les visages restent fidèles aux photos.
                   </p>
                 </div>
@@ -718,6 +718,13 @@ export default function LandingInvitationAiGenerator({
 
           {studioTab === 'create' ? (
           <>
+          <StudioHowTo
+            steps={[
+              'Décrivez la fête ou déposez une carte',
+              'Générez la carte 9:16',
+              'Éditez les textes et le RSVP',
+            ]}
+          />
           <div
             role="radiogroup"
             aria-label="Comment créer la carte"
@@ -737,7 +744,7 @@ export default function LandingInvitationAiGenerator({
               )}
             >
               <span className="block text-xs font-bold text-foreground">Décrire une fête</span>
-              <span className="hidden sm:block text-xs text-muted mt-0.5">Brief, or, ambiance</span>
+              <span className="block text-xs text-muted mt-0.5">Brief, or, ambiance</span>
             </button>
             <button
               type="button"
@@ -753,7 +760,7 @@ export default function LandingInvitationAiGenerator({
               )}
             >
               <span className="block text-xs font-bold text-foreground">Cloner une carte</span>
-              <span className="hidden sm:block text-xs text-muted mt-0.5">Photo obligatoire</span>
+              <span className="block text-xs text-muted mt-0.5">Photo obligatoire</span>
             </button>
           </div>
 
@@ -797,7 +804,7 @@ export default function LandingInvitationAiGenerator({
                     ? 'Photo de la carte à reproduire'
                     : 'Photos de visages (optionnel)'}
                 </p>
-                <p className="hidden sm:block text-xs text-muted mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   {studioIntent === 'clone'
                     ? 'Une photo nette de l’invitation à cloner. JPEG, PNG ou WebP, jusqu’à 4 vues.'
                     : 'Sans photo : carte depuis le brief. Avec photos : visages conservés (yeux, sourire, joues).'}

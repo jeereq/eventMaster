@@ -79,6 +79,19 @@ export function StudioAiTabs({
   );
 }
 
+export function StudioHowTo({ steps }: { steps: string[] }) {
+  return (
+    <ol className="flex flex-col sm:flex-row sm:flex-wrap gap-1.5 sm:gap-x-4 sm:gap-y-1 text-xs text-muted leading-relaxed">
+      {steps.map((step, index) => (
+        <li key={step} className="inline-flex items-start gap-1.5 min-w-0">
+          <span className="font-semibold text-foreground tabular-nums shrink-0">{index + 1}.</span>
+          <span>{step}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function StudioAiEmpty({
   icon: Icon,
   title,

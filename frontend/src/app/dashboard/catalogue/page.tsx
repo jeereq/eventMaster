@@ -634,7 +634,7 @@ function ClientMarketplaceInner() {
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Agenda' : 'Marketplace'}
         description={
           tab === 'plan'
-            ? 'Choisissez comment simuler (par critères ou avec l’IA), puis retenez le pack utilisé pour les devis.'
+            ? 'Studios budget, invitation et plan de salle : simulez, générez, retenez un pack pour les devis.'
             : tab === 'favorites'
               ? 'Salles, prestataires et matériel & équipements enregistrés. Filtrez et changez la vue grille ou liste.'
               : tab === 'packs'

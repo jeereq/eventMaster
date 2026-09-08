@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
@@ -9,7 +8,6 @@ import {
   ROOM_LAYOUT_TEMPLATES,
   applyRoomTemplate,
   type RoomLayoutBlueprint,
-  type RoomLayoutTemplate,
 } from '@/lib/roomLayoutUtils';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -21,13 +19,12 @@ import {
   Users,
   Building2,
   ScanLine,
-  Box,
-  Layers,
-  Compass,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import LandingRoomPlanAiStudio from '@/components/landing/LandingRoomPlanAiStudio';
+import PlanViewModeToggle from '@/components/PlanViewModeToggle';
+import { StudioHowTo } from '@/components/StudioAiTabs';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => (
@@ -51,11 +48,11 @@ const SHOWCASE_TEMPLATES = [
 ];
 
 const CATEGORIES = [
-  { id: 'all', label: 'Tous les modèles' },
-  { id: 'wedding', label: 'Mariages & Célébrations' },
-  { id: 'banquet', label: 'Banquets & Dîners' },
-  { id: 'pro', label: 'Conférences & Entreprise' },
-  { id: 'cocktail', label: 'Cocktails & Fêtes' },
+  { id: 'all', label: 'Tous' },
+  { id: 'wedding', label: 'Mariages' },
+  { id: 'banquet', label: 'Banquets' },
+  { id: 'pro', label: 'Entreprise' },
+  { id: 'cocktail', label: 'Cocktails' },
 ];
 
 export default function Plans3DPage() {
@@ -119,85 +116,43 @@ export default function Plans3DPage() {
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
-          <a
-            href="#studio-ia"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Ouvrir le studio IA</span>
-          </a>
-          <Link
-            href="/marketplace/salles"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Explorer les salles en RDC</span>
-          </Link>
+          <Button href="#plan-viewer" size="sm">
+            Voir le plan 2D / 3D
+          </Button>
+          <Button href="#studio-ia" size="sm" variant="secondary" leftIcon={<Sparkles className="w-3.5 h-3.5" />}>
+            Composer avec l’IA
+          </Button>
+          <Button href="/marketplace/salles" size="sm" variant="ghost" leftIcon={<Building2 className="w-3.5 h-3.5" />}>
+            Salles en RDC
+          </Button>
         </div>
       </PublicPageHero>
 
       <div className="page-container py-6 sm:py-10 space-y-12">
-        <LandingRoomPlanAiStudio
-          defaultExpanded
-          onBlueprintChange={setStudioBlueprint}
-        />
+        <section id="plan-viewer" className="space-y-4 scroll-mt-20">
+          <div className="space-y-2">
+            <h2 className="text-base sm:text-lg font-semibold text-foreground">
+              {studioBlueprint ? 'Plan généré par l’IA' : selectedTemplate.name}
+            </h2>
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              {studioBlueprint
+                ? 'Le studio IA a posé ce plan. Basculez 2D / 3D, puis ouvrez l’éditeur pour le peaufiner.'
+                : selectedTemplate.description}
+            </p>
+            <StudioHowTo
+              steps={[
+                'Choisissez un modèle ci-dessous',
+                'Basculez Plan 2D ou Vue 3D',
+                'Personnalisez dans l’éditeur',
+              ]}
+            />
+          </div>
 
-        {/* ─── Studio Interactif 2D/3D ─── */}
-        <section className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface/80 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border/80 shadow-xs">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <h2 className="text-sm sm:text-base font-bold text-foreground">
-                  {studioBlueprint ? 'Plan généré par l’IA' : selectedTemplate.name}
-                </h2>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                  {selectedTemplate.roomType}
-                </span>
-              </div>
-              <p className="text-xs text-muted mt-0.5 line-clamp-1">
-                {selectedTemplate.description}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="inline-flex items-center rounded-lg border border-border bg-surface-muted p-0.5 text-xs" role="group" aria-label="Vue du plan">
-                <button
-                  type="button"
-                  onClick={() => setForce2d(false)}
-                  aria-pressed={!force2d}
-                  className={cn(
-                    'px-3 min-h-11 rounded-md font-semibold transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    !force2d
-                      ? 'bg-surface text-primary shadow-xs font-bold'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  <Box className="w-3.5 h-3.5" aria-hidden />
-                  <span>Vue 3D</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setForce2d(true)}
-                  aria-pressed={force2d}
-                  className={cn(
-                    'px-3 min-h-11 rounded-md font-semibold transition flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    force2d
-                      ? 'bg-surface text-primary shadow-xs font-bold'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" aria-hidden />
-                  <span>Plan 2D</span>
-                </button>
-              </div>
-
-              <Link href={editorUrl}>
-                <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                  {protocolLocked ? 'Desk protocole' : 'Personnaliser'}
-                </Button>
-              </Link>
-            </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <PlanViewModeToggle force2d={force2d} onChange={setForce2d} />
+            <Button href={editorUrl} size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+              {protocolLocked ? 'Desk protocole' : 'Personnaliser dans l’éditeur'}
+            </Button>
           </div>
 
           {/* Visualiseur WebGL / 2D interactif */}
@@ -221,27 +176,24 @@ export default function Plans3DPage() {
             </div>
 
             {/* Barre flottante d'indicateurs de capacité */}
-            <div className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 flex items-center justify-between pointer-events-none">
-              <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 bg-foreground/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-background/20 text-background text-xs">
+            <div className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 flex items-center justify-between gap-2 pointer-events-none">
+              <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 bg-foreground/85 px-3 py-1.5 rounded-full border border-background/20 text-background text-xs">
                 {stats.seats > 0 && (
                   <span className="flex items-center gap-1 font-semibold tabular-nums">
-                    <Users className="w-3.5 h-3.5 text-emerald-400" />
+                    <Users className="w-3.5 h-3.5 text-primary" />
                     <span>~{stats.seats} convives</span>
                   </span>
                 )}
                 {stats.tables > 0 && (
                   <span className="hidden sm:flex items-center gap-1 text-background/80 tabular-nums">
-                    <LayoutGrid className="w-3 h-3 text-amber-400" />
+                    <LayoutGrid className="w-3 h-3" />
                     <span>{stats.tables} tables</span>
                   </span>
                 )}
-                <span className="hidden sm:inline text-background/40">·</span>
-                <span className="text-background/70 text-[11px]">100% dans le navigateur</span>
               </div>
-
-              <div className="pointer-events-auto text-[11px] text-background/80 bg-foreground/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/15 hidden sm:block">
-                Astuce : Cliquez et glissez pour explorer à 360°
-              </div>
+              <p className="pointer-events-auto text-xs text-background bg-foreground/80 px-2.5 py-1.5 rounded-full border border-background/15">
+                {force2d ? 'Plan coté vu du dessus' : 'Glissez pour tourner à 360°'}
+              </p>
             </div>
           </div>
         </section>
@@ -250,12 +202,11 @@ export default function Plans3DPage() {
         <section className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-                <LayoutGrid className="w-5 h-5 text-primary" />
-                <span>Modèles d’agencement prêts à l’emploi</span>
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">
+                Modèles d’agencement
               </h2>
-              <p className="text-xs text-muted mt-0.5">
-                Cliquez sur un modèle pour le charger dans le studio interactif ci-dessus.
+              <p className="text-xs sm:text-sm text-muted mt-0.5">
+                Un clic charge le plan dans la vue ci-dessus.
               </p>
             </div>
 
@@ -301,11 +252,16 @@ export default function Plans3DPage() {
                   onClick={() => {
                     setStudioBlueprint(null);
                     setSelectedTemplateId(tpl.id);
+                    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    document.getElementById('plan-viewer')?.scrollIntoView({
+                      block: 'start',
+                      behavior: reduceMotion ? 'auto' : 'smooth',
+                    });
                   }}
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
+                      <span className="text-xs font-semibold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
                         {item.label}
                       </span>
                       {isSelected && (
@@ -330,7 +286,7 @@ export default function Plans3DPage() {
                     </span>
                     <span className="text-xs font-semibold text-primary inline-flex items-center gap-1">
                       <Eye className="w-3 h-3" aria-hidden />
-                      <span>Voir en 3D</span>
+                      <span>Charger ce plan</span>
                     </span>
                   </div>
                 </button>
@@ -339,58 +295,50 @@ export default function Plans3DPage() {
           </div>
         </section>
 
-        {/* ─── Piliers technologiques de l’éditeur ─── */}
-        <section className="rounded-2xl sm:rounded-3xl border border-border/80 bg-surface/70 p-6 sm:p-8 space-y-6">
+        <LandingRoomPlanAiStudio
+          defaultExpanded={false}
+          onBlueprintChange={setStudioBlueprint}
+        />
+
+        <section className="space-y-4">
           <div className="max-w-2xl space-y-1.5">
             <h2 className="em-landing-heading text-lg sm:text-2xl text-foreground">
-              Tout ce dont vous avez besoin pour agencer votre salle
+              Du plan coté à l’accueil jour J
             </h2>
-            <p className="text-xs sm:text-sm text-muted">
-              Une suite d’outils intégrée pour éliminer les erreurs de disposition le jour J.
+            <p className="text-sm text-muted leading-relaxed">
+              Même fichier : millimètres en 2D, visite 3D, places nominatives, QR à l’entrée.
             </p>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-            <div className="space-y-2 p-3.5 rounded-xl bg-surface border border-border/70">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
-                <LayoutGrid className="w-4 h-4" />
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <li className="flex gap-3">
+              <LayoutGrid className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Plan 2D au millimètre</p>
+                <p className="text-xs text-muted leading-relaxed">Cotations, allées de sécurité, ouverture des portes.</p>
               </div>
-              <h3 className="text-xs sm:text-sm font-bold text-foreground">Plan 2D au millimètre</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Cotations exactes, grille magnétique, allées de sécurité et sens d’ouverture des portes.
-              </p>
-            </div>
-
-            <div className="space-y-2 p-3.5 rounded-xl bg-surface border border-border/70">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-                <Eye className="w-4 h-4" />
+            </li>
+            <li className="flex gap-3">
+              <Eye className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Visite 3D</p>
+                <p className="text-xs text-muted leading-relaxed">Tournez la salle dans le navigateur, sans plugin.</p>
               </div>
-              <h3 className="text-xs sm:text-sm font-bold text-foreground">Visite 3D interactive</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Exploration à 360° dans le navigateur, textures réalistes, lustres suspendus et ambiances lumineuses.
-              </p>
-            </div>
-
-            <div className="space-y-2 p-3.5 rounded-xl bg-surface border border-border/70">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
-                <Users className="w-4 h-4" />
+            </li>
+            <li className="flex gap-3">
+              <Users className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Placement des invités</p>
+                <p className="text-xs text-muted leading-relaxed">Sièges nominatifs liés à la liste et au RSVP.</p>
               </div>
-              <h3 className="text-xs sm:text-sm font-bold text-foreground">Placement & Attribution</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Assignation nominative des sièges, gestion des régimes alimentaires et suivi d’occupation en direct.
-              </p>
-            </div>
-
-            <div className="space-y-2 p-3.5 rounded-xl bg-surface border border-border/70">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
-                <ScanLine className="w-4 h-4" />
+            </li>
+            <li className="flex gap-3">
+              <ScanLine className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Accueil QR</p>
+                <p className="text-xs text-muted leading-relaxed">Table et siège sur l’invitation, scan à l’entrée.</p>
               </div>
-              <h3 className="text-xs sm:text-sm font-bold text-foreground">Accueil QR le Jour J</h3>
-              <p className="text-xs text-muted leading-relaxed">
-                Numéro de table sur l’invitation WhatsApp et orientation immédiate de vos invités au scan QR à l’entrée.
-              </p>
-            </div>
-          </div>
+            </li>
+          </ul>
         </section>
 
       </div>
