@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowRight, LayoutGrid, Eye, Users, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui';
@@ -8,11 +8,19 @@ import { useAuth } from '@/context/AuthContext';
 import { applyRoomTemplate } from '@/lib/roomLayoutUtils';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 
+function PreviewFallback() {
+  return (
+    <div
+      className="w-full h-full min-h-[240px] sm:min-h-[320px] rounded-[var(--radius-card)] bg-stage-foreground/10 animate-pulse motion-reduce:animate-none"
+      role="status"
+      aria-label="Chargement du plan de salle"
+    />
+  );
+}
+
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full min-h-[240px] rounded-[var(--radius-card)] bg-stage-foreground/10 animate-pulse" />
-  ),
+  loading: () => <PreviewFallback />,
 });
 
 export default function Landing3DTeaserBand() {
@@ -21,12 +29,17 @@ export default function Landing3DTeaserBand() {
     ? '/dashboard/rooms'
     : '/register?kind=ORGANIZER&intent=personal&action=room_editor';
   const [force2d, setForce2d] = useState(true);
+  const [previewReady, setPreviewReady] = useState(false);
   const blueprint = useMemo(() => {
     try {
       return applyRoomTemplate('banquet-honor');
     } catch {
       return null;
     }
+  }, []);
+
+  useEffect(() => {
+    setPreviewReady(true);
   }, []);
 
   return (
@@ -83,12 +96,14 @@ export default function Landing3DTeaserBand() {
             <div className="space-y-3 min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold text-stage-foreground">
-                  {force2d ? 'Plan 2D — cliquez un modèle sur la page dédiée pour en changer.' : 'Glissez pour tourner la salle.'}
+                  {force2d
+                    ? 'Plan 2D vu du dessus — basculez en 3D ou ouvrez les modèles.'
+                    : 'Glissez pour tourner la salle.'}
                 </p>
                 <PlanViewModeToggle force2d={force2d} onChange={setForce2d} tone="stage" />
               </div>
               <div className="rounded-[var(--radius-card)] overflow-hidden border border-stage-foreground/15 bg-stage min-h-[240px] sm:min-h-[320px]">
-                {blueprint ? (
+                {previewReady && blueprint ? (
                   <RoomLayoutPreview
                     blueprint={blueprint}
                     quality="standard"
@@ -97,7 +112,9 @@ export default function Landing3DTeaserBand() {
                     allowMobileExpand
                     className="w-full h-full min-h-[240px] sm:min-h-[320px]"
                   />
-                ) : null}
+                ) : (
+                  <PreviewFallback />
+                )}
               </div>
             </div>
           </div>

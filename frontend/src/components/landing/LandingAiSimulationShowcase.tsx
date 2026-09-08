@@ -26,6 +26,7 @@ import {
   AI_TOKEN_PACK_SIZE,
   addPurchasedAiTokens,
   getAiSimulationAllowance,
+  createEmptyAiAllowance,
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
@@ -108,7 +109,7 @@ export default function LandingAiSimulationShowcase() {
   const marketplaceCities = enabledMarketplaceCities(site);
 
   const [viewMode, setViewMode] = useState<'presets' | 'live'>('presets');
-  const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
+  const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [selectedScenarioId, setSelectedScenarioId] = useState('mariage-kin');
   const [liveDefaults, setLiveDefaults] = useState<EventPrepAiDefaults | undefined>();

@@ -109,6 +109,21 @@ export interface AiAllowance {
   unlimited: boolean;
 }
 
+/** Premier rendu SSR/client identique — ne pas lire localStorage ici (hydratation). */
+export function createEmptyAiAllowance(): AiAllowance {
+  return {
+    deviceId: '',
+    freeTrialsUsed: 0,
+    freeTrialsMax: MAX_FREE_TRIALS,
+    freeRemaining: MAX_FREE_TRIALS,
+    bonusTokens: 0,
+    grantedTokens: 0,
+    totalRemaining: MAX_FREE_TRIALS,
+    canSimulate: true,
+    unlimited: false,
+  };
+}
+
 let sessionUnlimited = false;
 
 export function setAiTokenSessionUnlimited(value: boolean) {

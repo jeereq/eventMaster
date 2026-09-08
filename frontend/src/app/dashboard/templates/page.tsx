@@ -25,6 +25,7 @@ import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
 import {
  persistInvitationArtStyle,
  readStoredInvitationArtStyle,
+ DEFAULT_INVITATION_ART_STYLE,
  type InvitationArtStyleId,
 } from '@/config/invitationArtStyles';
 import {
@@ -34,6 +35,7 @@ import {
 } from '@/lib/invitationContextSource';
 import {
  getAiSimulationAllowance,
+ createEmptyAiAllowance,
  syncDeviceAiTokensWithBackend,
  canAffordAiAction,
  aiTokenBalanceLabel,
@@ -326,7 +328,7 @@ export default function TemplatesPage() {
  const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
- const [aiComposeArtStyle, setAiComposeArtStyle] = useState<InvitationArtStyleId>(() => readStoredInvitationArtStyle());
+ const [aiComposeArtStyle, setAiComposeArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
  const [aiComposeContextSource, setAiComposeContextSource] = useState<InvitationContextSource>('none');
  const [aiComposeDragging, setAiComposeDragging] = useState(false);
  const [aiImageDownloading, setAiImageDownloading] = useState(false);
@@ -334,7 +336,7 @@ export default function TemplatesPage() {
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
  const [aiComposeStudioTab, setAiComposeStudioTab] = useState<StudioAiTabId>('create');
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
- const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
+ const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
  const [mobilePane, setMobilePane] = useState<'canvas' | 'tools' | 'inspect'>('canvas');
  const [showAllThemes, setShowAllThemes] = useState(false);
@@ -363,6 +365,16 @@ export default function TemplatesPage() {
  } catch {
  /* ignore */
  }
+ }, []);
+
+ useEffect(() => {
+ setAiComposeArtStyle(readStoredInvitationArtStyle());
+ setAiAllowance(getAiSimulationAllowance());
+ }, []);
+
+ useEffect(() => {
+ setAiComposeArtStyle(readStoredInvitationArtStyle());
+ setAiAllowance(getAiSimulationAllowance());
  }, []);
 
  useEffect(() => {

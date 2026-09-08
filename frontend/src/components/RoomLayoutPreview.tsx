@@ -296,7 +296,7 @@ function ThumbPreview({
   );
 }
 
-/** Aperçu détail encore en 2,5D (fallback si force2d). */
+/** Aperçu 2D vu du dessus (sans tilt 2,5D). */
 function FlatShowcasePreview({
   blueprint,
   className,
@@ -309,7 +309,7 @@ function FlatShowcasePreview({
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
   const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
-  const amount = 62;
+  const amount = 0;
   const walls = resolveBlueprintWalls(blueprint);
 
   return (
@@ -324,7 +324,7 @@ function FlatShowcasePreview({
           ...floorStyle,
           ...(blueprint.metadata.floorColor ? { backgroundColor: blueprint.metadata.floorColor } : {}),
         }}
-        maxTilt={44}
+        maxTilt={0}
         className="w-full h-full"
       >
         {outline && (

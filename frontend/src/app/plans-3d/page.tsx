@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
@@ -28,7 +28,7 @@ import { StudioHowTo } from '@/components/StudioAiTabs';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => (
-    <div className="w-full aspect-[16/10] sm:aspect-[16/9] max-h-[560px] rounded-2xl bg-surface-muted/80 animate-pulse flex items-center justify-center text-xs text-muted">
+    <div className="w-full aspect-[16/10] sm:aspect-[16/9] max-h-[560px] rounded-2xl bg-surface-muted/80 animate-pulse motion-reduce:animate-none flex items-center justify-center text-xs text-muted">
       Chargement du rendu spatial 2D / 3D…
     </div>
   ),
@@ -62,6 +62,11 @@ export default function Plans3DPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [force2d, setForce2d] = useState(true);
   const [studioBlueprint, setStudioBlueprint] = useState<RoomLayoutBlueprint | null>(null);
+  const [previewReady, setPreviewReady] = useState(false);
+
+  useEffect(() => {
+    setPreviewReady(true);
+  }, []);
 
   const selectedTemplate = useMemo(() => {
     return (
@@ -158,7 +163,7 @@ export default function Plans3DPage() {
           {/* Visualiseur WebGL / 2D interactif */}
           <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-stage overflow-hidden shadow-xl relative">
             <div className="w-full aspect-[16/10] sm:aspect-[16/9] max-h-[580px] min-h-[340px]">
-              {activeBlueprint ? (
+              {previewReady && activeBlueprint ? (
                 <RoomLayoutPreview
                   blueprint={activeBlueprint}
                   quality="showcase"
@@ -169,8 +174,8 @@ export default function Plans3DPage() {
                   className="w-full h-full"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted text-xs">
-                  Modèle non disponible.
+                <div className="w-full h-full flex items-center justify-center text-muted text-xs animate-pulse motion-reduce:animate-none">
+                  {activeBlueprint ? 'Chargement du rendu spatial 2D / 3D…' : 'Modèle non disponible.'}
                 </div>
               )}
             </div>
@@ -185,7 +190,7 @@ export default function Plans3DPage() {
                   </span>
                 )}
                 {stats.tables > 0 && (
-                  <span className="hidden sm:flex items-center gap-1 text-background/80 tabular-nums">
+                  <span className="flex items-center gap-1 text-background/80 tabular-nums">
                     <LayoutGrid className="w-3 h-3" />
                     <span>{stats.tables} tables</span>
                   </span>

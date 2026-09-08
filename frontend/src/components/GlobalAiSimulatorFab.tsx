@@ -18,6 +18,7 @@ import {
   AI_ROOM_PLAN_TOKEN_COST,
   AI_SIMULATION_TOKEN_COST,
   getAiSimulationAllowance,
+  createEmptyAiAllowance,
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
@@ -33,7 +34,7 @@ export default function GlobalAiSimulatorFab() {
   const { user, tenant, planFeatures, access } = useAuth();
   const [open, setOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
-  const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
+  const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
 
   const hidden =
     Boolean(access?.isProtocolOnly) ||

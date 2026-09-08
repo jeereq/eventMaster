@@ -6,6 +6,7 @@ import {
   AI_ROOM_PLAN_TOKEN_COST,
   canAffordAiAction,
   getAiSimulationAllowance,
+  createEmptyAiAllowance,
   aiTokenBalanceLabel,
   type AiAllowance,
 } from '@/lib/aiTokens';
@@ -83,7 +84,7 @@ export default function RoomPlanAiStudioModal({
   const [history, setHistory] = useState<AiRoomPlanComposeHistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [studioTab, setStudioTab] = useState<StudioAiTabId>('create');
-  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(getAiSimulationAllowance());
+  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   useEffect(() => {

@@ -17,6 +17,7 @@ import {
   AI_ALLOWANCE_CHANGED,
   consumeAiSimulation,
   getAiSimulationAllowance,
+  createEmptyAiAllowance,
   aiTokenBalanceLabel,
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
@@ -149,7 +150,7 @@ export default function EventPrepAiSimulator({
   const [result, setResult] = useState<EventPlanAiResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(openPurchaseOnMount);
-  const [allowance, setAllowance] = useState<AiAllowance>(getAiSimulationAllowance);
+  const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [history, setHistory] = useState<Awaited<ReturnType<typeof fetchAiSimulationHistory>>>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [saveBusy, setSaveBusy] = useState(false);

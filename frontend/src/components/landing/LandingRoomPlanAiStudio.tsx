@@ -4,11 +4,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
-  Box,
   ChevronDown,
   ChevronUp,
   Coins,
-  LayoutGrid,
   Loader2,
   Upload,
   Wand2,
@@ -21,6 +19,7 @@ import {
   canAffordAiAction,
   aiTokenBalanceLabel,
   getAiSimulationAllowance,
+  createEmptyAiAllowance,
   type AiAllowance,
 } from '@/lib/aiTokens';
 import {
@@ -43,6 +42,7 @@ import {
 } from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
 import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
+import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -53,7 +53,7 @@ const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[280px] bg-surface-muted animate-pulse rounded-[var(--radius-card)]" />
+    <div className="w-full h-full min-h-[280px] bg-surface-muted animate-pulse motion-reduce:animate-none rounded-[var(--radius-card)]" />
   ),
 });
 
@@ -81,8 +81,8 @@ export default function LandingRoomPlanAiStudio({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<RoomPlanVisionDraft | null>(null);
-  const [force2d, setForce2d] = useState(false);
-  const [allowance, setAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
+  const [force2d, setForce2d] = useState(true);
+  const [allowance, setAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [lastImageUrl, setLastImageUrl] = useState<string>();
@@ -92,6 +92,10 @@ export default function LandingRoomPlanAiStudio({
 
   useEffect(() => {
     void fetchAiRoomPlanComposeHistory().then(setHistory);
+  }, []);
+
+  useEffect(() => {
+    setAllowance(getAiSimulationAllowance());
   }, []);
 
   const asRoomType = (value?: string | null): RoomType => (
@@ -470,38 +474,11 @@ export default function LandingRoomPlanAiStudio({
             </div>
 
             <div className="p-4 sm:p-6 space-y-3 bg-stage/40 min-h-[320px]">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground">
                   {preview ? 'Aperçu généré' : 'Aperçu 2D / 3D'}
                 </p>
-                <div className="inline-flex items-center rounded-[var(--radius-button)] border border-border bg-surface p-0.5">
-                  <button
-                    type="button"
-                    aria-pressed={!force2d}
-                    aria-label="Aperçu 3D"
-                    onClick={() => setForce2d(false)}
-                    className={cn(
-                      'min-h-11 px-2.5 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                      !force2d ? 'bg-primary/10 text-foreground' : 'text-muted',
-                    )}
-                  >
-                    <Box className="w-3.5 h-3.5" aria-hidden />
-                    3D
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={force2d}
-                    aria-label="Aperçu 2D"
-                    onClick={() => setForce2d(true)}
-                    className={cn(
-                      'min-h-11 px-2.5 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                      force2d ? 'bg-primary/10 text-foreground' : 'text-muted',
-                    )}
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" aria-hidden />
-                    2D
-                  </button>
-                </div>
+                <PlanViewModeToggle force2d={force2d} onChange={setForce2d} />
               </div>
 
               <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-stage aspect-[16/10] min-h-[260px]">

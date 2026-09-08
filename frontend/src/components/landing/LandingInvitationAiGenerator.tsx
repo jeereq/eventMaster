@@ -18,6 +18,7 @@ import {
   ChevronUp,
   Undo2,
   Redo2,
+  Check,
   Clock,
   Download,
 } from 'lucide-react';
@@ -26,6 +27,7 @@ import { isProtocolUser, PROTOCOL_CREATIVE_DENIED } from '@/lib/protocolAccess';
 import { api } from '@/lib/api';
 import {
   getAiSimulationAllowance,
+  createEmptyAiAllowance,
   syncDeviceAiTokensWithBackend,
   canAffordAiAction,
   aiTokenBalanceLabel,
@@ -55,6 +57,7 @@ import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
 import {
   persistInvitationArtStyle,
   readStoredInvitationArtStyle,
+  DEFAULT_INVITATION_ART_STYLE,
   type InvitationArtStyleId,
 } from '@/config/invitationArtStyles';
 import {
@@ -195,7 +198,7 @@ export default function LandingInvitationAiGenerator({
   const [lastStageMeta, setLastStageMeta] = useState<TemplateAiComposeResult['stage'] | null>(null);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
   const [history, setHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
-  const [allowance, setAllowance] = useState<AiAllowance>(() => getAiSimulationAllowance());
+  const [allowance, setAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -203,7 +206,7 @@ export default function LandingInvitationAiGenerator({
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [embedText, setEmbedText] = useState(false);
-  const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(() => readStoredInvitationArtStyle());
+  const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
   const [contextSource, setContextSource] = useState<InvitationContextSource>('none');
   const [downloading, setDownloading] = useState(false);
 
@@ -263,6 +266,10 @@ export default function LandingInvitationAiGenerator({
       setTimeout(() => setCopiedColorKey(null), 1800);
     }
   };
+
+  useEffect(() => {
+    setArtStyle(readStoredInvitationArtStyle());
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -1269,7 +1276,7 @@ export default function LandingInvitationAiGenerator({
                               key={swatch.key}
                               type="button"
                               onClick={() => handleCopyColor(swatch.color, swatch.key)}
-                              className="group inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border bg-surface-muted/70 hover:bg-surface-muted hover:border-primary/40 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 text-xs font-semibold text-foreground cursor-pointer"
+                              className="group inline-flex items-center gap-1.5 min-h-11 px-2.5 rounded-lg border border-border bg-surface-muted/70 hover:bg-surface-muted hover:border-primary/40 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 text-xs font-semibold text-foreground cursor-pointer"
                               aria-label={`Copier la couleur ${swatch.key} ${swatch.color}`}
                             >
                               <span
@@ -1277,9 +1284,16 @@ export default function LandingInvitationAiGenerator({
                                 style={{ backgroundColor: swatch.color }}
                               />
                               <span className="capitalize text-xs">{swatch.key}</span>
-                              <span className="text-xs font-mono text-muted group-hover:text-foreground">
-                                {isCopied ? '✓ Copié' : swatch.color}
-                              </span>
+                                {isCopied ? (
+                                  <span className="inline-flex items-center gap-1 text-primary">
+                                    <Check className="w-3.5 h-3.5" aria-hidden />
+                                    Copié
+                                  </span>
+                                ) : (
+                                  <span className="text-xs font-mono text-muted group-hover:text-foreground">
+                                    {swatch.color}
+                                  </span>
+                                )}
                             </button>
                           );
                         })}
