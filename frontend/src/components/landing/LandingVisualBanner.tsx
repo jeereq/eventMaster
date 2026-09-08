@@ -105,9 +105,7 @@ export default function LandingVisualBanner() {
   const revealRef = useLandingReveal<HTMLElement>();
   const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const budgetHref = user
-    ? '/dashboard/catalogue?tab=plan&planView=ai'
-    : '/#simulateur-ia';
+  const budgetHref = '/simulateur';
 
   const filteredItems = activeCategory === 'all'
     ? GALLERY_ITEMS

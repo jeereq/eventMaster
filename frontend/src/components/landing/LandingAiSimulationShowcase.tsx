@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
 import {
@@ -101,8 +100,6 @@ function scenarioToDefaults(scenario: ScenarioBrief, rate = 2800): EventPrepAiDe
 
 export default function LandingAiSimulationShowcase() {
   const revealRef = useLandingReveal<HTMLElement>();
-  const { user } = useAuth();
-  const isLoggedIn = Boolean(user);
 
   const { site } = usePlatformSite();
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
@@ -127,9 +124,7 @@ export default function LandingAiSimulationShowcase() {
   }, [visibleScenarios, selectedScenarioId]);
   const activeScenario = visibleScenarios.find((item) => item.id === selectedScenarioId) || visibleScenarios[0] || SCENARIOS[0];
   const activeScenarioUsd = Math.round(activeScenario.budgetTargetFc / exchangeRate);
-  const simulatorUrl = isLoggedIn
-    ? '/dashboard/catalogue?tab=plan&planView=ai'
-    : '/register?kind=CLIENT&intent=seeker&action=ai_simulator';
+  const simulatorUrl = '/simulateur';
 
   useEffect(() => {
     try {

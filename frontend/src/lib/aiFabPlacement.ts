@@ -5,6 +5,8 @@ import {
   aiTokenCostLegend,
 } from '@/lib/aiTokens';
 
+export const PUBLIC_SIMULATOR_PATH = '/simulateur';
+
 export type AiFabMood = 'celebrate' | 'work';
 export type AiFabClick = 'open' | 'scroll' | 'href';
 export type AiFabHighlight = 'budget' | 'invite' | 'room' | 'tokens';
@@ -44,12 +46,13 @@ export function resolveAiFabPlacement(input: {
   const onHome = pathname === '/';
   const onModeles = pathname.startsWith('/modeles');
   const onPlans3d = pathname.startsWith('/plans-3d');
+  const onSimulateur = pathname.startsWith(PUBLIC_SIMULATOR_PATH);
 
   const inviteHref = onDashboard ? '/dashboard/templates' : '/modeles';
   const roomsHref = '/dashboard/rooms';
   const catalogueHref = onDashboard
     ? '/dashboard/catalogue?tab=plan&planView=ai&studio=budget'
-    : '/#simulateur-ia';
+    : PUBLIC_SIMULATOR_PATH;
   const inviteStudioHref = '/dashboard/catalogue?tab=plan&planView=ai&studio=invite';
   const roomStudioHref = '/dashboard/catalogue?tab=plan&planView=ai&studio=room';
 
@@ -64,7 +67,7 @@ export function resolveAiFabPlacement(input: {
       modalTitle: 'Plus de jetons IA',
       modalDescription: aiTokenCostLegend(),
       highlight: 'tokens',
-      embedSimulator: !onHome && !onCataloguePlan,
+      embedSimulator: false,
       inviteHref,
       roomsHref,
       catalogueHref,
@@ -80,7 +83,7 @@ export function resolveAiFabPlacement(input: {
       title: `Trois packs chiffrés dans votre enveloppe · ${aiTokenCostLegend()}`,
       click: 'scroll',
       scrollId: 'simulateur-ia',
-      href: '/#simulateur-ia',
+      href: PUBLIC_SIMULATOR_PATH,
       modalTitle: 'Estimer un budget',
       modalDescription: `Trois formules (éco, équilibré, confort) à partir du catalogue réel. ${aiTokenCostLegend()}.`,
       highlight: 'budget',
@@ -185,6 +188,24 @@ export function resolveAiFabPlacement(input: {
     };
   }
 
+  if (onSimulateur) {
+    return {
+      mood: 'celebrate',
+      label: 'Jetons IA',
+      subtitle: `${AI_SIMULATION_TOKEN_COST} / ${AI_INVITATION_COMPOSE_TOKEN_COST} / ${AI_ROOM_PLAN_TOKEN_COST}`,
+      ariaLabel: 'Solde de jetons IA',
+      title: aiTokenCostLegend(),
+      click: 'open',
+      modalTitle: 'Jetons IA',
+      modalDescription: `Le simulateur est déjà ouvert sur cette page. ${aiTokenCostLegend()}.`,
+      highlight: 'tokens',
+      embedSimulator: false,
+      inviteHref,
+      roomsHref,
+      catalogueHref,
+    };
+  }
+
   if (onDashboard) {
     return {
       mood: 'work',
@@ -211,7 +232,7 @@ export function resolveAiFabPlacement(input: {
     ariaLabel: 'Estimer un budget avec 3 formules IA',
     title: aiTokenCostLegend(),
     click: pathname.startsWith('/marketplace') ? 'open' : 'href',
-    href: '/#simulateur-ia',
+    href: PUBLIC_SIMULATOR_PATH,
     modalTitle: 'Estimer un budget',
     modalDescription: `Trois formules à partir du catalogue réel. ${aiTokenCostLegend()}.`,
     highlight: 'budget',

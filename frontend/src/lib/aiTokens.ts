@@ -337,6 +337,28 @@ export function addPurchasedAiTokens(amount = AI_TOKEN_PACK_SIZE, orderId?: stri
   return next;
 }
 
+/** Applique le retour paiement FlexPay (`?ai_tokens_status=success`) et nettoie l’URL. */
+export function claimAiTokenCheckoutReturn(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const aiStatus = params.get('ai_tokens_status') || params.get('ai_tokens');
+    const orderId = params.get('orderId');
+    if (aiStatus !== 'success' && aiStatus !== 'paid') return false;
+    const added = parseInt(params.get('tokens') || String(AI_TOKEN_PACK_SIZE), 10) || AI_TOKEN_PACK_SIZE;
+    addPurchasedAiTokens(added, orderId);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('ai_tokens_status');
+    url.searchParams.delete('ai_tokens');
+    url.searchParams.delete('tokens');
+    url.searchParams.delete('orderId');
+    window.history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Synchronise le cache local avec le portefeuille serveur (essais + jetons payés restants).
  */

@@ -57,6 +57,7 @@ import EventPrepPanel from '@/components/EventPrepPanel';
 import OrgTicketingView from '@/components/OrgTicketingView';
 import { isB2cPlanId } from '@/config/landingPricing';
 import { formatEventPlace } from '@/lib/eventPlace';
+import type { EventConfigPayload } from '@/lib/eventConfig';
 import { eventPrepSummary, hasEventPrepShortlist, parseEventPrep } from '@/lib/eventPrep';
 import {
  displayGuestEmail,

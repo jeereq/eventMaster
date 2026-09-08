@@ -327,7 +327,7 @@ export default function LandingVitrineSection() {
             </div>
           </div>
           <Button
-            href="/#simulateur-ia"
+            href="/simulateur"
             size="sm"
             className="shrink-0 w-full sm:w-auto"
             aria-label="Tester la simulation IA"

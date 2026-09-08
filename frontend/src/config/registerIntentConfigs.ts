@@ -210,6 +210,22 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
       { step: 3, icon: CalendarCheck, title: 'Devis en 1 clic', desc: 'Contactez directement les pros sans aucun engagement financier.' },
     ],
   },
+  ai_simulator: {
+    key: 'ai_simulator',
+    heroTitle: 'Gardez vos packs budget IA',
+    heroDescription:
+      'Compte client gratuit. Retenez les formules du simulateur, ouvrez les fiches et envoyez les devis sans engagement.',
+    defaultAccountKind: 'CLIENT',
+    defaultNextPath: '/simulateur',
+    submitButtonLabel: 'Créer mon compte client gratuit',
+    orgLabel: '',
+    orgPlaceholder: '',
+    features: [
+      { step: 1, icon: Sparkles, title: 'Simuler', desc: 'Trois formules (éco, équilibré, confort) à partir du catalogue réel.' },
+      { step: 2, icon: Wallet, title: 'Retenir un pack', desc: 'Enregistrez la formule choisie pour y revenir plus tard.' },
+      { step: 3, icon: CalendarCheck, title: 'Demander un devis', desc: 'Écrivez au pro. L’acompte se verse ensuite, directement.' },
+    ],
+  },
   personal: {
     key: 'personal',
     heroTitle: 'Votre fête réussie de A à Z',

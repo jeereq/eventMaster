@@ -22,6 +22,7 @@ export const FOOTER_FEATURES = [
 
 export const FOOTER_PRODUCT = [
   { label: 'Plans & Modèles 2D/3D', href: '/plans-3d' },
+  { label: 'Simulateur budget IA', href: '/simulateur' },
   { label: 'Marketplace', href: '/marketplace' },
   { label: 'Réalisations', href: '/activite' },
   { label: 'Modèles', href: '/modeles' },
@@ -95,7 +96,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'event-packs',
     question: 'Comment fonctionne la simulation d’événement et de packs budget par IA ?',
     answer:
-      'Indiquez votre type d’événement (mariage, fête, gala), votre budget en Dollar ($) converti en Francs Congolais (CDF), votre ville et votre nombre d’invités. Vous disposez de 4 simulations complètes gratuites sans compte préalable. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et génère instantanément 3 formules optimisées (Économique, Équilibré, Confort). Une fois les essais gratuits terminés, vous pouvez recharger 6 simulations supplémentaires pour 2 500 FC (payables par Orange Money, M-Pesa, Airtel Money ou Carte). Une fois connecté, vous accédez aux coordonnées complètes et fiches directes des prestataires.',
+      'Indiquez votre type d’événement (mariage, fête, gala), votre budget en Dollar ($) converti en Francs Congolais (CDF), votre ville et votre nombre d’invités sur la page Simulateur. Vous disposez de 4 simulations complètes gratuites sans compte préalable. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et génère instantanément 3 formules optimisées (Économique, Équilibré, Confort). Une fois les essais gratuits terminés, vous pouvez recharger 6 simulations supplémentaires pour 2 500 FC (payables par Orange Money, M-Pesa, Airtel Money ou Carte). Une fois connecté, vous accédez aux coordonnées complètes et fiches directes des prestataires.',
   },
   {
     id: 'free-trial',

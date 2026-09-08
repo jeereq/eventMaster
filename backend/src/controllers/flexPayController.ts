@@ -350,7 +350,7 @@ export async function flexPayCardReturn(req: Request, res: Response) {
     if (kind === 'ai_tokens') {
       const orderId = String(req.query.orderId || '');
       if (result === 'cancel' || result === 'decline') {
-        return res.redirect(`${FRONTEND_URL}/#simulateur-ia?ai_tokens_status=canceled`);
+        return res.redirect(`${FRONTEND_URL}/simulateur?ai_tokens_status=canceled`);
       }
 
       let tokensCount = 6;
@@ -366,7 +366,7 @@ export async function flexPayCardReturn(req: Request, res: Response) {
       }
 
       return res.redirect(
-        `${FRONTEND_URL}/#simulateur-ia?ai_tokens_status=success&tokens=${tokensCount}&orderId=${encodeURIComponent(orderId)}`,
+        `${FRONTEND_URL}/simulateur?ai_tokens_status=success&tokens=${tokensCount}&orderId=${encodeURIComponent(orderId)}`,
       );
     }
 
