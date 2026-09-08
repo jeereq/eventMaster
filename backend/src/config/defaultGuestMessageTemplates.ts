@@ -104,6 +104,7 @@ _{{orgName}} — suivi en temps réel_`,
 
 👤 *Nom* : {{name}}
 📧 *Email* : {{email}}
+🏷 *Raison* : {{reason}}
 📌 *Sujet* : {{subject}}
 
 💬 *Message* :

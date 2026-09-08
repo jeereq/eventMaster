@@ -10,6 +10,7 @@ import {
   loadPlatformSettings,
 } from '../services/platformSettingsService';
 import { optionalAuth, requireAuth } from '../middleware/auth';
+import { resolveContactReason } from '../config/contactReasons';
 import {
   listPublicVenues,
   getPublicVenue,
@@ -161,6 +162,14 @@ router.get('/payments/flexpay/orders/:orderId/verify', verifyFlexPayCardOrder);
 router.post('/payments/flexpay/orders/:orderId/retry', requireAuth, retryFlexPayTicketOrder);
 router.post('/payments/flexpay/orders/:orderId/cancel', requireAuth, cancelFlexPayTicketOrder);
 
+function escapeContactHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
 // POST /api/public/contact
 router.post('/contact', async (req: Request, res: Response) => {
   try {
@@ -172,12 +181,13 @@ router.post('/contact', async (req: Request, res: Response) => {
       });
     }
 
-    const { name, email, subject, message } = req.body;
+    const { name, email, subject, message, reason: rawReason } = req.body;
+    const reason = resolveContactReason(rawReason);
 
-    if (!name || !email || !subject || !message) {
+    if (!name || !email || !subject || !message || !reason) {
       return res
         .status(400)
-        .json({ error: 'Tous les champs sont requis (nom, email, sujet, message).' });
+        .json({ error: 'Tous les champs sont requis (raison, nom, email, sujet, message).' });
     }
 
     const {
@@ -186,28 +196,31 @@ router.post('/contact', async (req: Request, res: Response) => {
       platformName,
     } = getContactDestinations(settings);
 
-    const emailSubject = `[${platformName} Contact] ${subject}`;
-    const emailText = `Nouveau message de contact ${platformName}\n\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
+    const composedSubject = `[${reason.label}] ${subject}`;
+    const emailSubject = `[${platformName} Contact] ${composedSubject}`;
+    const emailText = `Nouveau message de contact ${platformName}\n\nRaison : ${reason.label}\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
     const emailHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
         <h2 style="color: #312e81; margin-top: 0;">Nouveau message de contact</h2>
-        <p><strong>Nom :</strong> ${name}</p>
-        <p><strong>Email :</strong> <a href="mailto:${email}">${email}</a></p>
-        <p><strong>Sujet :</strong> ${subject}</p>
+        <p><strong>Raison :</strong> ${escapeContactHtml(reason.label)}</p>
+        <p><strong>Nom :</strong> ${escapeContactHtml(String(name))}</p>
+        <p><strong>Email :</strong> <a href="mailto:${escapeContactHtml(String(email))}">${escapeContactHtml(String(email))}</a></p>
+        <p><strong>Sujet :</strong> ${escapeContactHtml(String(subject))}</p>
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px;">
-          <p style="margin: 0; white-space: pre-line; color: #334155;">${message}</p>
+          <p style="margin: 0; white-space: pre-line; color: #334155;">${escapeContactHtml(String(message))}</p>
         </div>
-        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">${platformName} — formulaire de contact public</p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">${escapeContactHtml(platformName)} — formulaire de contact public</p>
       </div>
     `;
 
     const emailResult = await sendRealEmail(adminEmail, emailSubject, emailText, emailHtml);
 
     const whatsappRendered = await renderGuestMessage('CONTACT_ADMIN_WHATSAPP', {
-      name,
-      email,
-      subject,
-      message,
+      name: String(name),
+      email: String(email),
+      subject: composedSubject,
+      reason: reason.label,
+      message: String(message),
     });
     const whatsappResult = await sendRealWhatsApp(
       adminWhatsApp,

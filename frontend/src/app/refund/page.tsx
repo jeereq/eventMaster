@@ -123,7 +123,11 @@ export default function RefundPage() {
 
       <Section title="7. Comment demander un remboursement">
         <p>
-          Adressez votre demande à{' '}
+          Adressez votre demande via le{' '}
+          <Link href="/contact?reason=refund" className="text-primary font-semibold hover:underline">
+            formulaire de contact
+          </Link>
+          {' '}(raison « Remboursement ») ou écrivez à{' '}
           <LegalSupportEmail className="text-primary font-semibold hover:underline" /> en indiquant : e-mail du
           compte, date, montant, numéro de transaction FlexPay, et s’il s’agit d’un billet, d’un abonnement, de jetons
           IA ou d’un acompte.

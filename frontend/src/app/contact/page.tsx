@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import FaqSection from '@/components/landing/FaqSection';
@@ -9,6 +9,13 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import { Alert, Button, Input } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
+  CONTACT_REASONS,
+  getContactReason,
+  isContactReasonId,
+  type ContactReasonId,
+} from '@/config/contactReasons';
+import { cn } from '@/lib/cn';
+import {
   Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, Clock, ArrowRight,
 } from 'lucide-react';
 
@@ -16,6 +23,7 @@ export default function ContactPage() {
   const { site } = usePlatformSite();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [reason, setReason] = useState<ContactReasonId | ''>('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
 
@@ -24,16 +32,43 @@ export default function ContactPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  const applyReason = (
+    next: ContactReasonId,
+    currentSubject: string,
+    previousId: ContactReasonId | '',
+  ) => {
+    const previous = previousId ? getContactReason(previousId) : null;
+    const incoming = getContactReason(next);
+    setReason(next);
+    if (!currentSubject.trim() || (previous && currentSubject.trim() === previous.defaultSubject)) {
+      setSubject(incoming.defaultSubject);
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('reason');
+    if (!fromUrl || !isContactReasonId(fromUrl)) return;
+    applyReason(fromUrl, '', '');
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
     setSubmitting(true);
 
+    if (!reason) {
+      setError('Choisissez la raison de votre message.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const response = await api.post('/public/contact', {
         name,
         email,
+        reason,
         subject,
         message,
       });
@@ -50,6 +85,7 @@ export default function ContactPage() {
       );
       setName('');
       setEmail('');
+      setReason('');
       setSubject('');
       setMessage('');
     } catch (err: unknown) {
@@ -70,7 +106,7 @@ export default function ContactPage() {
     <PublicPageShell faqHref="/contact#faq">
       <PublicPageHero
         title="Parlons de votre événement"
-        description={`Démonstration, forfaits ou support — réponse sous 24–48 h (${site.supportHours}).`}
+        description={`Démonstration, forfaits, support ou remboursement — réponse sous 24–48 h (${site.supportHours}).`}
       />
 
       <div className="flex-1">
@@ -161,7 +197,7 @@ export default function ContactPage() {
                     {[
                       'Démonstration personnalisée du produit',
                       'Offres sur-mesure pour grands comptes',
-                      'Support technique et facturation',
+                      'Support technique, facturation et remboursements',
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-2">
                         <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
@@ -206,11 +242,57 @@ export default function ContactPage() {
                         Écrivez-nous
                       </h2>
                       <p className="text-sm text-muted">
-                        Décrivez votre besoin — nous vous répondons rapidement.
+                        Choisissez d’abord la raison — nous orientons le message vers la bonne équipe.
                       </p>
                     </div>
 
                     {error && <Alert variant="error">{error}</Alert>}
+
+                    <div className="space-y-1.5">
+                      <label htmlFor="contact-reason" className="block text-xs font-semibold text-muted">
+                        Raison <span className="text-danger">*</span>
+                      </label>
+                      <select
+                        id="contact-reason"
+                        value={reason}
+                        required
+                        disabled={submitting}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          if (!isContactReasonId(next)) {
+                            setReason('');
+                            return;
+                          }
+                          applyReason(next, subject, reason);
+                        }}
+                        className={cn(
+                          fieldClass,
+                          'min-h-11 appearance-auto',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary',
+                          !reason ? 'text-muted' : 'text-foreground',
+                        )}
+                      >
+                        <option value="">Choisir une raison</option>
+                        {CONTACT_REASONS.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {reason === 'refund' ? (
+                      <p className="text-xs text-muted leading-relaxed rounded-[var(--radius-card)] border border-border bg-surface-muted px-3 py-2.5">
+                        Consultez d’abord la{' '}
+                        <Link
+                          href="/refund"
+                          className="font-semibold text-primary hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        >
+                          politique de remboursement
+                        </Link>
+                        . Pour un billet, l’organisateur décide ; EventMaster n’exécute qu’après son instruction, si les fonds sont encore disponibles.
+                      </p>
+                    ) : null}
 
                     <div className="grid sm:grid-cols-2 gap-4">
                       <Input
@@ -264,7 +346,7 @@ export default function ContactPage() {
                         id="contact-message"
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Décrivez votre besoin en détail…"
+                        placeholder={reason ? getContactReason(reason).messagePlaceholder : 'Décrivez votre besoin en détail…'}
                         rows={5}
                         className={`${fieldClass} resize-none`}
                         required
