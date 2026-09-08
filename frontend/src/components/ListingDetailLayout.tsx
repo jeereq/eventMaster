@@ -254,7 +254,7 @@ export default function ListingDetailLayout({
       active ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]' : 'text-muted hover:text-foreground',
     );
 
-  const commerceActions = showBooking ? (['inquire', 'book'] as const) : [];
+  const commerceActions: Array<'inquire' | 'book'> = showBooking ? ['inquire', 'book'] : [];
   const onCommerceTabKey = (index: number, event: React.KeyboardEvent) => {
     if (!commerceActions.length) return;
     let next = index;
@@ -264,9 +264,11 @@ export default function ListingDetailLayout({
     else if (event.key === 'End') next = commerceActions.length - 1;
     else return;
     event.preventDefault();
-    const action = commerceActions[(next + commerceActions.length) % commerceActions.length];
+    const wrapped = (next + commerceActions.length) % commerceActions.length;
+    const action = commerceActions[wrapped];
+    if (!action) return;
     setMobileAction(action);
-    commerceTabRefs.current[commerceActions.indexOf(action)]?.focus();
+    commerceTabRefs.current[wrapped]?.focus();
   };
 
   const commercePanel = showCommerce ? (
