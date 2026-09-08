@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
-import { Ticket, Plus, Minus, X, Check, Users, Box, Loader2 } from 'lucide-react';
+import { Ticket, Plus, Minus, X, Check, Users, Loader2 } from 'lucide-react';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
@@ -52,6 +52,8 @@ type SeatInventoryMeta = {
   roomLayoutBlueprint?: any;
   roomType?: string | null;
 };
+
+const ZONE_COLOR_FALLBACK = 'var(--festive-accent)';
 
 export default function EventTicketCheckoutForm({
   event,
@@ -400,7 +402,7 @@ export default function EventTicketCheckoutForm({
         {event.paid ? 'Acheter un billet' : 'S’inscrire'}
       </h2>
       {zonePricing && event.priceFromFc != null && (
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           Tarifs à partir de {formatFc(event.priceFromFc)}
           {pricingZones.length > 0 && (
             <span className="ml-1">
@@ -410,7 +412,7 @@ export default function EventTicketCheckoutForm({
         </p>
       )}
       {programHint && (
-        <p className="text-[10px] text-muted">Ambiance programme actuelle : {programHint}</p>
+        <p className="text-xs text-muted">Ambiance programme actuelle : {programHint}</p>
       )}
       {(search.get('canceled') || search.get('payment') === 'paused') && !pendingOrder && (
         <Alert variant="info">
@@ -486,7 +488,7 @@ export default function EventTicketCheckoutForm({
                       <span className="inline-flex items-center gap-2 font-medium">
                         <span
                           className="w-3 h-3 rounded-full shrink-0 border border-border"
-                          style={{ backgroundColor: zone.color || '#c4a35a' }}
+                          style={{ backgroundColor: zone.color || ZONE_COLOR_FALLBACK }}
                         />
                         {zone.name}
                       </span>
@@ -506,7 +508,7 @@ export default function EventTicketCheckoutForm({
                     <Users className="w-3.5 h-3.5 text-primary" />
                     Choisissez vos places sur le plan interactif
                   </p>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     {selectedSeats.length === 0
                       ? 'Touchez un ou plusieurs sièges libres sur le plan (jusqu’à 8 places)'
                       : `${selectedSeats.length} place${selectedSeats.length > 1 ? 's' : ''} sélectionnée${selectedSeats.length > 1 ? 's' : ''} (max 8)`}
@@ -521,7 +523,7 @@ export default function EventTicketCheckoutForm({
                     <button
                       type="button"
                       onClick={() => setSelectedSeats([])}
-                      className="text-xs text-rose-600 hover:underline font-semibold px-3 min-h-11 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      className="text-xs text-danger hover:underline font-semibold px-3 min-h-11 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       Tout désélectionner
                     </button>
@@ -591,7 +593,7 @@ export default function EventTicketCheckoutForm({
                               key={`${s.tableId}-${s.seatIndex}`}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-border text-xs font-medium text-foreground shadow-xs"
                             >
-                              <span className="w-4 h-4 rounded-full bg-primary text-white text-[9px] font-black flex items-center justify-center">
+                              <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-black flex items-center justify-center">
                                 {idx + 1}
                               </span>
                               <span>
@@ -599,7 +601,7 @@ export default function EventTicketCheckoutForm({
                               </span>
                               {s.pricingZoneName && (
                                 <span
-                                  className="text-[10px] px-1 py-0.2 rounded font-semibold"
+                                  className="text-xs px-1 py-0.2 rounded font-semibold"
                                   style={{
                                     backgroundColor: zoneColor ? `${zoneColor}22` : undefined,
                                     color: zoneColor || undefined,
@@ -609,14 +611,14 @@ export default function EventTicketCheckoutForm({
                                 </span>
                               )}
                               {zonePricing && s.priceFc > 0 && (
-                                <span className="text-[10px] text-muted font-mono">
+                                <span className="text-xs text-muted font-mono tabular-nums">
                                   {formatFc(s.priceFc)}
                                 </span>
                               )}
                               <button
                                 type="button"
                                 onClick={() => removeSeat(s.tableId, s.seatIndex)}
-                                className="text-muted hover:text-rose-600 ml-1 p-1.5 -mr-1 rounded-md min-w-[36px] min-h-[36px] sm:min-w-[28px] sm:min-h-[28px] inline-flex items-center justify-center touch-manipulation active:scale-95 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                className="text-muted hover:text-danger ml-1 rounded-md min-w-11 min-h-11 inline-flex items-center justify-center touch-manipulation active:scale-95 hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                                 title="Retirer ce siège"
                                 aria-label={`Retirer le siège ${s.tableName} n°${s.seatIndex + 1}`}
                               >
@@ -636,7 +638,7 @@ export default function EventTicketCheckoutForm({
                     <div className="mt-2 max-h-40 overflow-y-auto space-y-2 pr-1">
                       {tables.map(([tableId, info]) => (
                         <div key={tableId} className="rounded border border-border p-2">
-                          <p className="text-[11px] font-bold text-foreground mb-1.5">{info.name}</p>
+                          <p className="text-xs font-bold text-foreground mb-1.5">{info.name}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {info.seats.map((s) => {
                               const active = selectedSeats.some(

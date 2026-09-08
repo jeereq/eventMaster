@@ -201,12 +201,14 @@ export default function TicketsPage() {
 
       {/* Barre d'onglets pour les organisateurs, managers et protocole */}
       {isOrgRole && (
-        <div className="flex gap-1.5 p-1 rounded-2xl bg-surface border border-border shadow-2xs w-fit">
+        <div className="flex gap-1.5 p-1 rounded-2xl bg-surface border border-border shadow-2xs w-fit" role="group" aria-label="Billetterie ou achats personnels">
           <button
             type="button"
             onClick={() => setActiveTab('org')}
+            aria-pressed={activeTab === 'org'}
             className={cn(
               'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               activeTab === 'org'
                 ? 'bg-foreground text-background shadow-xs'
                 : 'text-muted hover:text-foreground hover:bg-surface-muted'
@@ -219,17 +221,19 @@ export default function TicketsPage() {
           <button
             type="button"
             onClick={() => setActiveTab('my')}
+            aria-pressed={activeTab === 'my'}
             className={cn(
               'inline-flex min-h-11 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition touch-manipulation',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               activeTab === 'my'
                 ? 'bg-foreground text-background shadow-xs'
                 : 'text-muted hover:text-foreground hover:bg-surface-muted'
             )}
           >
-            <QrCode className="w-4 h-4 text-emerald-500" />
+            <QrCode className="w-4 h-4 text-primary" />
             <span>Mes achats personnels</span>
             {tickets.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-primary text-white">
+              <span className="px-1.5 py-0.2 rounded-full text-xs font-bold bg-primary text-primary-foreground">
                 {tickets.length}
               </span>
             )}

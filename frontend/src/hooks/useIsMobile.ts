@@ -2,23 +2,31 @@
 
 import { useSyncExternalStore } from 'react';
 
-const QUERY = '(max-width: 767px)';
+const MOBILE_QUERY = '(max-width: 767px)';
+const LG_UP_QUERY = '(min-width: 1024px)';
 
-function subscribe(onChange: () => void) {
-  const mq = window.matchMedia(QUERY);
-  mq.addEventListener('change', onChange);
-  return () => mq.removeEventListener('change', onChange);
-}
-
-function getSnapshot() {
-  return window.matchMedia(QUERY).matches;
+function subscribeQuery(query: string) {
+  return (onChange: () => void) => {
+    const mq = window.matchMedia(query);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  };
 }
 
 /** SSR : desktop, pour éviter un flash de carte plein écran sur grand écran. */
-function getServerSnapshot() {
-  return false;
+export default function useIsMobile() {
+  return useSyncExternalStore(
+    subscribeQuery(MOBILE_QUERY),
+    () => window.matchMedia(MOBILE_QUERY).matches,
+    () => false,
+  );
 }
 
-export default function useIsMobile() {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+/** Aligné sur le breakpoint `lg` Tailwind : colonne contact des fiches. */
+export function useIsLgUp() {
+  return useSyncExternalStore(
+    subscribeQuery(LG_UP_QUERY),
+    () => window.matchMedia(LG_UP_QUERY).matches,
+    () => true,
+  );
 }

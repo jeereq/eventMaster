@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, Smartphone, CreditCard, CheckCircle2, RefreshCw, ArrowLeft, XCircle } from 'lucide-react';
-import { Alert, Button } from '@/components/ui';
+import { Alert, Button, ConfirmDialog } from '@/components/ui';
 import { FLEXPAY_MOBILE_OPERATORS_LABEL } from '@/lib/flexPayOperators';
 import { CANCEL_PAYMENT_CONFIRM, CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 
@@ -35,6 +35,13 @@ type PaymentPendingViewProps = {
   className?: string;
 };
 
+function statusAnnouncement(status: PaymentPendingStatus, title: string, message: string) {
+  if (status === 'paid') return 'Paiement confirmé. Votre paiement a bien été reçu.';
+  if (status === 'failed') return message || 'Le paiement a échoué ou a été refusé.';
+  if (status === 'error') return message || 'Vérification impossible.';
+  return message || `${title}. Vérification automatique en cours.`;
+}
+
 export default function PaymentPendingView({
   title = 'Paiement en cours',
   description,
@@ -60,6 +67,7 @@ export default function PaymentPendingView({
   const [checking, setChecking] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [confirmKind, setConfirmKind] = useState<'leave' | 'cancel' | null>(null);
   const paidRef = useRef(false);
 
   const runCheck = async (manual = false) => {
@@ -130,15 +138,9 @@ export default function PaymentPendingView({
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [confirmLeave, confirmLeaveMessage, status]);
 
-  const requestLeave = () => {
-    if (confirmLeave && (status === 'pending' || status === 'error')) {
-      return window.confirm(confirmLeaveMessage);
-    }
-    return true;
-  };
+  const needsLeaveConfirm = confirmLeave && (status === 'pending' || status === 'error');
 
-  const handleBack = () => {
-    if (!requestLeave()) return;
+  const leave = () => {
     if (onBack) {
       onBack();
       return;
@@ -146,46 +148,76 @@ export default function PaymentPendingView({
     if (backHref) window.location.assign(backHref);
   };
 
-  const handleCancel = async () => {
+  const handleBack = () => {
+    if (needsLeaveConfirm) {
+      setConfirmKind('leave');
+      return;
+    }
+    leave();
+  };
+
+  const handleCancel = () => {
     if (!onCancelPayment) return;
-    if (!window.confirm(CANCEL_PAYMENT_CONFIRM)) return;
-    setCancelling(true);
-    try {
-      await onCancelPayment();
-    } finally {
-      setCancelling(false);
+    setConfirmKind('cancel');
+  };
+
+  const confirmAction = async () => {
+    if (confirmKind === 'leave') {
+      setConfirmKind(null);
+      leave();
+      return;
+    }
+    if (confirmKind === 'cancel' && onCancelPayment) {
+      setCancelling(true);
+      try {
+        await onCancelPayment();
+        setConfirmKind(null);
+      } finally {
+        setCancelling(false);
+      }
     }
   };
 
   const isMobile = method === 'mobile' || method === 'flexpay_mobile';
   const waiting = status === 'pending' || status === 'error';
+  const liveText = statusAnnouncement(status, title, message);
 
   if (status === 'paid') {
     return (
-      <div className={`rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50/60 p-5 space-y-3 ${className}`}>
-        <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+      <div
+        className={`rounded-[var(--radius-card)] border border-primary/35 bg-primary/10 p-5 space-y-3 ${className}`}
+      >
+        <p className="sr-only" role="status" aria-live="polite">
+          {liveText}
+        </p>
+        <CheckCircle2 className="w-8 h-8 text-primary" aria-hidden />
         <h2 className="text-lg font-bold text-foreground">Paiement confirmé</h2>
-        <p className="text-sm text-muted">Votre paiement a bien été reçu.</p>
+        <p className="text-sm text-foreground/80">Votre paiement a bien été reçu.</p>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-5 space-y-4 ${className}`}>
+    <div
+      className={`rounded-[var(--radius-card)] border border-festive-accent/35 bg-festive-accent-soft p-5 space-y-4 ${className}`}
+    >
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {liveText}
+      </p>
       <div className="flex items-start gap-3">
         <div className="relative mt-0.5">
           {isMobile ? (
-            <Smartphone className="w-8 h-8 text-amber-700" />
+            <Smartphone className="w-8 h-8 text-festive-accent" aria-hidden />
           ) : (
-            <CreditCard className="w-8 h-8 text-amber-700" />
+            <CreditCard className="w-8 h-8 text-festive-accent" aria-hidden />
           )}
           {waiting && (
-            <Loader2 className="w-4 h-4 text-amber-600 absolute -right-1 -bottom-1 animate-spin" />
+            <Loader2 className="w-4 h-4 text-festive-accent absolute -right-1 -bottom-1 animate-spin" aria-hidden />
           )}
         </div>
         <div className="space-y-1 min-w-0">
           <h2 className="text-lg font-bold text-foreground">{title}</h2>
-          <p className="text-sm text-muted leading-relaxed">
+          <p className="text-sm text-foreground/80 leading-relaxed">
             {description ||
               (isMobile
                 ? 'Validez la demande sur votre téléphone (USSD / app Mobile Money). Cette page se met à jour automatiquement.'
@@ -231,7 +263,7 @@ export default function PaymentPendingView({
           disabled={checking || retrying || cancelling}
           className="inline-flex items-center gap-2"
         >
-          {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {checking ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <RefreshCw className="w-4 h-4" aria-hidden />}
           {checking ? 'Vérification…' : 'Vérifier maintenant'}
         </Button>
         {onRetry && (status === 'failed' || status === 'error' || attempts >= Math.min(8, maxAttempts)) && (
@@ -256,7 +288,7 @@ export default function PaymentPendingView({
               }
             }}
           >
-            {retrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {retrying ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <RefreshCw className="w-4 h-4" aria-hidden />}
             {retrying ? 'Relance…' : retryLabel}
           </Button>
         )}
@@ -268,7 +300,7 @@ export default function PaymentPendingView({
             disabled={checking || retrying || cancelling}
             className="inline-flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" aria-hidden />
             {backLabel}
           </Button>
         )}
@@ -276,11 +308,11 @@ export default function PaymentPendingView({
           <Button
             type="button"
             variant="ghost"
-            onClick={() => void handleCancel()}
+            onClick={handleCancel}
             disabled={checking || retrying || cancelling}
-            className="inline-flex items-center gap-2 text-rose-700"
+            className="inline-flex items-center gap-2 text-danger hover:text-danger"
           >
-            {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+            {cancelling ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <XCircle className="w-4 h-4" aria-hidden />}
             {cancelling ? 'Annulation…' : cancelLabel}
           </Button>
         )}
@@ -290,6 +322,27 @@ export default function PaymentPendingView({
           </p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmKind === 'leave'}
+        onClose={() => setConfirmKind(null)}
+        onConfirm={() => void confirmAction()}
+        title="Fermer sans annuler"
+        description={confirmLeaveMessage}
+        confirmLabel="Fermer quand même"
+        cancelLabel="Rester ici"
+      />
+      <ConfirmDialog
+        open={confirmKind === 'cancel'}
+        onClose={() => setConfirmKind(null)}
+        onConfirm={() => void confirmAction()}
+        title="Annuler la commande"
+        description={CANCEL_PAYMENT_CONFIRM}
+        confirmLabel="Annuler la commande"
+        cancelLabel="Garder la commande"
+        tone="danger"
+        loading={cancelling}
+      />
     </div>
   );
 }

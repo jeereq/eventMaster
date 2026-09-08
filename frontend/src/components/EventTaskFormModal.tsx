@@ -37,7 +37,7 @@ function toDateInput(value: string | null): string {
 }
 
 const fieldClass =
-  'w-full min-h-11 px-3 rounded-xl border border-border bg-surface text-sm text-foreground focus:ring-2 focus:ring-primary/20 outline-none';
+  'w-full min-h-11 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 export default function EventTaskFormModal({
   open,

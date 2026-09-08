@@ -58,7 +58,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap',
+        'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap',
         STATUS_PILL_TONES[tone],
         className,
       )}

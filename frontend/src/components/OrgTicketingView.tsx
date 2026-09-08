@@ -72,7 +72,7 @@ export interface OrgTicketOrder {
     date: string;
     location: string;
     ticketPricingMode?: string;
-    tablePlan?: any;
+    tablePlan?: unknown;
   } | null;
   guests?: OrgTicketOrderGuest[];
 }
@@ -99,7 +99,7 @@ export interface OrgTicketingEventSummary {
   ticketPricingMode?: string;
   ticketsSold?: number;
   ticketsTotal?: number | null;
-  tablePlan?: any;
+  tablePlan?: unknown;
   _count?: {
     ticketOrders?: number;
     guests?: number;
@@ -323,21 +323,21 @@ export default function OrgTicketingView({
       </div>
 
       {error && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-danger/10 border border-danger/25 text-danger text-xs flex items-center justify-between">
           <span>{error}</span>
-          <button type="button" onClick={() => setError('')} className="p-1 hover:opacity-75">
+          <button type="button" onClick={() => setError('')} className="min-h-11 min-w-11 inline-flex items-center justify-center hover:opacity-75" aria-label="Fermer">
             <XCircle className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {actionSuccess && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between animate-in fade-in">
+        <div className="p-3 rounded-xl bg-primary/10 border border-primary/25 text-primary text-xs flex items-center justify-between animate-in fade-in">
           <span className="flex items-center gap-1.5 font-semibold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 className="w-4 h-4 text-primary" />
             {actionSuccess}
           </span>
-          <button type="button" onClick={() => setActionSuccess('')} className="p-1 hover:opacity-75">
+          <button type="button" onClick={() => setActionSuccess('')} className="min-h-11 min-w-11 inline-flex items-center justify-center hover:opacity-75" aria-label="Fermer">
             <XCircle className="w-4 h-4" />
           </button>
         </div>
@@ -364,9 +364,9 @@ export default function OrgTicketingView({
           <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-1 shadow-2xs">
             <div className="flex items-center justify-between text-muted text-xs">
               <span className="font-medium">Billets payés</span>
-              <Ticket className="w-3.5 h-3.5 text-emerald-500" />
+              <Ticket className="w-3.5 h-3.5 text-primary" />
             </div>
-            <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+            <p className="text-lg font-black text-primary tabular-nums">
               {summary.paidTicketsCount}
             </p>
             <p className="text-xs text-muted">
@@ -378,9 +378,9 @@ export default function OrgTicketingView({
           <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-1 shadow-2xs">
             <div className="flex items-center justify-between text-muted text-xs">
               <span className="font-medium">Entrées validées</span>
-              <UserCheck className="w-3.5 h-3.5 text-blue-500" />
+              <UserCheck className="w-3.5 h-3.5 text-foreground" />
             </div>
-            <p className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums">
+            <p className="text-lg font-black text-foreground tabular-nums">
               {summary.checkedInGuestsCount} / {summary.paidTicketsCount || summary.totalOrdersCount || 0}
             </p>
             <p className="text-xs text-muted">
@@ -394,7 +394,7 @@ export default function OrgTicketingView({
           <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-1 shadow-2xs">
             <div className="flex items-center justify-between text-muted text-xs">
               <span className="font-medium">Total commandes</span>
-              <Users className="w-3.5 h-3.5 text-amber-500" />
+              <Users className="w-3.5 h-3.5 text-festive-accent" />
             </div>
             <p className="text-lg font-black text-foreground tabular-nums">
               {summary.totalOrdersCount}
@@ -416,7 +416,7 @@ export default function OrgTicketingView({
               <select
                 value={selectedEventId}
                 onChange={(e) => setSelectedEventId(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground focus:ring-2 focus:ring-primary/30"
+                className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <option value="all">Tous les événements ({eventsList.length})</option>
                 {eventsList.map((ev) => (
@@ -466,8 +466,10 @@ export default function OrgTicketingView({
                   key={id}
                   type="button"
                   onClick={() => setStatusFilter(id)}
+                  aria-pressed={statusFilter === id}
                   className={cn(
                     'px-2.5 min-h-11 rounded-lg text-xs font-semibold border transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     statusFilter === id
                       ? 'bg-foreground text-background border-foreground'
                       : 'border-border bg-surface text-muted hover:text-foreground',
@@ -484,8 +486,13 @@ export default function OrgTicketingView({
             <label className="block text-xs font-semibold text-muted mb-1">Contrôle d’accès</label>
             <select
               value={checkInFilter}
-              onChange={(e) => setCheckInFilter(e.target.value as any)}
-              className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground focus:ring-2 focus:ring-primary/30"
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'ALL' || value === 'CHECKED_IN' || value === 'PENDING') {
+                  setCheckInFilter(value);
+                }
+              }}
+              className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <option value="ALL">Toutes les entrées</option>
               <option value="CHECKED_IN">Scannés / Entrés</option>
@@ -501,15 +508,15 @@ export default function OrgTicketingView({
           </span>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="w-2 h-2 rounded-full bg-primary" />
               Payé
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="w-2 h-2 rounded-full bg-festive-accent" />
               En attente
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="w-2 h-2 rounded-full bg-foreground" />
               Validé à l’entrée
             </span>
           </div>
@@ -555,7 +562,7 @@ export default function OrgTicketingView({
                 key={order.id}
                 className={cn(
                   'rounded-2xl border bg-surface transition shadow-2xs overflow-hidden',
-                  isPaid ? 'border-border' : isPending ? 'border-amber-500/40' : 'border-border opacity-80',
+                  isPaid ? 'border-border' : isPending ? 'border-festive-accent/40' : 'border-border opacity-80',
                 )}
               >
                 <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -566,7 +573,7 @@ export default function OrgTicketingView({
                         {isPaid ? 'Payé' : isPending ? 'Paiement en cours' : isCancelled ? 'Annulé' : order.status}
                       </StatusPill>
                       {order.flexPayChannel && (
-                        <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-[10px] font-semibold text-muted uppercase">
+                        <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-xs font-semibold text-muted uppercase">
                           {order.flexPayChannel}
                         </span>
                       )}
@@ -603,7 +610,7 @@ export default function OrgTicketingView({
                           href={`https://wa.me/${order.buyerPhone.replace(/[^\d]/g, '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 min-h-11"
+                          className="text-primary hover:underline inline-flex items-center gap-1 min-h-11"
                         >
                           <MessageCircle className="w-3 h-3" />
                           WhatsApp
@@ -614,7 +621,7 @@ export default function OrgTicketingView({
                       )}
                     </div>
                     {isPending ? (
-                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                      <p className="text-xs text-festive-accent">
                         L’acheteur a initié FlexPay — en attente de confirmation opérateur.
                       </p>
                     ) : null}
@@ -635,15 +642,15 @@ export default function OrgTicketingView({
                       <button
                         type="button"
                         onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                        className="inline-flex min-h-11 items-center gap-1 px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition"
+                        className="inline-flex min-h-11 items-center gap-1 px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       >
                         <span>Détails & Entrées</span>
                         {guestsList.length > 0 && (
                           <span
                             className={cn(
-                              'px-1.5 py-0.2 rounded-full text-[10px] font-bold',
+                              'px-1.5 py-0.2 rounded-full text-xs font-bold',
                               checkedInCount === guestsList.length
-                                ? 'bg-emerald-500/15 text-emerald-600'
+                                ? 'bg-primary/15 text-primary'
                                 : 'bg-primary/10 text-primary'
                             )}
                           >
@@ -672,13 +679,13 @@ export default function OrgTicketingView({
                               key={sIdx}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-border text-xs font-semibold text-foreground shadow-2xs"
                             >
-                              <span className="w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                              <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
                                 {sIdx + 1}
                               </span>
                               <span>{seat.tableName || `Table ${seat.tableId}`}</span>
                               <span>· Siège {seat.seatIndex + 1}</span>
                               {seat.zoneName && (
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/10 text-primary font-bold">
+                                <span className="text-xs px-1.5 py-0.2 rounded bg-primary/10 text-primary font-bold">
                                   {seat.zoneName}
                                 </span>
                               )}
@@ -715,30 +722,30 @@ export default function OrgTicketingView({
                                 key={guest.id}
                                 className={cn(
                                   'p-3 rounded-xl border bg-surface flex items-center justify-between gap-2 shadow-2xs',
-                                  isCheckedIn ? 'border-emerald-500/30' : 'border-border'
+                                  isCheckedIn ? 'border-primary/30' : 'border-border'
                                 )}
                               >
                                 <div className="space-y-0.5 min-w-0">
                                   <p className="text-xs font-bold text-foreground truncate">
                                     {guest.firstName} {guest.lastName}
                                   </p>
-                                  <p className="text-[11px] text-muted truncate">
+                                  <p className="text-xs text-muted truncate">
                                     {guest.email || guest.phone || 'Billet nominatif'}
                                   </p>
                                   <div className="flex items-center gap-1.5 pt-0.5">
                                     {isCheckedIn ? (
-                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                      <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
                                         <CheckCircle2 className="w-3 h-3" />
                                         Entrée validée
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1 text-[10px] text-muted">
+                                      <span className="inline-flex items-center gap-1 text-xs text-muted">
                                         <Clock className="w-3 h-3" />
                                         En attente au guichet
                                       </span>
                                     )}
                                     {guest.seatVerified && (
-                                      <span className="text-[10px] font-bold text-primary">
+                                      <span className="text-xs font-bold text-primary">
                                         · Siège vérifié
                                       </span>
                                     )}
@@ -754,7 +761,7 @@ export default function OrgTicketingView({
                                       variant="primary"
                                       disabled={isBusy}
                                       onClick={() => handleCheckInGuest(targetEventId, guest.id)}
-                                      className="min-h-9 px-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700"
+                                      className="text-xs font-bold"
                                       leftIcon={<UserCheck className="w-3.5 h-3.5" />}
                                     >
                                       Valider entrée
@@ -767,7 +774,6 @@ export default function OrgTicketingView({
                                       variant="secondary"
                                       disabled={isBusy}
                                       onClick={() => handleVerifySeat(targetEventId, guest.id)}
-                                      className="min-h-9 px-2 text-xs"
                                       title="Vérifier le placement de l’invité à sa table"
                                     >
                                       Siège vérifié

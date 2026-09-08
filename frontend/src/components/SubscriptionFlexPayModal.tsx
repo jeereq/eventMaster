@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Smartphone,
 } from 'lucide-react';
-import { Modal, Button } from '@/components/ui';
+import { Modal, Button, ConfirmDialog } from '@/components/ui';
 import { api } from '@/lib/api';
 import type { FlexPayMobileOperatorId } from '@/lib/flexPayOperators';
 import type { BillingCycle, PlanId } from '@/config/landingPricing';
@@ -66,6 +66,7 @@ export default function SubscriptionFlexPayModal({
   const [error, setError] = useState('');
   const [requestId, setRequestId] = useState<string | null>(retryRequestId);
   const [successMessage, setSuccessMessage] = useState('');
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -165,10 +166,14 @@ export default function SubscriptionFlexPayModal({
   };
 
   return (
+    <>
     <Modal
       open={open}
       onClose={() => {
-        if (step === 'waiting' && !window.confirm(CLOSE_PAYMENT_CONFIRM)) return;
+        if (step === 'waiting') {
+          setLeaveConfirmOpen(true);
+          return;
+        }
         onClose();
       }}
       size="sm"
@@ -177,7 +182,7 @@ export default function SubscriptionFlexPayModal({
     >
       {step === 'success' && (
         <div className="py-8 text-center space-y-3 animate-fade-in">
-          <div className="w-14 h-14 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mx-auto">
+          <div className="w-14 h-14 rounded-full bg-primary/15 text-primary flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-8 h-8" />
           </div>
           <h4 className="text-base font-bold text-foreground">Paiement validé</h4>
@@ -210,7 +215,7 @@ export default function SubscriptionFlexPayModal({
           <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-bold text-foreground truncate">{planName}</p>
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 {isRenew ? 'Renouvellement' : retryRequestId ? 'Nouvelle tentative' : 'Activation du forfait'}
               </p>
             </div>
@@ -266,13 +271,26 @@ export default function SubscriptionFlexPayModal({
                 ? `Payer ${priceLabel || 'par carte'}`
                 : `Payer ${chargeLabel || priceLabel || 'par Mobile Money'}`}
             </Button>
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center pt-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="flex items-center justify-center gap-1.5 text-xs text-muted text-center pt-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
               <span>Paiement réel FlexPay · Orange, M-Pesa, Airtel, Visa / Mastercard</span>
             </div>
           </div>
         </form>
       )}
     </Modal>
+    <ConfirmDialog
+      open={leaveConfirmOpen}
+      onClose={() => setLeaveConfirmOpen(false)}
+      onConfirm={() => {
+        setLeaveConfirmOpen(false);
+        onClose();
+      }}
+      title="Fermer sans annuler"
+      description={CLOSE_PAYMENT_CONFIRM}
+      confirmLabel="Fermer quand même"
+      cancelLabel="Rester ici"
+    />
+    </>
   );
 }

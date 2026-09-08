@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, ClipboardList, Clock, Flag, Loader2, Pencil, Plus, Sparkles, Trash2, UserRound } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Alert, Button, EmptyState, StatusPill, ViewModeToggle, useViewMode, listStackClass } from '@/components/ui';
+import { Alert, Button, ConfirmDialog, EmptyState, StatusPill, ViewModeToggle, useViewMode, listStackClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import EventTaskNotifications from '@/components/EventTaskNotifications';
 import EventTaskFormModal, { type EventTaskFormValues } from '@/components/EventTaskFormModal';
@@ -40,6 +40,8 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const { mode, setViewMode, columns, setGridColumns, gridClassName } = useViewMode('em-view-event-tasks', 'list', 2);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<EventTaskItem | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -94,11 +96,22 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     setFormError('');
   };
 
+  const upsertTask = (task: EventTaskItem) => {
+    setTasks((prev) => {
+      const index = prev.findIndex((item) => item.id === task.id);
+      if (index === -1) return [...prev, task];
+      const next = [...prev];
+      next[index] = task;
+      return next;
+    });
+  };
+
   const patch = async (taskId: string, body: Record<string, unknown>) => {
     setError('');
     try {
       const data = (await api.patch(`/events/${eventId}/tasks/${taskId}`, body)) as { task?: EventTaskItem };
-      if (data.task) await load();
+      if (data.task) upsertTask(data.task);
+      else await load();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de mettre à jour la tâche.');
     }
@@ -109,7 +122,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     setFormError('');
     try {
       if (editingTask) {
-        await api.patch(`/events/${eventId}/tasks/${editingTask.id}`, {
+        const data = (await api.patch(`/events/${eventId}/tasks/${editingTask.id}`, {
           title: values.title,
           notes: values.notes || null,
           kind: values.kind,
@@ -118,8 +131,9 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
           assigneeId: values.assigneeId || null,
           blockedById: values.blockedById || null,
           dueAt: values.dueAt || null,
-        });
-        await load();
+        })) as { task?: EventTaskItem };
+        if (data.task) upsertTask(data.task);
+        else await load();
       } else {
         const data = (await api.post(`/events/${eventId}/tasks`, {
           title: values.title,
@@ -154,14 +168,18 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     }
   };
 
-  const handleDelete = async (taskId: string) => {
-    if (!window.confirm('Supprimer cette tâche ?')) return;
+  const handleDelete = async () => {
+    if (!pendingDeleteId) return;
     setError('');
+    setDeleting(true);
     try {
-      await api.delete(`/events/${eventId}/tasks/${taskId}`);
-      setTasks((prev) => prev.filter((item) => item.id !== taskId));
+      await api.delete(`/events/${eventId}/tasks/${pendingDeleteId}`);
+      setTasks((prev) => prev.filter((item) => item.id !== pendingDeleteId));
+      setPendingDeleteId(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de supprimer la tâche.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -191,12 +209,14 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             columns={columns}
             onColumnsChange={setGridColumns}
           />
-          <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1">
+          <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1" role="group" aria-label="Filtrer les tâches">
             <button
               type="button"
               onClick={() => setFilter('open')}
+              aria-pressed={filter === 'open'}
               className={cn(
                 'px-3 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 filter === 'open' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
@@ -205,8 +225,10 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             <button
               type="button"
               onClick={() => setFilter('all')}
+              aria-pressed={filter === 'all'}
               className={cn(
                 'px-3 min-h-11 text-xs font-semibold rounded-lg transition-all touch-manipulation',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 filter === 'all' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
@@ -249,8 +271,10 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 key={person.id}
                 type="button"
                 onClick={() => setPersonFilter(active ? 'all' : person.id)}
+                aria-pressed={active}
                 className={cn(
                   'text-left rounded-[var(--radius-card)] border px-3 py-2.5 min-h-11 transition',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   active
                     ? 'border-foreground bg-foreground text-background'
                     : 'border-border bg-surface hover:border-foreground/30',
@@ -263,9 +287,12 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                   {' · '}
                   {person.done} faite{person.done > 1 ? 's' : ''}
                 </p>
-                <div className={cn('mt-2 h-1.5 rounded-full overflow-hidden', active ? 'bg-background/20' : 'bg-surface-muted')}>
+                <div
+                  className={cn('mt-2 h-1.5 rounded-full overflow-hidden', active ? 'bg-background/20' : 'bg-surface-muted')}
+                  aria-hidden
+                >
                   <div
-                    className={cn('h-full rounded-full', active ? 'bg-background' : 'bg-emerald-600')}
+                    className={cn('h-full rounded-full', active ? 'bg-background' : 'bg-primary')}
                     style={{ width: `${person.total ? Math.round((person.done / person.total) * 100) : 0}%` }}
                   />
                 </div>
@@ -321,15 +348,17 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                     onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
                     className={cn(
                       'min-w-11 min-h-11 -m-2 p-2 inline-flex items-center justify-center shrink-0 touch-manipulation',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl',
                       (!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED') && 'cursor-not-allowed opacity-40',
                     )}
                     aria-label={done ? 'Marquer comme non faite' : 'Marquer comme faite'}
+                    aria-pressed={done}
                   >
                     <span
                       className={cn(
                         'w-6 h-6 rounded-full border-2 inline-flex items-center justify-center',
                         done
-                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          ? 'bg-primary-solid border-primary-solid text-primary-foreground'
                           : 'border-muted/40 text-transparent hover:border-primary',
                       )}
                     >
@@ -354,15 +383,15 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                       <button
                         type="button"
                         onClick={() => openEdit(task)}
-                        className="min-w-11 min-h-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-xl"
+                        className="min-w-11 min-h-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         aria-label="Modifier la tâche"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleDelete(task.id)}
-                        className="min-w-11 min-h-11 inline-flex items-center justify-center text-muted/50 hover:text-rose-600 hover:bg-rose-500/10 rounded-xl"
+                        onClick={() => setPendingDeleteId(task.id)}
+                        className="min-w-11 min-h-11 inline-flex items-center justify-center text-muted/50 hover:text-danger hover:bg-danger/10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         aria-label="Supprimer la tâche"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -372,7 +401,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 </div>
 
                 {task.blockedBy ? (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 max-w-full truncate">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-festive-accent-soft text-festive-accent border border-festive-accent/20 max-w-full truncate">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">
                       Dépend de : <strong>{task.blockedBy.title}</strong>
@@ -432,6 +461,21 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
         saving={saving}
         error={formError}
         onSubmit={handleSave}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteId)}
+        onClose={() => {
+          if (deleting) return;
+          setPendingDeleteId(null);
+        }}
+        onConfirm={() => void handleDelete()}
+        title="Supprimer cette tâche ?"
+        description="La tâche sera retirée de la checklist. Cette action ne peut pas être annulée."
+        confirmLabel="Supprimer"
+        cancelLabel="Garder"
+        tone="danger"
+        loading={deleting}
       />
     </div>
   );

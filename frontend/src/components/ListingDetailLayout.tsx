@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui';
+import { Button, ConfirmDialog, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui';
+import { useIsLgUp } from '@/hooks/useIsMobile';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
@@ -152,8 +153,10 @@ export default function ListingDetailLayout({
   paymentInProgress?: boolean;
 }) {
   const router = useRouter();
+  const isLgUp = useIsLgUp();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
   const [mobileModalOpen, setMobileModalOpen] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const shareHref = shareUrl || (shareSlug ? listingPublicUrl(shareKind, shareSlug) : undefined);
   const priceLabel = priceCaption ?? (priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis');
   const showCommerce = !preview && Boolean(inquiry || booking);
@@ -193,7 +196,10 @@ export default function ListingDetailLayout({
   };
 
   const closeMobileCommerce = () => {
-    if (paymentInProgress && !window.confirm(CLOSE_PAYMENT_CONFIRM)) return;
+    if (paymentInProgress) {
+      setLeaveConfirmOpen(true);
+      return;
+    }
     setMobileModalOpen(false);
   };
 
@@ -211,6 +217,46 @@ export default function ListingDetailLayout({
       block: 'start',
     });
   };
+
+  const commerceTabClass = (active: boolean) =>
+    cn(
+      'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+      active ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]' : 'text-muted hover:text-foreground',
+    );
+
+  const commercePanel = showCommerce ? (
+    <>
+      {showBooking ? (
+        <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Devis ou réservation">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileAction === 'inquire'}
+            onClick={() => setMobileAction('inquire')}
+            className={commerceTabClass(mobileAction === 'inquire')}
+          >
+            {inquireLabel}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileAction === 'book'}
+            onClick={() => setMobileAction('book')}
+            className={commerceTabClass(mobileAction === 'book')}
+          >
+            {bookLabel}
+          </button>
+        </div>
+      ) : null}
+      <div className={cn(!showBooking || mobileAction === 'inquire' ? 'block' : 'hidden')}>
+        {inquiry}
+      </div>
+      {showBooking ? (
+        <div className={cn(mobileAction === 'book' ? 'block' : 'hidden')}>{booking}</div>
+      ) : null}
+    </>
+  ) : null;
 
   const priceBlock = (
     <div className="space-y-1">
@@ -717,52 +763,8 @@ export default function ListingDetailLayout({
                 </div>
               ) : null}
 
-              {showCommerce ? (
-                <>
-              {showBooking ? (
-              <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Devis ou réservation">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={mobileAction === 'inquire'}
-                  onClick={() => setMobileAction('inquire')}
-                  className={cn(
-                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    mobileAction === 'inquire'
-                      ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  {inquireLabel}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={mobileAction === 'book'}
-                  onClick={() => setMobileAction('book')}
-                  className={cn(
-                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    mobileAction === 'book'
-                      ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  {bookLabel}
-                </button>
-              </div>
-              ) : null}
-
-              <div className={cn(!showBooking || mobileAction === 'inquire' ? 'block' : 'hidden')}>
-                {inquiry}
-              </div>
-              {showBooking ? (
-              <div className={cn(mobileAction === 'book' ? 'block' : 'hidden')}>
-                {booking}
-              </div>
-              ) : null}
-                </>
+              {isLgUp && showCommerce ? (
+                commercePanel
               ) : preview ? (
                 <p className="text-xs text-muted leading-relaxed">
                   Aperçu interne — les demandes de devis et réservations restent sur la fiche publique.
@@ -813,8 +815,7 @@ export default function ListingDetailLayout({
         </div>
       )}
 
-      {/* Modal / Tiroir d'action directe sur mobile */}
-      {showCommerce && (
+      {!isLgUp && showCommerce ? (
         <Modal
           open={mobileModalOpen}
           onClose={closeMobileCommerce}
@@ -823,46 +824,22 @@ export default function ListingDetailLayout({
           size="lg"
           className="min-h-[88dvh] sm:min-h-0"
         >
-          <div className="space-y-4 pt-1">
-            {showBooking && (
-              <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Devis ou réservation">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={mobileAction === 'inquire'}
-                  onClick={() => setMobileAction('inquire')}
-                  className={cn(
-                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
-                    mobileAction === 'inquire'
-                      ? 'bg-surface text-foreground shadow-xs'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  {inquireLabel}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={mobileAction === 'book'}
-                  onClick={() => setMobileAction('book')}
-                  className={cn(
-                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
-                    mobileAction === 'book'
-                      ? 'bg-surface text-foreground shadow-xs'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  {bookLabel}
-                </button>
-              </div>
-            )}
-
-            <div>
-              {mobileAction === 'inquire' ? inquiry : booking}
-            </div>
-          </div>
+          <div className="space-y-4 pt-1">{commercePanel}</div>
         </Modal>
-      )}
+      ) : null}
+
+      <ConfirmDialog
+        open={leaveConfirmOpen}
+        onClose={() => setLeaveConfirmOpen(false)}
+        onConfirm={() => {
+          setLeaveConfirmOpen(false);
+          setMobileModalOpen(false);
+        }}
+        title="Fermer sans annuler"
+        description={CLOSE_PAYMENT_CONFIRM}
+        confirmLabel="Fermer quand même"
+        cancelLabel="Rester ici"
+      />
     </div>
   );
 }
