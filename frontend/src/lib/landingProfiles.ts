@@ -14,6 +14,7 @@ import {
   Briefcase,
   MessageSquare,
 } from 'lucide-react';
+import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 
 export type LandingProfileId = 'personal' | 'pro' | 'seeker' | 'vendor';
 export type LandingPricingAudience = 'B2B' | 'B2C' | 'VENDOR';
@@ -299,7 +300,10 @@ export function isLandingProfileId(value: string | null | undefined): value is L
 export function scrollToLandingSection(sectionId: string) {
   if (typeof document === 'undefined') return;
   const run = () => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: motionSafeScrollBehavior(),
+      block: 'start',
+    });
   };
   requestAnimationFrame(() => requestAnimationFrame(run));
 }

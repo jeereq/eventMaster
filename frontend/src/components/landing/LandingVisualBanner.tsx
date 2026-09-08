@@ -117,17 +117,19 @@ export default function LandingVisualBanner() {
     <section
       ref={revealRef}
       id="galerie-inspiration"
-      className="em-reveal em-landing-defer py-14 sm:py-20 border-t border-border bg-surface relative overflow-hidden em-landing-section-glow"
+      className="em-reveal em-landing-defer py-8 sm:py-20 border-t border-border bg-surface relative overflow-hidden em-landing-section-glow"
     >
-      <div className="page-container relative z-10 space-y-10 sm:space-y-12">
-        {/* En-tête de section */}
+      <div className="page-container relative z-10 space-y-6 sm:space-y-12">
         <div className="text-center max-w-3xl mx-auto space-y-2.5">
-          <h2 className="em-landing-heading text-2xl sm:text-4xl text-foreground">
-            Des réceptions d’exception,{' '}
-            <span className="text-primary">conçues pour marquer les esprits</span>
+          <h2 className="em-landing-heading text-xl sm:text-4xl text-foreground">
+            <span className="sm:hidden">Inspirations</span>
+            <span className="hidden sm:inline">
+              Des réceptions d’exception,{' '}
+              <span className="text-primary">conçues pour marquer les esprits</span>
+            </span>
           </h2>
 
-          <p className="text-sm sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
+          <p className="hidden sm:block text-base text-muted leading-relaxed max-w-xl mx-auto">
             Inspirations visuelles pour vos réceptions en RDC — le catalogue réel est juste en dessous.
           </p>
 
@@ -144,7 +146,8 @@ export default function LandingVisualBanner() {
                   : 'bg-surface-muted border border-border text-muted hover:text-foreground',
               )}
             >
-              Toutes les inspirations
+              <span className="sm:hidden">Tout</span>
+              <span className="hidden sm:inline">Toutes les inspirations</span>
             </button>
             {GALLERY_ITEMS.map((item) => (
               <button
@@ -194,7 +197,7 @@ export default function LandingVisualBanner() {
 
                   {/* Titre et localisation incrustés en bas de l'image */}
                   <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <span className="text-xs font-bold uppercase tracking-wider text-festive-on-stage block">
+                    <span className="hidden sm:block text-xs font-bold uppercase tracking-wider text-festive-on-stage">
                       {item.category}
                     </span>
                     <h3 className="text-base font-bold text-white drop-shadow-sm line-clamp-1">
@@ -219,8 +222,10 @@ export default function LandingVisualBanner() {
                     <Link
                       href={item.href}
                       className="min-h-11 inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-hover group/link transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label="Explorer ces offres"
                     >
-                      <span>Explorer ces offres</span>
+                      <span className="sm:hidden">Explorer</span>
+                      <span className="hidden sm:inline">Explorer ces offres</span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
                     </Link>
 
@@ -232,7 +237,8 @@ export default function LandingVisualBanner() {
                         : 'Estimer un budget avec 3 formules IA (1 jeton)'}
                     >
                       <Wand2 className="w-3.5 h-3.5" />
-                      <span>Estimer mon budget · 1 jeton</span>
+                      <span className="sm:hidden">Budget IA</span>
+                      <span className="hidden sm:inline">Estimer mon budget · 1 jeton</span>
                     </Link>
                   </div>
                 </div>
@@ -249,9 +255,12 @@ export default function LandingVisualBanner() {
             </div>
             <div>
               <p className="text-sm font-bold text-foreground">
-                Des prestataires et salles certifiés sur toute la République Démocratique du Congo
+                <span className="sm:hidden">Salles et prestataires certifiés</span>
+                <span className="hidden sm:inline">
+                  Des prestataires et salles certifiés sur toute la République Démocratique du Congo
+                </span>
               </p>
-              <p className="text-xs text-muted">
+              <p className="hidden sm:block text-xs text-muted">
                 Inspirations visuelles, tarifs transparents en CDF et devis direct sans frais d’intermédiaire.
               </p>
             </div>
@@ -263,9 +272,11 @@ export default function LandingVisualBanner() {
               size="md"
               variant="primary"
               className="w-full sm:w-auto"
+              aria-label="Explorer tout le catalogue"
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              Explorer tout le catalogue
+              <span className="sm:hidden">Catalogue</span>
+              <span className="hidden sm:inline">Explorer tout le catalogue</span>
             </Button>
           </div>
         </div>

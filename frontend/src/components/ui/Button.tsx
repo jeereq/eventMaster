@@ -85,6 +85,7 @@ export default function Button({
           }
           onClick?.(event as unknown as React.MouseEvent<HTMLButtonElement>);
         }}
+        {...props}
       >
         {inner}
       </Link>

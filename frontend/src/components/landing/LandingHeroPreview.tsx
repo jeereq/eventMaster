@@ -198,14 +198,15 @@ export default function LandingHeroPreview({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-primary-solid animate-pulse motion-reduce:animate-none shrink-0" />
             <h3 className="text-sm font-bold text-foreground">
-              Actions directes disponibles
+              <span className="sm:hidden">Actions</span>
+              <span className="hidden sm:inline">Actions directes disponibles</span>
             </h3>
-            <span className="text-xs font-semibold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
+            <span className="hidden sm:inline text-xs font-semibold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
               Accès immédiat
             </span>
           </div>
 
-          <span className="text-xs text-muted font-medium">
+          <span className="hidden sm:inline text-xs text-muted font-medium">
             {isLoggedIn ? (
               <span className="text-primary font-semibold">
                 Connecté · Accès direct à votre espace
@@ -229,6 +230,7 @@ export default function LandingHeroPreview({
                 href={targetHref}
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
+                aria-label={act.ctaLabel}
                 className={cn(
                   'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 flex flex-col justify-between h-full group hover:border-primary/60 hover:shadow-md cursor-pointer block',
                   act.highlight
@@ -251,7 +253,7 @@ export default function LandingHeroPreview({
                     </span>
                   </div>
 
-                  <p className="text-xs text-muted leading-relaxed line-clamp-3">
+                  <p className="hidden sm:block text-xs text-muted leading-relaxed line-clamp-3">
                     {act.description}
                   </p>
                 </div>
@@ -259,13 +261,14 @@ export default function LandingHeroPreview({
                 <div className="mt-auto pt-1 sm:pt-2">
                   <div
                     className={cn(
-                      'w-full py-1.5 sm:py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold flex items-center justify-between transition-all duration-200',
+                      'w-full min-h-11 py-1.5 sm:py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold flex items-center justify-between transition-all duration-200',
                       act.highlight
                         ? 'bg-primary-solid text-primary-foreground shadow-sm shadow-primary/30 group-hover:bg-primary-solid-hover'
                         : 'bg-surface-muted text-foreground border border-border group-hover:border-primary/40 group-hover:text-primary',
                     )}
                   >
-                    <span>{act.ctaLabel}</span>
+                    <span className="sm:hidden">Ouvrir</span>
+                    <span className="hidden sm:inline">{act.ctaLabel}</span>
                     <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </div>
@@ -275,7 +278,7 @@ export default function LandingHeroPreview({
         </div>
 
         {/* Note de réassurance sous la grille */}
-        <div className="pt-2 border-t border-border/80 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+        <div className="hidden sm:flex pt-2 border-t border-border/80 flex-wrap items-center justify-between gap-2 text-xs text-muted">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>Zéro installation requise · Fonctionne à 100% dans votre navigateur</span>

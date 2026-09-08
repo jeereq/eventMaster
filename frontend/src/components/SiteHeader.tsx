@@ -14,6 +14,7 @@ import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import PWAInstallCta from '@/components/PWAInstallCta';
 import usePwaInstall from '@/hooks/usePwaInstall';
+import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 
 export type SiteHeaderLink = {
   href: string;
@@ -131,7 +132,10 @@ export default function SiteHeader({
       const targetId = href.replace('/#', '');
       const elem = document.getElementById(targetId);
       if (elem) {
-        elem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        elem.scrollIntoView({
+          behavior: motionSafeScrollBehavior(),
+          block: 'start',
+        });
         window.history.replaceState(null, '', href);
         setCurrentHash(`#${targetId}`);
       }

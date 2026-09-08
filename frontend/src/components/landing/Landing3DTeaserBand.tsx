@@ -19,16 +19,12 @@ export default function Landing3DTeaserBand() {
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8">
             <div className="max-w-2xl space-y-3">
               <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground">
-                Modélisez vos réceptions au millimètre et placez vos invités
+                <span className="sm:hidden">Plans 2D/3D et invités</span>
+                <span className="hidden sm:inline">Modélisez vos réceptions au millimètre et placez vos invités</span>
               </h2>
 
-              <p className="text-xs sm:text-sm text-stage-foreground/80 leading-relaxed max-w-xl">
-                <span className="hidden sm:inline">
-                  Tables rondes, scènes d’honneur, allées et éclairages : testez nos modèles 2D/3D prêts à l'emploi directement dans votre navigateur.
-                </span>
-                <span className="inline sm:hidden">
-                  Agencement précis, visite 3D fluide et synchronisation avec les invitations WhatsApp.
-                </span>
+              <p className="hidden sm:block text-sm text-stage-foreground/80 leading-relaxed max-w-xl">
+                Tables rondes, scènes d’honneur, allées et éclairages : testez nos modèles 2D/3D prêts à l'emploi directement dans votre navigateur.
               </p>
 
               {/* 4 points clés en capsules compactes */}
@@ -59,9 +55,11 @@ export default function Landing3DTeaserBand() {
                 size="lg"
                 variant="primary"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
+                aria-label="Découvrir les modèles 3D"
                 className="w-full justify-center shadow-md font-semibold text-xs sm:text-sm"
               >
-                Découvrir les modèles 3D
+                <span className="sm:hidden">Modèles 3D</span>
+                <span className="hidden sm:inline">Découvrir les modèles 3D</span>
               </Button>
               <Button
                 href={editorUrl}

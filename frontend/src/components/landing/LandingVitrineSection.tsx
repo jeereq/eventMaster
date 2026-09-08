@@ -289,7 +289,7 @@ export default function LandingVitrineSection() {
   );
 
   return (
-    <section ref={revealRef} className="em-reveal em-landing-defer py-14 sm:py-16 border-t border-border bg-surface/80 dark:bg-background/80 em-landing-section-glow">
+    <section ref={revealRef} className="em-reveal em-landing-defer py-8 sm:py-16 border-t border-border bg-surface/80 dark:bg-background/80 em-landing-section-glow">
       <div id="catalogue" className="scroll-mt-16" />
       <div id="salles" className="scroll-mt-16" />
       <div id="prestataires" className="scroll-mt-16" />
@@ -298,10 +298,10 @@ export default function LandingVitrineSection() {
       <div className="page-container relative z-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
-            <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">
+            <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">
               Lieux, prestataires et billetteries
             </h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="hidden sm:block text-sm text-muted leading-relaxed">
               Explorez les espaces vérifiés avec visite 3D et contactez les professionnels en direct.
             </p>
           </div>
@@ -317,7 +317,10 @@ export default function LandingVitrineSection() {
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-foreground">Besoin d’un pack complet selon votre budget ?</p>
+              <p className="text-xs font-bold text-foreground">
+                <span className="sm:hidden">Pack selon votre budget</span>
+                <span className="hidden sm:inline">Besoin d’un pack complet selon votre budget ?</span>
+              </p>
               <p className="text-xs text-muted hidden sm:block">
                 Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.
               </p>
@@ -327,9 +330,11 @@ export default function LandingVitrineSection() {
             href="/#simulateur-ia"
             size="sm"
             className="shrink-0 w-full sm:w-auto"
+            aria-label="Tester la simulation IA"
             rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
           >
-            Tester la simulation IA
+            <span className="sm:hidden">Simulation IA</span>
+            <span className="hidden sm:inline">Tester la simulation IA</span>
           </Button>
         </div>
 

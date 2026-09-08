@@ -5,6 +5,10 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+export function motionSafeScrollBehavior(): ScrollBehavior {
+  return prefersReducedMotion() ? 'auto' : 'smooth';
+}
+
 export function usePrefersReducedMotion(): boolean {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
@@ -21,7 +25,7 @@ export function scrollToElementId(id: string) {
   const el = document.getElementById(id);
   if (!el) return;
   el.scrollIntoView({
-    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    behavior: motionSafeScrollBehavior(),
     block: 'nearest',
   });
 }

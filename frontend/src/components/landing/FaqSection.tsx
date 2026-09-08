@@ -34,10 +34,10 @@ export default function FaqSection({
       .filter((item): item is (typeof FAQ_ITEMS)[number] => Boolean(item));
   }, [itemIds]);
 
-  const [openId, setOpenId] = useState<string | null>(source[0]?.id ?? null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
-    setOpenId(source[0]?.id ?? null);
+    setOpenId(null);
   }, [source]);
 
   const items = source.map((item) => ({
@@ -49,11 +49,13 @@ export default function FaqSection({
   }));
 
   return (
-    <section id={id} className={cn('em-landing-defer py-16 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
+    <section id={id} className={cn('em-landing-defer py-8 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
       <div className="page-container relative z-10">
-        <div className="max-w-2xl mb-8 space-y-2.5">
-          <h2 className="em-landing-heading text-2xl sm:text-3xl text-foreground">{title}</h2>
-          <p className="text-sm text-muted leading-relaxed">{subtitle}</p>
+        <div className="max-w-2xl mb-5 sm:mb-8 space-y-2.5">
+          <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">{title}</h2>
+          {subtitle ? (
+            <p className="hidden sm:block text-sm text-muted leading-relaxed">{subtitle}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2.5 max-w-3xl">
@@ -105,9 +107,10 @@ export default function FaqSection({
           <div className="mt-8 flex items-center gap-2 text-xs text-muted">
             <HelpCircle className="w-4 h-4 text-primary shrink-0" />
             <span>
-              Une question spécifique ?{' '}
+              Une question ?{' '}
               <Link href="/contact" className="font-bold text-primary hover:underline">
-                Contactez notre équipe de support →
+                <span className="sm:hidden">Nous écrire</span>
+                <span className="hidden sm:inline">Contactez notre équipe de support →</span>
               </Link>
             </span>
           </div>

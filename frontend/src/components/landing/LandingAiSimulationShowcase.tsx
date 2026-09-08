@@ -166,7 +166,7 @@ export default function LandingAiSimulationShowcase() {
     <section
       ref={revealRef}
       id="simulateur-ia"
-      className="em-reveal em-landing-defer py-14 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
+      className="em-reveal em-landing-defer py-8 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
     >
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[260px] sm:w-[480px] sm:h-[480px] bg-primary/10 rounded-full blur-xl sm:blur-2xl pointer-events-none -z-10" />
 
@@ -182,24 +182,24 @@ export default function LandingAiSimulationShowcase() {
             </div>
           ) : null}
 
-          <h2 className="em-landing-heading text-2xl sm:text-4xl text-foreground">
-            Préparez votre événement par IA :{' '}
-            <span className="text-primary">3 packs clés en main</span>{' '}
-            dans votre budget
+          <h2 className="em-landing-heading text-xl sm:text-4xl text-foreground">
+            <span className="sm:hidden">
+              3 packs IA, <span className="text-primary">votre budget</span>
+            </span>
+            <span className="hidden sm:inline">
+              Préparez votre événement par IA :{' '}
+              <span className="text-primary">3 packs clés en main</span>{' '}
+              dans votre budget
+            </span>
           </h2>
 
           <p className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-foreground tabular-nums">
             Taux actuel : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
           </p>
 
-          <p className="text-xs sm:text-base text-muted leading-relaxed">
-            <span className="hidden sm:inline">
-              Indiquez votre budget en dollars : il est converti en francs au taux ci-dessus. Choisissez votre ville et vos envies — l’assistant compose{' '}
-              <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples préremplissent le projet ; la simulation budget IA ne part qu’au clic « Générer ».
-            </span>
-            <span className="inline sm:hidden">
-              Indiquez votre budget en dollars : il est converti au taux affiché, puis l’IA compose 3 formules dans votre enveloppe.
-            </span>
+          <p className="hidden sm:block text-base text-muted leading-relaxed">
+            Indiquez votre budget en dollars : il est converti en francs au taux ci-dessus. Choisissez votre ville et vos envies — l’assistant compose{' '}
+            <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples préremplissent le projet ; la simulation budget IA ne part qu’au clic « Générer ».
           </p>
 
           {!allowance.unlimited && !isAiSimulationThresholdReached(allowance) ? (
@@ -223,7 +223,7 @@ export default function LandingAiSimulationShowcase() {
                   : 'text-muted hover:text-foreground',
               )}
             >
-              Exemples & projets types
+              Exemples
             </button>
             <button
               type="button"
@@ -237,7 +237,8 @@ export default function LandingAiSimulationShowcase() {
               )}
             >
               <Wand2 className="w-3.5 h-3.5 text-festive-accent" />
-              <span>Tester mon événement en direct</span>
+              <span className="sm:hidden">En direct</span>
+              <span className="hidden sm:inline">Tester mon événement en direct</span>
               {isAiSimulationThresholdReached(allowance) ? (
                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-bold tabular-nums">
                   {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} budget IA
@@ -250,7 +251,7 @@ export default function LandingAiSimulationShowcase() {
         {viewMode === 'presets' && (
           <div className="bg-surface/90 dark:bg-surface border border-primary/25 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
-              <p className="text-xs font-bold text-foreground">
+              <p className="hidden sm:block text-xs font-bold text-foreground">
                 Choisissez un projet type, puis générez de vrais packs catalogue.
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap -mx-1 px-1" role="group" aria-label="Projets types">
@@ -287,7 +288,7 @@ export default function LandingAiSimulationShowcase() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
                 <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
                   <div>
-                    <span className="text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground inline-block mb-1">
+                    <span className="hidden sm:inline-block text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground mb-1">
                       Projet type
                     </span>
                     <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
@@ -302,13 +303,17 @@ export default function LandingAiSimulationShowcase() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3.5 sm:p-4 text-xs">
                 <div className="space-y-0.5">
                   <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <Heart className="w-3.5 h-3.5 text-primary" /> Type d’événement
+                    <Heart className="w-3.5 h-3.5 text-primary" />
+                    <span className="sm:hidden">Type</span>
+                    <span className="hidden sm:inline">Type d’événement</span>
                   </span>
                   <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <MapPin className="w-3.5 h-3.5 text-primary" /> Ville & Commune
+                    <MapPin className="w-3.5 h-3.5 text-primary" />
+                    <span className="sm:hidden">Ville</span>
+                    <span className="hidden sm:inline">Ville & Commune</span>
                   </span>
                   <p className="font-bold text-foreground truncate">
                     {activeScenario.commune
@@ -318,13 +323,17 @@ export default function LandingAiSimulationShowcase() {
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <Users className="w-3.5 h-3.5 text-primary" /> Nombre d’invités
+                    <Users className="w-3.5 h-3.5 text-primary" />
+                    <span className="sm:hidden">Invités</span>
+                    <span className="hidden sm:inline">Nombre d’invités</span>
                   </span>
-                  <p className="font-bold text-foreground">{activeScenario.guests} personnes</p>
+                  <p className="font-bold text-foreground">{activeScenario.guests}</p>
                 </div>
                 <div className="space-y-0.5">
                   <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <DollarSign className="w-3.5 h-3.5 text-primary" /> Budget alloué ($ / FC)
+                    <DollarSign className="w-3.5 h-3.5 text-primary" />
+                    <span className="sm:hidden">Budget</span>
+                    <span className="hidden sm:inline">Budget alloué ($ / FC)</span>
                   </span>
                   <p className="font-bold text-primary flex items-baseline gap-1">
                     <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
@@ -334,12 +343,12 @@ export default function LandingAiSimulationShowcase() {
               </div>
             </div>
 
-            <p className="text-xs text-muted leading-relaxed bg-surface-muted/60 border border-border rounded-[var(--radius-card)] p-3.5">
+            <p className="hidden sm:block text-xs text-muted leading-relaxed bg-surface-muted/60 border border-border rounded-[var(--radius-card)] p-3.5">
               {activeScenario.prompt}
             </p>
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/80">
-              <div className="flex items-center gap-2 text-xs text-muted">
+              <div className="hidden sm:flex items-center gap-2 text-xs text-muted">
                 <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
                 <span>Aucun jeton n’est débité tant que vous n’avez pas cliqué sur Générer.</span>
               </div>
@@ -349,13 +358,22 @@ export default function LandingAiSimulationShowcase() {
                   size="md"
                   fullWidth
                   className="shadow-sm shadow-primary/30 sm:w-auto"
+                  aria-label="Préremplir et simuler ce projet"
                   rightIcon={<ArrowRight className="w-4 h-4" />}
                   onClick={() => openLiveWithScenario(activeScenario)}
                 >
-                  Préremplir et simuler ce projet
+                  <span className="sm:hidden">Simuler</span>
+                  <span className="hidden sm:inline">Préremplir et simuler ce projet</span>
                 </Button>
-                <Button href={simulatorUrl} variant="secondary" size="md" className="flex-1 sm:flex-none">
-                  Ouvrir le simulateur complet
+                <Button
+                  href={simulatorUrl}
+                  variant="secondary"
+                  size="md"
+                  className="flex-1 sm:flex-none"
+                  aria-label="Ouvrir le simulateur complet"
+                >
+                  <span className="sm:hidden">Simulateur</span>
+                  <span className="hidden sm:inline">Ouvrir le simulateur complet</span>
                 </Button>
               </div>
             </div>
@@ -379,7 +397,7 @@ export default function LandingAiSimulationShowcase() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto pt-4">
+        <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto pt-4">
           <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
             <div className="w-9 h-9 rounded-[var(--radius-button)] bg-festive-accent/15 text-festive-accent flex items-center justify-center">
               <Heart className="w-4 h-4" />

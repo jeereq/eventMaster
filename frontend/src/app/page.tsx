@@ -68,9 +68,11 @@ export default function Home() {
                     href="/register?kind=ORGANIZER&intent=personal&action=event"
                     size="lg"
                     variant="primary"
+                    aria-label="Créer mon événement"
                     rightIcon={<ArrowRight className="w-4 h-4" />}
                   >
-                    Créer mon événement
+                    <span className="sm:hidden">Créer</span>
+                    <span className="hidden sm:inline">Créer mon événement</span>
                   </Button>
                 )}
                 <Button
@@ -78,8 +80,10 @@ export default function Home() {
                   size="lg"
                   variant="secondary"
                   className="bg-stage-foreground/10 text-stage-foreground hover:bg-stage-foreground/20 border-stage-foreground/20 text-sm font-semibold"
+                  aria-label="Explorer le marketplace"
                 >
-                  Explorer le marketplace
+                  <span className="sm:hidden">Marketplace</span>
+                  <span className="hidden sm:inline">Explorer le marketplace</span>
                 </Button>
               </>
             )

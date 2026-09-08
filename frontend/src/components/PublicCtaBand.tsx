@@ -40,7 +40,7 @@ export default function PublicCtaBand({
               <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground">
                 {title}
               </h2>
-              <p className="text-xs sm:text-sm text-stage-foreground/80 leading-relaxed max-w-xl">
+              <p className="hidden sm:block text-xs sm:text-sm text-stage-foreground/80 leading-relaxed max-w-xl">
                 {description}
               </p>
               {highlights?.length ? (

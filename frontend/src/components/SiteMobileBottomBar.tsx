@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Store, Rss, LayoutGrid, FileText } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 
 export interface MobileNavItem {
   id: string;
@@ -95,7 +96,7 @@ export default function SiteMobileBottomBar({
     if (item.href === '/') {
       if (pathname === '/') {
         e.preventDefault();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: motionSafeScrollBehavior() });
         if (currentHash) {
           window.history.replaceState(null, '', '/');
           setCurrentHash('');
