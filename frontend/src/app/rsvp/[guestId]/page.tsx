@@ -42,7 +42,6 @@ const GuestTablePlanView = dynamic(() => import('@/app/rsvp/GuestTablePlanView')
 });
 
 const GuestPendingInvitationView = dynamic(() => import('@/app/rsvp/GuestPendingInvitationView'), {
-  ssr: false,
   loading: () => (
     <div className="min-h-screen em-guest-page flex items-center justify-center p-6" role="status" aria-busy="true">
       <Loader2 className="w-6 h-6 text-primary animate-spin" aria-hidden />
@@ -71,6 +70,7 @@ export default function RsvpPage() {
   const [guest, setGuest] = useState<GuestRsvpData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const [rsvpStatus, setRsvpStatus] = useState<'ACCEPTED' | 'DECLINED'>('ACCEPTED');
   
   // Preferences form
@@ -381,10 +381,10 @@ export default function RsvpPage() {
   const handleSubmitRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rsvpLocked) {
-      setError('La date de l\'événement est passée. Vous ne pouvez plus modifier votre présence.');
+      setSubmitError('La date de l\'événement est passée. Vous ne pouvez plus modifier votre présence.');
       return;
     }
-    setError('');
+    setSubmitError('');
     setSubmitting(true);
 
     try {
@@ -400,7 +400,7 @@ export default function RsvpPage() {
           if (!field.required) continue;
           const val = customFieldValues[field.id];
           if (val === undefined || val === null || val === '') {
-            setError(`Le champ « ${field.label} » est obligatoire.`);
+            setSubmitError(`Le champ « ${field.label} » est obligatoire. Complétez-le, puis renvoyez votre réponse.`);
             setSubmitting(false);
             return;
           }
@@ -422,7 +422,7 @@ export default function RsvpPage() {
 
       setSubmitted(true);
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue lors de la soumission de votre réponse.');
+      setSubmitError(err.message || 'Impossible d’envoyer la réponse. Vérifiez votre connexion, puis réessayez.');
     } finally {
       setSubmitting(false);
     }
@@ -460,7 +460,7 @@ export default function RsvpPage() {
           <div className="bg-danger/10 text-danger p-4 rounded-[var(--radius-card)] w-16 h-16 flex items-center justify-center mx-auto border border-danger/25">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground tracking-tight">Invitation introuvable</h2>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">Invitation introuvable</h1>
           <p className="text-muted leading-relaxed text-sm">
             {error || 'Ce lien d’invitation est invalide ou a expiré.'}
           </p>
@@ -521,10 +521,12 @@ export default function RsvpPage() {
       ];
 
       return (
+        <>
         <GuestPortalShell
           title={guest.event.title}
           guestId={guestId}
           organizationName={guest.organizationName}
+          inert={lightboxOpen || showFullScreenQr}
           swipeTabIds={[...guestTabIds]}
           activeTabId={activeGuestTab}
           onTabChange={goGuestTab}
@@ -1165,6 +1167,8 @@ export default function RsvpPage() {
             )}
             </div>
 
+        </GuestPortalShell>
+
         {/* Expanded Image Modal with Carousel */}
         {expandedImages.length > 0 && (
           <div
@@ -1348,7 +1352,7 @@ export default function RsvpPage() {
             </div>
           </div>
         )}
-        </GuestPortalShell>
+        </>
     );
   }
 
@@ -1357,7 +1361,10 @@ export default function RsvpPage() {
       guest={guest}
       guestId={guestId}
       rsvpStatus={rsvpStatus}
-      setRsvpStatus={setRsvpStatus}
+      setRsvpStatus={(status) => {
+        setSubmitError('');
+        setRsvpStatus(status);
+      }}
       rsvpLocked={rsvpLocked}
       submitting={submitting}
       additionalNotes={additionalNotes}
@@ -1365,6 +1372,7 @@ export default function RsvpPage() {
       customFieldValues={customFieldValues}
       setCustomFieldValues={setCustomFieldValues}
       onSubmit={handleSubmitRsvp}
+      submitError={submitError}
     />
   );
 }

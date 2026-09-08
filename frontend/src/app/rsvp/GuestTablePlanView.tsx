@@ -362,7 +362,7 @@ export default function GuestTablePlanView({
                         ({inspectedTable.occupiedCount}/{inspectedTable.capacity} pl.)
                       </span>
                       {inspectedTable.pricingZoneId && (
-                        <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase bg-white/20 text-white truncate">
+                        <span className="px-1.5 py-0.5 rounded text-xs font-bold uppercase bg-white/20 text-white truncate">
                           {pricingZones?.find((z) => z.id === inspectedTable.pricingZoneId)?.name}
                         </span>
                       )}
@@ -540,9 +540,9 @@ export default function GuestTablePlanView({
                     >
                       {occupant.type === 'guest' || occupant.type === 'neighbor' ? (
                         <div
-                          className={`w-9 h-9 rounded-xl border flex items-center justify-center text-[8px] font-semibold ${
+                          className={`w-9 h-9 rounded-xl border flex items-center justify-center text-xs font-semibold ${
                             occupant.type === 'guest'
-                              ? 'bg-primary text-white border-primary ring-2 ring-primary/25 shadow-sm'
+                              ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/25 shadow-sm'
                               : occupant.anonymous
                                 ? 'bg-surface-muted/80 border-border/80 text-muted'
                                 : 'bg-surface-muted border-border text-foreground'

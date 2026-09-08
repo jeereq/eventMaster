@@ -25,6 +25,8 @@ interface GuestPortalShellProps {
   swipeTabIds?: string[];
   activeTabId?: string;
   onTabChange?: (id: string) => void;
+  /** Masque le chrome aux lecteurs d’écran quand un dialog recouvre la page. */
+  inert?: boolean;
 }
 
 function swipeBlocked(target: EventTarget | null) {
@@ -49,6 +51,7 @@ export default function GuestPortalShell({
   swipeTabIds,
   activeTabId,
   onTabChange,
+  inert = false,
 }: GuestPortalShellProps) {
   const { site } = usePlatformSite();
   const brandLabel = organizationName?.trim() || site.platformName || 'EventMaster';
@@ -77,7 +80,7 @@ export default function GuestPortalShell({
   };
 
   return (
-    <div className={cn('em-guest-page flex flex-col min-h-dvh', className)}>
+    <div className={cn('em-guest-page flex flex-col min-h-dvh', className)} inert={inert || undefined}>
       <CelebrateMood />
       <header className="sticky top-0 z-40 border-b border-border/70 bg-surface/85 backdrop-blur-md pt-[env(safe-area-inset-top)]">
         <div className="page-container max-w-xl mx-auto min-h-12 sm:min-h-14 flex items-center justify-between gap-2 sm:gap-3 py-2.5 pl-[max(0px,env(safe-area-inset-left))] pr-[max(0px,env(safe-area-inset-right))]">

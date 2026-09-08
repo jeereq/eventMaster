@@ -56,6 +56,7 @@ export default function GuestPendingInvitationView({
   customFieldValues,
   setCustomFieldValues,
   onSubmit,
+  submitError,
 }: {
   guest: GuestRsvpData;
   guestId: string;
@@ -68,6 +69,7 @@ export default function GuestPendingInvitationView({
   customFieldValues: Record<string, any>;
   setCustomFieldValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   onSubmit: (e: React.FormEvent) => void;
+  submitError?: string;
 }) {
   const { site } = usePlatformSite();
 
@@ -359,6 +361,11 @@ export default function GuestPendingInvitationView({
         )}
         <div className={isOutside ? 'relative z-10' : undefined}>
         {renderRsvpLockedBanner()}
+        {submitError ? (
+          <div className="bg-danger/10 border border-danger/25 text-danger px-4 py-3 rounded-[var(--radius-card)] text-sm font-semibold text-left" role="alert">
+            {submitError}
+          </div>
+        ) : null}
         <div className={`font-semibold text-foreground ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
         
         {/* Yes/No Buttons */}
@@ -1075,6 +1082,11 @@ export default function GuestPendingInvitationView({
               {/* Default RSVP Form */}
               <form onSubmit={onSubmit} className="space-y-6">
                 {renderRsvpLockedBanner()}
+                {submitError ? (
+                  <div className="bg-danger/10 border border-danger/25 text-danger px-4 py-3 rounded-[var(--radius-card)] text-sm font-semibold text-left" role="alert">
+                    {submitError}
+                  </div>
+                ) : null}
                 <div className="space-y-3">
                   <label className="block text-xs font-bold text-muted uppercase tracking-wider text-center mb-1">
                     Serez-vous parmi nous ?
