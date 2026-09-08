@@ -294,7 +294,7 @@ export default function ListingDetailLayout({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-4">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-500" />
+            <Sparkles className="w-5 h-5 text-festive-accent" />
             <span>Prestations & Métiers ({relatedServices?.length || 0})</span>
           </h2>
           <p className="text-xs sm:text-sm text-muted">
@@ -316,7 +316,7 @@ export default function ListingDetailLayout({
               className="group rounded-xl border border-border/80 bg-surface shadow-xs hover:shadow-md hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col justify-between"
             >
               <div>
-                <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
+                <div className="relative aspect-[16/10] bg-stage overflow-hidden">
                   {cover ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -327,10 +327,10 @@ export default function ListingDetailLayout({
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted">
-                      <Sparkles className="w-8 h-8 text-amber-500/50" />
+                      <Sparkles className="w-8 h-8 text-festive-accent/50" />
                     </div>
                   )}
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-white border border-white/20">
+                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-stage/80 text-stage-foreground border border-stage-foreground/20">
                     {srv.categoryLabel || 'Prestation'}
                   </span>
                 </div>
@@ -355,11 +355,11 @@ export default function ListingDetailLayout({
               <div className="p-3 sm:p-4 pt-0 border-t border-border/60 mt-2 flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-foreground tabular-nums">
                   {srv.priceFromFc != null ? formatFc(srv.priceFromFc) : 'Sur devis'}
-                  {srv.priceUnitLabel ? <span className="text-[10px] font-normal text-muted"> {srv.priceUnitLabel}</span> : null}
+                  {srv.priceUnitLabel ? <span className="text-xs font-normal text-muted"> {srv.priceUnitLabel}</span> : null}
                 </span>
                 <Link
                   href={href}
-                  className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition inline-flex items-center gap-1 shadow-2xs"
+                  className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <span>Voir l'offre</span>
                   <ArrowRight className="w-3 h-3" />
@@ -377,7 +377,7 @@ export default function ListingDetailLayout({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-4">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-emerald-500" />
+            <Building2 className="w-5 h-5 text-primary" />
             <span>Salles & Espaces de réception ({relatedVenues?.length || 0})</span>
           </h2>
           <p className="text-xs sm:text-sm text-muted">
@@ -397,7 +397,7 @@ export default function ListingDetailLayout({
               className="group rounded-xl border border-border/80 bg-surface shadow-xs hover:shadow-md hover:border-primary/40 transition-all duration-200 overflow-hidden flex flex-col justify-between"
             >
               <div>
-                <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
+                <div className="relative aspect-[16/10] bg-stage overflow-hidden">
                   {cover ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -408,11 +408,11 @@ export default function ListingDetailLayout({
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted">
-                      <Building2 className="w-8 h-8 text-emerald-500/50" />
+                      <Building2 className="w-8 h-8 text-primary/50" />
                     </div>
                   )}
                   {vn.capacity ? (
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-white border border-white/20 flex items-center gap-1">
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-bold bg-stage/80 text-stage-foreground border border-stage-foreground/20 flex items-center gap-1">
                       <Users className="w-3 h-3" />
                       <span>{vn.capacity} places</span>
                     </span>
@@ -439,11 +439,11 @@ export default function ListingDetailLayout({
               <div className="p-3 sm:p-4 pt-0 border-t border-border/60 mt-2 flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-foreground tabular-nums">
                   {vn.priceFromFc != null ? formatFc(vn.priceFromFc) : 'Sur devis'}
-                  {vn.priceUnitLabel ? <span className="text-[10px] font-normal text-muted"> {vn.priceUnitLabel}</span> : null}
+                  {vn.priceUnitLabel ? <span className="text-xs font-normal text-muted"> {vn.priceUnitLabel}</span> : null}
                 </span>
                 <Link
                   href={href}
-                  className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition inline-flex items-center gap-1 shadow-2xs"
+                  className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <span>Voir la salle</span>
                   <ArrowRight className="w-3 h-3" />
@@ -475,7 +475,7 @@ export default function ListingDetailLayout({
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <Sparkles className="w-4 h-4 text-festive-accent" />
                           <span>Autres prestations proposées ({relatedServices!.length})</span>
                         </h2>
                         <p className="text-xs text-muted">
@@ -511,18 +511,18 @@ export default function ListingDetailLayout({
                                 <img src={sizedMediaUrl(cover, 160)} alt={srv.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted">
-                                  <Sparkles className="w-5 h-5 text-amber-500/60" />
+                                  <Sparkles className="w-5 h-5 text-festive-accent/60" />
                                 </div>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block truncate">
+                              <span className="text-xs font-bold text-muted uppercase tracking-wider block truncate">
                                 {srv.categoryLabel}
                               </span>
                               <h3 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
                                 {srv.title}
                               </h3>
-                              <p className="text-[11px] font-semibold text-muted tabular-nums">
+                              <p className="text-xs font-semibold text-muted tabular-nums">
                                 {srv.priceFromFc != null ? formatFc(srv.priceFromFc) : 'Sur devis'}
                               </p>
                             </div>
@@ -539,7 +539,7 @@ export default function ListingDetailLayout({
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                          <Building2 className="w-4 h-4 text-emerald-500" />
+                          <Building2 className="w-4 h-4 text-primary" />
                           <span>Salles & Lieux de réception ({relatedVenues!.length})</span>
                         </h2>
                         <p className="text-xs text-muted">
@@ -573,20 +573,20 @@ export default function ListingDetailLayout({
                                 <img src={sizedMediaUrl(cover, 160)} alt={vn.headline || vn.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted">
-                                  <Building2 className="w-5 h-5 text-emerald-500/60" />
+                                  <Building2 className="w-5 h-5 text-primary/60" />
                                 </div>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
                               {vn.capacity && (
-                                <span className="text-[10px] font-bold text-muted uppercase tracking-wider block truncate">
+                                <span className="text-xs font-bold text-muted uppercase tracking-wider block truncate">
                                   {vn.capacity} places
                                 </span>
                               )}
                               <h3 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
                                 {vn.headline || vn.name}
                               </h3>
-                              <p className="text-[11px] font-semibold text-muted tabular-nums">
+                              <p className="text-xs font-semibold text-muted tabular-nums">
                                 {vn.priceFromFc != null ? formatFc(vn.priceFromFc) : 'Sur devis'}
                               </p>
                             </div>

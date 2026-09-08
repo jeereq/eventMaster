@@ -42,7 +42,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Vous pilotez EventMaster : organisations et licences, marketplace, vitrine, facturation, audit et impersonation support.',
     canDo: [
       'Traiter la file du jour : demandes d’abonnement, licences J-7, factures ouvertes',
-      'Créer et modifier les organisations, forfaits et durées (trimestre 90 j, mois, annuel 365 j −10 %)',
+      'Créer et modifier les organisations, forfaits, durées et type de compte (organisateur, prestataire, mixte, client)',
       'Ouvrir l’espace d’une organisation (impersonation support, bandeau visible)',
       'Modérer le catalogue : salles, prestataires, matériel & équipements ; dépublier / republier avec motif',
       'Suivre packs, favoris, GMV salles / prestataires / matériel & équipements et commissions {commissionPercent} %',
@@ -78,6 +78,13 @@ export const USER_GUIDES: UserGuide[] = [
         content:
           '1. Ouvrez Demandes abonnement.\n2. Vérifiez le forfait et la durée : trimestre 90 j (Particulier) ou mois (Business / marketplace), annuel 365 j facturé 12 mois ou 4 trimestres avec −10 %.\n3. Vérifiez la preuve de paiement hors plateforme.\n4. Approuvez — la licence s’active et une facture est générée au statut Payée.\n5. Pour une facture déjà émise « Envoyée » (renouvellement, ancien dossier) : Factures → détail → Marquer payée (motif ≥ 8 caractères).',
         links: [{ label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' }],
+      },
+      {
+        id: 'account-kind',
+        title: 'Changer le type de compte d’une organisation',
+        content:
+          '1. Organisations → Modifier.\n2. Champ Type de compte : organisateur, prestataire, mixte ou client.\n3. Ajustez le forfait s’il n’est plus compatible.\n4. Enregistrez. Aucun autre rôle (propriétaire, manager, commercial, client) ne peut faire ce changement.',
+        links: [{ label: 'Organisations', href: '/dashboard?tab=tenants' }],
       },
       {
         id: 'license-duration',
@@ -206,12 +213,13 @@ export const USER_GUIDES: UserGuide[] = [
       'Suivre séparément les demandes de devis et les réservations',
       'Publier vos offres vendeur (Mes offres) : prestations / matériel & équipements ; salles via Salles',
       'Accéder à la facturation, au forfait et aux factures',
-      'Changer le type de compte de l’organisation (Mon compte)',
+      'Demander un changement de type de compte au Super Admin EventMaster',
       'Personnaliser modèles d’invitation et messages invités',
     ],
     cannotDo: [
       'Voir les données d\'autres organisations',
       'Modifier les forfaits plateforme ou valider des abonnements d\'autres tenants',
+      'Changer le type de compte (réservé au Super Admin)',
     ],
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
@@ -236,7 +244,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'whats-new',
         title: 'Nouveautés à connaître',
         content:
-          '1. Marketplace séparé : Explorer = catalogue acheteur (comme le client) ; Mes offres = publication vendeur.\n2. Devis et Réservations sont deux entrées de menu distinctes (même page, onglets synchronisés avec l’URL).\n3. Événements : sous-onglets Liste | Tâches ; en mode Protocole, Accueil | Tâches sur un événement.\n4. Salles : modèles d’étages (Duplex…), escaliers / balcons dès Premium — détail dans « Éditeur de salles selon le forfait » et la FAQ.\n5. Type de compte : vous seul pouvez le changer (Mon compte). Managers et protocole voient le type en lecture seule.',
+          '1. Marketplace séparé : Explorer = catalogue acheteur (comme le client) ; Mes offres = publication vendeur.\n2. Devis et Réservations sont deux entrées de menu distinctes (même page, onglets synchronisés avec l’URL).\n3. Événements : sous-onglets Liste | Tâches ; en mode Protocole, Accueil | Tâches sur un événement.\n4. Salles : modèles d’étages (Duplex…), escaliers / balcons dès Premium — détail dans « Éditeur de salles selon le forfait » et la FAQ.\n5. Type de compte : lecture seule pour toute l’organisation. Seul un Super Admin EventMaster peut le modifier.',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
           { label: 'FAQ éditeur', href: '/faq' },
@@ -288,9 +296,9 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'account-kind',
-        title: 'Changer le type de compte',
+        title: 'Type de compte',
         content:
-          '1. Mon compte → Type de compte.\n2. Organisateur, prestataire / salles, mixte, ou client.\n3. Un type incompatible avec le forfait actuel repasse l’espace à l’essai Essentials : choisissez ensuite un forfait dans Facturation.\n4. Managers et protocole ne peuvent pas modifier ce champ.',
+          '1. Le type (organisateur, prestataire, mixte, client) s’affiche en lecture seule dans Mon compte.\n2. Aucun rôle d’organisation ne peut le modifier — ni le propriétaire, ni le manager, ni le protocole.\n3. Pour un changement d’activité, contactez le Super Admin EventMaster : il le règle depuis Organisations.\n4. Un type incompatible avec le forfait se corrige aussi côté Super Admin (forfait adapté).',
         links: [
           { label: 'Mon compte', href: '/dashboard/profile' },
           { label: 'Facturation', href: '/dashboard/billing' },
@@ -350,7 +358,7 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Manager organisation',
     badge: 'Organisation',
     summary:
-      'Vous pilotez le quotidien : équipe, événements, salles 2D/3D, modèles, réalisations, simulateur IA, Explorer, devis / réservations et Mes offres. Le type de compte, la facturation et le forfait restent au propriétaire.',
+      'Vous pilotez le quotidien : équipe, événements, salles 2D/3D, modèles, réalisations, simulateur IA, Explorer, devis / réservations et Mes offres. Le type de compte est réservé au Super Admin ; le forfait au propriétaire (Facturation).',
     canDo: [
       'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
       'Créer salles (étages, plan 3D selon forfait) et événements (privés / publics)',
@@ -392,7 +400,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'whats-new',
         title: 'Nouveautés à connaître',
         content:
-          '1. Réalisations : grille élargie — publiez photos et actualités liées aux salles / prestations.\n2. Simulateur IA : bouton Acheter des jetons toujours visible (1 jeton = 1 simulation).\n3. Explorer = catalogue acheteur ; Mes offres = publication vendeur.\n4. Devis et Réservations sont deux menus distincts.\n5. Type de compte et forfait : uniquement le propriétaire (Mon compte / Facturation).',
+          '1. Réalisations : grille élargie — publiez photos et actualités liées aux salles / prestations.\n2. Simulateur IA : bouton Acheter des jetons toujours visible (1 jeton = 1 simulation).\n3. Explorer = catalogue acheteur ; Mes offres = publication vendeur.\n4. Devis et Réservations sont deux menus distincts.\n5. Type de compte : lecture seule. Forfait : propriétaire (Facturation). Changement de type : Super Admin uniquement.',
         links: [
           { label: 'Réalisations', href: '/dashboard/publications' },
           { label: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai' },
@@ -478,7 +486,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     tips: [
       'Explorer pour acheter / retenir ; Mes offres pour vendre ; Réalisations pour montrer le travail.',
-      'Le type de compte est en lecture seule : seul le propriétaire le change dans Mon compte.',
+      'Le type de compte est en lecture seule : seul un Super Admin EventMaster peut le modifier.',
       'Achetez des jetons depuis le simulateur — le bouton n’attend plus que le solde soit bas.',
       'Déléguez le protocole et des tâches avant le jour J.',
       'Escaliers / balcons = Premium+ (forfait de l’organisation, changé par le propriétaire).',
@@ -581,7 +589,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Les tâches sont dans Protocole → Tâches, pas dans un menu séparé.',
       'Réalisations montre les photos des salles et prestations — lecture seule.',
       'Les pages /modeles et /plans-3d restent consultables, mais la création IA et l’enregistrement sont bloqués.',
-      'Le type de compte de l’organisation se change uniquement depuis le compte propriétaire.',
+      'Le type de compte se change uniquement par un Super Admin EventMaster.',
       'Pas d’app native pour l’instant : tout se fait dans le navigateur.',
     ],
   },
@@ -667,16 +675,17 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
-      'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace (Explorer), Agenda, billets, Demandes de devis et Réservations (séparés). Pour organiser ou publier, changez le type de compte dans Mon compte.',
+      'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace (Explorer), Agenda, billets, Demandes de devis et Réservations (séparés). Pour organiser ou publier, un Super Admin doit changer le type de compte.',
     canDo: [
       'Explorer salles, prestataires, matériel & équipements et événements (filtres, carte, grille / liste)',
       'Agenda : s’inscrire ou acheter un billet',
       'Favoris, packs budget, partage d’URL',
       'Suivre Demandes de devis et Réservations dans deux menus distincts',
       'Mes billets + badge QR',
-      'Passer organisateur / prestataire depuis Mon compte',
+      'Demander un passage organisateur / prestataire au Super Admin',
     ],
     cannotDo: [
+      'Changer soi-même le type de compte (réservé au Super Admin)',
       'Créer des événements, invitations ou plans de table',
       'Publier une salle ou une prestation',
       'Souscrire un abonnement SaaS tant que le compte reste client',
@@ -757,7 +766,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'upgrade-account',
         title: 'Passer organisateur ou prestataire',
         content:
-          '1. Ouvrez Mon compte.\n2. Changez le type de compte (organisateur, prestataire / salles, ou les deux).\n3. L’espace SaaS s’ouvre : événements ou publication marketplace.\n4. Choisissez ensuite un forfait adapté dans Facturation.',
+          '1. Le type de compte est visible en lecture seule dans Mon compte.\n2. Vous ne pouvez pas le modifier vous-même.\n3. Contactez le support EventMaster (Super Admin) pour passer organisateur, prestataire ou mixte.\n4. Une fois le type mis à jour, choisissez un forfait adapté dans Facturation.',
         links: [{ label: 'Mon compte', href: '/dashboard/profile' }],
       },
     ],

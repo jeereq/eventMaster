@@ -603,7 +603,7 @@ export default function ClientDashboardHome() {
               Information sur votre type de compte : Compte Client Gratuit
             </p>
             <p className="text-[11px] text-muted leading-relaxed">
-              Votre compte actuel est un <strong>Compte Client Particulier</strong> (100% gratuit à vie, dédié à la recherche de prestataires, aux devis directs, aux billets et aux simulations IA sans abonnement). Si vous souhaitez gérer vous-même vos événements (invitations WhatsApp, plan de table 2D/3D, pass QR) ou référencer vos prestations, vous devrez <strong>créer un compte dédié (Organisateur ou Prestataire) distinct</strong> de celui-ci.
+              Votre compte actuel est un <strong>Compte Client Particulier</strong> (gratuit : recherche de prestataires, devis, billets, simulations IA). Pour organiser des événements ou publier des offres, contactez le support EventMaster : <strong>seul un Super Admin peut changer le type de ce compte</strong>. Vous pouvez aussi ouvrir un compte organisateur ou prestataire distinct à l’inscription.
             </p>
           </div>
         </div>

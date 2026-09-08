@@ -586,7 +586,7 @@ export function accountKindForPlanAssignment(
 
 export function planAudienceMismatchMessage(planKey: string, kind?: string | null): string {
   if (kind === 'CLIENT') {
-    return 'Un compte client ne souscrit pas d’abonnement SaaS. Passez organisateur ou prestataire dans Mon compte, puis choisissez un forfait.';
+    return 'Un compte client ne souscrit pas d’abonnement SaaS. Contactez le support EventMaster pour faire passer le compte en organisateur ou prestataire, puis choisissez un forfait.';
   }
   const plan = getPlanLimits(planKey);
   if (kind === 'VENDOR') {

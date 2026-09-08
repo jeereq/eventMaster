@@ -35,7 +35,7 @@ import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import AdminOpsHome from '@/components/admin/AdminOpsHome';
 import AdminPlatformSettings from '@/components/admin/AdminPlatformSettings';
-import { ACCOUNT_KIND_FILTER_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { ACCOUNT_KIND_FILTER_LABELS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import {
   platformRoleLabel,
@@ -632,6 +632,7 @@ function DashboardPageContent() {
   const [openingWorkspaceId, setOpeningWorkspaceId] = useState<string | null>(null);
   const [modalTenantName, setTenantName] = useState('');
   const [modalPlan, setModalPlan] = useState<PlanId>('FREE');
+  const [modalAccountKind, setModalAccountKind] = useState<TenantAccountKind>('ORGANIZER');
   const [modalLicenseActive, setModalLicenseActive] = useState(true);
   const [modalLicenseExpiresAt, setModalLicenseExpiresAt] = useState('');
   const [modalLicenseKey, setModalLicenseKey] = useState('');
@@ -1197,6 +1198,7 @@ function DashboardPageContent() {
     setSelectedTenant(null);
     setTenantName('');
     setModalPlan('FREE');
+    setModalAccountKind('ORGANIZER');
     setModalLicenseActive(true);
     setModalLicenseExpiresAt('');
     setModalLicenseKey('');
@@ -1214,6 +1216,7 @@ function DashboardPageContent() {
     setSelectedTenant(t);
     setTenantName(t.name);
     setModalPlan(t.plan);
+    setModalAccountKind((t.accountKind as TenantAccountKind) || 'ORGANIZER');
     setModalLicenseActive(t.licenseActive);
     setModalLicenseExpiresAt(t.licenseExpiresAt ? t.licenseExpiresAt.split('T')[0] : '');
     setModalLicenseKey(t.licenseKey || '');
@@ -1242,6 +1245,7 @@ function DashboardPageContent() {
         await api.post('/admin/tenants', {
           name: modalTenantName,
           plan: modalPlan,
+          accountKind: user?.role === 'SUPER_ADMIN' ? modalAccountKind : undefined,
           licenseActive: modalLicenseActive,
           licenseExpiresAt: modalLicenseExpiresAt ? new Date(modalLicenseExpiresAt).toISOString() : null,
           licenseKey: modalLicenseKey || null,
@@ -1258,6 +1262,7 @@ function DashboardPageContent() {
         const payload: Record<string, unknown> = {
           name: modalTenantName,
           plan: modalPlan,
+          ...(user?.role === 'SUPER_ADMIN' ? { accountKind: modalAccountKind } : {}),
           licenseActive: modalLicenseActive,
           licenseExpiresAt: modalLicenseExpiresAt ? new Date(modalLicenseExpiresAt).toISOString() : null,
           licenseKey: modalLicenseKey || null,
@@ -4405,6 +4410,23 @@ function DashboardPageContent() {
                       ))}
                     </select>
                   </div>
+
+                  {user?.role === 'SUPER_ADMIN' && (
+                  <div className="space-y-2">
+                    <label htmlFor="admin-tenant-account-kind" className="text-xs font-bold text-muted uppercase tracking-wider">Type de compte</label>
+                    <select
+                      id="admin-tenant-account-kind"
+                      value={modalAccountKind}
+                      onChange={(e) => setModalAccountKind(e.target.value as TenantAccountKind)}
+                      className="w-full min-h-11 bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus:border-primary transition"
+                    >
+                      {(Object.keys(ACCOUNT_KIND_LABELS) as TenantAccountKind[]).map((kind) => (
+                        <option key={kind} value={kind}>{ACCOUNT_KIND_LABELS[kind]}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted">Seul le Super Admin peut modifier ce champ. Le forfait n’y est plus couplé automatiquement.</p>
+                  </div>
+                  )}
 
                   {/* License Active */}
                   <div className="flex items-center justify-between p-4 bg-surface-muted rounded-xl border border-border">

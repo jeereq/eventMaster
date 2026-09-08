@@ -29,7 +29,7 @@ import {
 } from '../utils/marketplaceDates';
 import { parseListingDetails } from '../utils/listingDetails';
 import { fetchActivityPreview } from './marketplaceFeedController';
-import { Prisma, RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
+import { Prisma, RoomType, ServiceCategory, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import { notifyTenantOperators } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
@@ -677,14 +677,8 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
     });
 
     if (wantPublic) {
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, accountKind: true } });
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
       await ensureVendorProfile(tenantId, tenant?.name || room.name, place.city || listing.city);
-      if (tenant && tenant.accountKind === TenantAccountKind.ORGANIZER) {
-        await prisma.tenant.update({
-          where: { id: tenantId },
-          data: { accountKind: TenantAccountKind.BOTH },
-        });
-      }
     }
 
     return res.json(listing);
@@ -1187,13 +1181,6 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       : await prisma.serviceOffering.create({
           data: { ...data, tenantId, vendorProfileId: profile.id, slug },
         });
-
-    if (wantPublic && tenant?.accountKind === TenantAccountKind.ORGANIZER) {
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { accountKind: TenantAccountKind.BOTH },
-      });
-    }
 
     return res.json(offering);
   } catch (error) {

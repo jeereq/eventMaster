@@ -13,9 +13,9 @@ const variants = {
   ghost:
     'bg-transparent text-muted hover:bg-surface-muted hover:text-foreground focus-visible:ring-primary/30',
   danger:
-    'bg-rose-700 text-primary-foreground hover:bg-rose-800 focus-visible:ring-rose-500',
+    'bg-danger text-primary-foreground hover:bg-danger/90 focus-visible:ring-danger',
   success:
-    'bg-emerald-800 text-primary-foreground hover:bg-emerald-900 focus-visible:ring-emerald-700',
+    'bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover focus-visible:ring-primary',
 } as const;
 
 const sizes = {

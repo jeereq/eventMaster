@@ -291,11 +291,8 @@ export async function assertCanCreateRoom(userId: string, tenantId: string): Pro
 export const PROTOCOL_CREATIVE_DENIED =
   'Le rôle protocole ne peut pas créer de modèles d’invitation ni de plans de salle.';
 
-export const PROTOCOL_ACCOUNT_KIND_DENIED =
-  'Le rôle protocole ne peut pas changer le type de compte de l’organisation.';
-
-export const ACCOUNT_KIND_OWNER_ONLY =
-  'Seul le propriétaire de l’organisation peut changer le type de compte.';
+export const ACCOUNT_KIND_SUPERADMIN_ONLY =
+  'Seul un Super Admin peut changer le type de compte.';
 
 /** Bloque la création / composition IA de modèles et de plans si l’utilisateur est protocole. */
 export async function protocolCreativeDeniedMessage(

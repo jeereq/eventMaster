@@ -88,7 +88,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'client-account',
     question: 'Je cherche seulement une salle ou un prestataire : dois-je payer un abonnement ?',
     answer:
-      'Non. Le compte client est gratuit : explorer, favoris, packs budget, devis. Pour organiser une fête ou publier vos offres, changez le type de compte puis choisissez un forfait.',
+      'Non. Le compte client est gratuit : explorer, favoris, packs budget, devis. Pour organiser une fête ou publier vos offres, un Super Admin doit changer le type de compte ; ensuite choisissez un forfait.',
   },
   {
     id: 'event-packs',

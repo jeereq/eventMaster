@@ -36,10 +36,10 @@ export type ProjectCardLayout = 'grid' | 'list';
 export type StatusPillTone = 'amber' | 'emerald' | 'rose' | 'sky' | 'violet' | 'slate' | 'primary';
 
 const STATUS_PILL_TONES: Record<StatusPillTone, string> = {
-  amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-  sky: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+  amber: 'bg-festive-accent-soft text-festive-accent',
+  emerald: 'bg-primary/10 text-primary',
+  rose: 'bg-danger/10 text-danger',
+  sky: 'bg-primary/10 text-primary',
   violet: 'bg-primary/10 text-primary',
   slate: 'bg-surface-muted text-muted border border-border',
   primary: 'bg-primary/10 text-primary',

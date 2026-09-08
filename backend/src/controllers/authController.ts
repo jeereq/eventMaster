@@ -6,11 +6,9 @@ import { AuthenticatedRequest, signUserToken } from '../middleware/auth';
 import { formatTenantResponse, parseAccountKind } from '../utils/tenantAccess';
 import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
 import { isPlanAllowedForAccountKind, resolvePendingSignupPlan } from '../config/plansConfig';
-import { PlanType } from '@prisma/client';
 import { recordUserLegalAcceptance } from '../services/legalService';
 import {
-  ACCOUNT_KIND_OWNER_ONLY,
-  PROTOCOL_ACCOUNT_KIND_DENIED,
+  ACCOUNT_KIND_SUPERADMIN_ONLY,
   resolveOrgAccess,
 } from '../services/permissionsService';
 import { resolveCommercialByReferralCode } from '../services/commercialService';
@@ -532,6 +530,10 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
 
     const { name, phone, phoneCountryCode, nationalNumber, avatarUrl, password, tenantName, accountKind } = req.body;
 
+    if (accountKind !== undefined && accountKind !== null && String(accountKind).trim() !== '') {
+      return res.status(403).json({ error: ACCOUNT_KIND_SUPERADMIN_ONLY });
+    }
+
     if (!name) {
       return res.status(400).json({ error: 'Le nom est obligatoire.' });
     }
@@ -553,16 +555,9 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    const wantsAccountKind =
-      accountKind === 'ORGANIZER' || accountKind === 'VENDOR' || accountKind === 'BOTH' || accountKind === 'CLIENT';
     const profileAccess = req.user.tenantId
       ? await resolveOrgAccess(req.user.id, req.user.tenantId)
       : null;
-    if (wantsAccountKind && req.user.tenantId && profileAccess && !profileAccess.isOwner) {
-      return res.status(403).json({
-        error: profileAccess.isProtocolOnly ? PROTOCOL_ACCOUNT_KIND_DENIED : ACCOUNT_KIND_OWNER_ONLY,
-      });
-    }
 
     const result = await prisma.$transaction(async (tx) => {
       const updatedUser = await tx.user.update({
@@ -571,27 +566,9 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       });
 
       let updatedTenant = null;
-      let planResetToFree = false;
       if (req.user!.tenantId) {
-        const currentTenant = await tx.tenant.findUnique({
-          where: { id: req.user!.tenantId },
-          select: { plan: true },
-        });
-        const tenantData: {
-          name?: string;
-          accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
-          plan?: PlanType;
-        } = {};
+        const tenantData: { name?: string } = {};
         if (tenantName && !profileAccess?.isProtocolOnly) tenantData.name = tenantName;
-        if (wantsAccountKind && profileAccess?.isOwner) {
-          const nextKind = parseAccountKind(accountKind);
-          tenantData.accountKind = nextKind;
-          const currentPlan = currentTenant?.plan || 'FREE';
-          if (nextKind === 'CLIENT' || !isPlanAllowedForAccountKind(currentPlan, nextKind)) {
-            if (currentPlan !== 'FREE') planResetToFree = true;
-            tenantData.plan = 'FREE';
-          }
-        }
         if (Object.keys(tenantData).length > 0) {
           updatedTenant = await tx.tenant.update({
             where: { id: req.user!.tenantId },
@@ -604,14 +581,11 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
         }
       }
 
-      return { user: updatedUser, tenant: updatedTenant, planResetToFree };
+      return { user: updatedUser, tenant: updatedTenant };
     });
 
     return res.json({
-      message: result.planResetToFree
-        ? 'Profil mis à jour. L’ancien forfait n’était pas destiné à ce type de compte : l’espace est passé à l’essai Essentials. Choisissez un forfait adapté dans Facturation.'
-        : 'Profil mis à jour avec succès !',
-      planResetToFree: result.planResetToFree,
+      message: 'Profil mis à jour avec succès !',
       user: publicUser(result.user),
       tenant: result.tenant ? formatTenantResponse(result.tenant) : null,
     });

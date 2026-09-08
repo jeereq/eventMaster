@@ -414,7 +414,7 @@ function BillingPageInner() {
                   Vous souhaitez créer vos propres événements ou publier vos prestations sur la plateforme ?
                 </p>
                 <p className="text-xs text-muted leading-relaxed">
-                  Les forfaits d&apos;abonnement ci-dessous (Particulier Organisateur, Business B2B, Vitrine Prestataire) sont réservés aux espaces de gestion événementielle. Pour y souscrire et accéder aux outils d&apos;organisation (plans de table 2D/3D, invitations WhatsApp, pass QR), <strong>vous devez créer un compte dédié (Organisateur ou Prestataire) distinct de votre compte client actuel</strong>.
+                  Les forfaits d&apos;abonnement ci-dessous (Particulier Organisateur, Business B2B, Vitrine Prestataire) sont réservés aux espaces organisateur / prestataire. Pour y souscrire, <strong>contactez le support EventMaster</strong> (seul un Super Admin peut changer le type de ce compte), ou ouvrez un compte distinct.
                 </p>
               </div>
             </div>

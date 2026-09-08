@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { parseAccountKind } from '../utils/tenantAccess';
 import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment, normalizePlanKey, resolveDurationDaysForPlan, billingCycleFromDurationDays } from '../config/plansConfig';
 import {
   loadSubscriptionPlansFromDb,
@@ -444,7 +445,7 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
-    const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
+    const { name, plan, licenseActive, licenseExpiresAt, licenseKey, accountKind: rawAccountKind } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Le nom de l\'organisation est requis.' });
@@ -452,7 +453,10 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
 
     const nextPlanKey = normalizePlanKey((plan as string) || 'FREE');
     const nextPlan = nextPlanKey as PlanType;
-    const accountKind = accountKindForPlanAssignment(nextPlanKey, 'ORGANIZER');
+    const accountKind =
+      req.user?.role === 'SUPER_ADMIN' && rawAccountKind
+        ? parseAccountKind(rawAccountKind)
+        : accountKindForPlanAssignment(nextPlanKey, 'ORGANIZER');
 
     const newTenant = await prisma.tenant.create({
       data: {
@@ -498,6 +502,7 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
       licenseExpiresAt,
       licenseKey,
       billing,
+      accountKind: rawAccountKind,
     } = req.body;
 
     const existing = await prisma.tenant.findUnique({ where: { id } });
@@ -507,7 +512,10 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
 
     const newPlanKey = normalizePlanKey(String(plan ?? existing.plan));
     const newPlan = newPlanKey as PlanType;
-    const nextAccountKind = accountKindForPlanAssignment(newPlanKey, existing.accountKind);
+    const nextAccountKind =
+      req.user?.role === 'SUPER_ADMIN' && rawAccountKind
+        ? parseAccountKind(rawAccountKind, existing.accountKind)
+        : existing.accountKind;
     let nextExpiry = licenseExpiresAt !== undefined
       ? licenseExpiresAt
         ? new Date(licenseExpiresAt)

@@ -265,13 +265,6 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       },
     });
 
-    if (tenant?.accountKind === 'VENDOR') {
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { accountKind: 'BOTH' },
-      });
-    }
-
     return res.status(201).json(serializeEvent(event));
   } catch (error: any) {
     console.error('Erreur lors de la création de l\'événement:', error);
