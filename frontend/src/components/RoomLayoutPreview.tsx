@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import {
@@ -22,11 +23,21 @@ import {
 import FloorDepthFrame from '@/components/FloorDepthFrame';
 import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
-import RoomWebGLViewer from '@/components/RoomWebGLViewer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import { cn } from '@/lib/cn';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
+
+const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none">
+      <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-xs font-semibold text-background">
+        Chargement 3D…
+      </span>
+    </div>
+  ),
+});
 
 export type RoomPreviewQuality = 'thumb' | 'standard' | 'showcase';
 
@@ -147,7 +158,7 @@ function ThumbPreview({
   return (
     <div
       className={cn(
-        'relative aspect-[4/3] h-full min-h-0 overflow-hidden rounded-2xl border border-border bg-[#1a1410]',
+        'relative aspect-[4/3] h-full min-h-0 overflow-hidden rounded-2xl border border-border bg-stage',
         className,
       )}
       role="img"
@@ -302,7 +313,11 @@ function FlatShowcasePreview({
   const walls = resolveBlueprintWalls(blueprint);
 
   return (
-    <div className={cn('relative aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden bg-[#1a1410]', className)}>
+    <div
+      role="img"
+      aria-label={`Plan 2D ${roomTypeLabels[blueprint.roomType]}, ${blueprint.canvas.widthM} × ${blueprint.canvas.heightM} mètres${blueprint.metadata.totalSeats ? `, ${blueprint.metadata.totalSeats} places` : ''}`}
+      className={cn('relative aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden bg-stage', className)}
+    >
       <FloorDepthFrame
         amount={amount}
         floorStyle={{
@@ -559,7 +574,7 @@ export default function RoomLayoutPreview({
   return (
     <div className={cn('space-y-2', className)}>
       {showHeader && (
-        <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
+        <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between text-xs font-bold uppercase tracking-wider text-muted">
           <span className="truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
           <span className="shrink-0 tabular-nums">
             {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
@@ -588,18 +603,18 @@ export default function RoomLayoutPreview({
               className="absolute inset-0 h-full w-full rounded-2xl"
             />
           )}
-          {!mounted && (
+          {!mounted && !force2d ? (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-3">
-              <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-[10px] font-semibold text-background backdrop-blur-sm">
+              <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-xs font-semibold text-background">
                 Chargement 3D…
               </span>
             </div>
-          )}
+          ) : null}
           {canExpand ? (
             <button
               type="button"
               onClick={() => setExpanded(true)}
-              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 rounded-full bg-foreground/80 px-3 py-2 min-h-[44px] text-[11px] font-bold text-background backdrop-blur-sm border border-background/20 active:scale-[0.98] transition"
+              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 rounded-full bg-foreground/80 px-3 py-2 min-h-[44px] text-xs font-bold text-background border border-background/20 active:scale-[0.98] transition"
               aria-label="Agrandir la vue 3D"
             >
               <Maximize2 className="w-4 h-4 shrink-0" />
@@ -610,7 +625,7 @@ export default function RoomLayoutPreview({
       )}
 
       {quality === 'showcase' && useWebGL ? (
-        <p className="text-[10px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           <span className="hidden sm:inline">
             Visualisation <span className="font-semibold text-foreground">3D showcase</span> : textures, bloom, vignette et architecture.
             Orbitez pour inspecter la salle.
@@ -631,14 +646,14 @@ export default function RoomLayoutPreview({
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-background/15 pt-[max(0.5rem,env(safe-area-inset-top))]">
             <div className="min-w-0">
               <p className="text-xs font-bold text-background truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
-              <p className="text-[10px] text-background/60 tabular-nums">
+              <p className="text-xs text-background/60 tabular-nums">
                 {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
               </p>
             </div>
             <button
               type="button"
               onClick={() => setExpanded(false)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-background/10 px-3 py-2 min-h-[44px] min-w-[44px] text-[11px] font-bold text-background border border-background/20 shrink-0"
+              className="inline-flex items-center gap-1.5 rounded-full bg-background/10 px-3 py-2 min-h-[44px] min-w-[44px] text-xs font-bold text-background border border-background/20 shrink-0"
               aria-label="Réduire la vue 3D"
             >
               <Minimize2 className="w-4 h-4" />
@@ -657,7 +672,7 @@ export default function RoomLayoutPreview({
               className="rounded-none"
             />
           </div>
-          <p className="text-[10px] text-background/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <p className="text-xs text-background/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             Glissez ou flèches pour orbiter · pincez ou +/− pour zoomer
           </p>
         </div>,

@@ -85,7 +85,7 @@ export default function Landing3DTeaserBand() {
                 <p className="text-xs font-semibold text-stage-foreground">
                   {force2d ? 'Plan 2D — cliquez un modèle sur la page dédiée pour en changer.' : 'Glissez pour tourner la salle.'}
                 </p>
-                <PlanViewModeToggle force2d={force2d} onChange={setForce2d} />
+                <PlanViewModeToggle force2d={force2d} onChange={setForce2d} tone="stage" />
               </div>
               <div className="rounded-[var(--radius-card)] overflow-hidden border border-stage-foreground/15 bg-stage min-h-[240px] sm:min-h-[320px]">
                 {blueprint ? (

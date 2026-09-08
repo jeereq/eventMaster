@@ -528,12 +528,12 @@ export default function EventPrepAiSimulator({
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-foreground">{model.title}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 shrink-0">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 shrink-0">
                       {model.badge}
                     </span>
                   </span>
-                  <span className="hidden sm:block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
-                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                  <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary">
                     {selected ? <Check className="w-3.5 h-3.5" /> : null}
                     {selected ? 'Prérempli' : 'Préremplir'}
                   </span>
@@ -588,7 +588,7 @@ export default function EventPrepAiSimulator({
               placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
               className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
             />
-            <p className="hidden sm:block text-xs text-muted">
+            <p className="text-xs text-muted">
               Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
               <button type="button" className="font-bold text-primary hover:underline" onClick={() => setActiveTab('prompts')}>
                 onglet Prompts
@@ -660,7 +660,7 @@ export default function EventPrepAiSimulator({
                 onChange={(e) => setBudgetMaxUsd(e.target.value)}
                 placeholder="1 500"
               />
-              <div className="flex items-center justify-between text-[11px] text-muted px-0.5">
+              <div className="flex items-center justify-between text-xs text-muted px-0.5">
                 <span>Calculé en francs :</span>
                 <span className="font-semibold text-primary-solid">
                   {budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—'}
@@ -677,7 +677,7 @@ export default function EventPrepAiSimulator({
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-muted bg-surface-muted/60 px-3 py-1.5 rounded-xl border border-border/70">
+          <div className="flex items-center justify-between text-xs text-muted bg-surface-muted/60 px-3 py-1.5 rounded-xl border border-border/70">
             <span>Taux de change appliqué :</span>
             <span className="font-semibold text-foreground">
               1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
@@ -780,7 +780,7 @@ export default function EventPrepAiSimulator({
                       placeholder="Optionnel (ex: 500)"
                     />
                     {budgetMinFcCalculated > 0 ? (
-                      <p className="text-[11px] text-muted text-right px-0.5">
+                      <p className="text-xs text-muted text-right px-0.5">
                         Calculé : <span className="font-semibold text-primary-solid">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span>
                       </p>
                     ) : null}
@@ -859,7 +859,7 @@ export default function EventPrepAiSimulator({
           <div className="space-y-2">
             <p>{error}</p>
             {error.toLowerCase().includes('aucune salle') || error.toLowerCase().includes('élargir') ? (
-              <p className="text-[11px] opacity-90">
+              <p className="text-xs opacity-90">
                 Essayez une autre commune, toute la ville, ou un budget plus large.
               </p>
             ) : null}
@@ -890,15 +890,15 @@ export default function EventPrepAiSimulator({
               <Sparkles className="w-3.5 h-3.5 text-primary" />
               3 formules — touchez-en une pour voir les éléments
             </span>
-            <span className="text-[11px] text-muted">
+            <span className="text-xs text-muted">
               {result.catalog.venues} salles · {result.catalog.trades} prestataires · {result.catalog.rentals} matériels
             </span>
           </div>
 
           {result.catalog.widenedCommune || (result.warnings && result.warnings.length > 0) ? (
-            <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+            <Alert variant="warning">
               {(result.warnings && result.warnings[0]) || 'Recherche élargie à toute la ville faute de fiches dans la commune.'}
-            </p>
+            </Alert>
           ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -932,7 +932,7 @@ export default function EventPrepAiSimulator({
                       <p className="text-xs font-bold text-foreground leading-snug mt-1">{pack.summary}</p>
                     ) : null}
                     {pack.blurb ? (
-                      <p className="text-[11px] text-muted leading-relaxed line-clamp-2">{pack.blurb}</p>
+                      <p className="text-xs text-muted leading-relaxed line-clamp-2">{pack.blurb}</p>
                     ) : null}
                   </div>
 

@@ -394,7 +394,7 @@ export default function LandingRoomPlanAiStudio({
                 <p className="text-sm font-bold text-foreground">
                   {intent === 'photo' ? 'Photo de la salle' : 'Photo optionnelle'}
                 </p>
-                <p className="hidden sm:block text-xs text-muted mt-0.5">JPEG, PNG ou WebP, 8 Mo max.</p>
+                <p className="text-xs text-muted mt-0.5">JPEG, PNG ou WebP, 8 Mo max.</p>
               </button>
 
               {previewUrl ? (
@@ -427,7 +427,7 @@ export default function LandingRoomPlanAiStudio({
                   placeholder="Ex. Mariage 120 convives, 12 tables rondes, allée, table d’honneur…"
                   className="w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
                 />
-                <p className="hidden sm:block text-xs text-muted tabular-nums text-right">{prompt.trim().length}/1500</p>
+                <p className="text-xs text-muted tabular-nums text-right">{prompt.trim().length}/1500</p>
               </div>
 
               {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}

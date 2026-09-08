@@ -60,7 +60,7 @@ export default function Plans3DPage() {
   const protocolLocked = Boolean(access?.isProtocolOnly);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('banquet-honor');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [force2d, setForce2d] = useState(false);
+  const [force2d, setForce2d] = useState(true);
   const [studioBlueprint, setStudioBlueprint] = useState<RoomLayoutBlueprint | null>(null);
 
   const selectedTemplate = useMemo(() => {
@@ -265,7 +265,7 @@ export default function Plans3DPage() {
                         {item.label}
                       </span>
                       {isSelected && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
                           <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                           <span>Actif</span>
                         </span>
@@ -281,7 +281,7 @@ export default function Plans3DPage() {
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-muted">
+                    <span className="text-xs font-semibold text-muted">
                       {tpl.outlineShape === 'circle' ? 'Salle circulaire' : 'Salle rectangulaire'}
                     </span>
                     <span className="text-xs font-semibold text-primary inline-flex items-center gap-1">

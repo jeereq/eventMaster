@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Clock, Sparkles, Wand2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -29,6 +29,29 @@ export function StudioAiTabs({
   disabled?: boolean;
   className?: string;
 }) {
+  const tabRefs = useRef<Partial<Record<StudioAiTabId, HTMLButtonElement | null>>>({});
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (disabled) return;
+    const ids = TABS.map((tab) => tab.id);
+    const current = Math.max(0, ids.indexOf(value));
+    let next = current;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      next = (current + 1) % ids.length;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      next = (current - 1 + ids.length) % ids.length;
+    } else if (event.key === 'Home') {
+      next = 0;
+    } else if (event.key === 'End') {
+      next = ids.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    onChange(ids[next]);
+    requestAnimationFrame(() => tabRefs.current[ids[next]]?.focus());
+  };
+
   return (
     <div
       className={cn(
@@ -37,6 +60,7 @@ export function StudioAiTabs({
       )}
       role="tablist"
       aria-label="Sections du studio"
+      onKeyDown={handleKeyDown}
     >
       {TABS.map((tab) => {
         const Icon = tab.icon;
@@ -48,7 +72,11 @@ export function StudioAiTabs({
             type="button"
             role="tab"
             aria-selected={selected}
+            tabIndex={selected ? 0 : -1}
             disabled={disabled}
+            ref={(node) => {
+              tabRefs.current[tab.id] = node;
+            }}
             onClick={() => onChange(tab.id)}
             className={cn(
               'flex-1 min-h-11 px-2 sm:px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
@@ -65,7 +93,7 @@ export function StudioAiTabs({
             {badge != null ? (
               <span
                 className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums',
+                  'px-1.5 py-0.5 rounded-full text-xs font-bold tabular-nums',
                   selected ? 'bg-primary/15 text-primary' : 'bg-surface border border-border text-muted',
                 )}
               >
