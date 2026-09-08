@@ -221,6 +221,11 @@ export default function SeatSelection3DViewer({
     return Array.from(ids);
   }, [selectedSeats]);
 
+  const blockedSeats = useMemo(
+    () => seats.filter((s) => !s.available).map((s) => ({ tableId: s.tableId, seatIndex: s.seatIndex })),
+    [seats],
+  );
+
   // Navigation table précédente / suivante
   const currentTableIndex = activeTable ? tablesList.findIndex((t) => t.id === activeTable.id) : -1;
   const goToPrevTable = () => {
@@ -243,7 +248,7 @@ export default function SeatSelection3DViewer({
       {/* Légende des zones */}
       {pricingZones.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 px-1">
-          <span className="text-[10px] text-muted font-medium">Zones 3D :</span>
+          <span className="text-xs text-muted font-medium">Tarifs</span>
           {pricingZones.map((z) => (
             <span
               key={z.id}
@@ -275,13 +280,16 @@ export default function SeatSelection3DViewer({
           lightingPreset={lightingPreset}
           selectedTableId={activeTable?.id}
           selectedTableIds={tablesWithSelection}
+          selectedSeats={selectedSeats}
+          blockedSeats={blockedSeats}
           onSelectTable={(tableId) => setFocusedTableId(tableId)}
+          onSelectSeat={onToggleSeat}
           showMeta={false}
           className="[&_.em-floor-canvas]:min-h-[min(58dvh,440px)] sm:[&_.em-floor-canvas]:min-h-[360px]"
         />
 
         {tablesWithSelection.length > 0 && (
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-lg bg-emerald-700/95 text-white text-xs font-semibold px-2.5 py-1.5 shadow-sm">
+          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold px-2.5 py-1.5 shadow-sm">
             <Check className="w-3.5 h-3.5" aria-hidden />
             <span>{selectedSeats.length} place{selectedSeats.length > 1 ? 's' : ''} sélectionnée{selectedSeats.length > 1 ? 's' : ''}</span>
           </div>
@@ -290,7 +298,7 @@ export default function SeatSelection3DViewer({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted leading-relaxed">
-          Touchez une table en 3D pour choisir vos places.
+          Touchez une chaise dans la salle, ou un siège dans la liste. Les places sombres sont déjà prises.
         </p>
         <div className="sm:hidden">
           <SeatPreviewQualityChips quality={quality} onChange={setQuality} variant="bar" />
@@ -380,13 +388,13 @@ export default function SeatSelection3DViewer({
                   className={cn(
                     'relative p-2.5 rounded-xl border text-center transition flex flex-col items-center justify-center gap-1 min-h-[58px] touch-manipulation active:scale-95',
                     !seat.available && 'opacity-40 cursor-not-allowed bg-muted/40 border-border text-muted',
-                    seat.available && !isSelected && 'bg-surface hover:bg-primary/5 hover:border-primary border-border text-foreground shadow-2xs',
-                    isSelected && 'bg-primary text-primary-foreground border-primary shadow-sm ring-2 ring-primary/40 font-bold',
+                    seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary border-border text-foreground shadow-2xs min-h-11',
+                    isSelected && 'bg-primary-solid text-primary-foreground border-primary shadow-sm ring-2 ring-primary/40 font-bold min-h-11',
                   )}
                 >
                   {/* Badge de numérotation de sélection */}
                   {isSelected && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center shadow-xs">
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-primary-solid text-primary-foreground text-[9px] font-black flex items-center justify-center shadow-xs">
                       {selectionOrder + 1}
                     </span>
                   )}

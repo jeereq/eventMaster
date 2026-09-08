@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -698,6 +698,7 @@ export default function RoomLayoutEditor({
       } else if (key === 'l') {
         e.preventDefault();
         setLockOrbit((v) => !v);
+        log('Basculer Déplacer / Regarder (Ctrl+L)', 'info');
       } else if (key === '2') {
         e.preventDefault();
         setDepthAmount(0);
@@ -894,6 +895,17 @@ export default function RoomLayoutEditor({
         deleteSelected();
         return;
       }
+      if (selection.length > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const step = e.shiftKey ? 2.5 : 1;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        updateBlueprint(moveLayoutSelectionByDelta(blueprint, expandSelectionWithGroups(blueprint, selection), dx, dy), {
+          message: 'Élément déplacé',
+          kind: 'edit',
+        });
+        return;
+      }
       if (!mod) return;
       if (key === 'd') {
         e.preventDefault();
@@ -919,7 +931,7 @@ export default function RoomLayoutEditor({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, selection, blueprint.furniture, blueprint.fixtures, groupSelection, ungroupSelection, duplicateSelection]);
+  }, [readOnly, selection, blueprint, groupSelection, ungroupSelection, duplicateSelection, updateBlueprint]);
 
   const addTable = () => {
     const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
@@ -3544,7 +3556,7 @@ export default function RoomLayoutEditor({
                     onChange={(e) => setLockOrbit(e.target.checked)}
                     className="rounded border-border size-4"
                   />
-                  Bloquer la perspective pour déplacer (Ctrl+L)
+                  Mode placement : glisser un objet le déplace, le sol ne tourne pas.
                 </label>
                 <RoomWallEditorPanel
                   blueprint={blueprint}
@@ -5444,11 +5456,11 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={() => setLockOrbit((v) => !v)}
-        title="Verrouiller / déverrouiller la caméra (Ctrl+L)"
+        title="Déplacer le mobilier ou tourner la vue (Ctrl+L)"
         className={cn(EDITOR_TOOL, lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
       >
-        {lockOrbit ? <VideoOff className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
-        {lockOrbit ? 'Caméra bloquée' : 'Caméra libre'}
+        {lockOrbit ? <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
+        {lockOrbit ? 'Déplacer' : 'Regarder'}
       </button>
       <button
         type="button"
@@ -6879,7 +6891,7 @@ export default function RoomLayoutEditor({
           </div>
         </div>
         <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary leading-relaxed font-medium">
-          Astuce ergonomie : Lorsque la caméra est verrouillée, vous pouvez glisser-déposer le mobilier directement dans la vue 3D avec la souris ou le doigt.
+          Glissez un objet dans la salle pour le poser. En mode Regarder, glissez le sol pour tourner la vue. Flèches du clavier : caler la sélection (Maj = plus grand pas).
         </div>
       </div>
     </Modal>

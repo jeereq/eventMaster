@@ -660,6 +660,7 @@ export function CatalogueChair({
   position,
   rotationY = 0,
   selected = false,
+  muted = false,
 }: {
   chairType: ChairType;
   chairStyle?: ChairStyle;
@@ -668,11 +669,19 @@ export function CatalogueChair({
   position: [number, number, number];
   rotationY?: number;
   selected?: boolean;
+  muted?: boolean;
 }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       <ChairSelectionHalo selected={selected} />
-      <ChairPickVolume />
+      {muted ? (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.016, 0]}>
+          <circleGeometry args={[0.2, 20]} />
+          <meshBasicMaterial color="#1c1917" transparent opacity={0.5} depthWrite={false} />
+        </mesh>
+      ) : (
+        <ChairPickVolume />
+      )}
       <CatalogueChairMesh
         chairType={chairType}
         chairStyle={chairStyle}

@@ -63,6 +63,12 @@ interface RoomLayoutPreviewProps {
   onSelectTable?: (tableId: string) => void;
   /** Callback lors du clic sur une zone en 3D */
   onSelectZone?: (zoneId: string) => void;
+  /** Sièges choisis (billetterie) — anneau sur la chaise. */
+  selectedSeats?: Array<{ tableId: string; seatIndex: number }>;
+  /** Sièges indisponibles — assombrir, ne pas cliquer. */
+  blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
+  /** Clic sur une chaise attachée à une table. */
+  onSelectSeat?: (tableId: string, seatIndex: number) => void;
 }
 
 function useIsMobileViewport(maxWidthPx = 639) {
@@ -88,6 +94,9 @@ type WebGLPreviewProps = {
   selectedTableIds?: string[];
   onSelectTable?: (tableId: string) => void;
   onSelectZone?: (zoneId: string) => void;
+  selectedSeats?: Array<{ tableId: string; seatIndex: number }>;
+  blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
+  onSelectSeat?: (tableId: string, seatIndex: number) => void;
 };
 
 function WebGLPreviewCanvas({
@@ -99,28 +108,41 @@ function WebGLPreviewCanvas({
   selectedTableIds,
   onSelectTable,
   onSelectZone,
+  selectedSeats,
+  blockedSeats,
+  onSelectSeat,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
-    const list: Array<{ kind: 'table' | 'zone'; id: string }> = [];
+    const list: Array<{ kind: 'table' | 'zone'; id: string; seatIndex?: number }> = [];
+    if (selectedSeats?.length) {
+      for (const s of selectedSeats) {
+        list.push({ kind: 'table', id: s.tableId, seatIndex: s.seatIndex });
+      }
+    }
     if (selectedTableId) {
       list.push({ kind: 'table', id: selectedTableId });
     }
     if (selectedTableIds?.length) {
       for (const id of selectedTableIds) {
-        if (!list.some((s) => s.kind === 'table' && s.id === id)) {
+        if (!list.some((s) => s.kind === 'table' && s.id === id && s.seatIndex == null)) {
           list.push({ kind: 'table', id });
         }
       }
     }
     return list;
-  }, [selectedTableId, selectedTableIds]);
+  }, [selectedTableId, selectedTableIds, selectedSeats]);
 
   return (
     <RoomWebGLViewer
       blueprint={webglBlueprint}
       selected={selected}
+      blockedSeats={blockedSeats}
       onSelect={(sel) => {
         if (!sel) return;
+        if (sel.kind === 'table' && typeof sel.seatIndex === 'number' && onSelectSeat) {
+          onSelectSeat(sel.id, sel.seatIndex);
+          return;
+        }
         if (sel.kind === 'table' && onSelectTable) {
           onSelectTable(sel.id);
         } else if (sel.kind === 'zone' && onSelectZone) {
@@ -538,6 +560,9 @@ export default function RoomLayoutPreview({
   selectedTableIds,
   onSelectTable,
   onSelectZone,
+  selectedSeats,
+  blockedSeats,
+  onSelectSeat,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -619,6 +644,9 @@ export default function RoomLayoutPreview({
               selectedTableIds={selectedTableIds}
               onSelectTable={onSelectTable}
               onSelectZone={onSelectZone}
+              selectedSeats={selectedSeats}
+              blockedSeats={blockedSeats}
+              onSelectSeat={onSelectSeat}
             />
           ) : (
             <FlatShowcasePreview
@@ -692,6 +720,9 @@ export default function RoomLayoutPreview({
               selectedTableIds={selectedTableIds}
               onSelectTable={onSelectTable}
               onSelectZone={onSelectZone}
+              selectedSeats={selectedSeats}
+              blockedSeats={blockedSeats}
+              onSelectSeat={onSelectSeat}
               className="rounded-none"
             />
           </div>

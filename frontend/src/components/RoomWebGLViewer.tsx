@@ -152,6 +152,8 @@ interface RoomWebGLViewerProps {
   walkthroughActive?: boolean;
   onWalkthroughProgress?: (label: string, progress01: number) => void;
   onWalkthroughComplete?: () => void;
+  /** Places déjà prises (billetterie) — chaises non cliquables. */
+  blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
   /** Coupe la boucle de rendu (onglet Identité, panneau masqué). */
   paused?: boolean;
 }
@@ -1266,6 +1268,7 @@ function RealisticChair(props: {
   position: [number, number, number];
   rotationY?: number;
   selected?: boolean;
+  muted?: boolean;
 }) {
   return <CatalogueChair {...props} />;
 }
@@ -1335,6 +1338,7 @@ function TableMesh({
   selected,
   selectedSeatIndices = [],
   hiddenSeatIndices = [],
+  blockedSeatIndices = [],
   onSelect,
   onDragStart,
   readOnly,
@@ -1365,9 +1369,10 @@ function TableMesh({
   selectedSeatIndices?: number[];
   hiddenSeatIndices?: number[];
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; seatIndex?: number }) => void;
-  onDragStart?: () => void;
+  onDragStart?: (e: ThreeEvent<PointerEvent>) => void;
   readOnly?: boolean;
   hideLabels?: boolean;
+  blockedSeatIndices?: number[];
 }) {
   const [wx, wz] = pctToWorld(xPct, yPct, widthM, heightM);
   const { gl } = useThree();
@@ -1382,6 +1387,7 @@ function TableMesh({
   const seatPicked = selectedSeatIndices.length > 0;
   const tableHalo = selected && !seatPicked;
   const hidden = useMemo(() => new Set(hiddenSeatIndices), [hiddenSeatIndices]);
+  const blocked = useMemo(() => new Set(blockedSeatIndices), [blockedSeatIndices]);
 
   const selectTable = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
     onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
@@ -1405,7 +1411,7 @@ function TableMesh({
           if (readOnly || !onDragStart) return;
           e.stopPropagation();
           selectTable(e);
-          onDragStart();
+          onDragStart(e);
           gl.domElement.style.cursor = 'grabbing';
         }}
         onPointerOver={(e) => {
@@ -1451,11 +1457,13 @@ function TableMesh({
         if (hidden.has(i)) return null;
         const seat = getTableSeatPlacement3D(shape, capacity, i, size);
         const chairSelected = selectedSeatIndices.includes(i);
+        const taken = blocked.has(i);
         return (
           <group
             key={i}
             position={[seat.x, 0, seat.z]}
             onClick={(e) => {
+              if (taken) return;
               e.stopPropagation();
               onSelect({
                 shiftKey: e.shiftKey,
@@ -1468,6 +1476,7 @@ function TableMesh({
               e.stopPropagation();
             }}
             onPointerOver={(e) => {
+              if (taken) return;
               e.stopPropagation();
               gl.domElement.style.cursor = 'pointer';
             }}
@@ -1483,6 +1492,7 @@ function TableMesh({
               position={[0, 0, 0]}
               rotationY={seat.rotationY}
               selected={chairSelected}
+              muted={taken}
             />
           </group>
         );
@@ -1532,7 +1542,7 @@ function ZoneMesh({
   heightM: number;
   selected: boolean;
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
-  onDragStart?: () => void;
+  onDragStart?: (e: ThreeEvent<PointerEvent>) => void;
   readOnly?: boolean;
   pickable?: boolean;
   hideLabels?: boolean;
@@ -1558,7 +1568,7 @@ function ZoneMesh({
         if (!pickable || readOnly || !onDragStart) return;
         e.stopPropagation();
         onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
-        onDragStart();
+        onDragStart(e);
         gl.domElement.style.cursor = 'grabbing';
       }}
     >
@@ -1615,7 +1625,7 @@ function FreeChairMesh({
   heightM: number;
   selected: boolean;
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
-  onDragStart?: () => void;
+  onDragStart?: (e: ThreeEvent<PointerEvent>) => void;
   readOnly?: boolean;
   label?: string;
   hideLabels?: boolean;
@@ -1633,7 +1643,7 @@ function FreeChairMesh({
         if (readOnly || !onDragStart) return;
         e.stopPropagation();
         onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
-        onDragStart();
+        onDragStart(e);
         gl.domElement.style.cursor = 'grabbing';
       }}
       onPointerOver={(e) => {
@@ -1662,44 +1672,90 @@ function FreeChairMesh({
   );
 }
 
+type DragSession = {
+  kind: WebGLSelectableKind;
+  id: string;
+  grabDx: number;
+  grabDy: number;
+  originX: number;
+  originY: number;
+};
+
+const DRAG_THRESHOLD_PX = 8;
+
 function DragPlane({
-  active,
+  session,
   widthM,
   heightM,
   onDrag,
   onEnd,
+  orbitControlsRef,
 }: {
-  active: boolean;
+  session: DragSession | null;
   widthM: number;
   heightM: number;
   onDrag: (xPct: number, yPct: number) => void;
   onEnd: () => void;
+  orbitControlsRef?: React.MutableRefObject<{ enabled?: boolean } | null>;
 }) {
-  const { gl } = useThree();
-  if (!active) return null;
-  return (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, 0.05, 0]}
-      onPointerMove={(e) => {
-        e.stopPropagation();
-        const pct = worldToPct(e.point.x, e.point.z, widthM, heightM);
-        onDrag(pct.x, pct.y);
-      }}
-      onPointerUp={(e) => {
-        e.stopPropagation();
-        gl.domElement.style.cursor = 'auto';
-        onEnd();
-      }}
-      onPointerLeave={() => {
-        gl.domElement.style.cursor = 'auto';
-        onEnd();
-      }}
-    >
-      <planeGeometry args={[widthM * 3, heightM * 3]} />
-      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-    </mesh>
-  );
+  const { camera, gl } = useThree();
+  const onDragRef = useRef(onDrag);
+  const onEndRef = useRef(onEnd);
+  onDragRef.current = onDrag;
+  onEndRef.current = onEnd;
+
+  useEffect(() => {
+    if (!session) return;
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const hit = new THREE.Vector3();
+    let live = false;
+    const grabDx = session.grabDx;
+    const grabDy = session.grabDy;
+    const originX = session.originX;
+    const originY = session.originY;
+
+    const project = (e: PointerEvent) => {
+      const rect = gl.domElement.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return null;
+      ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(plane, hit)) return null;
+      const pct = worldToPct(hit.x, hit.z, widthM, heightM);
+      return { x: pct.x + grabDx, y: pct.y + grabDy };
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (!live) {
+        const dist = Math.hypot(e.clientX - originX, e.clientY - originY);
+        if (dist < DRAG_THRESHOLD_PX) return;
+        live = true;
+      }
+      e.preventDefault();
+      const next = project(e);
+      if (next) onDragRef.current(next.x, next.y);
+    };
+
+    const finish = () => {
+      const ctrl = orbitControlsRef?.current;
+      if (ctrl) ctrl.enabled = true;
+      gl.domElement.style.cursor = '';
+      onEndRef.current();
+    };
+
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+    };
+  }, [session, camera, gl, widthM, heightM, orbitControlsRef]);
+
+  return null;
 }
 
 function FixtureMesh({
@@ -1792,7 +1848,7 @@ function FixtureMesh({
   roomDepthM: number;
   selected: boolean;
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
-  onDragStart?: () => void;
+  onDragStart?: (e: ThreeEvent<PointerEvent>) => void;
   readOnly?: boolean;
   pickable?: boolean;
   hideLabels?: boolean;
@@ -1874,7 +1930,7 @@ function FixtureMesh({
         if (!pickable || readOnly || !onDragStart) return;
         e.stopPropagation();
         onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
-        onDragStart();
+        onDragStart(e);
         gl.domElement.style.cursor = 'grabbing';
       }}
     >
@@ -2091,6 +2147,7 @@ function SceneContent({
   onWalkthroughComplete,
   orbitControlsRef,
   reduceMotion = false,
+  blockedSeats = [],
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -2133,14 +2190,41 @@ function SceneContent({
     camera.updateProjectionMatrix();
   }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM]);
 
-  const [dragTarget, setDragTarget] = React.useState<{ kind: WebGLSelectableKind; id: string } | null>(null);
-  /** En mode caméra bloquée (placement mobilier), les surfaces ne capturent pas les clics. */
-  const surfacePickable = !lockOrbit && !dragTarget;
+  const [dragSession, setDragSession] = React.useState<DragSession | null>(null);
 
   const moveAny = useCallback(
     (kind: WebGLSelectableKind, id: string, x: number, y: number) => onMoveItem?.(kind, id, x, y),
     [onMoveItem],
   );
+
+  const armDrag = useCallback(
+    (kind: WebGLSelectableKind, id: string, itemX: number, itemY: number, e: ThreeEvent<PointerEvent>) => {
+      e.stopPropagation();
+      const ctrl = orbitControlsRef as { current?: { enabled?: boolean } | null } | undefined;
+      if (ctrl?.current) ctrl.current.enabled = false;
+      const p = worldToPct(e.point.x, e.point.z, widthM, heightM);
+      setDragSession({
+        kind,
+        id,
+        grabDx: itemX - p.x,
+        grabDy: itemY - p.y,
+        originX: e.nativeEvent.clientX,
+        originY: e.nativeEvent.clientY,
+      });
+    },
+    [heightM, orbitControlsRef, widthM],
+  );
+
+  const blockedByTable = useMemo(() => {
+    const map = new Map<string, number[]>();
+    for (const seat of blockedSeats) {
+      const list = map.get(seat.tableId) ?? [];
+      list.push(seat.seatIndex);
+      map.set(seat.tableId, list);
+    }
+    return map;
+  }, [blockedSeats]);
+  const surfacePickable = !lockOrbit && !dragSession;
 
   return (
     <>
@@ -2318,7 +2402,7 @@ function SceneContent({
         const fixturePickable = isSurfaceFixture
           ? surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)
           : true;
-        const canDragFixture = !readOnly && !wallEditMode && (!isSurfaceFixture || surfacePickable);
+        const canDragFixture = !readOnly && !wallEditMode && (!isSurfaceFixture || surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id));
         const sitsOnRaisedSurface = f.kind === 'instrument' || f.kind === 'bar';
         const raisedSurface = sitsOnRaisedSurface
           ? resolveFurnitureSurfaceAt(blueprint, f.x + f.w / 2, f.y + f.h / 2)
@@ -2368,7 +2452,7 @@ function SceneContent({
             roomDepthM={heightM}
             selected={selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
             onSelect={(e) => onSelect({ kind: 'fixture', id: f.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
-            onDragStart={canDragFixture ? () => setDragTarget({ kind: 'fixture', id: f.id }) : undefined}
+            onDragStart={canDragFixture ? (e) => armDrag('fixture', f.id, f.x, f.y, e) : undefined}
             readOnly={readOnly || wallEditMode}
             pickable={fixturePickable}
             hideLabels={hideLabels}
@@ -2396,7 +2480,7 @@ function SceneContent({
               heightM={heightM}
               selected={selected.some((s) => s.kind === 'zone' && s.id === item.id)}
               onSelect={(e) => onSelect({ kind: 'zone', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
-              onDragStart={wallEditMode || readOnly || !surfacePickable ? undefined : () => setDragTarget({ kind: 'zone', id: item.id })}
+              onDragStart={wallEditMode || readOnly ? undefined : (e) => armDrag('zone', item.id, item.x, item.y, e)}
               readOnly={readOnly || wallEditMode}
               pickable={surfacePickable || selected.some((s) => s.kind === 'zone' && s.id === item.id)}
               hideLabels={hideLabels}
@@ -2422,7 +2506,7 @@ function SceneContent({
               heightM={heightM}
               selected={selected.some((s) => s.kind === 'chair' && s.id === item.id)}
               onSelect={(e) => onSelect({ kind: 'chair', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
-              onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'chair', id: item.id })}
+              onDragStart={wallEditMode || readOnly || item.locked ? undefined : (e) => armDrag('chair', item.id, item.x, item.y, e)}
               readOnly={readOnly || wallEditMode || item.locked}
               hideLabels={hideLabels}
             />
@@ -2461,7 +2545,7 @@ function SceneContent({
                 if (readOnly || wallEditMode) return;
                 e.stopPropagation();
                 onSelect({ kind: 'row', id: item.id }, { additive: e.shiftKey || e.metaKey || e.ctrlKey });
-                setDragTarget({ kind: 'row', id: item.id });
+                armDrag('row', item.id, item.x, item.y, e);
               }}
             >
               {/* Plateforme / gradin amphithéâtre */}
@@ -2554,13 +2638,14 @@ function SceneContent({
               .filter((s) => s.kind === 'table' && s.id === item.id && typeof s.seatIndex === 'number')
               .map((s) => s.seatIndex as number)}
             hiddenSeatIndices={item.hiddenSeatIndices}
+            blockedSeatIndices={blockedByTable.get(item.id)}
             onSelect={(e) =>
               onSelect(
                 { kind: 'table', id: item.id, seatIndex: e?.seatIndex },
                 { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) },
               )
             }
-            onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'table', id: item.id })}
+            onDragStart={wallEditMode || readOnly || item.locked ? undefined : (e) => armDrag('table', item.id, item.x, item.y, e)}
             readOnly={readOnly || wallEditMode || item.locked}
             hideLabels={hideLabels}
           />
@@ -2569,22 +2654,16 @@ function SceneContent({
       })}
 
       <DragPlane
-        active={Boolean(dragTarget) && !wallEditMode}
+        session={wallEditMode ? null : dragSession}
         widthM={widthM}
         heightM={heightM}
+        orbitControlsRef={orbitControlsRef as React.MutableRefObject<{ enabled?: boolean } | null>}
         onDrag={(x, y) => {
-          if (!dragTarget) return;
-          if (dragTarget.kind === 'fixture') {
-            const f = blueprint.fixtures.find((fx) => fx.id === dragTarget.id);
-            if (!f) return;
-            // DragPlane donne le centre ; les fixtures stockent le coin haut-gauche.
-            moveAny('fixture', f.id, x - f.w / 2, y - f.h / 2);
-            return;
-          }
-          moveAny(dragTarget.kind, dragTarget.id, x, y);
+          if (!dragSession) return;
+          moveAny(dragSession.kind, dragSession.id, x, y);
         }}
         onEnd={() => {
-          setDragTarget(null);
+          setDragSession(null);
           onMoveEnd?.();
         }}
       />
@@ -2592,8 +2671,9 @@ function SceneContent({
       <OrbitControls
         ref={orbitControlsRef as never}
         key={stackView ? `stack-${stories.length}-${focusY.toFixed(1)}` : 'floor'}
-        enablePan={!wallEditMode && !lockOrbit && !dragTarget && !presentationMode && !walkthroughActive}
-        enableRotate={(!wallEditMode && !lockOrbit && !dragTarget && !walkthroughActive) || (presentationMode && !walkthroughActive)}
+        enabled={!dragSession && !walkthroughActive}
+        enablePan={!wallEditMode && !lockOrbit && !dragSession && !presentationMode && !walkthroughActive}
+        enableRotate={(!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
         autoRotate={presentationMode && !walkthroughActive && !reduceMotion}
         autoRotateSpeed={0.55}
@@ -2628,6 +2708,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   onWalkthroughProgress,
   onWalkthroughComplete,
   paused = false,
+  blockedSeats,
 }, ref) {
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
   const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
@@ -2659,6 +2740,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     object: { position: THREE.Vector3; updateProjectionMatrix?: () => void };
     target: THREE.Vector3;
     update: () => void;
+    enabled?: boolean;
   } | null>(null);
   const [inView, setInView] = useState(true);
   const reduceMotion = usePrefersReducedMotion();
@@ -2787,6 +2869,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             onWalkthroughProgress={onWalkthroughProgress}
             onWalkthroughComplete={onWalkthroughComplete}
             orbitControlsRef={orbitControlsRef}
+            blockedSeats={blockedSeats}
           />
         </Suspense>
       </Canvas>
@@ -2806,10 +2889,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
             {previewMode
-              ? 'Rendu 3D · molette = zoom · glisser = orbit'
+              ? 'Glissez pour tourner la vue · molette pour zoomer'
               : orbitLocked
-                ? 'Cliquez le plateau pour la table, une chaise pour un siège · glisser pour poser'
-                : 'Cliquez une table ou une chaise · « Caméra bloquée » pour déplacer le mobilier'}
+                ? 'Glissez un objet pour le poser · flèches pour caler · clic chaise = un siège'
+                : 'Glissez un objet pour le poser · glissez le sol pour tourner la vue'}
           </div>
           {previewMode ? (
             <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
