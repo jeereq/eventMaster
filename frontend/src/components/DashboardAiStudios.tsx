@@ -2,23 +2,15 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { Building2, Mail, Wand2, type LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/cn';
 import { useAuth } from '@/context/AuthContext';
 import { isProtocolUser } from '@/lib/protocolAccess';
+import AiStudioTabList, {
+  AI_STUDIO_TABS,
+  aiStudioPanelId,
+  type AiStudioId,
+} from '@/components/AiStudioTabList';
 
-export type DashboardAiStudioId = 'budget' | 'invite' | 'room';
-
-const STUDIO_TABS: Array<{
-  id: DashboardAiStudioId;
-  label: string;
-  hint: string;
-  icon: LucideIcon;
-}> = [
-  { id: 'budget', label: 'Budget', hint: 'Packs et formules dans l’enveloppe', icon: Wand2 },
-  { id: 'invite', label: 'Invitation', hint: 'Carte 9:16 éditable', icon: Mail },
-  { id: 'room', label: 'Plan de salle', hint: 'Brief ou photo → 2D / 3D', icon: Building2 },
-];
+export type DashboardAiStudioId = AiStudioId;
 
 const LandingInvitationAiGenerator = dynamic(
   () => import('@/components/landing/LandingInvitationAiGenerator'),
@@ -49,9 +41,7 @@ function StudioPaneFallback({ label }: { label: string }) {
   );
 }
 
-function focusStudioTab(id: DashboardAiStudioId) {
-  document.getElementById(`dashboard-ai-studio-${id}`)?.focus();
-}
+const DASHBOARD_STUDIO_PREFIX = 'dashboard-ai-studio';
 
 export default function DashboardAiStudios({
   value,
@@ -65,27 +55,7 @@ export default function DashboardAiStudios({
   const { access, tenant } = useAuth();
   const protocolLocked = isProtocolUser(access);
   const showRoom = tenant?.accountKind !== 'CLIENT' && !protocolLocked;
-  const tabs = STUDIO_TABS.filter((tab) => tab.id !== 'room' || showRoom);
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    const ids = tabs.map((tab) => tab.id);
-    const current = Math.max(0, ids.indexOf(value));
-    let next = current;
-    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-      next = (current + 1) % ids.length;
-    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-      next = (current - 1 + ids.length) % ids.length;
-    } else if (event.key === 'Home') {
-      next = 0;
-    } else if (event.key === 'End') {
-      next = ids.length - 1;
-    } else {
-      return;
-    }
-    event.preventDefault();
-    onChange(ids[next]);
-    requestAnimationFrame(() => focusStudioTab(ids[next]));
-  };
+  const tabs = AI_STUDIO_TABS.filter((tab) => tab.id !== 'room' || showRoom);
 
   return (
     <div className="space-y-4">
@@ -95,49 +65,39 @@ export default function DashboardAiStudios({
           Choisissez un atelier. Chaque studio a ses propres étapes : packs budget, carte invitation, ou plan 2D / 3D.
         </p>
       </div>
-      <div
-        role="tablist"
-        aria-label="Studios IA"
-        className="flex flex-col sm:flex-row gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border"
-        onKeyDown={handleKeyDown}
-      >
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const selected = value === tab.id;
-          return (
-            <button
-              key={tab.id}
-              id={`dashboard-ai-studio-${tab.id}`}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => onChange(tab.id)}
-              className={cn(
-                'flex-1 min-h-11 px-3 py-2 rounded-[var(--radius-button)] text-left transition touch-manipulation',
-                'inline-flex items-center gap-2.5',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                selected
-                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Icon className={cn('w-4 h-4 shrink-0', selected ? 'text-primary' : '')} aria-hidden />
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold">{tab.label}</span>
-                <span className="block text-xs text-muted">{tab.hint}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <AiStudioTabList
+        value={value}
+        onChange={onChange}
+        tabs={tabs}
+        idPrefix={DASHBOARD_STUDIO_PREFIX}
+      />
 
-      {value === 'budget' ? budget : null}
+      {value === 'budget' ? (
+        <div
+          role="tabpanel"
+          id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'budget')}
+          aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-budget`}
+        >
+          {budget}
+        </div>
+      ) : null}
       {value === 'invite' ? (
-        <LandingInvitationAiGenerator id="dashboard-studio-invite" defaultExpanded />
+        <div
+          role="tabpanel"
+          id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'invite')}
+          aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-invite`}
+        >
+          <LandingInvitationAiGenerator id="dashboard-studio-invite" defaultExpanded />
+        </div>
       ) : null}
       {value === 'room' && showRoom ? (
-        <LandingRoomPlanAiStudio id="dashboard-studio-room" defaultExpanded />
+        <div
+          role="tabpanel"
+          id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'room')}
+          aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-room`}
+        >
+          <LandingRoomPlanAiStudio id="dashboard-studio-room" defaultExpanded />
+        </div>
       ) : null}
     </div>
   );

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
 import {
   Wand2,
-  Building2,
   ArrowRight,
   ShieldCheck,
-  Briefcase,
   Heart,
   Users,
   MapPin,
@@ -22,8 +22,10 @@ import { enabledMarketplaceCities, resolveUsdExchangeRateCdf } from '@/lib/platf
 import LandingMedia from '@/components/landing/LandingMedia';
 import type { ListingEventTypeId } from '@/lib/listingDetails';
 import {
+  AI_ALLOWANCE_CHANGED,
   AI_TOKEN_PACK_SIZE,
   addPurchasedAiTokens,
+  aiTokenCostLegend,
   getAiSimulationAllowance,
   createEmptyAiAllowance,
   syncDeviceAiTokensWithBackend,
@@ -33,6 +35,54 @@ import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import EventPrepAiSimulator, { type EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
+import AiStudioTabList, {
+  aiStudioPanelId,
+  type AiStudioId,
+} from '@/components/AiStudioTabList';
+
+const LANDING_STUDIO_PREFIX = 'landing-ai-studio';
+
+const STUDIO_FULL_PAGE: Record<AiStudioId, { href: string; label: string }> = {
+  budget: { href: '/simulateur', label: 'Simulateur budget complet' },
+  invite: { href: '/modeles#generateur-ia', label: 'Studio invitation complet' },
+  room: { href: '/plans-3d#studio-ia', label: 'Studio plan de salle complet' },
+};
+
+function StudioPaneFallback({ label }: { label: string }) {
+  return (
+    <div
+      className="min-h-[16rem] rounded-[var(--radius-card)] bg-surface-muted/40 animate-pulse motion-reduce:animate-none"
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
+const LandingInvitationAiGenerator = dynamic(
+  () => import('@/components/landing/LandingInvitationAiGenerator'),
+  {
+    ssr: false,
+    loading: () => <StudioPaneFallback label="Chargement du studio invitation…" />,
+  },
+);
+
+const LandingRoomPlanAiStudio = dynamic(
+  () => import('@/components/landing/LandingRoomPlanAiStudio'),
+  {
+    ssr: false,
+    loading: () => <StudioPaneFallback label="Chargement du studio plan de salle…" />,
+  },
+);
+
+function readLandingStudio(): AiStudioId {
+  if (typeof window === 'undefined') return 'budget';
+  const raw = new URLSearchParams(window.location.search).get('studio');
+  if (raw === 'invite' || raw === 'room' || raw === 'budget') return raw;
+  return 'budget';
+}
 
 type ScenarioBrief = {
   id: string;
@@ -106,6 +156,7 @@ export default function LandingAiSimulationShowcase() {
   const marketplaceCities = enabledMarketplaceCities(site);
 
   const [viewMode, setViewMode] = useState<'presets' | 'live'>('presets');
+  const [studio, setStudio] = useState<AiStudioId>('budget');
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [selectedScenarioId, setSelectedScenarioId] = useState('mariage-kin');
@@ -124,7 +175,11 @@ export default function LandingAiSimulationShowcase() {
   }, [visibleScenarios, selectedScenarioId]);
   const activeScenario = visibleScenarios.find((item) => item.id === selectedScenarioId) || visibleScenarios[0] || SCENARIOS[0];
   const activeScenarioUsd = Math.round(activeScenario.budgetTargetFc / exchangeRate);
-  const simulatorUrl = '/simulateur';
+  const fullPage = STUDIO_FULL_PAGE[studio];
+
+  useEffect(() => {
+    setStudio(readLandingStudio());
+  }, []);
 
   useEffect(() => {
     try {
@@ -150,9 +205,13 @@ export default function LandingAiSimulationShowcase() {
     void syncDeviceAiTokensWithBackend(api).then((synced) => {
       if (synced) setAllowance(synced);
     });
+    const onAllowance = () => setAllowance(getAiSimulationAllowance());
+    window.addEventListener(AI_ALLOWANCE_CHANGED, onAllowance);
+    return () => window.removeEventListener(AI_ALLOWANCE_CHANGED, onAllowance);
   }, []);
 
   const openLiveWithScenario = (scenario: ScenarioBrief) => {
+    setStudio('budget');
     setLiveDefaults(scenarioToDefaults(scenario, exchangeRate));
     setPreferDefaults(true);
     setViewMode('live');
@@ -180,12 +239,11 @@ export default function LandingAiSimulationShowcase() {
 
           <h2 className="em-landing-heading text-xl sm:text-4xl text-foreground">
             <span className="sm:hidden">
-              3 packs IA, <span className="text-primary">votre budget</span>
+              Budget, invitation, <span className="text-primary">salle</span>
             </span>
             <span className="hidden sm:inline">
-              Préparez votre événement par IA :{' '}
-              <span className="text-primary">3 packs clés en main</span>{' '}
-              dans votre budget
+              Trois ateliers IA :{' '}
+              <span className="text-primary">budget, invitation et plan de salle</span>
             </span>
           </h2>
 
@@ -193,9 +251,9 @@ export default function LandingAiSimulationShowcase() {
             Taux actuel : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
           </p>
 
-          <p className="hidden sm:block text-base text-muted leading-relaxed">
-            Indiquez votre budget en dollars : il est converti en francs au taux ci-dessus. Choisissez votre ville et vos envies — l’assistant compose{' '}
-            <strong>3 formules (Éco, Équilibré, Confort)</strong> à partir du catalogue réel. Les exemples préremplissent le projet ; la simulation budget IA ne part qu’au clic « Générer ».
+          <p className="text-sm sm:text-base text-muted leading-relaxed">
+            Un même portefeuille de jetons. Packs catalogue, carte 9:16, ou plan 2D / 3D à partir d’un brief ou d’une photo.{' '}
+            {aiTokenCostLegend()}.
           </p>
 
           {!allowance.unlimited && !isAiSimulationThresholdReached(allowance) ? (
@@ -207,7 +265,23 @@ export default function LandingAiSimulationShowcase() {
             </div>
           ) : null}
 
-          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2" role="group" aria-label="Mode de vue simulateur">
+          <AiStudioTabList
+            value={studio}
+            onChange={setStudio}
+            idPrefix={LANDING_STUDIO_PREFIX}
+            className="text-left max-w-3xl mx-auto mt-2"
+          />
+          <p className="pt-1">
+            <Link
+              href={fullPage.href}
+              className="text-xs font-semibold text-primary-solid hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              {fullPage.label}
+            </Link>
+          </p>
+
+          {studio === 'budget' ? (
+          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2" role="group" aria-label="Mode de vue simulateur budget">
             <button
               type="button"
               aria-pressed={viewMode === 'presets'}
@@ -243,8 +317,16 @@ export default function LandingAiSimulationShowcase() {
               ) : null}
             </button>
           </div>
+          ) : null}
         </div>
 
+        {studio === 'budget' ? (
+        <div
+          role="tabpanel"
+          id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'budget')}
+          aria-labelledby={`${LANDING_STUDIO_PREFIX}-budget`}
+          className="space-y-6"
+        >
         {viewMode === 'presets' && (
           <div className="bg-surface/90 dark:bg-surface border border-primary/25 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
@@ -363,11 +445,11 @@ export default function LandingAiSimulationShowcase() {
                   <span className="hidden sm:inline">Préremplir et simuler ce projet</span>
                 </Button>
                 <Button
-                  href={simulatorUrl}
+                  href={STUDIO_FULL_PAGE.budget.href}
                   variant="secondary"
                   size="md"
                   className="flex-1 sm:flex-none"
-                  aria-label="Ouvrir le simulateur complet"
+                  aria-label="Ouvrir le simulateur budget complet"
                 >
                   <span className="sm:hidden">Simulateur</span>
                   <span className="hidden sm:inline">Ouvrir le simulateur complet</span>
@@ -393,38 +475,30 @@ export default function LandingAiSimulationShowcase() {
             onAllowanceChange={setAllowance}
           />
         </div>
-
-        <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto pt-4">
-          <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-festive-accent/15 text-festive-accent flex items-center justify-center">
-              <Heart className="w-4 h-4" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">Pour les Particuliers & Mariés</h3>
-            <p className="text-xs text-muted leading-relaxed">
-              Estimez le coût réel de votre fête en 30 secondes. Choisissez entre formule économique ou confort et ajustez chaque ligne selon vos préférences.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/15 text-primary flex items-center justify-center">
-              <Briefcase className="w-4 h-4" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">Pour les Organisateurs & Entreprises</h3>
-            <p className="text-xs text-muted leading-relaxed">
-              Respectez scrupuleusement les enveloppes budgétaires de vos clients. Générez des devis pré-remplis et gagnez des jours entiers de recherche.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-[var(--radius-card)] border border-border bg-surface space-y-2.5 hover:border-primary/40 transition">
-            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-brand-accent/15 text-brand-accent flex items-center justify-center">
-              <Building2 className="w-4 h-4" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">Pour les Prestataires & Salles</h3>
-            <p className="text-xs text-muted leading-relaxed">
-              Vos offres et fiches sont automatiquement recommandées et intégrées dans les packs IA dès qu’un projet correspond à votre ville et catégorie.
-            </p>
-          </div>
         </div>
+        ) : null}
+
+        {studio === 'invite' ? (
+          <div
+            role="tabpanel"
+            id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'invite')}
+            aria-labelledby={`${LANDING_STUDIO_PREFIX}-invite`}
+            className="max-w-5xl mx-auto"
+          >
+            <LandingInvitationAiGenerator id="landing-studio-invite" defaultExpanded />
+          </div>
+        ) : null}
+
+        {studio === 'room' ? (
+          <div
+            role="tabpanel"
+            id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'room')}
+            aria-labelledby={`${LANDING_STUDIO_PREFIX}-room`}
+            className="max-w-5xl mx-auto"
+          >
+            <LandingRoomPlanAiStudio id="landing-studio-room" defaultExpanded />
+          </div>
+        ) : null}
       </div>
 
       <AiTokenPurchaseModal
