@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
 import TermsMarketplaceRates from '@/components/TermsMarketplaceRates';
@@ -113,6 +114,12 @@ export default function TermsPage() {
           <li>L&apos;organisateur est le seul garant de la bonne tenue de l&apos;événement, de sa programmation artistique ou professionnelle et de la conformité du lieu.</li>
           <li>En cas d&apos;annulation, de report de date ou de changement substantiel du programme, la responsabilité du remboursement incombe exclusivement à l&apos;organisateur.</li>
           <li>EventMaster n&apos;étant qu&apos;un intermédiaire technique, la plateforme ne procède au remboursement des acheteurs que sur instruction formelle de l&apos;organisateur et sous réserve que les fonds correspondants soient disponibles.</li>
+          <li>
+            Le détail (billets, abonnements, jetons IA, acomptes marketplace, erreurs de paiement) figure dans la{' '}
+            <Link href="/refund" className="text-primary font-semibold hover:underline">
+              politique de remboursement
+            </Link>.
+          </li>
         </ul>
 
         <p>

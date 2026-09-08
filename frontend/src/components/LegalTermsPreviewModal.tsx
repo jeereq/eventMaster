@@ -16,12 +16,13 @@ import {
   ArrowRight,
   Ticket,
   ScanLine,
+  Wallet,
 } from 'lucide-react';
 import { Modal, Button } from '@/components/ui';
-import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
+import { TERMS_VERSION, PRIVACY_VERSION, REFUND_VERSION } from '@/config/legalConfig';
 import { cn } from '@/lib/cn';
 
-type LegalTabId = 'summary' | 'terms' | 'privacy';
+type LegalTabId = 'summary' | 'terms' | 'privacy' | 'refund';
 
 const LEGAL_TABS: Array<{
   id: LegalTabId;
@@ -32,15 +33,17 @@ const LEGAL_TABS: Array<{
   { id: 'summary', shortLabel: 'Synthèse', longLabel: 'Synthèse clé', Icon: Sparkles },
   { id: 'terms', shortLabel: 'CGU', longLabel: `Conditions (v${TERMS_VERSION})`, Icon: FileText },
   { id: 'privacy', shortLabel: 'Données', longLabel: `Confidentialité (v${PRIVACY_VERSION})`, Icon: ShieldCheck },
+  { id: 'refund', shortLabel: 'Rembours.', longLabel: `Remboursements (v${REFUND_VERSION})`, Icon: Wallet },
 ];
 
 interface LegalTermsPreviewModalProps {
   open: boolean;
   onClose: () => void;
-  initialTab?: 'terms' | 'privacy' | 'summary';
+  initialTab?: 'terms' | 'privacy' | 'summary' | 'refund';
   onAcceptAll: () => void;
   acceptedTerms?: boolean;
   acceptedPrivacy?: boolean;
+  acceptedRefund?: boolean;
 }
 
 export default function LegalTermsPreviewModal({
@@ -50,10 +53,12 @@ export default function LegalTermsPreviewModal({
   onAcceptAll,
   acceptedTerms = false,
   acceptedPrivacy = false,
+  acceptedRefund = false,
 }: LegalTermsPreviewModalProps) {
-  const [activeTab, setActiveTab] = useState<'summary' | 'terms' | 'privacy'>(initialTab);
+  const [activeTab, setActiveTab] = useState<LegalTabId>(initialTab);
   const [termsAgreed, setTermsAgreed] = useState(acceptedTerms);
   const [privacyAgreed, setPrivacyAgreed] = useState(acceptedPrivacy);
+  const [refundAgreed, setRefundAgreed] = useState(acceptedRefund);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [readProgress, setReadProgress] = useState(0);
@@ -63,9 +68,10 @@ export default function LegalTermsPreviewModal({
       setActiveTab(initialTab);
       setTermsAgreed(acceptedTerms);
       setPrivacyAgreed(acceptedPrivacy);
+      setRefundAgreed(acceptedRefund);
       setReadProgress(0);
     }
-  }, [open, initialTab, acceptedTerms, acceptedPrivacy]);
+  }, [open, initialTab, acceptedTerms, acceptedPrivacy, acceptedRefund]);
 
   const handleScroll = () => {
     const el = scrollContainerRef.current;
@@ -109,6 +115,7 @@ export default function LegalTermsPreviewModal({
   const handleConfirm = () => {
     setTermsAgreed(true);
     setPrivacyAgreed(true);
+    setRefundAgreed(true);
     onAcceptAll();
     onClose();
   };
@@ -140,12 +147,12 @@ export default function LegalTermsPreviewModal({
               <CheckCircle2
                 className={cn(
                   'w-4 h-4',
-                  termsAgreed && privacyAgreed
+                  termsAgreed && privacyAgreed && refundAgreed
                     ? 'text-primary'
                     : 'text-muted',
                 )}
               />
-              {termsAgreed && privacyAgreed
+              {termsAgreed && privacyAgreed && refundAgreed
                 ? 'Tous les documents sont approuvés'
                 : 'Validation requise'}
             </span>
@@ -288,6 +295,18 @@ export default function LegalTermsPreviewModal({
                   Chaque organisation dispose d’un environnement sécurisé et isolé (multi-tenant). Vos listes d’invités, plans de table, photos de salle et médias restent votre entière propriété. EventMaster n’exploite pas vos listes d’invités à des fins commerciales propres.
                 </p>
               </div>
+
+              <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
+                <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
+                  <Wallet className="w-4 h-4 text-primary" aria-hidden />
+                  6. Remboursements
+                </h3>
+                <p className="text-muted">
+                  Billets : l’organisateur décide, EventMaster n’exécute qu’après instruction et si les fonds sont disponibles.
+                  Abonnements : la période payée va jusqu’à son terme, sans prorata. Jetons IA déjà consommés : non remboursables.
+                  Erreur de paiement : support avec le numéro de transaction FlexPay.
+                </p>
+              </div>
             </div>
           )}
 
@@ -385,6 +404,50 @@ export default function LegalTermsPreviewModal({
               </section>
             </div>
           )}
+
+          {activeTab === 'refund' && (
+            <div className="space-y-4">
+              <div className="border-b border-border pb-3">
+                <h3 className="text-sm font-bold text-foreground">Politique de remboursement</h3>
+                <p className="text-xs text-muted">Version {REFUND_VERSION} · En vigueur au 8 septembre 2026</p>
+              </div>
+
+              <section className="space-y-1.5">
+                <h4 className="font-bold text-foreground">1. Billets d’événements</h4>
+                <p className="text-muted">
+                  L’organisateur est le seul garant de la tenue de l’événement. EventMaster ne rembourse un acheteur que sur instruction formelle de l’organisateur, et seulement si les fonds sont encore disponibles. Un billet déjà scanné, falsifié ou revendu hors canal officiel n’est pas remboursable.
+                </p>
+              </section>
+
+              <section className="space-y-1.5">
+                <h4 className="font-bold text-foreground">2. Abonnements SaaS</h4>
+                <p className="text-muted">
+                  Vous pouvez arrêter le renouvellement à tout moment. L’accès reste actif jusqu’à la fin de la période déjà payée. Les périodes entamées ne sont pas remboursées au prorata, sauf erreur de facturation ou double paiement.
+                </p>
+              </section>
+
+              <section className="space-y-1.5">
+                <h4 className="font-bold text-foreground">3. Jetons IA</h4>
+                <p className="text-muted">
+                  Les jetons consommés par un traitement effectivement exécuté ne sont pas remboursables. Un pack débité deux fois, ou un paiement sans crédit de jetons, est corrigé après vérification du reçu FlexPay.
+                </p>
+              </section>
+
+              <section className="space-y-1.5">
+                <h4 className="font-bold text-foreground">4. Acomptes marketplace</h4>
+                <p className="text-muted">
+                  Les acomptes salle ou prestation relèvent de l’accord entre l’organisateur et le professionnel. EventMaster n’est pas partie à ce contrat ; un reversement n’est possible que si les fonds transitent encore par la plateforme et sur demande conjointe.
+                </p>
+              </section>
+
+              <section className="space-y-1.5">
+                <h4 className="font-bold text-foreground">5. Erreurs de paiement</h4>
+                <p className="text-muted">
+                  Double débit ou montant erroné : contactez le support avec le numéro de transaction. Le délai de retour des fonds dépend de FlexPay et de votre banque ou opérateur Mobile Money.
+                </p>
+              </section>
+            </div>
+          )}
         </div>
 
         {/* Liens externes vers les pages complètes */}
@@ -403,6 +466,13 @@ export default function LegalTermsPreviewModal({
               className="hover:text-primary transition inline-flex items-center gap-1 font-medium rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               Consulter la page Confidentialité complète <ExternalLink className="w-3 h-3" aria-hidden />
+            </Link>
+            <Link
+              href="/refund"
+              target="_blank"
+              className="hover:text-primary transition inline-flex items-center gap-1 font-medium rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              Consulter la politique de remboursement <ExternalLink className="w-3 h-3" aria-hidden />
             </Link>
           </div>
         </div>

@@ -20,6 +20,10 @@ export function LegalLinksText({ prefix = 'J\'accepte les ' }: LegalLinksTextPro
       <Text style={[styles.link, { color: colors.primary }]} onPress={() => openLegalPage('privacy')}>
         politique de confidentialité
       </Text>
+      {' et la '}
+      <Text style={[styles.link, { color: colors.primary }]} onPress={() => openLegalPage('refund')}>
+        politique de remboursement
+      </Text>
       .
     </Text>
   );
@@ -27,7 +31,7 @@ export function LegalLinksText({ prefix = 'J\'accepte les ' }: LegalLinksTextPro
 
 interface LegalLinkRowProps {
   label: string;
-  page: 'terms' | 'privacy';
+  page: 'terms' | 'privacy' | 'refund';
 }
 
 export function LegalLinkRow({ label, page }: LegalLinkRowProps) {

@@ -1,4 +1,4 @@
-import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
+import { TERMS_VERSION, PRIVACY_VERSION, REFUND_VERSION } from '@/config/legalConfig';
 
 export const SITE_CONTACT = {
   email: 'mingandajeereq@gmail.com',
@@ -34,6 +34,7 @@ export const FOOTER_RESOURCES = [
   { label: 'Contact & Support', href: '/contact' },
   { label: `Conditions d'utilisation (v${TERMS_VERSION})`, href: '/terms' },
   { label: `Politique de confidentialité (v${PRIVACY_VERSION})`, href: '/privacy' },
+  { label: `Politique de remboursement (v${REFUND_VERSION})`, href: '/refund' },
   { label: 'Connexion', href: '/login' },
   { label: 'Compte client (devis, favoris & packs)', href: '/register' },
 ] as const;

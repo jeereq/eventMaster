@@ -1,11 +1,12 @@
 import { Linking } from 'react-native';
 import { env } from '../config/env';
 
-export type LegalPage = 'terms' | 'privacy';
+export type LegalPage = 'terms' | 'privacy' | 'refund';
 
 const PATHS: Record<LegalPage, string> = {
   terms: '/terms',
   privacy: '/privacy',
+  refund: '/refund',
 };
 
 export function getLegalUrl(page: LegalPage): string {

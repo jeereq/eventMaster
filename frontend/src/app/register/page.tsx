@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, PasswordInput, Card, PhoneInput } from '@/components/ui';
-import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
+import { TERMS_VERSION, PRIVACY_VERSION, REFUND_VERSION } from '@/config/legalConfig';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
@@ -239,6 +239,7 @@ function RegisterPageContent() {
   const [verificationMethod, setVerificationMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
  const [acceptTerms, setAcceptTerms] = useState(false);
  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+ const [acceptRefund, setAcceptRefund] = useState(false);
  const [referralCode, setReferralCode] = useState('');
  const [referralFromLink, setReferralFromLink] = useState(false);
   const [referralChoice, setReferralChoice] = useState<'yes' | 'no' | null>(null);
@@ -254,7 +255,7 @@ function RegisterPageContent() {
  const [successMessage, setSuccessMessage] = useState('');
  const [loading, setLoading] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
-  const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy'>('summary');
+  const [legalModalTab, setLegalModalTab] = useState<'summary' | 'terms' | 'privacy' | 'refund'>('summary');
   const [kindConfirmed, setKindConfirmed] = useState(kindFromUrl);
   const [intentConfigs, setIntentConfigs] = useState<Record<string, RegistrationActionConfig>>({});
 
@@ -383,10 +384,10 @@ function RegisterPageContent() {
     setPhoneError('');
     setReferralError('');
 
-    if (!acceptTerms || !acceptPrivacy) {
-      setLegalModalTab(!acceptTerms ? 'terms' : 'privacy');
+    if (!acceptTerms || !acceptPrivacy || !acceptRefund) {
+      setLegalModalTab(!acceptTerms ? 'terms' : !acceptPrivacy ? 'privacy' : 'refund');
       setLegalModalOpen(true);
-      setError('Cochez les conditions et la confidentialité après lecture, ou utilisez « Tout lire & approuver ».');
+      setError('Cochez les conditions, la confidentialité et la politique de remboursement après lecture, ou utilisez « Tout lire & approuver ».');
       return;
     }
 
@@ -750,7 +751,7 @@ function RegisterPageContent() {
                     <Scale className="w-3.5 h-3.5 text-primary" aria-hidden />
                     Engagements
                   </span>
-                  {(!acceptTerms || !acceptPrivacy) && (
+                  {(!acceptTerms || !acceptPrivacy || !acceptRefund) && (
                     <button
                       type="button"
                       onClick={() => {
@@ -847,6 +848,46 @@ function RegisterPageContent() {
                       {acceptPrivacy ? 'Relire' : 'Lire'}
                     </button>
                   </div>
+
+                  <div
+                    className={cn(
+                      'min-h-11 px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
+                      acceptRefund
+                        ? 'border-primary/30 bg-primary/8'
+                        : 'border-border bg-surface hover:border-primary/40',
+                    )}
+                  >
+                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1 min-h-11">
+                      <input
+                        type="checkbox"
+                        checked={acceptRefund}
+                        onChange={(e) => setAcceptRefund(e.target.checked)}
+                        className="rounded text-primary focus:ring-primary accent-primary shrink-0 h-4 w-4"
+                      />
+                      <span className="font-medium text-foreground truncate text-xs">
+                        Politique de remboursement <span className="text-xs text-muted">v{REFUND_VERSION}</span>
+                      </span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLegalModalTab('refund');
+                        setLegalModalOpen(true);
+                      }}
+                      aria-label={acceptRefund ? 'Relire la politique de remboursement' : 'Lire la politique de remboursement'}
+                      className={cn(
+                        'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                        acceptRefund
+                          ? 'text-primary bg-primary/12'
+                          : 'text-primary bg-primary/10 hover:bg-primary/20',
+                      )}
+                    >
+                      {acceptRefund ? <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden /> : null}
+                      {acceptRefund ? 'Relire' : 'Lire'}
+                    </button>
+                  </div>
                 </div>
  </div>
 
@@ -881,9 +922,11 @@ function RegisterPageContent() {
         initialTab={legalModalTab}
         acceptedTerms={acceptTerms}
         acceptedPrivacy={acceptPrivacy}
+        acceptedRefund={acceptRefund}
         onAcceptAll={() => {
           setAcceptTerms(true);
           setAcceptPrivacy(true);
+          setAcceptRefund(true);
           setError('');
         }}
       />

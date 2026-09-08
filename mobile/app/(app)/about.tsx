@@ -29,6 +29,7 @@ export default function AboutScreen() {
         <View style={styles.links}>
           <LegalLinkRow label="Conditions d'utilisation" page="terms" />
           <LegalLinkRow label="Politique de confidentialité" page="privacy" />
+          <LegalLinkRow label="Politique de remboursement" page="refund" />
         </View>
 
         <View style={[styles.urlBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -38,6 +39,9 @@ export default function AboutScreen() {
           </Text>
           <Text style={[styles.url, { color: colors.primary }]} selectable>
             {getLegalUrl('privacy')}
+          </Text>
+          <Text style={[styles.url, { color: colors.primary }]} selectable>
+            {getLegalUrl('refund')}
           </Text>
         </View>
 

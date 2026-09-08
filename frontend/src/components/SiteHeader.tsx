@@ -39,6 +39,7 @@ const LEGAL_LINKS: SiteHeaderLink[] = [
   { href: '/faq', label: 'FAQ' },
   { href: '/terms', label: 'Conditions d’utilisation' },
   { href: '/privacy', label: 'Confidentialité' },
+  { href: '/refund', label: 'Remboursements' },
 ];
 
 export default function SiteHeader({

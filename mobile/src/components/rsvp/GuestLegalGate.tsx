@@ -23,6 +23,7 @@ export function GuestLegalGate({ guestId, children }: GuestLegalGateProps) {
   const [requiresAcceptance, setRequiresAcceptance] = useState(true);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptRefund, setAcceptRefund] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,8 +78,8 @@ export function GuestLegalGate({ guestId, children }: GuestLegalGateProps) {
       <View style={styles.gate}>
         <Text style={styles.title}>Bienvenue dans votre espace invité</Text>
         <Text style={styles.subtitle}>
-          Avant d&apos;accéder à votre invitation, acceptez les conditions d&apos;utilisation et la
-          politique de confidentialité.
+          Avant d&apos;accéder à votre invitation, acceptez les conditions d&apos;utilisation, la
+          politique de confidentialité et la politique de remboursement.
         </Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -103,11 +104,21 @@ export function GuestLegalGate({ guestId, children }: GuestLegalGateProps) {
           </Text>
         </Pressable>
 
+        <Pressable style={styles.checkRow} onPress={() => setAcceptRefund((v) => !v)}>
+          <View style={[styles.checkbox, acceptRefund && styles.checkboxOn]} />
+          <Text style={styles.checkLabel}>
+            J&apos;accepte la{' '}
+            <Text style={styles.link} onPress={() => openLegalPage('refund')}>
+              politique de remboursement
+            </Text>
+          </Text>
+        </Pressable>
+
         <Button
           title="Continuer"
           onPress={handleAccept}
           loading={submitting}
-          disabled={!acceptTerms || !acceptPrivacy}
+          disabled={!acceptTerms || !acceptPrivacy || !acceptRefund}
         />
       </View>
     );

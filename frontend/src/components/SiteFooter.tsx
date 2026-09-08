@@ -127,6 +127,9 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
             <Link href="/privacy" className="hover:text-foreground transition-colors rounded-sm min-h-8 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               Confidentialité
             </Link>
+            <Link href="/refund" className="hover:text-foreground transition-colors rounded-sm min-h-8 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              Remboursements
+            </Link>
             <Link href={faqHref} className="hover:text-foreground transition-colors rounded-sm min-h-8 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
               FAQ
             </Link>

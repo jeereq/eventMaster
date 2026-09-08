@@ -6,7 +6,7 @@ import { ShieldCheck } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
-import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
+import { TERMS_VERSION, PRIVACY_VERSION, REFUND_VERSION } from '@/config/legalConfig';
 
 interface LegalAcceptanceModalProps {
   open: boolean;
@@ -20,18 +20,20 @@ interface LegalAcceptanceModalProps {
 export default function LegalAcceptanceModal({
   open,
   title = 'Conditions d\'utilisation',
-  subtitle = 'Pour accéder à la plateforme EventMaster (un projet du Groupe Tekango), vous devez accepter nos conditions et notre politique de confidentialité.',
+  subtitle = 'Pour accéder à la plateforme EventMaster (un projet du Groupe Tekango), vous devez accepter nos conditions, notre politique de confidentialité et notre politique de remboursement.',
   submitting = false,
   error = '',
   onAccept,
 }: LegalAcceptanceModalProps) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptRefund, setAcceptRefund] = useState(false);
 
   useEffect(() => {
     if (open) {
       setAcceptTerms(false);
       setAcceptPrivacy(false);
+      setAcceptRefund(false);
     }
   }, [open]);
 
@@ -54,7 +56,7 @@ export default function LegalAcceptanceModal({
       footer={
         <Button
           fullWidth
-          disabled={!acceptTerms || !acceptPrivacy}
+          disabled={!acceptTerms || !acceptPrivacy || !acceptRefund}
           loading={submitting}
           onClick={() => onAccept(acceptTerms, acceptPrivacy)}
         >
@@ -94,6 +96,22 @@ export default function LegalAcceptanceModal({
               politique de confidentialité
             </Link>{' '}
             (version {PRIVACY_VERSION}).
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
+          <input
+            type="checkbox"
+            checked={acceptRefund}
+            onChange={(e) => setAcceptRefund(e.target.checked)}
+            className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+          />
+          <span className="text-sm text-foreground">
+            J&apos;accepte la{' '}
+            <Link href="/refund" target="_blank" className="text-primary font-semibold hover:underline">
+              politique de remboursement
+            </Link>{' '}
+            (version {REFUND_VERSION}).
           </span>
         </label>
       </div>

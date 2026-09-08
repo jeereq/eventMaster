@@ -50,6 +50,7 @@ export function LegalPageShell({
         <div className="flex flex-wrap gap-4 text-xs text-muted">
           <Link href="/terms" className="hover:text-primary transition">Conditions d&apos;utilisation</Link>
           <Link href="/privacy" className="hover:text-primary transition">Politique de confidentialité</Link>
+          <Link href="/refund" className="hover:text-primary transition">Politique de remboursement</Link>
           <Link href="/contact" className="hover:text-primary transition">Contact</Link>
         </div>
       </main>
