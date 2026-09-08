@@ -241,7 +241,7 @@ export default function LandingRoomPlanAiStudio({
           className="w-full text-left px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-surface-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <div className="flex items-center gap-3.5 min-w-0">
-            <span className="w-10 h-10 rounded-2xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shrink-0">
+            <span className="w-10 h-10 rounded-[var(--radius-card)] bg-primary-solid text-primary-foreground inline-flex items-center justify-center shrink-0">
               <Wand2 className="w-5 h-5" aria-hidden />
             </span>
             <div className="min-w-0">
@@ -280,7 +280,7 @@ export default function LandingRoomPlanAiStudio({
           <div className="px-5 sm:px-7 pt-5 pb-4 border-b border-border bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
-                <span className="w-10 h-10 rounded-2xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shrink-0">
+                <span className="w-10 h-10 rounded-[var(--radius-card)] bg-primary-solid text-primary-foreground inline-flex items-center justify-center shrink-0">
                   <Wand2 className="w-5 h-5" aria-hidden />
                 </span>
                 <div className="min-w-0">

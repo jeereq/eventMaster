@@ -569,7 +569,7 @@ export default function EventPrepAiSimulator({
               }}
             />
           ) : (
-            <div className="py-10 px-4 text-center rounded-xl border border-dashed border-border bg-surface-muted/30 space-y-3">
+            <div className="py-10 px-4 text-center rounded-[var(--radius-card)] border border-dashed border-border bg-surface-muted/30 space-y-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
                 <Clock className="w-5 h-5" />
               </div>
@@ -718,7 +718,7 @@ export default function EventPrepAiSimulator({
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-muted bg-surface-muted/60 px-3 py-1.5 rounded-xl border border-border/70">
+          <div className="flex items-center justify-between text-xs text-muted bg-surface-muted/60 px-3 py-1.5 rounded-[var(--radius-card)] border border-border/70">
             <span>Taux de change appliqué :</span>
             <span className="font-semibold text-foreground">
               1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
@@ -963,7 +963,7 @@ export default function EventPrepAiSimulator({
                     setPackModalOpen(true);
                   }}
                   className={cn(
-                    'text-left rounded-2xl border p-4 space-y-2 transition flex flex-col justify-between h-full gap-2 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    'text-left rounded-[var(--radius-card)] border p-4 space-y-2 transition flex flex-col justify-between h-full gap-2 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     active
                       ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
                       : 'border-border bg-surface hover:border-primary/40 opacity-85 hover:opacity-100',

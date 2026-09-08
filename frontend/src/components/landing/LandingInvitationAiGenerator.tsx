@@ -615,7 +615,7 @@ export default function LandingInvitationAiGenerator({
           className="w-full text-left px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-surface-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 group"
         >
           <div className="flex items-center gap-3.5 min-w-0">
-            <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+            <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-[var(--radius-card)] bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
               <Wand2 className="w-5 h-5" aria-hidden />
             </span>
             <div className="space-y-0.5 min-w-0">
@@ -653,7 +653,7 @@ export default function LandingInvitationAiGenerator({
           <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
-                <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-sm shrink-0">
+                <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-[var(--radius-card)] bg-primary-solid text-primary-foreground inline-flex items-center justify-center shadow-sm shrink-0">
                   <Wand2 className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
                 </span>
                 <div className="space-y-0.5 min-w-0">
@@ -744,7 +744,7 @@ export default function LandingInvitationAiGenerator({
               disabled={busy}
               onClick={() => switchIntent('create')}
               className={cn(
-                'min-h-11 px-3 py-2.5 rounded-xl border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 studioIntent === 'create'
                   ? 'border-primary bg-primary/10 shadow-xs'
                   : 'border-border bg-surface hover:border-primary/40',
@@ -760,7 +760,7 @@ export default function LandingInvitationAiGenerator({
               disabled={busy}
               onClick={() => switchIntent('clone')}
               className={cn(
-                'min-h-11 px-3 py-2.5 rounded-xl border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 studioIntent === 'clone'
                   ? 'border-primary bg-primary/10 shadow-xs'
                   : 'border-border bg-surface hover:border-primary/40',
@@ -798,7 +798,7 @@ export default function LandingInvitationAiGenerator({
                   addFiles(Array.from(e.dataTransfer.files || []));
                 }}
                 className={cn(
-                  'w-full rounded-xl border-2 border-dashed p-4 sm:p-5 text-center transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  'w-full rounded-[var(--radius-card)] border-2 border-dashed p-4 sm:p-5 text-center transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   dragOver
                     ? 'border-primary bg-primary/10'
                     : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
@@ -823,7 +823,7 @@ export default function LandingInvitationAiGenerator({
                   {previews.map((url, i) => (
                     <div
                       key={url}
-                      className="relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-xl overflow-hidden border border-border shadow-xs group"
+                      className="relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
@@ -891,7 +891,7 @@ export default function LandingInvitationAiGenerator({
                       ? 'Ex. Reprendre l’or et l’ivoire, garder la date en haut, noms en script…'
                       : 'Ex. Mariage princier, or et ivoire, éclairage naturel, invitation WhatsApp…'
                   }
-                  className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
+                  className="w-full rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
                 />
 
                 <InvitationArtStylePicker
@@ -921,7 +921,7 @@ export default function LandingInvitationAiGenerator({
                   disabled={busy}
                   onClick={() => setEmbedText((v) => !v)}
                   className={cn(
-                    'w-full flex items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
+                    'w-full flex items-start gap-3 rounded-[var(--radius-card)] border px-3.5 py-3 text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
                     embedText
                       ? 'border-primary/40 bg-primary/10'
                       : 'border-border bg-surface-muted/40 hover:border-primary/30',
@@ -1063,7 +1063,7 @@ export default function LandingInvitationAiGenerator({
                   {historySubTab === 'actions' && (
                     <div className="space-y-2 max-h-72 sm:max-h-80 overflow-y-auto overscroll-contain pr-1">
                       {actionHistory.length === 0 ? (
-                        <div className="p-6 text-center text-xs text-muted border border-dashed border-border rounded-xl">
+                        <div className="p-6 text-center text-xs text-muted border border-dashed border-border rounded-[var(--radius-card)]">
                           <Clock className="w-5 h-5 mx-auto mb-1 text-muted/60" />
                           Aucune action enregistrée pour cette session.
                         </div>
@@ -1071,7 +1071,7 @@ export default function LandingInvitationAiGenerator({
                         actionHistory.map((act) => (
                           <div
                             key={act.id}
-                            className="flex items-start justify-between gap-2 p-2.5 rounded-xl border border-border bg-surface shadow-2xs text-xs"
+                            className="flex items-start justify-between gap-2 p-2.5 rounded-[var(--radius-card)] border border-border bg-surface shadow-2xs text-xs"
                           >
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
@@ -1136,7 +1136,7 @@ export default function LandingInvitationAiGenerator({
             <div className="flex-1 flex flex-col gap-3 min-h-0 animate-fade-in">
               {/* Commutateur de vue à 3 modes */}
               <div
-                className="flex items-center gap-1 p-1 rounded-xl bg-surface border border-border shadow-2xs"
+                className="flex items-center gap-1 p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-2xs"
                 role="tablist"
                 aria-label="Modes d'aperçu de l'invitation"
               >
@@ -1222,7 +1222,7 @@ export default function LandingInvitationAiGenerator({
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
-                  className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   aria-label="Agrandir la carte"
                 >
                   <LandingInvitationPreview
@@ -1238,7 +1238,7 @@ export default function LandingInvitationAiGenerator({
 
               {/* Vue 2 : Illustration IA pure (sans texte, pour apprécier le photoréalisme) */}
               {previewTab === 'artwork' && (
-                <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center space-y-2">
+                <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center space-y-2">
                   <LandingInvitationPreview
                     template={previewTemplate}
                     showOnlyBackground={true}
@@ -1259,7 +1259,7 @@ export default function LandingInvitationAiGenerator({
 
               {/* Vue 3 : Détails, Palette & Structure */}
               {previewTab === 'details' && (
-                <div className="space-y-3 p-3 rounded-2xl border border-border bg-surface shadow-xs">
+                <div className="space-y-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface shadow-xs">
                   {palette && palette.length > 0 && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -1366,7 +1366,7 @@ export default function LandingInvitationAiGenerator({
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 px-2">
-              <div className="w-14 h-14 rounded-2xl bg-surface border border-border flex items-center justify-center shadow-2xs">
+              <div className="w-14 h-14 rounded-[var(--radius-card)] bg-surface border border-border flex items-center justify-center shadow-2xs">
                 <Sparkles className="w-6 h-6 text-primary/60" aria-hidden />
               </div>
               <p className="text-sm font-semibold text-foreground">Votre carte apparaîtra ici</p>
@@ -1429,7 +1429,7 @@ export default function LandingInvitationAiGenerator({
       >
         {previewTemplate ? (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-center gap-1.5 p-1 rounded-xl bg-surface-muted/60 border border-border max-w-xs mx-auto w-full">
+            <div className="flex items-center justify-center gap-1.5 p-1 rounded-[var(--radius-card)] bg-surface-muted/60 border border-border max-w-xs mx-auto w-full">
               <button
                 type="button"
                 onClick={() => setPreviewTab('card')}
@@ -1453,7 +1453,7 @@ export default function LandingInvitationAiGenerator({
                   <span>Image seule</span>
               </button>
             </div>
-            <div className="rounded-2xl border border-border overflow-hidden bg-surface-muted/30 p-2 sm:p-4 flex justify-center">
+            <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface-muted/30 p-2 sm:p-4 flex justify-center">
               <LandingInvitationPreview
                 template={previewTemplate}
                 showOnlyBackground={previewTab === 'artwork' || resultEmbedText}

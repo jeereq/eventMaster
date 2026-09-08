@@ -70,7 +70,7 @@ export default function AiSimulationCounter({
       <div className={cn('flex gap-3', compact ? 'flex-col sm:flex-row sm:items-center sm:justify-between' : 'flex-col sm:flex-row sm:items-center sm:justify-between')}>
         <div className="min-w-0 flex items-center gap-3">
           <div className={cn(
-            'rounded-xl flex items-center justify-center shrink-0 tabular-nums font-black shadow-sm bg-primary-solid text-primary-foreground',
+            'rounded-[var(--radius-card)] flex items-center justify-center shrink-0 tabular-nums font-black shadow-sm bg-primary-solid text-primary-foreground',
             compact ? 'w-11 h-11 text-lg' : 'w-14 h-14 text-2xl',
           )}>
             {remaining}
@@ -120,7 +120,7 @@ export default function AiSimulationCounter({
         <button
           type="button"
           onClick={onBuy}
-          className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl bg-primary/15 hover:bg-primary/25 text-foreground border border-primary/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-[var(--radius-button)] bg-primary/15 hover:bg-primary/25 text-foreground border border-primary/30 text-xs font-bold shrink-0 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
           <span>Recharger des jetons IA</span>

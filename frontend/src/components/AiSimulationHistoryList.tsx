@@ -53,7 +53,7 @@ export default function AiSimulationHistoryList({
         <span className="text-muted font-medium">({items.length})</span>
       </p>
       <ul className={cn(
-        'max-h-80 sm:max-h-96 overflow-y-auto overscroll-contain divide-y divide-border border border-border rounded-xl bg-surface',
+        'max-h-80 sm:max-h-96 overflow-y-auto overscroll-contain divide-y divide-border border border-border rounded-[var(--radius-card)] bg-surface',
         listClassName,
       )}>
         {items.map((item) => {

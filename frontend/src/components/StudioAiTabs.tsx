@@ -140,7 +140,7 @@ export function StudioAiEmpty({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="py-10 px-4 text-center rounded-xl border border-dashed border-border bg-surface-muted/30 space-y-3">
+    <div className="py-10 px-4 text-center rounded-[var(--radius-card)] border border-dashed border-border bg-surface-muted/30 space-y-3">
       <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
         <Icon className="w-5 h-5" aria-hidden />
       </div>

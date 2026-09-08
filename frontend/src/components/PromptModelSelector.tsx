@@ -125,7 +125,7 @@ export default function PromptModelSelector({
       </div>
 
       {activeCategory === 'coutumier' && (
-        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-950 dark:text-amber-100 text-xs flex items-start gap-2">
+        <div className="p-2.5 rounded-[var(--radius-card)] bg-amber-500/10 border border-amber-500/25 text-amber-950 dark:text-amber-100 text-xs flex items-start gap-2">
           <Crown className="w-4 h-4 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">4 grandes tribus — mariages coutumiers</p>
@@ -138,7 +138,7 @@ export default function PromptModelSelector({
 
       {/* Conseil contextuel pour le mode copie / clonage */}
       {activeCategory === 'clone' && (
-        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 animate-fade-in">
+        <div className="p-2.5 rounded-[var(--radius-card)] bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 animate-fade-in">
           <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">Pour cloner une carte :</p>
@@ -151,7 +151,7 @@ export default function PromptModelSelector({
 
       {/* Conseil contextuel pour les 4 langues nationales de la RDC */}
       {activeCategory === 'rdc-langues' && (
-        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-200 text-xs flex items-start gap-2 animate-fade-in">
+        <div className="p-2.5 rounded-[var(--radius-card)] bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-200 text-xs flex items-start gap-2 animate-fade-in">
           <Languages className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">4 Langues nationales de la RDC :</p>
@@ -183,7 +183,7 @@ export default function PromptModelSelector({
               aria-pressed={isSelected}
               onClick={() => handleSelect(model)}
               className={cn(
-                'group min-h-11 p-2.5 sm:p-3 rounded-xl border transition-all text-left touch-manipulation flex flex-col justify-between space-y-1 sm:space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer',
+                'group min-h-11 p-2.5 sm:p-3 rounded-[var(--radius-card)] border transition-all text-left touch-manipulation flex flex-col justify-between space-y-1 sm:space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer',
                 isSelected
                   ? 'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/40'
                   : 'border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/60',

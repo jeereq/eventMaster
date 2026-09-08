@@ -372,7 +372,7 @@ export default function LandingAiSimulationShowcase() {
                     </span>
                     <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
                   </div>
-                  <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-lg border border-festive-accent/30 backdrop-blur-sm self-start sm:self-auto flex items-baseline gap-1.5">
+                  <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-[var(--radius-button)] border border-festive-accent/30 backdrop-blur-sm self-start sm:self-auto flex items-baseline gap-1.5">
                     <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
                     <span className="text-xs text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
                   </span>

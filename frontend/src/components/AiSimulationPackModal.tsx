@@ -199,7 +199,7 @@ export default function AiSimulationPackModal({
             ) : null}
 
             {selected.warnings.length > 0 ? (
-              <ul className="space-y-1 text-xs text-festive-accent bg-festive-accent-soft p-2.5 rounded-xl border border-festive-accent/20">
+              <ul className="space-y-1 text-xs text-festive-accent bg-festive-accent-soft p-2.5 rounded-[var(--radius-card)] border border-festive-accent/20">
                 {selected.warnings.map((warning) => (
                   <li key={warning}>{warning}</li>
                 ))}
