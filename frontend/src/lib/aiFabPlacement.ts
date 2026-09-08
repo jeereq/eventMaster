@@ -251,7 +251,7 @@ export function scrollToPageSection(id: string): boolean {
   return true;
 }
 
-const REVEAL_SCROLL_FRAMES = 24;
+const REVEAL_SCROLL_MAX_MS = 8000;
 
 /** Pose le hash, réveille un montage paresseux, puis scrolle dès que la cible existe. */
 export function revealAndScrollToSection(id: string): void {
@@ -265,11 +265,14 @@ export function revealAndScrollToSection(id: string): void {
     );
   }
   window.dispatchEvent(new HashChangeEvent('hashchange'));
-  let frames = 0;
-  const tick = () => {
-    if (scrollToPageSection(id) || frames >= REVEAL_SCROLL_FRAMES) return;
-    frames += 1;
-    requestAnimationFrame(tick);
-  };
-  tick();
+  if (scrollToPageSection(id)) return;
+
+  const started = Date.now();
+  const observer = new MutationObserver(() => {
+    if (scrollToPageSection(id) || Date.now() - started > REVEAL_SCROLL_MAX_MS) {
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  window.setTimeout(() => observer.disconnect(), REVEAL_SCROLL_MAX_MS);
 }

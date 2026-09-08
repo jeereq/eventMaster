@@ -72,31 +72,34 @@ export default function DashboardAiStudios({
         idPrefix={DASHBOARD_STUDIO_PREFIX}
       />
 
-      {value === 'budget' ? (
-        <div
-          role="tabpanel"
-          id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'budget')}
-          aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-budget`}
-        >
-          {budget}
-        </div>
-      ) : null}
-      {value === 'invite' ? (
-        <div
-          role="tabpanel"
-          id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'invite')}
-          aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-invite`}
-        >
+      <div
+        role="tabpanel"
+        id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'budget')}
+        aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-budget`}
+        hidden={value !== 'budget'}
+      >
+        {value === 'budget' ? budget : null}
+      </div>
+      <div
+        role="tabpanel"
+        id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'invite')}
+        aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-invite`}
+        hidden={value !== 'invite'}
+      >
+        {value === 'invite' ? (
           <LandingInvitationAiGenerator id="dashboard-studio-invite" defaultExpanded />
-        </div>
-      ) : null}
-      {value === 'room' && showRoom ? (
+        ) : null}
+      </div>
+      {showRoom ? (
         <div
           role="tabpanel"
           id={aiStudioPanelId(DASHBOARD_STUDIO_PREFIX, 'room')}
           aria-labelledby={`${DASHBOARD_STUDIO_PREFIX}-room`}
+          hidden={value !== 'room'}
         >
-          <LandingRoomPlanAiStudio id="dashboard-studio-room" defaultExpanded />
+          {value === 'room' ? (
+            <LandingRoomPlanAiStudio id="dashboard-studio-room" defaultExpanded />
+          ) : null}
         </div>
       ) : null}
     </div>

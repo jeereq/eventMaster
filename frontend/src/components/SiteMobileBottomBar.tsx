@@ -60,11 +60,7 @@ function isItemActive(itemHref: string, pathname: string, currentHash: string): 
     return pathname === '/' && (!currentHash || currentHash === '#' || currentHash === '');
   }
   if (itemHref === SIMULATOR_HREF) {
-    return (
-      pathname === '/simulateur' ||
-      pathname.startsWith('/simulateur/') ||
-      (pathname === '/' && currentHash === `#${SIMULATOR_SECTION_ID}`)
-    );
+    return pathname === '/' && currentHash === `#${SIMULATOR_SECTION_ID}`;
   }
   if (itemHref === '/plans-3d') {
     return pathname === '/plans-3d' || pathname === '/editeur' || pathname.startsWith('/plans-3d/');

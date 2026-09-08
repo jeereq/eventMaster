@@ -31,7 +31,6 @@ import {
   type AiAllowance,
 } from '@/lib/aiTokens';
 import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
-import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import type { EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
@@ -83,6 +82,11 @@ const EventPrepAiSimulator = dynamic(
     ssr: false,
     loading: () => <StudioPaneFallback label="Chargement du simulateur budget…" />,
   },
+);
+
+const AiTokenPurchaseModal = dynamic(
+  () => import('@/components/AiTokenPurchaseModal'),
+  { ssr: false },
 );
 
 function readLandingStudio(): AiStudioId {
@@ -218,8 +222,6 @@ export default function LandingAiSimulationShowcase() {
       id="simulateur-ia"
       className="em-reveal em-landing-defer scroll-mt-24 py-8 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
     >
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[260px] sm:w-[480px] sm:h-[480px] bg-primary/10 rounded-full blur-xl sm:blur-2xl pointer-events-none -z-10" />
-
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
         <div className="text-center max-w-3xl mx-auto space-y-2.5">
           {checkoutNotice === 'success' ? (
@@ -282,7 +284,7 @@ export default function LandingAiSimulationShowcase() {
           <p className="pt-1">
             <Link
               href={fullPage.href}
-              className="text-xs font-semibold text-primary-solid hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="inline-flex min-h-11 items-center text-xs font-semibold text-primary-solid hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               {fullPage.label}
             </Link>
@@ -328,13 +330,15 @@ export default function LandingAiSimulationShowcase() {
           ) : null}
         </div>
 
-        {studio === 'budget' ? (
         <div
           role="tabpanel"
           id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'budget')}
           aria-labelledby={`${LANDING_STUDIO_PREFIX}-budget`}
+          hidden={studio !== 'budget'}
           className="space-y-6"
         >
+        {studio === 'budget' ? (
+          <>
         {viewMode === 'presets' && (
           <div className="bg-surface border border-border rounded-[var(--radius-card)] max-w-5xl mx-auto overflow-hidden animate-fade-in">
             <div className="p-3 sm:p-4 border-b border-border space-y-2">
@@ -371,9 +375,9 @@ export default function LandingAiSimulationShowcase() {
                 sizes="(max-width: 768px) 100vw, 64rem"
                 className="object-center"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
-              <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
-                <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
+              <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/40 to-transparent" />
+              <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-stage-foreground">
+                <h3 className="text-base sm:text-lg font-bold">{activeScenario.name}</h3>
                 <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-[var(--radius-button)] border border-festive-accent/30 self-start sm:self-auto flex items-baseline gap-1.5">
                   <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
                   <span className="text-xs text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
@@ -469,39 +473,44 @@ export default function LandingAiSimulationShowcase() {
             />
           </div>
         ) : null}
+          </>
+        ) : null}
         </div>
-        ) : null}
 
-        {studio === 'invite' ? (
-          <div
-            role="tabpanel"
-            id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'invite')}
-            aria-labelledby={`${LANDING_STUDIO_PREFIX}-invite`}
-            className="max-w-5xl mx-auto"
-          >
+        <div
+          role="tabpanel"
+          id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'invite')}
+          aria-labelledby={`${LANDING_STUDIO_PREFIX}-invite`}
+          hidden={studio !== 'invite'}
+          className="max-w-5xl mx-auto"
+        >
+          {studio === 'invite' ? (
             <LandingInvitationAiGenerator id="landing-studio-invite" defaultExpanded />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
-        {studio === 'room' ? (
-          <div
-            role="tabpanel"
-            id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'room')}
-            aria-labelledby={`${LANDING_STUDIO_PREFIX}-room`}
-            className="max-w-5xl mx-auto"
-          >
+        <div
+          role="tabpanel"
+          id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'room')}
+          aria-labelledby={`${LANDING_STUDIO_PREFIX}-room`}
+          hidden={studio !== 'room'}
+          className="max-w-5xl mx-auto"
+        >
+          {studio === 'room' ? (
             <LandingRoomPlanAiStudio id="landing-studio-room" defaultExpanded />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
-      <AiTokenPurchaseModal
-        open={purchaseModalOpen}
-        onClose={() => setPurchaseModalOpen(false)}
-        onSuccess={() => {
-          void syncDeviceAiTokensWithBackend(api).then((synced) => setAllowance(synced));
-        }}
-      />
+      {purchaseModalOpen ? (
+        <AiTokenPurchaseModal
+          open
+          onClose={() => setPurchaseModalOpen(false)}
+          onSuccess={() => {
+            void syncDeviceAiTokensWithBackend(api).then((synced) => setAllowance(synced));
+          }}
+        />
+      ) : null}
     </section>
   );
 }

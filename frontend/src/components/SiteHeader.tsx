@@ -119,11 +119,7 @@ export default function SiteHeader({
       return pathname === '/activite' || pathname.startsWith('/activite/');
     }
     if (href === '/#simulateur-ia') {
-      return (
-        pathname === '/simulateur' ||
-        pathname.startsWith('/simulateur/') ||
-        (pathname === '/' && currentHash === '#simulateur-ia')
-      );
+      return pathname === '/' && currentHash === '#simulateur-ia';
     }
     if (href === '/contact') {
       return pathname === '/contact';

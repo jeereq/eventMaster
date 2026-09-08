@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages, Crown } from 'lucide-react';
 import {
   INVITATION_PROMPT_MODELS,
@@ -9,6 +9,10 @@ import {
   type PromptModel,
 } from '@/config/invitationPromptModels';
 import { cn } from '@/lib/cn';
+
+type CategoryFilter = PromptCategory | 'all';
+
+const CATEGORY_FILTERS: CategoryFilter[] = ['all', ...PROMPT_CATEGORIES.map((cat) => cat.id)];
 
 interface PromptModelSelectorProps {
   onSelectPrompt: (promptText: string) => void;
@@ -32,11 +36,13 @@ export default function PromptModelSelector({
   intent = 'create',
   defaultCategory,
 }: PromptModelSelectorProps) {
-  const initialCategory: PromptCategory | 'all' =
+  const initialCategory: CategoryFilter =
     defaultCategory ?? (intent === 'clone' ? 'clone' : 'coutumier');
-  const [activeCategory, setActiveCategory] = useState<PromptCategory | 'all'>(initialCategory);
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>(initialCategory);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const isPanel = layout === 'panel';
+  const uid = useId();
+  const modelsPanelId = `${uid}-prompt-models`;
 
   useEffect(() => {
     setActiveCategory(defaultCategory ?? (intent === 'clone' ? 'clone' : 'coutumier'));
@@ -52,6 +58,28 @@ export default function PromptModelSelector({
     onSelectPrompt(model.prompt);
     setCopiedId(model.id);
     setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  const categoryTabId = (id: CategoryFilter) => `${uid}-cat-${id}`;
+
+  const handleCategoryKeyDown = (event: React.KeyboardEvent) => {
+    const current = Math.max(0, CATEGORY_FILTERS.indexOf(activeCategory));
+    let next = current;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      next = (current + 1) % CATEGORY_FILTERS.length;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      next = (current - 1 + CATEGORY_FILTERS.length) % CATEGORY_FILTERS.length;
+    } else if (event.key === 'Home') {
+      next = 0;
+    } else if (event.key === 'End') {
+      next = CATEGORY_FILTERS.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    const nextId = CATEGORY_FILTERS[next];
+    setActiveCategory(nextId);
+    requestAnimationFrame(() => document.getElementById(categoryTabId(nextId))?.focus());
   };
 
   const getCategoryIcon = (catId: PromptCategory) => {
@@ -73,6 +101,14 @@ export default function PromptModelSelector({
     }
   };
 
+  const categoryChipClass = (selected: boolean) =>
+    cn(
+      'min-h-11 px-3 py-2 rounded-full text-xs font-semibold transition touch-manipulation cursor-pointer border inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+      selected
+        ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
+        : 'bg-surface-muted/80 text-muted border-border hover:text-foreground hover:bg-surface',
+    );
+
   return (
     <div className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between gap-2">
@@ -85,37 +121,37 @@ export default function PromptModelSelector({
         </span>
       </div>
 
-      {/* Onglets de catégories */}
-      <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Catégories d’exemples">
+      <div
+        className="flex flex-wrap items-center gap-1.5"
+        role="tablist"
+        aria-label="Catégories d’exemples"
+        onKeyDown={handleCategoryKeyDown}
+      >
         <button
+          id={categoryTabId('all')}
           type="button"
           role="tab"
           aria-selected={activeCategory === 'all'}
+          aria-controls={modelsPanelId}
+          tabIndex={activeCategory === 'all' ? 0 : -1}
           disabled={disabled}
           onClick={() => setActiveCategory('all')}
-          className={cn(
-            'px-2.5 py-1.5 rounded-full text-xs font-semibold transition touch-manipulation cursor-pointer border',
-            activeCategory === 'all'
-              ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
-              : 'bg-surface-muted/80 text-muted border-border hover:text-foreground hover:bg-surface',
-          )}
+          className={categoryChipClass(activeCategory === 'all')}
         >
           Tous ({INVITATION_PROMPT_MODELS.length})
         </button>
         {PROMPT_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
+            id={categoryTabId(cat.id)}
             type="button"
             role="tab"
             aria-selected={activeCategory === cat.id}
+            aria-controls={modelsPanelId}
+            tabIndex={activeCategory === cat.id ? 0 : -1}
             disabled={disabled}
             onClick={() => setActiveCategory(cat.id)}
-            className={cn(
-              'px-2.5 py-1.5 rounded-full text-xs font-semibold transition touch-manipulation cursor-pointer inline-flex items-center gap-1.5 border',
-              activeCategory === cat.id
-                ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
-                : 'bg-surface-muted/80 text-muted border-border hover:text-foreground hover:bg-surface',
-            )}
+            className={categoryChipClass(activeCategory === cat.id)}
           >
             {getCategoryIcon(cat.id)}
             <span className="sm:hidden">{cat.shortLabel}</span>
@@ -165,6 +201,9 @@ export default function PromptModelSelector({
 
       {/* Grille des modèles de prompt */}
       <div
+        id={modelsPanelId}
+        role="tabpanel"
+        aria-label="Exemples de brief"
         className={cn(
           'grid gap-2 overflow-y-auto overscroll-contain pr-1 no-scrollbar',
           isPanel ? 'max-h-[min(28rem,52vh)]' : 'max-h-56 sm:max-h-64',

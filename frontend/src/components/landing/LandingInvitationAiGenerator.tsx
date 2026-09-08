@@ -623,7 +623,7 @@ export default function LandingInvitationAiGenerator({
                 <span id={`${id}-title`} className="text-sm sm:text-base font-display font-semibold text-foreground tracking-tight">
                   Invitation
                 </span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-solid border border-primary/20">
                   Carte 9:16
                 </span>
               </div>
@@ -661,7 +661,7 @@ export default function LandingInvitationAiGenerator({
                     <h2 id={`${id}-title`} className="text-base sm:text-xl font-display font-semibold text-foreground tracking-tight">
                       Créer une invitation
                     </h2>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary-solid border border-primary/20">
                       Carte 9:16
                     </span>
                   </div>
