@@ -158,20 +158,19 @@ export function SkeletonTemplatesView() {
 
 export function SkeletonBillingView() {
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <SkeletonPageHeader />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-4">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-4/5" />
-        </div>
-        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-full rounded-lg" />
-          ))}
-        </div>
+      <div className="flex gap-1 rounded-[var(--radius-button)] border border-border bg-surface-muted p-1">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-11 flex-1 rounded-[var(--radius-button)]" />
+        ))}
+      </div>
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-4">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-4/5" />
+        <Skeleton className="h-24 w-full rounded-lg" />
       </div>
     </div>
   );

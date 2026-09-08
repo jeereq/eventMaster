@@ -291,7 +291,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'upgrade-plan',
         title: 'Changer de forfait',
         content:
-          '1. Facturation & plan.\n2. Comparez quotas et niveau d’éditeur de salles (Essentiel → Complet).\n3. Période de base ou annuel (−10 %).\n4. Demande + preuve si requis ; suivi dans Factures.',
+          '1. Facturation & plan → onglet Forfaits.\n2. Comparez quotas (Aperçu) et le tableau des fonctionnalités.\n3. Période de base ou annuel (−10 %).\n4. Demande + preuve si requis ; suivi dans Demandes, puis Factures.',
         links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
       },
       {
