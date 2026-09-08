@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -106,6 +106,8 @@ import {
   centerpieceStyleLabels,
   wallsFromRoomOutline,
   resolveFurnitureSurfaceAt,
+  isBlueprintRoofVisible,
+  isBlueprintWallsVisible,
   type ArrangeDensity,
   type ChairStyle,
   type LayoutParams,
@@ -1087,10 +1089,24 @@ export default function RoomLayoutEditor({
     setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
 
-  const clearWalls = () => {
-    updateBlueprint({ ...blueprint, walls: [] }, { message: 'Tous les murs ont été retirés', kind: 'settings' });
-    setSelection([]);
-    setWallEditMode(false);
+  const roofVisible = isBlueprintRoofVisible(blueprint.metadata);
+  const wallsVisible = isBlueprintWallsVisible(blueprint.metadata);
+
+  const toggleRoofVisible = () => {
+    const next = !roofVisible;
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, showRoof: next },
+    }, { message: next ? 'Toit affiché' : 'Toit masqué', kind: 'settings' });
+  };
+
+  const toggleWallsVisible = () => {
+    const next = !wallsVisible;
+    if (!next) setWallEditMode(false);
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, showWalls: next },
+    }, { message: next ? 'Murs affichés' : 'Murs masqués', kind: 'settings' });
   };
 
   const addAmphitheaterQuick = () => {
@@ -2854,22 +2870,28 @@ export default function RoomLayoutEditor({
                 </div>
                 <div className="space-y-3 pt-3 border-t border-border/50">
                   <div>
-                    <p className={EDITOR_HEADING}>Toit & éclairage</p>
-                    <p className={EDITOR_HINT}>Plafond visible + style de lustres.</p>
+                    <p className={EDITOR_HEADING}>Toit, murs & éclairage</p>
+                    <p className={EDITOR_HINT}>Masquez l’enveloppe pour placer le mobilier ; les murs restent enregistrés.</p>
                   </div>
                   <label className="flex items-center gap-2 min-h-11 text-sm font-semibold text-foreground cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={blueprint.metadata.showRoof === true}
-                      onChange={(e) => updateBlueprint({
-                        ...blueprint,
-                        metadata: { ...blueprint.metadata, showRoof: e.target.checked },
-                      }, { message: e.target.checked ? 'Toit affiché' : 'Toit masqué', kind: 'settings' })}
+                      checked={roofVisible}
+                      onChange={() => toggleRoofVisible()}
                       className="rounded border-border size-4"
                     />
                     Afficher le toit / plafond
                   </label>
-                  {blueprint.metadata.showRoof && (
+                  <label className="flex items-center gap-2 min-h-11 text-sm font-semibold text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={wallsVisible}
+                      onChange={() => toggleWallsVisible()}
+                      className="rounded border-border size-4"
+                    />
+                    Afficher les murs
+                  </label>
+                  {roofVisible && (
                     <div className="grid grid-cols-2 gap-3 pl-1">
                       <label className="block space-y-1.5 col-span-2">
                         <span className="text-xs font-semibold text-foreground">Style de toit</span>
@@ -3494,8 +3516,17 @@ export default function RoomLayoutEditor({
             {accordion === 'murs' && (
               <div id="editor-panel-murs" className="p-4 bg-surface space-y-3 border-t border-border">
                 <p className={EDITOR_HINT}>
-                  Configurez la hauteur, l&apos;épaisseur, la texture des murs et le style des ouvertures. Cliquez un mur dans la vue 3D pour le sélectionner.
+                  Configurez la hauteur, l&apos;épaisseur, la texture des murs et le style des ouvertures. Cliquez un mur dans la vue 3D pour le sélectionner. Pour seulement les cacher, utilisez « Murs » dans la barre d’outils.
                 </p>
+                <label className="flex items-center gap-2 min-h-11 text-sm text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={wallsVisible}
+                    onChange={() => toggleWallsVisible()}
+                    className="rounded border-border size-4"
+                  />
+                  Afficher les murs dans la vue
+                </label>
                 <label className="flex items-center gap-2 min-h-11 text-sm text-foreground cursor-pointer">
                   <input
                     type="checkbox"
@@ -5415,6 +5446,26 @@ export default function RoomLayoutEditor({
       </button>
       <button
         type="button"
+        onClick={toggleRoofVisible}
+        aria-pressed={roofVisible}
+        title={roofVisible ? 'Masquer le toit / plafond' : 'Afficher le toit / plafond'}
+        className={cn(EDITOR_TOOL, roofVisible ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        {roofVisible ? <Eye className="w-3.5 h-3.5" aria-hidden /> : <EyeOff className="w-3.5 h-3.5" aria-hidden />}
+        {roofVisible ? 'Toit' : 'Toit masqué'}
+      </button>
+      <button
+        type="button"
+        onClick={toggleWallsVisible}
+        aria-pressed={wallsVisible}
+        title={wallsVisible ? 'Masquer les murs (sans les supprimer)' : 'Réafficher les murs'}
+        className={cn(EDITOR_TOOL, wallsVisible ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <BrickWall className="w-3.5 h-3.5" aria-hidden />
+        {wallsVisible ? 'Murs' : 'Murs masqués'}
+      </button>
+      <button
+        type="button"
         onClick={() => {
           if (walkthroughActive) {
             setWalkthroughActive(false);
@@ -5789,7 +5840,6 @@ export default function RoomLayoutEditor({
           {aiPlanReading ? 'Lecture IA…' : 'Lire avec l’IA'}
         </button>
       ) : null}
-      <button type="button" onClick={clearWalls} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Sans murs</button>
       {caps.fixtureKinds.includes('door') ? (
         <button
           type="button"

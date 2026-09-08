@@ -618,6 +618,8 @@ export interface RoomLayoutBlueprint {
     floorColor?: string;
     /** Afficher le toit / plafond en 3D. */
     showRoof?: boolean; 
+    /** Afficher les murs en 3D / 2D (masquer sans les supprimer). Défaut : visibles. */
+    showWalls?: boolean;
     /** Opacité du toit (0–1). */
     roofOpacity?: number;
     /** Couleur du plafond / underside. */
@@ -670,6 +672,14 @@ export interface RoomLayoutBlueprint {
     /** Journal des actions d’édition, persisté avec le plan. */
     layoutActions?: import('@/lib/layoutActionLog').LayoutActionEntry[];
   };
+}
+
+export function isBlueprintRoofVisible(metadata?: RoomLayoutBlueprint['metadata'] | null): boolean {
+  return metadata?.showRoof === true;
+}
+
+export function isBlueprintWallsVisible(metadata?: RoomLayoutBlueprint['metadata'] | null): boolean {
+  return metadata?.showWalls !== false;
 }
 
 function uid(prefix: string) {

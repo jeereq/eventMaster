@@ -12,6 +12,7 @@ import {
   roomTypeLabels,
   ensureBlueprintDefaults,
   resolveBlueprintWalls,
+  isBlueprintWallsVisible,
 } from '@/lib/roomLayoutUtils';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -181,7 +182,7 @@ function ThumbPreview({
           }}
         />
       )}
-      {walls.length > 0 && (
+      {walls.length > 0 && isBlueprintWallsVisible(blueprint.metadata) && (
         <Room2DPlanWalls
           walls={walls}
           canvasWidthM={blueprint.canvas.widthM}
@@ -342,7 +343,7 @@ function FlatShowcasePreview({
             }}
           />
         )}
-        {walls.length > 0 && (
+        {walls.length > 0 && isBlueprintWallsVisible(blueprint.metadata) && (
           <Room2DPlanWalls
             walls={walls}
             canvasWidthM={blueprint.canvas.widthM}

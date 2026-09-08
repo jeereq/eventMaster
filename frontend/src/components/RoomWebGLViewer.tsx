@@ -12,6 +12,8 @@ import {
   resolveBlueprintWalls,
   resolveFurnitureSurfaceAt,
   resolveTableColor,
+  isBlueprintRoofVisible,
+  isBlueprintWallsVisible,
   type ChairType,
   type ChairStyle,
   type SeatMaterial,
@@ -2200,7 +2202,7 @@ function SceneContent({
         );
       })()}
 
-      {blueprint.metadata.showRoof === true && (
+      {isBlueprintRoofVisible(blueprint.metadata) && (
         <RoofMesh
           widthM={widthM}
           heightM={heightM}
@@ -2220,8 +2222,8 @@ function SceneContent({
           wallHeightM={wallHeightM}
           flags={{
             chandeliers: blueprint.metadata.showChandeliers === true,
-            uplights: blueprint.metadata.showUplights === true,
-            curtains: blueprint.metadata.showCurtains === true,
+            uplights: isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showUplights === true,
+            curtains: isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showCurtains === true,
             plants: blueprint.metadata.showDecorPlants === true,
           }}
           curtainColor={blueprint.metadata.curtainColor}
@@ -2240,7 +2242,8 @@ function SceneContent({
         />
       ) : null}
 
-      {walls.filter((wall) => isStoryVisible(blueprint, wall.storyId)).map((wall) => (
+      {isBlueprintWallsVisible(blueprint.metadata)
+        ? walls.filter((wall) => isStoryVisible(blueprint, wall.storyId)).map((wall) => (
         <group key={wall.id} position={[0, worldElevationForStory(blueprint, wall.storyId), 0]}>
           <WallMesh
             wall={wall}
@@ -2251,7 +2254,8 @@ function SceneContent({
             onSelect={(e) => onSelect({ kind: 'wall', id: wall.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
           />
         </group>
-      ))}
+      ))
+        : null}
 
       {blueprint.fixtures.filter((f) => isStoryVisible(blueprint, f.storyId)).map((f) => {
         /** Surfaces plates : ne capturent pas les clics en mode caméra bloquée. */
