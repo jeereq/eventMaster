@@ -16,6 +16,7 @@ import {
   getSeatCoordinates,
   getTableShapeLabel,
   getTableVisualStyle,
+  normalizeTableSeats,
   TableShape,
 } from '@/lib/tablePlanUtils';
 import { chairTypeLabels, getFixtureClass, type ChairType, type RoomLayoutBlueprint, resolveBlueprintWalls, wallsFromRoomOutline } from '@/lib/roomLayoutUtils';
@@ -178,7 +179,10 @@ export default function TablePlanner({
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [tables, setTables] = useState<Table[]>(() => {
     if (initialTablePlan && Array.isArray(initialTablePlan.tables)) {
-      return initialTablePlan.tables;
+      return initialTablePlan.tables.map((table) => ({
+        ...table,
+        seats: normalizeTableSeats(table.seats, table.capacity),
+      }));
     }
     return [];
   });
@@ -343,8 +347,8 @@ export default function TablePlanner({
 
   // Get list of assigned guest IDs
   const assignedGuestIds = new Set<string>();
-  tables.forEach(table => {
-    Object.values(table.seats).forEach(guestId => {
+  tables.forEach((table) => {
+    Object.values(normalizeTableSeats(table.seats, table.capacity)).forEach((guestId) => {
       if (guestId) assignedGuestIds.add(guestId);
     });
   });
@@ -443,7 +447,7 @@ export default function TablePlanner({
     setTables(tables.map(t => {
       if (t.id === editingTable.id) {
         // adjust seats if capacity changed
-        const updatedSeats = { ...t.seats };
+        const updatedSeats = { ...normalizeTableSeats(t.seats, t.capacity) };
         if (editingTable.capacity > t.capacity) {
           for (let i = t.capacity; i < editingTable.capacity; i++) {
             updatedSeats[i] = null;
@@ -531,7 +535,7 @@ export default function TablePlanner({
       return;
     }
 
-    const updatedTables = [...tables.map(t => ({ ...t, seats: { ...t.seats } }))];
+    const updatedTables = [...tables.map((t) => ({ ...t, seats: { ...normalizeTableSeats(t.seats, t.capacity) } }))];
     let unplaced = [...unassignedGuests];
 
     // Group unplaced guests by category
@@ -740,7 +744,7 @@ export default function TablePlanner({
 
   // Helper to get guest names assigned to a table
   const getTableAssignedGuests = (table: Table) => {
-    return Object.entries(table.seats)
+    return Object.entries(normalizeTableSeats(table.seats, table.capacity))
       .filter(([, guestId]) => guestId)
       .map(([seatIndex, guestId]) => {
         const guest = guests.find((g) => g.id === guestId);
@@ -1415,7 +1419,7 @@ export default function TablePlanner({
 
                   {Array.from({ length: table.capacity }).map((_, index) => {
                     const coords = getSeatCoordinates(table.shape, table.capacity, index);
-                    const assignedGuestId = table.seats[index];
+                    const assignedGuestId = table.seats?.[index] ?? null;
                     const guest = guests.find((g) => g.id === assignedGuestId);
 
                     return (
@@ -1798,7 +1802,7 @@ export default function TablePlanner({
               <Move className="w-3.5 h-3.5 text-muted shrink-0" />
               <span className="flex-1 min-w-[10rem] hidden sm:inline">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
               <span className="flex-1 sm:hidden">Glissez · touchez un siège</span>
-              {tables.some((t) => Object.values(t.seats).some(Boolean)) ? (
+              {tables.some((t) => Object.values(normalizeTableSeats(t.seats, t.capacity)).some(Boolean)) ? (
                 <button
                   type="button"
                   onClick={handleClearAssignments}

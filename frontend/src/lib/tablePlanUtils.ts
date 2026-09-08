@@ -10,7 +10,27 @@ export interface TablePlanTable {
   capacity: number;
   x: number;
   y: number;
-  seats?: Record<number, string | null>;
+  seats?: Record<number, string | null> | null;
+}
+
+/** Garantit un dictionnaire de sièges, y compris pour les plans enregistrés sans `seats`. */
+export function normalizeTableSeats(
+  seats: Record<number, string | null> | null | undefined,
+  capacity?: number,
+): Record<number, string | null> {
+  const next: Record<number, string | null> = {};
+  if (seats && typeof seats === 'object') {
+    for (const [key, value] of Object.entries(seats)) {
+      const index = Number(key);
+      if (!Number.isFinite(index) || index < 0) continue;
+      next[index] = value ?? null;
+    }
+  }
+  const size = Math.max(0, Number(capacity) || 0);
+  for (let i = 0; i < size; i++) {
+    if (!(i in next)) next[i] = null;
+  }
+  return next;
 }
 
 export function getTableShapeLabel(shape: TableShape | string): string {
@@ -190,8 +210,7 @@ export function getTableVisualStyle(
 }
 
 export function getOccupiedSeatCount(table: Pick<TablePlanTable, 'seats' | 'capacity'>): number {
-  if (!table.seats) return 0;
-  return Object.values(table.seats).filter(Boolean).length;
+  return Object.values(normalizeTableSeats(table.seats, table.capacity)).filter(Boolean).length;
 }
 
 export function getSeatCoordinates(
