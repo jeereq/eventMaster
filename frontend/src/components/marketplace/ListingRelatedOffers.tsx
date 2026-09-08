@@ -7,6 +7,7 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
   isServiceRentalCategory,
+  listingSrcSet,
   sizedMediaUrl,
   type PublicService,
   type PublicVenue,
@@ -78,8 +79,11 @@ export function RelatedOfferCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={sizedMediaUrl(cover, 360)}
+            srcSet={listingSrcSet(cover, [360, 720])}
+            sizes="(min-width: 1024px) 360px, (min-width: 640px) 45vw, 100vw"
             alt=""
             loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover"
           />
         ) : (
@@ -135,7 +139,15 @@ export function RelatedOfferRow({
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[var(--radius-button)] bg-surface-muted">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={sizedMediaUrl(cover, 160)} alt="" className="h-full w-full object-cover" />
+          <img
+            src={sizedMediaUrl(cover, 160)}
+            srcSet={listingSrcSet(cover, [160, 280])}
+            sizes="56px"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <OfferIcon kind={kind} />

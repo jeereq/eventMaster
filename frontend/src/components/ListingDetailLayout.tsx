@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, ConfirmDialog, Modal, Skeleton, SkeletonListingDetail } from '@/components/ui';
 import { useIsLgUp } from '@/hooks/useIsMobile';
@@ -14,6 +14,7 @@ import { ArrowLeft, Play } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 import ListingActivityHighlights from '@/components/marketplace/ListingActivityHighlights';
+import { LISTING_INQUIRE_EVENT } from '@/lib/listingInquire';
 import {
   RelatedOfferCard,
   RelatedOfferRow,
@@ -53,7 +54,7 @@ function ListingPhotoThumbs({
           <img
             src={sizedMediaUrl(url, 160)}
             srcSet={listingSrcSet(url, [160, 280])}
-            sizes="80px"
+            sizes="(min-width: 640px) 112px, 80px"
             alt={`${listingTitle}, photo ${i + 1}`}
             loading="lazy"
             decoding="async"
@@ -218,6 +219,24 @@ export default function ListingDetailLayout({
     setMobileModalOpen(true);
   };
 
+  useEffect(() => {
+    const onInquire = () => {
+      if (window.matchMedia('(min-width: 1024px)').matches) return;
+      if (showCommerce) {
+        setMobileAction('inquire');
+        setMobileModalOpen(true);
+        return;
+      }
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById('listing-contact')?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    };
+    window.addEventListener(LISTING_INQUIRE_EVENT, onInquire);
+    return () => window.removeEventListener(LISTING_INQUIRE_EVENT, onInquire);
+  }, [showCommerce]);
+
   const scrollToContact = (action: 'inquire' | 'book') => {
     setMobileAction(action);
     const reduceMotion = typeof window !== 'undefined'
@@ -345,9 +364,7 @@ export default function ListingDetailLayout({
     ...(resolvedActivityCount != null && resolvedActivityCount > 0 ? { activity: resolvedActivityCount } : {}),
   };
 
-  const isWideTab = viewTab === 'map' || viewTab === 'activity' || viewTab === 'services' || viewTab === 'venues';
-
-  const offerGridClass = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+  const offerGridClass = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
   const offerRowClass = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
 
   const servicesPanel = (
@@ -618,11 +635,8 @@ export default function ListingDetailLayout({
             ) : null}
           </div>
 
-          <div className={cn(
-            'grid grid-cols-1 items-start gap-8 lg:gap-12',
-            isWideTab ? 'lg:grid-cols-1' : 'lg:grid-cols-5',
-          )}>
-            <div className={cn('flex flex-col gap-4 min-w-0', isWideTab ? '' : 'lg:col-span-3')}>
+          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5 lg:gap-12">
+            <div className="flex min-w-0 flex-col gap-4 lg:col-span-3">
               <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-[var(--em-site-header)]', 'md:top-16')}>
                 <MarketplaceFormTabs
                   value={viewTab}
@@ -635,7 +649,7 @@ export default function ListingDetailLayout({
                 />
               </div>
 
-              {viewTab === 'details' && relationStatus ? (
+              {relationStatus ? (
                 <div className="lg:hidden">{relationStatus}</div>
               ) : null}
 
@@ -648,7 +662,6 @@ export default function ListingDetailLayout({
               </div>
             </div>
 
-            {isWideTab ? null : (
             <aside
               id="listing-contact"
               className={cn(
@@ -685,7 +698,6 @@ export default function ListingDetailLayout({
                 </div>
               ) : null}
             </aside>
-            )}
           </div>
         </>
       )}

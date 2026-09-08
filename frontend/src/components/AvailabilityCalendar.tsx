@@ -161,7 +161,7 @@ export default function AvailabilityCalendar({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="px-2 py-1 rounded-lg border border-border text-[10px] font-semibold text-muted hover:text-foreground"
+            className="min-h-11 px-2.5 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-muted hover:text-foreground"
             onClick={() => {
               const t = todayKey();
               const p = parseKey(t);
@@ -172,7 +172,7 @@ export default function AvailabilityCalendar({
           </button>
           <button
             type="button"
-            className="min-h-10 min-w-10 sm:min-h-0 sm:min-w-0 p-2 sm:p-1.5 inline-flex items-center justify-center rounded-lg border border-border text-muted hover:text-foreground"
+            className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground"
             onClick={() => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }))}
             aria-label="Mois précédent"
           >
@@ -181,7 +181,7 @@ export default function AvailabilityCalendar({
           <span className="text-xs font-semibold min-w-[7rem] sm:min-w-[8rem] text-center capitalize">{monthLabel}</span>
           <button
             type="button"
-            className="min-h-10 min-w-10 sm:min-h-0 sm:min-w-0 p-2 sm:p-1.5 inline-flex items-center justify-center rounded-lg border border-border text-muted hover:text-foreground"
+            className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground"
             onClick={() => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }))}
             aria-label="Mois suivant"
           >
@@ -191,7 +191,7 @@ export default function AvailabilityCalendar({
       </div>
 
       {rangeMode ? (
-        <p className="text-[11px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           {selectingSecond
             ? 'Sélectionnez la fin de période (ou recliquez le même jour).'
             : '1er clic = début · 2e clic = fin. Un seul jour suffit aussi.'}
@@ -200,32 +200,32 @@ export default function AvailabilityCalendar({
 
       {selectionLabel && (onSelectDate || onSelectRange) ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-semibold border border-primary/20">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
             {selectionLabel}
           </span>
           <button
             type="button"
             onClick={clearSelection}
-            className="text-[11px] font-semibold text-muted hover:text-foreground underline-offset-2 hover:underline"
+            className="text-xs font-semibold text-muted hover:text-foreground underline-offset-2 hover:underline min-h-11 px-1"
           >
             Effacer
           </button>
         </div>
       ) : selectionLabel && !onSelectDate && !onSelectRange ? (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-semibold border border-primary/20 w-fit">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20 w-fit">
           {selectionLabel}
         </span>
       ) : null}
 
       {hint ? (
-        <p className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/20 rounded-xl px-2.5 py-1.5">
+        <p className="text-xs text-festive-accent bg-festive-accent/10 border border-festive-accent/20 rounded-[var(--radius-button)] px-2.5 py-1.5">
           {hint}
         </p>
       ) : null}
 
       <div className="grid grid-cols-7 gap-1 text-center">
         {WEEKDAYS.map((label) => (
-          <div key={label} className="text-[10px] font-semibold uppercase tracking-wide text-muted py-1">
+          <div key={label} className="text-xs font-semibold text-muted py-1">
             {label}
           </div>
         ))}
@@ -253,12 +253,12 @@ export default function AvailabilityCalendar({
               aria-current={isToday ? 'date' : undefined}
               className={cn(
                 'aspect-square min-h-9 sm:min-h-0 rounded-lg text-sm sm:text-xs font-medium border relative',
-                isBooked && !isEdge && !isSelected && !inRange && 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
-                isBooked && (isEdge || isSelected || inRange) && 'bg-primary text-white border-primary shadow-sm',
-                !isBooked && isBlocked && !isEdge && !isSelected && 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30',
-                isEdge && !isBooked && !isBlocked && 'bg-primary text-white border-primary shadow-sm',
-                inRange && !isEdge && !isBooked && !isBlocked && 'bg-primary/20 text-foreground border-primary/25',
-                isSelected && !isBooked && !isBlocked && 'bg-primary text-white border-primary shadow-sm',
+                isBooked && !isEdge && !isSelected && !inRange && 'bg-danger/10 text-danger border-danger/30',
+                isBooked && (isEdge || isSelected || inRange) && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
+                !isBooked && isBlocked && !isEdge && !isSelected && 'bg-festive-accent/10 text-festive-accent border-festive-accent/30',
+                isEdge && !isBooked && !isBlocked && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
+                inRange && !isEdge && !isBooked && !isBlocked && 'bg-primary/15 text-foreground border-primary/25',
+                isSelected && !isBooked && !isBlocked && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
                 !isBooked && !isBlocked && !inRange && !isSelected && !isPast && 'border-transparent hover:border-border hover:bg-surface-muted',
                 isPast && 'text-muted/45 border-transparent',
                 isToday && !isEdge && !isSelected && 'ring-1 ring-primary/50',
@@ -270,13 +270,13 @@ export default function AvailabilityCalendar({
         })}
       </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[10px] text-muted">
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/40 border border-rose-500/40" />
+          <span className="w-2.5 h-2.5 rounded-sm bg-danger/40 border border-danger/40" />
           Réservé
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40 border border-amber-500/40" />
+          <span className="w-2.5 h-2.5 rounded-sm bg-festive-accent/40 border border-festive-accent/40" />
           Indisponible
         </span>
         <span className="inline-flex items-center gap-1.5">

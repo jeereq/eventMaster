@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { formatFc } from '@/config/landingPricing';
+import { goToListingInquire } from '@/lib/listingInquire';
 import {
   amenityLabel,
   eventTypeLabel,
@@ -178,18 +179,28 @@ export default function ListingPublicDetails({
         </Block>
       ) : null}
       {hasContact ? (
-        <Block title="Contact">
+        <Block title="Joindre directement">
+          <p className="text-xs text-muted leading-relaxed">
+            Ces liens ouvrent le téléphone, WhatsApp ou Instagram, hors EventMaster. Pour un devis ou une réservation suivis sur la plateforme, utilisez Devis ou Réserver.
+          </p>
           <div className="flex flex-wrap gap-2">
             {contacts.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 {...(item.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                className="inline-flex min-h-11 items-center rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm font-semibold text-primary hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="inline-flex min-h-11 items-center rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 {item.label}
               </a>
             ))}
+            <button
+              type="button"
+              onClick={goToListingInquire}
+              className="inline-flex min-h-11 items-center rounded-[var(--radius-button)] bg-primary-solid px-3 text-sm font-semibold text-primary-foreground hover:bg-primary-solid-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              Aller au devis
+            </button>
           </div>
         </Block>
       ) : null}

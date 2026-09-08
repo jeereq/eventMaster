@@ -40,6 +40,7 @@ export default function ShareButton({
 
   const icon = copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />;
   const caption = copied ? 'Lien copié' : label;
+  const copiedClass = 'bg-primary-solid text-primary-foreground border-primary-solid';
 
   if (variant === 'button') {
     return (
@@ -47,7 +48,11 @@ export default function ShareButton({
         type="button"
         onClick={() => void onShare()}
         className={cn(
-          'inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-[var(--radius-button)] text-xs font-semibold border border-border bg-surface text-foreground hover:bg-surface-muted transition',
+          'inline-flex min-h-11 items-center justify-center gap-1.5 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+          copied
+            ? copiedClass
+            : 'border-border bg-surface text-foreground hover:bg-surface-muted',
           className,
         )}
         aria-label={caption}
@@ -65,8 +70,9 @@ export default function ShareButton({
         onClick={() => void onShare()}
         className={cn(
           'relative h-11 w-11 shrink-0 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
           copied
-            ? 'bg-primary text-white border-primary'
+            ? copiedClass
             : 'bg-surface/90 text-foreground border-white/25 dark:border-white/10',
           className,
         )}
@@ -86,7 +92,7 @@ export default function ShareButton({
         'inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-button)] border shadow-sm transition',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         copied
-          ? 'bg-primary border-primary text-white'
+          ? copiedClass
           : 'bg-surface border-border text-muted hover:text-foreground',
         className,
       )}
