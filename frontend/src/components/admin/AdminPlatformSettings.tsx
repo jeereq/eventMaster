@@ -794,6 +794,7 @@ export default function AdminPlatformSettings({
         {section === 'audio' && (() => {
           const audio = sanitizeAudioNotifications(value.audioNotifications);
           const familyLabels: Record<AudioNotificationFamily, string> = {
+            events: 'Événements (RSVP, billets)',
             billing: 'Facturation & abonnements',
             commissions: 'Commissions',
             catalog: 'Catalogue / marketplace',

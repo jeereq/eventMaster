@@ -10,12 +10,13 @@ export const AUDIO_PRESET_LABELS: Record<AudioNotificationPreset, string> = {
   urgent: 'Urgent',
 };
 
-export const AUDIO_NOTIFICATION_FAMILIES = ['billing', 'commissions', 'catalog', 'tasks'] as const;
+export const AUDIO_NOTIFICATION_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks'] as const;
 export type AudioNotificationFamily = (typeof AUDIO_NOTIFICATION_FAMILIES)[number];
 
 export interface AudioNotificationsSettings {
   enabled: boolean;
   volume: number;
+  events: AudioNotificationPreset;
   billing: AudioNotificationPreset;
   commissions: AudioNotificationPreset;
   catalog: AudioNotificationPreset;
@@ -26,6 +27,7 @@ export interface AudioNotificationsSettings {
 export const DEFAULT_AUDIO_NOTIFICATIONS: AudioNotificationsSettings = {
   enabled: true,
   volume: 70,
+  events: 'bell',
   billing: 'urgent',
   commissions: 'chime',
   catalog: 'bell',
@@ -45,6 +47,7 @@ export function sanitizeAudioNotifications(raw: unknown): AudioNotificationsSett
   return {
     enabled: src.enabled !== false,
     volume: Number.isFinite(volume) ? Math.max(0, Math.min(100, Math.round(volume))) : DEFAULT_AUDIO_NOTIFICATIONS.volume,
+    events: isAudioNotificationPreset(src.events) ? src.events : DEFAULT_AUDIO_NOTIFICATIONS.events,
     billing: isAudioNotificationPreset(src.billing) ? src.billing : DEFAULT_AUDIO_NOTIFICATIONS.billing,
     commissions: isAudioNotificationPreset(src.commissions) ? src.commissions : DEFAULT_AUDIO_NOTIFICATIONS.commissions,
     catalog: isAudioNotificationPreset(src.catalog) ? src.catalog : DEFAULT_AUDIO_NOTIFICATIONS.catalog,

@@ -13,8 +13,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Box,
-  X,
   Plus,
 } from 'lucide-react';
 
@@ -55,6 +53,56 @@ export interface SeatSelection3DViewerProps {
   className?: string;
 }
 
+const QUALITY_OPTIONS = [
+  { id: 'standard' as const, label: 'Standard' },
+  { id: 'showcase' as const, label: 'Showcase 3D' },
+];
+
+function SeatPreviewQualityChips({
+  quality,
+  onChange,
+  variant,
+}: {
+  quality: RoomPreviewQuality;
+  onChange: (next: RoomPreviewQuality) => void;
+  variant: 'overlay' | 'bar';
+}) {
+  return (
+    <div
+      className={cn(
+        'flex shrink-0 gap-1 rounded-full p-0.5',
+        variant === 'overlay'
+          ? 'border border-background/20 bg-foreground/80 backdrop-blur-md'
+          : 'border border-border bg-surface',
+      )}
+      role="group"
+      aria-label="Qualité de l’aperçu 3D"
+    >
+      {QUALITY_OPTIONS.map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          aria-pressed={quality === opt.id}
+          onClick={() => onChange(opt.id)}
+          className={cn(
+            'min-h-11 px-2.5 rounded-full text-xs font-semibold transition',
+            variant === 'bar' && 'flex-1',
+            quality === opt.id
+              ? variant === 'overlay'
+                ? 'bg-background text-foreground shadow-xs'
+                : 'bg-foreground text-background shadow-xs'
+              : variant === 'overlay'
+                ? 'text-background/70 hover:text-background'
+                : 'text-muted hover:text-foreground',
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function SeatSelection3DViewer({
   seats,
   selectedSeats,
@@ -68,7 +116,7 @@ export default function SeatSelection3DViewer({
   className = '',
 }: SeatSelection3DViewerProps) {
   const [internalFocusedTableId, setInternalFocusedTableId] = useState<string | null>(null);
-  const [quality, setQuality] = useState<RoomPreviewQuality>('standard');
+  const [quality, setQuality] = useState<RoomPreviewQuality>('showcase');
 
   const focusedTableId = activeTableId !== undefined ? activeTableId : internalFocusedTableId;
   const setFocusedTableId = (id: string | null) => {
@@ -216,37 +264,9 @@ export default function SeatSelection3DViewer({
         </div>
       )}
 
-      {/* Rendu 3D de la salle */}
       <div className="relative rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
-        {/* Badge mode et conseils */}
-        <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-foreground/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-[10px] font-semibold text-background">
-          <Box className="w-3.5 h-3.5 text-primary" />
-          <span>Touchez une table en 3D pour choisir vos places</span>
-        </div>
-
-        {/* Sélecteur de qualité 3D */}
-        <div className="absolute top-2 right-2 z-20 flex shrink-0 gap-1 rounded-full border border-background/20 bg-foreground/80 p-0.5 backdrop-blur-md">
-          {(
-            [
-              { id: 'standard' as const, label: 'Standard' },
-              { id: 'showcase' as const, label: 'Showcase 3D' },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              aria-pressed={quality === opt.id}
-              onClick={() => setQuality(opt.id)}
-              className={cn(
-                'min-h-11 px-2.5 rounded-full text-xs font-semibold transition',
-                quality === opt.id
-                  ? 'bg-background text-foreground shadow-xs'
-                  : 'text-background/70 hover:text-background'
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="absolute top-2 right-2 z-20 hidden sm:block">
+          <SeatPreviewQualityChips quality={quality} onChange={setQuality} variant="overlay" />
         </div>
 
         <RoomLayoutPreview
@@ -257,16 +277,24 @@ export default function SeatSelection3DViewer({
           selectedTableIds={tablesWithSelection}
           onSelectTable={(tableId) => setFocusedTableId(tableId)}
           showMeta={false}
-          className="[&_.em-floor-canvas]:min-h-[280px] sm:[&_.em-floor-canvas]:min-h-[340px]"
+          className="[&_.em-floor-canvas]:min-h-[min(58dvh,440px)] sm:[&_.em-floor-canvas]:min-h-[360px]"
         />
 
-        {/* Indicateur de tables sélectionnées en overlay */}
         {tablesWithSelection.length > 0 && (
-          <div className="absolute top-10 left-2 z-20 flex items-center gap-1 rounded-lg bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 shadow-sm">
-            <Check className="w-3 h-3" />
+          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-lg bg-emerald-700/95 text-white text-xs font-semibold px-2.5 py-1.5 shadow-sm">
+            <Check className="w-3.5 h-3.5" aria-hidden />
             <span>{selectedSeats.length} place{selectedSeats.length > 1 ? 's' : ''} sélectionnée{selectedSeats.length > 1 ? 's' : ''}</span>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted leading-relaxed">
+          Touchez une table en 3D pour choisir vos places.
+        </p>
+        <div className="sm:hidden">
+          <SeatPreviewQualityChips quality={quality} onChange={setQuality} variant="bar" />
+        </div>
       </div>
 
       {/* Panneau de sélection de sièges sur la table active */}
@@ -310,7 +338,7 @@ export default function SeatSelection3DViewer({
                 <button
                   type="button"
                   onClick={goToPrevTable}
-                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-[32px] min-h-[32px] flex items-center justify-center"
+                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
                   title="Table précédente"
                   aria-label="Table précédente"
                 >
@@ -322,7 +350,7 @@ export default function SeatSelection3DViewer({
                 <button
                   type="button"
                   onClick={goToNextTable}
-                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-[32px] min-h-[32px] flex items-center justify-center"
+                  className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
                   title="Table suivante"
                   aria-label="Table suivante"
                 >
@@ -401,7 +429,7 @@ export default function SeatSelection3DViewer({
                     );
                     if (firstFree) onToggleSeat(firstFree.tableId, firstFree.seatIndex);
                   }}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline min-h-8"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline min-h-11 px-2 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Prendre 1 place libre

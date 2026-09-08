@@ -33,7 +33,7 @@ export type ChannelPreference = {
   push: boolean;
 };
 
-export type NotificationPrefFamily = 'billing' | 'commissions' | 'catalog';
+export type NotificationPrefFamily = 'events' | 'billing' | 'commissions' | 'catalog' | 'tasks';
 
 export type NotificationPreferences = {
   hasPhone: boolean;

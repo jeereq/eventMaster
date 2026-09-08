@@ -334,3 +334,39 @@ export async function notifyTicketPayment(order: {
 
   return created;
 }
+
+export async function notifyTicketPaymentFailed(order: {
+  id: string;
+  tenantId?: string | null;
+  eventId?: string | null;
+  eventTitle?: string | null;
+  buyerName?: string | null;
+  buyerEmail?: string | null;
+  amountFc?: number | null;
+  quantity?: number | null;
+}) {
+  if (!order.tenantId) return;
+
+  const eventTitle = order.eventTitle || 'événement';
+  const buyer = order.buyerName || order.buyerEmail || 'Un acheteur';
+  const quantity = order.quantity || 1;
+  const href = order.eventId
+    ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing`
+    : `${FRONTEND_URL}/dashboard/events`;
+
+  void notifyTenantOperators(order.tenantId, {
+    type: PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED,
+    title: 'Paiement de billet non abouti',
+    message: `${buyer} n’a pas finalisé ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} »`,
+    metadata: {
+      kind: 'ticket',
+      orderId: order.id,
+      eventId: order.eventId || null,
+      eventTitle,
+      tenantId: order.tenantId,
+      quantity,
+      amountFc: Number(order.amountFc) || 0,
+      href,
+    },
+  }).catch((err) => console.error('[PaymentTrace] notify ticket payment failed:', err));
+}

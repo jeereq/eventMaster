@@ -17,6 +17,8 @@ export const PLATFORM_NOTIFICATION_TYPE = {
   EVENT_TASK_COMPLETED: 'EVENT_TASK_COMPLETED',
   PAYMENT_RECEIVED: 'PAYMENT_RECEIVED',
   TICKET_SALE: 'TICKET_SALE',
+  TICKET_PAYMENT_FAILED: 'TICKET_PAYMENT_FAILED',
+  EVENT_RSVP: 'EVENT_RSVP',
   DISCOUNT_REQUEST_PENDING: 'DISCOUNT_REQUEST_PENDING',
   DISCOUNT_QUOTE_READY: 'DISCOUNT_QUOTE_READY',
 } as const;
@@ -25,6 +27,11 @@ export type PlatformNotificationType =
   (typeof PLATFORM_NOTIFICATION_TYPE)[keyof typeof PLATFORM_NOTIFICATION_TYPE];
 
 export const NOTIFICATION_FAMILIES = {
+  events: [
+    PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP,
+    PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
+    PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED,
+  ],
   billing: [
     PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_APPROVAL,
     PLATFORM_NOTIFICATION_TYPE.ADMIN_ACTIVATION,
@@ -35,7 +42,6 @@ export const NOTIFICATION_FAMILIES = {
     PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
     PLATFORM_NOTIFICATION_TYPE.INVOICE_ISSUED,
     PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED,
-    PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
     PLATFORM_NOTIFICATION_TYPE.DISCOUNT_REQUEST_PENDING,
     PLATFORM_NOTIFICATION_TYPE.DISCOUNT_QUOTE_READY,
   ],
@@ -57,7 +63,7 @@ export const NOTIFICATION_FAMILIES = {
 
 export type NotificationFamily = keyof typeof NOTIFICATION_FAMILIES;
 
-export const NOTIFICATION_PREF_FAMILIES = ['billing', 'commissions', 'catalog', 'tasks'] as const;
+export const NOTIFICATION_PREF_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks'] as const;
 export type NotificationPrefFamily = (typeof NOTIFICATION_PREF_FAMILIES)[number];
 
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP' | 'PUSH';
@@ -70,6 +76,7 @@ export function typesForFamily(family?: string | null): string[] | undefined {
 }
 
 export function familyForType(type: string): NotificationPrefFamily | 'account' {
+  if ((NOTIFICATION_FAMILIES.events as readonly string[]).includes(type)) return 'events';
   if ((NOTIFICATION_FAMILIES.billing as readonly string[]).includes(type)) return 'billing';
   if ((NOTIFICATION_FAMILIES.commissions as readonly string[]).includes(type)) return 'commissions';
   if ((NOTIFICATION_FAMILIES.catalog as readonly string[]).includes(type)) return 'catalog';

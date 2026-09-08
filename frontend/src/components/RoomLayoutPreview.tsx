@@ -523,9 +523,9 @@ export default function RoomLayoutPreview({
   const canvasClass = useMemo(() => {
     if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
     if (quality === 'showcase') {
-      return 'aspect-[16/10] min-h-[200px] max-h-[min(52vh,420px)] sm:min-h-[360px] sm:max-h-none';
+      return 'aspect-[16/10] min-h-[280px] max-h-[min(70dvh,560px)] sm:min-h-[360px] sm:max-h-none';
     }
-    return 'aspect-[4/3] min-h-[180px] sm:min-h-[200px]';
+    return 'aspect-[4/3] min-h-[240px] sm:min-h-[280px]';
   }, [quality]);
 
   if (!blueprint) {

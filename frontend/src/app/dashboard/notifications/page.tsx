@@ -9,9 +9,11 @@ import { PageHeader, Breadcrumbs, Button, EmptyState, Pagination, Alert, usePage
 import NotificationPreferencesCard from '@/components/NotificationPreferencesCard';
 import { cn } from '@/lib/cn';
 import {
+  NOTIFICATION_FAMILY_LABELS,
   notificationFamilyLabel,
   notificationTypeLabel,
   type NotificationFamily,
+  type NotificationPrefFamily,
 } from '@/config/platformNotifications';
 
 export interface PlatformNotificationItem {
@@ -157,11 +159,11 @@ export default function NotificationsPage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <details className="group">
-        <summary className="cursor-pointer text-sm font-medium text-muted hover:text-foreground list-none flex items-center gap-2 py-1">
-          <span className="text-xs uppercase tracking-wider">Canaux e-mail, WhatsApp, push</span>
-          <span className="text-[11px] text-muted group-open:hidden">Afficher</span>
-          <span className="text-[11px] text-muted hidden group-open:inline">Masquer</span>
+      <details className="group" open>
+        <summary className="cursor-pointer text-sm font-medium text-foreground hover:text-foreground list-none flex items-center gap-2 min-h-11 py-1">
+          <span>Canaux e-mail, WhatsApp, push</span>
+          <span className="text-xs text-muted group-open:hidden">Afficher</span>
+          <span className="text-xs text-muted hidden group-open:inline">Masquer</span>
         </summary>
         <div className="mt-3">
           <NotificationPreferencesCard />
@@ -169,7 +171,7 @@ export default function NotificationsPage() {
       </details>
 
       <div className="flex flex-wrap items-center gap-2">
-        {(['all', 'tasks', 'billing', 'commissions', 'catalog'] as NotificationFamily[]).map((id) => (
+        {(['all', 'events', 'tasks', 'billing', 'commissions', 'catalog'] as NotificationFamily[]).map((id) => (
           <button
             key={id}
             type="button"
@@ -178,24 +180,17 @@ export default function NotificationsPage() {
               setPage(1);
             }}
             className={cn(
-              'px-3 py-1.5 rounded-md text-xs font-medium border transition',
+              'px-3 min-h-11 rounded-[var(--radius-button)] text-xs font-medium border transition',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               family === id
                 ? 'bg-surface text-foreground border-border shadow-[var(--shadow-soft)]'
                 : 'text-muted border-transparent hover:text-foreground',
             )}
           >
-            {id === 'all'
-              ? 'Toutes'
-              : id === 'billing'
-                ? 'Facturation'
-                : id === 'commissions'
-                  ? 'Commissions'
-                  : id === 'catalog'
-                    ? 'Catalogue'
-                    : 'Tâches'}
+            {id === 'all' ? 'Toutes' : NOTIFICATION_FAMILY_LABELS[id as NotificationPrefFamily]}
           </button>
         ))}
-        <label className="ml-auto flex items-center gap-2 text-xs font-medium text-muted">
+        <label className="ml-auto flex items-center gap-2 text-xs font-medium text-muted min-h-11">
           <input
             type="checkbox"
             checked={unreadOnly}
@@ -203,7 +198,7 @@ export default function NotificationsPage() {
               setUnreadOnly(e.target.checked);
               setPage(1);
             }}
-            className="rounded border-border"
+            className="rounded border-border w-4 h-4 accent-primary"
           />
           Non lues
         </label>

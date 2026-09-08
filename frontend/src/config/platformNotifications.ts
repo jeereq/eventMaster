@@ -17,19 +17,44 @@ export const PLATFORM_NOTIFICATION_TYPE = {
   EVENT_TASK_COMPLETED: 'EVENT_TASK_COMPLETED',
   PAYMENT_RECEIVED: 'PAYMENT_RECEIVED',
   TICKET_SALE: 'TICKET_SALE',
+  TICKET_PAYMENT_FAILED: 'TICKET_PAYMENT_FAILED',
+  EVENT_RSVP: 'EVENT_RSVP',
   DISCOUNT_REQUEST_PENDING: 'DISCOUNT_REQUEST_PENDING',
   DISCOUNT_QUOTE_READY: 'DISCOUNT_QUOTE_READY',
 } as const;
 
-export type NotificationFamily = 'billing' | 'commissions' | 'catalog' | 'tasks' | 'all';
+export type NotificationFamily = 'events' | 'billing' | 'commissions' | 'catalog' | 'tasks' | 'all';
 export type NotificationPrefFamily = Exclude<NotificationFamily, 'all'>;
 
+export const NOTIFICATION_PREF_FAMILIES: NotificationPrefFamily[] = [
+  'events',
+  'billing',
+  'commissions',
+  'catalog',
+  'tasks',
+];
+
 export const NOTIFICATION_FAMILY_LABELS: Record<NotificationPrefFamily, string> = {
+  events: 'Événements',
   billing: 'Facturation',
   commissions: 'Commissions',
   catalog: 'Catalogue',
   tasks: 'Tâches',
 };
+
+export const NOTIFICATION_FAMILY_DESCRIPTIONS: Record<NotificationPrefFamily, string> = {
+  events: 'Réponses RSVP, billets vendus et paiements de places qui n’aboutissent pas.',
+  billing: 'Factures, abonnements, licences et demandes de rabais.',
+  commissions: 'Commissions mensuelles à encaisser ou déjà payées.',
+  catalog: 'Demandes et réservations marketplace (salles, services).',
+  tasks: 'Tâches d’événement assignées, à échéance ou terminées.',
+};
+
+const EVENT_TYPES = new Set([
+  PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP,
+  PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
+  PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED,
+]);
 
 const BILLING_TYPES = new Set([
   PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_APPROVAL,
@@ -41,7 +66,6 @@ const BILLING_TYPES = new Set([
   PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
   PLATFORM_NOTIFICATION_TYPE.INVOICE_ISSUED,
   PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED,
-  PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
   PLATFORM_NOTIFICATION_TYPE.DISCOUNT_REQUEST_PENDING,
   PLATFORM_NOTIFICATION_TYPE.DISCOUNT_QUOTE_READY,
 ]);
@@ -64,6 +88,7 @@ const TASK_TYPES = new Set([
 ]);
 
 export function notificationFamily(type: string): Exclude<NotificationFamily, 'all'> | 'account' {
+  if (EVENT_TYPES.has(type as never)) return 'events';
   if (BILLING_TYPES.has(type as never)) return 'billing';
   if (COMMISSION_TYPES.has(type as never)) return 'commissions';
   if (CATALOG_TYPES.has(type as never)) return 'catalog';
@@ -73,15 +98,14 @@ export function notificationFamily(type: string): Exclude<NotificationFamily, 'a
 
 export function notificationFamilyLabel(type: string): string {
   const family = notificationFamily(type);
-  if (family === 'billing') return 'Facturation';
-  if (family === 'commissions') return 'Commissions';
-  if (family === 'catalog') return 'Catalogue';
-  if (family === 'tasks') return 'Tâches';
-  return 'Compte';
+  if (family === 'account') return 'Compte';
+  return NOTIFICATION_FAMILY_LABELS[family];
 }
 
 const TYPE_LABELS: Record<string, string> = {
   [PLATFORM_NOTIFICATION_TYPE.TICKET_SALE]: 'Billet',
+  [PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED]: 'Paiement billet',
+  [PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP]: 'RSVP',
   [PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED]: 'Paiement',
   [PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_REQUEST_PENDING]: 'Abonnement',
   [PLATFORM_NOTIFICATION_TYPE.DISCOUNT_REQUEST_PENDING]: 'Rabais',

@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { Bell, Loader2, Mail, MessageCircle, Save, Smartphone } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Card, CardHeader } from '@/components/ui';
-import { NOTIFICATION_FAMILY_LABELS, type NotificationPrefFamily } from '@/config/platformNotifications';
+import { cn } from '@/lib/cn';
+import {
+  NOTIFICATION_FAMILY_DESCRIPTIONS,
+  NOTIFICATION_FAMILY_LABELS,
+  NOTIFICATION_PREF_FAMILIES,
+  type NotificationPrefFamily,
+} from '@/config/platformNotifications';
 
 type ChannelPreference = {
   email: boolean;
@@ -18,13 +24,19 @@ type PreferencesResponse = {
   families: Record<NotificationPrefFamily, ChannelPreference>;
 };
 
-const FAMILIES: NotificationPrefFamily[] = ['billing', 'commissions', 'catalog', 'tasks'];
-
 const CHANNELS: Array<{ key: keyof ChannelPreference; label: string; icon: React.ReactNode }> = [
-  { key: 'email', label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" /> },
-  { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-3.5 h-3.5" /> },
-  { key: 'push', label: 'Push', icon: <Smartphone className="w-3.5 h-3.5" /> },
+  { key: 'email', label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> },
+  { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-3.5 h-3.5" aria-hidden /> },
+  { key: 'push', label: 'Push', icon: <Smartphone className="w-3.5 h-3.5" aria-hidden /> },
 ];
+
+function defaultChannels(hasPhone: boolean): ChannelPreference {
+  return { email: true, whatsapp: hasPhone, push: true };
+}
+
+function familyChannels(data: PreferencesResponse, family: NotificationPrefFamily): ChannelPreference {
+  return data.families[family] ?? defaultChannels(data.hasPhone);
+}
 
 export default function NotificationPreferencesCard() {
   const [loading, setLoading] = useState(true);
@@ -55,13 +67,14 @@ export default function NotificationPreferencesCard() {
       if (!prev) return prev;
       if (channel === 'whatsapp' && !prev.hasPhone) return prev;
       setSuccess('');
+      const current = familyChannels(prev, family);
       return {
         ...prev,
         families: {
           ...prev.families,
           [family]: {
-            ...prev.families[family],
-            [channel]: !prev.families[family][channel],
+            ...current,
+            [channel]: !current[channel],
           },
         },
       };
@@ -89,13 +102,20 @@ export default function NotificationPreferencesCard() {
       <CardHeader
         title={
           <span className="inline-flex items-center gap-2">
-            <Bell className="w-4 h-4 text-primary" />
+            <Bell className="w-4 h-4 text-primary" aria-hidden />
             Canaux d’alerte
           </span>
         }
-        description="L’inbox in-app reste toujours active. E-mail, WhatsApp et push se règlent par famille."
+        description="L’inbox du tableau de bord reste toujours active. Choisissez, pour chaque famille, si e-mail, WhatsApp et push vous suivent."
         action={
-          <Button size="sm" onClick={() => void save()} loading={saving} disabled={!data} leftIcon={<Save className="w-3.5 h-3.5" />}>
+          <Button
+            size="sm"
+            className="hidden sm:inline-flex"
+            onClick={() => void save()}
+            loading={saving}
+            disabled={!data}
+            leftIcon={<Save className="w-3.5 h-3.5" />}
+          >
             Enregistrer
           </Button>
         }
@@ -106,12 +126,13 @@ export default function NotificationPreferencesCard() {
 
       {loading && !data ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <Loader2 className="w-5 h-5 animate-spin text-primary" aria-hidden />
+          <span className="sr-only">Chargement des préférences</span>
         </div>
       ) : data ? (
         <div className="space-y-4">
           {!data.hasPhone && (
-            <p className="text-xs text-muted leading-relaxed">
+            <p className="text-sm text-muted leading-relaxed">
               Ajoutez un numéro WhatsApp dans{' '}
               <Link href="/dashboard/profile" className="text-primary font-medium hover:underline">
                 Mon profil
@@ -119,48 +140,68 @@ export default function NotificationPreferencesCard() {
               pour recevoir les alertes WhatsApp.
             </p>
           )}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
-                  <th className="pb-2 pr-3 font-semibold">Famille</th>
-                  {CHANNELS.map((channel) => (
-                    <th key={channel.key} className="pb-2 px-2 font-semibold">
-                      <span className="inline-flex items-center gap-1">
-                        {channel.icon}
-                        {channel.label}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {FAMILIES.map((family) => (
-                  <tr key={family} className="border-t border-border">
-                    <td className="py-3 pr-3 font-medium text-foreground">{NOTIFICATION_FAMILY_LABELS[family]}</td>
+
+          <ul className="space-y-3">
+            {NOTIFICATION_PREF_FAMILIES.map((family) => {
+              const channels = familyChannels(data, family);
+              return (
+                <li
+                  key={family}
+                  className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3.5 sm:p-4 space-y-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{NOTIFICATION_FAMILY_LABELS[family]}</p>
+                    <p className="text-xs text-muted leading-relaxed mt-0.5">
+                      {NOTIFICATION_FAMILY_DESCRIPTIONS[family]}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label={`Canaux ${NOTIFICATION_FAMILY_LABELS[family]}`}>
                     {CHANNELS.map((channel) => {
                       const disabled = channel.key === 'whatsapp' && !data.hasPhone;
-                      const checked = data.families[family][channel.key];
+                      const checked = channels[channel.key];
                       return (
-                        <td key={channel.key} className="py-3 px-2">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={disabled}
-                            onChange={() => toggle(family, channel.key)}
-                            className="rounded border-border"
-                            aria-label={`${NOTIFICATION_FAMILY_LABELS[family]} — ${channel.label}`}
-                          />
-                        </td>
+                        <button
+                          key={channel.key}
+                          type="button"
+                          role="switch"
+                          aria-checked={checked}
+                          disabled={disabled}
+                          onClick={() => toggle(family, channel.key)}
+                          className={cn(
+                            'inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-button)] border px-3 text-xs font-semibold transition',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                            'disabled:opacity-50 disabled:cursor-not-allowed',
+                            checked
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-surface text-foreground border-border hover:bg-card-hover',
+                          )}
+                        >
+                          {channel.icon}
+                          {channel.label}
+                          <span className="sr-only">{checked ? 'activé' : 'désactivé'}</span>
+                        </button>
                       );
                     })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-[11px] text-muted">
-            Les invitations invités (RSVP, PDF de table) restent sur le canal choisi pour l’événement — ce panneau ne les concerne pas.
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <Button
+            className="sm:hidden"
+            fullWidth
+            onClick={() => void save()}
+            loading={saving}
+            disabled={!data}
+            leftIcon={<Save className="w-3.5 h-3.5" />}
+          >
+            Enregistrer les canaux
+          </Button>
+
+          <p className="text-xs text-muted leading-relaxed">
+            Les messages envoyés aux invités (invitation, RSVP, PDF de table) restent sur le canal choisi pour
+            l’événement — ce panneau ne les concerne pas.
           </p>
         </div>
       ) : null}

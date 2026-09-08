@@ -367,7 +367,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                       key={zone.id}
                       type="button"
                       onClick={() => setSelectedZoneId(zone.id)}
-                      className={`flex items-center justify-between gap-2 p-2.5 rounded border text-left text-sm transition ${
+                      className={`flex items-center justify-between gap-2 p-2.5 min-h-11 rounded border text-left text-sm transition ${
                         active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                       }`}
                     >
@@ -409,7 +409,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                     <button
                       type="button"
                       onClick={() => setSelectedSeats([])}
-                      className="text-[11px] text-rose-600 hover:underline font-semibold px-2 py-1"
+                      className="text-xs text-rose-600 hover:underline font-semibold px-3 min-h-11 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       Tout désélectionner
                     </button>
@@ -460,7 +460,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
                       onSelect={(tableId, seatIndex) => toggleSeat(tableId, seatIndex)}
                       zoneColorById={zoneColorById}
                       showZonePricing={zonePricing}
-                      height={320}
+                      height={420}
                     />
                   )}
 

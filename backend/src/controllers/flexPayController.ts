@@ -23,7 +23,7 @@ import {
   findAiTokenOrderForFlexPay,
   verifyAndFinalizeAiTokenOrder,
 } from '../services/aiTokenFlexPayService';
-import { notifyAiTokenPayment } from '../services/paymentTraceService';
+import { notifyAiTokenPayment, notifyTicketPaymentFailed } from '../services/paymentTraceService';
 import { creditPaidAiTokenOrder } from '../services/aiSimulationWalletService';
 
 function frontendBaseUrl(): string {
@@ -34,7 +34,7 @@ async function findTicketOrderForFlexPay(opts: { reference?: string; orderNumber
   if (opts.orderNumber) {
     const byNumber = await prisma.ticketOrder.findFirst({
       where: { flexPayOrderNumber: opts.orderNumber },
-      include: { event: { select: { slug: true, title: true } } },
+      include: { event: { select: { id: true, slug: true, title: true, tenantId: true } } },
     });
     if (byNumber) return byNumber;
   }
@@ -43,7 +43,7 @@ async function findTicketOrderForFlexPay(opts: { reference?: string; orderNumber
       where: {
         OR: [{ id: opts.reference }, { flexPayReference: opts.reference }],
       },
-      include: { event: { select: { slug: true, title: true } } },
+      include: { event: { select: { id: true, slug: true, title: true, tenantId: true } } },
     });
     if (byRef) return byRef;
   }
@@ -135,10 +135,23 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       const meta = mergeMetadata(callbackMeta, checkMeta);
 
       if (!success) {
+        const wasPending = order.status === 'PENDING';
         await prisma.ticketOrder.update({
           where: { id: order.id },
           data: { status: 'CANCELLED', ...meta },
         });
+        if (wasPending) {
+          void notifyTicketPaymentFailed({
+            id: order.id,
+            tenantId: order.event.tenantId,
+            eventId: order.event.id,
+            eventTitle: order.event.title,
+            buyerName: order.buyerName,
+            buyerEmail: order.buyerEmail,
+            amountFc: order.amountFc,
+            quantity: order.quantity,
+          });
+        }
         return res.json({ ok: true, paid: false, kind: 'ticket', orderId: order.id });
       }
 
@@ -410,7 +423,7 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
     const order = await prisma.ticketOrder.findUnique({
       where: { id: orderId },
       include: {
-        event: { select: { title: true, slug: true, date: true, location: true } },
+        event: { select: { id: true, title: true, slug: true, date: true, location: true, tenantId: true } },
         guests: { select: { id: true, email: true, firstName: true } },
       },
     });
@@ -453,10 +466,23 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
     }
 
     if (checked.status === 'failed') {
+      const wasPending = order.status === 'PENDING';
       await prisma.ticketOrder.update({
         where: { id: order.id },
         data: { status: 'CANCELLED', ...meta },
       });
+      if (wasPending) {
+        void notifyTicketPaymentFailed({
+          id: order.id,
+          tenantId: order.event.tenantId,
+          eventId: order.event.id,
+          eventTitle: order.event.title,
+          buyerName: order.buyerName,
+          buyerEmail: order.buyerEmail,
+          amountFc: order.amountFc,
+          quantity: order.quantity,
+        });
+      }
       return res.json({
         paid: false,
         status: 'failed',

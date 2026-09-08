@@ -812,7 +812,8 @@ export default function ListingDetailLayout({
           onClose={() => setMobileModalOpen(false)}
           title={mobileAction === 'inquire' ? inquireLabel : bookLabel}
           description={title}
-          size="md"
+          size="lg"
+          className="min-h-[88dvh] sm:min-h-0"
         >
           <div className="space-y-4 pt-1">
             {showBooking && (
@@ -823,7 +824,7 @@ export default function ListingDetailLayout({
                   aria-selected={mobileAction === 'inquire'}
                   onClick={() => setMobileAction('inquire')}
                   className={cn(
-                    'flex-1 min-h-10 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
                     mobileAction === 'inquire'
                       ? 'bg-surface text-foreground shadow-xs'
                       : 'text-muted hover:text-foreground',
@@ -837,7 +838,7 @@ export default function ListingDetailLayout({
                   aria-selected={mobileAction === 'book'}
                   onClick={() => setMobileAction('book')}
                   className={cn(
-                    'flex-1 min-h-10 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
                     mobileAction === 'book'
                       ? 'bg-surface text-foreground shadow-xs'
                       : 'text-muted hover:text-foreground',

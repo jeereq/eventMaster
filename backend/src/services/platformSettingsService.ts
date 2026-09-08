@@ -35,6 +35,7 @@ export type AudioNotificationPreset = (typeof AUDIO_NOTIFICATION_PRESETS)[number
 export interface AudioNotificationsSettings {
   enabled: boolean;
   volume: number;
+  events: AudioNotificationPreset;
   billing: AudioNotificationPreset;
   commissions: AudioNotificationPreset;
   catalog: AudioNotificationPreset;
@@ -45,6 +46,7 @@ export interface AudioNotificationsSettings {
 export const DEFAULT_AUDIO_NOTIFICATIONS: AudioNotificationsSettings = {
   enabled: true,
   volume: 70,
+  events: 'bell',
   billing: 'urgent',
   commissions: 'chime',
   catalog: 'bell',
@@ -62,6 +64,7 @@ export function sanitizeAudioNotifications(raw: unknown): AudioNotificationsSett
   return {
     enabled: src.enabled !== false,
     volume: Number.isFinite(volume) ? Math.max(0, Math.min(100, Math.round(volume))) : DEFAULT_AUDIO_NOTIFICATIONS.volume,
+    events: isAudioPreset(src.events) ? src.events : DEFAULT_AUDIO_NOTIFICATIONS.events,
     billing: isAudioPreset(src.billing) ? src.billing : DEFAULT_AUDIO_NOTIFICATIONS.billing,
     commissions: isAudioPreset(src.commissions) ? src.commissions : DEFAULT_AUDIO_NOTIFICATIONS.commissions,
     catalog: isAudioPreset(src.catalog) ? src.catalog : DEFAULT_AUDIO_NOTIFICATIONS.catalog,

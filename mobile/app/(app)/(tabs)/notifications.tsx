@@ -26,12 +26,14 @@ import { Button } from '../../../src/components/ui/Button';
 import { useTheme } from '../../../src/theme/ThemeContext';
 
 const FAMILY_LABELS: Record<NotificationPrefFamily, string> = {
+  events: 'Événements',
   billing: 'Facturation',
   commissions: 'Commissions',
   catalog: 'Catalogue',
+  tasks: 'Tâches',
 };
 
-const FAMILIES: NotificationPrefFamily[] = ['billing', 'commissions', 'catalog'];
+const FAMILIES: NotificationPrefFamily[] = ['events', 'billing', 'commissions', 'catalog', 'tasks'];
 
 export default function NotificationsTab() {
   const { colors } = useTheme();
@@ -217,7 +219,8 @@ export default function NotificationsTab() {
         <View style={styles.card}>
           <Text style={styles.prefsTitle}>Canaux d'alerte</Text>
           <Text style={styles.prefsHint}>
-            L'inbox reste active. WhatsApp nécessite un numéro sur le profil.
+            L'inbox reste active. WhatsApp nécessite un numéro sur le profil. Les invitations
+            envoyées aux invités ne sont pas concernées.
           </Text>
           {FAMILIES.map((family) => (
             <View key={family} style={styles.familyBlock}>
@@ -225,7 +228,7 @@ export default function NotificationsTab() {
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>E-mail</Text>
                 <Switch
-                  value={prefs.families[family].email}
+                  value={prefs.families[family]?.email ?? true}
                   onValueChange={(value) => void togglePref(family, 'email', value)}
                   trackColor={{ true: colors.primary }}
                 />
@@ -233,7 +236,7 @@ export default function NotificationsTab() {
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>WhatsApp</Text>
                 <Switch
-                  value={prefs.families[family].whatsapp}
+                  value={prefs.families[family]?.whatsapp ?? false}
                   disabled={!prefs.hasPhone}
                   onValueChange={(value) => void togglePref(family, 'whatsapp', value)}
                   trackColor={{ true: colors.primary }}
@@ -242,7 +245,7 @@ export default function NotificationsTab() {
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Push</Text>
                 <Switch
-                  value={prefs.families[family].push}
+                  value={prefs.families[family]?.push ?? true}
                   onValueChange={(value) => void togglePref(family, 'push', value)}
                   trackColor={{ true: colors.primary }}
                 />

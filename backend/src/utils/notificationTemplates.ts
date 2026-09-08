@@ -73,6 +73,7 @@ export function userWhatsAppNumber(user: {
 }
 
 export const FAMILY_LABEL_FR: Record<string, string> = {
+  events: 'Événements',
   billing: 'Facturation',
   commissions: 'Commissions',
   catalog: 'Catalogue',

@@ -182,8 +182,7 @@ export default function SeatSelectionPlanCanvas({
 
       <div
         ref={containerRef}
-        className="relative w-full overflow-auto rounded-[var(--radius-card)] border border-border bg-surface-muted touch-pan-x touch-pan-y"
-        style={{ height: `${height}px` }}
+        className="relative w-full overflow-auto rounded-[var(--radius-card)] border border-border bg-surface-muted touch-pan-x touch-pan-y h-[min(70dvh,480px)] sm:h-[400px]"
       >
         <div
           className="relative origin-top-left em-floor-canvas em-floor-canvas--photo min-w-full min-h-full"
@@ -191,7 +190,7 @@ export default function SeatSelectionPlanCanvas({
             ...floorStyle,
             width: `${100 * zoom}%`,
             height: `${100 * zoom}%`,
-            minHeight: `${height * zoom}px`,
+            minHeight: `${Math.round(height * zoom)}px`,
           }}
         >
           {roomOutline && (
@@ -324,7 +323,7 @@ export default function SeatSelectionPlanCanvas({
                   title={`${table.name} (${availableSeatsCount}/${table.capacity} places libres)`}
                 >
                   <div className="px-1 relative z-10 pointer-events-none">
-                    <div className="truncate max-w-[72px] font-semibold text-[10px]">{table.name}</div>
+                    <div className="truncate max-w-[5.5rem] sm:max-w-[72px] font-semibold text-[11px] sm:text-[10px]">{table.name}</div>
                     {table.seats[0]?.pricingZoneName && (
                       <div
                         className="text-[7.5px] px-1 py-0.2 rounded font-semibold truncate max-w-[68px] mx-auto mt-0.5 shadow-2xs"
@@ -364,7 +363,7 @@ export default function SeatSelectionPlanCanvas({
                           ...(seatZoneColor && !isSelected ? { borderColor: seatZoneColor, boxShadow: `0 0 0 1px ${seatZoneColor}55` } : {}),
                         }}
                         className={cn(
-                          'absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2 before:rounded-full',
+                          'absolute w-8 h-8 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[10px] sm:text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2.5 before:rounded-full',
                           !seat.available && 'opacity-35 cursor-not-allowed bg-muted text-muted border-border',
                           seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
                           isSelected && 'bg-primary text-white border-primary scale-110 shadow-md font-extrabold ring-2 ring-primary/40',

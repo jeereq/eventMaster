@@ -25,6 +25,8 @@ import { customTenantBranding, escapeHtml } from '../utils/brandingUtils';
 import { GUEST_COPY } from '../utils/guestMessageCopy';
 import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
+import { notifyTenantOperators } from '../services/platformNotificationService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -93,6 +95,7 @@ async function notifyOrganizerOfRsvp(params: {
   organizer: { name: string | null; email: string; phone: string | null };
   guest: { firstName: string; lastName: string; email: string };
   eventTitle: string;
+  eventId?: string | null;
   rsvp: 'ACCEPTED' | 'DECLINED';
   preferences: unknown;
   tenantId?: string | null;
@@ -101,7 +104,10 @@ async function notifyOrganizerOfRsvp(params: {
   const statusLabel = rsvp === 'ACCEPTED' ? 'Présence confirmée (Oui)' : 'Absence (Décliné)';
   const preferencesDetails = formatPreferencesDetails(preferences);
   const ownerSubject = `[RSVP] ${guest.firstName} ${guest.lastName} — ${rsvp === 'ACCEPTED' ? 'Présent' : 'Décliné'}`;
-  const dashboardUrl = `${FRONTEND_URL}/dashboard/events`;
+  const dashboardPath = params.eventId
+    ? `/dashboard/events/${params.eventId}`
+    : '/dashboard/events';
+  const dashboardUrl = `${FRONTEND_URL}${dashboardPath}`;
   const orgBrand = await loadOrgBrand(params.tenantId);
 
   const ownerTextBody =
@@ -140,6 +146,22 @@ async function notifyOrganizerOfRsvp(params: {
     orgName: orgBrand.orgName,
   });
   const ownerWhatsappBody = wrapBrandedWhatsApp(ownerWhatsappRendered.body, orgBrand.orgName);
+
+  if (params.tenantId) {
+    await notifyTenantOperators(params.tenantId, {
+      type: PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP,
+      title: `RSVP — ${statusLabel}`,
+      message: `${guest.firstName} ${guest.lastName} · ${eventTitle}`,
+      metadata: {
+        href: dashboardPath,
+        eventId: params.eventId || null,
+        eventTitle,
+      },
+      email: { subject: ownerSubject, text: ownerTextBody, html: ownerHtmlBody },
+      whatsapp: ownerWhatsappBody,
+    });
+    return;
+  }
 
   const organizerPhone = getUserPhone(organizer);
   const results: string[] = [];
@@ -757,6 +779,7 @@ export async function submitRsvp(req: Request, res: Response) {
               email: guest.email,
             },
             eventTitle: guest.event.title,
+            eventId: guest.eventId,
             rsvp,
             preferences: preferences || {},
             tenantId: guest.event.tenantId,
