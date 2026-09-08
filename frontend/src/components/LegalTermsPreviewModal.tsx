@@ -80,12 +80,12 @@ export default function LegalTermsPreviewModal({
       title={
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Scale className="w-4 h-4" />
+            <Scale className="w-4 h-4" aria-hidden />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-foreground">
+            <span className="block text-base sm:text-lg font-bold text-foreground">
               Conditions d’utilisation & Confidentialité
-            </h2>
+            </span>
             <p className="text-xs text-muted">
               Lecture et validation requises incluant la billetterie et les paiements sécurisés
             </p>
@@ -100,7 +100,7 @@ export default function LegalTermsPreviewModal({
                 className={cn(
                   'w-4 h-4',
                   termsAgreed && privacyAgreed
-                    ? 'text-emerald-600 dark:text-emerald-400'
+                    ? 'text-primary'
                     : 'text-muted',
                 )}
               />
@@ -130,15 +130,20 @@ export default function LegalTermsPreviewModal({
     >
       <div className="space-y-4">
         {/* Onglets de navigation légale */}
-        <div className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-xl border border-border">
+        <div role="tablist" aria-label="Documents à lire" className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-xl border border-border">
           <button
             type="button"
+            role="tab"
+            id="legal-tab-summary"
+            aria-controls="legal-panel-summary"
+            aria-selected={activeTab === 'summary'}
             onClick={() => {
               setActiveTab('summary');
               if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
             }}
             className={cn(
-              'flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
+              'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               activeTab === 'summary'
                 ? 'bg-surface text-foreground shadow-xs'
                 : 'text-muted hover:text-foreground',
@@ -150,12 +155,17 @@ export default function LegalTermsPreviewModal({
 
           <button
             type="button"
+            role="tab"
+            id="legal-tab-terms"
+            aria-controls="legal-panel-terms"
+            aria-selected={activeTab === 'terms'}
             onClick={() => {
               setActiveTab('terms');
               if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
             }}
             className={cn(
-              'flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
+              'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               activeTab === 'terms'
                 ? 'bg-surface text-foreground shadow-xs'
                 : 'text-muted hover:text-foreground',
@@ -167,12 +177,17 @@ export default function LegalTermsPreviewModal({
 
           <button
             type="button"
+            role="tab"
+            id="legal-tab-privacy"
+            aria-controls="legal-panel-privacy"
+            aria-selected={activeTab === 'privacy'}
             onClick={() => {
               setActiveTab('privacy');
               if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
             }}
             className={cn(
-              'flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
+              'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               activeTab === 'privacy'
                 ? 'bg-surface text-foreground shadow-xs'
                 : 'text-muted hover:text-foreground',
@@ -184,7 +199,7 @@ export default function LegalTermsPreviewModal({
         </div>
 
         {/* Barre de progression de lecture */}
-        <div className="flex items-center justify-between text-[11px] text-muted px-1">
+        <div className="flex items-center justify-between text-xs text-muted px-1">
           <span>Défilement du document</span>
           <span className="font-mono font-semibold">{readProgress}% lu</span>
         </div>
@@ -199,6 +214,9 @@ export default function LegalTermsPreviewModal({
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
+          role="tabpanel"
+          id={`legal-panel-${activeTab}`}
+          aria-labelledby={`legal-tab-${activeTab}`}
           className="max-h-[50vh] sm:max-h-[55vh] overflow-y-auto pr-2 space-y-4 text-xs leading-relaxed text-foreground/90 rounded-xl border border-border p-4 bg-surface"
         >
           {activeTab === 'summary' && (
@@ -217,7 +235,7 @@ export default function LegalTermsPreviewModal({
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
-                  <Ticket className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <Ticket className="w-4 h-4 text-primary" />
                   2. Billetterie multi-zones &amp; e-Billets QR
                 </h3>
                 <p className="text-muted">
@@ -227,7 +245,7 @@ export default function LegalTermsPreviewModal({
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4 text-amber-600" />
+                  <CreditCard className="w-4 h-4 text-primary" />
                   3. Paiements sécurisés FlexPay, Abonnements &amp; Jetons IA
                 </h3>
                 <p className="text-muted">
@@ -247,7 +265,7 @@ export default function LegalTermsPreviewModal({
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <ShieldCheck className="w-4 h-4 text-primary" />
                   5. Vos données &amp; Cloisonnement étanche
                 </h3>
                 <p className="text-muted">
@@ -261,7 +279,7 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Conditions Générales d’Utilisation</h3>
-                <p className="text-[11px] text-muted">Version {TERMS_VERSION} · En vigueur au 7 septembre 2026</p>
+        <p className="text-xs text-muted">Version {TERMS_VERSION} · En vigueur au 7 septembre 2026</p>
               </div>
 
               <section className="space-y-1.5">
@@ -312,7 +330,7 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Politique de Confidentialité &amp; Données</h3>
-                <p className="text-[11px] text-muted">Version {PRIVACY_VERSION} · En vigueur au 7 septembre 2026</p>
+                <p className="text-xs text-muted">Version {PRIVACY_VERSION} · En vigueur au 7 septembre 2026</p>
               </div>
 
               <section className="space-y-1.5">
@@ -354,7 +372,7 @@ export default function LegalTermsPreviewModal({
         </div>
 
         {/* Liens externes vers les pages complètes */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-muted">
           <div className="flex items-center gap-3">
             <Link
               href="/terms"

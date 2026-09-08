@@ -38,7 +38,7 @@ export default function Input({
           {label ? (
             <label htmlFor={id} className="block text-xs font-semibold text-muted">
               {label}
-              {props.required ? <span className="text-rose-700 dark:text-rose-400"> *</span> : null}
+              {props.required ? <span className="text-danger"> *</span> : null}
             </label>
           ) : (
             <span />
@@ -60,7 +60,7 @@ export default function Input({
             'transition duration-150',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary',
             error
-              ? 'border-rose-300 dark:border-rose-800 focus-visible:ring-rose-500/25 focus-visible:border-rose-500'
+              ? 'border-danger/40 focus-visible:ring-danger/25 focus-visible:border-danger'
               : 'border-border',
             leftIcon ? 'pl-10' : 'px-3.5',
             hasRight ? 'pr-12' : leftIcon ? 'pr-3.5' : undefined,
@@ -86,7 +86,7 @@ export default function Input({
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+        <p id={`${id}-error`} className="text-xs text-danger font-medium" role="alert">
           {error}
         </p>
       )}

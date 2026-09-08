@@ -74,7 +74,7 @@ export function AuthSplitLayout({
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
             <h1 className="text-3xl xl:text-4xl font-display font-semibold tracking-tight leading-tight">{title}</h1>
-            <p className="text-white/85 text-sm leading-relaxed">{description}</p>
+            <p className="text-white/90 text-sm leading-relaxed">{description}</p>
           </div>
 
           {features.length > 0 && (
@@ -92,7 +92,7 @@ export function AuthSplitLayout({
                     </span>
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
-                      <p className="text-xs text-white/80 leading-relaxed mt-0.5">{feat.desc}</p>
+                      <p className="text-xs text-white/90 leading-relaxed mt-0.5">{feat.desc}</p>
                     </div>
                   </li>
                 );
@@ -101,9 +101,14 @@ export function AuthSplitLayout({
           )}
         </div>
 
-        <div className="text-xs text-white/75 relative z-10 flex justify-between items-center">
+        <div className="text-xs text-white/90 relative z-10 flex justify-between items-center gap-3">
           <span>© {new Date().getFullYear()} {site.platformName}</span>
-          <Link href="/contact" className="hover:text-white/80 transition">Support</Link>
+          <Link
+            href="/contact"
+            className="rounded-[var(--radius-button)] px-1.5 py-1 hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          >
+            Support
+          </Link>
         </div>
       </div>
 

@@ -12,23 +12,28 @@ export default function RegisterReferralGate({
   code,
   onCodeChange,
   fromLink,
+  error,
 }: {
   choice: ReferralChoice | null;
   onChoice: (next: ReferralChoice) => void;
   code: string;
   onCodeChange: (next: string) => void;
   fromLink: boolean;
+  error?: string;
 }) {
   if (fromLink && code) {
     return (
       <div className="flex items-start gap-2.5 p-2.5 rounded-[var(--radius-card)] bg-primary/8 border border-primary/20 text-xs">
-        <UserCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+        <UserCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
         <div className="min-w-0">
           <p className="font-semibold text-foreground">Parrainage déjà appliqué</p>
           <p className="text-muted mt-0.5">
             Code : <span className="font-mono font-bold text-foreground">{code}</span>
             {' '}— facultatif, vous pouvez le retirer.
           </p>
+          {error ? (
+            <p className="text-danger font-medium mt-1.5" role="alert">{error}</p>
+          ) : null}
           <button
             type="button"
             onClick={() => {
@@ -44,7 +49,7 @@ export default function RegisterReferralGate({
     );
   }
 
-  if (choice !== 'yes') {
+  if (choice !== 'yes' && !error) {
     return (
       <button
         type="button"
@@ -65,6 +70,7 @@ export default function RegisterReferralGate({
         onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
         placeholder="EM-XXXX-XXXX"
         hint="Laissez vide si vous ne l’avez plus. Ce n’est pas obligatoire."
+        error={error}
       />
       <button
         type="button"

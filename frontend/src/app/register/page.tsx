@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -18,19 +19,16 @@ import {
   CalendarCheck,
   Store,
   Sparkles,
-  Heart,
   Users,
   ShieldCheck,
   Eye,
   ArrowRight,
   CheckCircle2,
   Ticket,
-  Briefcase,
   Scale,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, PasswordInput, Card, PhoneInput } from '@/components/ui';
-import LegalTermsPreviewModal from '@/components/LegalTermsPreviewModal';
 import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -67,15 +65,14 @@ import {
 } from '@/lib/registerVendorIntent';
 import { cn } from '@/lib/cn';
 
+const LegalTermsPreviewModal = dynamic(
+  () => import('@/components/LegalTermsPreviewModal'),
+);
+
 interface RegistrationActionConfig {
   key: string;
-    badge: string;
   heroTitle: string;
   heroDescription: string;
-  goalTitle: string;
-  goalSubtitle: string;
-  goalTag: string;
-  goalIcon: React.ComponentType<{ className?: string }>;
   defaultAccountKind: TenantAccountKind;
   defaultNextPath: string;
   submitButtonLabel: string;
@@ -92,14 +89,9 @@ interface RegistrationActionConfig {
 const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   room_editor: {
     key: 'room_editor',
-    badge: 'Éditeur 2D / 3D',
     heroTitle: 'Concevez votre plan de salle et explorez en 3D',
     heroDescription:
       'Modélisez votre espace au millimètre, disposez vos tables, allées et éclairages, et placez vos invités en direct.',
-    goalTitle: 'Objectif : Éditeur de Salle 2D / 3D',
-    goalSubtitle: 'Accès immédiat à l’outil d’agencement et de visite 3D dès validation.',
-    goalTag: 'Outil de Salle',
-    goalIcon: LayoutGrid,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/rooms',
     submitButtonLabel: 'Ouvrir l’éditeur de salle',
@@ -113,14 +105,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   event: {
     key: 'event',
-    badge: 'Fête & Mariage',
     heroTitle: 'Votre événement réussi, maîtrisé de A à Z',
     heroDescription:
       'Créez l’événement, envoyez des faire-part WhatsApp personnalisés et suivez les réponses en direct.',
-    goalTitle: 'Objectif : Créer mon événement & RSVP',
-    goalSubtitle: 'Votre espace organisateur sera prêt en 1 minute sans carte bancaire.',
-    goalTag: 'Célébration Privée',
-    goalIcon: Heart,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/events',
     submitButtonLabel: 'Créer mon événement gratuit',
@@ -134,14 +121,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   template: {
     key: 'template',
-    badge: 'Papeterie Digitale',
     heroTitle: 'Personnalisez votre invitation en 1 clic',
     heroDescription:
       'Sélectionnez un modèle élégant, personnalisez les textes et partagez votre faire-part digital à vos convives.',
-    goalTitle: 'Objectif : Modèle d’invitation digitale',
-    goalSubtitle: 'Votre modèle est réservé et prêt à être personnalisé dès votre première connexion.',
-    goalTag: 'Faire-part & RSVP',
-    goalIcon: Sparkles,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/templates',
     submitButtonLabel: 'Personnaliser mon invitation',
@@ -155,14 +137,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   seating: {
     key: 'seating',
-    badge: 'Plan de Table & VIP',
     heroTitle: 'Attribution des places & gestion des invités',
     heroDescription:
       'Assignez chaque invité à sa table, synchronisez les confirmations en temps réel et préparez l’accueil.',
-    goalTitle: 'Objectif : Plan de table & placement VIP',
-    goalSubtitle: 'Configurez la liste des invités et affectez les sièges en toute simplicité.',
-    goalTag: 'Placement Invités',
-    goalIcon: Users,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/events',
     submitButtonLabel: 'Organiser le plan de table',
@@ -176,14 +153,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   ticketing: {
     key: 'ticketing',
-    badge: 'Billetterie & Pro',
     heroTitle: 'Billetterie en ligne & encaissements FlexPay',
     heroDescription:
       'Vendez vos billets par zone (VIP, Standard), encaissez en CDF par Mobile Money / Carte et gérez vos flux.',
-    goalTitle: 'Objectif : Billetterie & Ventes FlexPay',
-    goalSubtitle: 'Paramétrez vos tarifs et recevez vos encaissements directement sur votre compte.',
-    goalTag: 'Billetterie Pro',
-    goalIcon: Wallet,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/tickets',
     submitButtonLabel: 'Lancer ma billetterie',
@@ -197,14 +169,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   protocol: {
     key: 'protocol',
-    badge: 'Scanner Protocole',
     heroTitle: 'Ouvrez l’organisation, puis invitez le protocole',
     heroDescription:
       'Ce formulaire crée le compte propriétaire de l’organisation. Les agents protocole s’ajoutent ensuite dans Équipe (4 jetons IA chacun).',
-    goalTitle: 'Objectif : Organisation + desk protocole',
-    goalSubtitle: 'Créez d’abord l’espace organisateur, puis invitez vos agents d’accueil depuis Équipe.',
-    goalTag: 'Organisation',
-    goalIcon: ScanLine,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/team',
     submitButtonLabel: 'Créer l’organisation',
@@ -218,14 +185,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   sales: {
     key: 'sales',
-    badge: 'Analytique & Recettes',
     heroTitle: 'Suivi des ventes, billetterie et rapports',
     heroDescription:
       'Consultez les statistiques d’encaissements en temps réel et téléchargez les listes certifiées.',
-    goalTitle: 'Objectif : Suivi des ventes & recettes',
-    goalSubtitle: 'Visualisez vos flux financiers et vos statistiques d’audience.',
-    goalTag: 'Gestion Financière',
-    goalIcon: Sparkles,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/tickets',
     submitButtonLabel: 'Accéder aux recettes',
@@ -239,14 +201,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   team: {
     key: 'team',
-    badge: 'Coordination d’Équipe',
     heroTitle: 'Gestion collaborative & rôles d’accès',
     heroDescription:
       'Attribuez des droits sécurisés à vos collaborateurs, régisseurs et agents d’accueil sur le terrain.',
-    goalTitle: 'Objectif : Coordination d’équipe & rôles',
-    goalSubtitle: 'Invitez vos collaborateurs et définissez leurs permissions d’accès.',
-    goalTag: 'Multi-accès',
-    goalIcon: Users,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/team',
     submitButtonLabel: 'Configurer mon équipe',
@@ -260,14 +217,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   venue: {
     key: 'venue',
-    badge: 'Salle & Espace',
     heroTitle: 'Référencez votre salle sur le marketplace',
     heroDescription:
       'Créez votre fiche vitrine avec visite 3D, recevez des demandes de devis qualifiées et sécurisez vos dates.',
-    goalTitle: 'Objectif : Publication de Salle de Fête',
-    goalSubtitle: 'Votre vitrine partenaire sera mise en ligne avec visite 3D et calendrier de disponibilité.',
-    goalTag: 'Espace Propriétaire',
-    goalIcon: Building2,
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/rooms',
     submitButtonLabel: 'Référencer mon établissement',
@@ -281,14 +233,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   services: {
     key: 'services',
-    badge: 'Prestataire Pro',
     heroTitle: 'Mettez en valeur vos prestations événementielles',
     heroDescription:
       'Choisissez votre métier, publiez une offre claire, puis recevez des devis d’organisateurs près de chez vous.',
-    goalTitle: 'Objectif : Fiche prestataire',
-    goalSubtitle: 'Métier → vitrine → devis. Une seule offre pour commencer, le catalogue ensuite.',
-    goalTag: 'Prestataire Événementiel',
-    goalIcon: Store,
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/marketplace',
     submitButtonLabel: 'Créer ma fiche prestataire',
@@ -302,14 +249,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   quotes: {
     key: 'quotes',
-    badge: 'Gestion Devis',
     heroTitle: 'Répondez aux demandes de devis clients',
     heroDescription:
       'Gérez vos échanges commerciaux, validez les réservations et synchronisez vos disponibilités.',
-    goalTitle: 'Objectif : Gestion des devis clients',
-    goalSubtitle: 'Centralisez vos propositions commerciales et vos acomptes.',
-    goalTag: 'Espace Pro',
-    goalIcon: MessageSquare,
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/catalogue',
     submitButtonLabel: 'Accéder à mes devis',
@@ -323,14 +265,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   seeker: {
     key: 'seeker',
-    badge: 'Compte Client Gratuit',
     heroTitle: 'Trouvez la salle ou le prestataire idéal',
     heroDescription:
       'Compte 100% gratuit. Enregistrez vos favoris, composez vos packs budget et demandez des devis sans engagement.',
-    goalTitle: 'Objectif : Recherche de salles & prestataires',
-    goalSubtitle: 'Compte 100% gratuit : favoris, packs budget sur-mesure et devis sans engagement.',
-    goalTag: 'Recherche Gratuite',
-    goalIcon: Store,
     defaultAccountKind: 'CLIENT',
     defaultNextPath: '/marketplace',
     submitButtonLabel: 'Créer mon compte client gratuit',
@@ -344,14 +281,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   personal: {
     key: 'personal',
-    badge: 'Fête & Mariage',
     heroTitle: 'Votre fête réussie de A à Z',
     heroDescription:
       'Créez votre événement, invitez vos proches sur WhatsApp et placez-les sur plan de salle 2D/3D.',
-    goalTitle: 'Objectif : Organisation Fête & Célébration',
-    goalSubtitle: 'Créez vos invitations WhatsApp, plan de table 2D/3D et scan QR à l’entrée.',
-    goalTag: 'Particulier & Fête',
-    goalIcon: Heart,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/events',
     submitButtonLabel: 'Créer mon événement gratuit',
@@ -365,14 +297,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   pro: {
     key: 'pro',
-    badge: 'Pro & Agence',
     heroTitle: 'Billetterie et gestion multi-événements',
     heroDescription:
       'Vendez vos billets par zone, encaissez par Mobile Money/Carte et coordonnez votre desk protocole.',
-    goalTitle: 'Objectif : Espace Professionnel & Billetterie',
-    goalSubtitle: 'Débloquez les outils d’encaissement FlexPay, gestion d’équipe et contrôle d’accès.',
-    goalTag: 'Professionnel B2B',
-    goalIcon: Briefcase,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/tickets',
     submitButtonLabel: 'Lancer mon espace Pro',
@@ -386,14 +313,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   vendor: {
     key: 'vendor',
-    badge: 'Salle & Prestataire',
     heroTitle: 'Donnez de la visibilité à votre activité',
     heroDescription:
       'Publiez votre fiche vitrine, recevez des demandes qualifiées et développez votre clientèle.',
-    goalTitle: 'Objectif : Vitrine Professionnelle Marketplace',
-    goalSubtitle: 'Mettez vos salles et prestations en avant auprès des organisateurs.',
-    goalTag: 'Partenaire Marketplace',
-    goalIcon: Store,
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/catalogue',
     submitButtonLabel: 'Référencer mon activité',
@@ -407,14 +329,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   ORGANIZER: {
     key: 'ORGANIZER',
-    badge: 'Organisateur',
     heroTitle: 'Votre espace organisateur',
     heroDescription:
       'Créez l’événement, invitez vos proches, suivez les réponses et accueillez le jour J.',
-    goalTitle: 'Compte organisateur',
-    goalSubtitle: 'Invitations, plan de table et accueil QR.',
-    goalTag: 'Organisateur',
-    goalIcon: Calendar,
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/events',
     submitButtonLabel: 'Créer mon compte organisateur',
@@ -428,14 +345,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   CLIENT: {
     key: 'CLIENT',
-    badge: 'Client marketplace',
     heroTitle: 'Trouvez salle et prestataires',
     heroDescription:
       'Compte gratuit. Comparez, gardez des favoris, demandez un devis sans engagement.',
-    goalTitle: 'Compte client',
-    goalSubtitle: 'Recherche, packs budget et devis. Gratuit.',
-    goalTag: 'Client',
-    goalIcon: Store,
     defaultAccountKind: 'CLIENT',
     defaultNextPath: '/marketplace',
     submitButtonLabel: 'Créer mon compte gratuit',
@@ -449,14 +361,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   VENDOR: {
     key: 'VENDOR',
-    badge: 'Salle & Prestataire',
     heroTitle: 'Publiez votre activité',
     heroDescription:
       'Une vitrine pour votre salle ou votre métier. Les organisateurs vous écrivent, vous bloquez la date.',
-    goalTitle: 'Compte salle ou prestataire',
-    goalSubtitle: 'Vitrine, devis, calendrier.',
-    goalTag: 'Vendeur',
-    goalIcon: Store,
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/catalogue',
     submitButtonLabel: 'Créer mon compte professionnel',
@@ -470,14 +377,9 @@ const REGISTRATION_ACTION_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   BOTH: {
     key: 'BOTH',
-    badge: 'Espace complet',
     heroTitle: 'Organiser et vendre, ensemble',
     heroDescription:
       'Un compte pour vos événements et pour votre vitrine salle ou prestataire.',
-    goalTitle: 'Compte organisateur et vendeur',
-    goalSubtitle: 'Événements d’un côté, devis de l’autre.',
-    goalTag: 'Mixte',
-    goalIcon: Sparkles,
     defaultAccountKind: 'BOTH',
     defaultNextPath: '/dashboard',
     submitButtonLabel: 'Créer mon compte',
@@ -557,6 +459,46 @@ export default function RegisterPage() {
  );
 }
 
+function applyRegisterError(
+  message: string,
+  setters: {
+    setError: (value: string) => void;
+    setEmailError: (value: string) => void;
+    setOrgError: (value: string) => void;
+    setPhoneError: (value: string) => void;
+    setReferralError: (value: string) => void;
+  },
+) {
+  const lower = message.toLowerCase();
+  if (lower.includes('email')) {
+    setters.setEmailError(message);
+    window.setTimeout(() => document.getElementById('email')?.focus(), 0);
+    return;
+  }
+  if (lower.includes('parrain')) {
+    setters.setReferralError(message);
+    window.setTimeout(() => document.getElementById('referralCode')?.focus(), 0);
+    return;
+  }
+  if (lower.includes('téléphone') || lower.includes('whatsapp')) {
+    setters.setPhoneError(message);
+    window.setTimeout(() => document.getElementById('phone')?.focus(), 0);
+    return;
+  }
+  if (
+    lower.includes('organisation')
+    || lower.includes('enseigne')
+    || lower.includes('salle')
+    || lower.includes('complexe')
+    || lower.includes('établissement')
+  ) {
+    setters.setOrgError(message);
+    window.setTimeout(() => document.getElementById('tenantName')?.focus(), 0);
+    return;
+  }
+  setters.setError(message);
+}
+
 function RegisterPageContent() {
  const { register } = useAuth();
  const { site, ready } = usePlatformSite();
@@ -590,6 +532,10 @@ function RegisterPageContent() {
   const [serviceGroup, setServiceGroup] = useState<VendorServiceGroup | null>(null);
   const [serviceCategory, setServiceCategory] = useState<ServiceCategory | null>(null);
  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [orgError, setOrgError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [referralError, setReferralError] = useState('');
  const [successMessage, setSuccessMessage] = useState('');
  const [loading, setLoading] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
@@ -698,19 +644,25 @@ function RegisterPageContent() {
  const handleSubmit = async (e: React.FormEvent) => {
  e.preventDefault();
  setError('');
+    setEmailError('');
+    setOrgError('');
+    setPhoneError('');
+    setReferralError('');
 
     if (!acceptTerms || !acceptPrivacy) {
       setLegalModalTab(!acceptTerms ? 'terms' : 'privacy');
       setLegalModalOpen(true);
-      setError('Veuillez examiner et approuver les conditions d’utilisation et la politique de confidentialité pour continuer.');
+      setError('Cochez les conditions et la confidentialité après lecture, ou utilisez « Tout lire & approuver ».');
       return;
     }
 
  setLoading(true);
 
  if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
- setError('Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.');
- setLoading(false);
+      const phoneMsg = 'Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.';
+      setPhoneError(phoneMsg);
+      setLoading(false);
+      window.setTimeout(() => document.getElementById('phone')?.focus(), 0);
  return;
  }
 
@@ -718,12 +670,14 @@ function RegisterPageContent() {
  const e164 = composeE164(phoneCountryCode, phoneNational) || undefined;
  const orgName = accountKind === 'CLIENT' ? name.trim() : tenantName.trim();
  if (accountKind !== 'CLIENT' && !orgName) {
-        setError(vendorTrack === 'venue'
+        const orgMsg = vendorTrack === 'venue'
           ? 'Le nom de la salle ou du complexe est obligatoire.'
           : vendorTrack === 'service'
             ? 'Le nom de l’enseigne est obligatoire.'
-            : 'Le nom de l’organisation ou établissement est obligatoire.');
+            : 'Le nom de l’organisation ou établissement est obligatoire.';
+        setOrgError(orgMsg);
  setLoading(false);
+        window.setTimeout(() => document.getElementById('tenantName')?.focus(), 0);
  return;
  }
 
@@ -770,7 +724,14 @@ function RegisterPageContent() {
  setSuccessMessage(res.message);
  setLoading(false);
  } catch (err: unknown) {
- setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la création du compte.');
+      const message = err instanceof Error ? err.message : 'Une erreur est survenue lors de la création du compte.';
+      applyRegisterError(message, {
+        setError,
+        setEmailError,
+        setOrgError,
+        setPhoneError,
+        setReferralError,
+      });
  setLoading(false);
  }
  };
@@ -808,7 +769,6 @@ function RegisterPageContent() {
  backHref="/"
  backLabel="Retour au site"
       maxWidthClassName="max-w-xl"
-      hideMobileTitle={showAccountForm}
  >
       <Card padding="md" className="border-border shadow-sm p-4 sm:p-5">
  {ready && !site.allowRegistration ? (
@@ -834,9 +794,9 @@ function RegisterPageContent() {
           <div className="text-center space-y-4 py-2">
             <div className="inline-flex items-center justify-center bg-primary/15 p-3.5 rounded-full text-primary">
               {verificationMethod === 'WHATSAPP' ? (
-                <MessageSquare className="w-8 h-8" />
+                <MessageSquare className="w-8 h-8" aria-hidden />
               ) : (
-                <Mail className="w-8 h-8" />
+                <Mail className="w-8 h-8" aria-hidden />
               )}
  </div>
  <div>
@@ -902,7 +862,7 @@ function RegisterPageContent() {
                       onClick={vendorTrack && !vendorPlanLocked ? goBackToVendorTrack : goBackToKind}
                       className="font-semibold text-primary hover:underline min-h-11 inline-flex items-center"
                     >
-                      Changer
+                      Changer le type de compte
                     </button>
                   </>
                 ) : vendorTrack && !vendorPlanLocked ? (
@@ -913,7 +873,7 @@ function RegisterPageContent() {
                       onClick={goBackToVendorTrack}
                       className="font-semibold text-primary hover:underline min-h-11 inline-flex items-center"
                     >
-                      Salle ou métier
+                      Choisir salle ou métier
                     </button>
                   </>
                 ) : null}
@@ -948,7 +908,7 @@ function RegisterPageContent() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jean Dupont"
-                  leftIcon={<User className="w-4 h-4" />}
+                  leftIcon={<User className="w-4 h-4" aria-hidden />}
                 />
                 {accountKind !== 'CLIENT' && (
                   <Input
@@ -956,9 +916,13 @@ function RegisterPageContent() {
                     id="tenantName"
                     required
                     value={tenantName}
-                    onChange={(e) => setTenantName(e.target.value)}
+                    onChange={(e) => {
+                      setTenantName(e.target.value);
+                      if (orgError) setOrgError('');
+                    }}
                     placeholder={config.orgPlaceholder || 'Dupont Événements'}
-                    leftIcon={<Building className="w-4 h-4" />}
+                    leftIcon={<Building className="w-4 h-4" aria-hidden />}
+                    error={orgError || undefined}
                   />
                 )}
               </div>
@@ -971,9 +935,13 @@ function RegisterPageContent() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError('');
+                  }}
                   placeholder="jean@exemple.com"
-                  leftIcon={<Mail className="w-4 h-4" />}
+                  leftIcon={<Mail className="w-4 h-4" aria-hidden />}
+                  error={emailError || undefined}
                 />
 
  <PhoneInput
@@ -982,9 +950,13 @@ function RegisterPageContent() {
  countryCode={phoneCountryCode}
  national={phoneNational}
  onCountryCodeChange={setPhoneCountryCode}
- onNationalChange={setPhoneNational}
+ onNationalChange={(next) => {
+   setPhoneNational(next);
+   if (phoneError) setPhoneError('');
+ }}
  required={verificationMethod === 'WHATSAPP'}
                   placeholder="812345678"
+                  error={phoneError || undefined}
                 />
               </div>
 
@@ -997,7 +969,7 @@ function RegisterPageContent() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
+                leftIcon={<Lock className="w-4 h-4" aria-hidden />}
                 hint="Au moins 6 caractères."
               />
 
@@ -1007,10 +979,15 @@ function RegisterPageContent() {
                   setReferralChoice(next);
                   setReferralFromLink(false);
                   if (next === 'no') setReferralCode('');
+                  if (referralError) setReferralError('');
                 }}
                 code={referralCode}
-                onCodeChange={setReferralCode}
+                onCodeChange={(next) => {
+                  setReferralCode(next);
+                  if (referralError) setReferralError('');
+                }}
                 fromLink={referralFromLink}
+                error={referralError || undefined}
               />
 
               {/* ─── CHOIX DE MÉTHODE DE VALIDATION OTP ─── */}
@@ -1020,8 +997,8 @@ function RegisterPageContent() {
  value={verificationMethod}
  onChange={setVerificationMethod}
  options={[
-                    { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" /> },
-                    { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
+                    { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> },
+                    { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> },
                   ]}
                 />
               ) : (
@@ -1036,7 +1013,7 @@ function RegisterPageContent() {
               <div className="space-y-1.5 pt-0.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-foreground flex items-center gap-1 text-xs">
-                    <Scale className="w-3.5 h-3.5 text-primary" />
+                    <Scale className="w-3.5 h-3.5 text-primary" aria-hidden />
                     Engagements
                   </span>
                   {(!acceptTerms || !acceptPrivacy) && (
@@ -1058,25 +1035,18 @@ function RegisterPageContent() {
                   {/* 1. Carte Conditions d'utilisation */}
                   <div
                     className={cn(
-                      'px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
+                      'min-h-11 px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
                       acceptTerms
                         ? 'border-primary/30 bg-primary/8'
                         : 'border-border bg-surface hover:border-primary/40',
                     )}
                   >
-                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1">
+                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1 min-h-11">
                       <input
                         type="checkbox"
                         checked={acceptTerms}
-                        onChange={() => {
-                          if (!acceptTerms) {
-                            setLegalModalTab('terms');
-                            setLegalModalOpen(true);
-                          } else {
-                            setAcceptTerms(false);
-                          }
-                        }}
-                        className="rounded text-primary focus:ring-primary accent-primary shrink-0"
+                        onChange={(e) => setAcceptTerms(e.target.checked)}
+                        className="rounded text-primary focus:ring-primary accent-primary shrink-0 h-4 w-4"
                       />
                       <span className="font-medium text-foreground truncate text-xs">
                         Conditions d’utilisation <span className="text-xs text-muted">v{TERMS_VERSION}</span>
@@ -1089,6 +1059,7 @@ function RegisterPageContent() {
                         setLegalModalTab('terms');
                         setLegalModalOpen(true);
                       }}
+                      aria-label={acceptTerms ? 'Relire les conditions d’utilisation' : 'Lire les conditions d’utilisation'}
                       className={cn(
                         'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
                         acceptTerms
@@ -1096,32 +1067,26 @@ function RegisterPageContent() {
                           : 'text-primary bg-primary/10 hover:bg-primary/20',
                       )}
                     >
-                      {acceptTerms ? <CheckCircle2 className="w-4 h-4 text-primary" /> : 'Lire'}
+                      {acceptTerms ? <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden /> : null}
+                      {acceptTerms ? 'Relire' : 'Lire'}
                     </button>
                   </div>
 
                   {/* 2. Carte Politique de confidentialité */}
                   <div
                     className={cn(
-                      'px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
+                      'min-h-11 px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
                       acceptPrivacy
                         ? 'border-primary/30 bg-primary/8'
                         : 'border-border bg-surface hover:border-primary/40',
                     )}
                   >
-                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1">
+                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1 min-h-11">
                       <input
                         type="checkbox"
                         checked={acceptPrivacy}
-                        onChange={() => {
-                          if (!acceptPrivacy) {
-                            setLegalModalTab('privacy');
-                            setLegalModalOpen(true);
-                          } else {
-                            setAcceptPrivacy(false);
-                          }
-                        }}
-                        className="rounded text-primary focus:ring-primary accent-primary shrink-0"
+                        onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                        className="rounded text-primary focus:ring-primary accent-primary shrink-0 h-4 w-4"
                       />
                       <span className="font-medium text-foreground truncate text-xs">
                         Confidentialité <span className="text-xs text-muted">v{PRIVACY_VERSION}</span>
@@ -1134,6 +1099,7 @@ function RegisterPageContent() {
                         setLegalModalTab('privacy');
                         setLegalModalOpen(true);
                       }}
+                      aria-label={acceptPrivacy ? 'Relire la politique de confidentialité' : 'Lire la politique de confidentialité'}
                       className={cn(
                         'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
                         acceptPrivacy
@@ -1141,7 +1107,8 @@ function RegisterPageContent() {
                           : 'text-primary bg-primary/10 hover:bg-primary/20',
                       )}
                     >
-                      {acceptPrivacy ? <CheckCircle2 className="w-4 h-4 text-primary" /> : 'Lire'}
+                      {acceptPrivacy ? <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden /> : null}
+                      {acceptPrivacy ? 'Relire' : 'Lire'}
                     </button>
                   </div>
                 </div>
@@ -1171,6 +1138,7 @@ function RegisterPageContent() {
  </Card>
 
       {/* ─── MODALE DE PRÉVISUALISATION ET VALIDATION LÉGALE FORCÉE ─── */}
+      {legalModalOpen ? (
       <LegalTermsPreviewModal
         open={legalModalOpen}
         onClose={() => setLegalModalOpen(false)}
@@ -1183,6 +1151,7 @@ function RegisterPageContent() {
           setError('');
         }}
       />
+      ) : null}
  </AuthSplitLayout>
  );
 }

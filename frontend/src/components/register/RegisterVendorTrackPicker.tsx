@@ -55,7 +55,7 @@ export default function RegisterVendorTrackPicker({
           </Link>
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-2">
+      <div role="group" aria-label="Salle ou métier de service" className="grid grid-cols-1 gap-2">
         {TRACKS.map((track) => {
           const Icon = track.icon;
           return (
