@@ -23,7 +23,7 @@ export default function GuestGuidePage() {
       <div className="mb-4">
         <Link
           href="/"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary transition"
+          className="inline-flex items-center gap-1.5 min-h-11 text-xs font-semibold text-muted hover:text-primary transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Accueil
