@@ -95,12 +95,8 @@ export default function LandingHeroStreamlined() {
         <div className="text-center max-w-3xl mx-auto space-y-2 sm:space-y-4">
           <h1 className="em-landing-heading text-2xl min-[400px]:text-3xl sm:text-5xl lg:text-[3.25rem] font-bold text-foreground">
             <span className="block">{site.platformName || 'EventMaster'}</span>
-            <span className="sm:hidden block mt-1 font-semibold text-[0.92em] leading-tight">
-              Votre événement, <span className="em-glow-text">de A à Z</span>
-            </span>
-            <span className="hidden sm:block mt-2 font-semibold text-[0.88em] leading-tight">
-              Votre événement d’exception,{' '}
-              <br className="hidden sm:inline" />
+            <span className="block mt-1 sm:mt-2 font-semibold text-[0.92em] sm:text-[0.88em] leading-tight">
+              Votre événement, de A à Z —{' '}
               <span className="em-glow-text">parfaitement orchestré.</span>
             </span>
           </h1>
