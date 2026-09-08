@@ -33,7 +33,7 @@ import {
   Scale,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
-import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
+import { Button, Alert, Input, PasswordInput, Card, PhoneInput } from '@/components/ui';
 import LegalTermsPreviewModal from '@/components/LegalTermsPreviewModal';
 import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
@@ -1088,15 +1088,17 @@ function RegisterPageContent() {
                 />
               </div>
 
- <Input
+ <PasswordInput
                 label="Mot de passe"
                 id="password"
-                type="password"
+                autoComplete="new-password"
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 leftIcon={<Lock className="w-4 h-4" />}
+                hint="Au moins 6 caractères."
               />
 
               <RegisterReferralGate

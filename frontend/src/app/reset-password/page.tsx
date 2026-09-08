@@ -8,7 +8,7 @@ import {
  Calendar, Lock, Loader2, MessageSquare, Table, Sparkles,
 } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
-import { Button, Alert, Input, Card } from '@/components/ui';
+import { Button, Alert, PasswordInput, Card } from '@/components/ui';
 
 const FEATURES = [
  { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -88,21 +88,24 @@ function ResetPasswordForm() {
  </Alert>
  ) : (
  <form className="space-y-5" onSubmit={handleSubmit}>
- <Input
+ <PasswordInput
  label="Nouveau mot de passe"
  id="password"
- type="password"
+ autoComplete="new-password"
  required
+ minLength={6}
  value={password}
  onChange={(e) => setPassword(e.target.value)}
  placeholder="••••••••"
  leftIcon={<Lock className="w-4 h-4" />}
+ hint="Au moins 6 caractères."
  />
- <Input
+ <PasswordInput
  label="Confirmer le mot de passe"
  id="confirmPassword"
- type="password"
+ autoComplete="new-password"
  required
+ minLength={6}
  value={confirmPassword}
  onChange={(e) => setConfirmPassword(e.target.value)}
  placeholder="••••••••"

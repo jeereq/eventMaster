@@ -109,30 +109,32 @@ export function AuthSplitLayout({
 
       {/* Formulaire */}
       <div className="w-full lg:w-[54%] xl:w-1/2 flex flex-col justify-center p-5 sm:p-10 lg:p-14 relative bg-background">
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 flex items-center gap-2">
-          <PWAInstallCta variant="inline" />
-          <SiteBrandMark href="/" size="sm" className="lg:hidden" />
-          <PublicAccentPicker />
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:bg-surface-muted hover:text-foreground transition"
-            aria-label="Changer de thème"
-          >
-            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          </button>
-        </div>
-
-        <main id="main-content" className={cn(maxWidthClassName || 'max-w-md', 'w-full mx-auto space-y-4 pt-8 lg:pt-0')}>
-          {backHref && (
+        <div className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-10 flex items-center gap-2">
+          {backHref ? (
             <Link
               href={backHref}
-              className="inline-flex items-center gap-1.5 min-h-11 text-xs font-semibold text-muted hover:text-primary transition"
+              className="inline-flex items-center gap-2 min-h-11 max-w-[min(100%,16rem)] px-3 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted hover:border-primary/30 transition shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              {backLabel}
+              <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
+              <span className="truncate">{backLabel}</span>
             </Link>
-          )}
+          ) : null}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <PWAInstallCta variant="inline" />
+            <SiteBrandMark href="/" size="sm" className="lg:hidden" />
+            <PublicAccentPicker />
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="inline-flex items-center justify-center min-h-11 min-w-11 p-2.5 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:bg-surface-muted hover:text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              aria-label={theme === 'light' ? 'Passer en thème sombre' : 'Passer en thème clair'}
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" aria-hidden /> : <Sun className="w-4 h-4" aria-hidden />}
+            </button>
+          </div>
+        </div>
+
+        <main id="main-content" className={cn(maxWidthClassName || 'max-w-md', 'w-full mx-auto space-y-4 pt-16 sm:pt-14 lg:pt-12')}>
           {hideMobileTitle ? null : (
             <h1 className="lg:hidden text-xl font-semibold tracking-tight text-foreground">{title}</h1>
           )}

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import SiteBrandMark from '@/components/SiteBrandMark';
-import { Button, Alert, Input, Card, IdentifierInput, identifierValue } from '@/components/ui';
+import { Button, Alert, PasswordInput, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
@@ -118,26 +118,21 @@ function LoginPageContent() {
             onNationalChange={setPhoneNational}
           />
 
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label htmlFor="password" className="text-xs font-semibold text-muted">
-                Mot de passe
-              </label>
-              <Link href="/ask-reset-password" className="text-xs font-semibold text-primary hover:underline">
+          <PasswordInput
+            id="password"
+            label="Mot de passe"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            leftIcon={<Lock className="w-4 h-4" />}
+            labelExtra={
+              <Link href="/ask-reset-password" className="text-xs font-semibold text-primary hover:underline min-h-11 inline-flex items-center">
                 Mot de passe oublié ?
               </Link>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              leftIcon={<Lock className="w-4 h-4" />}
-            />
-          </div>
+            }
+          />
 
           <Button type="submit" fullWidth size="lg" loading={loading}>
             Se connecter

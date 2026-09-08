@@ -157,19 +157,20 @@ function VerifyOtpForm() {
  {success && <Alert variant="success" className="mb-4">{success}</Alert>}
 
  <form onSubmit={handleSubmit} className="space-y-6">
- <div className="flex justify-center gap-2" onPaste={handlePaste}>
+ <div className="flex justify-center gap-2" onPaste={handlePaste} role="group" aria-label="Code de confirmation à 6 chiffres">
  {digits.map((d, i) => (
  <input
  key={i}
  ref={(el) => { inputRefs.current[i] = el; }}
  type="text"
  inputMode="numeric"
+ autoComplete={i === 0 ? 'one-time-code' : 'off'}
  maxLength={1}
  value={d}
  onChange={(e) => handleDigitChange(i, e.target.value)}
  onKeyDown={(e) => handleKeyDown(i, e)}
- className="w-11 h-14 text-center text-xl font-bold border-2 border-border rounded-[var(--radius-button)] focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface-muted transition"
- aria-label={`Chiffre ${i + 1}`}
+ className="w-11 min-h-11 h-14 text-center text-base sm:text-xl font-bold border-2 border-border rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 bg-surface-muted transition"
+ aria-label={`Chiffre ${i + 1} sur 6`}
  />
  ))}
  </div>
@@ -214,9 +215,12 @@ function VerifyOtpForm() {
 export default function VerifyOtpPage() {
  return (
  <Suspense fallback={
- <div className="min-h-screen flex items-center justify-center bg-surface-muted dark:bg-background">
- <Loader2 className="w-8 h-8 animate-spin text-primary" />
- </div>
+ <AuthSplitLayout title="Chargement…" description="" backHref="/login" backLabel="Retour à la connexion">
+ <Card padding="lg" className="flex flex-col items-center py-12 gap-3">
+ <Loader2 className="w-8 h-8 text-primary animate-spin" />
+ <p className="text-xs text-muted">Chargement…</p>
+ </Card>
+ </AuthSplitLayout>
  }>
  <VerifyOtpForm />
  </Suspense>

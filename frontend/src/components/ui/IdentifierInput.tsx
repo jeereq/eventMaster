@@ -48,7 +48,7 @@ export default function IdentifierInput({
         <select
           value={mode}
           onChange={(e) => onModeChange(e.target.value as IdentifierMode)}
-          className="w-full h-[42px] px-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm font-medium text-foreground"
+          className="w-full min-h-11 px-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary"
         >
           <option value="email">E-mail</option>
           <option value="phone">Téléphone</option>
