@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
@@ -47,7 +47,7 @@ import {
   type AiMomentId,
   type AiSettingId,
 } from '@/lib/aiSimulationCriteria';
-import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { StudioAiTabs, StudioHowTo, studioAiTabPanelId, type StudioAiTabId } from '@/components/StudioAiTabs';
 import { EVENT_PREP_PROMPT_MODELS } from '@/config/eventPrepPromptModels';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
@@ -56,12 +56,14 @@ const VENUE_PARAM_AMENITIES = VENUE_AMENITIES.filter((item) =>
 );
 
 const FIELD_LABEL = 'text-xs font-semibold text-muted';
+const NATIVE_FIELD =
+  'w-full min-h-11 rounded-[var(--radius-button)] border border-border bg-surface-muted dark:bg-background px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary';
 const CHIP =
   'inline-flex items-center justify-center min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition whitespace-nowrap shrink-0 sm:shrink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 function chipTone(active: boolean) {
   return active
-    ? 'bg-primary text-primary-foreground border-primary'
+    ? 'bg-primary-solid text-primary-foreground border-primary-solid'
     : 'border-border text-muted hover:text-foreground';
 }
 
@@ -107,6 +109,8 @@ export default function EventPrepAiSimulator({
   const { user, access } = useAuth();
   const isLoggedIn = Boolean(user);
   const canCreateEvents = Boolean(access?.canCreateEvents);
+  const tabsId = useId();
+  const citySelectRef = useRef<HTMLSelectElement>(null);
   const [open, setOpen] = useState(defaultOpen || embedded);
   const [activeTab, setActiveTab] = useState<StudioAiTabId>('create');
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -147,6 +151,7 @@ export default function EventPrepAiSimulator({
   const [includeRentals, setIncludeRentals] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [cityError, setCityError] = useState('');
   const [result, setResult] = useState<EventPlanAiResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(openPurchaseOnMount);
@@ -290,6 +295,14 @@ export default function EventPrepAiSimulator({
 
   const run = async () => {
     if (loading) return;
+    if (!city.trim()) {
+      setCityError('Choisissez une ville pour composer les packs du catalogue local.');
+      setError('');
+      setActiveTab('create');
+      citySelectRef.current?.focus();
+      return;
+    }
+    setCityError('');
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
@@ -460,6 +473,7 @@ export default function EventPrepAiSimulator({
           value={activeTab}
           onChange={setActiveTab}
           historyCount={history.length}
+          idPrefix={tabsId}
           className="w-full sm:w-auto sm:min-w-[22rem]"
         />
 
@@ -486,18 +500,13 @@ export default function EventPrepAiSimulator({
       ) : null}
       </div>
 
-      {activeTab === 'create' ? (
-        <StudioHowTo
-          steps={[
-            'Indiquez ville, date et budget',
-            'Générez 3 packs (éco, équilibré, confort)',
-            'Retenez un pack avant de réserver',
-          ]}
-        />
-      ) : null}
-
       {activeTab === 'prompts' ? (
-        <div className="space-y-3 pt-1">
+        <div
+          role="tabpanel"
+          id={studioAiTabPanelId(tabsId, 'prompts')}
+          aria-labelledby={`${tabsId}-tab-prompts`}
+          className="space-y-3 pt-1"
+        >
           <p className="text-xs text-muted">
             Un bouton préremplit le brief, le type d’événement et le budget. Ajustez ensuite ville et date.
           </p>
@@ -544,7 +553,12 @@ export default function EventPrepAiSimulator({
           </div>
         </div>
       ) : activeTab === 'history' ? (
-        <div className="space-y-3 pt-1">
+        <div
+          role="tabpanel"
+          id={studioAiTabPanelId(tabsId, 'history')}
+          aria-labelledby={`${tabsId}-tab-history`}
+          className="space-y-3 pt-1"
+        >
           {history.length > 0 ? (
             <AiSimulationHistoryList
               items={history}
@@ -577,7 +591,19 @@ export default function EventPrepAiSimulator({
           )}
         </div>
       ) : (
-        <>
+        <div
+          role="tabpanel"
+          id={studioAiTabPanelId(tabsId, 'create')}
+          aria-labelledby={`${tabsId}-tab-create`}
+          className="space-y-3"
+        >
+          <StudioHowTo
+            steps={[
+              'Indiquez ville, date et budget',
+              'Générez 3 packs (éco, équilibré, confort)',
+              'Retenez un pack avant de réserver',
+            ]}
+          />
           {open ? (
         <div className="space-y-3">
           <label className="space-y-1 block">
@@ -587,7 +613,7 @@ export default function EventPrepAiSimulator({
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
               placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
-              className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
+              className={cn(NATIVE_FIELD, 'resize-y min-h-[4.5rem] py-2.5')}
             />
             <p className="text-xs text-muted">
               Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
@@ -598,11 +624,16 @@ export default function EventPrepAiSimulator({
             </p>
           </label>
 
-          <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1">
+          <div
+            className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1"
+            role="group"
+            aria-label="Type d’événement"
+          >
             {LISTING_EVENT_TYPES.map((item) => (
               <button
                 key={item.id}
                 type="button"
+                aria-pressed={eventType === item.id}
                 onClick={() => setEventType(item.id)}
                 className={cn(
                   CHIP,
@@ -618,25 +649,34 @@ export default function EventPrepAiSimulator({
             <label className="space-y-1">
               <span className={FIELD_LABEL}>Ville</span>
               <select
+                ref={citySelectRef}
                 value={city}
+                aria-invalid={cityError ? true : undefined}
+                aria-describedby={cityError ? `${tabsId}-city-error` : undefined}
                 onChange={(e) => {
                   setCity(e.target.value);
                   setCommune('');
+                  setCityError('');
                 }}
-                className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
+                className={cn(NATIVE_FIELD, cityError && 'border-danger/40 focus-visible:border-danger')}
               >
-                <option value="">{marketplaceCities.join(' & ') || 'Ville'}</option>
+                <option value="">Choisir une ville</option>
                 {marketplaceCities.map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
+              {cityError ? (
+                <p id={`${tabsId}-city-error`} className="text-xs text-danger font-medium" role="alert">
+                  {cityError}
+                </p>
+              ) : null}
             </label>
             <label className="space-y-1">
               <span className={FIELD_LABEL}>Commune</span>
               <select
                 value={commune}
                 onChange={(e) => setCommune(e.target.value)}
-                className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
+                className={NATIVE_FIELD}
               >
                 <option value="">Toutes</option>
                 {communes.map((item) => (
@@ -710,20 +750,23 @@ export default function EventPrepAiSimulator({
             <button
               type="button"
               onClick={() => setAdvancedOpen((value) => !value)}
+              aria-expanded={advancedOpen}
+              aria-controls={`${tabsId}-advanced`}
               className="w-full flex items-center justify-between gap-2 min-h-11 px-3 py-2 text-left text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Plus de paramètres
               <ChevronDown className={cn('w-4 h-4 text-muted transition', advancedOpen && 'rotate-180')} />
             </button>
             {advancedOpen ? (
-              <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+              <div id={`${tabsId}-advanced`} className="px-3 pb-3 space-y-3 border-t border-border pt-3">
                 <div className="space-y-1.5">
                   <p className={FIELD_LABEL}>Ambiance</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Ambiance">
                     {AI_AMBIANCES.map((item) => (
                       <button
                         key={item.id}
                         type="button"
+                        aria-pressed={ambiance === item.id}
                         onClick={() => toggleChip(item.id, ambiance, setAmbiance)}
                         className={cn(CHIP, chipTone(ambiance === item.id))}
                       >
@@ -735,11 +778,12 @@ export default function EventPrepAiSimulator({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <p className={FIELD_LABEL}>Moment</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Moment">
                       {AI_MOMENTS.map((item) => (
                         <button
                           key={item.id}
                           type="button"
+                          aria-pressed={moment === item.id}
                           onClick={() => toggleChip(item.id, moment, setMoment)}
                           className={cn(CHIP, chipTone(moment === item.id))}
                         >
@@ -750,11 +794,12 @@ export default function EventPrepAiSimulator({
                   </div>
                   <div className="space-y-1.5">
                     <p className={FIELD_LABEL}>Lieu</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Cadre du lieu">
                       {AI_SETTINGS.map((item) => (
                         <button
                           key={item.id}
                           type="button"
+                          aria-pressed={setting === item.id}
                           onClick={() => toggleChip(item.id, setting, setSetting)}
                           className={cn(CHIP, chipTone(setting === item.id))}
                         >
@@ -789,13 +834,14 @@ export default function EventPrepAiSimulator({
                 </div>
                 <div className="space-y-1.5">
                   <p className={FIELD_LABEL}>Prestations souhaitées</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Prestations souhaitées">
                     {categoryChoices.map((id) => {
                       const active = wantedCategories.includes(id);
                       return (
                         <button
                           key={id}
                           type="button"
+                          aria-pressed={active}
                           onClick={() => setWantedCategories((prev) =>
                             prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
                           )}
@@ -810,13 +856,14 @@ export default function EventPrepAiSimulator({
                 {includeVenue ? (
                   <div className="space-y-1.5">
                     <p className={FIELD_LABEL}>Équipements salle</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Équipements salle">
                       {VENUE_PARAM_AMENITIES.map((item) => {
                         const active = venueAmenities.includes(item.id);
                         return (
                           <button
                             key={item.id}
                             type="button"
+                            aria-pressed={active}
                             onClick={() => setVenueAmenities((prev) =>
                               prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id],
                             )}
@@ -958,7 +1005,7 @@ export default function EventPrepAiSimulator({
           </div>
         </div>
       ) : null}
-        </>
+        </div>
       )}
 
       <AiSimulationPackModal

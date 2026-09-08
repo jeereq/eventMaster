@@ -145,7 +145,6 @@ function StudioVignette({
 
 export function AiProcessFullscreenLoader({
   active,
-  eyebrow,
   title,
   footnote,
   steps,
@@ -154,7 +153,6 @@ export function AiProcessFullscreenLoader({
   variant = 'invitation',
 }: {
   active: boolean;
-  eyebrow: string;
   title: string;
   footnote?: string;
   steps: AiProcessStep[];
@@ -288,10 +286,9 @@ export function AiProcessFullscreenLoader({
           </div>
         </div>
 
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">{eyebrow}</p>
         <h2
           id="ai-process-loader-title"
-          className="mt-2 font-display text-2xl sm:text-3xl font-semibold tracking-tight text-stage-foreground"
+          className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-stage-foreground"
         >
           {title}
         </h2>
@@ -394,7 +391,6 @@ export default function AiComposeFullscreenLoader({
     <AiProcessFullscreenLoader
       active={active}
       variant="invitation"
-      eyebrow="Invitation"
       title="Votre carte se prépare"
       stageHint={stageHint}
       steps={steps}
@@ -418,7 +414,6 @@ export function AiBudgetFullscreenLoader({
     <AiProcessFullscreenLoader
       active={active}
       variant="budget"
-      eyebrow="Simulation IA"
       title="Calcul des formules"
       stageHint={stageHint}
       steps={BUDGET_STEPS}
@@ -443,7 +438,6 @@ export function AiRoomPlanFullscreenLoader({
     <AiProcessFullscreenLoader
       active={active}
       variant="room"
-      eyebrow="Plan de salle"
       title="Le studio compose votre plan"
       stageHint={stageHint}
       steps={steps}

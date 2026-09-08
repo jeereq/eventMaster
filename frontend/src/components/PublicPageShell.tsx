@@ -58,13 +58,13 @@ export function PublicPageHero({
           <h1 className={cn(
             'em-landing-heading text-foreground',
             compact
-              ? 'text-sm md:text-2xl lg:text-3xl'
-              : 'text-base md:text-3xl lg:text-[2.5rem]',
+              ? 'text-xl md:text-2xl lg:text-3xl'
+              : 'text-xl md:text-3xl lg:text-[2.5rem]',
           )}>
             {title}
           </h1>
           {description ? (
-            <p className="hidden md:block text-base text-muted leading-relaxed max-w-2xl">
+            <p className="text-sm md:text-base text-muted leading-relaxed max-w-2xl">
               {description}
             </p>
           ) : null}

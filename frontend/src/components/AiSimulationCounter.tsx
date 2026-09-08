@@ -70,7 +70,7 @@ export default function AiSimulationCounter({
       <div className={cn('flex gap-3', compact ? 'flex-col sm:flex-row sm:items-center sm:justify-between' : 'flex-col sm:flex-row sm:items-center sm:justify-between')}>
         <div className="min-w-0 flex items-center gap-3">
           <div className={cn(
-            'rounded-xl flex items-center justify-center shrink-0 tabular-nums font-black shadow-sm bg-primary text-primary-foreground',
+            'rounded-xl flex items-center justify-center shrink-0 tabular-nums font-black shadow-sm bg-primary-solid text-primary-foreground',
             compact ? 'w-11 h-11 text-lg' : 'w-14 h-14 text-2xl',
           )}>
             {remaining}
@@ -79,7 +79,7 @@ export default function AiSimulationCounter({
             <p className="text-xs sm:text-sm font-bold text-foreground leading-snug">
               {remaining} jeton{remaining > 1 ? 's' : ''} IA restant{remaining > 1 ? 's' : ''}
             </p>
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               Budget, invitation ou plan · {allowance.freeRemaining}/{max} essais gratuits
               {bonus > 0 ? ` · +${bonus} bonus` : ''}
             </p>
@@ -102,10 +102,10 @@ export default function AiSimulationCounter({
                   <span
                     key={index}
                     className={cn(
-                      'w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold border tabular-nums',
+                      'w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold border tabular-nums',
                       consumed
                         ? 'bg-muted/15 border-border text-muted line-through'
-                        : 'bg-primary text-primary-foreground border-primary',
+                        : 'bg-primary-solid text-primary-foreground border-primary-solid',
                     )}
                     title={consumed ? `Essai ${index + 1} utilisé` : `Essai ${index + 1} disponible`}
                   >
@@ -128,7 +128,7 @@ export default function AiSimulationCounter({
       </div>
 
       {!compact ? (
-        <p className="mt-2.5 text-[11px] text-muted inline-flex items-center gap-1.5">
+        <p className="mt-2.5 text-xs text-muted inline-flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
           {empty
             ? 'Plus de crédit. Rechargez pour les invitations IA ou le simulateur.'

@@ -91,16 +91,16 @@ export default function AiSimulationPackModal({
                   </span>
                 </div>
                 {leftover != null ? (
-                  <p className={cn('text-[11px] font-medium mt-0.5', leftover >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200')}>
+                  <p className={cn('text-xs font-medium mt-0.5', leftover >= 0 ? 'text-primary-solid' : 'text-festive-accent')}>
                     {leftover >= 0
                       ? `Reste : ${leftoverUsd != null ? `${leftoverUsd.toLocaleString('fr-FR')} $ · ` : ''}${formatFc(leftover)}`
                       : `Dépassement : ${leftoverUsd != null ? `${Math.abs(leftoverUsd).toLocaleString('fr-FR')} $ · ` : ''}${formatFc(Math.abs(leftover))}`}
                   </p>
                 ) : null}
-                <p className="text-[10px] text-muted">
+                <p className="text-xs text-muted">
                   Taux calculé : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
                 </p>
-                {saveMessage ? <p className="text-[11px] text-muted mt-1">{saveMessage}</p> : null}
+                {saveMessage ? <p className="text-xs text-muted mt-1">{saveMessage}</p> : null}
               </div>
               {onApply ? (
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -177,11 +177,13 @@ export default function AiSimulationPackModal({
                     <button
                       key={pack.id}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => onSelectPack(pack.id)}
                       className={cn(
-                        'shrink-0 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold border transition',
+                        'shrink-0 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                         active
-                          ? 'bg-primary text-white border-primary'
+                          ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                           : 'border-border text-muted hover:text-foreground',
                       )}
                     >
@@ -197,7 +199,7 @@ export default function AiSimulationPackModal({
             ) : null}
 
             {selected.warnings.length > 0 ? (
-              <ul className="space-y-1 text-[12px] text-amber-800 dark:text-amber-200 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+              <ul className="space-y-1 text-xs text-festive-accent bg-festive-accent-soft p-2.5 rounded-xl border border-festive-accent/20">
                 {selected.warnings.map((warning) => (
                   <li key={warning}>{warning}</li>
                 ))}
@@ -231,7 +233,7 @@ export default function AiSimulationPackModal({
                 );
               })}
             </ul>
-            <p className="text-[11px] text-muted">Touchez un élément pour l’ouvrir — la fiche complète n’est pas quittée.</p>
+            <p className="text-xs text-muted">Touchez un élément pour l’ouvrir — la fiche complète n’est pas quittée.</p>
           </div>
         ) : null}
       </Modal>
@@ -285,9 +287,9 @@ function ElementRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] uppercase tracking-wider text-muted">{kind}</p>
+        <p className="text-xs text-muted">{kind}</p>
         <span className="text-sm font-semibold truncate block">{item.title}</span>
-        <p className="text-[11px] text-muted truncate">
+        <p className="text-xs text-muted truncate">
           {[item.categoryLabel, item.orgName, item.location].filter(Boolean).join(' · ')}
         </p>
       </div>
@@ -296,12 +298,12 @@ function ElementRow({
           <span className="text-xs font-bold text-foreground block">
             {itemUsd.toLocaleString('fr-FR')} $
           </span>
-          <span className="text-[10px] text-muted block">
+          <span className="text-xs text-muted block">
             {formatFc(item.estimatedFc)}
           </span>
         </div>
       ) : (
-        <span className="text-[11px] text-muted shrink-0">Sur devis</span>
+        <span className="text-xs text-muted shrink-0">Sur devis</span>
       )}
     </button>
   );

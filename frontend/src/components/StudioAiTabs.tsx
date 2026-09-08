@@ -16,18 +16,24 @@ const TABS: Array<{
   { id: 'prompts', label: 'Prompts', icon: Sparkles },
 ];
 
+export function studioAiTabPanelId(prefix: string, tab: StudioAiTabId) {
+  return `${prefix}-panel-${tab}`;
+}
+
 export function StudioAiTabs({
   value,
   onChange,
   historyCount = 0,
   disabled = false,
   className,
+  idPrefix,
 }: {
   value: StudioAiTabId;
   onChange: (id: StudioAiTabId) => void;
   historyCount?: number;
   disabled?: boolean;
   className?: string;
+  idPrefix?: string;
 }) {
   const tabRefs = useRef<Partial<Record<StudioAiTabId, HTMLButtonElement | null>>>({});
 
@@ -70,8 +76,10 @@ export function StudioAiTabs({
           <button
             key={tab.id}
             type="button"
+            id={idPrefix ? `${idPrefix}-tab-${tab.id}` : undefined}
             role="tab"
             aria-selected={selected}
+            aria-controls={idPrefix ? studioAiTabPanelId(idPrefix, tab.id) : undefined}
             tabIndex={selected ? 0 : -1}
             disabled={disabled}
             ref={(node) => {

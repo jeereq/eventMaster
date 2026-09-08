@@ -1,17 +1,32 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
+import { Alert } from '@/components/ui';
 import { api } from '@/lib/api';
 import { claimAiTokenCheckoutReturn, syncDeviceAiTokensWithBackend } from '@/lib/aiTokens';
 import { Store, Sparkles, Wallet } from 'lucide-react';
 
+const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="min-h-[28rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none"
+      aria-busy="true"
+      aria-label="Chargement du simulateur"
+    />
+  ),
+});
+
 export default function SimulateurPageClient() {
+  const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'canceled' | null>(null);
+
   useEffect(() => {
-    claimAiTokenCheckoutReturn();
+    const claim = claimAiTokenCheckoutReturn();
+    if (claim === 'success' || claim === 'canceled') setCheckoutNotice(claim);
     void syncDeviceAiTokensWithBackend(api);
   }, []);
 
@@ -41,10 +56,13 @@ export default function SimulateurPageClient() {
       </PublicPageHero>
 
       <div className="page-container pb-10 sm:pb-14">
-        <section
-          id="simulateur"
-          className="scroll-mt-24 max-w-5xl mx-auto rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-6"
-        >
+        <section id="simulateur" className="scroll-mt-24 max-w-5xl mx-auto space-y-3">
+          {checkoutNotice === 'success' ? (
+            <Alert variant="success">Jetons IA crédités. Vous pouvez relancer une simulation.</Alert>
+          ) : null}
+          {checkoutNotice === 'canceled' ? (
+            <Alert variant="warning">Paiement annulé — aucun jeton n’a été débité.</Alert>
+          ) : null}
           <EventPrepAiSimulator embedded defaultOpen />
         </section>
       </div>

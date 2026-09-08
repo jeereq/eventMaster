@@ -337,25 +337,35 @@ export function addPurchasedAiTokens(amount = AI_TOKEN_PACK_SIZE, orderId?: stri
   return next;
 }
 
-/** Applique le retour paiement FlexPay (`?ai_tokens_status=success`) et nettoie l’URL. */
-export function claimAiTokenCheckoutReturn(): boolean {
-  if (typeof window === 'undefined') return false;
+export type AiTokenCheckoutClaim = 'success' | 'canceled' | 'none';
+
+function stripAiTokenCheckoutParams(): void {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('ai_tokens_status');
+  url.searchParams.delete('ai_tokens');
+  url.searchParams.delete('tokens');
+  url.searchParams.delete('orderId');
+  window.history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
+}
+
+/** Applique le retour paiement FlexPay (`?ai_tokens_status=success|canceled`) et nettoie l’URL. */
+export function claimAiTokenCheckoutReturn(): AiTokenCheckoutClaim {
+  if (typeof window === 'undefined') return 'none';
   try {
     const params = new URLSearchParams(window.location.search);
     const aiStatus = params.get('ai_tokens_status') || params.get('ai_tokens');
     const orderId = params.get('orderId');
-    if (aiStatus !== 'success' && aiStatus !== 'paid') return false;
+    if (aiStatus === 'canceled' || aiStatus === 'cancelled' || aiStatus === 'cancel') {
+      stripAiTokenCheckoutParams();
+      return 'canceled';
+    }
+    if (aiStatus !== 'success' && aiStatus !== 'paid') return 'none';
     const added = parseInt(params.get('tokens') || String(AI_TOKEN_PACK_SIZE), 10) || AI_TOKEN_PACK_SIZE;
     addPurchasedAiTokens(added, orderId);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('ai_tokens_status');
-    url.searchParams.delete('ai_tokens');
-    url.searchParams.delete('tokens');
-    url.searchParams.delete('orderId');
-    window.history.replaceState({}, '', url.pathname + (url.search || '') + url.hash);
-    return true;
+    stripAiTokenCheckoutParams();
+    return 'success';
   } catch {
-    return false;
+    return 'none';
   }
 }
 
