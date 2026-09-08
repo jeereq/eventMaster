@@ -14,7 +14,7 @@ import {
   MapPin,
   DollarSign,
 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -23,18 +23,18 @@ import LandingMedia from '@/components/landing/LandingMedia';
 import type { ListingEventTypeId } from '@/lib/listingDetails';
 import {
   AI_ALLOWANCE_CHANGED,
-  AI_TOKEN_PACK_SIZE,
-  addPurchasedAiTokens,
   aiTokenCostLegend,
   getAiSimulationAllowance,
   createEmptyAiAllowance,
   syncDeviceAiTokensWithBackend,
+  claimAiTokenCheckoutReturn,
   type AiAllowance,
 } from '@/lib/aiTokens';
+import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
-import EventPrepAiSimulator, { type EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
+import type { EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
 import AiStudioTabList, {
   aiStudioPanelId,
   type AiStudioId,
@@ -74,6 +74,14 @@ const LandingRoomPlanAiStudio = dynamic(
   {
     ssr: false,
     loading: () => <StudioPaneFallback label="Chargement du studio plan de salle…" />,
+  },
+);
+
+const EventPrepAiSimulator = dynamic(
+  () => import('@/components/EventPrepAiSimulator'),
+  {
+    ssr: false,
+    loading: () => <StudioPaneFallback label="Chargement du simulateur budget…" />,
   },
 );
 
@@ -162,6 +170,7 @@ export default function LandingAiSimulationShowcase() {
   const [selectedScenarioId, setSelectedScenarioId] = useState('mariage-kin');
   const [liveDefaults, setLiveDefaults] = useState<EventPrepAiDefaults | undefined>();
   const [preferDefaults, setPreferDefaults] = useState(false);
+  const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'canceled' | null>(null);
 
   const visibleScenarios = useMemo(() => {
     const filtered = SCENARIOS.filter((item) => marketplaceCities.includes(item.city as 'Kinshasa' | 'Lubumbashi'));
@@ -179,28 +188,14 @@ export default function LandingAiSimulationShowcase() {
 
   useEffect(() => {
     setStudio(readLandingStudio());
+    if (typeof window !== 'undefined' && window.location.hash === '#simulateur-ia') {
+      revealAndScrollToSection('simulateur-ia');
+    }
   }, []);
 
   useEffect(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const aiStatus = params.get('ai_tokens_status') || params.get('ai_tokens');
-        const orderId = params.get('orderId');
-        if (aiStatus === 'success' || aiStatus === 'paid') {
-          const added = parseInt(params.get('tokens') || String(AI_TOKEN_PACK_SIZE), 10) || AI_TOKEN_PACK_SIZE;
-          addPurchasedAiTokens(added, orderId);
-          const url = new URL(window.location.href);
-          url.searchParams.delete('ai_tokens_status');
-          url.searchParams.delete('ai_tokens');
-          url.searchParams.delete('tokens');
-          url.searchParams.delete('orderId');
-          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
-        }
-      }
-    } catch {
-      // safe fallback
-    }
+    const claim = claimAiTokenCheckoutReturn();
+    if (claim === 'success' || claim === 'canceled') setCheckoutNotice(claim);
     setAllowance(getAiSimulationAllowance());
     void syncDeviceAiTokensWithBackend(api).then((synced) => {
       if (synced) setAllowance(synced);
@@ -221,12 +216,23 @@ export default function LandingAiSimulationShowcase() {
     <section
       ref={revealRef}
       id="simulateur-ia"
-      className="em-reveal em-landing-defer py-8 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
+      className="em-reveal em-landing-defer scroll-mt-24 py-8 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
     >
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] h-[260px] sm:w-[480px] sm:h-[480px] bg-primary/10 rounded-full blur-xl sm:blur-2xl pointer-events-none -z-10" />
 
       <div className="page-container relative z-10 space-y-10 sm:space-y-12">
         <div className="text-center max-w-3xl mx-auto space-y-2.5">
+          {checkoutNotice === 'success' ? (
+            <div className="text-left">
+              <Alert variant="success">Jetons IA crédités. Vous pouvez relancer une simulation.</Alert>
+            </div>
+          ) : null}
+          {checkoutNotice === 'canceled' ? (
+            <div className="text-left">
+              <Alert variant="warning">Paiement annulé — aucun jeton n’a été débité.</Alert>
+            </div>
+          ) : null}
+
           {isAiSimulationThresholdReached(allowance) ? (
             <div className="max-w-xl mx-auto text-left">
               <AiSimulationCounter
@@ -247,9 +253,11 @@ export default function LandingAiSimulationShowcase() {
             </span>
           </h2>
 
-          <p className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-foreground tabular-nums">
-            Taux actuel : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
-          </p>
+          {studio === 'budget' ? (
+            <p className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-foreground tabular-nums">
+              Taux actuel : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
+            </p>
+          ) : null}
 
           <p className="text-sm sm:text-base text-muted leading-relaxed">
             Un même portefeuille de jetons. Packs catalogue, carte 9:16, ou plan 2D / 3D à partir d’un brief ou d’une photo.{' '}
@@ -307,11 +315,11 @@ export default function LandingAiSimulationShowcase() {
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <Wand2 className="w-3.5 h-3.5 text-festive-accent" />
+              <Wand2 className="w-3.5 h-3.5 text-festive-accent" aria-hidden />
               <span className="sm:hidden">En direct</span>
               <span className="hidden sm:inline">Tester mon événement en direct</span>
               {isAiSimulationThresholdReached(allowance) ? (
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-bold tabular-nums">
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-primary-solid font-bold tabular-nums">
                   {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} budget IA
                 </span>
               ) : null}
@@ -328,12 +336,12 @@ export default function LandingAiSimulationShowcase() {
           className="space-y-6"
         >
         {viewMode === 'presets' && (
-          <div className="bg-surface/90 dark:bg-surface border border-primary/25 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/5 space-y-6 max-w-5xl mx-auto animate-fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border/80">
-              <p className="hidden sm:block text-xs font-bold text-foreground">
-                Choisissez un projet type, puis générez de vrais packs catalogue.
+          <div className="bg-surface border border-border rounded-[var(--radius-card)] max-w-5xl mx-auto overflow-hidden animate-fade-in">
+            <div className="p-3 sm:p-4 border-b border-border space-y-2">
+              <p className="text-xs font-semibold text-foreground">
+                Choisissez un exemple, puis générez de vrais packs catalogue.
               </p>
-              <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap -mx-1 px-1" role="group" aria-label="Projets types">
+              <div className="flex gap-2 overflow-x-auto pb-0.5 sm:flex-wrap" role="group" aria-label="Projets types">
                 {visibleScenarios.map((scenario) => {
                   const isSelected = scenario.id === selectedScenarioId;
                   return (
@@ -345,7 +353,7 @@ export default function LandingAiSimulationShowcase() {
                       className={cn(
                         'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                         isSelected
-                          ? 'bg-primary-solid text-primary-foreground shadow-xs shadow-primary/30 ring-2 ring-primary/20'
+                          ? 'bg-primary-solid text-primary-foreground shadow-xs'
                           : 'bg-surface-muted border border-border text-muted hover:text-foreground hover:bg-surface',
                       )}
                     >
@@ -356,125 +364,111 @@ export default function LandingAiSimulationShowcase() {
               </div>
             </div>
 
-            <div className="relative rounded-[var(--radius-card)] overflow-hidden border border-border shadow-sm">
-              <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-stage">
-                <LandingMedia
-                  src={activeScenario.imageUrl}
-                  alt={activeScenario.name}
-                  sizes="(max-width: 768px) 100vw, 64rem"
-                  className="object-center"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
-                <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
-                  <div>
-                    <span className="hidden sm:inline-block text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground mb-1">
-                      Projet type
-                    </span>
-                    <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
-                  </div>
-                  <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-[var(--radius-button)] border border-festive-accent/30 backdrop-blur-sm self-start sm:self-auto flex items-baseline gap-1.5">
-                    <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
-                    <span className="text-xs text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3.5 sm:p-4 text-xs">
-                <div className="space-y-0.5">
-                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <Heart className="w-3.5 h-3.5 text-primary" />
-                    <span className="sm:hidden">Type</span>
-                    <span className="hidden sm:inline">Type d’événement</span>
-                  </span>
-                  <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
-                </div>
-                <div className="space-y-0.5">
-                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <MapPin className="w-3.5 h-3.5 text-primary" />
-                    <span className="sm:hidden">Ville</span>
-                    <span className="hidden sm:inline">Ville & Commune</span>
-                  </span>
-                  <p className="font-bold text-foreground truncate">
-                    {activeScenario.commune
-                      ? `${activeScenario.city} (${activeScenario.commune})`
-                      : activeScenario.city}
-                  </p>
-                </div>
-                <div className="space-y-0.5">
-                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <Users className="w-3.5 h-3.5 text-primary" />
-                    <span className="sm:hidden">Invités</span>
-                    <span className="hidden sm:inline">Nombre d’invités</span>
-                  </span>
-                  <p className="font-bold text-foreground">{activeScenario.guests}</p>
-                </div>
-                <div className="space-y-0.5">
-                  <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                    <DollarSign className="w-3.5 h-3.5 text-primary" />
-                    <span className="sm:hidden">Budget</span>
-                    <span className="hidden sm:inline">Budget alloué ($ / FC)</span>
-                  </span>
-                  <p className="font-bold text-primary flex items-baseline gap-1">
-                    <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
-                    <span className="text-xs font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
-                  </p>
-                </div>
+            <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-stage">
+              <LandingMedia
+                src={activeScenario.imageUrl}
+                alt={activeScenario.name}
+                sizes="(max-width: 768px) 100vw, 64rem"
+                className="object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+              <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
+                <h3 className="text-base sm:text-lg font-bold drop-shadow-sm">{activeScenario.name}</h3>
+                <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-[var(--radius-button)] border border-festive-accent/30 self-start sm:self-auto flex items-baseline gap-1.5">
+                  <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
+                  <span className="text-xs text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
+                </span>
               </div>
             </div>
 
-            <p className="hidden sm:block text-xs text-muted leading-relaxed bg-surface-muted/60 border border-border rounded-[var(--radius-card)] p-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 sm:p-4 text-xs border-t border-border">
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                  <Heart className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  <span className="sm:hidden">Type</span>
+                  <span className="hidden sm:inline">Type d’événement</span>
+                </span>
+                <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  <span className="sm:hidden">Ville</span>
+                  <span className="hidden sm:inline">Ville & Commune</span>
+                </span>
+                <p className="font-bold text-foreground truncate">
+                  {activeScenario.commune
+                    ? `${activeScenario.city} (${activeScenario.commune})`
+                    : activeScenario.city}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                  <Users className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  <span className="sm:hidden">Invités</span>
+                  <span className="hidden sm:inline">Nombre d’invités</span>
+                </span>
+                <p className="font-bold text-foreground">{activeScenario.guests}</p>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                  <DollarSign className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  <span className="sm:hidden">Budget</span>
+                  <span className="hidden sm:inline">Budget alloué ($ / FC)</span>
+                </span>
+                <p className="font-bold text-primary-solid flex items-baseline gap-1">
+                  <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
+                  <span className="text-xs font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted leading-relaxed px-3.5 sm:px-4 pb-1">
               {activeScenario.prompt}
             </p>
+            <p className="text-xs text-muted px-3.5 sm:px-4 pb-3 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-primary-solid shrink-0 mt-0.5" aria-hidden />
+              <span>Aucun jeton n’est débité tant que vous n’avez pas cliqué sur Générer.</span>
+            </p>
 
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/80">
-              <div className="hidden sm:flex items-center gap-2 text-xs text-muted">
-                <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-                <span>Aucun jeton n’est débité tant que vous n’avez pas cliqué sur Générer.</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                <Button
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  className="shadow-sm shadow-primary/30 sm:w-auto"
-                  aria-label="Préremplir et simuler ce projet"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                  onClick={() => openLiveWithScenario(activeScenario)}
-                >
-                  <span className="sm:hidden">Simuler</span>
-                  <span className="hidden sm:inline">Préremplir et simuler ce projet</span>
-                </Button>
-                <Button
-                  href={STUDIO_FULL_PAGE.budget.href}
-                  variant="secondary"
-                  size="md"
-                  className="flex-1 sm:flex-none"
-                  aria-label="Ouvrir le simulateur budget complet"
-                >
-                  <span className="sm:hidden">Simulateur</span>
-                  <span className="hidden sm:inline">Ouvrir le simulateur complet</span>
-                </Button>
-              </div>
+            <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border">
+              <Button
+                variant="primary"
+                size="md"
+                fullWidth
+                className="sm:w-auto"
+                aria-label="Préremplir et simuler ce projet"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                onClick={() => openLiveWithScenario(activeScenario)}
+              >
+                <span className="sm:hidden">Simuler</span>
+                <span className="hidden sm:inline">Préremplir et simuler ce projet</span>
+              </Button>
+              <Button
+                href={STUDIO_FULL_PAGE.budget.href}
+                variant="secondary"
+                size="md"
+                className="flex-1 sm:flex-none"
+                aria-label="Ouvrir le simulateur budget complet"
+              >
+                <span className="sm:hidden">Page budget</span>
+                <span className="hidden sm:inline">Ouvrir le simulateur complet</span>
+              </Button>
             </div>
           </div>
         )}
 
-        <div
-          className={cn(
-            'bg-surface/90 dark:bg-surface border-2 border-primary/40 rounded-[var(--radius-card)] p-5 sm:p-8 shadow-xl shadow-primary/10 space-y-4 max-w-5xl mx-auto',
-            viewMode === 'live' ? 'animate-fade-in' : 'hidden',
-          )}
-          hidden={viewMode !== 'live'}
-          aria-hidden={viewMode !== 'live'}
-        >
-          <EventPrepAiSimulator
-            embedded
-            defaultOpen
-            preferDefaults={preferDefaults}
-            defaults={liveDefaults}
-            onAllowanceChange={setAllowance}
-          />
-        </div>
+        {viewMode === 'live' ? (
+          <div className="max-w-5xl mx-auto animate-fade-in">
+            <EventPrepAiSimulator
+              embedded
+              defaultOpen
+              preferDefaults={preferDefaults}
+              defaults={liveDefaults}
+              onAllowanceChange={setAllowance}
+            />
+          </div>
+        ) : null}
         </div>
         ) : null}
 

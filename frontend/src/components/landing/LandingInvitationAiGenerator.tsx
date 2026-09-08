@@ -641,7 +641,7 @@ export default function LandingInvitationAiGenerator({
               <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
               {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
             </span>
-            <span className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold">
               Ouvrir
               <ChevronDown className="w-4 h-4" aria-hidden />
             </span>
@@ -1020,7 +1020,7 @@ export default function LandingInvitationAiGenerator({
                       className={cn(
                         'flex-1 min-h-11 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
                         historySubTab === 'generations'
-                          ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                          ? 'bg-primary-solid text-primary-foreground font-bold shadow-2xs'
                           : 'text-muted hover:text-foreground',
                       )}
                     >
@@ -1032,7 +1032,7 @@ export default function LandingInvitationAiGenerator({
                       className={cn(
                         'flex-1 min-h-11 py-1 px-2.5 rounded-md text-xs transition cursor-pointer',
                         historySubTab === 'actions'
-                          ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                          ? 'bg-primary-solid text-primary-foreground font-bold shadow-2xs'
                           : 'text-muted hover:text-foreground',
                       )}
                     >
@@ -1148,7 +1148,7 @@ export default function LandingInvitationAiGenerator({
                   className={cn(
                     'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'card'
-                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      ? 'bg-primary-solid text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
                   )}
                 >
@@ -1163,7 +1163,7 @@ export default function LandingInvitationAiGenerator({
                   className={cn(
                     'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'artwork'
-                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      ? 'bg-primary-solid text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
                   )}
                 >
@@ -1178,7 +1178,7 @@ export default function LandingInvitationAiGenerator({
                   className={cn(
                     'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'details'
-                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      ? 'bg-primary-solid text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
                   )}
                 >
@@ -1197,7 +1197,7 @@ export default function LandingInvitationAiGenerator({
                       onClick={() => setCoverFitMode('cover')}
                       className={cn(
                         'min-h-11 px-3 rounded text-xs font-semibold transition cursor-pointer',
-                        coverFitMode === 'cover' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
+                        coverFitMode === 'cover' ? 'bg-primary-solid text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
                       )}
                     >
                       Remplir le cadre
@@ -1207,7 +1207,7 @@ export default function LandingInvitationAiGenerator({
                       onClick={() => setCoverFitMode('contain')}
                       className={cn(
                         'min-h-11 px-3 rounded text-xs font-semibold transition cursor-pointer',
-                        coverFitMode === 'contain' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
+                        coverFitMode === 'contain' ? 'bg-primary-solid text-primary-foreground shadow-2xs' : 'text-muted hover:text-foreground',
                       )}
                       title="Affiche toute l’image, sans découpe"
                     >
@@ -1263,7 +1263,7 @@ export default function LandingInvitationAiGenerator({
                   {palette && palette.length > 0 && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                        <span className="text-xs font-bold text-foreground">
                           Couleurs de la carte
                         </span>
                         <span className="text-xs text-muted">Cliquez pour copier</span>
@@ -1303,7 +1303,7 @@ export default function LandingInvitationAiGenerator({
 
                   {elements.length > 0 && (
                     <div className="space-y-1.5 pt-2 border-t border-border/60">
-                      <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                      <span className="text-xs font-bold text-foreground">
                         Textes de la carte ({elements.length})
                       </span>
                       <ul className="space-y-1 max-h-32 overflow-y-auto overscroll-contain pr-1">
@@ -1435,7 +1435,7 @@ export default function LandingInvitationAiGenerator({
                 onClick={() => setPreviewTab('card')}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer',
-                  previewTab === 'card' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                  previewTab === 'card' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                 )}
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -1446,7 +1446,7 @@ export default function LandingInvitationAiGenerator({
                 onClick={() => setPreviewTab('artwork')}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition cursor-pointer',
-                  previewTab === 'artwork' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                  previewTab === 'artwork' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                 )}
               >
                 <Sparkles className="w-3.5 h-3.5" />

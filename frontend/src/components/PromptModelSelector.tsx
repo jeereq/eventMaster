@@ -57,19 +57,19 @@ export default function PromptModelSelector({
   const getCategoryIcon = (catId: PromptCategory) => {
     switch (catId) {
       case 'coutumier':
-        return <Crown className="w-3.5 h-3.5" />;
+        return <Crown className="w-3.5 h-3.5" aria-hidden />;
       case 'clone':
-        return <Copy className="w-3.5 h-3.5" />;
+        return <Copy className="w-3.5 h-3.5" aria-hidden />;
       case 'wedding':
-        return <Heart className="w-3.5 h-3.5" />;
+        return <Heart className="w-3.5 h-3.5" aria-hidden />;
       case 'gala':
-        return <Building2 className="w-3.5 h-3.5" />;
+        return <Building2 className="w-3.5 h-3.5" aria-hidden />;
       case 'birthday':
-        return <PartyPopper className="w-3.5 h-3.5" />;
+        return <PartyPopper className="w-3.5 h-3.5" aria-hidden />;
       case 'rdc-langues':
-        return <Languages className="w-3.5 h-3.5" />;
+        return <Languages className="w-3.5 h-3.5" aria-hidden />;
       default:
-        return <Sparkles className="w-3.5 h-3.5" />;
+        return <Sparkles className="w-3.5 h-3.5" aria-hidden />;
     }
   };
 
@@ -77,10 +77,10 @@ export default function PromptModelSelector({
     <div className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-bold text-foreground inline-flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <Sparkles className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
           Exemples de brief
         </span>
-        <span className="text-[11px] text-muted hidden sm:inline">
+        <span className="text-xs text-muted hidden sm:inline">
           Un bouton préremplit le brief
         </span>
       </div>
@@ -96,7 +96,7 @@ export default function PromptModelSelector({
           className={cn(
             'px-2.5 py-1.5 rounded-full text-xs font-semibold transition touch-manipulation cursor-pointer border',
             activeCategory === 'all'
-              ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+              ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
               : 'bg-surface-muted/80 text-muted border-border hover:text-foreground hover:bg-surface',
           )}
         >
@@ -113,7 +113,7 @@ export default function PromptModelSelector({
             className={cn(
               'px-2.5 py-1.5 rounded-full text-xs font-semibold transition touch-manipulation cursor-pointer inline-flex items-center gap-1.5 border',
               activeCategory === cat.id
-                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                 : 'bg-surface-muted/80 text-muted border-border hover:text-foreground hover:bg-surface',
             )}
           >
@@ -125,11 +125,11 @@ export default function PromptModelSelector({
       </div>
 
       {activeCategory === 'coutumier' && (
-        <div className="p-2.5 rounded-[var(--radius-card)] bg-amber-500/10 border border-amber-500/25 text-amber-950 dark:text-amber-100 text-xs flex items-start gap-2">
-          <Crown className="w-4 h-4 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5" />
+        <div className="p-2.5 rounded-[var(--radius-card)] bg-festive-accent-soft border border-festive-accent/30 text-foreground text-xs flex items-start gap-2">
+          <Crown className="w-4 h-4 text-festive-accent shrink-0 mt-0.5" aria-hidden />
           <div>
             <p className="font-bold">4 grandes tribus — mariages coutumiers</p>
-            <p className="hidden sm:block text-[11px] opacity-90 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Kongo (Bakongo), Luba (Baluba), Mongo et Lunda. Appuyez sur « Préremplir » puis ajustez date, lieu et noms.
             </p>
           </div>
@@ -138,11 +138,11 @@ export default function PromptModelSelector({
 
       {/* Conseil contextuel pour le mode copie / clonage */}
       {activeCategory === 'clone' && (
-        <div className="p-2.5 rounded-[var(--radius-card)] bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2 animate-fade-in">
-          <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="p-2.5 rounded-[var(--radius-card)] bg-festive-accent-soft border border-festive-accent/30 text-foreground text-xs flex items-start gap-2">
+          <Info className="w-4 h-4 text-festive-accent shrink-0 mt-0.5" aria-hidden />
           <div>
             <p className="font-bold">Pour cloner une carte :</p>
-            <p className="hidden sm:block text-[11px] opacity-90 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Déposez la photo de l’invitation dans la zone d’envoi à côté, sur ce même écran, puis choisissez un exemple.
             </p>
           </div>
@@ -151,11 +151,11 @@ export default function PromptModelSelector({
 
       {/* Conseil contextuel pour les 4 langues nationales de la RDC */}
       {activeCategory === 'rdc-langues' && (
-        <div className="p-2.5 rounded-[var(--radius-card)] bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-200 text-xs flex items-start gap-2 animate-fade-in">
-          <Languages className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+        <div className="p-2.5 rounded-[var(--radius-card)] bg-primary/10 border border-primary/25 text-foreground text-xs flex items-start gap-2">
+          <Languages className="w-4 h-4 text-primary-solid shrink-0 mt-0.5" aria-hidden />
           <div>
             <p className="font-bold">4 Langues nationales de la RDC :</p>
-            <p className="hidden sm:block text-[11px] opacity-90 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Lingala (Kinshasa & Fleuve), Kiswahili (Est & Grand Katanga), Kikongo (Kongo Central & Bandundu), Tshiluba (Grand Kasaï).
               Les titres, textes et formulations cérémoniales sont générés fidèlement dans la langue choisie.
             </p>
@@ -197,37 +197,28 @@ export default function PromptModelSelector({
                   </span>
                   <span
                     className={cn(
-                      'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
-                      model.isClone
-                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20'
-                        : model.category === 'coutumier'
-                          ? 'bg-amber-600/15 text-amber-800 dark:text-amber-200 border border-amber-600/25'
-                          : model.category === 'rdc-langues'
-                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
-                            : 'bg-primary/15 text-primary border border-primary/20',
+                      'text-xs font-bold px-2 py-0.5 rounded-full shrink-0 border',
+                      model.isClone || model.category === 'coutumier'
+                        ? 'bg-festive-accent-soft text-festive-accent border-festive-accent/30'
+                        : 'bg-primary/10 text-primary-solid border-primary/20',
                     )}
                   >
                     {model.badge}
                   </span>
                 </div>
-                <p className="hidden sm:block text-[11px] text-muted leading-relaxed line-clamp-2">
+                <p className="text-xs text-muted leading-relaxed line-clamp-2">
                   {model.summary}
                 </p>
               </div>
 
-              <div className="pt-1 border-t border-border/60 flex items-center justify-between text-[11px] font-semibold">
-                <span className="hidden sm:inline text-muted/80 text-[10px] truncate max-w-[70%]">
+              <div className="pt-1 border-t border-border/60 flex items-center justify-between text-xs font-semibold">
+                <span className="hidden sm:inline text-muted truncate max-w-[70%]">
                   {model.prompt.slice(0, 45)}…
                 </span>
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1 transition-colors',
-                    justCopied ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-primary',
-                  )}
-                >
+                <span className="inline-flex items-center gap-1 text-primary-solid">
                   {justCopied ? (
                     <>
-                      <Check className="w-3.5 h-3.5" />
+                      <Check className="w-3.5 h-3.5" aria-hidden />
                       <span>Prérempli</span>
                     </>
                   ) : (

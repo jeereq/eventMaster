@@ -47,7 +47,7 @@ export default function Home() {
           <LandingVitrineSection />
         </LandingLazyMount>
         <Landing3DTeaserBand />
-        <LandingLazyMount label="Chargement du simulateur IA…">
+        <LandingLazyMount label="Chargement du simulateur IA…" eagerHash="simulateur-ia">
           <LandingAiSimulationShowcase />
         </LandingLazyMount>
         <FaqSection

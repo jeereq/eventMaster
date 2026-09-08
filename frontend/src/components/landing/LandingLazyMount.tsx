@@ -23,15 +23,33 @@ export function LandingSectionFallback({ label }: { label: string }) {
   );
 }
 
+function hashMatches(eagerHash?: string): boolean {
+  if (!eagerHash || typeof window === 'undefined') return false;
+  return window.location.hash.replace(/^#/, '') === eagerHash;
+}
+
 export default function LandingLazyMount({
   children,
   label,
+  eagerHash,
 }: {
   children: React.ReactNode;
   label: string;
+  /** Monte tout de suite si l’URL porte ce hash (ex. `/#simulateur-ia`). */
+  eagerHash?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (hashMatches(eagerHash)) setReady(true);
+    if (!eagerHash) return;
+    const onHash = () => {
+      if (hashMatches(eagerHash)) setReady(true);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [eagerHash]);
 
   useEffect(() => {
     const el = ref.current;

@@ -4,9 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Store, Rss, LayoutGrid, FileText, Sparkles } from 'lucide-react';
+import { Home, Store, LayoutGrid, FileText, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
+
+const SIMULATOR_HREF = '/#simulateur-ia';
+const SIMULATOR_SECTION_ID = 'simulateur-ia';
 
 export interface MobileNavItem {
   id: string;
@@ -33,16 +37,8 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
   {
     id: 'simulator',
     label: 'Simulateur',
-    shortLabel: 'Simul.',
-    href: '/#simulateur-ia',
+    href: SIMULATOR_HREF,
     icon: Sparkles,
-  },
-  {
-    id: 'publications',
-    label: 'Réalisations',
-    shortLabel: 'Réalis.',
-    href: '/activite',
-    icon: Rss,
   },
   {
     id: 'editor',
@@ -63,11 +59,11 @@ function isItemActive(itemHref: string, pathname: string, currentHash: string): 
   if (itemHref === '/') {
     return pathname === '/' && (!currentHash || currentHash === '#' || currentHash === '');
   }
-  if (itemHref === '/#simulateur-ia') {
+  if (itemHref === SIMULATOR_HREF) {
     return (
       pathname === '/simulateur' ||
       pathname.startsWith('/simulateur/') ||
-      (pathname === '/' && currentHash === '#simulateur-ia')
+      (pathname === '/' && currentHash === `#${SIMULATOR_SECTION_ID}`)
     );
   }
   if (itemHref === '/plans-3d') {
@@ -75,9 +71,6 @@ function isItemActive(itemHref: string, pathname: string, currentHash: string): 
   }
   if (itemHref === '/marketplace') {
     return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
-  }
-  if (itemHref === '/activite') {
-    return pathname === '/activite' || pathname.startsWith('/activite/');
   }
   if (itemHref === '/modeles') {
     return pathname === '/modeles' || pathname.startsWith('/modeles/');
@@ -120,15 +113,8 @@ export default function SiteMobileBottomBar({
     }
     if (item.id === 'simulator' && pathname === '/') {
       e.preventDefault();
-      const el = document.getElementById('simulateur-ia');
-      if (el) {
-        el.scrollIntoView({
-          behavior: motionSafeScrollBehavior(),
-          block: 'start',
-        });
-        window.history.replaceState(null, '', '/#simulateur-ia');
-        setCurrentHash('#simulateur-ia');
-      }
+      revealAndScrollToSection(SIMULATOR_SECTION_ID);
+      setCurrentHash(`#${SIMULATOR_SECTION_ID}`);
     }
   };
 
@@ -140,35 +126,30 @@ export default function SiteMobileBottomBar({
         className,
       )}
     >
-      <div className="grid grid-cols-6 gap-0 items-center max-w-xl mx-auto">
+      <div className="grid grid-cols-5 gap-0 items-center max-w-xl mx-auto">
         {SITE_MOBILE_NAV_ITEMS.map((item) => {
           const active = isItemActive(item.href, pathname, currentHash);
           const Icon = item.icon;
-
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              onClick={(e) => handleClick(e, item)}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 min-h-[48px] py-1 px-0.5 rounded-xl transition-all select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                active
-                  ? 'text-primary font-bold'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
+          const isHashHref = item.href.startsWith('/#');
+          const classNameItem = cn(
+            'flex flex-col items-center justify-center gap-0.5 min-h-[48px] py-1 px-0.5 rounded-xl transition-all select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+            active
+              ? 'text-primary-solid font-bold'
+              : 'text-muted hover:text-foreground',
+          );
+          const inner = (
+            <>
               <div
                 className={cn(
                   'p-1 sm:p-1.5 rounded-lg transition-all flex items-center justify-center relative',
                   active
-                    ? 'bg-primary/15 text-primary scale-105'
+                    ? 'bg-primary/15 text-primary-solid scale-105'
                     : 'bg-transparent text-muted',
                 )}
               >
-                <Icon className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" />
+                <Icon className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" aria-hidden />
                 {active && (
-                  <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary" />
+                  <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary-solid" />
                 )}
               </div>
               <span className="text-xs tracking-tight leading-tight truncate max-w-full text-center">
@@ -181,6 +162,32 @@ export default function SiteMobileBottomBar({
                   item.label
                 )}
               </span>
+            </>
+          );
+
+          if (isHashHref) {
+            return (
+              <a
+                key={item.id}
+                href={item.href}
+                onClick={(e) => handleClick(e, item)}
+                aria-current={active ? 'page' : undefined}
+                className={classNameItem}
+              >
+                {inner}
+              </a>
+            );
+          }
+
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={(e) => handleClick(e, item)}
+              aria-current={active ? 'page' : undefined}
+              className={classNameItem}
+            >
+              {inner}
             </Link>
           );
         })}

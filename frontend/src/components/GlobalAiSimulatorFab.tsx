@@ -22,7 +22,7 @@ import {
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
-import { resolveAiFabPlacement, scrollToPageSection } from '@/lib/aiFabPlacement';
+import { resolveAiFabPlacement, revealAndScrollToSection } from '@/lib/aiFabPlacement';
 
 const HIDDEN_PREFIXES = ['/rsvp/', '/invite/', '/print'];
 const LISTING_DETAIL = /^\/marketplace\/(salles|prestataires|evenements)\/[^/]+/;
@@ -83,11 +83,8 @@ export default function GlobalAiSimulatorFab() {
       return;
     }
     if (placement.click === 'scroll' && placement.scrollId) {
-      if (scrollToPageSection(placement.scrollId)) return;
-      if (placement.href) {
-        router.push(placement.href);
-        return;
-      }
+      revealAndScrollToSection(placement.scrollId);
+      return;
     }
     if (placement.click === 'href' && placement.href) {
       router.push(placement.href);

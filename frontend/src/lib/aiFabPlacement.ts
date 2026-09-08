@@ -4,6 +4,7 @@ import {
   AI_SIMULATION_TOKEN_COST,
   aiTokenCostLegend,
 } from '@/lib/aiTokens';
+import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 
 export const PUBLIC_SIMULATOR_PATH = '/simulateur';
 
@@ -246,6 +247,29 @@ export function resolveAiFabPlacement(input: {
 export function scrollToPageSection(id: string): boolean {
   const el = document.getElementById(id);
   if (!el) return false;
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: 'start' });
   return true;
+}
+
+const REVEAL_SCROLL_FRAMES = 24;
+
+/** Pose le hash, réveille un montage paresseux, puis scrolle dès que la cible existe. */
+export function revealAndScrollToSection(id: string): void {
+  if (typeof window === 'undefined') return;
+  const hash = `#${id}`;
+  if (window.location.hash !== hash) {
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}${hash}`,
+    );
+  }
+  window.dispatchEvent(new HashChangeEvent('hashchange'));
+  let frames = 0;
+  const tick = () => {
+    if (scrollToPageSection(id) || frames >= REVEAL_SCROLL_FRAMES) return;
+    frames += 1;
+    requestAnimationFrame(tick);
+  };
+  tick();
 }

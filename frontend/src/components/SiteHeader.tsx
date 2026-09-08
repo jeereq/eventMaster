@@ -14,7 +14,7 @@ import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import PWAInstallCta from '@/components/PWAInstallCta';
 import usePwaInstall from '@/hooks/usePwaInstall';
-import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
+import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 
 export type SiteHeaderLink = {
   href: string;
@@ -28,7 +28,7 @@ interface SiteHeaderProps {
 
 const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/marketplace', label: 'Marketplace' },
-  { href: '/simulateur', label: 'Simulateur' },
+  { href: '/#simulateur-ia', label: 'Simulateur' },
   { href: '/activite', label: 'Réalisations' },
   { href: '/plans-3d', label: 'Plans 2D/3D' },
   { href: '/modeles', label: 'Modèles' },
@@ -118,8 +118,12 @@ export default function SiteHeader({
     if (href === '/activite') {
       return pathname === '/activite' || pathname.startsWith('/activite/');
     }
-    if (href === '/simulateur') {
-      return pathname === '/simulateur' || pathname.startsWith('/simulateur/');
+    if (href === '/#simulateur-ia') {
+      return (
+        pathname === '/simulateur' ||
+        pathname.startsWith('/simulateur/') ||
+        (pathname === '/' && currentHash === '#simulateur-ia')
+      );
     }
     if (href === '/contact') {
       return pathname === '/contact';
@@ -135,15 +139,8 @@ export default function SiteHeader({
     if (href.startsWith('/#') && pathname === '/') {
       e.preventDefault();
       const targetId = href.replace('/#', '');
-      const elem = document.getElementById(targetId);
-      if (elem) {
-        elem.scrollIntoView({
-          behavior: motionSafeScrollBehavior(),
-          block: 'start',
-        });
-        window.history.replaceState(null, '', href);
-        setCurrentHash(`#${targetId}`);
-      }
+      revealAndScrollToSection(targetId);
+      setCurrentHash(`#${targetId}`);
     }
     setMobileMenuOpen(false);
   };
