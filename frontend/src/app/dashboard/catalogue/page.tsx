@@ -80,6 +80,7 @@ import EventPlanMethodPicker from '@/components/EventPlanMethodPicker';
 import EventPlanPacks from '@/components/EventPlanPacks';
 import EventSavedPacks from '@/components/EventSavedPacks';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
+import DashboardAiStudios, { type DashboardAiStudioId } from '@/components/DashboardAiStudios';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
 
@@ -97,6 +98,11 @@ function parseHubTab(params: URLSearchParams): HubTab {
 function parsePlanPrepView(params: URLSearchParams): PlanPrepView {
   const raw = params.get('planView');
   return raw === 'ai' || raw === 'final' ? raw : 'manual';
+}
+
+function parseAiStudio(params: URLSearchParams): DashboardAiStudioId {
+  const raw = params.get('studio');
+  return raw === 'invite' || raw === 'room' ? raw : 'budget';
 }
 
 const emptyFilters: HubFilters = {
@@ -154,10 +160,13 @@ function ClientMarketplaceInner() {
 
   const urlTab = parseHubTab(searchParams);
   const urlPlanView = parsePlanPrepView(searchParams);
+  const urlAiStudio = parseAiStudio(searchParams);
   const [tab, setTabState] = useState<HubTab>(urlTab);
   const [planView, setPlanViewState] = useState<PlanPrepView>(urlPlanView);
+  const [aiStudio, setAiStudioState] = useState<DashboardAiStudioId>(urlAiStudio);
   const pendingTab = useRef<HubTab | null>(null);
   const pendingPlanView = useRef<PlanPrepView | null>(null);
+  const pendingAiStudio = useRef<DashboardAiStudioId | null>(null);
 
   useEffect(() => {
     if (pendingTab.current) {
@@ -175,6 +184,14 @@ function ClientMarketplaceInner() {
     setPlanViewState(urlPlanView);
   }, [urlPlanView]);
 
+  useEffect(() => {
+    if (pendingAiStudio.current) {
+      if (urlAiStudio === pendingAiStudio.current) pendingAiStudio.current = null;
+      return;
+    }
+    setAiStudioState(urlAiStudio);
+  }, [urlAiStudio]);
+
   const setTab = (next: HubTab) => {
     pendingTab.current = next;
     setTabState(next);
@@ -184,7 +201,10 @@ function ClientMarketplaceInner() {
     params.delete('tab');
     if (next === 'explore') params.delete('hub');
     else params.set('hub', next);
-    if (next !== 'plan') params.delete('planView');
+    if (next !== 'plan') {
+      params.delete('planView');
+      params.delete('studio');
+    }
     const qs = params.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;
     router.replace(href, { scroll: false });
@@ -197,8 +217,28 @@ function ClientMarketplaceInner() {
       typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
     );
     params.set('hub', 'plan');
-    if (next === 'manual') params.delete('planView');
-    else params.set('planView', next);
+    if (next === 'manual') {
+      params.delete('planView');
+      params.delete('studio');
+    } else {
+      params.set('planView', next);
+      if (next !== 'ai') params.delete('studio');
+    }
+    const qs = params.toString();
+    const href = qs ? `${pathname}?${qs}` : pathname;
+    router.replace(href, { scroll: false });
+  };
+
+  const setAiStudio = (next: DashboardAiStudioId) => {
+    pendingAiStudio.current = next;
+    setAiStudioState(next);
+    const params = new URLSearchParams(
+      typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
+    );
+    params.set('hub', 'plan');
+    params.set('planView', 'ai');
+    if (next === 'budget') params.delete('studio');
+    else params.set('studio', next);
     const qs = params.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;
     router.replace(href, { scroll: false });
@@ -779,31 +819,37 @@ function ClientMarketplaceInner() {
 
           <div className="space-y-5">
             {planView === 'ai' ? (
-              <EventPrepAiSimulator
-                defaultOpen
-                openPurchaseOnMount={searchParams.get('buyTokens') === '1'}
-                defaults={{
-                  eventType: brief.eventType,
-                  city: brief.city,
-                  commune: brief.commune,
-                  guestCount: brief.guestCount,
-                  eventDate: brief.eventDate,
-                  budgetMaxFc: brief.budgetMaxFc,
-                  keepVenueSlug: aiPackages[0]?.venue?.slug || manualPackages[0]?.venue?.slug,
-                  keepServiceSlugs: [
-                    ...(aiPackages[0]?.services || []),
-                    ...(manualPackages[0]?.services || []),
-                  ].map((item) => item.slug),
-                }}
-                applyLabel="Retenir cette proposition"
-                onOpenListing={(target) => setListingPreview(target)}
-                onApply={(pack) => {
-                  setAiPackages(() => {
-                    const next = eventPlanAiToPackage(pack, brief.budgetMaxFc);
-                    return [next];
-                  });
-                  setPlanError('');
-                }}
+              <DashboardAiStudios
+                value={aiStudio}
+                onChange={setAiStudio}
+                budget={
+                  <EventPrepAiSimulator
+                    defaultOpen
+                    openPurchaseOnMount={searchParams.get('buyTokens') === '1'}
+                    defaults={{
+                      eventType: brief.eventType,
+                      city: brief.city,
+                      commune: brief.commune,
+                      guestCount: brief.guestCount,
+                      eventDate: brief.eventDate,
+                      budgetMaxFc: brief.budgetMaxFc,
+                      keepVenueSlug: aiPackages[0]?.venue?.slug || manualPackages[0]?.venue?.slug,
+                      keepServiceSlugs: [
+                        ...(aiPackages[0]?.services || []),
+                        ...(manualPackages[0]?.services || []),
+                      ].map((item) => item.slug),
+                    }}
+                    applyLabel="Retenir cette proposition"
+                    onOpenListing={(target) => setListingPreview(target)}
+                    onApply={(pack) => {
+                      setAiPackages(() => {
+                        const next = eventPlanAiToPackage(pack, brief.budgetMaxFc);
+                        return [next];
+                      });
+                      setPlanError('');
+                    }}
+                  />
+                }
               />
             ) : null}
 
@@ -900,7 +946,7 @@ function ClientMarketplaceInner() {
               </div>
             ) : null}
 
-            {workingPackages.length > 0 ? (
+            {workingPackages.length > 0 && (planView !== 'ai' || aiStudio === 'budget') ? (
               <div className="space-y-3 pt-2 animate-fade-in">
                 {planView === 'ai' ? (
                   <div className="flex items-center justify-between p-3.5 rounded-2xl bg-primary/10 border border-primary/25">
@@ -966,7 +1012,7 @@ function ClientMarketplaceInner() {
                   } : undefined}
                 />
               </div>
-            ) : !planning && (planView !== 'manual' || !planError) ? (
+            ) : !planning && (planView !== 'manual' || !planError) && (planView !== 'ai' || aiStudio === 'budget') ? (
               <EmptyState
                 icon={<Wallet className="w-5 h-5" />}
                 title={

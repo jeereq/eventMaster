@@ -9,12 +9,15 @@ import {
   MessageSquare,
   Ticket,
   ScanLine,
+  ArrowRight,
   type LucideIcon,
 } from 'lucide-react';
 import {
   type EventWorkflowState,
+  type EventWorkflowStepId,
   type EventWorkflowTab,
 } from '@/lib/eventWorkflow';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 interface EventWorkflowPanelProps {
@@ -41,8 +44,48 @@ const PROTOCOL_TABS: Array<{ id: EventWorkflowTab; label: string; icon: LucideIc
   { id: 'tasks', label: 'Tâches', icon: ClipboardList },
 ];
 
+const STEP_CTA: Record<EventWorkflowStepId, string> = {
+  event: 'Configurer l’événement',
+  prep: 'Ouvrir la préparation',
+  guests: 'Gérer les invités',
+  invitation: 'Ouvrir les invitations',
+  rsvp: 'Voir les réponses',
+  tablePlan: 'Ouvrir le plan de table',
+  protocol: 'Ouvrir l’accueil',
+  protocolTasks: 'Ouvrir les tâches',
+};
+
 const TAB_CHIP_CLASS =
   'inline-flex items-center gap-1.5 px-3 py-1.5 min-h-11 rounded-full text-xs font-semibold transition-colors border touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
+function focusWorkflowTab(id: EventWorkflowTab) {
+  document.getElementById(`workflow-tab-${id}`)?.focus();
+}
+
+function onTabListKeyDown(
+  event: React.KeyboardEvent,
+  tabs: Array<{ id: EventWorkflowTab }>,
+  selectedId: string,
+  onSelect: (id: EventWorkflowTab) => void,
+) {
+  const ids = tabs.map((tab) => tab.id);
+  const current = Math.max(0, ids.indexOf(selectedId as EventWorkflowTab));
+  let next = current;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    next = (current + 1) % ids.length;
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    next = (current - 1 + ids.length) % ids.length;
+  } else if (event.key === 'Home') {
+    next = 0;
+  } else if (event.key === 'End') {
+    next = ids.length - 1;
+  } else {
+    return;
+  }
+  event.preventDefault();
+  onSelect(ids[next]);
+  requestAnimationFrame(() => focusWorkflowTab(ids[next]));
+}
 
 function WorkflowTabChip({
   id,
@@ -60,8 +103,10 @@ function WorkflowTabChip({
   return (
     <button
       type="button"
+      id={`workflow-tab-${id}`}
       role="tab"
       aria-selected={selected}
+      tabIndex={selected ? 0 : -1}
       onClick={() => onSelect(id)}
       className={cn(
         TAB_CHIP_CLASS,
@@ -80,6 +125,7 @@ export default function EventWorkflowPanel({
   workflow,
   activeTab,
   onNavigateTab,
+  onAction,
   compact = false,
   protocolDesk = false,
 }: EventWorkflowPanelProps) {
@@ -88,6 +134,9 @@ export default function EventWorkflowPanel({
 
   const activeIndex = mainSteps.findIndex((s) => s.tab === activeTab);
   const activeStep = activeIndex >= 0 ? mainSteps[activeIndex] : null;
+  const currentStep = workflow.steps.find((s) => s.id === workflow.currentStepId) ?? activeStep;
+  const onCurrentTab = Boolean(currentStep?.tab && currentStep.tab === activeTab);
+  const allDone = workflow.completedCount >= workflow.totalCount && workflow.totalCount > 0;
 
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -100,6 +149,14 @@ export default function EventWorkflowPanel({
       behavior: reduceMotion ? 'auto' : 'smooth',
     });
   }, [activeTab]);
+
+  const handleNextAction = () => {
+    if (!currentStep) return;
+    if (currentStep.tab && currentStep.tab !== activeTab) {
+      onNavigateTab(currentStep.tab);
+    }
+    onAction?.(currentStep.id);
+  };
 
   return (
     <div className="space-y-3.5">
@@ -131,6 +188,38 @@ export default function EventWorkflowPanel({
           </span>
         </div>
       </div>
+
+      {!compact && currentStep ? (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-3">
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-sm font-semibold text-foreground">
+              {allDone ? 'Parcours prêt pour le jour J' : `À faire : ${currentStep.title}`}
+            </p>
+            <p className="text-xs text-muted leading-relaxed">
+              {allDone
+                ? 'Invitations, places et accueil sont en place. Le jour J, ouvrez Protocole pour scanner les QR.'
+                : currentStep.description}
+            </p>
+          </div>
+          {allDone ? (
+            currentStep.tab && currentStep.tab !== activeTab ? (
+              <Button type="button" size="sm" onClick={() => currentStep.tab && onNavigateTab(currentStep.tab)} rightIcon={<ArrowRight className="w-4 h-4" />}>
+                {STEP_CTA[currentStep.id]}
+              </Button>
+            ) : null
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant={onCurrentTab ? 'secondary' : 'primary'}
+              onClick={handleNextAction}
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              {onCurrentTab ? 'Continuer ici' : STEP_CTA[currentStep.id]}
+            </Button>
+          )}
+        </div>
+      ) : null}
 
       <nav
         aria-label="Parcours de l’événement"
@@ -206,7 +295,12 @@ export default function EventWorkflowPanel({
       </nav>
 
       {showSupport ? (
-        <div role="tablist" aria-label="Onglets complémentaires" className="flex flex-wrap gap-2 items-center pt-1">
+        <div
+          role="tablist"
+          aria-label="Onglets complémentaires"
+          className="flex flex-wrap gap-2 items-center pt-1"
+          onKeyDown={(event) => onTabListKeyDown(event, SUPPORT_TABS, activeTab, onNavigateTab)}
+        >
           {SUPPORT_TABS.map((tab) => (
             <WorkflowTabChip
               key={tab.id}
@@ -217,7 +311,12 @@ export default function EventWorkflowPanel({
           ))}
         </div>
       ) : protocolDesk ? (
-        <div role="tablist" aria-label="Desk protocole" className="flex flex-wrap gap-2 items-center pt-1">
+        <div
+          role="tablist"
+          aria-label="Desk protocole"
+          className="flex flex-wrap gap-2 items-center pt-1"
+          onKeyDown={(event) => onTabListKeyDown(event, PROTOCOL_TABS, activeTab, onNavigateTab)}
+        >
           {PROTOCOL_TABS.map((tab) => (
             <WorkflowTabChip
               key={tab.id}

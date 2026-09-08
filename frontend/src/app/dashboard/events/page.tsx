@@ -36,7 +36,7 @@ import {
  applyInvitationGuidelineVariables,
  formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -66,7 +66,6 @@ import {
 } from '@/lib/guestContact';
 import InvitationMessagePreview from '@/components/InvitationMessagePreview';
 import InvitationEditorModal, { type InvitationFormData } from '@/components/InvitationEditorModal';
-import { BarChart2, ArrowRight } from 'lucide-react';
 import { resolveWhatsAppInvitationBody, toWhatsAppTone } from '@/lib/whatsappTone';
 import {
  extractRsvpFieldsFromTemplateContent,
@@ -81,6 +80,17 @@ import {
  type RsvpField,
 } from '@/lib/rsvpFormFields';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
+
+const GUEST_FILTER_CONTROL =
+  'w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary';
+
+const GUEST_DATA_TABS = new Set(['guests', 'invitations', 'tablePlan', 'protocol']);
+
+type PendingDestructive =
+  | { type: 'event'; id: string }
+  | { type: 'guest'; id: string }
+  | { type: 'invitation'; id: string }
+  | { type: 'layout'; mode: 'replace' | 'update' | 'exists' };
 
 interface EventItem {
  id: string;
@@ -471,6 +481,8 @@ function EventsPageInner() {
  const [loading, setLoading] = useState(true);
  const [loadingEventDetail, setLoadingEventDetail] = useState(false);
  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+ const [pendingDestructive, setPendingDestructive] = useState<PendingDestructive | null>(null);
+ const [confirmBusy, setConfirmBusy] = useState(false);
  const [eventSearch, setEventSearch] = useState('');
  const [eventWhen, setEventWhen] = useState<'ALL' | 'upcoming' | 'past'>('ALL');
  const [eventVisibility, setEventVisibility] = useState<'all' | 'public' | 'private'>('all');
@@ -737,6 +749,12 @@ function EventsPageInner() {
 
  const handleWorkflowAction = useCallback((stepId: string) => {
  switch (stepId) {
+ case 'event':
+ if (selectedEvent) {
+ setEventFormTarget(selectedEvent);
+ setShowEventModal(true);
+ }
+ break;
  case 'guests':
  if (guests.length === 0) setShowGuestModal(true);
  break;
@@ -754,7 +772,7 @@ function EventsPageInner() {
  default:
  break;
  }
- }, [guests.length, invitations.length]);
+ }, [guests.length, invitations.length, selectedEvent]);
 
  useEffect(() => {
  if (guests.length === 0) return;
@@ -1022,7 +1040,6 @@ Merci de confirmer votre présence :
  };
 
  const handleDeleteEvent = async (id: string) => {
- if (!confirm('Êtes-vous sûr de vouloir supprimer cet événement et l\'ensemble de ses invités ?')) return;
  try {
  await api.delete(`/events/${id}`);
  setEvents(events.filter(e => e.id !== id));
@@ -1033,6 +1050,10 @@ Merci de confirmer votre présence :
  } catch (err: any) {
  setError(err.message || 'Erreur de suppression');
  }
+ };
+
+ const requestDeleteEvent = (id: string) => {
+ setPendingDestructive({ type: 'event', id });
  };
 
  const handleSaveTablePlan = async (newTablePlan: any) => {
@@ -1069,17 +1090,8 @@ Merci de confirmer votre présence :
  }
  };
 
- const handleImportRoomLayout = async (replaceExisting: boolean, preserveAssignments = true) => {
+ const runImportRoomLayout = async (replaceExisting: boolean, preserveAssignments = true) => {
  if (!selectedEvent) return;
- if (replaceExisting && !preserveAssignments) {
- if (!confirm('Remplacer le plan par le modèle de la salle ? Les assignations de sièges seront perdues.')) {
- return;
- }
- } else if (replaceExisting && preserveAssignments) {
- if (!confirm('Mettre à jour le plan depuis la salle en conservant les places déjà assignées ?')) {
- return;
- }
- }
  setImportingLayout(true);
  setError('');
  try {
@@ -1096,19 +1108,26 @@ Merci de confirmer votre présence :
  );
  } catch (err: any) {
  if (err.message?.includes('existe déjà') || err.hasExistingPlan) {
- const keep = confirm(
- 'Un plan existe déjà.\n\nOK = mettre à jour en gardant les places\nAnnuler = ne rien faire\n\n(Pour tout remplacer sans garder les places, réessayez puis refusez la conservation.)',
- );
- if (keep) {
- setImportingLayout(false);
- return handleImportRoomLayout(true, true);
- }
+ setPendingDestructive({ type: 'layout', mode: 'exists' });
  } else {
  setError(err.message || 'Impossible d\'importer le plan de la salle.');
  }
  } finally {
  setImportingLayout(false);
  }
+ };
+
+ const handleImportRoomLayout = async (replaceExisting: boolean, preserveAssignments = true) => {
+ if (!selectedEvent) return;
+ if (replaceExisting && !preserveAssignments) {
+ setPendingDestructive({ type: 'layout', mode: 'replace' });
+ return;
+ }
+ if (replaceExisting && preserveAssignments) {
+ setPendingDestructive({ type: 'layout', mode: 'update' });
+ return;
+ }
+ await runImportRoomLayout(replaceExisting, preserveAssignments);
  };
 
  const selectedRoomHasLayout = Boolean(
@@ -1315,7 +1334,7 @@ Merci de confirmer votre présence :
 
  // Delete Guest
  const handleDeleteGuest = async (guestId: string) => {
- if (!selectedEvent || !confirm('Supprimer cet invité ?')) return;
+ if (!selectedEvent) return;
  try {
  await api.delete(`/events/${selectedEvent.id}/guests/${guestId}`);
  setGuests(guests.filter(g => g.id !== guestId));
@@ -1325,10 +1344,14 @@ Merci de confirmer votre présence :
  }
  };
 
+ const requestDeleteGuest = (guestId: string) => {
+ setPendingDestructive({ type: 'guest', id: guestId });
+ };
+
  // Export Guests to CSV
  const handleExportGuests = () => {
  if (guests.length === 0) {
- alert("Aucun invité à exporter.");
+ setError('Aucun invité à exporter.');
  return;
  }
  
@@ -1653,7 +1676,7 @@ Merci de confirmer votre présence :
 
  // Delete Invitation
  const handleDeleteInvitation = async (inviteId: string) => {
- if (!selectedEvent || !confirm('Supprimer cette invitation ?')) return;
+ if (!selectedEvent) return;
  try {
  await api.delete(`/events/${selectedEvent.id}/invitations/${inviteId}`);
  setInvitations(invitations.filter(i => i.id !== inviteId));
@@ -1661,6 +1684,10 @@ Merci de confirmer votre présence :
  } catch (err: any) {
  setError('Erreur de suppression.');
  }
+ };
+
+ const requestDeleteInvitation = (inviteId: string) => {
+ setPendingDestructive({ type: 'invitation', id: inviteId });
  };
 
  // Simulate Broadcast
@@ -2066,6 +2093,7 @@ Merci de confirmer votre présence :
  target="_blank"
  rel="noreferrer"
  className="inline-flex items-center min-h-11 px-3 text-xs font-semibold text-primary hover:bg-surface-muted rounded-[var(--radius-button)] transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ aria-label="Page publique (s’ouvre dans un nouvel onglet)"
  >
  Page publique
  </a>
@@ -2213,8 +2241,8 @@ Merci de confirmer votre présence :
  {!protocolDesk && canManageEvents && (
  <button
  type="button"
- onClick={() => handleDeleteEvent(event.id)}
- className="p-2 text-muted hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition"
+ onClick={() => requestDeleteEvent(event.id)}
+ className="p-2 text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition"
  title="Supprimer l'événement"
  >
  <Trash2 className="w-4 h-4" />
@@ -2288,7 +2316,7 @@ Merci de confirmer votre présence :
  protocolDesk={protocolDesk}
  />
 
- {loadingEventDetail ? (
+ {loadingEventDetail && GUEST_DATA_TABS.has(deskTab) ? (
  <SkeletonEventDetailBody />
  ) : (
  <>
@@ -2341,7 +2369,7 @@ Merci de confirmer votre présence :
  <Button
  onClick={() => {
  if (invitations.length === 0) {
- alert("Configurez d'abord une invitation dans l'onglet Invitations.");
+ setError("Configurez d'abord une invitation dans l'onglet Invitations.");
  return;
  }
  setBulkSelectedInviteId(invitations[0]?.id || '');
@@ -2399,60 +2427,61 @@ Merci de confirmer votre présence :
 
  {/* Insights / Vue d'ensemble */}
  {guests.length > 0 && (
-   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center">
-       <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Total Invités</p>
-       <p className="text-3xl font-bold text-foreground tabular-nums">{guests.length}</p>
+   <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
+     <div className="min-w-0">
+       <dt className="text-xs text-muted">Invités</dt>
+       <dd className="text-lg font-semibold text-foreground tabular-nums">{guests.length}</dd>
      </div>
-     <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex flex-col justify-center">
-       <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider mb-1">Présences (RSVP)</p>
-       <p className="text-3xl font-bold text-emerald-800 dark:text-emerald-200 tabular-nums">
+     <div className="min-w-0">
+       <dt className="text-xs text-muted">Présents (RSVP)</dt>
+       <dd className="text-lg font-semibold text-foreground tabular-nums">
          {guests.filter(g => g.rsvp === 'ACCEPTED').length}
-         <span className="text-sm text-emerald-700/70 dark:text-emerald-400/80 font-medium ml-2">
-           ({Math.round((guests.filter(g => g.rsvp === 'ACCEPTED').length / guests.length) * 100) || 0}%)
+         <span className="text-xs font-medium text-muted ml-1.5">
+           ({Math.round((guests.filter(g => g.rsvp === 'ACCEPTED').length / guests.length) * 100) || 0} %)
          </span>
-       </p>
+       </dd>
      </div>
-     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center">
-       <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Spéc. Alim.</p>
-       <p className="text-3xl font-bold text-foreground tabular-nums">
+     <div className="min-w-0">
+       <dt className="text-xs text-muted">Régimes spéciaux</dt>
+       <dd className="text-lg font-semibold text-foreground tabular-nums">
          {guests.filter(g => g.preferences?.specialMeal && g.preferences.specialMeal !== 'none').length}
-       </p>
+       </dd>
      </div>
-     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center">
-       <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1">Check-in (Jour J)</p>
-       <p className="text-3xl font-bold text-foreground tabular-nums">
+     <div className="min-w-0">
+       <dt className="text-xs text-muted">Check-in jour J</dt>
+       <dd className="text-lg font-semibold text-foreground tabular-nums">
          {guests.filter(g => g.checkedInAt).length}
-         <span className="text-sm text-muted font-medium ml-2">
+         <span className="text-xs font-medium text-muted ml-1.5">
            / {guests.filter(g => g.rsvp === 'ACCEPTED').length || guests.length}
          </span>
-       </p>
+       </dd>
      </div>
-   </div>
+   </dl>
  )}
 
  {/* Search & Filtering Controls */}
  {guests.length > 0 && (
  <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 space-y-3">
- <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
- <div className="relative w-full lg:flex-1">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
- <input
- type="text"
+ <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
+ <div className="w-full lg:flex-1 min-w-0">
+ <Input
+ label="Rechercher un invité"
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- placeholder="Rechercher un invité par nom ou email..."
- className="w-full pl-9 pr-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition"
+ placeholder="Nom ou e-mail"
+ leftIcon={<Search className="w-4 h-4" />}
  />
  </div>
 
  <div className="w-full lg:w-44">
+ <label htmlFor="guest-filter-rsvp" className="block text-xs font-semibold text-muted mb-1.5">Statut RSVP</label>
  <select
+ id="guest-filter-rsvp"
  value={rsvpFilter}
  onChange={(e) => setRsvpFilter(e.target.value as any)}
- className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className={GUEST_FILTER_CONTROL}
  >
- <option value="ALL">Tous les statuts RSVP</option>
+ <option value="ALL">Tous les statuts</option>
  <option value="ACCEPTED">Présent uniquement</option>
  <option value="DECLINED">Absent uniquement</option>
  <option value="PENDING">Sans réponse uniquement</option>
@@ -2460,22 +2489,26 @@ Merci de confirmer votre présence :
  </div>
 
  <div className="w-full lg:w-44">
+ <label htmlFor="guest-filter-checkin" className="block text-xs font-semibold text-muted mb-1.5">Présence jour J</label>
  <select
+ id="guest-filter-checkin"
  value={checkinFilter}
  onChange={(e) => setCheckinFilter(e.target.value as 'ALL' | 'in' | 'out')}
- className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className={GUEST_FILTER_CONTROL}
  >
- <option value="ALL">Présence jour J</option>
+ <option value="ALL">Tous</option>
  <option value="in">Enregistrés</option>
  <option value="out">Non enregistrés</option>
  </select>
  </div>
 
  <div className="w-full lg:w-44">
+ <label htmlFor="guest-filter-category" className="block text-xs font-semibold text-muted mb-1.5">Catégorie</label>
  <select
+ id="guest-filter-category"
  value={categoryFilter}
  onChange={(e) => setCategoryFilter(e.target.value)}
- className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className={GUEST_FILTER_CONTROL}
  >
  <option value="ALL">Toutes les catégories</option>
  {uniqueCategories.map(cat => (
@@ -2536,7 +2569,7 @@ Merci de confirmer votre présence :
  <select
  value={dietFilter}
  onChange={(e) => setDietFilter(e.target.value)}
- className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className={GUEST_FILTER_CONTROL}
  >
  <option value="ALL">Tous les régimes</option>
  <option value="none">Standard</option>
@@ -2558,7 +2591,7 @@ Merci de confirmer votre présence :
  <select
  value={currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
- className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className={GUEST_FILTER_CONTROL}
  >
  <option value="ALL">Tous</option>
  <option value="Oui">Coché (Oui)</option>
@@ -2568,7 +2601,7 @@ Merci de confirmer votre présence :
  <select
  value={currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
- className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className={GUEST_FILTER_CONTROL}
  >
  <option value="ALL">Tous</option>
  {field.options.map(opt => (
@@ -2581,7 +2614,7 @@ Merci de confirmer votre présence :
  value={currentValue === 'ALL' ? '' : currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value || 'ALL' })}
  placeholder="Filtrer par réponse..."
- className="w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ className={GUEST_FILTER_CONTROL}
  />
  )}
  </div>
@@ -2682,7 +2715,7 @@ Merci de confirmer votre présence :
  Envoi échoué
  </span>
  ) : g.preferences?.invitationLastStatus === 'SENT' && g.preferences?.invitationSentAt ? (
- <span className="text-xs text-emerald-700 dark:text-emerald-400">Invitation envoyée</span>
+ <span className="text-xs text-primary">Invitation envoyée</span>
  ) : null;
 
  const prefsLine = g.preferences ? (
@@ -2745,8 +2778,8 @@ Merci de confirmer votre présence :
  </button>
  <button
  type="button"
- onClick={() => handleDeleteGuest(g.id)}
- className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition touch-manipulation"
+ onClick={() => requestDeleteGuest(g.id)}
+ className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition touch-manipulation"
  title="Supprimer l'invité"
  aria-label="Supprimer l'invité"
  >
@@ -2765,10 +2798,10 @@ Merci de confirmer votre présence :
  >
  <label
  className={cn(
- 'absolute z-10 flex items-center justify-center',
+ 'absolute z-10 flex items-center justify-center min-h-11 min-w-11',
  guestsViewMode === 'grid'
- ? 'top-2.5 right-2.5 h-7 w-7 rounded-lg bg-white/95 border border-white/80 shadow-sm'
- : 'left-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg bg-surface/95 border border-border shadow-sm',
+ ? 'top-1 right-1 rounded-lg'
+ : 'left-1 top-1/2 -translate-y-1/2 rounded-lg',
  )}
  onClick={(e) => e.stopPropagation()}
  onKeyDown={(e) => e.stopPropagation()}
@@ -2777,7 +2810,7 @@ Merci de confirmer votre présence :
  type="checkbox"
  checked={isSelected}
  onChange={(e) => toggleSelect(e.target.checked)}
- className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+ className="rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-primary h-4 w-4"
  aria-label={`Sélectionner ${g.firstName} ${g.lastName}`}
  />
  </label>
@@ -2866,52 +2899,32 @@ Merci de confirmer votre présence :
 
  {/* Entonnoir de Conversion (Insights) */}
  {invitations.length > 0 && guests.length > 0 && (
-   <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm relative overflow-hidden">
-     <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none" />
-     <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
-       <BarChart2 className="w-3.5 h-3.5" />
-       Performances de la campagne
-     </h3>
-     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
-       
-       {/* 1. Invités */}
-       <div className="flex-1 flex flex-col items-center text-center relative z-10">
-         <div className="w-12 h-12 bg-surface-muted border border-border text-foreground rounded-full flex items-center justify-center font-bold text-lg mb-2">
-           {guests.length}
-         </div>
-         <p className="text-xs font-semibold text-foreground">Invités sur liste</p>
-       </div>
-       
-       <div className="hidden sm:block text-border/60"><ArrowRight className="w-5 h-5" /></div>
-       
-       {/* 2. Envoyées */}
-       <div className="flex-1 flex flex-col items-center text-center relative z-10">
-         <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-lg mb-2 border border-primary/20">
-           {guests.filter(g => g.preferences?.invitationSentAt).length}
-         </div>
-         <p className="text-xs font-semibold text-foreground">Invitations délivrées</p>
-         <p className="text-xs text-muted mt-0.5">
-           {Math.round((guests.filter(g => g.preferences?.invitationSentAt).length / guests.length) * 100) || 0}% de la liste
-         </p>
-       </div>
-       
-       <div className="hidden sm:block text-border/60"><ArrowRight className="w-5 h-5" /></div>
-
-       {/* 3. RSVP */}
-       <div className="flex-1 flex flex-col items-center text-center relative z-10">
-         <div className="w-12 h-12 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full flex items-center justify-center font-bold text-lg mb-2 border border-emerald-500/20">
-           {guests.filter(g => g.rsvp !== 'PENDING').length}
-         </div>
-         <p className="text-xs font-semibold text-foreground">Réponses RSVP</p>
-         <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
-           {guests.filter(g => g.preferences?.invitationSentAt).length > 0 
-             ? `${Math.round((guests.filter(g => g.rsvp !== 'PENDING').length / guests.filter(g => g.preferences?.invitationSentAt).length) * 100) || 0}% de conversion` 
-             : '0% de conversion'}
-         </p>
-       </div>
-       
+   <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
+     <div className="min-w-0">
+       <dt className="text-xs text-muted">Invités sur liste</dt>
+       <dd className="text-lg font-semibold text-foreground tabular-nums">{guests.length}</dd>
      </div>
-   </div>
+     <div className="min-w-0">
+       <dt className="text-xs text-muted">Invitations délivrées</dt>
+       <dd className="text-lg font-semibold text-foreground tabular-nums">
+         {guests.filter(g => g.preferences?.invitationSentAt).length}
+         <span className="text-xs font-medium text-muted ml-1.5">
+           {Math.round((guests.filter(g => g.preferences?.invitationSentAt).length / guests.length) * 100) || 0} % de la liste
+         </span>
+       </dd>
+     </div>
+     <div className="min-w-0">
+       <dt className="text-xs text-muted">Réponses RSVP</dt>
+       <dd className="text-lg font-semibold text-foreground tabular-nums">
+         {guests.filter(g => g.rsvp !== 'PENDING').length}
+         <span className="text-xs font-medium text-muted ml-1.5">
+           {guests.filter(g => g.preferences?.invitationSentAt).length > 0
+             ? `${Math.round((guests.filter(g => g.rsvp !== 'PENDING').length / guests.filter(g => g.preferences?.invitationSentAt).length) * 100) || 0} % de conversion`
+             : '0 % de conversion'}
+         </span>
+       </dd>
+     </div>
+   </dl>
  )}
 
  <Card>
@@ -2993,10 +3006,11 @@ Merci de confirmer votre présence :
  <Button
  variant="ghost"
  size="sm"
- onClick={() => handleDeleteInvitation(invite.id)}
+ onClick={() => requestDeleteInvitation(invite.id)}
  disabled={broadcastingInviteId !== null}
  title="Supprimer l'invitation"
- className="hover:text-rose-600"
+ className="hover:text-danger"
+
  >
  <Trash2 className="w-4 h-4" />
  </Button>
@@ -3097,6 +3111,116 @@ Merci de confirmer votre présence :
  )}
 
  {/* MODALS */}
+
+ <ConfirmDialog
+ open={pendingDestructive?.type === 'event'}
+ onClose={() => !confirmBusy && setPendingDestructive(null)}
+ title="Supprimer l’événement ?"
+ description="Cet événement et tous ses invités seront supprimés. Cette action est irréversible."
+ confirmLabel="Supprimer"
+ tone="danger"
+ loading={confirmBusy}
+ onConfirm={async () => {
+ if (pendingDestructive?.type !== 'event') return;
+ setConfirmBusy(true);
+ try {
+ await handleDeleteEvent(pendingDestructive.id);
+ setPendingDestructive(null);
+ } finally {
+ setConfirmBusy(false);
+ }
+ }}
+ />
+ <ConfirmDialog
+ open={pendingDestructive?.type === 'guest'}
+ onClose={() => !confirmBusy && setPendingDestructive(null)}
+ title="Supprimer cet invité ?"
+ description="L’invité sera retiré de la liste. Ses réponses RSVP et sa place seront perdues."
+ confirmLabel="Supprimer"
+ tone="danger"
+ loading={confirmBusy}
+ onConfirm={async () => {
+ if (pendingDestructive?.type !== 'guest') return;
+ setConfirmBusy(true);
+ try {
+ await handleDeleteGuest(pendingDestructive.id);
+ setPendingDestructive(null);
+ } finally {
+ setConfirmBusy(false);
+ }
+ }}
+ />
+ <ConfirmDialog
+ open={pendingDestructive?.type === 'invitation'}
+ onClose={() => !confirmBusy && setPendingDestructive(null)}
+ title="Supprimer cette invitation ?"
+ description="Le modèle d’invitation sera retiré. Les envois déjà partis restent valides."
+ confirmLabel="Supprimer"
+ tone="danger"
+ loading={confirmBusy}
+ onConfirm={async () => {
+ if (pendingDestructive?.type !== 'invitation') return;
+ setConfirmBusy(true);
+ try {
+ await handleDeleteInvitation(pendingDestructive.id);
+ setPendingDestructive(null);
+ } finally {
+ setConfirmBusy(false);
+ }
+ }}
+ />
+ <ConfirmDialog
+ open={pendingDestructive?.type === 'layout' && pendingDestructive.mode === 'replace'}
+ onClose={() => !confirmBusy && setPendingDestructive(null)}
+ title="Remplacer le plan de table ?"
+ description="Le plan de la salle remplacera le plan actuel. Les assignations de sièges seront perdues."
+ confirmLabel="Remplacer"
+ tone="danger"
+ loading={confirmBusy}
+ onConfirm={async () => {
+ setConfirmBusy(true);
+ try {
+ setPendingDestructive(null);
+ await runImportRoomLayout(true, false);
+ } finally {
+ setConfirmBusy(false);
+ }
+ }}
+ />
+ <ConfirmDialog
+ open={pendingDestructive?.type === 'layout' && pendingDestructive.mode === 'update'}
+ onClose={() => !confirmBusy && setPendingDestructive(null)}
+ title="Mettre à jour le plan ?"
+ description="Le plan sera aligné sur la salle. Les places déjà assignées sont conservées."
+ confirmLabel="Mettre à jour"
+ loading={confirmBusy}
+ onConfirm={async () => {
+ setConfirmBusy(true);
+ try {
+ setPendingDestructive(null);
+ await runImportRoomLayout(true, true);
+ } finally {
+ setConfirmBusy(false);
+ }
+ }}
+ />
+ <ConfirmDialog
+ open={pendingDestructive?.type === 'layout' && pendingDestructive.mode === 'exists'}
+ onClose={() => !confirmBusy && setPendingDestructive(null)}
+ title="Un plan existe déjà"
+ description="Mettre à jour en gardant les places déjà assignées ? Pour tout remplacer sans conserver les places, annulez puis relancez un import sans conservation."
+ confirmLabel="Garder les places"
+ loading={confirmBusy}
+ onConfirm={async () => {
+ setConfirmBusy(true);
+ try {
+ setPendingDestructive(null);
+ await runImportRoomLayout(true, true);
+ } finally {
+ setConfirmBusy(false);
+ }
+ }}
+ />
 
  {/* Event Modal */}
  <EventConfigForm

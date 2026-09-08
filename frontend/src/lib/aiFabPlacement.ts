@@ -38,7 +38,7 @@ export function resolveAiFabPlacement(input: {
   const onDashboard = pathname.startsWith('/dashboard');
   const onCataloguePlan =
     pathname.startsWith('/dashboard/catalogue') &&
-    (params.get('tab') === 'plan' || params.get('planView') === 'ai');
+    (params.get('tab') === 'plan' || params.get('hub') === 'plan' || params.get('planView') === 'ai');
   const onTemplates = pathname.startsWith('/dashboard/templates');
   const onRooms = pathname.startsWith('/dashboard/rooms');
   const onHome = pathname === '/';
@@ -48,8 +48,10 @@ export function resolveAiFabPlacement(input: {
   const inviteHref = onDashboard ? '/dashboard/templates' : '/modeles';
   const roomsHref = '/dashboard/rooms';
   const catalogueHref = onDashboard
-    ? '/dashboard/catalogue?tab=plan&planView=ai'
+    ? '/dashboard/catalogue?tab=plan&planView=ai&studio=budget'
     : '/#simulateur-ia';
+  const inviteStudioHref = '/dashboard/catalogue?tab=plan&planView=ai&studio=invite';
+  const roomStudioHref = '/dashboard/catalogue?tab=plan&planView=ai&studio=room';
 
   if (input.emptyTokens) {
     return {
@@ -177,8 +179,8 @@ export function resolveAiFabPlacement(input: {
       modalDescription: `Le simulateur est déjà ouvert ici. ${aiTokenCostLegend()}.`,
       highlight: 'tokens',
       embedSimulator: false,
-      inviteHref,
-      roomsHref,
+      inviteHref: inviteStudioHref,
+      roomsHref: input.canUseRooms ? roomStudioHref : roomsHref,
       catalogueHref,
     };
   }
@@ -186,17 +188,18 @@ export function resolveAiFabPlacement(input: {
   if (onDashboard) {
     return {
       mood: 'work',
-      label: 'Budget IA',
-      subtitle: 'Packs · invitations · salles',
-      ariaLabel: 'Ouvrir l’atelier IA : budget, invitations et plans de salle',
+      label: 'Studios IA',
+      subtitle: 'Budget · invitation · salle',
+      ariaLabel: 'Ouvrir les trois studios IA du tableau de bord',
       title: aiTokenCostLegend(),
-      click: 'open',
-      modalTitle: 'Atelier IA',
-      modalDescription: `Composez un pack, une invitation ou un plan de salle. ${aiTokenCostLegend()}.`,
+      click: 'href',
+      href: catalogueHref,
+      modalTitle: 'Studios IA',
+      modalDescription: `Pack budget, invitation et plan de salle au même endroit. ${aiTokenCostLegend()}.`,
       highlight: 'budget',
-      embedSimulator: true,
-      inviteHref,
-      roomsHref,
+      embedSimulator: false,
+      inviteHref: inviteStudioHref,
+      roomsHref: input.canUseRooms ? roomStudioHref : roomsHref,
       catalogueHref,
     };
   }
