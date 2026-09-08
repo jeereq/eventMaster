@@ -236,7 +236,6 @@ function ClientMarketplaceInner() {
       typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
     );
     params.set('hub', 'plan');
-    params.set('planView', 'ai');
     if (next === 'budget') params.delete('studio');
     else params.set('studio', next);
     const qs = params.toString();
@@ -805,6 +804,10 @@ function ClientMarketplaceInner() {
       ) : null}
 
       {tab === 'plan' ? (
+        <DashboardAiStudios
+          value={aiStudio}
+          onChange={setAiStudio}
+          budget={
         <div className="space-y-5">
           <EventPlanMethodPicker
             value={planView}
@@ -819,10 +822,6 @@ function ClientMarketplaceInner() {
 
           <div className="space-y-5">
             {planView === 'ai' ? (
-              <DashboardAiStudios
-                value={aiStudio}
-                onChange={setAiStudio}
-                budget={
                   <EventPrepAiSimulator
                     defaultOpen
                     openPurchaseOnMount={searchParams.get('buyTokens') === '1'}
@@ -849,8 +848,6 @@ function ClientMarketplaceInner() {
                       setPlanError('');
                     }}
                   />
-                }
-              />
             ) : null}
 
             {planView === 'manual' ? (
@@ -946,7 +943,7 @@ function ClientMarketplaceInner() {
               </div>
             ) : null}
 
-            {workingPackages.length > 0 && (planView !== 'ai' || aiStudio === 'budget') ? (
+            {workingPackages.length > 0 ? (
               <div className="space-y-3 pt-2 animate-fade-in">
                 {planView === 'ai' ? (
                   <div className="flex items-center justify-between p-3.5 rounded-2xl bg-primary/10 border border-primary/25">
@@ -1012,7 +1009,7 @@ function ClientMarketplaceInner() {
                   } : undefined}
                 />
               </div>
-            ) : !planning && (planView !== 'manual' || !planError) && (planView !== 'ai' || aiStudio === 'budget') ? (
+            ) : !planning && (planView !== 'manual' || !planError) ? (
               <EmptyState
                 icon={<Wallet className="w-5 h-5" />}
                 title={
@@ -1033,6 +1030,8 @@ function ClientMarketplaceInner() {
             ) : null}
           </div>
         </div>
+          }
+        />
       ) : null}
 
       {tab === 'packs' ? (

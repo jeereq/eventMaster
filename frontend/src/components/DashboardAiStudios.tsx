@@ -15,7 +15,7 @@ const STUDIO_TABS: Array<{
   hint: string;
   icon: LucideIcon;
 }> = [
-  { id: 'budget', label: 'Pack budget', hint: '3 formules dans l’enveloppe', icon: Wand2 },
+  { id: 'budget', label: 'Budget', hint: 'Packs et formules dans l’enveloppe', icon: Wand2 },
   { id: 'invite', label: 'Invitation', hint: 'Carte 9:16 éditable', icon: Mail },
   { id: 'room', label: 'Plan de salle', hint: 'Brief ou photo → 2D / 3D', icon: Building2 },
 ];
@@ -92,7 +92,7 @@ export default function DashboardAiStudios({
       <div className="space-y-1.5">
         <h2 className="text-sm font-semibold text-foreground">Studios IA</h2>
         <p className="text-xs text-muted leading-relaxed max-w-2xl">
-          Les trois ateliers de la vitrine, au même endroit : pack budget, invitation, puis plan de salle.
+          Budget (packs et formules), invitation, puis plan de salle — les trois ateliers au même endroit.
         </p>
       </div>
       <div

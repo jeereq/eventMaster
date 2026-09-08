@@ -60,6 +60,13 @@ function isBottomItemActive(
   const path = qIndex >= 0 ? item.href.slice(0, qIndex) : item.href;
   const query = qIndex >= 0 ? item.href.slice(qIndex + 1) : '';
   const have = new URLSearchParams(search);
+  const onCatalogueSimulator =
+    pathname.startsWith('/dashboard/catalogue') &&
+    (have.get('tab') === 'plan' || have.get('hub') === 'plan' || have.get('planView') === 'ai' || have.get('planView') === 'final');
+
+  if (item.id === 'simulator') {
+    return onCatalogueSimulator;
+  }
 
   // Cas protocole
   if (path === '/dashboard/protocol') {
@@ -102,14 +109,42 @@ function isBottomItemActive(
   }
   if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
     if (have.get('kind') === 'event') return false;
-    if (have.has('tab') && have.get('tab') !== 'explore') return false;
+    if (onCatalogueSimulator) return false;
+    if (have.get('tab') && have.get('tab') !== 'explore') return false;
+    if (have.get('hub') && have.get('hub') !== 'explore') return false;
     return true;
   }
 
   return true;
 }
 
-export function buildMobileBottomItems({
+const SIMULATOR_ITEM: MobileBottomNavItem = {
+  id: 'simulator',
+  name: 'Simulateur',
+  href: '/dashboard/catalogue?tab=plan&planView=ai',
+  icon: Sparkles,
+};
+
+function withSimulatorTab(items: MobileBottomNavItem[]): MobileBottomNavItem[] {
+  if (items.some((item) => item.id === 'simulator')) return items;
+  const menuIndex = items.findIndex((item) => item.isMenuTrigger);
+  const insertAt = menuIndex >= 0 ? menuIndex : items.length;
+  return [...items.slice(0, insertAt), SIMULATOR_ITEM, ...items.slice(insertAt)];
+}
+
+export function buildMobileBottomItems(
+  input: {
+    role?: string;
+    access?: OrgAccess | null;
+    workspace: WorkspaceModules;
+    accountKind?: TenantAccountKind;
+    isClientAccount?: boolean;
+  },
+): MobileBottomNavItem[] {
+  return withSimulatorTab(buildRoleMobileBottomItems(input));
+}
+
+function buildRoleMobileBottomItems({
   role,
   access,
   workspace,
