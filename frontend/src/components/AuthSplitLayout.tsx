@@ -160,15 +160,15 @@ interface MethodToggleProps<T extends string> {
 
 export function MethodToggle<T extends string>({ value, onChange, options, label }: MethodToggleProps<T>) {
   return (
-    <fieldset className="space-y-2">
-      {label && (
+    <fieldset
+      role="radiogroup"
+      className="space-y-2"
+      {...(label ? {} : { 'aria-label': 'Choix de méthode' })}
+    >
+      {label ? (
         <legend className="text-xs font-semibold text-muted">{label}</legend>
-      )}
-      <div
-        role="radiogroup"
-        aria-label={label}
-        className={cn('grid gap-2', options.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}
-      >
+      ) : null}
+      <div className={cn('grid gap-2', options.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
         {options.map((opt) => (
           <button
             key={opt.value}

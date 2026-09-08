@@ -29,7 +29,10 @@ export default function RegisterAccountKindPicker({
     <div className="space-y-4">
       <p className="text-sm text-muted leading-relaxed">
         Déjà un compte ?{' '}
-        <Link href={loginHref} className="font-semibold text-primary hover:underline">
+        <Link
+          href={loginHref}
+          className="font-semibold text-primary hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
           Connectez-vous
         </Link>
       </p>

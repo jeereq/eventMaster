@@ -21,6 +21,19 @@ import { Modal, Button } from '@/components/ui';
 import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
 import { cn } from '@/lib/cn';
 
+type LegalTabId = 'summary' | 'terms' | 'privacy';
+
+const LEGAL_TABS: Array<{
+  id: LegalTabId;
+  shortLabel: string;
+  longLabel: string;
+  Icon: typeof Sparkles;
+}> = [
+  { id: 'summary', shortLabel: 'Synthèse', longLabel: 'Synthèse clé', Icon: Sparkles },
+  { id: 'terms', shortLabel: 'CGU', longLabel: `Conditions (v${TERMS_VERSION})`, Icon: FileText },
+  { id: 'privacy', shortLabel: 'Données', longLabel: `Confidentialité (v${PRIVACY_VERSION})`, Icon: ShieldCheck },
+];
+
 interface LegalTermsPreviewModalProps {
   open: boolean;
   onClose: () => void;
@@ -42,6 +55,7 @@ export default function LegalTermsPreviewModal({
   const [termsAgreed, setTermsAgreed] = useState(acceptedTerms);
   const [privacyAgreed, setPrivacyAgreed] = useState(acceptedPrivacy);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [readProgress, setReadProgress] = useState(0);
 
   useEffect(() => {
@@ -63,6 +77,33 @@ export default function LegalTermsPreviewModal({
     }
     const currentProgress = Math.min(100, Math.round((el.scrollTop / maxScroll) * 100));
     setReadProgress(currentProgress);
+  };
+
+  const selectTab = (id: LegalTabId) => {
+    setActiveTab(id);
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+  };
+
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = LEGAL_TABS.length - 1;
+    let next = index;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      next = index === last ? 0 : index + 1;
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      next = index === 0 ? last : index - 1;
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      next = 0;
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      next = last;
+    } else {
+      return;
+    }
+    selectTab(LEGAL_TABS[next].id);
+    tabRefs.current[next]?.focus();
   };
 
   const handleConfirm = () => {
@@ -129,81 +170,56 @@ export default function LegalTermsPreviewModal({
       }
     >
       <div className="space-y-4">
-        {/* Onglets de navigation légale */}
-        <div role="tablist" aria-label="Documents à lire" className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-xl border border-border">
-          <button
-            type="button"
-            role="tab"
-            id="legal-tab-summary"
-            aria-controls="legal-panel-summary"
-            aria-selected={activeTab === 'summary'}
-            onClick={() => {
-              setActiveTab('summary');
-              if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
-            }}
-            className={cn(
-              'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              activeTab === 'summary'
-                ? 'bg-surface text-foreground shadow-xs'
-                : 'text-muted hover:text-foreground',
-            )}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span>Synthèse clé</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            id="legal-tab-terms"
-            aria-controls="legal-panel-terms"
-            aria-selected={activeTab === 'terms'}
-            onClick={() => {
-              setActiveTab('terms');
-              if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
-            }}
-            className={cn(
-              'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              activeTab === 'terms'
-                ? 'bg-surface text-foreground shadow-xs'
-                : 'text-muted hover:text-foreground',
-            )}
-          >
-            <FileText className="w-3.5 h-3.5 text-primary" />
-            <span>Conditions (v{TERMS_VERSION})</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            id="legal-tab-privacy"
-            aria-controls="legal-panel-privacy"
-            aria-selected={activeTab === 'privacy'}
-            onClick={() => {
-              setActiveTab('privacy');
-              if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
-            }}
-            className={cn(
-              'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              activeTab === 'privacy'
-                ? 'bg-surface text-foreground shadow-xs'
-                : 'text-muted hover:text-foreground',
-            )}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-            <span>Confidentialité (v{PRIVACY_VERSION})</span>
-          </button>
+        <div
+          role="tablist"
+          aria-label="Documents à lire"
+          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 p-1 bg-surface-muted rounded-xl border border-border"
+        >
+          {LEGAL_TABS.map((tab, index) => {
+            const Icon = tab.Icon;
+            const selected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`legal-tab-${tab.id}`}
+                aria-controls={`legal-panel-${tab.id}`}
+                aria-selected={selected}
+                tabIndex={selected ? 0 : -1}
+                ref={(node) => {
+                  tabRefs.current[index] = node;
+                }}
+                onClick={() => selectTab(tab.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
+                className={cn(
+                  'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation cursor-pointer',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  selected
+                    ? 'bg-surface text-foreground shadow-xs'
+                    : 'text-muted hover:text-foreground',
+                )}
+              >
+                <Icon className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
+                <span className="sm:hidden">{tab.shortLabel}</span>
+                <span className="hidden sm:inline">{tab.longLabel}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Barre de progression de lecture */}
         <div className="flex items-center justify-between text-xs text-muted px-1">
-          <span>Défilement du document</span>
+          <span id="legal-read-progress-label">Défilement du document</span>
           <span className="font-mono font-semibold">{readProgress}% lu</span>
         </div>
-        <div className="w-full bg-border/60 h-1 rounded-full overflow-hidden">
+        <div
+          role="progressbar"
+          aria-labelledby="legal-read-progress-label"
+          aria-valuenow={readProgress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          className="w-full bg-border/60 h-1 rounded-full overflow-hidden"
+        >
           <div
             className="bg-primary h-full transition-all duration-150"
             style={{ width: `${Math.max(5, readProgress)}%` }}
@@ -377,16 +393,16 @@ export default function LegalTermsPreviewModal({
             <Link
               href="/terms"
               target="_blank"
-              className="hover:text-primary transition inline-flex items-center gap-1 font-medium"
+              className="hover:text-primary transition inline-flex items-center gap-1 font-medium rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
-              Consulter la page CGU complète <ExternalLink className="w-3 h-3" />
+              Consulter la page CGU complète <ExternalLink className="w-3 h-3" aria-hidden />
             </Link>
             <Link
               href="/privacy"
               target="_blank"
-              className="hover:text-primary transition inline-flex items-center gap-1 font-medium"
+              className="hover:text-primary transition inline-flex items-center gap-1 font-medium rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
-              Consulter la page Confidentialité complète <ExternalLink className="w-3 h-3" />
+              Consulter la page Confidentialité complète <ExternalLink className="w-3 h-3" aria-hidden />
             </Link>
           </div>
         </div>
