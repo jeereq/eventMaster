@@ -41,6 +41,7 @@ import {
   resolveZoneMaterialMap,
 } from '@/lib/roomWebGLMaterials';
 import { cn } from '@/lib/cn';
+import { usePrefersReducedMotion } from '@/lib/prefersReducedMotion';
 import {
   CatalogueBuffet,
   CatalogueChair,
@@ -515,10 +516,12 @@ function FloorPlane({
       <meshPhysicalMaterial
         color={mat.color}
         map={mat.map ?? undefined}
+        bumpMap={mat.bumpMap ?? undefined}
+        bumpScale={mat.bumpScale || 0}
         roughness={mat.roughness}
         metalness={mat.metalness}
         clearcoat={mat.clearcoat}
-        clearcoatRoughness={mat.clearcoat > 0 ? 0.2 : 1}
+        clearcoatRoughness={mat.clearcoat > 0 ? 0.22 : 1}
         envMapIntensity={mat.envMapIntensity}
         polygonOffset
         polygonOffsetFactor={1}
@@ -2030,6 +2033,7 @@ function SceneContent({
   onWalkthroughProgress,
   onWalkthroughComplete,
   orbitControlsRef,
+  reduceMotion = false,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -2037,6 +2041,7 @@ function SceneContent({
   presentationMode?: boolean;
   hideLabels?: boolean;
   orbitControlsRef?: React.Ref<unknown>;
+  reduceMotion?: boolean;
 }) {
   const widthM = blueprint.canvas.widthM;
   const heightM = blueprint.canvas.heightM;
@@ -2131,7 +2136,12 @@ function SceneContent({
           blur={qualitySettings.contactShadowsBlur * (lighting.preset === 'dusk' ? 1.15 : 1)}
           far={8}
           resolution={Math.min(qualitySettings.contactShadowsResolution, 1024)}
-          color={lighting.preset === 'night' ? '#020617' : lighting.preset === 'dusk' ? '#431407' : '#1c1917'}
+          color={
+            lighting.preset === 'night' ? '#020617'
+              : lighting.preset === 'dusk' ? '#431407'
+                : lighting.preset === 'banquet' ? '#2a1810'
+                  : '#1c1917'
+          }
           frames={1}
         />
       ) : null}
@@ -2508,7 +2518,7 @@ function SceneContent({
         enablePan={!wallEditMode && !lockOrbit && !dragTarget && !presentationMode && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragTarget && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
-        autoRotate={presentationMode && !walkthroughActive}
+        autoRotate={presentationMode && !walkthroughActive && !reduceMotion}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -2516,7 +2526,7 @@ function SceneContent({
         target={[0, focusY, 0]}
       />
 
-      {qualitySettings.quality === 'showcase' ? (
+      {qualitySettings.quality === 'showcase' && !reduceMotion ? (
         <RoomShowcasePostProcessing lighting={lighting} />
       ) : null}
     </>
@@ -2574,6 +2584,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     update: () => void;
   } | null>(null);
   const [inView, setInView] = useState(true);
+  const reduceMotion = usePrefersReducedMotion();
   const sceneLabel = useMemo(() => describeRoomScene(blueprint), [blueprint]);
   const freezeFrames = paused || !inView;
 
@@ -2695,6 +2706,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             presentationMode={presentationMode}
             hideLabels={hideLabels || !qualitySettings.showHints}
             walkthroughActive={walkthroughActive}
+            reduceMotion={reduceMotion}
             onWalkthroughProgress={onWalkthroughProgress}
             onWalkthroughComplete={onWalkthroughComplete}
             orbitControlsRef={orbitControlsRef}

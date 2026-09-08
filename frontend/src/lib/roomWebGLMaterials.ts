@@ -61,6 +61,8 @@ export function resolveFloorMap(
   clearcoat: number;
   envMapIntensity: number;
   isPlan: boolean;
+  bumpMap: THREE.Texture | null;
+  bumpScale: number;
 } {
   if (floorImageUrl) {
     const isPlan = floorImageFit !== 'tile';
@@ -75,6 +77,8 @@ export function resolveFloorMap(
       clearcoat: 0,
       envMapIntensity: isPlan ? 0.25 : 0.45,
       isPlan,
+      bumpMap: isPlan ? null : bumpFromAlbedo(map),
+      bumpScale: isPlan ? 0 : 0.01,
     };
   }
   const type = floorType && floorType !== 'custom' ? floorType : 'parquet';
@@ -122,6 +126,11 @@ export function resolveFloorMap(
   }
 
   const tint = floorColor && floorColor !== '#ffffff' ? floorColor : asset.fallback;
+  const isWood =
+    type === 'parquet' || type === 'chevron' || type === 'chevronGris' || type === 'chevronGreige'
+    || type === 'bois' || type === 'boisPanel' || type === 'boisHex' || type === 'boisAmber'
+    || type === 'boisRustique' || type === 'boisBlond' || type === 'boisPetale'
+    || type === 'boisCharcoal' || type === 'boisMarqueterie';
   return {
     map,
     color: floorColor ? tint : '#ffffff',
@@ -130,6 +139,8 @@ export function resolveFloorMap(
     clearcoat,
     envMapIntensity,
     isPlan: false,
+    bumpMap: map ? bumpFromAlbedo(map) : null,
+    bumpScale: isWood ? 0.016 : clearcoat > 0.4 ? 0.008 : 0.01,
   };
 }
 
@@ -936,15 +947,15 @@ export function resolveTableMaterial(
   const bumpScale =
     resolvedSurface === 'marble' ? 0.008 :
     resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.012 :
-    resolvedSurface === 'wood' ? 0.01 : 0.006;
+    resolvedSurface === 'wood' ? 0.01 : 0.008;
 
   return {
     map,
     bumpMap: bumpFromAlbedo(map),
     bumpScale,
     color: color && color !== '#ffffff' ? color : defaultColors[resolvedSurface],
-    roughness: resolvedSurface === 'marble' ? 0.22 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.48 : 0.45,
-    metalness: resolvedSurface === 'marble' ? 0.12 : 0.08,
+    roughness: resolvedSurface === 'marble' ? 0.22 : resolvedSurface === 'linen' ? 0.36 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.48 : 0.45,
+    metalness: resolvedSurface === 'marble' ? 0.12 : resolvedSurface === 'linen' ? 0.04 : 0.08,
   };
 }
 
@@ -960,7 +971,7 @@ export type ChairVisual = {
 
 export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
   BANQUET: {
-    seatColor: '#1e3a5f',
+    seatColor: '#faf7f2',
     frameColor: '#c9a227',
     backHeight: 0.55,
     seatSize: [0.38, 0.06, 0.38],
@@ -1107,12 +1118,12 @@ export function resolveChairVisual(
   }
   if (style === 'chiavari' && (!material || material === 'linen' || material === 'fabric')) {
     base.frameColor = '#c9a227';
-    base.seatColor = '#f8fafc';
+    base.seatColor = '#faf7f2';
     base.cushion = true;
   }
   if (style === 'tiffany' && !material) {
     base.frameColor = '#d4af37';
-    base.seatColor = '#f8fafc';
+    base.seatColor = '#faf7f2';
     base.cushion = true;
   }
   if (style === 'phoenix' && !material) {

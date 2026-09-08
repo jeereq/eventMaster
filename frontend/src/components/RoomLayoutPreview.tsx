@@ -150,6 +150,8 @@ function ThumbPreview({
         'relative aspect-[4/3] h-full min-h-0 overflow-hidden rounded-2xl border border-border bg-[#1a1410]',
         className,
       )}
+      role="img"
+      aria-label="Aperçu 2D du plan de salle"
     >
       <div className="absolute inset-0 opacity-95" style={floorStyle} />
       {outline && (

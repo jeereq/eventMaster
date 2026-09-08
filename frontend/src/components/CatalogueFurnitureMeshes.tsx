@@ -23,12 +23,14 @@ type MatProps = {
 };
 
 function Mat({ color, map, roughness = 0.6, metalness = 0.05, transparent, opacity, bumpMap, bumpScale }: MatProps) {
+  const gold = color === '#c9a227' || color === '#d4af37' || color === '#d97706';
   return (
     <meshStandardMaterial
       color={color}
       map={map ?? undefined}
-      roughness={roughness}
-      metalness={metalness}
+      roughness={gold && roughness > 0.28 ? 0.18 : roughness}
+      metalness={gold && metalness < 0.5 ? 0.88 : metalness}
+      envMapIntensity={gold ? 1.25 : 1}
       transparent={transparent}
       opacity={opacity}
       bumpMap={bumpMap}

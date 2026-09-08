@@ -62,7 +62,7 @@ export default function SeatSelection3DViewer({
   pricingZones = [],
   zoneColorById,
   planMeta,
-  lightingPreset = 'dusk',
+  lightingPreset = 'banquet',
   activeTableId,
   onActiveTableChange,
   className = '',
@@ -235,9 +235,10 @@ export default function SeatSelection3DViewer({
             <button
               key={opt.id}
               type="button"
+              aria-pressed={quality === opt.id}
               onClick={() => setQuality(opt.id)}
               className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-semibold transition',
+                'min-h-11 px-2.5 rounded-full text-xs font-semibold transition',
                 quality === opt.id
                   ? 'bg-background text-foreground shadow-xs'
                   : 'text-background/70 hover:text-background'

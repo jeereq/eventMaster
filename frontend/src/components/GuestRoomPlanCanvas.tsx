@@ -280,6 +280,8 @@ export default function GuestRoomPlanCanvas({
 
       <div
         ref={containerRef}
+        role="region"
+        aria-label="Plan de salle. Pincez ou utilisez les boutons pour zoomer."
         className={`relative w-full overflow-auto rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] ${fill ? 'flex-1 min-h-0' : ''}`}
         style={{
           height: fill ? undefined : `${height}px`,

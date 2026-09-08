@@ -19,8 +19,8 @@ const TEXTURE_FILL_COLORS: Record<string, string> = {
   concrete: '#475569',
   glass: 'rgba(56, 189, 248, 0.45)',
   curtain: '#7e22ce',
-  plaster: '#1e293b',
-  whiteWood: '#cbd5e1',
+  plaster: '#e8e4df',
+  whiteWood: '#f5f0e8',
 };
 
 export default function Room2DPlanWalls({

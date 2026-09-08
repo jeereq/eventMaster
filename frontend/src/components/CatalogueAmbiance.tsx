@@ -79,7 +79,7 @@ function ChandelierCrystal({ pointLights }: { pointLights: boolean }) {
         );
       })}
       {pointLights ? (
-        <pointLight position={[0, -0.15, 0]} intensity={0.7} color="#e0f2fe" distance={11} decay={2} />
+        <pointLight position={[0, -0.15, 0]} intensity={0.78} color="#fef3c7" distance={11} decay={2} />
       ) : null}
     </group>
   );

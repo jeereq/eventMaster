@@ -319,7 +319,7 @@ export function EventStage({
         ) : null}
         <mesh position={[0, 0.05, r + 0.03]}>
           <boxGeometry args={[r * 1.2, 0.03, 0.03]} />
-          <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={0.55} />
+          <meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={0.4} />
         </mesh>
       </group>
     );
@@ -339,7 +339,7 @@ export function EventStage({
         })}
         <mesh position={[0, 0.05, d * 0.5 + 0.04]}>
           <boxGeometry args={[w * 0.92, 0.03, 0.03]} />
-          <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={0.55} />
+          <meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={0.4} />
         </mesh>
       </group>
     );
@@ -401,9 +401,9 @@ export function EventStage({
       <mesh position={[0, 0.06, d * 0.5 + 0.05]}>
         <boxGeometry args={[w * 0.9, 0.03, 0.03]} />
         <meshStandardMaterial
-          color="#38bdf8"
-          emissive="#0ea5e9"
-          emissiveIntensity={0.65}
+          color="#fbbf24"
+          emissive="#d97706"
+          emissiveIntensity={0.4}
           roughness={0.2}
           metalness={0.4}
         />

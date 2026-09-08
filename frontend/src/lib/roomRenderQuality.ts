@@ -95,7 +95,7 @@ export type ScenicLightSettings = {
   /** Intensité HDRI Environment. */
   environmentIntensity: number;
   /** Preset drei Environment. */
-  environmentPreset: 'apartment' | 'city' | 'dawn' | 'night' | 'warehouse' | 'sunset';
+  environmentPreset: 'apartment' | 'city' | 'dawn' | 'night' | 'warehouse' | 'sunset' | 'lobby';
   /** Rebond sol / bounce light. */
   bounceIntensity: number;
   bounceColor: string;
@@ -150,7 +150,7 @@ const QUALITY: Record<RenderQuality, RenderQualitySettings> = {
     rowChairShadows: false,
     maxChandeliers: 2,
     maxUplights: 10,
-    chandelierPointLights: false,
+    chandelierPointLights: true,
     environment: true,
     environmentIntensity: 0.28,
     fog: true,
@@ -282,29 +282,29 @@ const LIGHTING: Record<Exclude<LightingPreset, 'auto'>, ScenicLightSettings> = {
   // Salle de réception : spots chauds, ambiance chandelier
   banquet: {
     preset: 'banquet',
-    ambient: 0.18,
-    keyIntensity: 1.45,
+    ambient: 0.2,
+    keyIntensity: 1.52,
     keyColor: '#fff4e0',
-    fillIntensity: 0.28,
-    fillColor: '#bfdbfe',
+    fillIntensity: 0.26,
+    fillColor: '#f5deb3',
     hemiSky: '#fef3c7',
-    hemiGround: '#44403c',
-    hemiIntensity: 0.4,
-    spotIntensity: 0.72,
+    hemiGround: '#5c4033',
+    hemiIntensity: 0.42,
+    spotIntensity: 0.78,
     spotColor: '#fff7ed',
-    warmPoint: 0.5,
-    coolPoint: 0.1,
+    warmPoint: 0.65,
+    coolPoint: 0.04,
     background: '#120f0c',
     sunPosition: [10, 18, 6],
     showSky: false,
     skyTop: '#1a1410',
     skyHorizon: '#292524',
-    interiorBoost: 1.15,
-    exposure: 1.0,
-    environmentIntensity: 0.32,
-    environmentPreset: 'apartment',
-    bounceIntensity: 0.28,
-    bounceColor: '#d6b896',
+    interiorBoost: 1.2,
+    exposure: 1.08,
+    environmentIntensity: 0.36,
+    environmentPreset: 'lobby',
+    bounceIntensity: 0.34,
+    bounceColor: '#e8d4b8',
     skyTurbidity: 2,
     skyRayleigh: 1,
     skyMie: 0.005,

@@ -12,14 +12,15 @@ export default function RoomShowcasePostProcessing({ lighting }: RoomShowcasePos
   const bloomIntensity =
     lighting.preset === 'night' ? 0.9
       : lighting.preset === 'dusk' ? 0.58
-        : lighting.preset === 'banquet' ? 0.48
+        : lighting.preset === 'banquet' ? 0.42
           : lighting.preset === 'tent' ? 0.35
             : 0.22;
 
   const bloomThreshold =
     lighting.preset === 'night' ? 0.72
       : lighting.preset === 'day' ? 0.9
-        : 0.82;
+        : lighting.preset === 'banquet' ? 0.78
+          : 0.82;
 
   const vignetteDarkness =
     lighting.preset === 'night' ? 0.74
@@ -27,7 +28,7 @@ export default function RoomShowcasePostProcessing({ lighting }: RoomShowcasePos
         : 0.45;
 
   return (
-    <EffectComposer multisampling={0}>
+    <EffectComposer multisampling={4}>
       <Bloom
         intensity={bloomIntensity}
         luminanceThreshold={bloomThreshold}
