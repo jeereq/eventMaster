@@ -13,6 +13,8 @@ export {
   SkeletonList,
   SkeletonDashboardHome,
   SkeletonEventsView,
+  SkeletonEventDetail,
+  SkeletonEventDetailBody,
   SkeletonRoomsView,
   SkeletonTemplatesView,
   SkeletonBillingView,

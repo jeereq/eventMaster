@@ -11,7 +11,7 @@ import {
  Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
  ClipboardList, Eye, Utensils, FileSpreadsheet, Download, LayoutGrid,
- Building2, ScanLine, Shirt, Globe, GlobeLock, ChevronDown, ChevronUp,
+ Building2, ScanLine, Shirt, Globe, GlobeLock,
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
@@ -36,7 +36,7 @@ import {
  applyInvitationGuidelineVariables,
  formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -421,9 +421,16 @@ A très vite !`
  }
 ];
 
+function EventsPageFallback() {
+ const params = useParams();
+ const eventId = typeof params?.eventId === 'string' ? params.eventId : null;
+ if (eventId) return <SkeletonEventDetail />;
+ return <SkeletonEventsView mode="grid" />;
+}
+
 export default function EventsPage() {
  return (
-  <Suspense fallback={<SkeletonEventsView mode="grid" />}>
+  <Suspense fallback={<EventsPageFallback />}>
    <EventsPageInner />
   </Suspense>
  );
@@ -464,7 +471,6 @@ function EventsPageInner() {
  const [loading, setLoading] = useState(true);
  const [loadingEventDetail, setLoadingEventDetail] = useState(false);
  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
- const [showMobileDetails, setShowMobileDetails] = useState(false);
  const [eventSearch, setEventSearch] = useState('');
  const [eventWhen, setEventWhen] = useState<'ALL' | 'upcoming' | 'past'>('ALL');
  const [eventVisibility, setEventVisibility] = useState<'all' | 'public' | 'private'>('all');
@@ -1827,6 +1833,10 @@ Merci de confirmer votre présence :
  );
  }
 
+ if (loading && eventIdFromRoute && !selectedEvent) {
+ return <SkeletonEventDetail />;
+ }
+
  if (loading) {
  return <SkeletonEventsView mode={eventsViewMode} />;
  }
@@ -1997,8 +2007,7 @@ Merci de confirmer votre présence :
  )}
  </>
  ) : (
- <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
- <div className="space-y-2 min-w-0 flex-1">
+ <div className="space-y-3">
  <Breadcrumbs
  items={[
  { label: 'Accueil', href: '/dashboard' },
@@ -2009,99 +2018,68 @@ Merci de confirmer votre présence :
  <button
  type="button"
  onClick={() => router.push(eventsListHref(protocolDesk))}
- className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-foreground transition min-h-11 sm:min-h-[32px] -ml-1 pl-1 touch-manipulation"
+ className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-foreground transition min-h-11 -ml-1 pl-1 pr-2 touch-manipulation rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
- <ArrowLeft className="w-3.5 h-3.5" />
+ <ArrowLeft className="w-3.5 h-3.5" aria-hidden />
  {protocolDesk ? 'Tous les accueils' : 'Tous les événements'}
  </button>
- <div className="flex items-center justify-between gap-3">
+ <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+ <div className="space-y-2 min-w-0 flex-1">
  <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight truncate">
  {selectedEvent.title}
  </h1>
- <button
- type="button"
- onClick={() => setShowMobileDetails((prev) => !prev)}
- className="sm:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-surface-muted border border-border text-foreground hover:bg-surface-muted/80 transition min-h-11 touch-manipulation shrink-0"
- aria-expanded={showMobileDetails}
- aria-label="Afficher ou masquer les détails de l'événement"
- >
- <span>{showMobileDetails ? 'Moins' : 'Détails'}</span>
- {showMobileDetails ? <ChevronUp className="w-3.5 h-3.5 text-muted" /> : <ChevronDown className="w-3.5 h-3.5 text-muted" />}
- </button>
- </div>
-
- {/* Version mobile condensée : Date et Lieu toujours visibles */}
- <div className="flex sm:hidden flex-wrap items-center gap-1.5 text-xs text-muted">
- <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border font-medium">
- <Calendar className="w-3.5 h-3.5 text-primary" />
- {new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
- weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
- })}
- </span>
- <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border max-w-[180px] truncate font-medium">
- <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" />
- {selectedEvent.location}
- </span>
- </div>
-
- {/* Badges complets : toujours visibles sur sm+, escamotables sur mobile */}
- <div className={cn(
- "flex flex-wrap items-center gap-2 text-xs text-muted transition-all",
- showMobileDetails ? "flex" : "hidden sm:flex"
- )}>
- <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
- <Calendar className="w-3.5 h-3.5 text-primary" />
+ <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+ <span className="inline-flex items-center gap-1.5 min-w-0">
+ <Calendar className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  {new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
  weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
  })}
  </span>
- <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border max-w-xs truncate">
- <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" />
- {selectedEvent.location}
+ <span className="text-border" aria-hidden>·</span>
+ <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
+ <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" aria-hidden />
+ <span className="truncate">{selectedEvent.location}</span>
  </span>
+ </p>
+ <div className="flex flex-wrap items-center gap-2">
+ <StatusPill tone={selectedEvent.isPublic ? 'primary' : 'slate'} className="gap-1.5">
+ {selectedEvent.isPublic ? <Globe className="w-3.5 h-3.5" aria-hidden /> : <GlobeLock className="w-3.5 h-3.5" aria-hidden />}
+ {selectedEvent.isPublic ? 'Public' : 'Privé'}
+ </StatusPill>
  {selectedEvent.room && (
- <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
- <Building2 className="w-3.5 h-3.5 text-primary" />
- {selectedEvent.room.name}
- </span>
+ <StatusPill tone="slate" className="gap-1.5 max-w-[16rem] truncate">
+ <Building2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
+ <span className="truncate">{selectedEvent.room.name}</span>
+ </StatusPill>
  )}
- <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-muted">
+ {selectedEvent.isPublic && selectedEvent.ticketingEnabled && selectedEvent.ticketPriceFc ? (
+ <span className="text-xs text-muted tabular-nums">
+ {selectedEvent.ticketsSold ?? 0} billet{(selectedEvent.ticketsSold ?? 0) > 1 ? 's' : ''}
+ </span>
+ ) : null}
+ <span className="text-xs text-muted">
  {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
  </span>
- {selectedEvent.isPublic ? (
- <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-medium">
- <Globe className="w-3.5 h-3.5" />
- Public
- {selectedEvent.ticketingEnabled && selectedEvent.ticketPriceFc
-  ? ` · ${selectedEvent.ticketsSold ?? 0} billet${(selectedEvent.ticketsSold ?? 0) > 1 ? 's' : ''}`
-  : ''}
- </span>
- ) : (
- <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-muted">
- <GlobeLock className="w-3.5 h-3.5" />
- Privé
- </span>
- )}
  {selectedEvent.isPublic && selectedEvent.slug && (
  <a
  href={`/marketplace/evenements/${selectedEvent.slug}`}
  target="_blank"
  rel="noreferrer"
- className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border text-primary font-semibold hover:bg-surface-muted transition"
+ className="inline-flex items-center min-h-11 px-3 text-xs font-semibold text-primary hover:bg-surface-muted rounded-[var(--radius-button)] transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  Page publique
  </a>
  )}
  </div>
  </div>
- <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
+ <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 w-full sm:w-auto">
  {protocolDesk && !isProtocolOnly ? (
  <Button
  type="button"
  size="sm"
  variant="secondary"
  onClick={() => router.push(eventDashboardHref(selectedEvent.id, { tab: 'prep' }))}
- className="flex-1 sm:flex-initial min-h-11 sm:min-h-[36px]"
+ className="flex-1 sm:flex-initial"
  >
  Vue complète
  </Button>
@@ -2113,7 +2091,7 @@ Merci de confirmer votre présence :
  onClick={() => handleManageEvent(selectedEvent)}
  disabled={loadingEventDetail}
  leftIcon={<RefreshCw className={cn('w-4 h-4', loadingEventDetail && 'animate-spin')} />}
- className="flex-1 sm:flex-initial min-h-11 sm:min-h-[36px]"
+ className="flex-1 sm:flex-initial"
  >
  Actualiser
  </Button>
@@ -2123,11 +2101,12 @@ Merci de confirmer votre présence :
  size="sm"
  onClick={() => handleEditEventClick(selectedEvent)}
  leftIcon={<Edit3 className="w-4 h-4" />}
- className="flex-1 sm:flex-initial min-h-11 sm:min-h-[36px]"
+ className="flex-1 sm:flex-initial"
  >
  Configurer
  </Button>
  )}
+ </div>
  </div>
  </div>
  )}
@@ -2309,6 +2288,10 @@ Merci de confirmer votre présence :
  protocolDesk={protocolDesk}
  />
 
+ {loadingEventDetail ? (
+ <SkeletonEventDetailBody />
+ ) : (
+ <>
  {deskTab === 'protocol' && (
  <>
  {protocolLocked ? (
@@ -3107,6 +3090,8 @@ Merci de confirmer votre présence :
  setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, feedPostCount: count } : e)));
  }}
  />
+ )}
+ </>
  )}
  </div>
  )}

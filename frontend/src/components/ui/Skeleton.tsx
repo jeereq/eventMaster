@@ -125,6 +125,82 @@ export function SkeletonEventsView({ mode = 'grid' }: { mode?: 'grid' | 'list' }
   );
 }
 
+export function SkeletonEventDetailBody({ announced = true }: { announced?: boolean }) {
+  return (
+    <div
+      className="space-y-4 animate-fade-in"
+      {...(announced
+        ? { role: 'status', 'aria-live': 'polite', 'aria-label': 'Chargement du contenu de l’événement' }
+        : { 'aria-hidden': true })}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="space-y-2 flex-1 min-w-0">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-3.5 w-full max-w-md" />
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Skeleton className="h-11 w-28 rounded-[var(--radius-button)]" />
+          <Skeleton className="h-11 w-28 rounded-[var(--radius-button)]" />
+        </div>
+      </div>
+      <SkeletonList count={5} />
+      {announced ? <span className="sr-only">Chargement du contenu de l’événement…</span> : null}
+    </div>
+  );
+}
+
+export function SkeletonEventDetail() {
+  return (
+    <div
+      className="space-y-5 animate-fade-in"
+      role="status"
+      aria-live="polite"
+      aria-label="Chargement de l’événement"
+    >
+      <Skeleton className="h-3 w-52" />
+      <Skeleton className="h-11 w-44 rounded-[var(--radius-button)]" />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="space-y-2 flex-1 min-w-0">
+          <Skeleton className="h-8 w-2/3 max-w-md" />
+          <Skeleton className="h-4 w-full max-w-lg" />
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Skeleton className="h-11 w-28 rounded-[var(--radius-button)]" />
+          <Skeleton className="h-11 w-32 rounded-[var(--radius-button)]" />
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-4 w-36" />
+      </div>
+      <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4">
+        <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <React.Fragment key={i}>
+              <div className="flex flex-col items-center gap-2 min-w-[76px]">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-3 w-14" />
+              </div>
+              {i < 4 ? <Skeleton className="h-0.5 flex-1 min-w-[1.5rem] rounded-full" /> : null}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-11 w-24 rounded-full" />
+        ))}
+      </div>
+      <SkeletonEventDetailBody announced={false} />
+      <span className="sr-only">Chargement de l’événement…</span>
+    </div>
+  );
+}
+
 export function SkeletonRoomsView({ mode = 'grid' }: { mode?: 'grid' | 'list' }) {
   return (
     <div className="rounded-[var(--radius-card)] border border-border bg-surface p-6 space-y-5 animate-fade-in">
