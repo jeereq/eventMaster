@@ -21,7 +21,7 @@ export default function PageHeader({ title, description, action, breadcrumbs, cl
             {title}
           </h1>
           {description && (
-            <p className="hidden sm:block text-sm text-muted max-w-2xl leading-relaxed">
+            <p className="text-sm text-muted max-w-2xl leading-relaxed">
               {description}
             </p>
           )}

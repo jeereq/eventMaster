@@ -4,18 +4,18 @@ import { AlertCircle, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 
 const variants = {
   error: {
-    container: 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300',
-    icon: 'text-rose-500',
+    container: 'bg-danger/10 border-danger/25 text-danger',
+    icon: 'text-danger',
     Icon: AlertCircle,
   },
   success: {
-    container: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300',
-    icon: 'text-emerald-500',
+    container: 'bg-primary/10 border-primary/25 text-primary',
+    icon: 'text-primary',
     Icon: CheckCircle2,
   },
   warning: {
-    container: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300',
-    icon: 'text-amber-500',
+    container: 'bg-festive-accent-soft border-festive-accent/30 text-festive-accent',
+    icon: 'text-festive-accent',
     Icon: AlertTriangle,
   },
   info: {
@@ -51,10 +51,10 @@ export default function Alert({ variant = 'info', title, children, className, ic
       )}
     >
       <span className={cn('shrink-0 mt-0.5', config.icon)}>
-        {icon ?? <IconComponent className="w-5 h-5" />}
+        {icon ?? <IconComponent className="w-5 h-5" aria-hidden />}
       </span>
       <div className="min-w-0">
-        {title && <p className="font-semibold mb-0.5">{title}</p>}
+        {title && <p className="font-semibold mb-0.5 text-foreground">{title}</p>}
         <div>{children}</div>
       </div>
     </div>

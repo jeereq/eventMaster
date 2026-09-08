@@ -7,7 +7,6 @@ import {
   CreditCard, Check, Sparkles,
   ShieldCheck, FileText, ArrowRight, Inbox, LayoutDashboard, Minus,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert, SkeletonBillingView, Button, StatusPill, PageHeader, Breadcrumbs, EmptyState,
@@ -185,10 +184,35 @@ function formatCampaignWindow(start: string | null, end: string | null) {
 }
 
 function FeatureCell({ value }: { value: string | boolean }) {
-  if (value === true) return <Check className="w-4 h-4 text-primary mx-auto" aria-label="Inclus" />;
-  if (value === false) return <Minus className="w-4 h-4 text-muted mx-auto" aria-label="Non inclus" />;
+  if (value === true) {
+    return (
+      <span className="inline-flex items-center justify-center">
+        <Check className="w-4 h-4 text-primary" aria-hidden />
+        <span className="sr-only">Inclus</span>
+      </span>
+    );
+  }
+  if (value === false) {
+    return (
+      <span className="inline-flex items-center justify-center">
+        <Minus className="w-4 h-4 text-muted" aria-hidden />
+        <span className="sr-only">Non inclus</span>
+      </span>
+    );
+  }
   return <span className="text-xs font-medium text-foreground">{value}</span>;
 }
+
+/** Colonnes du comparatif pour un compte client (découverte, sans 13 forfaits). */
+const CLIENT_COMPARISON_IDS: PlanId[] = [
+  'FREE',
+  'PERSONAL_50',
+  'STANDARD',
+  'PREMIUM_1',
+  'VENUE',
+  'SERVICE',
+  'CATALOG',
+];
 
 const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
   { label: 'Salles & prestataires', ids: [...VENDOR_PLAN_IDS] },
@@ -422,7 +446,7 @@ function BillingPageInner() {
   }, [allowedPaidIds, billing?.plan, isClientAccount]);
 
   const comparisonIds = useMemo(() => {
-    if (isClientAccount) return [...PLAN_IDS];
+    if (isClientAccount) return CLIENT_COMPARISON_IDS;
     const current = billing?.plan;
     return PLAN_IDS.filter((id) => id === current || allowedPaidIds.includes(id) || id === 'FREE');
   }, [allowedPaidIds, billing?.plan, isClientAccount]);
@@ -571,14 +595,12 @@ function BillingPageInner() {
       {pendingSignupPlan && (
         <Alert variant="info">
           Forfait choisi à l’inscription : <strong>{pendingSignupPlan}</strong>. Votre espace reste
-          en gratuit tant que l’abonnement n’est pas activé.{' '}
-          <button
-            type="button"
-            className="font-semibold text-primary underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
-            onClick={() => setBillingTab('plans')}
-          >
-            Ouvrir l’onglet Forfaits
-          </button>
+          en gratuit tant que l’abonnement n’est pas activé.
+          <span className="mt-2 block">
+            <Button type="button" size="md" variant="secondary" onClick={() => setBillingTab('plans')}>
+              Ouvrir l’onglet Forfaits
+            </Button>
+          </span>
         </Alert>
       )}
 
@@ -867,6 +889,13 @@ function BillingPageInner() {
                             Modèles : {formatQuotaSummary(billing.usage.templates, billing.limits.maxTemplates)}
                           </p>
                         )}
+                        {plan.id !== 'FREE' && !allowedPaidIds.includes(plan.id) && (
+                          <p className="text-xs text-muted mt-2 leading-relaxed">
+                            {isClientAccount
+                              ? 'Réservé à un compte organisateur ou prestataire. Contactez le Super Admin pour changer le type.'
+                              : 'Ce forfait ne correspond pas à votre type de compte.'}
+                          </p>
+                        )}
                         <Button
                           type="button"
                           size="md"
@@ -932,17 +961,38 @@ function BillingPageInner() {
             </button>
             {showComparison && (
               <div className="border-t border-border">
-                <div className="sm:hidden px-4 py-2 bg-primary/5 text-primary text-xs font-medium flex items-center justify-between border-b border-border/80">
-                  <span>Faites glisser pour comparer tous les forfaits</span>
-                  <span className="font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">{comparisonIds.length} forfaits</span>
+                <div className="lg:hidden divide-y divide-border">
+                  {FEATURE_COMPARISON.map((row) => (
+                    <details key={row.label} className="group">
+                      <summary className="min-h-11 px-4 py-2.5 text-sm font-semibold text-foreground cursor-pointer list-none flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
+                        {row.label}
+                        <span className="text-xs font-medium text-muted group-open:hidden">Voir</span>
+                        <span className="text-xs font-medium text-muted hidden group-open:inline">Masquer</span>
+                      </summary>
+                      <ul className="px-4 pb-3 space-y-2">
+                        {comparisonIds.map((id) => (
+                          <li key={id} className="flex items-center justify-between gap-3 text-xs">
+                            <span className="text-muted min-w-0 truncate">
+                              {LANDING_PLANS.find((p) => p.id === id)?.ms365Name || id}
+                            </span>
+                            <span className="shrink-0">
+                              <FeatureCell value={row.values[id]} />
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ))}
                 </div>
-                <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
-                  <table className="w-full text-sm min-w-[960px]">
+                <div className="hidden lg:block overflow-x-auto overscroll-x-contain">
+                  <table className="w-full text-sm min-w-[720px]">
                     <thead>
                       <tr className="bg-surface-muted">
-                        <th className="text-left px-4 py-2 text-xs text-muted">Fonctionnalité</th>
+                        <th className="sticky left-0 z-10 bg-surface-muted text-left px-4 py-2 text-xs text-muted min-w-[11rem] shadow-[2px_0_8px_rgba(0,0,0,0.06)]">
+                          Fonctionnalité
+                        </th>
                         {comparisonIds.map((id) => (
-                          <th key={id} className="px-2 py-2 text-xs text-center text-muted">
+                          <th key={id} className="px-2 py-2 text-xs text-center text-muted whitespace-nowrap">
                             {LANDING_PLANS.find((p) => p.id === id)?.ms365Name}
                           </th>
                         ))}
@@ -951,7 +1001,9 @@ function BillingPageInner() {
                     <tbody>
                       {FEATURE_COMPARISON.map((row) => (
                         <tr key={row.label} className="border-t border-border">
-                          <td className="px-4 py-2 text-xs text-foreground">{row.label}</td>
+                          <td className="sticky left-0 z-10 bg-surface px-4 py-2 text-xs text-foreground min-w-[11rem] shadow-[2px_0_8px_rgba(0,0,0,0.06)]">
+                            {row.label}
+                          </td>
                           {comparisonIds.map((id) => (
                             <td key={id} className="py-2 text-center">
                               <FeatureCell value={row.values[id]} />
