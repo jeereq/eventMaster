@@ -15,6 +15,7 @@ import {
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
+import { formatEventPlace } from '../utils/eventPlace';
 import { haversineKm, toDateKey } from '../utils/marketplaceDates';
 import { enabledMarketplaceCities, normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
 import { isOnlinePaymentsEnabled, loadPlatformSettings } from '../services/platformSettingsService';
@@ -64,6 +65,9 @@ function serializePublicEvent(event: {
   description: string | null;
   date: Date;
   location: string;
+  city?: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
   latitude: number | null;
   longitude: number | null;
   isPublic: boolean;
@@ -104,7 +108,10 @@ function serializePublicEvent(event: {
     title: event.title,
     description: event.description,
     date: event.date,
-    location: event.location,
+    location: formatEventPlace(event) || event.location,
+    city: event.city || null,
+    commune: event.commune || null,
+    neighborhood: event.neighborhood || null,
     latitude: event.latitude,
     longitude: event.longitude,
     orgName: event.tenant.name,
@@ -181,7 +188,12 @@ export async function listPublicEvents(req: Request, res: Response) {
                     }]
                   : []),
                 ...locationBits.map((bit) => ({
-                  location: { contains: bit, mode: 'insensitive' as const },
+                  OR: [
+                    { location: { contains: bit, mode: 'insensitive' as const } },
+                    { city: { contains: bit, mode: 'insensitive' as const } },
+                    { commune: { contains: bit, mode: 'insensitive' as const } },
+                    { neighborhood: { contains: bit, mode: 'insensitive' as const } },
+                  ],
                 })),
               ],
             }

@@ -15,6 +15,7 @@ import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotific
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
 import { parsePhotoUrls } from '../utils/publicVenue';
+import { formatEventPlace } from '../utils/eventPlace';
 
 function rejectPaidTicketingIfDisabled(body: Record<string, unknown>, res: Response): boolean {
   const wantsPublic = body.isPublic === true || body.isPublic === 'true';
@@ -28,9 +29,37 @@ function rejectPaidTicketingIfDisabled(body: Record<string, unknown>, res: Respo
   return false;
 }
 
-function serializeEvent<T extends { _count?: { posts: number } }>(event: T) {
+function serializeEvent<T extends {
+  _count?: { posts: number };
+  location?: string | null;
+  neighborhood?: string | null;
+  commune?: string | null;
+  city?: string | null;
+}>(event: T) {
   const { _count, ...rest } = event;
-  return { ...rest, feedPostCount: _count?.posts ?? 0 };
+  return {
+    ...rest,
+    feedPostCount: _count?.posts ?? 0,
+    placeLabel: formatEventPlace(rest),
+  };
+}
+
+function eventPlaceData(body: Record<string, unknown>, forCreate: boolean) {
+  const city = parseOptionalString(body.city);
+  const commune = parseOptionalString(body.commune);
+  const neighborhood = parseOptionalString(body.neighborhood);
+  if (forCreate) {
+    return {
+      city: city ?? null,
+      commune: commune ?? null,
+      neighborhood: neighborhood ?? null,
+    };
+  }
+  return {
+    ...(city !== undefined ? { city } : {}),
+    ...(commune !== undefined ? { commune } : {}),
+    ...(neighborhood !== undefined ? { neighborhood } : {}),
+  };
 }
 
 const EVENT_KIND_IDS = new Set([
@@ -258,6 +287,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
           : {}),
         ...visibility,
         ...eventDossierData(req.body, true),
+        ...eventPlaceData(req.body, true),
       },
       include: {
         room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
@@ -368,6 +398,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
           : {}),
         ...visibility,
         ...eventDossierData(req.body, false),
+        ...eventPlaceData(req.body, false),
       },
       include: {
         room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },

@@ -250,6 +250,9 @@ model Event {
   /** Fin optionnelle (gestionnaire). */
   endsAt            DateTime?
   location          String
+  city              String?
+  commune           String?
+  neighborhood      String?
   /** WEDDING, BIRTHDAY, BAPTISM, CORPORATE, CONFERENCE, GALA, OTHER */
   eventKind         String?
   /** Nom du client / dossier (gestionnaire). */
@@ -300,6 +303,8 @@ model Event {
   seatHolds    SeatHold[]
 
   @@index([isPublic, date])
+  @@index([city])
+  @@index([commune])
 }
 
 model Guest {

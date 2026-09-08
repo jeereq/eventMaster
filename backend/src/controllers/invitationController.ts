@@ -16,7 +16,7 @@ import {
 import { escapeHtml } from '../utils/brandingUtils';
 import { extractGuestEmail } from '../utils/guestIdentity';
 import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
-import { GUEST_COPY, rewriteStaleGuestMessageCopy } from '../utils/guestMessageCopy';
+import { formatEventPlace } from '../utils/eventPlace';
 
 function applyInvitePlaceholders(
   text: string,
@@ -220,7 +220,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         rsvpLink,
         title: event.title || '',
         description: event.description || '',
-        location: event.location || '',
+        location: formatEventPlace(event) || event.location || '',
         date: formattedDate,
         orgName: orgBrand.orgName,
       };

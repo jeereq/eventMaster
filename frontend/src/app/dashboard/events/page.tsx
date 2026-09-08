@@ -56,7 +56,7 @@ import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWork
 import EventPrepPanel from '@/components/EventPrepPanel';
 import OrgTicketingView from '@/components/OrgTicketingView';
 import { isB2cPlanId } from '@/config/landingPricing';
-import type { EventConfigPayload } from '@/lib/eventConfig';
+import { formatEventPlace } from '@/lib/eventPlace';
 import { eventPrepSummary, hasEventPrepShortlist, parseEventPrep } from '@/lib/eventPrep';
 import {
  displayGuestEmail,
@@ -99,6 +99,10 @@ interface EventItem {
  date: string;
  endsAt?: string | null;
  location: string;
+ city?: string | null;
+ commune?: string | null;
+ neighborhood?: string | null;
+ placeLabel?: string | null;
  eventKind?: string | null;
  clientName?: string | null;
  estimatedGuests?: number | null;
@@ -345,7 +349,7 @@ function fillInvitationPreviewVars(
   rsvpLink: 'https://eventmaster.cd/rsvp/exemple',
   title: event.title || '',
   description: event.description || '',
-  location: event.location || '',
+  location: formatEventPlace(event) || event.location || '',
   date: formattedDate,
   orgName,
  };
@@ -679,6 +683,9 @@ function EventsPageInner() {
  const matchesSearch = !q
   || event.title.toLowerCase().includes(q)
   || (event.location || '').toLowerCase().includes(q)
+  || (event.commune || '').toLowerCase().includes(q)
+  || (event.neighborhood || '').toLowerCase().includes(q)
+  || (event.city || '').toLowerCase().includes(q)
   || (event.room?.name || '').toLowerCase().includes(q);
  const when = new Date(event.date).getTime();
  const matchesWhen = eventWhen === 'ALL'
@@ -954,6 +961,9 @@ Merci de confirmer votre présence :
  description: form.description,
  date: form.date,
  location: form.location,
+ city: form.city,
+ commune: form.commune,
+ neighborhood: form.neighborhood,
  reminderFrequency: form.reminderFrequency,
  latitude: form.latitude,
  longitude: form.longitude,
@@ -1791,7 +1801,7 @@ Merci de confirmer votre présence :
  if (selectedEvent) {
  body = body.replaceAll('{{title}}', selectedEvent.title || '');
  body = body.replaceAll('{{description}}', selectedEvent.description || '');
- body = body.replaceAll('{{location}}', selectedEvent.location || '');
+ body = body.replaceAll('{{location}}', selectedEvent.placeLabel || formatEventPlace(selectedEvent) || selectedEvent.location || '');
  const formattedDate = new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
  });
@@ -2065,7 +2075,7 @@ Merci de confirmer votre présence :
  <span className="text-border" aria-hidden>·</span>
  <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
  <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" aria-hidden />
- <span className="truncate">{selectedEvent.location}</span>
+ <span className="truncate">{selectedEvent.placeLabel || formatEventPlace(selectedEvent) || selectedEvent.location}</span>
  </span>
  </p>
  <div className="flex flex-wrap items-center gap-2">
@@ -2216,7 +2226,7 @@ Merci de confirmer votre présence :
  <span className="font-medium text-primary">{dateLabel}</span>
  <span className="flex items-center gap-1 truncate">
  <MapPin className="w-3 h-3 shrink-0 opacity-70" />
- {event.location}
+ {event.placeLabel || formatEventPlace(event) || event.location}
  </span>
  {event.room && (
  <span className="flex items-center gap-1 truncate text-primary dark:text-primary">
@@ -2270,7 +2280,7 @@ Merci de confirmer votre présence :
  ctaLabel={protocolDesk ? 'Accueillir' : 'Gérer'}
  meta={
  eventsViewMode === 'list'
- ? event.location
+ ? event.placeLabel || formatEventPlace(event) || event.location
  : meta
  }
  value={eventsViewMode === 'list' ? dateLabel : undefined}
@@ -2343,7 +2353,7 @@ Merci de confirmer votre présence :
  key={selectedEvent.id}
  eventId={selectedEvent.id}
  value={selectedEvent.eventPrep}
- eventLocation={selectedEvent.location}
+ eventLocation={selectedEvent.placeLabel || formatEventPlace(selectedEvent) || selectedEvent.location}
  eventDate={selectedEvent.date}
  eventTitle={selectedEvent.title}
  guestCount={guests.length}

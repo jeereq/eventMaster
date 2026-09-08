@@ -22,6 +22,7 @@ export default function CityLocationFields({
   onChange,
   required = true,
   className,
+  hint,
 }: {
   city: string;
   commune: string;
@@ -29,12 +30,16 @@ export default function CityLocationFields({
   onChange: (next: { city: string; commune: string; neighborhood: string }) => void;
   required?: boolean;
   className?: string;
+  hint?: string;
 }) {
   const { site } = usePlatformSite();
   const marketplaceCities = enabledMarketplaceCities(site);
   const cityName = normalizeRdcCity(city);
   const communes = communesForCity(cityName);
   const quartiers = neighborhoodsFor(cityName, commune);
+  const help =
+    hint
+    ?? `Marketplace limité à ${findRdcCity(cityName)?.name || formatCityList(marketplaceCities) || 'les villes actives'}. La carte se cadre sur la ville et la commune choisies.`;
 
   return (
     <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-3', className)}>
@@ -92,7 +97,7 @@ export default function CityLocationFields({
         </select>
       </label>
       <p className="sm:col-span-2 text-[11px] text-muted -mt-1">
-        Marketplace limité à {findRdcCity(cityName)?.name || formatCityList(marketplaceCities) || 'les villes actives'}. La carte se cadre sur la ville et la commune choisies.
+        {help}
       </p>
     </div>
   );

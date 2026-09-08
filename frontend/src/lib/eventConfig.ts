@@ -44,6 +44,9 @@ export type EventConfigSource = {
   date: string;
   endsAt?: string | null;
   location: string;
+  city?: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
   reminderFrequency?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -70,6 +73,9 @@ export type EventConfigPayload = {
   description: string;
   date: string;
   location: string;
+  city: string;
+  commune: string;
+  neighborhood: string;
   reminderFrequency: string;
   latitude: number | null;
   longitude: number | null;
@@ -154,9 +160,13 @@ export function firstInvalidEventConfigTab(input: {
   title: string;
   date: string;
   location: string;
+  commune?: string;
+  neighborhood?: string;
 }): EventConfigTab | null {
   if (!input.title.trim() || !input.date) return 'essentials';
-  if (!input.location.trim()) return 'place';
+  if (!input.location.trim() || !String(input.commune || '').trim() || !String(input.neighborhood || '').trim()) {
+    return 'place';
+  }
   return null;
 }
 

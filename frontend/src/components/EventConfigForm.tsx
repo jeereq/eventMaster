@@ -28,6 +28,7 @@ import {
 import { api } from '@/lib/api';
 import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
+import CityLocationFields from '@/components/CityLocationFields';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
@@ -77,7 +78,7 @@ import {
   type PricingZone,
   type TicketPricingMode,
 } from '@/lib/ticketPricing';
-import { formatFc } from '@/config/landingPricing';
+import { findRdcCommune } from '@/lib/rdcCities';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
@@ -151,6 +152,9 @@ export default function EventConfigForm({
   const [date, setDate] = useState('');
   const [endsAt, setEndsAt] = useState('');
   const [location, setLocation] = useState('');
+  const [city, setCity] = useState('');
+  const [commune, setCommune] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
   const [eventKind, setEventKind] = useState<EventKindId | ''>('');
   const [clientName, setClientName] = useState('');
   const [estimatedGuests, setEstimatedGuests] = useState('');
@@ -209,6 +213,9 @@ export default function EventConfigForm({
       setDate('');
       setEndsAt('');
       setLocation('');
+      setCity('');
+      setCommune('');
+      setNeighborhood('');
       setEventKind('');
       setClientName('');
       setEstimatedGuests('');
@@ -246,6 +253,9 @@ export default function EventConfigForm({
     setDate(toDateTimeLocalValue(initialEvent.date));
     setEndsAt(toDateTimeLocalValue(initialEvent.endsAt));
     setLocation(initialEvent.location || '');
+    setCity(initialEvent.city || '');
+    setCommune(initialEvent.commune || '');
+    setNeighborhood(initialEvent.neighborhood || '');
     setEventKind(kind);
     setClientName(initialEvent.clientName || '');
     setEstimatedGuests(initialEvent.estimatedGuests != null ? String(initialEvent.estimatedGuests) : '');
@@ -437,6 +447,22 @@ export default function EventConfigForm({
     }
   };
 
+  const applyPlace = (next: { city: string; commune: string; neighborhood: string }) => {
+    const communeChanged = next.commune !== commune;
+    const missingGps = !latitude.trim() || !longitude.trim();
+    setCity(next.city);
+    setCommune(next.commune);
+    setNeighborhood(next.neighborhood);
+    const communeMeta = findRdcCommune(next.city, next.commune);
+    if (communeMeta && (missingGps || communeChanged)) {
+      const latText = communeMeta.center.lat.toFixed(6);
+      const lngText = communeMeta.center.lng.toFixed(6);
+      setLatitude(latText);
+      setLongitude(lngText);
+      syncMarker(latText, lngText);
+    }
+  };
+
   const applyRoom = (nextRoomId: string) => {
     setRoomId(nextRoomId);
     setRoomPreviewQuality('standard');
@@ -571,14 +597,17 @@ export default function EventConfigForm({
 
   const searchLocationOnMap = async () => {
     if (!location.trim()) {
-      setSearchError('Saisissez d’abord le lieu.');
+      setSearchError('Saisissez d’abord le lieu, la commune et le quartier.');
       return;
     }
     setSearchingLocation(true);
     setSearchError('');
     try {
+      const query = [location.trim(), neighborhood, commune, city, 'RD Congo']
+        .filter(Boolean)
+        .join(', ');
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location.trim())}`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`,
       );
       const data = await res.json();
       if (data && data.length > 0) {
@@ -646,6 +675,9 @@ export default function EventConfigForm({
       description: description.trim(),
       date,
       location: location.trim(),
+      city: city.trim(),
+      commune: commune.trim(),
+      neighborhood: neighborhood.trim(),
       reminderFrequency,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
@@ -691,7 +723,7 @@ export default function EventConfigForm({
     };
   };
 
-  const missingTab = firstInvalidEventConfigTab({ title, date, location });
+  const missingTab = firstInvalidEventConfigTab({ title, date, location, commune, neighborhood });
 
   const submit = async () => {
     if (missingTab) {
@@ -699,7 +731,7 @@ export default function EventConfigForm({
       setFormError(
         missingTab === 'essentials'
           ? 'Indiquez au moins un titre et une date.'
-          : 'Indiquez le lieu pour créer l’événement.',
+          : 'Indiquez le lieu, la commune et le quartier.',
       );
       return;
     }
@@ -743,7 +775,7 @@ export default function EventConfigForm({
 
   const tabNeedsAttention = (id: EventConfigTab) => {
     if (id === 'essentials') return !title.trim() || !date;
-    if (id === 'place') return !location.trim();
+    if (id === 'place') return !location.trim() || !commune.trim() || !neighborhood.trim();
     if (id === 'access') return complete && isPublic;
     return false;
   };
@@ -756,7 +788,7 @@ export default function EventConfigForm({
       description={
         complete
           ? 'Renseignez l’essentiel. Vous pouvez enregistrer depuis n’importe quel onglet.'
-          : 'Titre, date et lieu suffisent. Passez les autres onglets si vous voulez aller vite.'
+          : 'Titre, date, lieu, commune et quartier suffisent. Passez les autres onglets si vous voulez aller vite.'
       }
       size="xl"
       footer={
@@ -1011,13 +1043,22 @@ export default function EventConfigForm({
             </div>
 
             {!complete && (
-              <Input
-                label="Lieu"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="ex. Hôtel Fleuve Congo"
-                leftIcon={<MapPin className="w-4 h-4" />}
-              />
+              <div className="space-y-3">
+                <Input
+                  label="Lieu"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="ex. Hôtel Fleuve Congo"
+                  leftIcon={<MapPin className="w-4 h-4" />}
+                />
+                <CityLocationFields
+                  city={city}
+                  commune={commune}
+                  neighborhood={neighborhood}
+                  onChange={applyPlace}
+                  hint="Ville, commune et quartier — pour les invitations et le pin de rendez-vous."
+                />
+              </div>
             )}
             {complete && (
               <Input
@@ -1094,12 +1135,19 @@ export default function EventConfigForm({
         {tab === 'place' && (
           <section className="space-y-3">
             <Input
-              label="Lieu"
+              label="Lieu / salle"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="ex. Hôtel Fleuve Congo"
               required
               leftIcon={<MapPin className="w-4 h-4" />}
+            />
+            <CityLocationFields
+              city={city}
+              commune={commune}
+              neighborhood={neighborhood}
+              onChange={applyPlace}
+              hint="Commune et quartier aident les invités à se repérer. La carte se cadre sur la commune."
             />
             <label className="block space-y-1.5">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">

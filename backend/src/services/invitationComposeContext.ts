@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import { listAiTemplateComposeRuns } from './aiTemplateComposeHistoryService';
+import { formatEventPlace } from '../utils/eventPlace';
 import {
   ACCOUNT_KIND_LABEL,
   clipContextText,
@@ -79,6 +80,9 @@ export async function loadInvitationComposeContext(input: {
               title: true,
               eventKind: true,
               location: true,
+              city: true,
+              commune: true,
+              neighborhood: true,
               date: true,
               clientName: true,
             },
@@ -103,7 +107,7 @@ export async function loadInvitationComposeContext(input: {
       recentEvents: events.map((event) => ({
         title: clipContextText(event.title, 80),
         kind: event.eventKind || '',
-        location: clipContextText(event.location || '', 60),
+        location: clipContextText(formatEventPlace(event) || event.location || '', 80),
         date: event.date.toISOString().slice(0, 10),
         clientName: event.clientName ? clipContextText(event.clientName, 60) : null,
       })),

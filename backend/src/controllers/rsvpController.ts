@@ -23,6 +23,7 @@ import {
 } from '../utils/brandedMessaging';
 import { customTenantBranding, escapeHtml } from '../utils/brandingUtils';
 import { GUEST_COPY } from '../utils/guestMessageCopy';
+import { formatEventPlace } from '../utils/eventPlace';
 import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
@@ -210,6 +211,9 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             description: true,
             date: true,
             location: true,
+            city: true,
+            commune: true,
+            neighborhood: true,
             latitude: true,
             longitude: true,
             isPublic: true,
@@ -684,7 +688,7 @@ export async function submitRsvp(req: Request, res: Response) {
       const orgBrand = orgBrandFromTenant(guest.event.tenant);
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
-      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\n${GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
+      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${formatEventPlace(guest.event) || guest.event.location || 'Non défini'}\n\n${GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
       const htmlBody = wrapBrandedEmail({
         branding: orgBrand.branding,
         orgName: orgBrand.orgName,
@@ -700,7 +704,7 @@ export async function submitRsvp(req: Request, res: Response) {
           </div>
           ${brandedEventDetailsHtml(orgBrand.branding, [
             { label: 'Date', value: formattedDate },
-            { label: 'Lieu', value: guest.event.location || 'Non défini' },
+            { label: 'Lieu', value: formatEventPlace(guest.event) || guest.event.location || 'Non défini' },
           ])}
         `,
         footerNote: GUEST_COPY.rsvpEmailFooter,
@@ -710,7 +714,7 @@ export async function submitRsvp(req: Request, res: Response) {
         firstName: guest.firstName,
         title: guest.event.title,
         date: formattedDate,
-        location: guest.event.location || 'Non défini',
+        location: formatEventPlace(guest.event) || guest.event.location || 'Non défini',
         orgName: orgBrand.orgName,
       });
       const whatsappCaption = wrapBrandedWhatsApp(whatsappRendered.body, orgBrand.orgName, {
@@ -819,6 +823,9 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
             description: true,
             date: true,
             location: true,
+            city: true,
+            commune: true,
+            neighborhood: true,
             guestGuidelines: true,
             tablePlan: true,
           },
