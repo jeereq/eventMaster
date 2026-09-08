@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
-import { notifyPlatformStaff, notifyUsers } from './platformNotificationService';
+import { notifyPlatformStaff, notifyTenantOperators, notifyUsers } from './platformNotificationService';
 import { logAdminAction } from './adminAuditService';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { renderOperatorNotificationEmail, renderOperatorWhatsApp } from '../utils/notificationTemplates';
@@ -34,6 +34,44 @@ function formatAmount(amountFc: number, currency = 'CDF') {
 
 function isUniqueConstraint(error: unknown) {
   return Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'P2002');
+}
+
+function staffPaymentHref(kind: PaymentTraceKind, metadata?: Record<string, unknown>): string {
+  if (kind === 'ticket') return `${FRONTEND_URL}/dashboard/admin/payments?kind=ticket`;
+  if (kind === 'subscription') return `${FRONTEND_URL}/dashboard/admin/payments?kind=subscription`;
+  if (kind === 'ai_tokens') return `${FRONTEND_URL}/dashboard/admin/payments?kind=ai_tokens`;
+  const href = metadata?.href;
+  if (typeof href === 'string' && href.startsWith('/')) return `${FRONTEND_URL}${href}`;
+  return `${FRONTEND_URL}/dashboard/audit`;
+}
+
+function staffPaymentTitle(kind: PaymentTraceKind, metadata?: Record<string, unknown>): string {
+  if (kind === 'ticket') {
+    const eventTitle = typeof metadata?.eventTitle === 'string' ? metadata.eventTitle : '';
+    return eventTitle ? `Billet vendu — ${eventTitle}` : 'Billet vendu';
+  }
+  if (kind === 'subscription') {
+    const plan = typeof metadata?.plan === 'string' ? metadata.plan : '';
+    return plan ? `Abonnement payé — ${plan}` : 'Abonnement payé';
+  }
+  if (kind === 'ai_tokens') return 'Recharge jetons IA';
+  return `Paiement reçu — ${KIND_LABEL[kind]}`;
+}
+
+function staffPaymentMessage(
+  input: RecordPaymentSuccessInput,
+  amountLabel: string,
+): string {
+  const tenantName = typeof input.metadata?.tenantName === 'string' ? input.metadata.tenantName : '';
+  const buyer =
+    (typeof input.metadata?.buyerName === 'string' && input.metadata.buyerName) ||
+    input.payerEmail ||
+    input.payerPhone ||
+    '';
+  const parts = [input.summary, amountLabel];
+  if (tenantName) parts.push(tenantName);
+  if (buyer && input.kind === 'ticket') parts.push(buyer);
+  return parts.join(' · ');
 }
 
 /**
@@ -70,9 +108,13 @@ export async function recordPaymentSuccess(input: RecordPaymentSuccessInput): Pr
   }
 
   const titlePayer = 'Paiement confirmé';
-  const titleStaff = `Paiement reçu — ${kindLabel}`;
   const hrefPayer = input.kind === 'ticket' ? `${FRONTEND_URL}/dashboard/tickets` : `${FRONTEND_URL}/dashboard`;
-  const hrefStaff = `${FRONTEND_URL}/dashboard/audit`;
+  const hrefStaff = staffPaymentHref(input.kind, input.metadata);
+  const staffType =
+    input.kind === 'ticket'
+      ? PLATFORM_NOTIFICATION_TYPE.TICKET_SALE
+      : PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED;
+  const skipStaffNoise = input.kind === 'ticket' && input.amountFc <= 0;
 
   await logAdminAction({
     actorId: input.payerUserId || 'system',
@@ -91,19 +133,23 @@ export async function recordPaymentSuccess(input: RecordPaymentSuccessInput): Pr
     },
   });
 
-  void notifyPlatformStaff({
-    type: PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED,
-    title: titleStaff,
-    message: `${input.summary} · ${amountLabel}`,
-    metadata: {
-      kind: input.kind,
-      reference: input.reference,
-      amountFc: input.amountFc,
-      href: hrefStaff,
-      payerUserId: input.payerUserId || null,
-      payerEmail: input.payerEmail || null,
-    },
-  }).catch((err) => console.error('[PaymentTrace] notify staff:', err));
+  if (!skipStaffNoise) {
+    void notifyPlatformStaff({
+      type: staffType,
+      title: staffPaymentTitle(input.kind, input.metadata),
+      message: staffPaymentMessage(input, amountLabel),
+      metadata: {
+        kind: input.kind,
+        kindLabel,
+        reference: input.reference,
+        amountFc: input.amountFc,
+        href: hrefStaff,
+        payerUserId: input.payerUserId || null,
+        payerEmail: input.payerEmail || null,
+        ...(input.metadata || {}),
+      },
+    }).catch((err) => console.error('[PaymentTrace] notify staff:', err));
+  }
 
   if (input.payerUserId) {
     void notifyUsers([input.payerUserId], {
@@ -217,6 +263,7 @@ export async function notifySubscriptionPayment(params: {
     summary: `Abonnement ${params.plan} — ${tenant?.name || 'Organisation'}`,
     metadata: {
       tenantId: params.tenantId,
+      tenantName: tenant?.name || null,
       plan: params.plan,
       requestId: params.requestId,
     },
@@ -232,19 +279,58 @@ export async function notifyTicketPayment(order: {
   amountFc?: number | null;
   quantity?: number | null;
   eventTitle?: string | null;
+  eventId?: string | null;
+  tenantId?: string | null;
+  tenantName?: string | null;
 }) {
-  return recordPaymentSuccess({
+  const quantity = order.quantity || 1;
+  const amountFc = Number(order.amountFc) || 0;
+  const eventTitle = order.eventTitle || 'événement';
+  const created = await recordPaymentSuccess({
     kind: 'ticket',
     reference: order.id,
-    amountFc: Number(order.amountFc) || 0,
+    amountFc,
     payerUserId: order.userId,
     payerEmail: order.buyerEmail,
     payerPhone: order.buyerPhone,
-    summary: `Billet${(order.quantity || 1) > 1 ? 's' : ''} « ${order.eventTitle || 'événement' } » × ${order.quantity || 1}`,
+    summary: `Billet${quantity > 1 ? 's' : ''} « ${eventTitle} » × ${quantity}`,
     metadata: {
       orderId: order.id,
-      quantity: order.quantity || 1,
+      quantity,
       buyerName: order.buyerName || null,
+      eventId: order.eventId || null,
+      eventTitle,
+      tenantId: order.tenantId || null,
+      tenantName: order.tenantName || null,
     },
   });
+
+  if (!created.created || !order.tenantId) return created;
+
+  const amountLabel = formatAmount(amountFc);
+  const buyer = order.buyerName || order.buyerEmail || 'Un acheteur';
+  const isPaid = amountFc > 0;
+  const href = order.eventId
+    ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing`
+    : `${FRONTEND_URL}/dashboard/events`;
+
+  void notifyTenantOperators(order.tenantId, {
+    type: PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
+    title: isPaid ? 'Nouveau billet payé' : 'Nouvelle inscription',
+    message: isPaid
+      ? `${buyer} a acheté ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} » · ${amountLabel}`
+      : `${buyer} s’est inscrit à « ${eventTitle} » (${quantity} place${quantity > 1 ? 's' : ''})`,
+    metadata: {
+      kind: 'ticket',
+      orderId: order.id,
+      eventId: order.eventId || null,
+      eventTitle,
+      tenantId: order.tenantId,
+      quantity,
+      amountFc,
+      href,
+    },
+  }).catch((err) => console.error('[PaymentTrace] notify tenant operators:', err));
+
+  return created;
 }

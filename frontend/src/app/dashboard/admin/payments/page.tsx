@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Eye, Loader2, Wallet } from 'lucide-react';
 import AdminFinanceDetailsModal, { type AdminPaymentDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
@@ -164,9 +164,15 @@ const DATE_PRESET_OPTIONS: Array<{ id: DatePreset; label: string }> = [
 
 export default function AdminPaymentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
 
-  const [kind, setKind] = useState<'all' | PaymentKind>('all');
+  const kindFromUrl = searchParams.get('kind');
+  const [kind, setKind] = useState<'all' | PaymentKind>(() =>
+    kindFromUrl === 'ticket' || kindFromUrl === 'subscription' || kindFromUrl === 'ai_tokens'
+      ? kindFromUrl
+      : 'all',
+  );
   const [status, setStatus] = useState<'all' | PaymentStatus>('all');
   const [channel, setChannel] = useState('all');
   const [provider, setProvider] = useState('all');
@@ -191,6 +197,14 @@ export default function AdminPaymentsPage() {
     if (!user) return;
     if (user.role !== 'SUPER_ADMIN') router.replace('/dashboard');
   }, [authLoading, user, router]);
+
+  useEffect(() => {
+    const k = searchParams.get('kind');
+    if (k === 'ticket' || k === 'subscription' || k === 'ai_tokens') {
+      setKind(k);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {

@@ -10,6 +10,7 @@ import NotificationPreferencesCard from '@/components/NotificationPreferencesCar
 import { cn } from '@/lib/cn';
 import {
   notificationFamilyLabel,
+  notificationTypeLabel,
   type NotificationFamily,
 } from '@/config/platformNotifications';
 
@@ -74,7 +75,7 @@ export default function NotificationsPage() {
     if (user?.role === 'SUPER_ADMIN') {
       return {
         title: 'Aucune notification',
-        description: 'Demandes d’abonnement, licences et versements commerciaux s’afficheront ici.',
+        description: 'Paiements (billets, abonnements, jetons), demandes d’abonnement, licences et versements commerciaux s’afficheront ici.',
       };
     }
     if (user?.role === 'COMMERCIAL' || access?.level === 'commercial') {
@@ -230,9 +231,10 @@ export default function NotificationsPage() {
                   {!item.readAt && <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />}
                   <div className={cn('min-w-0 space-y-1', item.readAt && 'pl-5')}>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-                        {notificationFamilyLabel(item.type)}
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        {notificationTypeLabel(item.type)}
                       </span>
+                      <span className="text-[10px] text-muted">{notificationFamilyLabel(item.type)}</span>
                       <span className="text-[10px] text-muted">{formatWhen(item.createdAt)}</span>
                     </div>
                     <p className="text-sm font-semibold text-foreground">{item.title}</p>

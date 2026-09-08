@@ -6,7 +6,7 @@ import { Bell, Check, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { notificationFamily } from '@/config/platformNotifications';
+import { notificationFamily, notificationTypeLabel } from '@/config/platformNotifications';
 import {
   isLocalAudioMuted,
   playFamilyNotificationSound,
@@ -240,13 +240,18 @@ export function NotificationBell({ className }: { className?: string }) {
  <span className="mt-1.5 w-2 h-2 rounded-full bg-primary/100 shrink-0" />
  )}
  <div className={cn(!n.readAt ? '' : 'pl-4')}>
+ <div className="flex items-center gap-1.5 mb-0.5">
+ <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+ {notificationTypeLabel(n.type)}
+ </span>
+ <span className="text-[10px] text-muted">{formatRelativeTime(n.createdAt)}</span>
+ </div>
  <p className="text-sm font-semibold text-foreground dark:text-foreground line-clamp-1">
  {n.title}
  </p>
  <p className="text-xs text-muted dark:text-muted mt-0.5 line-clamp-2">
  {n.message}
  </p>
- <p className="text-[10px] text-muted mt-1">{formatRelativeTime(n.createdAt)}</p>
  </div>
  </div>
  </button>
