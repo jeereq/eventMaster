@@ -32,7 +32,7 @@ export default function PublicCtaBand({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="em-landing-defer py-10 sm:py-14 border-t border-border bg-gradient-to-b from-surface/90 to-surface-muted/50">
+    <section className="em-landing-defer py-8 sm:py-14 border-t border-border bg-gradient-to-b from-surface/90 to-surface-muted/50">
       <div className="page-container relative z-10">
         <div className="rounded-[var(--radius-card)] border border-primary/30 em-stage p-6 sm:p-10">
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8">

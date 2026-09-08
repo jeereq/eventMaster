@@ -30,7 +30,7 @@ export default function LandingDashboardQuickAccess() {
     <div className="hidden md:block fixed bottom-24 right-6 z-40 animate-fade-in pointer-events-auto">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-surface/90 dark:bg-surface/90 backdrop-blur-md border border-primary/40 text-foreground text-xs sm:text-sm font-semibold shadow-xl shadow-primary/15 hover:scale-105 hover:border-primary transition-all duration-200 group active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-surface/90 dark:bg-surface/90 backdrop-blur-md border border-primary/40 text-foreground text-xs sm:text-sm font-semibold shadow-xl shadow-primary/15 hover:scale-105 hover:border-primary transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 group active:scale-95 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         <span className="w-2.5 h-2.5 rounded-full bg-primary-solid animate-pulse motion-reduce:animate-none" />
         <LayoutDashboard className="w-4 h-4 text-primary group-hover:rotate-6 transition-transform" />

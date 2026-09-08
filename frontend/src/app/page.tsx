@@ -71,7 +71,7 @@ export default function Home() {
                     aria-label="Créer mon événement"
                     rightIcon={<ArrowRight className="w-4 h-4" />}
                   >
-                    <span className="sm:hidden">Créer</span>
+                    <span className="sm:hidden">Créer l’événement</span>
                     <span className="hidden sm:inline">Créer mon événement</span>
                   </Button>
                 )}

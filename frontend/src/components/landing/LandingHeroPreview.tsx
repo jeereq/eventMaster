@@ -196,7 +196,7 @@ export default function LandingHeroPreview({
         {/* En-tête de la console d'actions directes */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-border/80 pb-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-primary-solid animate-pulse motion-reduce:animate-none shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-primary-solid animate-pulse motion-reduce:animate-none shrink-0" aria-hidden />
             <h3 className="text-sm font-bold text-foreground">
               <span className="sm:hidden">Actions</span>
               <span className="hidden sm:inline">Actions directes disponibles</span>
@@ -232,7 +232,7 @@ export default function LandingHeroPreview({
                 rel={isExternal ? 'noopener noreferrer' : undefined}
                 aria-label={act.ctaLabel}
                 className={cn(
-                  'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 flex flex-col justify-between h-full group hover:border-primary/60 hover:shadow-md cursor-pointer block',
+                  'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 motion-reduce:transition-none flex flex-col justify-between h-full group hover:border-primary/60 hover:shadow-md cursor-pointer block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   act.highlight
                     ? 'bg-festive-accent-soft border-festive-accent/40 ring-1 ring-festive-accent/25'
                     : 'bg-surface/80 dark:bg-surface/70 border-border',
@@ -267,9 +267,8 @@ export default function LandingHeroPreview({
                         : 'bg-surface-muted text-foreground border border-border group-hover:border-primary/40 group-hover:text-primary',
                     )}
                   >
-                    <span className="sm:hidden">Ouvrir</span>
-                    <span className="hidden sm:inline">{act.ctaLabel}</span>
-                    <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                    <span className="truncate">{act.ctaLabel}</span>
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
                   </div>
                 </div>
               </Link>

@@ -71,21 +71,26 @@ export default function Button({
 
   if (href) {
     const inactive = Boolean(disabled || loading);
+    const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+      if (inactive) {
+        event.preventDefault();
+        return;
+      }
+      onClick?.(event as unknown as React.MouseEvent<HTMLButtonElement>);
+    };
+
     return (
       <Link
         href={href}
         className={cn(classes, inactive && 'opacity-50 pointer-events-none')}
+        id={props.id}
+        title={props.title}
+        aria-label={props['aria-label']}
+        aria-current={props['aria-current']}
         aria-disabled={inactive || undefined}
         aria-busy={loading || undefined}
         tabIndex={inactive ? -1 : undefined}
-        onClick={(event) => {
-          if (inactive) {
-            event.preventDefault();
-            return;
-          }
-          onClick?.(event as unknown as React.MouseEvent<HTMLButtonElement>);
-        }}
-        {...props}
+        onClick={handleLinkClick}
       >
         {inner}
       </Link>

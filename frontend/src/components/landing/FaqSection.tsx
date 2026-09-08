@@ -75,7 +75,7 @@ export default function FaqSection({
                   type="button"
                   id={`faq-trigger-${item.id}`}
                   onClick={() => setOpenId(isOpen ? null : item.id)}
-                  className="w-full flex items-center justify-between gap-4 px-4 sm:px-5 py-4 text-left transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="relative z-10 w-full min-h-11 flex items-center justify-between gap-4 px-4 sm:px-5 py-4 text-left transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                   aria-expanded={isOpen}
                   aria-controls={`faq-panel-${item.id}`}
                 >
@@ -83,8 +83,9 @@ export default function FaqSection({
                     {item.question}
                   </span>
                   <ChevronDown
+                    aria-hidden
                     className={cn(
-                      'w-4 h-4 shrink-0 transition-transform duration-200',
+                      'w-4 h-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none',
                       isOpen ? 'rotate-180 text-primary' : 'text-muted',
                     )}
                   />
@@ -105,10 +106,13 @@ export default function FaqSection({
 
         {showContactLink && (
           <div className="mt-8 flex items-center gap-2 text-xs text-muted">
-            <HelpCircle className="w-4 h-4 text-primary shrink-0" />
+            <HelpCircle className="w-4 h-4 text-primary shrink-0" aria-hidden />
             <span>
               Une question ?{' '}
-              <Link href="/contact" className="font-bold text-primary hover:underline">
+              <Link
+                href="/contact"
+                className="font-bold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
                 <span className="sm:hidden">Nous écrire</span>
                 <span className="hidden sm:inline">Contactez notre équipe de support →</span>
               </Link>

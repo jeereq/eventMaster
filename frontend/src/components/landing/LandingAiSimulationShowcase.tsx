@@ -217,20 +217,21 @@ export default function LandingAiSimulationShowcase() {
               aria-pressed={viewMode === 'presets'}
               onClick={() => setViewMode('presets')}
               className={cn(
-                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 viewMode === 'presets'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',
               )}
             >
-              Exemples
+              <span className="sm:hidden">Exemples</span>
+              <span className="hidden sm:inline">Exemples & projets types</span>
             </button>
             <button
               type="button"
               aria-pressed={viewMode === 'live'}
               onClick={() => setViewMode('live')}
               className={cn(
-                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 viewMode === 'live'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground',
