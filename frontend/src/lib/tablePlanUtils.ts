@@ -265,6 +265,21 @@ export function getSeatCoordinates(
   return { x, y, rotationDeg: isTopSide ? 0 : 180 };
 }
 
+/** Dimensions du plateau 3D (mètres), alignées sur le viewer. */
+export function tablePlateSizeMeters(shape: TableShape, capacity: number): [number, number] {
+  if (shape === 'rectangular') {
+    if (capacity >= 14) return [4.4, 0.95];
+    if (capacity >= 10) return [3.2, 0.92];
+    return [1.8, 0.9];
+  }
+  if (shape === 'oval') return [1.7, 1.0];
+  if (shape === 'square') return [1.2, 1.2];
+  if (shape === 'cocktail') return [0.7, 0.7];
+  if (shape === 'highTop') return [0.75, 0.75];
+  if (shape === 'arc') return [3.6, 1.8];
+  return [1.35, 1.35];
+}
+
 /**
  * Placement 3D des chaises autour d’une table (mètres locaux, centre = 0).
  * Le fauteuil modèle regarde vers +Z : rotationY oriente le siège vers le plateau.

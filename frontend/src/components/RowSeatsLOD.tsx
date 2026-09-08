@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 import type { ChairType, ChairStyle, SeatMaterial } from '@/lib/roomLayoutUtils';
 import { resolveChairVisual } from '@/lib/roomWebGLMaterials';
-import { CatalogueChair } from '@/components/CatalogueFurnitureMeshes';
+import { CatalogueChair, ChairSelectionHalo } from '@/components/CatalogueFurnitureMeshes';
 import type { RenderQualitySettings } from '@/lib/roomRenderQuality';
 import { computeRowSeatPose, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
 
@@ -23,6 +23,8 @@ export function RowSeatsLOD({
   seatMaterial,
   chairImageUrl,
   selected,
+  selectedSeatIndices = [],
+  onSelectSeat,
   lod,
   castShadow,
   aisleSplit,
@@ -41,6 +43,8 @@ export function RowSeatsLOD({
   seatMaterial?: SeatMaterial;
   chairImageUrl?: string;
   selected: boolean;
+  selectedSeatIndices?: number[];
+  onSelectSeat?: (seatIndex: number, mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   lod: Lod;
   castShadow: boolean;
   aisleSplit?: boolean;
@@ -52,8 +56,15 @@ export function RowSeatsLOD({
     () => resolveChairVisual(chairType, chairStyle, seatMaterial),
     [chairType, chairStyle, seatMaterial],
   );
-  const color = selected ? '#a5b4fc' : visual.seatColor;
+  const color = visual.seatColor;
   const frame = visual.frameColor;
+  const picked = selectedSeatIndices;
+
+  const emitSeat = (i: number, e: { stopPropagation: () => void; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
+    if (!onSelectSeat) return;
+    e.stopPropagation();
+    onSelectSeat(i, { shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+  };
 
   const seatRef = useRef<THREE.InstancedMesh>(null);
   const backRef = useRef<THREE.InstancedMesh>(null);
@@ -82,7 +93,14 @@ export function RowSeatsLOD({
   }, [lod, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct]);
 
   const numberLabel = useMemo(() => {
-    if (!showSeatNumbers || !selected || count < 1) return null;
+    if (!showSeatNumbers || (!selected && picked.length === 0) || count < 1) return null;
+    if (picked.length === 1) {
+      const p = computeRowSeatPose(picked[0], count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+      return {
+        mid: { x: p.localX, y: p.y + 0.98, z: p.localZ },
+        text: rowSeatCode(rowName, picked[0]),
+      };
+    }
     const first = computeRowSeatPose(0, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
     const last = computeRowSeatPose(count - 1, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
     const mid = {
@@ -96,6 +114,7 @@ export function RowSeatsLOD({
   }, [
     showSeatNumbers,
     selected,
+    picked,
     count,
     spacing,
     curve,
@@ -125,17 +144,23 @@ export function RowSeatsLOD({
       <group>
         {Array.from({ length: count }).map((_, i) => {
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+          const chairSelected = picked.includes(i);
           return (
-            <CatalogueChair
+            <group
               key={i}
-              chairType={chairType}
-              chairStyle={chairStyle}
-              seatMaterial={seatMaterial}
-              imageUrl={chairImageUrl}
-              position={[p.localX, p.y, p.localZ]}
-              rotationY={p.faceY}
-              selected={selected}
-            />
+              onClick={(e) => emitSeat(i, e)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <CatalogueChair
+                chairType={chairType}
+                chairStyle={chairStyle}
+                seatMaterial={seatMaterial}
+                imageUrl={chairImageUrl}
+                position={[p.localX, p.y, p.localZ]}
+                rotationY={p.faceY}
+                selected={chairSelected}
+              />
+            </group>
           );
         })}
         {numbers}
@@ -149,11 +174,18 @@ export function RowSeatsLOD({
         {Array.from({ length: count }).map((_, i) => {
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           return (
-            <group key={i} position={[p.localX, p.y, p.localZ]} rotation={[0, p.faceY, 0]}>
+            <group
+              key={i}
+              position={[p.localX, p.y, p.localZ]}
+              rotation={[0, p.faceY, 0]}
+              onClick={(e) => emitSeat(i, e)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <ChairSelectionHalo selected={picked.includes(i)} />
               {/* Assise rembourrée */}
               <mesh position={[0, 0.44, 0.01]} castShadow={castShadow}>
                 <boxGeometry args={[0.38, 0.08, 0.36]} />
-                <meshStandardMaterial color={color} roughness={0.85} />
+                <meshStandardMaterial color={picked.includes(i) ? '#93c5fd' : color} roughness={0.85} />
               </mesh>
               {/* Dossier rembourré */}
               <mesh position={[0, 0.70, -0.16]} castShadow={castShadow}>
@@ -197,7 +229,18 @@ export function RowSeatsLOD({
 
   return (
     <group>
-      <instancedMesh ref={seatRef} args={[undefined, undefined, count]} castShadow={castShadow}>
+      <instancedMesh
+        ref={seatRef}
+        args={[undefined, undefined, count]}
+        castShadow={castShadow}
+        onClick={(e) => {
+          if (e.instanceId == null) return;
+          emitSeat(e.instanceId, e);
+        }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+        }}
+      >
         <boxGeometry args={[0.4, 0.12, 0.4]} />
         <meshStandardMaterial color={color} roughness={0.85} />
       </instancedMesh>
@@ -205,6 +248,14 @@ export function RowSeatsLOD({
         <boxGeometry args={[0.38, 0.4, 0.06]} />
         <meshStandardMaterial color={color} roughness={0.85} />
       </instancedMesh>
+      {picked.map((i) => {
+        const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
+        return (
+          <group key={`sel-${i}`} position={[p.localX, p.y, p.localZ]}>
+            <ChairSelectionHalo selected />
+          </group>
+        );
+      })}
       {numbers}
     </group>
   );

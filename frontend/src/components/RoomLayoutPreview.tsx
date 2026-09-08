@@ -234,7 +234,7 @@ function ThumbPreview({
           return (
             <div
               key={item.id}
-              className="absolute z-[3] flex items-center justify-center"
+              className="absolute z-[3] flex items-center justify-center relative"
               style={{
                 left: `${item.x}%`,
                 top: `${item.y}%`,
@@ -251,6 +251,25 @@ function ThumbPreview({
                   </span>
                 )}
               </div>
+              {item.attachedChairs !== false && item.shape !== 'cocktail' && item.shape !== 'highTop'
+                ? Array.from({ length: Math.min(item.capacity, 12) }).map((_, seatIndex) => {
+                    if (item.hiddenSeatIndices?.includes(seatIndex)) return null;
+                    const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 36);
+                    return (
+                      <span
+                        key={seatIndex}
+                        className="absolute pointer-events-none"
+                        style={{
+                          left: `calc(50% + ${coords.x}px)`,
+                          top: `calc(50% + ${coords.y}px)`,
+                          transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
+                        }}
+                      >
+                        <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
+                      </span>
+                    );
+                  })
+                : null}
             </div>
           );
         }
@@ -474,22 +493,25 @@ function FlatShowcasePreview({
                     </span>
                   )}
                 </div>
-                {Array.from({ length: Math.min(item.capacity, 10) }).map((_, seatIndex) => {
-                  const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44);
-                  return (
-                    <span
-                      key={seatIndex}
-                      className="absolute"
-                      style={{
-                        left: `calc(50% + ${coords.x}px)`,
-                        top: `calc(50% + ${coords.y}px)`,
-                        transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
-                      }}
-                    >
-                      <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
-                    </span>
-                  );
-                })}
+                {item.attachedChairs !== false && item.shape !== 'cocktail' && item.shape !== 'highTop'
+                  ? Array.from({ length: Math.min(item.capacity, 14) }).map((_, seatIndex) => {
+                      if (item.hiddenSeatIndices?.includes(seatIndex)) return null;
+                      const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44);
+                      return (
+                        <span
+                          key={seatIndex}
+                          className="absolute"
+                          style={{
+                            left: `calc(50% + ${coords.x}px)`,
+                            top: `calc(50% + ${coords.y}px)`,
+                            transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
+                          }}
+                        >
+                          <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
+                        </span>
+                      );
+                    })
+                  : null}
               </div>
             </div>
           );

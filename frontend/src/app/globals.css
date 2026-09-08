@@ -1807,7 +1807,7 @@ html[data-mood="celebrate"] .font-display {
 
 .em-table-realistic--active {
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--primary) 55%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--primary-solid, var(--primary)) 70%, transparent),
     0 18px 26px -8px rgba(40, 18, 4, 0.45),
     inset 0 0 0 6px #8a5a28,
     inset 0 0 0 7.5px #4e3010,
@@ -1819,28 +1819,48 @@ html[data-mood="celebrate"] .font-display {
   position: relative;
   flex-shrink: 0;
   box-shadow:
-    0 2px 3px rgba(40, 18, 4, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    0 2px 4px rgba(40, 18, 4, 0.42),
+    0 0 0 1px rgba(40, 18, 4, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.em-chair-top--selected {
+  box-shadow:
+    0 0 0 2px var(--primary-solid, #4573d2),
+    0 2px 6px rgba(40, 18, 4, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .em-chair-top--banquet {
-  width: 0.7rem;
-  height: 0.82rem;
-  border-radius: 42% 42% 32% 32%;
+  width: 0.74rem;
+  height: 0.88rem;
+  border-radius: 46% 46% 34% 34%;
   background:
-    radial-gradient(ellipse at 50% 38%, #f6efe0 0%, #d9c7a4 58%, #b89560 100%);
+    radial-gradient(ellipse at 50% 36%, #faf4e8 0%, #e2cc9a 42%, #c4a062 78%, #8a5a28 100%);
 }
 
 .em-chair-top--banquet::before {
   content: '';
   position: absolute;
-  top: -0.18rem;
+  top: -0.2rem;
+  left: 16%;
+  width: 68%;
+  height: 0.26rem;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, #d4b078, #7a4e1c);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.28);
+}
+
+.em-chair-top--banquet::after {
+  content: '';
+  position: absolute;
   left: 18%;
-  width: 64%;
-  height: 0.22rem;
-  border-radius: 2px 2px 1px 1px;
-  background: linear-gradient(180deg, #c4a062, #7a4e1c);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  right: 18%;
+  top: 28%;
+  height: 42%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 45% 35%, rgba(255, 255, 255, 0.45), transparent 70%);
+  pointer-events: none;
 }
 
 .em-chair-top--theater {

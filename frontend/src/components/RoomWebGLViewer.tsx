@@ -31,7 +31,7 @@ import {
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
-import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
+import { getTableSeatPlacement3D, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import {
   getWallTexture,
   getDoorMaterialProps,
@@ -50,6 +50,7 @@ import {
   CatalogueColumn,
   CatalogueFlower,
   CatalogueTableStructure,
+  FurnitureSelectionHalo,
 } from '@/components/CatalogueFurnitureMeshes';
 import { CatalogueInterstoryStairs } from '@/components/CatalogueStairs';
 import { CatalogueBalcony } from '@/components/CatalogueBalcony';
@@ -97,6 +98,7 @@ export type WebGLSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' 
 export interface WebGLSelection {
   kind: WebGLSelectableKind;
   id: string;
+  seatIndex?: number;
 }
 
 function describeRoomScene(blueprint: RoomLayoutBlueprint): string {
@@ -1331,6 +1333,8 @@ function TableMesh({
   widthM,
   heightM,
   selected,
+  selectedSeatIndices = [],
+  hiddenSeatIndices = [],
   onSelect,
   onDragStart,
   readOnly,
@@ -1358,7 +1362,9 @@ function TableMesh({
   widthM: number;
   heightM: number;
   selected: boolean;
-  onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
+  selectedSeatIndices?: number[];
+  hiddenSeatIndices?: number[];
+  onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; seatIndex?: number }) => void;
   onDragStart?: () => void;
   readOnly?: boolean;
   hideLabels?: boolean;
@@ -1370,39 +1376,54 @@ function TableMesh({
     [shape, color, tableImageUrl, tableSurface],
   );
 
-  const size =
-    shape === 'rectangular' ? (capacity >= 14 ? [4.4, 0.95] : capacity >= 10 ? [3.2, 0.92] : [1.8, 0.9]) :
-    shape === 'oval' ? [1.7, 1.0] :
-    shape === 'square' ? [1.2, 1.2] :
-    shape === 'cocktail' ? [0.7, 0.7] :
-    shape === 'highTop' ? [0.75, 0.75] :
-    shape === 'arc' ? [3.6, 1.8] :
-    [1.35, 1.35];
+  const size = tablePlateSizeMeters(shape, capacity);
   const topY = shape === 'highTop' ? 1.05 : shape === 'cocktail' ? 0.55 : 0.72;
+  const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
+  const seatPicked = selectedSeatIndices.length > 0;
+  const tableHalo = selected && !seatPicked;
+  const hidden = useMemo(() => new Set(hiddenSeatIndices), [hiddenSeatIndices]);
+
+  const selectTable = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
+    onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+  };
 
   return (
-    <group
-      position={[wx, elevationM, wz]}
-      rotation={[0, ((rotation ?? 0) * Math.PI) / 180, 0]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
-      }}
-      onPointerDown={(e) => {
-        if (readOnly || !onDragStart) return;
-        e.stopPropagation();
-        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
-        onDragStart();
-        gl.domElement.style.cursor = 'grabbing';
-      }}
-    >
-      <CatalogueTableStructure
-        shape={shape}
-        size={size as [number, number]}
-        topY={topY}
-        mat={mat}
-        selected={selected}
+    <group position={[wx, elevationM, wz]} rotation={[0, ((rotation ?? 0) * Math.PI) / 180, 0]}>
+      <FurnitureSelectionHalo
+        width={size[0]}
+        depth={size[1]}
+        round={isRound}
+        selected={tableHalo}
+        hovered={selected && seatPicked}
       />
+      <group
+        onClick={(e) => {
+          e.stopPropagation();
+          selectTable(e);
+        }}
+        onPointerDown={(e) => {
+          if (readOnly || !onDragStart) return;
+          e.stopPropagation();
+          selectTable(e);
+          onDragStart();
+          gl.domElement.style.cursor = 'grabbing';
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          gl.domElement.style.cursor = readOnly ? 'pointer' : 'grab';
+        }}
+        onPointerOut={() => {
+          gl.domElement.style.cursor = '';
+        }}
+      >
+        <CatalogueTableStructure
+          shape={shape}
+          size={size}
+          topY={topY}
+          mat={mat}
+          selected={tableHalo}
+        />
+      </group>
       {hasCouverts && Array.from({ length: Math.min(capacity, 10) }).map((_, i) => {
         const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
         const r = Math.max(size[0], size[1]) * 0.28;
@@ -1427,24 +1448,51 @@ function TableMesh({
         </group>
       ) : null}
       {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
-        const seat = getTableSeatPlacement3D(shape, capacity, i, size as [number, number]);
+        if (hidden.has(i)) return null;
+        const seat = getTableSeatPlacement3D(shape, capacity, i, size);
+        const chairSelected = selectedSeatIndices.includes(i);
         return (
-          <RealisticChair
+          <group
             key={i}
-            chairType={chairType}
-            chairStyle={chairStyle}
-            seatMaterial={seatMaterial}
-            imageUrl={chairImageUrl}
             position={[seat.x, 0, seat.z]}
-            rotationY={seat.rotationY}
-            selected={selected}
-          />
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect({
+                shiftKey: e.shiftKey,
+                metaKey: e.metaKey,
+                ctrlKey: e.ctrlKey,
+                seatIndex: i,
+              });
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              gl.domElement.style.cursor = 'pointer';
+            }}
+            onPointerOut={() => {
+              gl.domElement.style.cursor = '';
+            }}
+          >
+            <RealisticChair
+              chairType={chairType}
+              chairStyle={chairStyle}
+              seatMaterial={seatMaterial}
+              imageUrl={chairImageUrl}
+              position={[0, 0, 0]}
+              rotationY={seat.rotationY}
+              selected={chairSelected}
+            />
+          </group>
         );
       })}
       {selected && !hideLabels && (
         <Html center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
           <div className="px-2 py-1 rounded-md bg-primary-solid text-primary-foreground text-xs font-bold whitespace-nowrap shadow-sm">
-            {name} · {capacity} pl.
+            {seatPicked
+              ? `${name} · chaise ${selectedSeatIndices.map((n) => n + 1).join(', ')}`
+              : `${name} · ${capacity} pl.`}
           </div>
         </Html>
       )}
@@ -1587,6 +1635,13 @@ function FreeChairMesh({
         onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
         onDragStart();
         gl.domElement.style.cursor = 'grabbing';
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        gl.domElement.style.cursor = readOnly ? 'pointer' : 'grab';
+      }}
+      onPointerOut={() => {
+        gl.domElement.style.cursor = '';
       }}
     >
       <RealisticChair
@@ -2441,6 +2496,15 @@ function SceneContent({
                     seatMaterial={item.seatMaterial}
                     chairImageUrl={item.chairImageUrl}
                     selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
+                    selectedSeatIndices={selected
+                      .filter((s) => s.kind === 'row' && s.id === item.id && typeof s.seatIndex === 'number')
+                      .map((s) => s.seatIndex as number)}
+                    onSelectSeat={(seatIndex, mods) =>
+                      onSelect(
+                        { kind: 'row', id: item.id, seatIndex },
+                        { additive: Boolean(mods?.shiftKey || mods?.metaKey || mods?.ctrlKey) },
+                      )
+                    }
                     lod={qualitySettings.rowChairLod}
                     castShadow={qualitySettings.rowChairShadows}
                     aisleSplit={item.aisleSplit === true}
@@ -2486,7 +2550,16 @@ function SceneContent({
             widthM={widthM}
             heightM={heightM}
             selected={selected.some((s) => s.kind === 'table' && s.id === item.id)}
-            onSelect={(e) => onSelect({ kind: 'table', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
+            selectedSeatIndices={selected
+              .filter((s) => s.kind === 'table' && s.id === item.id && typeof s.seatIndex === 'number')
+              .map((s) => s.seatIndex as number)}
+            hiddenSeatIndices={item.hiddenSeatIndices}
+            onSelect={(e) =>
+              onSelect(
+                { kind: 'table', id: item.id, seatIndex: e?.seatIndex },
+                { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) },
+              )
+            }
             onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'table', id: item.id })}
             readOnly={readOnly || wallEditMode || item.locked}
             hideLabels={hideLabels}
@@ -2733,10 +2806,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
             {previewMode
-              ? 'Rendu 3D réaliste · molette = zoom · glisser = orbit'
+              ? 'Rendu 3D · molette = zoom · glisser = orbit'
               : orbitLocked
-                ? 'Caméra bloquée · posez tables/chaises sur moquette, piste, podium · molette = zoom'
-                : 'Orbit libre · activez « Caméra bloquée » pour placer le mobilier sur les surfaces'}
+                ? 'Cliquez le plateau pour la table, une chaise pour un siège · glisser pour poser'
+                : 'Cliquez une table ou une chaise · « Caméra bloquée » pour déplacer le mobilier'}
           </div>
           {previewMode ? (
             <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">

@@ -45,6 +45,8 @@ export type LayoutSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'chair
 export type LayoutSelectionItem = {
   kind: LayoutSelectableKind;
   id: string;
+  /** Siège attaché (table ou rangée) — indépendant du plateau / de la rangée. */
+  seatIndex?: number;
 };
 
 export type AlignMode = SharedAlignMode;
@@ -331,6 +333,7 @@ export function expandSelectionWithGroups(
   blueprint: RoomLayoutBlueprint,
   selection: LayoutSelectionItem[],
 ): LayoutSelectionItem[] {
+  if (selection.some((s) => typeof s.seatIndex === 'number')) return selection;
   const groupIds = new Set<string>();
   for (const s of selection) {
     const b = getSelectionBounds(blueprint, s);
@@ -665,7 +668,18 @@ export function flipLayoutSelection(
 }
 
 export function selectionKey(s: LayoutSelectionItem) {
-  return `${s.kind}:${s.id}`;
+  return typeof s.seatIndex === 'number' ? `${s.kind}:${s.id}:${s.seatIndex}` : `${s.kind}:${s.id}`;
+}
+
+/** Indices de sièges sélectionnés pour une table ou une rangée. */
+export function selectedSeatIndicesFor(
+  selection: LayoutSelectionItem[],
+  kind: 'table' | 'row',
+  id: string,
+): number[] {
+  return selection
+    .filter((s) => s.kind === kind && s.id === id && typeof s.seatIndex === 'number')
+    .map((s) => s.seatIndex as number);
 }
 
 export function toggleSelectionItem(

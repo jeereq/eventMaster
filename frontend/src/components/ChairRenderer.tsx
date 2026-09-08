@@ -9,6 +9,7 @@ interface ChairRendererProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   title?: string;
   className?: string;
+  selected?: boolean;
 }
 
 const sizeMap = {
@@ -24,11 +25,12 @@ export default function ChairRenderer({
   size = 'sm',
   title,
   className = '',
+  selected = false,
 }: ChairRendererProps) {
   if (imageUrl) {
     return (
       <span
-        className={`inline-block rounded-full overflow-hidden border border-border/80 shadow-sm bg-white ${sizeMap[size]} ${className}`}
+        className={`inline-block rounded-full overflow-hidden border border-border/80 shadow-sm bg-white ${sizeMap[size]} ${selected ? 'em-chair-top--selected' : ''} ${className}`}
         title={title || 'Chaise personnalisée'}
       >
         <img src={imageUrl} alt="" className="w-full h-full object-cover" />
@@ -38,7 +40,7 @@ export default function ChairRenderer({
 
   return (
     <span
-      className={`${getChairVisualClass(chairType)} ${className}`}
+      className={`${getChairVisualClass(chairType)} ${selected ? 'em-chair-top--selected' : ''} ${className}`}
       title={title}
       style={size === 'lg' ? { transform: 'scale(1.35)' } : size === 'xs' ? { transform: 'scale(0.78)' } : size === 'md' ? { transform: 'scale(1.12)' } : undefined}
     />

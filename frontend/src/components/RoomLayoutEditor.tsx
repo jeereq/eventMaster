@@ -81,6 +81,7 @@ import {
   defaultRoomOutline,
   deleteCustomTemplateFromBlueprint,
   detachTableChairs,
+  detachOneTableChair,
   ensureBlueprintDefaults,
   flowerTypeLabels,
   getRoomOutlineClipPath,
@@ -4606,7 +4607,16 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
-            <p className="text-xs font-bold uppercase text-muted">Table</p>
+            <p className="text-sm font-semibold text-foreground">
+              {typeof selected?.seatIndex === 'number'
+                ? `${selectedFurniture.name} · chaise ${selected.seatIndex + 1}`
+                : 'Table'}
+            </p>
+            {typeof selected?.seatIndex === 'number' ? (
+              <p className="text-xs text-muted">
+                Siège n°{selected.seatIndex + 1} — cliquez le plateau pour toute la table. Maj+clic pour plusieurs chaises.
+              </p>
+            ) : null}
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Nom</span>
               <input value={selectedFurniture.name} onChange={(e) => updateFurniture(selectedFurniture.id, { name: e.target.value })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
@@ -4784,22 +4794,42 @@ export default function RoomLayoutEditor({
               ) : null}
             </div>
             {selectedFurniture.attachedChairs !== false ? (
-              <button
-                type="button"
-                onClick={() => {
-                  updateBlueprint(detachTableChairs(blueprint, selectedFurniture.id), {
-                    message: 'Chaises détachées — déplacez-les librement',
-                    kind: 'edit',
-                  });
-                }}
-                className={cn(EDITOR_PANEL_BTN, 'w-full border-border bg-surface text-foreground hover:bg-surface-muted')}
-              >
-                Détacher les chaises (placement libre)
-              </button>
+              <div className="space-y-1.5">
+                {typeof selected?.seatIndex === 'number' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = detachOneTableChair(blueprint, selectedFurniture.id, selected.seatIndex as number);
+                      updateBlueprint(next, {
+                        message: `Chaise ${selected.seatIndex! + 1} détachée`,
+                        kind: 'edit',
+                      });
+                      const created = next.furniture.filter((f) => f.kind === 'chair' && !blueprint.furniture.some((p) => p.id === f.id));
+                      const last = created[created.length - 1];
+                      if (last) setSelection([{ kind: 'chair', id: last.id }]);
+                    }}
+                    className={cn(EDITOR_PANEL_BTN, 'w-full border-primary/30 bg-primary/10 text-primary')}
+                  >
+                    Détacher cette chaise
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateBlueprint(detachTableChairs(blueprint, selectedFurniture.id), {
+                      message: 'Chaises détachées — déplacez-les librement',
+                      kind: 'edit',
+                    });
+                  }}
+                  className={cn(EDITOR_PANEL_BTN, 'w-full border-border bg-surface text-foreground hover:bg-surface-muted')}
+                >
+                  Détacher toutes les chaises
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
-                onClick={() => updateFurniture(selectedFurniture.id, { attachedChairs: true }, 'Chaises rattachées à la table')}
+                onClick={() => updateFurniture(selectedFurniture.id, { attachedChairs: true, hiddenSeatIndices: [] }, 'Chaises rattachées à la table')}
                 className={cn(EDITOR_PANEL_BTN, 'w-full border-border text-muted')}
               >
                 Réafficher chaises autour de la table
@@ -4870,7 +4900,11 @@ export default function RoomLayoutEditor({
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
             <p className="flex items-center justify-between gap-2">
-              <span className={EDITOR_HEADING}>Rangée / Gradin</span>
+              <span className={EDITOR_HEADING}>
+                {typeof selected?.seatIndex === 'number'
+                  ? `${selectedFurniture.label || 'Rangée'} · siège ${selected.seatIndex + 1}`
+                  : 'Rangée / Gradin'}
+              </span>
               {selectedFurniture.elevationM ? (
                 <span className="text-xs font-semibold tabular-nums text-primary px-2 py-1 rounded-[var(--radius-button)] bg-primary/10">
                   +{selectedFurniture.elevationM} m

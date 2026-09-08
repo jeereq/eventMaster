@@ -39,15 +39,98 @@ function Mat({ color, map, roughness = 0.6, metalness = 0.05, transparent, opaci
   );
 }
 
-/** Chaise catalogue — silhouette reconnaissable par type. */
-export function CatalogueChair({
+const SELECT_ACCENT = '#4573d2';
+
+/** Anneau au sol : sélection nette, survol discret — sans teinter le bois ni le tissu. */
+export function FurnitureSelectionHalo({
+  width,
+  depth,
+  round,
+  selected,
+  hovered,
+}: {
+  width: number;
+  depth: number;
+  round?: boolean;
+  selected?: boolean;
+  hovered?: boolean;
+}) {
+  if (!selected && !hovered) return null;
+  const opacity = selected ? 0.92 : 0.42;
+  if (round) {
+    const r = Math.max(width, depth) / 2 + 0.1;
+    return (
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]} renderOrder={3}>
+        <ringGeometry args={[r, r + 0.055, 48]} />
+        <meshBasicMaterial color={SELECT_ACCENT} transparent opacity={opacity} depthWrite={false} />
+      </mesh>
+    );
+  }
+  const hw = width / 2 + 0.08;
+  const hd = depth / 2 + 0.08;
+  const t = 0.048;
+  return (
+    <group position={[0, 0.012, 0]} renderOrder={3}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, hd]}>
+        <planeGeometry args={[width + 0.16, t]} />
+        <meshBasicMaterial color={SELECT_ACCENT} transparent opacity={opacity} depthWrite={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -hd]}>
+        <planeGeometry args={[width + 0.16, t]} />
+        <meshBasicMaterial color={SELECT_ACCENT} transparent opacity={opacity} depthWrite={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[hw, 0, 0]}>
+        <planeGeometry args={[t, depth]} />
+        <meshBasicMaterial color={SELECT_ACCENT} transparent opacity={opacity} depthWrite={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-hw, 0, 0]}>
+        <planeGeometry args={[t, depth]} />
+        <meshBasicMaterial color={SELECT_ACCENT} transparent opacity={opacity} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+export function ChairSelectionHalo({
+  selected,
+  hovered,
+  radius = 0.34,
+}: {
+  selected?: boolean;
+  hovered?: boolean;
+  radius?: number;
+}) {
+  if (!selected && !hovered) return null;
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.014, 0]} renderOrder={3}>
+      <ringGeometry args={[radius * 0.72, radius, 36]} />
+      <meshBasicMaterial
+        color={SELECT_ACCENT}
+        transparent
+        opacity={selected ? 0.95 : 0.45}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
+/** Volume invisible : la chaise reste cliquable même en vue zénithale. */
+export function ChairPickVolume() {
+  return (
+    <mesh position={[0, 0.46, 0]}>
+      <cylinderGeometry args={[0.32, 0.32, 0.96, 12]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
+function CatalogueChairMesh({
   chairType,
   chairStyle,
   seatMaterial,
   imageUrl,
   position,
   rotationY = 0,
-  selected = false,
 }: {
   chairType: ChairType;
   chairStyle?: ChairStyle;
@@ -55,7 +138,6 @@ export function CatalogueChair({
   imageUrl?: string;
   position: [number, number, number];
   rotationY?: number;
-  selected?: boolean;
 }) {
   const visual = useMemo(
     () => resolveChairVisual(chairType, chairStyle, seatMaterial),
@@ -72,7 +154,7 @@ export function CatalogueChair({
   const sh = sh0 * visual.scale;
   const sd = sd0 * visual.scale;
   const backH = visual.backHeight * visual.scale;
-  const seatTint = selected ? '#a5b4fc' : visual.seatColor;
+  const seatTint = visual.seatColor;
   const style = chairStyle ?? (chairType === 'ARMCHAIR' ? 'classic' : undefined);
 
   if (chairType === 'STOOL') {
@@ -528,18 +610,26 @@ export function CatalogueChair({
         </>
       ) : (
         <>
-          {/* Banquet classique */}
-          <mesh position={[0, seatH - sh * 0.1, 0]} castShadow>
-            <boxGeometry args={[sw * 1.02, sh * 0.4, sd * 1.02]} />
+          {/* Banquet classique — assise ronde, dossier légèrement cambré */}
+          <mesh position={[0, seatH * 0.12, 0]} castShadow>
+            <cylinderGeometry args={[0.018, 0.022, 0.04, 10]} />
+            <Mat color={visual.frameColor} metalness={0.55} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, seatH - sh * 0.08, 0]} castShadow>
+            <cylinderGeometry args={[sw * 0.5, sw * 0.52, sh * 0.45, 24]} />
             <Mat color={visual.frameColor} metalness={isBanquet ? 0.55 : 0.25} roughness={0.4} />
           </mesh>
-          <mesh position={[0, seatH + sh * 0.4, 0]} castShadow receiveShadow>
-            <boxGeometry args={[sw, sh * (visual.cushion ? 1.15 : 0.7), sd]} />
+          <mesh position={[0, seatH + sh * 0.38, 0.01]} rotation={[-0.06, 0, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[sw * 0.46, sw * 0.48, sh * (visual.cushion ? 1.05 : 0.65), 28]} />
             <Mat color={seatTint} map={map} roughness={fabric.roughness} metalness={fabric.metalness} />
           </mesh>
-          <mesh position={[0, seatH + backH * 0.48, -sd * 0.42]} castShadow>
-            <boxGeometry args={[sw * 0.92, backH, 0.05]} />
+          <mesh position={[0, seatH + backH * 0.48, -sd * 0.4]} rotation={[0.08, 0, 0]} castShadow>
+            <boxGeometry args={[sw * 0.9, backH, 0.055]} />
             <Mat color={seatTint} map={map} roughness={fabric.roughness} metalness={fabric.metalness} />
+          </mesh>
+          <mesh position={[0, seatH + backH * 0.5, -sd * 0.43]} rotation={[0.08, 0, 0]} castShadow>
+            <boxGeometry args={[sw * 0.94, backH * 1.02, 0.02]} />
+            <Mat color={visual.frameColor} metalness={0.45} roughness={0.4} />
           </mesh>
           {isBanquet && (
             <mesh position={[0, seatH + backH * 0.75, -sd * 0.4]} castShadow>
@@ -561,6 +651,40 @@ export function CatalogueChair({
   );
 }
 
+/** Chaise catalogue — halo de sélection + volume de picking. */
+export function CatalogueChair({
+  chairType,
+  chairStyle,
+  seatMaterial,
+  imageUrl,
+  position,
+  rotationY = 0,
+  selected = false,
+}: {
+  chairType: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
+  imageUrl?: string;
+  position: [number, number, number];
+  rotationY?: number;
+  selected?: boolean;
+}) {
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <ChairSelectionHalo selected={selected} />
+      <ChairPickVolume />
+      <CatalogueChairMesh
+        chairType={chairType}
+        chairStyle={chairStyle}
+        seatMaterial={seatMaterial}
+        imageUrl={imageUrl}
+        position={[0, 0, 0]}
+        rotationY={0}
+      />
+    </group>
+  );
+}
+
 type TableMat = ReturnType<typeof resolveTableMaterial>;
 
 /** Structure de table catalogue selon la forme. */
@@ -577,7 +701,7 @@ export function CatalogueTableStructure({
   mat: TableMat;
   selected: boolean;
 }) {
-  const topColor = selected ? '#c7d2fe' : mat.color;
+  const topColor = mat.color;
   const topMat = {
     map: mat.map,
     roughness: mat.roughness,

@@ -531,6 +531,8 @@ export interface RoomLayoutBlueprint {
         locked?: boolean;
         rotation?: number;
         attachedChairs?: boolean;
+        /** Sièges autour de la table retirés (après détachement unitaire). */
+        hiddenSeatIndices?: number[];
         groupId?: string;
         storyId?: string;
       }
@@ -951,6 +953,47 @@ export function createBlueprintChair(
     x: defaults.x ?? 40 + Math.random() * 20,
     y: defaults.y ?? 40 + Math.random() * 20,
     rotation: defaults.rotation ?? 0,
+  };
+}
+
+/** Détache une seule chaise attachée : elle devient un siège libre, le reste reste autour de la table. */
+export function detachOneTableChair(
+  blueprint: RoomLayoutBlueprint,
+  tableId: string,
+  seatIndex: number,
+): RoomLayoutBlueprint {
+  const table = blueprint.furniture.find((f) => f.kind === 'table' && f.id === tableId);
+  if (!table || table.kind !== 'table') return blueprint;
+  const capacity = Math.min(table.capacity, 14);
+  if (seatIndex < 0 || seatIndex >= capacity) return blueprint;
+  const hidden = new Set(table.hiddenSeatIndices ?? []);
+  if (hidden.has(seatIndex)) return blueprint;
+  hidden.add(seatIndex);
+  const a = (seatIndex / Math.max(capacity, 1)) * Math.PI * 2 - Math.PI / 2;
+  const radiusPct = 7;
+  const chair = createBlueprintChair(seatIndex + 1, {
+    chairType: table.chairType,
+    chairStyle: table.chairStyle,
+    seatMaterial: table.seatMaterial,
+    x: Math.max(2, Math.min(98, table.x + Math.cos(a) * radiusPct)),
+    y: Math.max(2, Math.min(98, table.y + Math.sin(a) * radiusPct)),
+    rotation: (Math.atan2(-Math.cos(a), -Math.sin(a)) * 180) / Math.PI,
+  });
+  const remaining = capacity - hidden.size;
+  return {
+    ...blueprint,
+    furniture: [
+      ...blueprint.furniture.map((f) =>
+        f.id === tableId && f.kind === 'table'
+          ? {
+              ...f,
+              hiddenSeatIndices: [...hidden],
+              attachedChairs: remaining > 0 ? f.attachedChairs : false,
+            }
+          : f,
+      ),
+      chair,
+    ],
   };
 }
 
