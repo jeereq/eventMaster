@@ -29,6 +29,7 @@ import {
   ExternalLink,
   Layers,
   Sparkles,
+  Heart,
 } from 'lucide-react';
 import { Button, Input, StatusPill, EmptyState } from '@/components/ui';
 import { eventDashboardHref } from '@/lib/eventRoutes';
@@ -135,6 +136,7 @@ export default function OrgTicketingView({
   const [selectedEventId, setSelectedEventId] = useState<string>(eventId || 'all');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PAID' | 'PENDING' | 'CANCELLED'>('ALL');
   const [checkInFilter, setCheckInFilter] = useState<'ALL' | 'CHECKED_IN' | 'PENDING'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'TICKETS' | 'DONATIONS'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [actingGuestId, setActingGuestId] = useState<string | null>(null);
@@ -264,6 +266,12 @@ export default function OrgTicketingView({
   // Filtrage local supplémentaire si besoin
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
+      if (typeFilter === 'TICKETS' && order.pricingZoneId === 'donation') {
+        return false;
+      }
+      if (typeFilter === 'DONATIONS' && order.pricingZoneId !== 'donation') {
+        return false;
+      }
       if (statusFilter !== 'ALL' && order.status !== statusFilter) {
         return false;
       }
@@ -408,7 +416,7 @@ export default function OrgTicketingView({
 
       {/* Barre d'outils et de filtres */}
       <div className="rounded-2xl border border-border bg-surface p-3 sm:p-3.5 space-y-3 shadow-2xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
           {/* Sélecteur d'événement (si vue globale) */}
           {!eventId && eventsList.length > 0 && (
             <div>
@@ -449,6 +457,36 @@ export default function OrgTicketingView({
                   <XCircle className="w-3.5 h-3.5" />
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* Filtre de type de flux : Billets / Dons */}
+          <div>
+            <p className="block text-xs font-semibold text-muted mb-1">Type de flux</p>
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Type de flux">
+              {([
+                ['ALL', 'Tous'],
+                ['TICKETS', 'Billets'],
+                ['DONATIONS', 'Dons'],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTypeFilter(id)}
+                  aria-pressed={typeFilter === id}
+                  className={cn(
+                    'px-2.5 min-h-11 rounded-lg text-xs font-semibold border transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    typeFilter === id
+                      ? id === 'DONATIONS'
+                        ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                        : 'bg-foreground text-background border-foreground'
+                      : 'border-border bg-surface text-muted hover:text-foreground',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -543,6 +581,7 @@ export default function OrgTicketingView({
         <div className="space-y-2.5">
           {filteredOrders.map((order) => {
             const isExpanded = expandedOrderId === order.id;
+            const isDonation = order.pricingZoneId === 'donation';
             const isPaid = order.status === 'PAID';
             const isPending = order.status === 'PENDING';
             const isCancelled = order.status === 'CANCELLED';
@@ -572,6 +611,12 @@ export default function OrgTicketingView({
                       <StatusPill tone={isPaid ? 'emerald' : isPending ? 'amber' : 'slate'}>
                         {isPaid ? 'Payé' : isPending ? 'Paiement en cours' : isCancelled ? 'Annulé' : order.status}
                       </StatusPill>
+                      {isDonation && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">
+                          <Heart className="w-3 h-3 fill-rose-500/30" />
+                          Don solidaire
+                        </span>
+                      )}
                       {order.flexPayChannel && (
                         <span className="px-2 py-0.5 rounded-full bg-surface-muted border border-border text-xs font-semibold text-muted uppercase">
                           {order.flexPayChannel}

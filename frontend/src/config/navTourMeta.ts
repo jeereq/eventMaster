@@ -85,6 +85,12 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Journal de toutes les tentatives de paiement (billets, abonnements, jetons IA) — abouties, en cours ou échouées — avec récapitulatif par source et canal FlexPay.',
     route: '/dashboard/admin/payments',
   },
+  'nav-donations-admin': {
+    title: 'Dons solidaires',
+    description:
+      'Reporting consolidé des collectes de fonds : volumes collectés, donateurs, causes soutenues, parts de marché par opérateur et exports comptables.',
+    route: '/dashboard/admin/donations',
+  },
   'nav-ai-tokens': {
     title: 'Jetons IA',
     description:

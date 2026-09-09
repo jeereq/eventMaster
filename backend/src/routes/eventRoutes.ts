@@ -31,6 +31,7 @@ import {
 } from '../controllers/protocolController';
 import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
 import { getEventShares, getEventFeed, createEventPost, updateEventPost, deleteEventPost, deleteGuestShare, toggleLikeEventPost } from '../controllers/feedController';
+import { getEventDonationsReport, exportEventDonationsReport } from '../controllers/donationReportController';
 import { requireAuth, requireActiveLicense } from '../middleware/auth';
 
 const router = Router();
@@ -53,6 +54,9 @@ router.put('/:id', updateEvent);
 router.post('/:id/import-room-layout', importRoomLayout);
 router.delete('/:id', deleteEvent);
 router.get('/:eventId/ticket-orders', listEventTicketOrders);
+// Donations (Dons solidaires — reporting & export)
+router.get('/:eventId/donations/report', getEventDonationsReport);
+router.get('/:eventId/donations/export', exportEventDonationsReport);
 
 // Event staff assignments
 router.get('/:eventId/staff', getEventStaff);

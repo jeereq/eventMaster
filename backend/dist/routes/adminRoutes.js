@@ -12,6 +12,7 @@ const adminOpsController_1 = require("../controllers/adminOpsController");
 const adminCatalogController_1 = require("../controllers/adminCatalogController");
 const adminPaymentsController_1 = require("../controllers/adminPaymentsController");
 const adminAiTokensController_1 = require("../controllers/adminAiTokensController");
+const donationReportController_1 = require("../controllers/donationReportController");
 const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
 // Personnel plateforme (Super Admin + Commercial sans organisation)
@@ -34,6 +35,8 @@ router.get('/reports/revenue', revenueReportController_1.getRevenueReport);
 router.get('/reports/revenue/export', revenueReportController_1.exportRevenueReport);
 router.post('/reports/revenue/notify-payouts', revenueReportController_1.notifyRevenuePayouts);
 router.post('/reports/revenue/mark-paid', revenueReportController_1.markRevenuePayoutPaid);
+router.get('/donations/report', donationReportController_1.getAdminDonationsReport);
+router.get('/donations/export', donationReportController_1.exportAdminDonationsReport);
 router.get('/payouts', saasPayoutController_1.listAdminSaasPayouts);
 router.patch('/payouts', saasPayoutController_1.settleAdminSaasPayout);
 router.post('/payouts/flexpay', (0, auth_1.requireRole)(['SUPER_ADMIN']), saasPayoutController_1.initiateAdminSaasFlexPayPayout);

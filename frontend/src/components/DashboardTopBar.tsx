@@ -53,6 +53,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
     }
     if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
     if (pathname.startsWith('/dashboard/admin/payments')) return { title: 'Paiements', subtitle: 'Tentatives et sources' };
+    if (pathname.startsWith('/dashboard/admin/donations')) return { title: 'Dons solidaires', subtitle: 'Reporting des collectes de fonds' };
     if (pathname.startsWith('/dashboard/admin/ai-tokens')) return { title: 'Jetons IA', subtitle: 'Consommation par action' };
     if (pathname.startsWith('/dashboard/admin/payouts')) return { title: 'Versements SaaS', subtitle: 'Commissions hors plateforme' };
     if (pathname.startsWith('/dashboard/admin/events')) return { title: 'Événements', subtitle: 'Console Super Admin' };

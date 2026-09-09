@@ -77,6 +77,10 @@ import {
   listAdminPaymentAttempts,
 } from '../controllers/adminPaymentsController';
 import { getAdminAiTokenUsage, grantAdminAiTokens } from '../controllers/adminAiTokensController';
+import {
+  getAdminDonationsReport,
+  exportAdminDonationsReport,
+} from '../controllers/donationReportController';
 
 const router = Router();
 
@@ -104,6 +108,8 @@ router.get('/reports/revenue', getRevenueReport);
 router.get('/reports/revenue/export', exportRevenueReport);
 router.post('/reports/revenue/notify-payouts', notifyRevenuePayouts);
 router.post('/reports/revenue/mark-paid', markRevenuePayoutPaid);
+router.get('/donations/report', getAdminDonationsReport);
+router.get('/donations/export', exportAdminDonationsReport);
 router.get('/payouts', listAdminSaasPayouts);
 router.patch('/payouts', settleAdminSaasPayout);
 router.post('/payouts/flexpay', requireRole(['SUPER_ADMIN']), initiateAdminSaasFlexPayPayout);

@@ -9,6 +9,7 @@ const guestController_1 = require("../controllers/guestController");
 const protocolController_1 = require("../controllers/protocolController");
 const invitationController_1 = require("../controllers/invitationController");
 const feedController_1 = require("../controllers/feedController");
+const donationReportController_1 = require("../controllers/donationReportController");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 // Apply requireAuth and requireActiveLicense middleware to all event-related routes
@@ -27,6 +28,9 @@ router.put('/:id', eventController_1.updateEvent);
 router.post('/:id/import-room-layout', eventController_1.importRoomLayout);
 router.delete('/:id', eventController_1.deleteEvent);
 router.get('/:eventId/ticket-orders', eventController_1.listEventTicketOrders);
+// Donations (Dons solidaires — reporting & export)
+router.get('/:eventId/donations/report', donationReportController_1.getEventDonationsReport);
+router.get('/:eventId/donations/export', donationReportController_1.exportEventDonationsReport);
 // Event staff assignments
 router.get('/:eventId/staff', eventStaffController_1.getEventStaff);
 router.post('/:eventId/staff', eventStaffController_1.assignEventStaff);

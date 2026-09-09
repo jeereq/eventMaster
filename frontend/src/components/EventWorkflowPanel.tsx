@@ -8,6 +8,7 @@ import {
   Shirt,
   MessageSquare,
   Ticket,
+  Heart,
   ScanLine,
   ArrowRight,
   type LucideIcon,
@@ -32,6 +33,7 @@ interface EventWorkflowPanelProps {
 
 const SUPPORT_TABS: Array<{ id: EventWorkflowTab; label: string; icon: LucideIcon }> = [
   { id: 'ticketing', label: 'Billetterie', icon: Ticket },
+  { id: 'donations', label: 'Dons solidaires', icon: Heart },
   { id: 'guestInfo', label: 'Infos invités', icon: Shirt },
   { id: 'feed', label: 'Feed', icon: MessageSquare },
   { id: 'tasks', label: 'Tâches', icon: ClipboardList },

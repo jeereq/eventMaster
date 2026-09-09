@@ -55,6 +55,7 @@ import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
 import EventPrepPanel from '@/components/EventPrepPanel';
 import OrgTicketingView from '@/components/OrgTicketingView';
+import EventDonationsReportView from '@/components/EventDonationsReportView';
 import { isB2cPlanId, formatFc } from '@/config/landingPricing';
 import { formatEventPlace } from '@/lib/eventPlace';
 import type { EventConfigPayload } from '@/lib/eventConfig';
@@ -2139,7 +2140,7 @@ Merci de confirmer votre présence :
  </div>
 
  {/* Synthèse ergonomique de l'événement */}
- <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+ <div className={cn('grid grid-cols-2 gap-2 pt-1', selectedEvent.donations?.enabled ? 'sm:grid-cols-5' : 'sm:grid-cols-4')}>
  <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Invités</div>
  <div className="text-base font-bold text-foreground mt-0.5">
@@ -2163,6 +2164,22 @@ Merci de confirmer votre présence :
  : 'Non activée'}
  </div>
  </div>
+ {selectedEvent.donations?.enabled && (
+ <button
+ type="button"
+ onClick={() => handleWorkflowNavigate('donations')}
+ className="rounded-xl border border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10 transition px-3 py-2 text-center touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
+ title="Voir le reporting des dons solidaires"
+ >
+ <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center justify-center gap-1">
+ <Heart className="w-3 h-3 fill-rose-500/30" />
+ Dons
+ </div>
+ <div className="text-base font-bold text-rose-700 dark:text-rose-300 mt-0.5 truncate">
+ Rapport
+ </div>
+ </button>
+ )}
  <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Plan de table</div>
  <div className="text-base font-bold text-foreground mt-0.5 truncate">
@@ -2406,6 +2423,13 @@ Merci de confirmer votre présence :
      eventId={selectedEvent.id}
      eventTitle={selectedEvent.title}
      protocolMode={protocolDesk}
+   />
+ )}
+
+ {deskTab === 'donations' && selectedEvent && (
+   <EventDonationsReportView
+     eventId={selectedEvent.id}
+     eventTitle={selectedEvent.title}
    />
  )}
 

@@ -382,7 +382,7 @@ export default function AdminOpsHome() {
             label: 'Dons solidaires',
             value: data?.donationsSummary?.count ?? 0,
             hint: data?.donationsSummary?.amountFc ? `${formatFc(data.donationsSummary.amountFc)} récoltés` : 'Collectes de fonds',
-            href: '/dashboard/admin/payments?kind=donation',
+            href: '/dashboard/admin/donations',
           },
           {
             label: 'Versements',
