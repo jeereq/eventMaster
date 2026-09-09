@@ -407,7 +407,7 @@ export default function LandingInvitationAiGenerator({
 
   const scrollResultIntoView = () => {
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = window.setTimeout(() => {
+    scrollTimeoutRef.current = setTimeout(() => {
       scrollTimeoutRef.current = null;
       const el = resultRef.current;
       if (!el) return;
@@ -499,7 +499,7 @@ export default function LandingInvitationAiGenerator({
             : 'Composition de la carte à partir du brief…',
     );
     if (stageTimeoutRef.current) clearTimeout(stageTimeoutRef.current);
-    stageTimeoutRef.current = window.setTimeout(() => {
+    stageTimeoutRef.current = setTimeout(() => {
       if (seq !== generationSeq.current) return;
       setActiveStep(2);
       setStage(

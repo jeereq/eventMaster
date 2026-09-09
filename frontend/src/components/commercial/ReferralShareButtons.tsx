@@ -24,7 +24,7 @@ export default function ReferralShareButtons({ referralCode, className = '' }: R
   const flash = (kind: 'code' | 'link') => {
     setCopied(kind);
     if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    flashTimeoutRef.current = window.setTimeout(() => {
+    flashTimeoutRef.current = setTimeout(() => {
       setCopied(null);
       flashTimeoutRef.current = null;
     }, 2000);
