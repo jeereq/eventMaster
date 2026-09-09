@@ -5,6 +5,10 @@ export interface GuestRsvpData {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string | null;
+  phoneCountryCode?: string | null;
+  ticketOrderId?: string | null;
+  category?: string | null;
   rsvp: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   preferences: any;
   seatingInvitationPdfUrl?: string | null;

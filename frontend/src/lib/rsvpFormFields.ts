@@ -43,6 +43,7 @@ export interface GuestRsvpPreferences {
   allergies?: string;
   specialMeal?: string;
   notes?: string;
+  phone?: string;
   customFields?: Record<string, string | number | boolean>;
   rsvpFormData?: RsvpFormDataEntry[];
 }
@@ -523,6 +524,7 @@ export function buildRsvpPreferencesPayload(params: {
   notes: string;
   rsvpFields: RsvpField[];
   fieldValues: Record<string, unknown>;
+  phone?: string;
 }): GuestRsvpPreferences {
   const customFields: Record<string, string | number | boolean> = {};
   const rsvpFormData: RsvpFormDataEntry[] = [];
@@ -552,6 +554,7 @@ export function buildRsvpPreferencesPayload(params: {
     allergies: String(allergiesFromField ?? params.allergies ?? '').trim(),
     specialMeal: mealValueFromLabel(String(menuFromField ?? params.specialMeal ?? 'none')),
     notes: params.notes,
+    ...(params.phone ? { phone: params.phone } : {}),
     customFields,
     rsvpFormData,
   };

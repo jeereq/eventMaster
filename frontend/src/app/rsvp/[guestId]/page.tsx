@@ -15,7 +15,7 @@ import {
   Calendar, MapPin, CheckCircle2, AlertCircle,
   Loader2, Award, Image, Send, Heart, LayoutGrid, MessageCircle,
   ChevronLeft, ChevronRight, X, ThumbsUp, Download, Navigation,
-  QrCode, Maximize2, Printer,
+  QrCode, Maximize2, Printer, User, UserCog, Pencil, Utensils, Sparkles,
 } from 'lucide-react';
 import {
   type RsvpField,
@@ -113,6 +113,25 @@ export default function RsvpPage() {
   const [rsvpLocked, setRsvpLocked] = useState(false);
   const [showFullScreenQr, setShowFullScreenQr] = useState(false);
 
+  const [guestFirstName, setGuestFirstName] = useState('');
+  const [guestLastName, setGuestLastName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [isEditIdentityOpen, setIsEditIdentityOpen] = useState(false);
+  const [savingIdentity, setSavingIdentity] = useState(false);
+  const [identitySaveSuccess, setIdentitySaveSuccess] = useState(false);
+  const [identitySaveError, setIdentitySaveError] = useState('');
+  const editModalCloseRef = useRef<HTMLButtonElement>(null);
+  const editModalPanelRef = useRef<HTMLDivElement>(null);
+
+  useDialogFocusTrap({
+    open: isEditIdentityOpen,
+    containerRef: editModalPanelRef,
+    onClose: () => {
+      if (!savingIdentity) setIsEditIdentityOpen(false);
+    },
+    initialFocusRef: editModalCloseRef,
+  });
+
   const needsInvitationFonts = Boolean(guest) && !submitted;
   const invitationFontFamilies = useMemo(
     () =>
@@ -149,9 +168,15 @@ export default function RsvpPage() {
       try {
         const data = await api.get(`/rsvp/${guestId}`);
         setGuest(data);
+        setGuestFirstName(data.firstName || '');
+        setGuestLastName(data.lastName || '');
+        setGuestPhone(data.phone || data.preferences?.phone || '');
         setRsvpLocked(Boolean(data.rsvpLocked));
-        if (data.rsvp && data.rsvp !== 'PENDING') {
-          setRsvpStatus(data.rsvp);
+        const isTicketOrPublic = Boolean(
+          data.ticketOrderId || data.category === 'Billet' || data.event?.isPublic,
+        );
+        if ((data.rsvp && data.rsvp !== 'PENDING') || isTicketOrPublic) {
+          setRsvpStatus(data.rsvp === 'DECLINED' ? 'DECLINED' : 'ACCEPTED');
           setSubmitted(true);
         }
         if (data.preferences) {
@@ -378,6 +403,73 @@ export default function RsvpPage() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [lightboxOpen, expandedImages.length]);
 
+  const handleUpdateGuestInfo = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!guestId) return;
+    if (!guestFirstName.trim()) {
+      setIdentitySaveError('Le prénom est requis.');
+      return;
+    }
+    setSavingIdentity(true);
+    setIdentitySaveError('');
+    try {
+      const templateContent = guest?.event?.invitations?.[0]?.template?.content;
+      const elements = templateContent?.elements || [];
+      const rsvpFields = ensureMandatoryRsvpFields(
+        (elements || [])
+          .filter((el: { type?: string }) => el.type === 'rsvp-block')
+          .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []),
+      );
+
+      const preferencesPayload = buildRsvpPreferencesPayload({
+        allergies,
+        specialMeal,
+        notes: additionalNotes,
+        rsvpFields,
+        fieldValues: customFieldValues,
+        phone: guestPhone.trim() || undefined,
+      });
+
+      const res = await api.post(`/rsvp/${guestId}`, {
+        firstName: guestFirstName.trim(),
+        lastName: guestLastName.trim(),
+        phone: guestPhone.trim() || null,
+        rsvp: rsvpStatus,
+        preferences: preferencesPayload,
+      });
+
+      if (res?.guest) {
+        setGuest((prev) => (prev ? { ...prev, ...res.guest } : prev));
+        setGuestFirstName(res.guest.firstName || guestFirstName.trim());
+        setGuestLastName(res.guest.lastName || guestLastName.trim());
+        setGuestPhone(res.guest.phone || guestPhone.trim());
+      } else {
+        setGuest((prev) =>
+          prev
+            ? {
+                ...prev,
+                firstName: guestFirstName.trim(),
+                lastName: guestLastName.trim(),
+                phone: guestPhone.trim() || null,
+                preferences: preferencesPayload,
+              }
+            : null,
+        );
+      }
+
+      setIdentitySaveSuccess(true);
+      setTimeout(() => {
+        setIdentitySaveSuccess(false);
+        setIsEditIdentityOpen(false);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Erreur lors de la mise à jour des coordonnées:', err);
+      setIdentitySaveError(err?.message || 'Erreur lors de la mise à jour des coordonnées.');
+    } finally {
+      setSavingIdentity(false);
+    }
+  };
+
   const handleSubmitRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rsvpLocked) {
@@ -413,12 +505,36 @@ export default function RsvpPage() {
         notes: additionalNotes,
         rsvpFields,
         fieldValues: customFieldValues,
+        phone: guestPhone.trim() || undefined,
       });
 
-      await api.post(`/rsvp/${guestId}`, {
+      const res = await api.post(`/rsvp/${guestId}`, {
         rsvp: rsvpStatus,
         preferences,
+        firstName: guestFirstName.trim() || undefined,
+        lastName: guestLastName.trim() || undefined,
+        phone: guestPhone.trim() || undefined,
       });
+
+      if (res?.guest) {
+        setGuest((prev) => (prev ? { ...prev, ...res.guest } : prev));
+        setGuestFirstName(res.guest.firstName || guestFirstName.trim());
+        setGuestLastName(res.guest.lastName || guestLastName.trim());
+        setGuestPhone(res.guest.phone || guestPhone.trim());
+      } else {
+        setGuest((prev) =>
+          prev
+            ? {
+                ...prev,
+                firstName: guestFirstName.trim() || prev.firstName,
+                lastName: guestLastName.trim() || prev.lastName,
+                phone: guestPhone.trim() || prev.phone,
+                rsvp: rsvpStatus,
+                preferences,
+              }
+            : null,
+        );
+      }
 
       setSubmitted(true);
     } catch (err: any) {
@@ -526,7 +642,7 @@ export default function RsvpPage() {
           title={guest.event.title}
           guestId={guestId}
           organizationName={guest.organizationName}
-          inert={lightboxOpen || showFullScreenQr}
+          inert={lightboxOpen || showFullScreenQr || isEditIdentityOpen}
           swipeTabIds={[...guestTabIds]}
           activeTabId={activeGuestTab}
           onTabChange={goGuestTab}
@@ -563,7 +679,7 @@ export default function RsvpPage() {
                     <div className="relative z-[1] flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0 space-y-0.5">
                         <h2 className="text-xl sm:text-2xl font-display font-semibold leading-tight tracking-tight text-white truncate">
-                          Bonjour {guest.firstName}
+                          Bonjour {guest.firstName} {guest.lastName}
                         </h2>
                         <p className="text-sm text-white/85 truncate">{guest.event.title}</p>
                       </div>
@@ -611,26 +727,67 @@ export default function RsvpPage() {
                         </span>
                     </div>
                       <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                    <button
-                      type="button"
+                        <button
+                          type="button"
                           onClick={() => setShowFullScreenQr(true)}
                           className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                    >
+                        >
                           <Maximize2 className="w-4 h-4" aria-hidden />
                           Pass plein écran
-                    </button>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIdentitySaveError('');
+                            setIdentitySaveSuccess(false);
+                            setIsEditIdentityOpen(true);
+                          }}
+                          className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        >
+                          <UserCog className="w-4 h-4 text-primary" aria-hidden />
+                          Modifier mes infos
+                        </button>
                         <Link
                           href={`/rsvp/${guestId}/print`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                          className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         >
                           <Printer className="w-4 h-4" aria-hidden />
                           Imprimer
                         </Link>
-                  </div>
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Bandeau d'invitation partagée ou personnalisation */}
+                <div className="rounded-2xl border border-primary/25 bg-primary/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                      {guest.firstName?.toLowerCase().startsWith('invité')
+                        ? 'Billet ou invitation partagée ?'
+                        : 'Personnaliser ce billet'}
+                    </p>
+                    <p className="text-xs text-foreground/85 leading-relaxed">
+                      {guest.firstName?.toLowerCase().startsWith('invité')
+                        ? 'Ce lien vous a été transmis ? Vous pouvez inscrire votre propre nom et vos coordonnées sur ce badge.'
+                        : 'Vous pouvez modifier le nom, numéro de téléphone et préférences alimentaires figurant sur votre pass à tout moment.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIdentitySaveError('');
+                      setIdentitySaveSuccess(false);
+                      setIsEditIdentityOpen(true);
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover shadow-xs active:scale-95 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Changer mes coordonnées
+                  </button>
                 </div>
 
                 <section className="space-y-4 px-0.5">
@@ -687,13 +844,27 @@ export default function RsvpPage() {
                 />
 
                 {!rsvpLocked && (
-                <button
-                    type="button"
-                  onClick={() => setSubmitted(false)}
-                    className="w-full min-h-11 py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  Modifier ma réponse
-                </button>
+                  <div className="space-y-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIdentitySaveError('');
+                        setIdentitySaveSuccess(false);
+                        setIsEditIdentityOpen(true);
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-2.5 rounded-xl border border-primary/30 bg-primary/5 text-sm font-semibold text-primary hover:bg-primary/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    >
+                      <UserCog className="w-4 h-4" />
+                      Modifier mes coordonnées et préférences
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSubmitted(false)}
+                      className="w-full min-h-11 py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    >
+                      Modifier ma réponse (présence / absence)
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -1352,6 +1523,175 @@ export default function RsvpPage() {
             </div>
           </div>
         )}
+
+        {/* Modal Modification des coordonnées de l'invité */}
+        {isEditIdentityOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-identity-title"
+          >
+            <div
+              ref={editModalPanelRef}
+              className="bg-surface border border-border rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                    <UserCog className="w-5 h-5" aria-hidden />
+                  </div>
+                  <div>
+                    <h3 id="edit-identity-title" className="text-base font-bold text-foreground">
+                      Modifier mes coordonnées
+                    </h3>
+                    <p className="text-xs text-muted">
+                      Ce nom figurera sur votre pass QR, votre siège et à l&apos;accueil.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  ref={editModalCloseRef}
+                  type="button"
+                  disabled={savingIdentity}
+                  onClick={() => setIsEditIdentityOpen(false)}
+                  className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition"
+                  aria-label="Fermer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {identitySaveError && (
+                <div className="p-3 rounded-xl bg-danger/10 border border-danger/25 text-danger text-xs font-semibold" role="alert">
+                  {identitySaveError}
+                </div>
+              )}
+
+              {identitySaveSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 text-xs font-semibold flex items-center gap-2" role="status">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  Vos informations ont été enregistrées avec succès.
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateGuestInfo} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="modal-first-name" className="block text-xs font-semibold text-foreground">
+                      Prénom <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      id="modal-first-name"
+                      type="text"
+                      value={guestFirstName}
+                      onChange={(e) => setGuestFirstName(e.target.value)}
+                      disabled={savingIdentity}
+                      className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      placeholder="Ex : Paul"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="modal-last-name" className="block text-xs font-semibold text-foreground">
+                      Nom de famille
+                    </label>
+                    <input
+                      id="modal-last-name"
+                      type="text"
+                      value={guestLastName}
+                      onChange={(e) => setGuestLastName(e.target.value)}
+                      disabled={savingIdentity}
+                      className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      placeholder="Ex : Kasongo"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label htmlFor="modal-phone" className="block text-xs font-semibold text-foreground">
+                    Numéro de téléphone / WhatsApp
+                  </label>
+                  <input
+                    id="modal-phone"
+                    type="tel"
+                    value={guestPhone}
+                    onChange={(e) => setGuestPhone(e.target.value)}
+                    disabled={savingIdentity}
+                    className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                    placeholder="Ex : +243 812 345 678"
+                  />
+                  <p className="text-[11px] text-muted">
+                    Utilisé pour vous transmettre votre badge et les notifications de placement.
+                  </p>
+                </div>
+
+                {/* Préférences & Remarques */}
+                <div className="pt-2 border-t border-border space-y-3">
+                  <p className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                    <Utensils className="w-3.5 h-3.5 text-primary" />
+                    Préférences & remarques
+                  </p>
+
+                  <div className="space-y-1">
+                    <label htmlFor="modal-allergies" className="block text-xs font-semibold text-foreground">
+                      Allergies ou régimes particuliers
+                    </label>
+                    <input
+                      id="modal-allergies"
+                      type="text"
+                      value={allergies}
+                      onChange={(e) => setAllergies(e.target.value)}
+                      disabled={savingIdentity}
+                      className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      placeholder="Ex : Sans arachides, sans gluten..."
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="modal-notes" className="block text-xs font-semibold text-foreground">
+                      Message / Remarques pour l&apos;organisateur
+                    </label>
+                    <textarea
+                      id="modal-notes"
+                      value={additionalNotes}
+                      onChange={(e) => setAdditionalNotes(e.target.value)}
+                      disabled={savingIdentity}
+                      className="w-full min-h-20 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      placeholder="Une précision sur votre venue, accompagnement..."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
+                  <button
+                    type="button"
+                    disabled={savingIdentity}
+                    onClick={() => setIsEditIdentityOpen(false)}
+                    className="w-full sm:w-auto min-h-11 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingIdentity}
+                    className="w-full sm:w-auto min-h-11 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover shadow-sm transition flex items-center justify-center gap-2"
+                  >
+                    {savingIdentity ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Enregistrement…
+                      </>
+                    ) : (
+                      'Enregistrer mes coordonnées'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
         </>
     );
   }
@@ -1367,6 +1707,12 @@ export default function RsvpPage() {
       }}
       rsvpLocked={rsvpLocked}
       submitting={submitting}
+      firstName={guestFirstName}
+      setFirstName={setGuestFirstName}
+      lastName={guestLastName}
+      setLastName={setGuestLastName}
+      phone={guestPhone}
+      setPhone={setGuestPhone}
       additionalNotes={additionalNotes}
       setAdditionalNotes={setAdditionalNotes}
       customFieldValues={customFieldValues}
