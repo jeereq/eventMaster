@@ -137,6 +137,8 @@ interface EventItem {
  eventPrep?: unknown;
  feedPostCount?: number;
  tenant?: { name: string };
+ tenantId?: string | null;
+ donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
 }
 
 interface OrgRoomOption {
@@ -986,6 +988,7 @@ Merci de confirmer votre présence :
  estimatedGuests: form.estimatedGuests,
  dayOfContactName: form.dayOfContactName,
  dayOfContactPhone: form.dayOfContactPhone,
+ donations: form.donations,
  };
 
  if (editingEventId) {

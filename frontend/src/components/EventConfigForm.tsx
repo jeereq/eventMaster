@@ -92,6 +92,12 @@ import {
 } from '@/lib/ticketPricing';
 import { findRdcCommune } from '@/lib/rdcCities';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { useAuth } from '@/context/AuthContext';
+import {
+  resolveDonationsAccess,
+  DEFAULT_DONATIONS_ACCESS,
+  type EventDonationsConfig,
+} from '@/lib/donationsAccess';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 
@@ -214,7 +220,22 @@ export default function EventConfigForm({
   const complete = mode === 'complete';
   const kinds = complete ? EVENT_KINDS_PRO : EVENT_KINDS_SIMPLE;
   const { site } = usePlatformSite();
+  const { tenant } = useAuth();
   const onlinePaymentsEnabled = site.onlinePaymentsEnabled !== false;
+
+  const [donationsEnabled, setDonationsEnabled] = useState(false);
+  const [donationTargetFc, setDonationTargetFc] = useState('');
+  const [donationMinAmountFc, setDonationMinAmountFc] = useState('1000');
+  const [donationCause, setDonationCause] = useState('');
+  const [donationSuggestedFc, setDonationSuggestedFc] = useState('2500, 5000, 10000, 25000, 50000');
+  const [donorAttendancePass, setDonorAttendancePass] = useState(true);
+
+  const tenantId = initialEvent?.tenantId || tenant?.id;
+  const donationAccessStatus = useMemo(
+    () => resolveDonationsAccess(tenantId, site.donationsAccess),
+    [tenantId, site.donationsAccess],
+  );
+  const donationsAllowedByAdmin = donationAccessStatus.allowed;
 
   useEffect(() => {
     if (!onlinePaymentsEnabled && ticketing) setTicketing(false);
@@ -262,6 +283,12 @@ export default function EventConfigForm({
       setContactName('');
       setContactCc(DEFAULT_PHONE_COUNTRY_CODE);
       setContactNational('');
+      setDonationsEnabled(false);
+      setDonationTargetFc('');
+      setDonationMinAmountFc('1000');
+      setDonationCause('');
+      setDonationSuggestedFc('2500, 5000, 10000, 25000, 50000');
+      setDonorAttendancePass(true);
       return;
     }
 
@@ -332,6 +359,18 @@ export default function EventConfigForm({
     const phone = parseStoredPhone(initialEvent.dayOfContactPhone);
     setContactCc(phone.countryCode);
     setContactNational(phone.national);
+
+    const dConfig = initialEvent.donations;
+    setDonationsEnabled(Boolean(dConfig?.enabled));
+    setDonationTargetFc(dConfig?.targetAmountFc ? String(dConfig.targetAmountFc) : '');
+    setDonationMinAmountFc(dConfig?.minAmountFc ? String(dConfig.minAmountFc) : '1000');
+    setDonationCause(dConfig?.cause || '');
+    setDonationSuggestedFc(
+      dConfig?.suggestedAmountsFc && dConfig.suggestedAmountsFc.length > 0
+        ? dConfig.suggestedAmountsFc.join(', ')
+        : '2500, 5000, 10000, 25000, 50000',
+    );
+    setDonorAttendancePass(dConfig?.donorAttendancePass !== false);
   }, [open, initialEvent?.id]);
 
   useEffect(() => {
@@ -742,6 +781,26 @@ export default function EventConfigForm({
         : initialEvent?.dayOfContactPhone || null,
       themeId: themeId || null,
       tablePlan: planToSave,
+      donations: donationsEnabled
+        ? {
+            enabled: true,
+            targetAmountFc: donationTargetFc ? Math.round(Number(donationTargetFc)) : null,
+            minAmountFc: donationMinAmountFc ? Math.round(Number(donationMinAmountFc)) : 1000,
+            cause: donationCause.trim() || null,
+            suggestedAmountsFc: donationSuggestedFc
+              .split(/[,;\s]+/)
+              .map((s) => Math.round(Number(s.trim())))
+              .filter((n) => Number.isFinite(n) && n >= (Number(donationMinAmountFc) || 1000)),
+            donorAttendancePass,
+          }
+        : {
+            enabled: false,
+            targetAmountFc: null,
+            minAmountFc: Number(donationMinAmountFc) || 1000,
+            cause: donationCause.trim() || null,
+            suggestedAmountsFc: [],
+            donorAttendancePass: true,
+          },
     };
   };
 
@@ -1909,6 +1968,121 @@ export default function EventConfigForm({
                       </div>
                     </label>
                   </div>
+                </div>
+
+                {/* Collecte de dons à montant libre */}
+                <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+                  <div className="flex items-start justify-between gap-3">
+                    <label className={cn('flex items-start gap-3', donationsAllowedByAdmin ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed')}>
+                      <input
+                        type="checkbox"
+                        checked={donationsEnabled}
+                        disabled={!donationsAllowedByAdmin}
+                        onChange={(e) => setDonationsEnabled(e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
+                      />
+                      <div>
+                        <span className="inline-flex items-center gap-1.5 font-bold text-foreground text-sm">
+                          <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
+                          Collecte de dons à montant libre
+                        </span>
+                        <p className="text-[11px] text-muted mt-0.5">
+                          Permet aux participants et donateurs d’effectuer un don financier solidaire libre en FC ou USD via Mobile Money et Carte bancaire.
+                        </p>
+                      </div>
+                    </label>
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+                        donationsAllowedByAdmin
+                          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                          : 'text-amber-700 dark:text-amber-300 bg-amber-500/15',
+                      )}
+                    >
+                      {donationsAllowedByAdmin ? 'Autorisé' : 'Restreint'}
+                    </span>
+                  </div>
+
+                  {!donationsAllowedByAdmin && (
+                    <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                      <p className="font-semibold flex items-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                        Option soumise à autorisation de l'administrateur
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-muted">
+                        La collecte de dons à montant libre est actuellement restreinte par la politique du Super Admin pour votre organisation.
+                        Contactez le support EventMaster pour demander l&apos;activation des donations pour vos événements.
+                      </p>
+                    </div>
+                  )}
+
+                  {donationsAllowedByAdmin && donationsEnabled && (
+                    <div className="space-y-3.5 pt-2 border-t border-border">
+                      <Input
+                        label="Cause / Motif de la collecte"
+                        value={donationCause}
+                        onChange={(e) => setDonationCause(e.target.value)}
+                        placeholder="ex. Soutien aux orphelinats de Kinshasa, levée de fonds pour bourses scolaires..."
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Input
+                          label="Objectif cible en FC (optionnel — affiche une jauge de collecte)"
+                          type="number"
+                          min={0}
+                          value={donationTargetFc}
+                          onChange={(e) => setDonationTargetFc(e.target.value)}
+                          placeholder="ex. 10000000"
+                        />
+                        <Input
+                          label="Montant minimum d'un don (FC)"
+                          type="number"
+                          min={100}
+                          step={500}
+                          value={donationMinAmountFc}
+                          onChange={(e) => setDonationMinAmountFc(e.target.value)}
+                          placeholder="1000"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-muted block">
+                          Suggestions rapides de montants (FC, séparés par virgules)
+                        </label>
+                        <Input
+                          value={donationSuggestedFc}
+                          onChange={(e) => setDonationSuggestedFc(e.target.value)}
+                          placeholder="2500, 5000, 10000, 25000, 50000, 100000"
+                        />
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {donationSuggestedFc
+                            .split(/[,;\s]+/)
+                            .map((s) => Number(s.trim()))
+                            .filter((n) => Number.isFinite(n) && n > 0)
+                            .map((amt) => (
+                              <span key={amt} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
+                                {amt.toLocaleString('fr-FR')} FC
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+
+                      <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer pt-1">
+                        <input
+                          type="checkbox"
+                          checked={donorAttendancePass}
+                          onChange={(e) => setDonorAttendancePass(e.target.checked)}
+                          className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                        />
+                        <div>
+                          <span className="font-semibold">Attribuer un pass invité « Donateur » avec badge QR</span>
+                          <span className="block text-[11px] text-muted">
+                            Si activé, chaque donateur reçoit automatiquement un pass d’accès confirmé et son QR code pour assister à l’événement.
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-border">

@@ -73,6 +73,8 @@ export type EventConfigSource = {
   dayOfContactPhone?: string | null;
   room?: { id: string } | null;
   themeId?: string | null;
+  tenantId?: string | null;
+  donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
 };
 
 export type EventConfigPayload = {
@@ -109,6 +111,7 @@ export type EventConfigPayload = {
   eventProgram?: import('@/lib/eventProgram').EventProgram | null;
   neighborSharingPolicy?: NeighborSharingPolicy;
   tablePlan?: unknown;
+  donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
 };
 
 export type NeighborSharingMode = 'full' | 'first_name' | 'hidden';

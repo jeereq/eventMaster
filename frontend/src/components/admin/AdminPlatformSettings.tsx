@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import {
-  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X,
+  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -33,6 +33,12 @@ import {
   type AudioNotificationFamily,
   type AudioNotificationPreset,
 } from '@/lib/audioNotifications';
+
+import {
+  DEFAULT_DONATIONS_ACCESS,
+  type DonationsAccess,
+  type DonationAccessMode,
+} from '@/lib/donationsAccess';
 
 export type AdminPlatformSettingsValues = Record<string, unknown> & {
   platformName?: string;
@@ -78,6 +84,7 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
     periodEnd?: string | null;
     tenantIds?: string[];
   };
+  donationsAccess?: DonationsAccess;
 };
 
 type SettingsSectionId =
@@ -402,6 +409,10 @@ export default function AdminPlatformSettings({
             <DiscountAccessEditor
               value={value.subscriptionDiscountAccess}
               onChange={(subscriptionDiscountAccess) => patch({ subscriptionDiscountAccess })}
+            />
+            <DonationsAccessEditor
+              value={value.donationsAccess}
+              onChange={(donationsAccess) => patch({ donationsAccess })}
             />
             <div className="pt-4 mt-2 border-t border-border space-y-4">
                 <SectionTitle icon={Wallet}>Jetons IA</SectionTitle>
@@ -1197,6 +1208,271 @@ function DiscountAccessEditor({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+type DonationsAccessValue = NonNullable<AdminPlatformSettingsValues['donationsAccess']>;
+
+function DonationsAccessEditor({
+  value,
+  onChange,
+}: {
+  value?: DonationsAccessValue;
+  onChange: (next: DonationsAccessValue) => void;
+}) {
+  const access: DonationsAccessValue = {
+    enabled: value?.enabled !== false,
+    mode: value?.mode === 'restricted' ? 'restricted' : 'all',
+    tenantIds: value?.tenantIds ?? [],
+    minAmountFc: Number(value?.minAmountFc) || 1000,
+    defaultSuggestedAmountsFc: value?.defaultSuggestedAmountsFc ?? [2500, 5000, 10000, 25000, 50000, 100000],
+  };
+
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Array<{ id: string; name: string; plan: string }>>([]);
+  const [named, setNamed] = useState<Record<string, string>>({});
+  const [searching, setSearching] = useState(false);
+  const [suggestedInput, setSuggestedInput] = useState(
+    access.defaultSuggestedAmountsFc.join(', '),
+  );
+
+  const patch = (partial: Partial<DonationsAccessValue>) => {
+    onChange({
+      enabled: access.enabled,
+      mode: access.mode,
+      tenantIds: access.tenantIds,
+      minAmountFc: access.minAmountFc,
+      defaultSuggestedAmountsFc: access.defaultSuggestedAmountsFc,
+      ...partial,
+    });
+  };
+
+  const allowlistedIds = access.tenantIds.join('|');
+  useEffect(() => {
+    const ids = allowlistedIds ? allowlistedIds.split('|') : [];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void Promise.all(
+      ids.map((id) =>
+        api
+          .get(`/admin/tenants?q=${encodeURIComponent(id)}&pageSize=1`)
+          .then((data: { items?: Array<{ id: string; name: string }> }) => {
+            const item = data.items?.find((tenant) => tenant.id === id);
+            return item ? ([id, item.name] as const) : null;
+          })
+          .catch(() => null),
+      ),
+    ).then((pairs) => {
+      if (cancelled) return;
+      setNamed((prev) => {
+        const next = { ...prev };
+        for (const pair of pairs) {
+          if (pair) next[pair[0]] = pair[1];
+        }
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [allowlistedIds]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      setSearching(true);
+      void api
+        .get(`/admin/tenants?q=${encodeURIComponent(q)}&pageSize=8`)
+        .then((data: { items?: Array<{ id: string; name: string; plan: string }> }) => {
+          setResults(Array.isArray(data.items) ? data.items : []);
+        })
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 280);
+    return () => window.clearTimeout(handle);
+  }, [query]);
+
+  const addTenant = (id: string, name: string) => {
+    if (access.tenantIds.includes(id)) return;
+    setNamed((prev) => ({ ...prev, [id]: name }));
+    patch({ tenantIds: [...access.tenantIds, id] });
+    setQuery('');
+    setResults([]);
+  };
+
+  const handleApplySuggested = (str: string) => {
+    setSuggestedInput(str);
+    const parsed = str
+      .split(/[,;\s]+/)
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n) && n >= access.minAmountFc);
+    if (parsed.length > 0) {
+      patch({ defaultSuggestedAmountsFc: [...new Set(parsed)].sort((a, b) => a - b) });
+    }
+  };
+
+  return (
+    <div className="pt-4 mt-2 border-t border-border space-y-4">
+      <SectionTitle icon={Heart}>Donations & Financement solidaire</SectionTitle>
+      <p className="text-xs text-muted -mt-2 leading-relaxed">
+        Permet aux organisateurs d’activer des collectes de dons à montant libre lors de leurs événements.
+        Vous pouvez autoriser tout le monde sans restrictions ou restreindre l’accès à une ou plusieurs organisations spécifiques.
+      </p>
+
+      <label className="flex items-center justify-between gap-3 min-h-11 cursor-pointer bg-white dark:bg-background p-3.5 border border-border rounded-xl">
+        <div>
+          <span className="text-sm font-semibold text-foreground block">Activer la fonctionnalité de dons libres</span>
+          <span className="text-xs text-muted">Désactivé = aucun événement ne peut proposer de collecte de dons sur la plateforme</span>
+        </div>
+        <input
+          type="checkbox"
+          checked={access.enabled}
+          onChange={(e) => patch({ enabled: e.target.checked })}
+          className="accent-primary w-5 h-5 shrink-0"
+        />
+      </label>
+
+      {access.enabled && (
+        <div className="space-y-4 pl-1">
+          <div className="space-y-2">
+            <label className={labelClass}>Politique d’éligibilité des organisations</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => patch({ mode: 'all' })}
+                className={cn(
+                  'p-3.5 rounded-xl border text-left transition flex items-start gap-3',
+                  access.mode === 'all'
+                    ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary/20'
+                    : 'bg-white dark:bg-background border-border text-muted hover:text-foreground',
+                )}
+              >
+                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold', access.mode === 'all' ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
+                  🌍
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-foreground">Tout le monde (Sans restriction)</span>
+                  <span className="block text-xs text-muted mt-0.5">Toutes les organisations peuvent proposer des dons sur leurs événements.</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => patch({ mode: 'restricted' })}
+                className={cn(
+                  'p-3.5 rounded-xl border text-left transition flex items-start gap-3',
+                  access.mode === 'restricted'
+                    ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary/20'
+                    : 'bg-white dark:bg-background border-border text-muted hover:text-foreground',
+                )}
+              >
+                <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold', access.mode === 'restricted' ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
+                  🔒
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-foreground">Organisations autorisées uniquement</span>
+                  <span className="block text-xs text-muted mt-0.5">Seuls les gestionnaires des organisations approuvées ci-dessous ont accès à la collecte.</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {access.mode === 'restricted' && (
+            <div className="space-y-2 bg-surface p-4 border border-border rounded-xl">
+              <label className={labelClass}>Organisations expressément autorisées ({access.tenantIds.length})</label>
+              <p className="text-xs text-muted">
+                Recherchez et ajoutez les organisations autorisées à activer des dons libres.
+              </p>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher une organisation par nom…"
+                className={fieldClass}
+              />
+              {searching ? <p className="text-xs text-muted">Recherche en cours…</p> : null}
+              {results.length > 0 && (
+                <ul className="border border-border rounded-xl overflow-hidden bg-surface shadow-md">
+                  {results.map((tenant) => (
+                    <li key={tenant.id}>
+                      <button
+                        type="button"
+                        onClick={() => addTenant(tenant.id, tenant.name)}
+                        className="w-full min-h-11 px-3 text-left text-sm hover:bg-surface-muted flex items-center justify-between"
+                      >
+                        <span className="font-semibold text-foreground">{tenant.name}</span>
+                        <span className="text-xs text-muted">Forfait : {tenant.plan}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {access.tenantIds.length > 0 ? (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {access.tenantIds.map((id) => (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1.5 min-h-9 pl-3 pr-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20"
+                    >
+                      {named[id] || id.slice(0, 8)}
+                      <button
+                        type="button"
+                        aria-label={`Retirer ${named[id] || 'cette organisation'}`}
+                        onClick={() => patch({ tenantIds: access.tenantIds.filter((item) => item !== id) })}
+                        className="w-5 h-5 inline-flex items-center justify-center rounded-full hover:bg-primary/20 text-primary"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium pt-1">
+                  Aucune organisation sélectionnée. Le mode restreint est actif mais aucune organisation n'est autorisée.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div className="space-y-1.5">
+              <label className={labelClass}>Montant minimum d'un don (FC)</label>
+              <input
+                type="number"
+                min={100}
+                step={500}
+                value={access.minAmountFc}
+                onChange={(e) => patch({ minAmountFc: Math.max(100, Number(e.target.value) || 1000) })}
+                className={fieldClass}
+              />
+              <p className="text-[11px] text-muted">Seuil plancher appliqué par défaut aux collectes.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={labelClass}>Montants suggérés par défaut (FC, séparés par virgules)</label>
+              <input
+                type="text"
+                value={suggestedInput}
+                onChange={(e) => handleApplySuggested(e.target.value)}
+                placeholder="2500, 5000, 10000, 25000, 50000"
+                className={fieldClass}
+              />
+              <div className="flex flex-wrap gap-1 pt-1">
+                {access.defaultSuggestedAmountsFc.map((amt) => (
+                  <span key={amt} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
+                    {amt.toLocaleString('fr-FR')} FC
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

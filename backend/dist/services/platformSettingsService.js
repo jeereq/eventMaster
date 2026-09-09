@@ -19,6 +19,7 @@ exports.savePlatformSettings = savePlatformSettings;
 exports.savePlatformSettingsDurable = savePlatformSettingsDurable;
 exports.hydratePlatformSettingsFromDb = hydratePlatformSettingsFromDb;
 exports.getPublicSiteConfig = getPublicSiteConfig;
+exports.getDonationsAccess = getDonationsAccess;
 exports.getSubscriptionDiscountAccess = getSubscriptionDiscountAccess;
 exports.getContactDestinations = getContactDestinations;
 exports.maskSecretsForAdmin = maskSecretsForAdmin;
@@ -31,6 +32,7 @@ const ratePercent_1 = require("../utils/ratePercent");
 const aiTokenPricing_1 = require("./aiTokenPricing");
 const welcomeAiTokensPolicy_1 = require("./welcomeAiTokensPolicy");
 const subscriptionDiscountAccess_1 = require("./subscriptionDiscountAccess");
+const donationsAccess_1 = require("./donationsAccess");
 const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
 exports.settingsFilePath = settingsFilePath;
 const PLATFORM_CONFIG_ID = 'default';
@@ -108,6 +110,7 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     welcomeAiGrants: welcomeAiTokensPolicy_1.DEFAULT_WELCOME_GRANT_RULES,
     audioNotifications: exports.DEFAULT_AUDIO_NOTIFICATIONS,
     subscriptionDiscountAccess: subscriptionDiscountAccess_1.DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
+    donationsAccess: donationsAccess_1.DEFAULT_DONATIONS_ACCESS,
 };
 exports.PLATFORM_CITY_CATALOG = [
     'Kinshasa',
@@ -238,6 +241,7 @@ function normalizeStoredRates(settings) {
         welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
         audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
         subscriptionDiscountAccess: (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess),
+        donationsAccess: (0, donationsAccess_1.sanitizeDonationsAccess)(settings.donationsAccess),
     };
 }
 function buildNextSettings(partial) {
@@ -263,6 +267,7 @@ function buildNextSettings(partial) {
     next.welcomeAiGrants = (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(next.welcomeAiGrants);
     next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
     next.subscriptionDiscountAccess = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(next.subscriptionDiscountAccess);
+    next.donationsAccess = (0, donationsAccess_1.sanitizeDonationsAccess)(next.donationsAccess);
     next.ticketPaymentProvider = 'flexpay_card';
     next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
     next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -363,7 +368,11 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
                 periodEnd: access.periodEnd,
             };
         })(),
+        donationsAccess: (0, donationsAccess_1.sanitizeDonationsAccess)(settings.donationsAccess),
     };
+}
+function getDonationsAccess(settings = loadPlatformSettings()) {
+    return (0, donationsAccess_1.sanitizeDonationsAccess)(settings.donationsAccess);
 }
 function getSubscriptionDiscountAccess(settings = loadPlatformSettings()) {
     return (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess);

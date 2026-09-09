@@ -16,6 +16,10 @@ import {
   syncAudioNotificationSettings,
   type AudioNotificationsSettings,
 } from '@/lib/audioNotifications';
+import {
+  DEFAULT_DONATIONS_ACCESS,
+  type DonationsAccess,
+} from '@/lib/donationsAccess';
 
 export interface PublicSiteConfig {
   platformName: string;
@@ -56,6 +60,7 @@ export interface PublicSiteConfig {
     periodStart: string | null;
     periodEnd: string | null;
   };
+  donationsAccess: DonationsAccess;
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -94,6 +99,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   welcomeAiGrants: DEFAULT_WELCOME_AI_GRANTS,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
   subscriptionDiscountAccess: { enabled: true, periodStart: null, periodEnd: null },
+  donationsAccess: DEFAULT_DONATIONS_ACCESS,
 };
 
 interface PlatformSiteContextValue {
@@ -136,6 +142,7 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
           periodStart: data.subscriptionDiscountAccess?.periodStart ?? null,
           periodEnd: data.subscriptionDiscountAccess?.periodEnd ?? null,
         },
+        donationsAccess: data.donationsAccess || DEFAULT_DONATIONS_ACCESS,
       };
       setSite(next);
 

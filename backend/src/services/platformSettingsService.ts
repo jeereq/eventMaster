@@ -19,6 +19,11 @@ import {
   sanitizeSubscriptionDiscountAccess,
   type SubscriptionDiscountAccess,
 } from './subscriptionDiscountAccess';
+import {
+  DEFAULT_DONATIONS_ACCESS,
+  sanitizeDonationsAccess,
+  type DonationsAccess,
+} from './donationsAccess';
 
 const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
 const PLATFORM_CONFIG_ID = 'default';
@@ -140,6 +145,8 @@ export interface PlatformSettings {
   audioNotifications: AudioNotificationsSettings;
   /** Ouverture des demandes de rabais (période et/ou organisations). */
   subscriptionDiscountAccess: SubscriptionDiscountAccess;
+  /** Politique d'autorisation des donations à montant libre. */
+  donationsAccess: DonationsAccess;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -181,6 +188,7 @@ export interface PublicSiteConfig {
   welcomeAiGrants: WelcomeGrantRules;
   audioNotifications: AudioNotificationsSettings;
   subscriptionDiscountAccess: Pick<SubscriptionDiscountAccess, 'enabled' | 'periodStart' | 'periodEnd'>;
+  donationsAccess: DonationsAccess;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -228,6 +236,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
   subscriptionDiscountAccess: DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
+  donationsAccess: DEFAULT_DONATIONS_ACCESS,
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -385,6 +394,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
     subscriptionDiscountAccess: sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess),
+    donationsAccess: sanitizeDonationsAccess(settings.donationsAccess),
   };
 }
 
@@ -415,6 +425,7 @@ function buildNextSettings(
   next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
   next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
   next.subscriptionDiscountAccess = sanitizeSubscriptionDiscountAccess(next.subscriptionDiscountAccess);
+  next.donationsAccess = sanitizeDonationsAccess(next.donationsAccess);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -533,7 +544,12 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
         periodEnd: access.periodEnd,
       };
     })(),
+    donationsAccess: sanitizeDonationsAccess(settings.donationsAccess),
   };
+}
+
+export function getDonationsAccess(settings = loadPlatformSettings()) {
+  return sanitizeDonationsAccess(settings.donationsAccess);
 }
 
 export function getSubscriptionDiscountAccess(settings = loadPlatformSettings()) {

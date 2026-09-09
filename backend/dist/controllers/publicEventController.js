@@ -16,6 +16,7 @@ const eventPlace_1 = require("../utils/eventPlace");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
 const rdcCities_1 = require("../utils/rdcCities");
 const platformSettingsService_1 = require("../services/platformSettingsService");
+const donationsAccess_1 = require("../services/donationsAccess");
 const prismaJson_1 = require("../utils/prismaJson");
 const flexPayCardService_1 = require("../services/flexPayCardService");
 const flexPayChargeCurrency_1 = require("../services/flexPayChargeCurrency");
@@ -41,7 +42,7 @@ function serializePublicPost(post) {
         createdAt: post.createdAt,
     };
 }
-function serializePublicEvent(event) {
+function serializePublicEvent(event, donationStats) {
     const remaining = (0, ticketOrderService_1.ticketsRemaining)(event);
     const pricingMode = (0, ticketPricingService_1.normalizeTicketPricingMode)(event.ticketPricingMode);
     const pricingZones = (0, ticketPricingService_1.pricingZonesFromPlan)(event.tablePlan);
@@ -53,6 +54,19 @@ function serializePublicEvent(event) {
     const plan = event.tablePlan;
     const hasTablePlan = Boolean(plan?.tables && plan.tables.length > 0);
     const priceFromFc = (0, ticketPricingService_1.priceFromFcForEvent)(event);
+    const donationsAccess = (0, platformSettingsService_1.getDonationsAccess)();
+    const allowedByPlatform = event.tenantId
+        ? (0, donationsAccess_1.resolveDonationsAccess)(event.tenantId, donationsAccess).allowed
+        : donationsAccess.enabled;
+    const donationsConfig = (0, donationsAccess_1.extractEventDonationsConfig)(event.eventPrep);
+    const donations = donationsConfig && donationsConfig.enabled && allowedByPlatform
+        ? {
+            ...donationsConfig,
+            collectedAmountFc: donationStats?.collectedAmountFc || 0,
+            donorsCount: donationStats?.donorsCount || 0,
+            allowedByPlatform: true,
+        }
+        : null;
     return {
         id: event.id,
         slug: event.slug,
@@ -82,6 +96,7 @@ function serializePublicEvent(event) {
         photos,
         coverUrl: (0, publicVenue_1.coverFromMedia)(photos),
         posts: (event.posts || []).map(serializePublicPost),
+        donations,
     };
 }
 async function listPublicEvents(req, res) {
@@ -176,7 +191,7 @@ async function listPublicEvents(req, res) {
             }
             return true;
         });
-        return res.json({ events: filtered.map(serializePublicEvent) });
+        return res.json({ events: filtered.map((e) => serializePublicEvent(e)) });
     }
     catch (error) {
         console.error('[Public events] list', error);
@@ -200,7 +215,24 @@ async function getPublicEvent(req, res) {
         });
         if (!event)
             return res.status(404).json({ error: 'Événement introuvable ou privé.' });
-        return res.json({ event: serializePublicEvent(event) });
+        let donationStats;
+        const donationsConfig = (0, donationsAccess_1.extractEventDonationsConfig)(event.eventPrep);
+        if (donationsConfig?.enabled) {
+            const agg = await db_1.prisma.ticketOrder.aggregate({
+                where: {
+                    eventId: event.id,
+                    status: 'PAID',
+                    pricingZoneId: 'donation',
+                },
+                _sum: { amountFc: true },
+                _count: { id: true },
+            });
+            donationStats = {
+                collectedAmountFc: agg._sum.amountFc || 0,
+                donorsCount: agg._count.id || 0,
+            };
+        }
+        return res.json({ event: serializePublicEvent(event, donationStats) });
     }
     catch (error) {
         console.error('[Public events] get', error);
@@ -290,6 +322,139 @@ async function checkoutPublicEvent(req, res) {
             return res.status(404).json({ error: 'Événement introuvable ou privé.' });
         if (new Date(event.date).getTime() < Date.now()) {
             return res.status(400).json({ error: 'Cet événement est déjà passé.' });
+        }
+        const isDonation = req.body?.isDonation === true || req.body?.orderKind === 'DONATION';
+        if (isDonation) {
+            const donationsAccess = (0, platformSettingsService_1.getDonationsAccess)();
+            const platformCheck = (0, donationsAccess_1.resolveDonationsAccess)(event.tenantId, donationsAccess);
+            if (!platformCheck.allowed) {
+                return res.status(403).json({ error: platformCheck.reason || 'Les donations sont désactivées pour cet événement.' });
+            }
+            const donationsConfig = (0, donationsAccess_1.extractEventDonationsConfig)(event.eventPrep);
+            if (!donationsConfig || !donationsConfig.enabled) {
+                return res.status(400).json({ error: 'Les donations ne sont pas activées sur cet événement.' });
+            }
+            const rawAmount = Number(req.body?.amountFc || req.body?.donationAmountFc);
+            const minAmount = donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000;
+            if (!Number.isFinite(rawAmount) || rawAmount < minAmount) {
+                return res.status(400).json({
+                    error: `Le montant minimum pour un don est de ${minAmount.toLocaleString('fr-FR')} FC.`,
+                });
+            }
+            const amountFc = Math.round(rawAmount);
+            const isAnonymous = Boolean(req.body?.isAnonymous);
+            const donationNote = typeof req.body?.donationNote === 'string' ? req.body.donationNote.trim().slice(0, 500) : null;
+            const rawMethod = String(req.body?.paymentMethod || 'card').toLowerCase();
+            const paymentMethod = rawMethod === 'mobile' ? 'mobile' : 'card';
+            const paymentProvider = paymentMethod === 'mobile' ? 'flexpay_mobile' : 'flexpay_card';
+            if (!(0, platformSettingsService_1.isOnlinePaymentsEnabled)()) {
+                return res.status(403).json({ error: 'Les paiements en ligne sont actuellement désactivés.' });
+            }
+            const order = await db_1.prisma.ticketOrder.create({
+                data: {
+                    eventId: event.id,
+                    buyerName: isAnonymous ? 'Donateur Anonyme' : buyerName,
+                    buyerEmail,
+                    buyerPhone,
+                    quantity: 1,
+                    amountFc,
+                    unitPriceFc: amountFc,
+                    pricingZoneId: 'donation',
+                    status: 'PENDING',
+                    paymentProvider,
+                    userId,
+                    selectedSeats: (0, prismaJson_1.toPrismaJson)({
+                        kind: 'DONATION',
+                        isAnonymous,
+                        donationNote,
+                        originalBuyerName: buyerName,
+                        donorAttendancePass: donationsConfig.donorAttendancePass,
+                    }),
+                },
+            });
+            if (!(0, flexPayCardService_1.isFlexPayCardConfigured)()) {
+                await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                return res.status(503).json({
+                    error: 'Paiements FlexPay non configurés. Réessayez plus tard ou contactez le support.',
+                });
+            }
+            if (paymentProvider === 'flexpay_mobile') {
+                const phone = String(req.body?.phone || buyerPhone || '').trim();
+                if (!phone) {
+                    await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                    return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
+                }
+                const charge = (0, flexPayChargeCurrency_1.resolveFlexPayCharge)(amountFc, (0, flexPayChargeCurrency_1.parseFlexPayChargeCurrency)(req.body?.currency, 'mobile'), (0, platformSettingsService_1.loadPlatformSettings)().usdExchangeRateCdf);
+                const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
+                const reference = (0, flexPayCardService_1.buildFlexPayReference)('dn', order.id);
+                try {
+                    const flex = await (0, flexPayCardService_1.createFlexPayMobileCheckout)({
+                        reference,
+                        amount: charge.amount,
+                        currency: charge.currency,
+                        phone,
+                        callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+                    });
+                    await db_1.prisma.ticketOrder.update({
+                        where: { id: order.id },
+                        data: {
+                            paymentProvider: 'flexpay_mobile',
+                            flexPayOrderNumber: flex.orderNumber,
+                            flexPayReference: reference,
+                        },
+                    });
+                    return res.status(201).json({
+                        paid: true,
+                        orderId: order.id,
+                        method: 'mobile',
+                        amountCustomer: charge.amount,
+                        currencyCustomer: charge.currency,
+                        orderNumber: flex.orderNumber,
+                        message: 'Approbation Mobile Money envoyée sur votre téléphone.',
+                    });
+                }
+                catch (err) {
+                    await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                    return res.status(502).json({ error: err?.message || 'Erreur lors de l’initialisation FlexPay Mobile.' });
+                }
+            }
+            // flexpay_card
+            const charge = (0, flexPayChargeCurrency_1.resolveFlexPayCharge)(amountFc, 'USD', (0, platformSettingsService_1.loadPlatformSettings)().usdExchangeRateCdf);
+            const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
+            const reference = (0, flexPayCardService_1.buildFlexPayReference)('dn', order.id);
+            try {
+                const flex = await (0, flexPayCardService_1.createFlexPayCardCheckout)({
+                    reference,
+                    amount: charge.amount,
+                    currency: charge.currency,
+                    description: `Donation: ${event.title}`.slice(0, 100),
+                    callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+                    approveUrl: `${FRONTEND_URL}/marketplace/evenements/${event.slug || event.id}?donationSuccess=1&orderId=${order.id}`,
+                    cancelUrl: `${FRONTEND_URL}/marketplace/evenements/${event.slug || event.id}?donationCancel=1`,
+                    declineUrl: `${FRONTEND_URL}/marketplace/evenements/${event.slug || event.id}?donationDecline=1`,
+                });
+                await db_1.prisma.ticketOrder.update({
+                    where: { id: order.id },
+                    data: {
+                        paymentProvider: 'flexpay_card',
+                        flexPayOrderNumber: flex.orderNumber,
+                        flexPayReference: reference,
+                    },
+                });
+                return res.status(201).json({
+                    paid: true,
+                    orderId: order.id,
+                    method: 'card',
+                    amountCustomer: charge.amount,
+                    currencyCustomer: charge.currency,
+                    checkoutUrl: flex.redirectUrl,
+                    orderNumber: flex.orderNumber,
+                });
+            }
+            catch (err) {
+                await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+                return res.status(502).json({ error: err?.message || 'Erreur lors de l’initialisation FlexPay Card.' });
+            }
         }
         const bodyPricingZoneId = req.body?.pricingZoneId ? String(req.body.pricingZoneId) : null;
         let requestedSeats = [];

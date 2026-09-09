@@ -15,6 +15,7 @@ const permissionsService_1 = require("../services/permissionsService");
 const roomLayoutService_1 = require("../services/roomLayoutService");
 const ticketPricingService_1 = require("../services/ticketPricingService");
 const platformSettingsService_1 = require("../services/platformSettingsService");
+const donationsAccess_1 = require("../services/donationsAccess");
 const tableAssignmentNotificationService_1 = require("../services/tableAssignmentNotificationService");
 const prismaJson_1 = require("../utils/prismaJson");
 const slug_1 = require("../utils/slug");
@@ -33,10 +34,18 @@ function rejectPaidTicketingIfDisabled(body, res) {
 }
 function serializeEvent(event) {
     const { _count, ...rest } = event;
+    const donationsAccess = (0, platformSettingsService_1.getDonationsAccess)();
+    const allowedByPlatform = event.tenantId
+        ? (0, donationsAccess_1.resolveDonationsAccess)(event.tenantId, donationsAccess).allowed
+        : donationsAccess.enabled;
+    const donationsConfig = (0, donationsAccess_1.extractEventDonationsConfig)(event.eventPrep);
     return {
         ...rest,
         feedPostCount: _count?.posts ?? 0,
         placeLabel: (0, eventPlace_1.formatEventPlace)(rest),
+        donations: donationsConfig
+            ? { ...donationsConfig, allowedByPlatform }
+            : { enabled: false, targetAmountFc: null, minAmountFc: donationsAccess.minAmountFc, cause: null, suggestedAmountsFc: donationsAccess.defaultSuggestedAmountsFc, donorAttendancePass: true, allowedByPlatform },
     };
 }
 function eventPlaceData(body, forCreate) {
@@ -235,6 +244,21 @@ async function createEvent(req, res) {
         if (req.body.pricingZones !== undefined) {
             tablePlanData = (0, ticketPricingService_1.mergePricingZonesIntoTablePlan)(tablePlanData ?? { tables: [] }, Array.isArray(req.body.pricingZones) ? req.body.pricingZones : []);
         }
+        const donationsAccess = (0, platformSettingsService_1.getDonationsAccess)();
+        let donationsConfig = null;
+        if (req.body.donations !== undefined) {
+            if (req.body.donations && typeof req.body.donations === 'object' && req.body.donations.enabled) {
+                const accessCheck = (0, donationsAccess_1.resolveDonationsAccess)(tenantId, donationsAccess);
+                if (!accessCheck.allowed) {
+                    return res.status(403).json({ error: accessCheck.reason });
+                }
+            }
+            donationsConfig = (0, donationsAccess_1.sanitizeEventDonationsConfig)(req.body.donations, donationsAccess);
+        }
+        const initialEventPrep = {
+            ...(req.body.eventPrep && typeof req.body.eventPrep === 'object' ? req.body.eventPrep : {}),
+            ...(donationsConfig ? { donations: donationsConfig } : {}),
+        };
         const event = await db_1.prisma.event.create({
             data: {
                 tenantId,
@@ -249,6 +273,7 @@ async function createEvent(req, res) {
                 tablePlan: tablePlanData ? (0, prismaJson_1.toPrismaJson)(tablePlanData) : undefined,
                 guestGuidelines: guestGuidelines !== undefined ? (0, prismaJson_1.toPrismaJson)(guestGuidelines) : undefined,
                 rsvpForm: rsvpForm !== undefined ? (0, prismaJson_1.toPrismaJson)(rsvpForm) : undefined,
+                eventPrep: Object.keys(initialEventPrep).length > 0 ? (0, prismaJson_1.toPrismaJson)(initialEventPrep) : undefined,
                 themeId: themeId || null,
                 photos: (0, prismaJson_1.toPrismaJson)((0, publicVenue_1.parsePhotoUrls)(req.body.photos)),
                 ...(req.body.eventProgram !== undefined
@@ -328,6 +353,25 @@ async function updateEvent(req, res) {
             const base = tablePlan !== undefined ? tablePlan : existingEvent.tablePlan;
             mergedTablePlan = (0, ticketPricingService_1.mergePricingZonesIntoTablePlan)(base, Array.isArray(req.body.pricingZones) ? req.body.pricingZones : []);
         }
+        const donationsAccess = (0, platformSettingsService_1.getDonationsAccess)();
+        let updatedEventPrep = eventPrep !== undefined
+            ? (eventPrep && typeof eventPrep === 'object' ? { ...eventPrep } : {})
+            : (existingEvent.eventPrep && typeof existingEvent.eventPrep === 'object'
+                ? { ...existingEvent.eventPrep }
+                : {});
+        if (req.body.donations !== undefined) {
+            if (req.body.donations && typeof req.body.donations === 'object' && req.body.donations.enabled) {
+                const accessCheck = (0, donationsAccess_1.resolveDonationsAccess)(tenantId, donationsAccess);
+                if (!accessCheck.allowed) {
+                    return res.status(403).json({ error: accessCheck.reason });
+                }
+            }
+            const sanitized = (0, donationsAccess_1.sanitizeEventDonationsConfig)(req.body.donations, donationsAccess);
+            updatedEventPrep = {
+                ...updatedEventPrep,
+                donations: sanitized,
+            };
+        }
         const updatedEvent = await db_1.prisma.event.update({
             where: { id },
             data: {
@@ -342,7 +386,7 @@ async function updateEvent(req, res) {
                 roomId: roomId !== undefined ? roomId : existingEvent.roomId,
                 guestGuidelines: guestGuidelines !== undefined ? (0, prismaJson_1.toPrismaJson)(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
                 rsvpForm: rsvpForm !== undefined ? (0, prismaJson_1.toPrismaJson)(rsvpForm) : existingEvent.rsvpForm ?? undefined,
-                eventPrep: eventPrep !== undefined ? (0, prismaJson_1.toPrismaJson)(eventPrep) : existingEvent.eventPrep ?? undefined,
+                eventPrep: Object.keys(updatedEventPrep).length > 0 ? (0, prismaJson_1.toPrismaJson)(updatedEventPrep) : (eventPrep !== undefined ? undefined : existingEvent.eventPrep ?? undefined),
                 themeId: themeId !== undefined ? (themeId || null) : existingEvent.themeId,
                 ...(req.body.photos !== undefined ? { photos: (0, prismaJson_1.toPrismaJson)((0, publicVenue_1.parsePhotoUrls)(req.body.photos)) } : {}),
                 ...(req.body.eventProgram !== undefined

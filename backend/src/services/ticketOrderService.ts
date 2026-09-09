@@ -29,43 +29,75 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
   }
 
   const event = order.event;
-  const remaining = ticketsRemaining(event);
-  if (remaining != null && remaining < order.quantity) {
-    await prisma.ticketOrder.update({
-      where: { id: orderId },
-      data: { status: 'CANCELLED' },
-    });
-    throw new Error('Plus assez de billets disponibles.');
-  }
+  const isDonation = order.pricingZoneId === 'donation';
+  const donationMeta =
+    order.selectedSeats && typeof order.selectedSeats === 'object' && !Array.isArray(order.selectedSeats)
+      ? (order.selectedSeats as Record<string, unknown>)
+      : null;
+  const wantDonorPass = isDonation ? donationMeta?.donorAttendancePass !== false : true;
 
-  const guestCount = await prisma.guest.count({ where: { event: { tenantId: event.tenantId } } });
-  const limits = getPlanLimitsForTenant(event.tenant.plan, event.tenant.accountKind);
-  if (guestCount + order.quantity > limits.maxGuests) {
-    throw new Error('Quota d’invités de l’organisation atteint. Contactez l’organisateur.');
+  if (!isDonation) {
+    const remaining = ticketsRemaining(event);
+    if (remaining != null && remaining < order.quantity) {
+      await prisma.ticketOrder.update({
+        where: { id: orderId },
+        data: { status: 'CANCELLED' },
+      });
+      throw new Error('Plus assez de billets disponibles.');
+    }
+
+    const guestCount = await prisma.guest.count({ where: { event: { tenantId: event.tenantId } } });
+    const limits = getPlanLimitsForTenant(event.tenant.plan, event.tenant.accountKind);
+    if (guestCount + order.quantity > limits.maxGuests) {
+      throw new Error('Quota d’invités de l’organisation atteint. Contactez l’organisateur.');
+    }
   }
 
   const { firstName, lastName } = splitBuyerName(order.buyerName);
-  const guestPayloads = Array.from({ length: order.quantity }, (_, i) => {
-    const email = i === 0 ? order.buyerEmail.trim().toLowerCase() : companionTicketEmail(order.buyerEmail, i + 1, order.id);
-    return {
-      eventId: event.id,
-      firstName: i === 0 ? firstName : `Invité ${i + 1}`,
-      lastName,
-      email,
-      phone: i === 0 ? order.buyerPhone : null,
-      category: event.ticketingEnabled ? 'Billet' : 'Public',
-      rsvp: 'ACCEPTED',
-      ticketOrderId: order.id,
-      ...(i === 0 && order.buyerPhone ? { preferences: { phone: order.buyerPhone } } : {}),
-    };
-  });
+  const guestPayloads: Array<{
+    eventId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    category: string;
+    rsvp: string;
+    ticketOrderId: string;
+    preferences?: { phone: string };
+  }> = [];
 
-  for (const row of guestPayloads) {
-    const clash = await prisma.guest.findUnique({
-      where: { eventId_email: { eventId: event.id, email: row.email } },
+  if (!isDonation || wantDonorPass) {
+    const rawPayloads = Array.from({ length: order.quantity }, (_, i) => {
+      const email = i === 0 ? order.buyerEmail.trim().toLowerCase() : companionTicketEmail(order.buyerEmail, i + 1, order.id);
+      return {
+        eventId: event.id,
+        firstName: i === 0 ? firstName : `Invité ${i + 1}`,
+        lastName,
+        email,
+        phone: i === 0 ? order.buyerPhone : null,
+        category: isDonation ? 'Donateur' : (event.ticketingEnabled ? 'Billet' : 'Public'),
+        rsvp: 'ACCEPTED',
+        ticketOrderId: order.id,
+        ...(i === 0 && order.buyerPhone ? { preferences: { phone: order.buyerPhone } } : {}),
+      };
     });
-    if (clash) {
-      throw new Error(`Un invité avec l’e-mail ${row.email} existe déjà pour cet événement.`);
+
+    for (const row of rawPayloads) {
+      const clash = await prisma.guest.findUnique({
+        where: { eventId_email: { eventId: event.id, email: row.email } },
+      });
+      if (clash) {
+        if (isDonation) {
+          await prisma.guest.update({
+            where: { id: clash.id },
+            data: { category: 'Donateur', rsvp: 'ACCEPTED', ticketOrderId: order.id },
+          });
+        } else {
+          throw new Error(`Un invité avec l’e-mail ${row.email} existe déjà pour cet événement.`);
+        }
+      } else {
+        guestPayloads.push(row);
+      }
     }
   }
 
@@ -73,10 +105,12 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
     for (const row of guestPayloads) {
       await tx.guest.create({ data: row });
     }
-    await tx.event.update({
-      where: { id: event.id },
-      data: { ticketsSold: { increment: order.quantity } },
-    });
+    if (!isDonation) {
+      await tx.event.update({
+        where: { id: event.id },
+        data: { ticketsSold: { increment: order.quantity } },
+      });
+    }
     await tx.ticketOrder.update({
       where: { id: order.id },
       data: {
@@ -149,7 +183,27 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
   }).catch((err) => console.error('[Ticket] notify payment:', err));
 
   const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
-  if (primary) {
+  const orgBrand = orgBrandFromTenant(event.tenant);
+  if (isDonation) {
+    const subject = `Merci pour votre don — ${event.title}`;
+    const text = `Bonjour ${order.buyerName},\n\nNous vous remercions très chaleureusement pour votre don de ${order.amountFc.toLocaleString('fr-FR')} FC en soutien à « ${event.title} ».\n\nOrganisé par ${event.tenant.name}.\n`;
+    const rsvpUrl = primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null;
+    const html = wrapBrandedEmail({
+      branding: orgBrand.branding,
+      orgName: orgBrand.orgName,
+      title: 'Don confirmé avec succès',
+      eyebrow: event.title,
+      innerHtml: `
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${escapeHtml(order.buyerName)}</strong>,</p>
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Nous vous remercions très chaleureusement pour votre contribution solidaire de <strong>${order.amountFc.toLocaleString('fr-FR')} FC</strong> en soutien à <strong>${escapeHtml(event.title)}</strong>.</p>
+        ${donationMeta?.donationNote ? `<p style="margin:0 0 16px;font-size:14px;color:#475569;font-style:italic;border-left:3px solid #6366f1;padding-left:12px;">« ${escapeHtml(String(donationMeta.donationNote))} »</p>` : ''}
+        ${rsvpUrl ? `<p style="margin:0 0 16px;font-size:14px;color:#334155;">Un pass d’accès invité vous a été attribué pour l'événement.</p>` : ''}
+      `,
+      ...(rsvpUrl ? { cta: { href: rsvpUrl, label: 'Ouvrir mon espace invité' } } : {}),
+      footerNote: 'Votre générosité fait la différence. Reçu de paiement généré par EventMaster.',
+    });
+    void sendRealEmail(order.buyerEmail, subject, text, html).catch(() => undefined);
+  } else if (primary) {
     const rsvpUrl = `${FRONTEND_URL}/rsvp/${primary.id}`;
     let seatLine = '';
     if (parsedSeats.length === 1) {
@@ -160,7 +214,6 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
         parsedSeats.map((s, idx) => ` - Place ${idx + 1} : table ${s.tableId} · siège ${s.seatIndex + 1}`).join('\n') +
         '\n';
     }
-    const orgBrand = orgBrandFromTenant(event.tenant);
     const subject = `Votre billet — ${event.title}`;
     const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR et itinéraire) :\n${rsvpUrl}\n\n${GUEST_COPY.ticket}\n\nOrganisé par ${event.tenant.name}.\n`;
     const html = wrapBrandedEmail({

@@ -7,7 +7,8 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
-import { Ticket, Plus, Minus, X, Check, Users, Loader2 } from 'lucide-react';
+import { Ticket, Plus, Minus, X, Check, Users, Loader2, Heart } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
@@ -252,6 +253,100 @@ export default function EventTicketCheckoutForm({
   const [mmPhone, setMmPhone] = useState('');
   const [operator, setOperator] = useState<FlexPayMobileOperatorId>('orange');
 
+  const donationsConfig = event.donations;
+  const hasDonations = Boolean(donationsConfig?.enabled);
+  const [checkoutTab, setCheckoutTab] = useState<'ticket' | 'donation'>(
+    hasDonations && !event.ticketingEnabled ? 'donation' : 'ticket',
+  );
+
+  const defaultDonationAmt = donationsConfig?.suggestedAmountsFc?.[0] || donationsConfig?.minAmountFc || 5000;
+  const [donationAmountFc, setDonationAmountFc] = useState(String(defaultDonationAmt));
+  const [isAnonymousDonation, setIsAnonymousDonation] = useState(false);
+  const [donationNote, setDonationNote] = useState('');
+  const effectiveDonationFc = Math.max(0, Number(donationAmountFc) || 0);
+
+  const submitDonation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const cleanBuyerName = isAnonymousDonation ? 'Donateur anonyme' : buyerName.trim();
+      const cleanBuyerPhone = buyerPhone.trim().replace(/\s+/g, '');
+      const rawMobilePhone = (mmPhone.trim() || buyerPhone.trim()).replace(/\s+/g, '').replace(/^\+/, '');
+      const parsedAmount = Math.round(Number(donationAmountFc));
+      const minAmount = donationsConfig?.minAmountFc ?? 1000;
+
+      if (!isAnonymousDonation && !cleanBuyerName) {
+        setError('Veuillez renseigner votre nom pour le reçu de don.');
+        setBusy(false);
+        return;
+      }
+      if (!cleanBuyerPhone) {
+        setError('Veuillez renseigner votre numéro de téléphone ou WhatsApp.');
+        setBusy(false);
+        return;
+      }
+      if (!Number.isFinite(parsedAmount) || parsedAmount < minAmount) {
+        setError(`Le montant minimum du don est de ${formatFc(minAmount)}.`);
+        setBusy(false);
+        return;
+      }
+      if (paymentMethod === 'mobile' && !rawMobilePhone) {
+        setError('Indiquez un numéro Mobile Money valide (ex: 24389XXXXXXX).');
+        setBusy(false);
+        return;
+      }
+
+      const data = await api.post(`/public/events/${slug}/checkout`, {
+        isDonation: true,
+        donationAmountFc: parsedAmount,
+        isAnonymous: isAnonymousDonation,
+        donationNote: donationNote.trim() || undefined,
+        buyerName: cleanBuyerName,
+        buyerPhone: cleanBuyerPhone,
+        paymentMethod,
+        ...(paymentMethod === 'mobile'
+          ? { phone: rawMobilePhone, operator, currency }
+          : {}),
+      });
+
+      if (data.checkoutUrl) {
+        if (data.orderId) {
+          writePendingTicketPayment({
+            orderId: data.orderId,
+            slug,
+            method: 'card',
+            eventTitle: `Don : ${event.title}`,
+          });
+          setPendingOrder({ orderId: data.orderId, method: 'card' });
+        }
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+      const isFlex =
+        data.provider === 'flexpay_mobile' || data.provider === 'flexpay_card';
+      if (isFlex && data.orderId && !data.rsvpUrl) {
+        const method = data.provider === 'flexpay_card' ? 'card' : 'mobile';
+        writePendingTicketPayment({
+          orderId: data.orderId,
+          slug,
+          method,
+          eventTitle: `Don : ${event.title}`,
+        });
+        setPendingOrder({ orderId: data.orderId, method });
+        return;
+      }
+      const rsvp = data.rsvpUrl ? `&rsvp=${encodeURIComponent(data.rsvpUrl)}` : '';
+      router.push(
+        `${eventPublicHref(slug)}/succes?order=${data.orderId || ''}${rsvp}`,
+      );
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible d’enregistrer le don.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -396,12 +491,53 @@ export default function EventTicketCheckoutForm({
   const showAuthChoice = !authLoading && !token;
 
   return (
-    <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
-      <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
-        <Ticket className="w-4 h-4" />
-        {event.paid ? 'Acheter un billet' : 'S’inscrire'}
-      </h2>
-      {zonePricing && event.priceFromFc != null && (
+    <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3.5">
+      {/* Switcher Billets / Don si les deux sont disponibles */}
+      {hasDonations && (event.ticketingEnabled || !event.paid) && (
+        <div className="grid grid-cols-2 p-1 bg-surface-muted rounded-xl border border-border gap-1">
+          <button
+            type="button"
+            onClick={() => setCheckoutTab('ticket')}
+            className={cn(
+              'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+              checkoutTab === 'ticket'
+                ? 'bg-surface text-foreground shadow-2xs border border-border'
+                : 'text-muted hover:text-foreground',
+            )}
+          >
+            <Ticket className="w-3.5 h-3.5 text-primary" />
+            <span>Billets & Accès</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCheckoutTab('donation')}
+            className={cn(
+              'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+              checkoutTab === 'donation'
+                ? 'bg-surface text-rose-600 dark:text-rose-400 shadow-2xs border border-border'
+                : 'text-muted hover:text-foreground',
+            )}
+          >
+            <Heart className="w-3.5 h-3.5 fill-rose-500/20 text-rose-500" />
+            <span>Faire un don libre</span>
+          </button>
+        </div>
+      )}
+
+      {/* Titre selon le tab actif */}
+      {checkoutTab === 'donation' ? (
+        <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
+          <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
+          Faire un don solidaire à montant libre
+        </h2>
+      ) : (
+        <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
+          <Ticket className="w-4 h-4" />
+          {event.paid ? 'Acheter un billet' : 'S’inscrire'}
+        </h2>
+      )}
+
+      {checkoutTab === 'ticket' && zonePricing && event.priceFromFc != null && (
         <p className="text-xs text-muted">
           Tarifs à partir de {formatFc(event.priceFromFc)}
           {pricingZones.length > 0 && (
@@ -411,7 +547,7 @@ export default function EventTicketCheckoutForm({
           )}
         </p>
       )}
-      {programHint && (
+      {checkoutTab === 'ticket' && programHint && (
         <p className="text-xs text-muted">Ambiance programme actuelle : {programHint}</p>
       )}
       {(search.get('canceled') || search.get('payment') === 'paused') && !pendingOrder && (
@@ -425,7 +561,7 @@ export default function EventTicketCheckoutForm({
       {error && <Alert variant="error">{error}</Alert>}
       {paidResult ? (
         <div className="space-y-3">
-          <Alert variant="success">Paiement confirmé. Votre place est réservée.</Alert>
+          <Alert variant="success">Paiement confirmé. Votre réservation est validée.</Alert>
           {paidResult.rsvpUrl ? (
             <Link href={paidResult.rsvpUrl} className="inline-flex">
               <Button type="button">Ouvrir mon espace invité</Button>
@@ -452,13 +588,211 @@ export default function EventTicketCheckoutForm({
             /* pollPending already sets paidResult */
           }}
         />
-      ) : event.soldOut ? (
-        <p className="text-sm text-muted">Plus de places disponibles.</p>
       ) : showAuthChoice ? (
         <ClientAuthChoice
           nextPath={nextPath}
-          description="Un compte est requis pour réserver une place ou acheter un billet. Après connexion, vous revenez à cette fiche."
+          description="Un compte est requis pour réserver une place ou effectuer un don. Après connexion, vous revenez à cette fiche."
         />
+      ) : checkoutTab === 'donation' ? (
+        <div className="space-y-4">
+          {/* Cause soutenue */}
+          {donationsConfig?.cause && (
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 block">
+                Cause soutenue
+              </span>
+              <p className="text-xs text-foreground leading-relaxed">{donationsConfig.cause}</p>
+            </div>
+          )}
+
+          {/* Jauge de collecte */}
+          {donationsConfig && (
+            <div className="rounded-xl border border-border bg-surface-muted/50 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-foreground flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/30" />
+                  {formatFc(donationsConfig.collectedAmountFc || 0)} récoltés
+                </span>
+                {donationsConfig.targetAmountFc ? (
+                  <span className="text-muted font-medium">
+                    Objectif : {formatFc(donationsConfig.targetAmountFc)} (
+                    {Math.min(
+                      100,
+                      Math.round(
+                        ((donationsConfig.collectedAmountFc || 0) / donationsConfig.targetAmountFc) * 100,
+                      ),
+                    )}
+                    %)
+                  </span>
+                ) : (
+                  <span className="text-muted text-[11px]">
+                    {donationsConfig.donorsCount || 0} donateur
+                    {(donationsConfig.donorsCount || 0) > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              {donationsConfig.targetAmountFc && (
+                <div className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border">
+                  <div
+                    className="h-full bg-gradient-to-r from-rose-500 to-amber-500 transition-all duration-500 rounded-full"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          4,
+                          Math.round(
+                            ((donationsConfig.collectedAmountFc || 0) /
+                              donationsConfig.targetAmountFc) *
+                              100,
+                          ),
+                        ),
+                      )}%`,
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-[11px] text-muted">
+                <span>
+                  {donationsConfig.donorsCount || 0} donateur
+                  {(donationsConfig.donorsCount || 0) > 1 ? 's' : ''} solidaire
+                  {(donationsConfig.donorsCount || 0) > 1 ? 's' : ''}
+                </span>
+                {donationsConfig.targetAmountFc && (
+                  <span>
+                    {formatFc(
+                      Math.max(
+                        0,
+                        donationsConfig.targetAmountFc - (donationsConfig.collectedAmountFc || 0),
+                      ),
+                    )}{' '}
+                    restant
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={submitDonation} className="space-y-3.5">
+            {/* Montants suggérés */}
+            {donationsConfig?.suggestedAmountsFc &&
+              donationsConfig.suggestedAmountsFc.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground block">
+                    Suggestions rapides de montant
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                    {donationsConfig.suggestedAmountsFc.map((amt) => {
+                      const active = Number(donationAmountFc) === amt;
+                      return (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setDonationAmountFc(String(amt))}
+                          className={cn(
+                            'py-2 px-1 text-xs font-bold rounded-lg border transition text-center touch-manipulation active:scale-95',
+                            active
+                              ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                              : 'bg-surface hover:bg-surface-muted text-foreground border-border',
+                          )}
+                        >
+                          {formatFc(amt)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+            {/* Saisie montant libre */}
+            <div className="space-y-1">
+              <Input
+                label={`Montant libre du don en FC (min ${formatFc(donationsConfig?.minAmountFc ?? 1000)})`}
+                type="number"
+                min={donationsConfig?.minAmountFc ?? 1000}
+                step={500}
+                value={donationAmountFc}
+                onChange={(e) => setDonationAmountFc(e.target.value)}
+                required
+              />
+              <p className="text-[11px] text-muted">
+                Paiement direct sécurisé via Mobile Money (M-Pesa, Orange, Airtel, Afrimoney) ou Carte bancaire.
+              </p>
+            </div>
+
+            {/* Identité donateur */}
+            <div className="space-y-2 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-xs">
+                <input
+                  type="checkbox"
+                  checked={isAnonymousDonation}
+                  onChange={(e) => setIsAnonymousDonation(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-primary/30 w-4 h-4"
+                />
+                <span className="font-medium text-foreground">
+                  Faire ce don de manière anonyme (votre nom ne sera pas rendu public)
+                </span>
+              </label>
+
+              {!isAnonymousDonation && (
+                <Input
+                  label="Nom complet pour le reçu"
+                  value={buyerName}
+                  onChange={(e) => setBuyerName(e.target.value)}
+                  required
+                />
+              )}
+
+              <Input
+                label="Numéro de téléphone ou WhatsApp (pour le reçu de paiement)"
+                value={buyerPhone}
+                onChange={(e) => setBuyerPhone(e.target.value)}
+                required
+              />
+
+              <Input
+                label="Message d’encouragement ou note (optionnel)"
+                value={donationNote}
+                onChange={(e) => setDonationNote(e.target.value)}
+                placeholder="Un mot pour l'organisateur ou les bénéficiaires…"
+              />
+            </div>
+
+            {/* Pass donateur */}
+            {donationsConfig?.donorAttendancePass !== false && (
+              <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs flex items-start gap-2 text-foreground">
+                <Ticket className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">Pass d’accès invité inclus</span>
+                  <span className="text-[11px] text-muted">
+                    Votre don vous ouvre automatiquement un pass d&apos;accès invité « Donateur » avec badge QR pour entrer à l&apos;événement.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Paiement Mobile Money ou Carte */}
+            <PaymentAccountPicker
+              method={paymentMethod}
+              onMethodChange={setPaymentMethod}
+              operator={operator}
+              onOperatorChange={setOperator}
+              phone={mmPhone}
+              onPhoneChange={setMmPhone}
+              amountFc={effectiveDonationFc}
+              amountHint="Montant du don à débiter"
+              currency={currency}
+              onCurrencyChange={setCurrency}
+            />
+
+            <Button type="submit" loading={busy} fullWidth className="min-h-11 bg-rose-600 hover:bg-rose-700 text-white font-bold">
+              Confirmer et verser mon don de {formatFc(effectiveDonationFc)}
+            </Button>
+          </form>
+        </div>
+      ) : event.soldOut ? (
+        <p className="text-sm text-muted">Plus de places disponibles pour la billetterie.</p>
       ) : (
         <form onSubmit={submit} className="space-y-3">
           {token && user && (

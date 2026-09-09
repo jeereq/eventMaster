@@ -1182,6 +1182,7 @@ export interface PublicEventCard {
   photos?: string[];
   coverUrl?: string | null;
   posts?: PublicEventPost[];
+  donations?: import('./donationsAccess').EventDonationsConfig | null;
 }
 
 export interface CatalogueItem {

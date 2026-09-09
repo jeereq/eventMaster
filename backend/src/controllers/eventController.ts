@@ -10,7 +10,13 @@ import {
 } from '../services/permissionsService';
 import { blueprintToTablePlan, mergeBlueprintIntoTablePlan } from '../services/roomLayoutService';
 import { mergePricingZonesIntoTablePlan } from '../services/ticketPricingService';
-import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
+import { isOnlinePaymentsEnabled, getDonationsAccess } from '../services/platformSettingsService';
+import {
+  resolveDonationsAccess,
+  sanitizeEventDonationsConfig,
+  extractEventDonationsConfig,
+  type EventDonationsConfig,
+} from '../services/donationsAccess';
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
@@ -30,17 +36,29 @@ function rejectPaidTicketingIfDisabled(body: Record<string, unknown>, res: Respo
 }
 
 function serializeEvent<T extends {
+  id?: string;
+  tenantId?: string;
   _count?: { posts: number };
   location?: string | null;
   neighborhood?: string | null;
   commune?: string | null;
   city?: string | null;
+  eventPrep?: unknown;
 }>(event: T) {
   const { _count, ...rest } = event;
+  const donationsAccess = getDonationsAccess();
+  const allowedByPlatform = event.tenantId
+    ? resolveDonationsAccess(event.tenantId, donationsAccess).allowed
+    : donationsAccess.enabled;
+  const donationsConfig = extractEventDonationsConfig(event.eventPrep);
+
   return {
     ...rest,
     feedPostCount: _count?.posts ?? 0,
     placeLabel: formatEventPlace(rest),
+    donations: donationsConfig
+      ? { ...donationsConfig, allowedByPlatform }
+      : { enabled: false, targetAmountFc: null, minAmountFc: donationsAccess.minAmountFc, cause: null, suggestedAmountsFc: donationsAccess.defaultSuggestedAmountsFc, donorAttendancePass: true, allowedByPlatform },
   };
 }
 
@@ -266,6 +284,22 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       ) as object;
     }
 
+    const donationsAccess = getDonationsAccess();
+    let donationsConfig: EventDonationsConfig | null = null;
+    if (req.body.donations !== undefined) {
+      if (req.body.donations && typeof req.body.donations === 'object' && req.body.donations.enabled) {
+        const accessCheck = resolveDonationsAccess(tenantId, donationsAccess);
+        if (!accessCheck.allowed) {
+          return res.status(403).json({ error: accessCheck.reason });
+        }
+      }
+      donationsConfig = sanitizeEventDonationsConfig(req.body.donations, donationsAccess);
+    }
+    const initialEventPrep: Record<string, unknown> = {
+      ...(req.body.eventPrep && typeof req.body.eventPrep === 'object' ? (req.body.eventPrep as Record<string, unknown>) : {}),
+      ...(donationsConfig ? { donations: donationsConfig } : {}),
+    };
+
     const event = await prisma.event.create({
       data: {
         tenantId,
@@ -280,6 +314,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         tablePlan: tablePlanData ? toPrismaJson(tablePlanData) : undefined,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : undefined,
         rsvpForm: rsvpForm !== undefined ? toPrismaJson(rsvpForm) : undefined,
+        eventPrep: Object.keys(initialEventPrep).length > 0 ? toPrismaJson(initialEventPrep) : undefined,
         themeId: themeId || null,
         photos: toPrismaJson(parsePhotoUrls(req.body.photos)),
         ...(req.body.eventProgram !== undefined
@@ -376,6 +411,28 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
       );
     }
 
+    const donationsAccess = getDonationsAccess();
+    let updatedEventPrep: Record<string, unknown> =
+      eventPrep !== undefined
+        ? (eventPrep && typeof eventPrep === 'object' ? { ...(eventPrep as Record<string, unknown>) } : {})
+        : (existingEvent.eventPrep && typeof existingEvent.eventPrep === 'object'
+            ? { ...(existingEvent.eventPrep as Record<string, unknown>) }
+            : {});
+
+    if (req.body.donations !== undefined) {
+      if (req.body.donations && typeof req.body.donations === 'object' && req.body.donations.enabled) {
+        const accessCheck = resolveDonationsAccess(tenantId, donationsAccess);
+        if (!accessCheck.allowed) {
+          return res.status(403).json({ error: accessCheck.reason });
+        }
+      }
+      const sanitized = sanitizeEventDonationsConfig(req.body.donations, donationsAccess);
+      updatedEventPrep = {
+        ...updatedEventPrep,
+        donations: sanitized,
+      };
+    }
+
     const updatedEvent = await prisma.event.update({
       where: { id },
       data: {
@@ -390,7 +447,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         roomId: roomId !== undefined ? roomId : existingEvent.roomId,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
         rsvpForm: rsvpForm !== undefined ? toPrismaJson(rsvpForm) : existingEvent.rsvpForm ?? undefined,
-        eventPrep: eventPrep !== undefined ? toPrismaJson(eventPrep) : existingEvent.eventPrep ?? undefined,
+        eventPrep: Object.keys(updatedEventPrep).length > 0 ? toPrismaJson(updatedEventPrep) : (eventPrep !== undefined ? undefined : existingEvent.eventPrep ?? undefined),
         themeId: themeId !== undefined ? (themeId || null) : existingEvent.themeId,
         ...(req.body.photos !== undefined ? { photos: toPrismaJson(parsePhotoUrls(req.body.photos)) } : {}),
         ...(req.body.eventProgram !== undefined
