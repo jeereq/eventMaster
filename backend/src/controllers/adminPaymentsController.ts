@@ -2,13 +2,14 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 
-export type PaymentAttemptKind = 'ticket' | 'subscription' | 'ai_tokens';
+export type PaymentAttemptKind = 'ticket' | 'subscription' | 'ai_tokens' | 'donation';
 export type PaymentAttemptStatus = 'paid' | 'pending' | 'failed';
 
 const KIND_LABEL: Record<PaymentAttemptKind, string> = {
   ticket: 'Billets',
   subscription: 'Abonnements',
   ai_tokens: 'Jetons IA',
+  donation: 'Dons solidaires',
 };
 
 function pager(req: AuthenticatedRequest) {
@@ -23,7 +24,7 @@ function searchQ(req: AuthenticatedRequest) {
 
 function parseKind(value: unknown): PaymentAttemptKind | 'all' {
   const raw = String(value || '').trim().toLowerCase();
-  if (raw === 'ticket' || raw === 'subscription' || raw === 'ai_tokens') return raw;
+  if (raw === 'ticket' || raw === 'subscription' || raw === 'ai_tokens' || raw === 'donation') return raw;
   return 'all';
 }
 
@@ -157,6 +158,8 @@ export type PaymentAttemptRow = {
   tenantName?: string | null;
   proofOfPayment?: string | null;
   rawStatus?: string | null;
+  donationNote?: string | null;
+  isAnonymousDonation?: boolean;
 };
 
 const STATUS_LABEL: Record<PaymentAttemptStatus, string> = {
@@ -208,6 +211,8 @@ function matchesQ(row: PaymentAttemptRow, q: string) {
     row.flexPayProviderReference,
     row.channel,
     row.kindLabel,
+    row.eventTitle,
+    row.donationNote,
   ]
     .filter(Boolean)
     .join(' ')
@@ -225,10 +230,19 @@ async function collectAttempts(opts: {
   const dateField = opts.dateField === 'paid' ? 'paidAt' : 'createdAt';
   const whereDate = opts.dateRange ? { [dateField]: opts.dateRange } : {};
 
+  const fetchTicketsOrDonations = opts.kind === 'all' || opts.kind === 'ticket' || opts.kind === 'donation';
+
   const [tickets, aiOrders, subscriptions] = await Promise.all([
-    opts.kind === 'all' || opts.kind === 'ticket'
+    fetchTicketsOrDonations
       ? prisma.ticketOrder.findMany({
-          where: whereDate,
+          where: {
+            ...whereDate,
+            ...(opts.kind === 'donation'
+              ? { pricingZoneId: 'donation' }
+              : opts.kind === 'ticket'
+                ? { NOT: { pricingZoneId: 'donation' } }
+                : {}),
+          },
           include: { event: { select: { title: true, slug: true } } },
           orderBy: { createdAt: 'desc' },
           take,
@@ -262,15 +276,32 @@ async function collectAttempts(opts: {
   const rows: PaymentAttemptRow[] = [];
 
   for (const row of tickets) {
+    const isDonation =
+      row.pricingZoneId === 'donation' ||
+      (row.selectedSeats &&
+        typeof row.selectedSeats === 'object' &&
+        (row.selectedSeats as Record<string, unknown>).kind === 'DONATION');
     const status = ticketStatus(row.status);
     const channel = normalizeChannel({
       flexPayChannel: row.flexPayChannel,
       paymentProvider: row.paymentProvider,
     });
+    const donationMeta =
+      isDonation && row.selectedSeats && typeof row.selectedSeats === 'object'
+        ? (row.selectedSeats as Record<string, unknown>)
+        : null;
+    const kind: PaymentAttemptKind = isDonation ? 'donation' : 'ticket';
+    const kindLabel = KIND_LABEL[kind];
+    const summary = isDonation
+      ? `Don solidaire « ${row.event?.title || 'événement'} »${
+          donationMeta?.donationNote ? ` — « ${String(donationMeta.donationNote).slice(0, 35)} »` : ''
+        }`
+      : `Billet${row.quantity > 1 ? 's' : ''} « ${row.event?.title || 'événement'} » × ${row.quantity}`;
+
     rows.push({
-      id: `ticket:${row.id}`,
-      kind: 'ticket',
-      kindLabel: KIND_LABEL.ticket,
+      id: `${kind}:${row.id}`,
+      kind,
+      kindLabel,
       status,
       statusLabel: STATUS_LABEL[status],
       amountFc: Number(row.flexPayAmountCustomer || row.amountFc) || 0,
@@ -284,7 +315,7 @@ async function collectAttempts(opts: {
       reference: row.flexPayReference || row.id,
       flexPayOrderNumber: row.flexPayOrderNumber,
       flexPayProviderReference: row.flexPayProviderReference,
-      summary: `Billet${row.quantity > 1 ? 's' : ''} « ${row.event?.title || 'événement'} » × ${row.quantity}`,
+      summary,
       createdAt: row.createdAt.toISOString(),
       updatedAt: null,
       paidAt: row.paidAt?.toISOString() || null,
@@ -293,6 +324,8 @@ async function collectAttempts(opts: {
       eventSlug: row.event?.slug || null,
       quantity: row.quantity,
       rawStatus: row.status,
+      donationNote: donationMeta?.donationNote ? String(donationMeta.donationNote) : null,
+      isAnonymousDonation: Boolean(donationMeta?.isAnonymous),
     });
   }
 

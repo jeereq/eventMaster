@@ -5,6 +5,7 @@ exports.grantAdminAiTokens = grantAdminAiTokens;
 const db_1 = require("../db");
 const aiSimulationWalletService_1 = require("../services/aiSimulationWalletService");
 const aiTokenUsageQuery_1 = require("../services/aiTokenUsageQuery");
+const adminAuditService_1 = require("../services/adminAuditService");
 const ACTION_IDS = [
     'budget_simulation',
     'invitation_compose',
@@ -21,6 +22,7 @@ const ACTION_LABEL = {
 };
 const SOURCE_LABEL = {
     landing: 'Landing',
+    simulateur: 'Simulateur dédié',
     dashboard: 'Tableau de bord',
     studio: 'Studio',
     flexpay: 'FlexPay',
@@ -251,6 +253,14 @@ async function grantAdminAiTokens(req, res) {
             userId,
             tokensCount,
             adminUserId: req.user.id,
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'AI_TOKENS_GRANT',
+            targetType: 'user',
+            targetId: result.user.id,
+            tenantId: null,
+            summary: `${result.tokensCount} jetons IA attribués à ${result.user.name || result.user.email}`,
+            metadata: { tokensCount: result.tokensCount, userEmail: result.user.email },
         });
         return res.json({
             ok: true,

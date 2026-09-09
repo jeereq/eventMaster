@@ -39,7 +39,7 @@ async function getOpsOverview(req, res) {
             licenseActive: true,
             licenseExpiresAt: { gte: now, lte: in7Days },
         };
-        const [pendingRequestsCount, pendingRequests, licensesExpiringCount, licensesExpiring, unpaidInvoices, unpaidCount, recentOrgs, recentOrgsCount, recentAudit, saasPayoutsDue,] = await Promise.all([
+        const [pendingRequestsCount, pendingRequests, licensesExpiringCount, licensesExpiring, unpaidInvoices, unpaidCount, recentOrgs, recentOrgsCount, recentAudit, saasPayoutsDue, donationsAgg,] = await Promise.all([
             db_1.prisma.subscriptionRequest.count({ where: { status: 'PENDING' } }),
             db_1.prisma.subscriptionRequest.findMany({
                 where: { status: 'PENDING' },
@@ -93,6 +93,11 @@ async function getOpsOverview(req, res) {
                 take: 15,
             }),
             (0, commercialPayoutService_1.previousPeriodPlatformPayoutSummary)(),
+            db_1.prisma.ticketOrder.aggregate({
+                where: { status: 'PAID', pricingZoneId: 'donation' },
+                _count: { _all: true },
+                _sum: { amountFc: true },
+            }),
         ]);
         return res.json({
             counts: {
@@ -101,6 +106,11 @@ async function getOpsOverview(req, res) {
                 unpaidInvoices: unpaidCount,
                 recentOrgs: recentOrgsCount,
                 saasPayoutsDue: saasPayoutsDue.count,
+                donationsPaid: donationsAgg._count._all,
+            },
+            donationsSummary: {
+                count: donationsAgg._count._all,
+                amountFc: donationsAgg._sum.amountFc || 0,
             },
             saasPayoutsDue,
             pendingRequests: pendingRequests.map((req) => ({
@@ -130,14 +140,19 @@ async function getPlatformInsights(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const billableWhere = { status: { in: ['CONFIRMED', 'COMPLETED'] } };
-        const [eventsTotal, eventsPublic, eventsTicketing, eventsGps, ticketsSoldSum, paidTickets, invitations, rsvpGroups, acceptedWithPdf, acceptedWithoutPdf, checkedIn, seatVerified, favorites, packs, gmvVenue, gmvTrade, gmvRental, openTasks, overdueTasks, doneTasks, protocolUsers, managerUsers,] = await Promise.all([
+        const [eventsTotal, eventsPublic, eventsTicketing, eventsGps, ticketsSoldSum, paidTickets, paidDonations, invitations, rsvpGroups, acceptedWithPdf, acceptedWithoutPdf, checkedIn, seatVerified, favorites, packs, gmvVenue, gmvTrade, gmvRental, openTasks, overdueTasks, doneTasks, protocolUsers, managerUsers,] = await Promise.all([
             db_1.prisma.event.count(),
             db_1.prisma.event.count({ where: { isPublic: true } }),
             db_1.prisma.event.count({ where: { ticketingEnabled: true } }),
             db_1.prisma.event.count({ where: { latitude: { not: null }, longitude: { not: null } } }),
             db_1.prisma.event.aggregate({ _sum: { ticketsSold: true } }),
             db_1.prisma.ticketOrder.aggregate({
-                where: { status: 'PAID' },
+                where: { status: 'PAID', NOT: { pricingZoneId: 'donation' } },
+                _count: { _all: true },
+                _sum: { amountFc: true },
+            }),
+            db_1.prisma.ticketOrder.aggregate({
+                where: { status: 'PAID', pricingZoneId: 'donation' },
                 _count: { _all: true },
                 _sum: { amountFc: true },
             }),
@@ -187,6 +202,10 @@ async function getPlatformInsights(req, res) {
             tickets: {
                 paidOrders: paidTickets._count._all,
                 gmvFc: paidTickets._sum.amountFc || 0,
+            },
+            donations: {
+                paidDonations: paidDonations._count._all,
+                gmvFc: paidDonations._sum.amountFc || 0,
             },
             guests: {
                 total: guestsTotal,

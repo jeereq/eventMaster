@@ -8,6 +8,7 @@ import {
   parseUtcDayEnd,
   parseUtcDayStart,
 } from '../services/aiTokenUsageQuery';
+import { auditReq } from '../services/adminAuditService';
 
 export type AiTokenActionFilter =
   | 'budget_simulation'
@@ -34,6 +35,7 @@ const ACTION_LABEL: Record<AiTokenActionFilter, string> = {
 
 const SOURCE_LABEL: Record<string, string> = {
   landing: 'Landing',
+  simulateur: 'Simulateur dédié',
   dashboard: 'Tableau de bord',
   studio: 'Studio',
   flexpay: 'FlexPay',
@@ -287,6 +289,16 @@ export async function grantAdminAiTokens(req: AuthenticatedRequest, res: Respons
       tokensCount,
       adminUserId: req.user.id,
     });
+
+    await auditReq(req, {
+      action: 'AI_TOKENS_GRANT',
+      targetType: 'user',
+      targetId: result.user.id,
+      tenantId: null,
+      summary: `${result.tokensCount} jetons IA attribués à ${result.user.name || result.user.email}`,
+      metadata: { tokensCount: result.tokensCount, userEmail: result.user.email },
+    });
+
     return res.json({
       ok: true,
       tokensCount: result.tokensCount,

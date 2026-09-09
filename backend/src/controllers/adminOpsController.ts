@@ -60,6 +60,7 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
       recentOrgsCount,
       recentAudit,
       saasPayoutsDue,
+      donationsAgg,
     ] = await Promise.all([
       prisma.subscriptionRequest.count({ where: { status: 'PENDING' } }),
       prisma.subscriptionRequest.findMany({
@@ -114,6 +115,11 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
         take: 15,
       }),
       previousPeriodPlatformPayoutSummary(),
+      prisma.ticketOrder.aggregate({
+        where: { status: 'PAID', pricingZoneId: 'donation' },
+        _count: { _all: true },
+        _sum: { amountFc: true },
+      }),
     ]);
 
     return res.json({
@@ -123,6 +129,11 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
         unpaidInvoices: unpaidCount,
         recentOrgs: recentOrgsCount,
         saasPayoutsDue: saasPayoutsDue.count,
+        donationsPaid: donationsAgg._count._all,
+      },
+      donationsSummary: {
+        count: donationsAgg._count._all,
+        amountFc: donationsAgg._sum.amountFc || 0,
       },
       saasPayoutsDue,
       pendingRequests: pendingRequests.map((req) => ({
@@ -161,6 +172,7 @@ export async function getPlatformInsights(req: AuthenticatedRequest, res: Respon
       eventsGps,
       ticketsSoldSum,
       paidTickets,
+      paidDonations,
       invitations,
       rsvpGroups,
       acceptedWithPdf,
@@ -184,7 +196,12 @@ export async function getPlatformInsights(req: AuthenticatedRequest, res: Respon
       prisma.event.count({ where: { latitude: { not: null }, longitude: { not: null } } }),
       prisma.event.aggregate({ _sum: { ticketsSold: true } }),
       prisma.ticketOrder.aggregate({
-        where: { status: 'PAID' },
+        where: { status: 'PAID', NOT: { pricingZoneId: 'donation' } },
+        _count: { _all: true },
+        _sum: { amountFc: true },
+      }),
+      prisma.ticketOrder.aggregate({
+        where: { status: 'PAID', pricingZoneId: 'donation' },
         _count: { _all: true },
         _sum: { amountFc: true },
       }),
@@ -236,6 +253,10 @@ export async function getPlatformInsights(req: AuthenticatedRequest, res: Respon
       tickets: {
         paidOrders: paidTickets._count._all,
         gmvFc: paidTickets._sum.amountFc || 0,
+      },
+      donations: {
+        paidDonations: paidDonations._count._all,
+        gmvFc: paidDonations._sum.amountFc || 0,
       },
       guests: {
         total: guestsTotal,

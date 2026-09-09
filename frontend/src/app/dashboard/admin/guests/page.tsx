@@ -68,6 +68,7 @@ export default function AdminGuestsPage() {
   const { user, loading: authLoading, enterSupportSession } = useAuth();
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
+  const [category, setCategory] = useState('ALL');
   const [rsvp, setRsvp] = useState('ALL');
   const [checkin, setCheckin] = useState('ALL');
   const [pdf, setPdf] = useState('ALL');
@@ -120,6 +121,7 @@ export default function AdminGuestsPage() {
         page,
         limit: pageSize,
         q,
+        category: category !== 'ALL' ? category : undefined,
         rsvp,
         checkin,
         pdf,
@@ -134,7 +136,7 @@ export default function AdminGuestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, page, pageSize, q, rsvp, checkin, pdf, org]);
+  }, [user?.role, page, pageSize, q, category, rsvp, checkin, pdf, org]);
 
   useEffect(() => {
     void load();
@@ -167,6 +169,7 @@ export default function AdminGuestsPage() {
         page: 1,
         limit: 100,
         q,
+        category: category !== 'ALL' ? category : undefined,
         rsvp,
         checkin,
         pdf,
@@ -226,6 +229,15 @@ export default function AdminGuestsPage() {
           className="flex-1 bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground"
         />
         <div className="flex flex-wrap items-center gap-2">
+          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} className={filterClass}>
+            <option value="ALL">Toutes catégories</option>
+            <option value="Donateur">Donateur</option>
+            <option value="VIP">VIP</option>
+            <option value="Famille">Famille</option>
+            <option value="Protocole">Protocole</option>
+            <option value="Presse">Presse</option>
+            <option value="Général">Général</option>
+          </select>
           <select value={rsvp} onChange={(e) => { setRsvp(e.target.value); setPage(1); }} className={filterClass}>
             <option value="ALL">Tous les RSVP</option>
             <option value="PENDING">En attente</option>
@@ -274,7 +286,8 @@ export default function AdminGuestsPage() {
             const rsvpTone = g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
             const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
             const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
-            const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
+            const categoryTone = g.category === 'Donateur' ? 'rose' : g.category === 'VIP' ? 'amber' : 'slate';
+            const categoryChip = <StatusPill tone={categoryTone}>{g.category || 'Général'}</StatusPill>;
             const pdfChip = g.rsvp === 'ACCEPTED' ? (
               <StatusPill tone={g.seatingInvitationPdfUrl ? 'emerald' : 'rose'}>
                 {g.seatingInvitationPdfUrl ? 'PDF livré' : 'PDF manquant'}

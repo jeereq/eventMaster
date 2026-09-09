@@ -45,6 +45,7 @@ const platformSettingsService_1 = require("../services/platformSettingsService")
 const adminAuditService_1 = require("../services/adminAuditService");
 const adminPager_1 = require("../utils/adminPager");
 const welcomeAiTokens_1 = require("../services/welcomeAiTokens");
+const donationsAccess_1 = require("../services/donationsAccess");
 // Get global system statistics and list of all tenants (Super Admin only)
 async function getSystemStats(req, res) {
     try {
@@ -991,6 +992,7 @@ async function getAllEvents(req, res) {
         const q = (0, adminPager_1.adminSearch)(req);
         const visibility = (0, adminPager_1.adminQueryString)(req, 'visibility');
         const ticketing = (0, adminPager_1.adminQueryString)(req, 'ticketing');
+        const donations = (0, adminPager_1.adminQueryString)(req, 'donations');
         const gps = (0, adminPager_1.adminQueryString)(req, 'gps');
         const when = (0, adminPager_1.adminQueryString)(req, 'when');
         const tenantName = (0, adminPager_1.adminQueryString)(req, 'org');
@@ -1005,6 +1007,12 @@ async function getAllEvents(req, res) {
             ...(when === 'past' ? { date: { lt: now } } : {}),
             ...(tenantName ? { tenant: { name: tenantName } } : {}),
         };
+        if (donations === 'yes') {
+            (0, adminPager_1.prismaAnd)(where, { eventPrep: { path: ['donations', 'enabled'], equals: true } });
+        }
+        else if (donations === 'no') {
+            (0, adminPager_1.prismaAnd)(where, { NOT: { eventPrep: { path: ['donations', 'enabled'], equals: true } } });
+        }
         if (gps === 'no') {
             (0, adminPager_1.prismaAnd)(where, { OR: [{ latitude: null }, { longitude: null }] });
         }
@@ -1030,27 +1038,59 @@ async function getAllEvents(req, res) {
             }),
             db_1.prisma.event.count({ where }),
         ]);
-        return res.json((0, adminPager_1.listPayload)(events.map((e) => ({
-            id: e.id,
-            title: e.title,
-            description: e.description,
-            date: e.date,
-            location: e.location,
-            reminderFrequency: e.reminderFrequency,
-            latitude: e.latitude,
-            longitude: e.longitude,
-            isPublic: e.isPublic,
-            isBlockedByAdmin: e.isBlockedByAdmin,
-            ticketingEnabled: e.ticketingEnabled,
-            ticketPriceFc: e.ticketPriceFc,
-            ticketsSold: e.ticketsSold,
-            ticketsTotal: e.ticketsTotal,
-            tenantId: e.tenantId,
-            tenantName: e.tenant?.name || 'Inconnu',
-            guestCount: e._count.guests,
-            invitationCount: e._count.invitations,
-            createdAt: e.createdAt,
-        })), total, page, pageSize));
+        const eventIds = events.map((e) => e.id);
+        const donationAggs = eventIds.length
+            ? await db_1.prisma.ticketOrder.groupBy({
+                by: ['eventId'],
+                where: {
+                    eventId: { in: eventIds },
+                    status: 'PAID',
+                    pricingZoneId: 'donation',
+                },
+                _sum: { amountFc: true },
+                _count: { id: true },
+            })
+            : [];
+        const donationStatsMap = new Map();
+        for (const row of donationAggs) {
+            donationStatsMap.set(row.eventId, {
+                collectedAmountFc: row._sum.amountFc || 0,
+                donorsCount: row._count.id || 0,
+            });
+        }
+        return res.json((0, adminPager_1.listPayload)(events.map((e) => {
+            const donationsConfig = (0, donationsAccess_1.extractEventDonationsConfig)(e.eventPrep);
+            const stats = donationStatsMap.get(e.id);
+            const hasDonations = Boolean(donationsConfig?.enabled);
+            return {
+                id: e.id,
+                title: e.title,
+                description: e.description,
+                date: e.date,
+                location: e.location,
+                reminderFrequency: e.reminderFrequency,
+                latitude: e.latitude,
+                longitude: e.longitude,
+                isPublic: e.isPublic,
+                isBlockedByAdmin: e.isBlockedByAdmin,
+                adminBlockReason: e.adminBlockReason,
+                ticketingEnabled: e.ticketingEnabled,
+                ticketPriceFc: e.ticketPriceFc,
+                ticketsSold: e.ticketsSold,
+                ticketsTotal: e.ticketsTotal,
+                tenantId: e.tenantId,
+                tenantName: e.tenant?.name || 'Inconnu',
+                guestCount: e._count.guests,
+                invitationCount: e._count.invitations,
+                createdAt: e.createdAt,
+                hasDonations,
+                donationTargetFc: donationsConfig?.targetAmountFc ?? null,
+                donationMinAmountFc: donationsConfig?.minAmountFc ?? 1000,
+                donationCause: donationsConfig?.cause ?? null,
+                donationCollectedFc: stats?.collectedAmountFc || 0,
+                donorsCount: stats?.donorsCount || 0,
+            };
+        }), total, page, pageSize));
     }
     catch (error) {
         console.error('Erreur lors de la récupération de tous les événements:', error);
@@ -1136,6 +1176,14 @@ async function toggleAdminEventBlock(req, res) {
                 isBlockedByAdmin: isBlocked,
                 adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
             },
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: isBlocked ? 'EVENT_BLOCK' : 'EVENT_UNBLOCK',
+            targetType: 'event',
+            targetId: updated.id,
+            tenantId: updated.tenantId,
+            summary: `Événement « ${updated.title} » ${isBlocked ? 'bloqué' : 'débloqué'} par la modération${isBlocked && updated.adminBlockReason ? ` (${updated.adminBlockReason})` : ''}`,
+            metadata: { isBlocked, reason: updated.adminBlockReason },
         });
         return res.json({ success: true, event: updated });
     }
@@ -1496,6 +1544,10 @@ async function updateAdminSettings(req, res) {
                 ticketPaymentProvider: {
                     from: current.ticketPaymentProvider,
                     to: updatedSettings.ticketPaymentProvider,
+                },
+                donationsAccess: {
+                    from: current.donationsAccess,
+                    to: updatedSettings.donationsAccess,
                 },
             },
         });

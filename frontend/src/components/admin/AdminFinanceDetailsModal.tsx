@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Coins, CreditCard, Eye, Mail, Phone, User } from 'lucide-react';
+import { Coins, CreditCard, Eye, Heart, Mail, Phone, User } from 'lucide-react';
 import { Badge, Button, Modal } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 
 export type AdminPaymentDetail = {
   id: string;
-  kind: 'ticket' | 'subscription' | 'ai_tokens';
+  kind: 'ticket' | 'subscription' | 'ai_tokens' | 'donation';
   kindLabel: string;
   status: 'paid' | 'pending' | 'failed';
   statusLabel: string;
@@ -36,6 +36,8 @@ export type AdminPaymentDetail = {
   tenantName?: string | null;
   proofOfPayment?: string | null;
   rawStatus?: string | null;
+  donationNote?: string | null;
+  isAnonymousDonation?: boolean;
 };
 
 export type AdminTokenDetail = {
@@ -155,19 +157,49 @@ export default function AdminFinanceDetailsModal({
       {payment ? (
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-3.5 rounded-[var(--radius-card)] border border-border bg-surface-muted">
-            <div className="w-10 h-10 rounded-[var(--radius-button)] bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <CreditCard className="w-5 h-5" />
+            <div
+              className={cn(
+                'w-10 h-10 rounded-[var(--radius-button)] flex items-center justify-center shrink-0',
+                payment.kind === 'donation'
+                  ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  : 'bg-primary/10 text-primary',
+              )}
+            >
+              {payment.kind === 'donation' ? <Heart className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-foreground truncate">{payment.summary}</p>
               <p className="text-xs text-muted mt-0.5">{formatFc(payment.amountFc)} · {payment.currency}</p>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {paymentStatusBadge(payment.status, payment.statusLabel)}
-                <Badge variant="default">{payment.kindLabel}</Badge>
+                <Badge
+                  variant="default"
+                  className={cn(
+                    payment.kind === 'donation' &&
+                      'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20 font-semibold',
+                  )}
+                >
+                  {payment.kindLabel}
+                </Badge>
                 <Badge variant="default">{payment.channelLabel}</Badge>
               </div>
             </div>
           </div>
+
+          {payment.kind === 'donation' && (payment.donationNote || payment.isAnonymousDonation) && (
+            <DetailSection title="Détail du don solidaire">
+              {payment.isAnonymousDonation && (
+                <DetailRow label="Visibilité publique">
+                  <Badge variant="warning">Don anonymisé en vitrine publique</Badge>
+                </DetailRow>
+              )}
+              {payment.donationNote && (
+                <DetailRow label="Message accompagnant">
+                  <span className="italic text-foreground/90">« {payment.donationNote} »</span>
+                </DetailRow>
+              )}
+            </DetailSection>
+          )}
 
           <DetailSection title="Payeur">
             <DetailRow label="Nom">

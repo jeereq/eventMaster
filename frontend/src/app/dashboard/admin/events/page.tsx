@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Calendar, Eye, Loader2, LogIn, MapPin, Trash2, AlertTriangle
+  Calendar, Eye, Loader2, LogIn, MapPin, Trash2, AlertTriangle, Heart
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
+import { formatFc } from '@/config/landingPricing';
 
 interface AdminEventRow {
   id: string;
@@ -35,6 +36,13 @@ interface AdminEventRow {
   invitationCount: number;
   createdAt: string;
   isBlockedByAdmin?: boolean;
+  adminBlockReason?: string | null;
+  hasDonations?: boolean;
+  donationTargetFc?: number | null;
+  donationMinAmountFc?: number;
+  donationCause?: string | null;
+  donationCollectedFc?: number;
+  donorsCount?: number;
 }
 
 function planBadgeClass() {
@@ -48,6 +56,7 @@ export default function AdminEventsPage() {
   const [q, setQ] = useState('');
   const [visibility, setVisibility] = useState('ALL');
   const [ticketing, setTicketing] = useState('ALL');
+  const [donations, setDonations] = useState('ALL');
   const [gps, setGps] = useState('ALL');
   const [when, setWhen] = useState('ALL');
   const [page, setPage] = useState(1);
@@ -94,6 +103,7 @@ export default function AdminEventsPage() {
         q,
         visibility,
         ticketing,
+        donations,
         gps,
         when,
       });
@@ -106,7 +116,7 @@ export default function AdminEventsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, page, pageSize, q, visibility, ticketing, gps, when]);
+  }, [user?.role, page, pageSize, q, visibility, ticketing, donations, gps, when]);
 
   useEffect(() => {
     void load();
@@ -223,6 +233,15 @@ export default function AdminEventsPage() {
             <option value="no">Sans billets</option>
           </select>
           <select
+            value={donations}
+            onChange={(e) => { setDonations(e.target.value); setPage(1); }}
+            className={filterClass}
+          >
+            <option value="ALL">Collecte de dons</option>
+            <option value="yes">Avec collecte</option>
+            <option value="no">Sans collecte</option>
+          </select>
+          <select
             value={gps}
             onChange={(e) => { setGps(e.target.value); setPage(1); }}
             className={filterClass}
@@ -270,6 +289,12 @@ export default function AdminEventsPage() {
             const ticketsChip = e.ticketingEnabled ? (
               <StatusPill tone="amber">{e.ticketsSold || 0} billets</StatusPill>
             ) : null;
+            const donationChip = e.hasDonations ? (
+              <StatusPill tone="rose" className="inline-flex items-center gap-1 font-semibold">
+                <Heart className="w-2.5 h-2.5" />
+                {formatFc(e.donationCollectedFc || 0)} dons
+              </StatusPill>
+            ) : null;
             return (
               <ProjectCard
                 key={e.id}
@@ -289,6 +314,7 @@ export default function AdminEventsPage() {
                       {e.location || 'Sans lieu'}
                       {' · '}
                       {dateLabel}
+                      {e.hasDonations && ` · ${formatFc(e.donationCollectedFc || 0)} dons`}
                     </span>
                   ) : (
                     <div className="space-y-1.5">
@@ -301,9 +327,15 @@ export default function AdminEventsPage() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         {visibilityChip}
                         {ticketsChip}
+                        {donationChip}
                         {guestsChip}
                         {invitesChip}
                       </div>
+                      {isBlocked && (e as any).adminBlockReason && (
+                        <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium truncate">
+                          Motif : {(e as any).adminBlockReason}
+                        </p>
+                      )}
                     </div>
                   )
                 }

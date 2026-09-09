@@ -3,10 +3,11 @@
 import React from 'react';
 import {
   Building2, Users, FileText, Calendar, Eye, History, Loader2,
-  Mail, Shield, CheckCircle2, AlertCircle, MapPin, Phone,
+  Mail, Shield, CheckCircle2, AlertCircle, MapPin, Phone, Heart, Ticket,
 } from 'lucide-react';
 import { Modal, Button, Badge } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { formatFc } from '@/config/landingPricing';
 import {
   platformRoleLabel,
   orgRoleLabel,
@@ -551,16 +552,44 @@ export default function AdminDetailsModal({
 
         {type === 'event' && (
           <>
+            {data.isBlockedByAdmin && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-[var(--radius-card)] flex items-start gap-2.5 text-rose-700 dark:text-rose-300 text-xs">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Événement suspendu par la modération Super Admin</p>
+                  <p className="mt-0.5">{data.adminBlockReason || 'Non-respect des règles de la plateforme.'}</p>
+                </div>
+              </div>
+            )}
+
             <DetailHero
               icon={Calendar}
               title={data.title}
               subtitle={`ID · ${data.id}`}
-              badges={<Badge variant="primary">{data.tenantName}</Badge>}
+              badges={
+                <>
+                  <Badge variant="primary">{data.tenantName}</Badge>
+                  <Badge variant={data.isBlockedByAdmin ? 'danger' : data.isPublic ? 'success' : 'default'}>
+                    {data.isBlockedByAdmin ? 'Bloqué' : data.isPublic ? 'Public' : 'Privé'}
+                  </Badge>
+                </>
+              }
             />
             <StatTiles
               items={[
                 { label: 'Invités', value: data.guestCount ?? 0 },
                 { label: 'Invitations', value: data.invitationCount ?? 0 },
+                ...(data.ticketingEnabled
+                  ? [
+                      {
+                        label: 'Billets vendus',
+                        value: `${data.ticketsSold ?? 0}${data.ticketsTotal ? ` / ${data.ticketsTotal}` : ''}`,
+                      },
+                    ]
+                  : []),
+                ...(data.hasDonations
+                  ? [{ label: 'Dons récoltés', value: formatFc(data.donationCollectedFc || 0) }]
+                  : []),
               ]}
             />
             <DetailSection title="Planning" icon={Calendar}>
@@ -578,6 +607,39 @@ export default function AdminDetailsModal({
                 </DetailRow>
               )}
             </DetailSection>
+
+            {data.ticketingEnabled && (
+              <DetailSection title="Billetterie en ligne" icon={Ticket}>
+                <DetailRow label="Statut billetterie">
+                  <Badge variant="success">Activée</Badge>
+                </DetailRow>
+                <DetailRow label="Tarif standard">{formatFc(data.ticketPriceFc || 0)}</DetailRow>
+                <DetailRow label="Ventes">{data.ticketsSold || 0} billet(s) écoulé(s)</DetailRow>
+                {data.ticketsTotal != null && (
+                  <DetailRow label="Capacité maximale">{data.ticketsTotal} places</DetailRow>
+                )}
+              </DetailSection>
+            )}
+
+            {data.hasDonations && (
+              <DetailSection title="Collecte de dons solidaires" icon={Heart}>
+                <DetailRow label="Statut collecte">
+                  <Badge variant="success">Active (montant libre)</Badge>
+                </DetailRow>
+                {data.donationCause && <DetailRow label="Cause défendue">{data.donationCause}</DetailRow>}
+                <DetailRow label="Total collecté">
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">
+                    {formatFc(data.donationCollectedFc || 0)}
+                  </span>
+                </DetailRow>
+                {data.donationTargetFc != null && (
+                  <DetailRow label="Objectif cible">{formatFc(data.donationTargetFc)}</DetailRow>
+                )}
+                <DetailRow label="Nombre de donateurs">{data.donorsCount || 0}</DetailRow>
+                <DetailRow label="Don minimal">{formatFc(data.donationMinAmountFc || 1000)}</DetailRow>
+              </DetailSection>
+            )}
+
             {data.description && (
               <DetailSection title="Description">
                 <p className="px-3.5 py-3 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">

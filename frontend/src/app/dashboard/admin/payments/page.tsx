@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Eye, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, Eye, Heart, Loader2, Wallet } from 'lucide-react';
 import AdminFinanceDetailsModal, { type AdminPaymentDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -17,7 +17,7 @@ import CatalogueFilterBar, {
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 
-type PaymentKind = 'ticket' | 'subscription' | 'ai_tokens';
+type PaymentKind = 'ticket' | 'subscription' | 'ai_tokens' | 'donation';
 type PaymentStatus = 'paid' | 'pending' | 'failed';
 
 interface PaymentAttemptRow {
@@ -50,6 +50,8 @@ interface PaymentAttemptRow {
   tenantName?: string | null;
   proofOfPayment?: string | null;
   rawStatus?: string | null;
+  donationNote?: string | null;
+  isAnonymousDonation?: boolean;
 }
 
 interface OverviewBucket {
@@ -169,7 +171,7 @@ export default function AdminPaymentsPage() {
 
   const kindFromUrl = searchParams.get('kind');
   const [kind, setKind] = useState<'all' | PaymentKind>(() =>
-    kindFromUrl === 'ticket' || kindFromUrl === 'subscription' || kindFromUrl === 'ai_tokens'
+    kindFromUrl === 'ticket' || kindFromUrl === 'subscription' || kindFromUrl === 'ai_tokens' || kindFromUrl === 'donation'
       ? kindFromUrl
       : 'all',
   );
@@ -289,7 +291,22 @@ export default function AdminPaymentsPage() {
   const providerLabel = PROVIDER_OPTIONS.find((o) => o.id === provider)?.label || provider;
   const datePresetLabel = DATE_PRESET_OPTIONS.find((o) => o.id === datePreset)?.label || datePreset;
   const chips: CatalogueFilterChip[] = [
-    ...(kind !== 'all' ? [{ id: 'kind', label: 'Source', value: kind === 'ticket' ? 'Billets' : kind === 'subscription' ? 'Abonnements' : 'Jetons IA' }] : []),
+    ...(kind !== 'all'
+      ? [
+          {
+            id: 'kind',
+            label: 'Source',
+            value:
+              kind === 'ticket'
+                ? 'Billets'
+                : kind === 'donation'
+                  ? 'Dons solidaires'
+                  : kind === 'subscription'
+                    ? 'Abonnements'
+                    : 'Jetons IA',
+          },
+        ]
+      : []),
     ...(status !== 'all' ? [{ id: 'status', label: 'Statut', value: status === 'paid' ? 'Aboutis' : status === 'pending' ? 'En cours' : 'Échoués' }] : []),
     ...(channel !== 'all' ? [{ id: 'channel', label: 'Canal', value: channelLabel }] : []),
     ...(provider !== 'all' ? [{ id: 'provider', label: 'Fournisseur', value: providerLabel }] : []),
@@ -426,6 +443,7 @@ export default function AdminPaymentsPage() {
                 options={[
                   { id: 'all', label: 'Toutes' },
                   { id: 'ticket', label: 'Billets' },
+                  { id: 'donation', label: 'Dons solidaires' },
                   { id: 'subscription', label: 'Abonnements' },
                   { id: 'ai_tokens', label: 'Jetons IA' },
                 ]}
@@ -566,7 +584,16 @@ export default function AdminPaymentsPage() {
               >
                 <div className="flex flex-wrap items-center gap-2">
                   {statusBadge(row.status)}
-                  <Badge variant="default">{row.kindLabel}</Badge>
+                  <Badge
+                    variant="default"
+                    className={cn(
+                      row.kind === 'donation' &&
+                        'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20 font-semibold inline-flex items-center gap-1',
+                    )}
+                  >
+                    {row.kind === 'donation' && <Heart className="w-3 h-3" />}
+                    {row.kindLabel}
+                  </Badge>
                   <span className="text-[10px] text-muted">{row.channelLabel}</span>
                   {row.paymentProvider ? (
                     <span className="text-[10px] text-muted">{row.paymentProvider}</span>

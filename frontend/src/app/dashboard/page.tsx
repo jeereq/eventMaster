@@ -10,7 +10,7 @@ import {
   PlusCircle, AlertCircle, Award, CheckCircle, Shield,
   Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
   CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
-  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine
+  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine, Heart
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
@@ -247,6 +247,7 @@ interface PlatformInsights {
     gpsCount: number;
   };
   tickets: { paidOrders: number; gmvFc: number };
+  donations?: { paidDonations: number; gmvFc: number };
   guests: {
     total: number;
     pending: number;
@@ -3588,7 +3589,7 @@ function DashboardPageContent() {
                         </div>
 
                         {platformInsights && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                             <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                               <div className="p-3 bg-primary/10 text-primary rounded-xl">
                                 <Globe className="w-6 h-6" />
@@ -3605,6 +3606,19 @@ function DashboardPageContent() {
                               <div>
                                 <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{formatFc(platformInsights.tickets.gmvFc)}</span>
                                 <span className="text-xs text-muted dark:text-muted font-bold">GMV billets</span>
+                              </div>
+                            </div>
+                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+                              <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
+                                <Heart className="w-6 h-6" />
+                              </div>
+                              <div>
+                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
+                                  {formatFc(platformInsights.donations?.gmvFc ?? 0)}
+                                </span>
+                                <span className="text-xs text-muted dark:text-muted font-bold">
+                                  Dons récoltés ({platformInsights.donations?.paidDonations ?? 0})
+                                </span>
                               </div>
                             </div>
                             <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -4062,6 +4076,8 @@ function DashboardPageContent() {
                               { label: 'Avec billetterie', value: platformInsights?.events.ticketingEnabled ?? 0 },
                               { label: 'Billets vendus', value: platformInsights?.events.ticketsSold ?? 0 },
                               { label: 'GMV billets', value: formatFc(platformInsights?.tickets.gmvFc ?? 0) },
+                              { label: 'Dons solidaires récoltés', value: formatFc(platformInsights?.donations?.gmvFc ?? 0) },
+                              { label: 'Nombre de dons enregistrés', value: platformInsights?.donations?.paidDonations ?? 0 },
                               { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? 0 },
                               { label: 'À venir', value: adminData?.stats.upcomingEvents ?? 0 },
                               { label: 'Actions en cours', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },

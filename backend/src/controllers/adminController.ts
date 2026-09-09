@@ -35,6 +35,7 @@ import {
 import { auditReq } from '../services/adminAuditService';
 import { adminPager, adminQueryString, adminSearch, listPayload, prismaAnd } from '../utils/adminPager';
 import { grantWelcomeAtPlanActivation } from '../services/welcomeAiTokens';
+import { extractEventDonationsConfig } from '../services/donationsAccess';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -1138,6 +1139,7 @@ export async function getAllEvents(req: AuthenticatedRequest, res: Response) {
     const q = adminSearch(req);
     const visibility = adminQueryString(req, 'visibility');
     const ticketing = adminQueryString(req, 'ticketing');
+    const donations = adminQueryString(req, 'donations');
     const gps = adminQueryString(req, 'gps');
     const when = adminQueryString(req, 'when');
     const tenantName = adminQueryString(req, 'org');
@@ -1153,6 +1155,11 @@ export async function getAllEvents(req: AuthenticatedRequest, res: Response) {
       ...(when === 'past' ? { date: { lt: now } } : {}),
       ...(tenantName ? { tenant: { name: tenantName } } : {}),
     };
+    if (donations === 'yes') {
+      prismaAnd(where, { eventPrep: { path: ['donations', 'enabled'], equals: true } });
+    } else if (donations === 'no') {
+      prismaAnd(where, { NOT: { eventPrep: { path: ['donations', 'enabled'], equals: true } } });
+    }
     if (gps === 'no') {
       prismaAnd(where, { OR: [{ latitude: null }, { longitude: null }] });
     }
@@ -1180,29 +1187,63 @@ export async function getAllEvents(req: AuthenticatedRequest, res: Response) {
       prisma.event.count({ where }),
     ]);
 
+    const eventIds = events.map((e) => e.id);
+    const donationAggs = eventIds.length
+      ? await prisma.ticketOrder.groupBy({
+          by: ['eventId'],
+          where: {
+            eventId: { in: eventIds },
+            status: 'PAID',
+            pricingZoneId: 'donation',
+          },
+          _sum: { amountFc: true },
+          _count: { id: true },
+        })
+      : [];
+
+    const donationStatsMap = new Map<string, { collectedAmountFc: number; donorsCount: number }>();
+    for (const row of donationAggs) {
+      donationStatsMap.set(row.eventId, {
+        collectedAmountFc: row._sum.amountFc || 0,
+        donorsCount: row._count.id || 0,
+      });
+    }
+
     return res.json(
       listPayload(
-        events.map((e) => ({
-          id: e.id,
-          title: e.title,
-          description: e.description,
-          date: e.date,
-          location: e.location,
-          reminderFrequency: e.reminderFrequency,
-          latitude: e.latitude,
-          longitude: e.longitude,
-          isPublic: e.isPublic,
-          isBlockedByAdmin: e.isBlockedByAdmin,
-          ticketingEnabled: e.ticketingEnabled,
-          ticketPriceFc: e.ticketPriceFc,
-          ticketsSold: e.ticketsSold,
-          ticketsTotal: e.ticketsTotal,
-          tenantId: e.tenantId,
-          tenantName: e.tenant?.name || 'Inconnu',
-          guestCount: e._count.guests,
-          invitationCount: e._count.invitations,
-          createdAt: e.createdAt,
-        })),
+        events.map((e) => {
+          const donationsConfig = extractEventDonationsConfig(e.eventPrep);
+          const stats = donationStatsMap.get(e.id);
+          const hasDonations = Boolean(donationsConfig?.enabled);
+          return {
+            id: e.id,
+            title: e.title,
+            description: e.description,
+            date: e.date,
+            location: e.location,
+            reminderFrequency: e.reminderFrequency,
+            latitude: e.latitude,
+            longitude: e.longitude,
+            isPublic: e.isPublic,
+            isBlockedByAdmin: e.isBlockedByAdmin,
+            adminBlockReason: e.adminBlockReason,
+            ticketingEnabled: e.ticketingEnabled,
+            ticketPriceFc: e.ticketPriceFc,
+            ticketsSold: e.ticketsSold,
+            ticketsTotal: e.ticketsTotal,
+            tenantId: e.tenantId,
+            tenantName: e.tenant?.name || 'Inconnu',
+            guestCount: e._count.guests,
+            invitationCount: e._count.invitations,
+            createdAt: e.createdAt,
+            hasDonations,
+            donationTargetFc: donationsConfig?.targetAmountFc ?? null,
+            donationMinAmountFc: donationsConfig?.minAmountFc ?? 1000,
+            donationCause: donationsConfig?.cause ?? null,
+            donationCollectedFc: stats?.collectedAmountFc || 0,
+            donorsCount: stats?.donorsCount || 0,
+          };
+        }),
         total,
         page,
         pageSize,
@@ -1306,6 +1347,18 @@ export async function toggleAdminEventBlock(req: AuthenticatedRequest, res: Resp
         adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
       },
     });
+
+    await auditReq(req, {
+      action: isBlocked ? 'EVENT_BLOCK' : 'EVENT_UNBLOCK',
+      targetType: 'event',
+      targetId: updated.id,
+      tenantId: updated.tenantId,
+      summary: `Événement « ${updated.title} » ${isBlocked ? 'bloqué' : 'débloqué'} par la modération${
+        isBlocked && updated.adminBlockReason ? ` (${updated.adminBlockReason})` : ''
+      }`,
+      metadata: { isBlocked, reason: updated.adminBlockReason },
+    });
+
     return res.json({ success: true, event: updated });
   } catch (error) {
     console.error('Erreur toggleAdminEventBlock admin:', error);
@@ -1705,6 +1758,10 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
         ticketPaymentProvider: {
           from: current.ticketPaymentProvider,
           to: updatedSettings.ticketPaymentProvider,
+        },
+        donationsAccess: {
+          from: current.donationsAccess,
+          to: updatedSettings.donationsAccess,
         },
       },
     });

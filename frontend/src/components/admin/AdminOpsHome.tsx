@@ -62,6 +62,11 @@ interface OpsOverview {
     unpaidInvoices: number;
     recentOrgs: number;
     saasPayoutsDue?: number;
+    donationsPaid?: number;
+  };
+  donationsSummary?: {
+    count: number;
+    amountFc: number;
   };
   saasPayoutsDue?: {
     period: string;
@@ -347,7 +352,7 @@ export default function AdminOpsHome() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
         {[
           {
             label: 'Demandes',
@@ -372,6 +377,12 @@ export default function AdminOpsHome() {
             value: counts?.recentOrgs ?? 0,
             hint: 'Créées ces 7 derniers jours',
             href: '/dashboard?tab=tenants',
+          },
+          {
+            label: 'Dons solidaires',
+            value: data?.donationsSummary?.count ?? 0,
+            hint: data?.donationsSummary?.amountFc ? `${formatFc(data.donationsSummary.amountFc)} récoltés` : 'Collectes de fonds',
+            href: '/dashboard/admin/payments?kind=donation',
           },
           {
             label: 'Versements',
