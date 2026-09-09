@@ -10,7 +10,7 @@ import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
 import { CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem, type PublicService, type PublicVenue } from '@/lib/marketplace';
 import MarketplaceFormTabs, { listingTabPanelId, type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { ArrowLeft, Play, Ticket } from 'lucide-react';
+import { ArrowLeft, Play, Ticket, Heart } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 import ListingActivityHighlights from '@/components/marketplace/ListingActivityHighlights';
@@ -735,10 +735,19 @@ export default function ListingDetailLayout({
                 </div>
                 <Button
                   size="md"
-                  className="shrink-0 min-h-11 font-bold shadow-xs flex items-center gap-1.5"
+                  className={cn(
+                    'shrink-0 min-h-11 font-bold shadow-xs flex items-center gap-1.5',
+                    inquireLabel.toLowerCase().includes('don') && !inquireLabel.toLowerCase().includes('billet')
+                      ? 'bg-rose-700 hover:bg-rose-800 text-white'
+                      : '',
+                  )}
                   onClick={() => scrollToContact('inquire')}
                 >
-                  <Ticket className="w-4 h-4" />
+                  {inquireLabel.toLowerCase().includes('don') ? (
+                    <Heart className="w-4 h-4" />
+                  ) : (
+                    <Ticket className="w-4 h-4" />
+                  )}
                   {inquireLabel}
                 </Button>
                 {showBooking ? (

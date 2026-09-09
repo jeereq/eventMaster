@@ -11,7 +11,7 @@ import {
  Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
  ClipboardList, Eye, Utensils, FileSpreadsheet, Download, LayoutGrid,
- Building2, ScanLine, Shirt, Globe, GlobeLock,
+ Building2, ScanLine, Shirt, Globe, GlobeLock, Heart,
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
@@ -55,7 +55,7 @@ import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
 import EventPrepPanel from '@/components/EventPrepPanel';
 import OrgTicketingView from '@/components/OrgTicketingView';
-import { isB2cPlanId } from '@/config/landingPricing';
+import { isB2cPlanId, formatFc } from '@/config/landingPricing';
 import { formatEventPlace } from '@/lib/eventPlace';
 import type { EventConfigPayload } from '@/lib/eventConfig';
 import { eventPrepSummary, hasEventPrepShortlist, parseEventPrep } from '@/lib/eventPrep';
@@ -2087,6 +2087,12 @@ Merci de confirmer votre présence :
  {selectedEvent.isPublic ? <Globe className="w-3.5 h-3.5" aria-hidden /> : <GlobeLock className="w-3.5 h-3.5" aria-hidden />}
  {selectedEvent.isPublic ? 'Public' : 'Privé'}
  </StatusPill>
+ {selectedEvent.donations?.enabled && (
+ <StatusPill tone="rose" className="gap-1.5">
+ <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" aria-hidden />
+ <span>Dons solidaires</span>
+ </StatusPill>
+ )}
  {selectedEvent.room && (
  <StatusPill tone="slate" className="gap-1.5 max-w-[16rem] truncate">
  <Building2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
@@ -2102,6 +2108,7 @@ Merci de confirmer votre présence :
  {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
  </span>
  {selectedEvent.isPublic && selectedEvent.slug && (
+ <>
  <a
  href={`/marketplace/evenements/${selectedEvent.slug}`}
  target="_blank"
@@ -2111,7 +2118,57 @@ Merci de confirmer votre présence :
  >
  Page publique
  </a>
+ <button
+ type="button"
+ onClick={() => {
+ if (typeof window !== 'undefined' && selectedEvent.slug) {
+ const url = `${window.location.origin}/marketplace/evenements/${selectedEvent.slug}`;
+ void navigator.clipboard.writeText(url);
+ setSuccess('Lien de la page publique copié dans le presse-papiers');
+ }
+ }}
+ className="inline-flex items-center gap-1.5 min-h-11 px-2.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted rounded-[var(--radius-button)] transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ title="Copier le lien de la page publique"
+ aria-label="Copier le lien de la page publique"
+ >
+ <Copy className="w-3.5 h-3.5" />
+ <span>Copier le lien</span>
+ </button>
+ </>
  )}
+ </div>
+
+ {/* Synthèse ergonomique de l'événement */}
+ <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+ <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
+ <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Invités</div>
+ <div className="text-base font-bold text-foreground mt-0.5">
+ {guests.length}{' '}
+ <span className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400">
+ ({guests.filter((g) => g.rsvp === 'ACCEPTED').length} RSVP)
+ </span>
+ </div>
+ </div>
+ <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
+ <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Invitations</div>
+ <div className="text-base font-bold text-foreground mt-0.5">
+ {invitations.length}
+ </div>
+ </div>
+ <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
+ <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Billetterie</div>
+ <div className="text-base font-bold text-foreground mt-0.5 truncate">
+ {selectedEvent.ticketingEnabled
+ ? `${selectedEvent.ticketsSold ?? 0}${selectedEvent.ticketsTotal ? ` / ${selectedEvent.ticketsTotal}` : ''}`
+ : 'Non activée'}
+ </div>
+ </div>
+ <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
+ <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Plan de table</div>
+ <div className="text-base font-bold text-foreground mt-0.5 truncate">
+ {selectedEvent.room ? selectedEvent.room.name : 'Non assigné'}
+ </div>
+ </div>
  </div>
  </div>
  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 w-full sm:w-auto">

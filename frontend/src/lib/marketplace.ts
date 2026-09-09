@@ -1164,6 +1164,9 @@ export interface PublicEventCard {
   description: string | null;
   date: string;
   location: string;
+  city?: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
   latitude: number | null;
   longitude: number | null;
   orgName: string;

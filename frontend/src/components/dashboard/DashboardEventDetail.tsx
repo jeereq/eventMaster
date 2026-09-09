@@ -4,10 +4,10 @@ import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
-import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import EventTicketCheckoutForm from '@/components/EventTicketCheckoutForm';
 import ListingMapPanel from '@/components/ListingMapPanel';
+import EventDetailOverview from '@/components/marketplace/EventDetailOverview';
 import {
   catalogueItemToMapMarker,
   CLIENT_AGENDA_HREF,
@@ -103,6 +103,39 @@ export default function DashboardEventDetail() {
     window.setTimeout(() => mapRef.current?.startDirectionsFor(itemId), 80);
   };
 
+  const scrollToCheckout = (modeTab?: 'ticket' | 'donation') => {
+    const el = document.getElementById('listing-contact');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+    if (modeTab === 'donation') {
+      const donationTabBtn = document.getElementById('checkout-tab-donation');
+      donationTabBtn?.click();
+    } else if (modeTab === 'ticket') {
+      const ticketTabBtn = document.getElementById('checkout-tab-ticket');
+      ticketTabBtn?.click();
+    }
+  };
+
+  const hasDonations = Boolean(event?.donations && event.donations.enabled);
+  const inquireLabel = (() => {
+    if (event?.soldOut) return 'Complet';
+    if (!event?.ticketingEnabled && hasDonations) return 'Faire un don solidaire';
+    if (event?.ticketingEnabled && hasDonations) return 'Billet / Don';
+    if (event?.paid) return 'Payer le billet';
+    return 'Prendre mon billet';
+  })();
+
+  const formattedEventDate = event?.date
+    ? new Date(event.date).toLocaleDateString('fr-FR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '';
+  const heroSubtitle = [formattedEventDate, event?.location].filter(Boolean).join(' · ');
+
   return (
     <ListingDetailLayout
       backHref={backHref}
@@ -118,7 +151,7 @@ export default function DashboardEventDetail() {
       fallbackIcon={<Ticket className="w-12 h-12" />}
       chip={event?.orgName || 'Événement'}
       title={event?.title || ''}
-      subtitle={event?.location || ''}
+      subtitle={heroSubtitle}
       shareKind="event"
       shareSlug={event?.slug ?? undefined}
       photos={photos}
@@ -128,51 +161,16 @@ export default function DashboardEventDetail() {
       onTab={setTab}
       priceFromFc={event?.paid ? event.ticketPriceFc : null}
       priceUnitLabel={event?.paid ? '/ personne' : null}
-      priceCaption={event && !event.paid ? 'Entrée libre' : undefined}
+      priceCaption={event && !event.paid ? (hasDonations ? 'Entrée libre & Dons' : 'Entrée libre') : undefined}
       hideBooking
       listingKind="event"
-      inquireLabel={event?.paid ? 'Payer le billet' : 'Prendre mon billet'}
+      inquireLabel={inquireLabel}
       details={event ? (
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-3 max-w-prose">
-          <p className="text-sm text-muted leading-relaxed">
-            {[
-              new Date(event.date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' }),
-              event.ticketsRemaining != null
-                ? (event.soldOut ? 'Complet' : `${event.ticketsRemaining} place${event.ticketsRemaining > 1 ? 's' : ''}`)
-                : null,
-            ].filter(Boolean).join(' · ')}
-            {item && event.latitude != null && event.longitude != null ? (
-              <>
-                {' · '}
-                <button type="button" onClick={() => startRoute(item.id)} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
-                  Itinéraire
-                </button>
-              </>
-            ) : null}
-          </p>
-          {event.description ? (
-            <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{event.description}</p>
-          ) : (
-            <p className="text-sm text-muted">Inscription ouverte au public.</p>
-          )}
-          </div>
-          {posts.length > 0 && (
-            <div className="flex flex-col gap-4">
-              <h2 className="font-semibold text-foreground text-sm">Actualités</h2>
-              {posts.map((post) => (
-                <PublicFeedPost key={post.id} post={post} />
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
-      availability={event ? (
-        <AvailabilityCalendar
-          compact
-          title="Date de l’événement"
-          selectedDate={eventDateKey(event.date)}
-          minDate="1970-01-01"
+        <EventDetailOverview
+          event={event}
+          onStartRoute={item ? () => startRoute(item.id) : undefined}
+          onGoToCheckout={scrollToCheckout}
+          posts={posts}
         />
       ) : null}
       map={event && item ? (
