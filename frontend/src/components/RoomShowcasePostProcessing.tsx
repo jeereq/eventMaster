@@ -27,8 +27,10 @@ export default function RoomShowcasePostProcessing({ lighting }: RoomShowcasePos
       : lighting.preset === 'dusk' ? 0.6
         : 0.45;
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
-    <EffectComposer multisampling={4}>
+    <EffectComposer multisampling={isMobile ? 0 : 4}>
       <Bloom
         intensity={bloomIntensity}
         luminanceThreshold={bloomThreshold}

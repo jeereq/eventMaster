@@ -285,7 +285,7 @@ async function main() {
       role: 'USER',
       orgRole: 'PROTOCOL',
       tenantId: tenantPrestige.id,
-      isEmailVerified: true,
+      isEmailVerified: true
     },
   });
 

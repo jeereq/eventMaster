@@ -888,6 +888,10 @@ export function resolveTableMaterial(
   opacity?: number;
   bumpMap?: THREE.Texture;
   bumpScale?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  transmission?: number;
+  ior?: number;
 } {
   if (imageUrl) {
     return {
@@ -895,6 +899,8 @@ export function resolveTableMaterial(
       color: '#ffffff',
       roughness: 0.55,
       metalness: 0.08,
+      clearcoat: 0.15,
+      clearcoatRoughness: 0.25,
     };
   }
 
@@ -907,11 +913,15 @@ export function resolveTableMaterial(
   if (resolvedSurface === 'glass') {
     return {
       map: null,
-      color: color && color !== '#ffffff' ? color : '#e2e8f0',
-      roughness: 0.06,
-      metalness: 0.22,
+      color: color && color !== '#ffffff' ? color : '#f1f5f9',
+      roughness: 0.04,
+      metalness: 0.06,
       transparent: true,
-      opacity: 0.42,
+      opacity: 0.88,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
+      transmission: 0.94,
+      ior: 1.52,
     };
   }
 
@@ -919,8 +929,10 @@ export function resolveTableMaterial(
     return {
       map: null,
       color: color && color !== '#ffffff' ? color : '#fafafa',
-      roughness: 0.12,
-      metalness: 0.18,
+      roughness: 0.1,
+      metalness: 0.15,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.08,
     };
   }
 
@@ -956,6 +968,8 @@ export function resolveTableMaterial(
     color: color && color !== '#ffffff' ? color : defaultColors[resolvedSurface],
     roughness: resolvedSurface === 'marble' ? 0.22 : resolvedSurface === 'linen' ? 0.36 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.48 : 0.45,
     metalness: resolvedSurface === 'marble' ? 0.12 : resolvedSurface === 'linen' ? 0.04 : 0.08,
+    clearcoat: resolvedSurface === 'marble' ? 0.75 : resolvedSurface === 'linen' ? 0 : 0.15,
+    clearcoatRoughness: resolvedSurface === 'marble' ? 0.15 : 0.3,
   };
 }
 

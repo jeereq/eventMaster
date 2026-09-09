@@ -1,8 +1,9 @@
 'use client';
 
 import React, { Suspense, useMemo, useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle, memo } from 'react';
-import { Canvas, ThreeEvent, useThree } from '@react-three/fiber';
+import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows, Environment, Sky, Stars } from '@react-three/drei';
+import { Compass, Sparkles, Crown, DoorOpen, RotateCcw } from 'lucide-react';
 import * as THREE from 'three';
 import {
   RoomLayoutBlueprint,
@@ -1282,33 +1283,99 @@ function PlaceSetting({
   position: [number, number, number];
   rotationY: number;
 }) {
-  const plate = style === 'gold' ? '#f3e6c4' : style === 'festive' ? '#f8e7ee' : '#f8fafc';
-  const rim = style === 'gold' ? '#c4a35a' : style === 'festive' ? '#be185d' : '#e2e8f0';
+  const plate = style === 'gold' ? '#fbf8ee' : style === 'festive' ? '#fdf2f8' : '#fafaf9';
+  const rim = style === 'gold' ? '#d4af37' : style === 'festive' ? '#db2777' : '#cbd5e1';
   const metal = style === 'gold' ? '#d4af37' : '#cbd5e1';
-  const glass = style === 'festive' ? '#fda4af' : '#f1f5f9';
+  const glass = style === 'festive' ? '#fce7f3' : '#f8fafc';
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      <mesh>
-        <cylinderGeometry args={[0.068, 0.074, 0.012, 22]} />
-        <meshStandardMaterial color={plate} metalness={style === 'gold' ? 0.45 : 0.22} roughness={style === 'gold' ? 0.18 : 0.28} />
+      {/* 1. Sous-assiette (Charger plate) biseautée */}
+      <mesh castShadow receiveShadow>
+        <cylinderGeometry args={[0.076, 0.082, 0.007, 24]} />
+        <meshPhysicalMaterial
+          color={style === 'gold' ? '#c9a227' : style === 'festive' ? '#be185d' : '#e2e8f0'}
+          metalness={style === 'gold' ? 0.9 : style === 'festive' ? 0.35 : 0.85}
+          roughness={0.16}
+          clearcoat={0.7}
+        />
       </mesh>
-      <mesh position={[0, 0.008, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.004, 20]} />
-        <meshStandardMaterial color={rim} metalness={style === 'gold' ? 0.7 : 0.15} roughness={0.28} />
+      {/* 2. Assiette plate principale en porcelaine fine */}
+      <mesh position={[0, 0.005, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.063, 0.059, 0.005, 24]} />
+        <meshPhysicalMaterial
+          color={plate}
+          metalness={0.04}
+          roughness={0.1}
+          clearcoat={0.95}
+          clearcoatRoughness={0.08}
+        />
       </mesh>
-      <mesh position={[0.09, 0.012, 0.01]} rotation={[0, 0, 0.18]}>
-        <boxGeometry args={[0.12, 0.004, 0.011]} />
-        <meshStandardMaterial color={metal} metalness={0.88} roughness={0.14} />
+      {/* 3. Filet décoratif intérieur sur l'assiette */}
+      <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.043, 0.046, 24]} />
+        <meshStandardMaterial
+          color={rim}
+          metalness={style === 'gold' ? 0.9 : 0.4}
+          roughness={0.2}
+          side={THREE.DoubleSide}
+        />
       </mesh>
-      <mesh position={[-0.09, 0.012, -0.01]} rotation={[0, 0, -0.16]}>
-        <boxGeometry args={[0.11, 0.004, 0.013]} />
-        <meshStandardMaterial color={metal} metalness={0.82} roughness={0.18} />
+      {/* 4. Serviette en tissu pliée */}
+      <mesh position={[0, 0.011, 0]} rotation={[0, 0.15, 0]} castShadow>
+        <boxGeometry args={[0.042, 0.005, 0.068]} />
+        <meshStandardMaterial color="#fcfbf9" roughness={0.88} />
       </mesh>
-      <mesh position={[0.015, 0.024, 0.08]}>
-        <cylinderGeometry args={[0.018, 0.014, 0.042, 12]} />
-        <meshPhysicalMaterial color={glass} transparent opacity={0.5} roughness={0.04} metalness={0.2} transmission={0.55} />
+      {/* Rond de serviette */}
+      <mesh position={[0, 0.015, 0]} rotation={[0, 0.15, 0]}>
+        <cylinderGeometry args={[0.011, 0.011, 0.012, 16]} />
+        <meshStandardMaterial color={metal} metalness={0.92} roughness={0.14} />
       </mesh>
+      {/* 5. Couverts réfléchissants */}
+      {/* Couteau à droite */}
+      <mesh position={[0.092, 0.005, 0.004]} rotation={[0, 0, 0.06]} castShadow>
+        <boxGeometry args={[0.009, 0.003, 0.125]} />
+        <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
+      </mesh>
+      {/* Fourchette à gauche */}
+      <mesh position={[-0.092, 0.005, 0.004]} rotation={[0, 0, -0.06]} castShadow>
+        <boxGeometry args={[0.01, 0.003, 0.12]} />
+        <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
+      </mesh>
+      {/* Petite cuillère à dessert au sommet */}
+      <mesh position={[0, 0.005, 0.084]} rotation={[0, Math.PI / 2, 0]} castShadow>
+        <boxGeometry args={[0.007, 0.0025, 0.07]} />
+        <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
+      </mesh>
+      {/* 6. Duo de verres à pied physiques (Verre à eau + Verre à vin) */}
+      <group position={[0.055, 0.004, 0.082]}>
+        <mesh position={[0, 0.002, 0]}>
+          <cylinderGeometry args={[0.013, 0.014, 0.0025, 14]} />
+          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+        </mesh>
+        <mesh position={[0, 0.022, 0]}>
+          <cylinderGeometry args={[0.002, 0.002, 0.038, 8]} />
+          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+        </mesh>
+        <mesh position={[0, 0.052, 0]}>
+          <cylinderGeometry args={[0.015, 0.009, 0.032, 16]} />
+          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+        </mesh>
+      </group>
+      <group position={[0.08, 0.004, 0.062]}>
+        <mesh position={[0, 0.002, 0]}>
+          <cylinderGeometry args={[0.011, 0.012, 0.002, 14]} />
+          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+        </mesh>
+        <mesh position={[0, 0.02, 0]}>
+          <cylinderGeometry args={[0.0018, 0.0018, 0.034, 8]} />
+          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+        </mesh>
+        <mesh position={[0, 0.046, 0]}>
+          <cylinderGeometry args={[0.013, 0.007, 0.028, 16]} />
+          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -1330,6 +1397,7 @@ function TableMesh({
   hasCenterpiece = false,
   centerpieceStyle = 'floral',
   couvertStyle = 'classic',
+  showcaseTableware = false,
   attachedChairs = true,
   rotation,
   elevationM = 0,
@@ -1360,6 +1428,7 @@ function TableMesh({
   hasCenterpiece?: boolean;
   centerpieceStyle?: 'floral' | 'greeneryRunner' | 'candleCluster';
   couvertStyle?: 'classic' | 'gold' | 'festive';
+  showcaseTableware?: boolean;
   attachedChairs?: boolean;
   rotation?: number;
   elevationM?: number;
@@ -1430,7 +1499,7 @@ function TableMesh({
           selected={tableHalo}
         />
       </group>
-      {hasCouverts && Array.from({ length: Math.min(capacity, 10) }).map((_, i) => {
+      {(hasCouverts || (showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 2)) && Array.from({ length: Math.min(capacity, 10) }).map((_, i) => {
         const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
         const r = Math.max(size[0], size[1]) * 0.28;
         return (
@@ -1442,7 +1511,7 @@ function TableMesh({
           />
         );
       })}
-      {hasCenterpiece && shape !== 'cocktail' && shape !== 'highTop' ? (
+      {(hasCenterpiece || (showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && (
         <group position={[0, topY, 0]}>
           {centerpieceStyle === 'greeneryRunner' ? (
             <GreeneryRunnerMesh length={Math.max(size[0], size[1]) * 0.72} selected={selected} />
@@ -1452,7 +1521,7 @@ function TableMesh({
             <TallCenterpiece selected={selected} />
           )}
         </group>
-      ) : null}
+      )}
       {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
         if (hidden.has(i)) return null;
         const seat = getTableSeatPlacement3D(shape, capacity, i, size);
@@ -2128,6 +2197,56 @@ function FixtureMesh({
   );
 }
 
+type CameraPresetKey = 'overview' | 'stage' | 'vip' | 'entrance';
+
+interface TargetCameraPose {
+  pos: THREE.Vector3;
+  target: THREE.Vector3;
+}
+
+function CinematicCameraController({
+  targetPose,
+  onArrival,
+  orbitControlsRef,
+}: {
+  targetPose: TargetCameraPose | null;
+  onArrival?: () => void;
+  orbitControlsRef?: React.Ref<unknown>;
+}) {
+  const { camera } = useThree();
+  const animatingRef = useRef(false);
+
+  useEffect(() => {
+    if (targetPose) {
+      animatingRef.current = true;
+    }
+  }, [targetPose]);
+
+  useFrame((_, delta) => {
+    if (!animatingRef.current || !targetPose) return;
+    const ctrl = (orbitControlsRef as { current?: any } | undefined)?.current;
+    const t = Math.min(1, 1 - Math.exp(-delta * 5.2));
+    camera.position.lerp(targetPose.pos, t);
+    if (ctrl?.target) {
+      ctrl.target.lerp(targetPose.target, t);
+      ctrl.update();
+    }
+    const distPos = camera.position.distanceTo(targetPose.pos);
+    const distTarget = ctrl?.target ? ctrl.target.distanceTo(targetPose.target) : 0;
+    if (distPos < 0.04 && distTarget < 0.04) {
+      camera.position.copy(targetPose.pos);
+      if (ctrl?.target) {
+        ctrl.target.copy(targetPose.target);
+        ctrl.update();
+      }
+      animatingRef.current = false;
+      onArrival?.();
+    }
+  });
+
+  return null;
+}
+
 function SceneContent({
   blueprint,
   selected,
@@ -2148,6 +2267,8 @@ function SceneContent({
   orbitControlsRef,
   reduceMotion = false,
   blockedSeats = [],
+  cameraTargetPose,
+  onCameraTargetArrived,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -2156,6 +2277,8 @@ function SceneContent({
   hideLabels?: boolean;
   orbitControlsRef?: React.Ref<unknown>;
   reduceMotion?: boolean;
+  cameraTargetPose?: TargetCameraPose | null;
+  onCameraTargetArrived?: () => void;
 }) {
   const widthM = blueprint.canvas.widthM;
   const heightM = blueprint.canvas.heightM;
@@ -2628,6 +2751,7 @@ function SceneContent({
             hasCenterpiece={item.hasCenterpiece}
             centerpieceStyle={item.centerpieceStyle}
             couvertStyle={item.couvertStyle}
+            showcaseTableware={qualitySettings.quality === 'showcase'}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}
             elevationM={surface?.elevationM ?? 0}
@@ -2666,6 +2790,12 @@ function SceneContent({
           setDragSession(null);
           onMoveEnd?.();
         }}
+      />
+
+      <CinematicCameraController
+        targetPose={cameraTargetPose ?? null}
+        onArrival={onCameraTargetArrived}
+        orbitControlsRef={orbitControlsRef}
       />
 
       <OrbitControls
@@ -2743,9 +2873,51 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     enabled?: boolean;
   } | null>(null);
   const [inView, setInView] = useState(true);
+  const [cameraTargetPose, setCameraTargetPose] = useState<TargetCameraPose | null>(null);
+  const [activePreset, setActivePreset] = useState<CameraPresetKey | null>(null);
   const reduceMotion = usePrefersReducedMotion();
   const sceneLabel = useMemo(() => describeRoomScene(blueprint), [blueprint]);
   const freezeFrames = paused || !inView;
+
+  const handleSelectPreset = useCallback((key: CameraPresetKey) => {
+    setActivePreset(key);
+    const widthM = blueprint.canvas.widthM;
+    const heightM = blueprint.canvas.heightM;
+    let pos: [number, number, number];
+    let target: [number, number, number];
+    switch (key) {
+      case 'overview':
+        pos = [0, Math.max(widthM, heightM) * 1.05, Math.max(widthM, heightM) * 0.98];
+        target = [0, 0, 0];
+        break;
+      case 'stage':
+        pos = [0, 2.2, Math.max(heightM * 0.32, 4.2)];
+        target = [0, 1.4, -Math.max(heightM * 0.38, 4.2)];
+        break;
+      case 'vip':
+        pos = [-Math.max(widthM * 0.22, 2.6), 1.9, Math.max(heightM * 0.18, 2.2)];
+        target = [0, 0.85, 0];
+        break;
+      case 'entrance':
+        pos = [0, 1.7, Math.max(heightM * 0.48, 5.2)];
+        target = [0, 1.4, 0];
+        break;
+    }
+    setCameraTargetPose({
+      pos: new THREE.Vector3(...pos),
+      target: new THREE.Vector3(...target),
+    });
+  }, [blueprint.canvas.widthM, blueprint.canvas.heightM]);
+
+  const handleResetCamera = useCallback(() => {
+    setActivePreset(null);
+    setCameraTargetPose(null);
+    try {
+      (orbitControlsRef.current as any)?.reset?.();
+    } catch {
+      handleSelectPreset('overview');
+    }
+  }, [handleSelectPreset]);
 
   useEffect(() => {
     const node = viewerRootRef.current;
@@ -2826,15 +2998,102 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground touch-none overscroll-none',
         className,
       )}
+      onPointerDown={() => {
+        if (cameraTargetPose) {
+          setCameraTargetPose(null);
+          setActivePreset(null);
+        }
+      }}
     >
+      {/* Préréglages de caméra cinématiques */}
+      {!walkthroughActive && !wallEditMode && (
+        <div
+          className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 backdrop-blur-md border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto"
+          role="toolbar"
+          aria-label="Angles de caméra 3D"
+        >
+          <button
+            type="button"
+            onClick={() => handleSelectPreset('overview')}
+            aria-pressed={activePreset === 'overview'}
+            title="Vue d'ensemble de la salle"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              activePreset === 'overview'
+                ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+            )}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Vue d'ensemble</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectPreset('stage')}
+            aria-pressed={activePreset === 'stage'}
+            title="Point de vue vers la scène"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              activePreset === 'stage'
+                ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+            )}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Scène</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectPreset('vip')}
+            aria-pressed={activePreset === 'vip'}
+            title="Point de vue Table d'honneur"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              activePreset === 'vip'
+                ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+            )}
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Table VIP</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectPreset('entrance')}
+            aria-pressed={activePreset === 'entrance'}
+            title="Point de vue depuis l'entrée"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              activePreset === 'entrance'
+                ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+            )}
+          >
+            <DoorOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Entrée</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleResetCamera}
+            title="Réinitialiser l'angle de vue"
+            aria-label="Réinitialiser l'angle"
+            className="inline-flex items-center justify-center p-1.5 rounded-full text-muted hover:text-foreground hover:bg-surface-muted transition-all shrink-0 min-h-[32px] min-w-[32px]"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       <Canvas
         shadows
         style={{ touchAction: 'none' }}
         frameloop={freezeFrames ? 'never' : 'always'}
-        dpr={qualitySettings.dpr}
+        dpr={typeof window !== 'undefined' && window.innerWidth < 768 ? [1, 1.5] : qualitySettings.dpr}
+        performance={{ min: 0.5 }}
         gl={{
           antialias: true,
           alpha: false,
+          powerPreference: 'high-performance',
           preserveDrawingBuffer: true,
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: qualitySettings.exposure,
@@ -2870,6 +3129,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             onWalkthroughComplete={onWalkthroughComplete}
             orbitControlsRef={orbitControlsRef}
             blockedSeats={blockedSeats}
+            cameraTargetPose={cameraTargetPose}
+            onCameraTargetArrived={() => setCameraTargetPose(null)}
           />
         </Suspense>
       </Canvas>

@@ -20,10 +20,66 @@ type MatProps = {
   opacity?: number;
   bumpMap?: THREE.Texture;
   bumpScale?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  transmission?: number;
+  ior?: number;
 };
 
-function Mat({ color, map, roughness = 0.6, metalness = 0.05, transparent, opacity, bumpMap, bumpScale }: MatProps) {
+function Mat({
+  color,
+  map,
+  roughness = 0.6,
+  metalness = 0.05,
+  transparent,
+  opacity,
+  bumpMap,
+  bumpScale,
+  clearcoat,
+  clearcoatRoughness,
+  transmission,
+  ior,
+}: MatProps) {
   const gold = color === '#c9a227' || color === '#d4af37' || color === '#d97706';
+  const hasTransmission = (typeof transmission === 'number' && transmission > 0) || (transparent && typeof opacity === 'number' && opacity < 0.9);
+
+  if (hasTransmission) {
+    return (
+      <meshPhysicalMaterial
+        color={color}
+        map={map ?? undefined}
+        roughness={roughness ?? 0.05}
+        metalness={metalness ?? 0.05}
+        transmission={transmission ?? 0.92}
+        ior={ior ?? 1.52}
+        thickness={0.05}
+        transparent
+        opacity={opacity ?? 0.9}
+        clearcoat={clearcoat ?? 1.0}
+        clearcoatRoughness={clearcoatRoughness ?? 0.05}
+        envMapIntensity={1.5}
+      />
+    );
+  }
+
+  if (typeof clearcoat === 'number' && clearcoat > 0) {
+    return (
+      <meshPhysicalMaterial
+        color={color}
+        map={map ?? undefined}
+        roughness={gold && roughness > 0.28 ? 0.18 : roughness}
+        metalness={gold && metalness < 0.5 ? 0.88 : metalness}
+        clearcoat={clearcoat}
+        clearcoatRoughness={clearcoatRoughness ?? 0.15}
+        envMapIntensity={gold ? 1.35 : 1.15}
+        transparent={transparent}
+        opacity={opacity}
+        bumpMap={bumpMap}
+        bumpScale={bumpScale}
+      />
+    );
+  }
+
   return (
     <meshStandardMaterial
       color={color}
@@ -719,6 +775,10 @@ export function CatalogueTableStructure({
     opacity: mat.opacity,
     bumpMap: mat.bumpMap,
     bumpScale: mat.bumpScale,
+    clearcoat: mat.clearcoat,
+    clearcoatRoughness: mat.clearcoatRoughness,
+    transmission: mat.transmission,
+    ior: mat.ior,
   };
   const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
   const segments = shape === 'oval' ? 40 : 48;
