@@ -213,7 +213,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
       <div className={cn("rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 space-y-1", isKioskMode && "w-full xl:w-80 shrink-0 sticky top-4 xl:top-8")}>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Parcours jour J</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Parcours jour J</p>
             <h3 className="font-semibold text-foreground text-base">1. Scanner · 2. Confirmer · 3. Invité suivant</h3>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -238,15 +238,15 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         <div className="grid grid-cols-3 gap-2 pt-3">
           <div className="rounded-[var(--radius-button)] bg-surface-muted border border-border px-3 py-2 text-center">
             <p className="text-lg font-semibold text-foreground tabular-nums">{checkedInCount}</p>
-            <p className="text-[10px] text-muted font-medium">Entrés</p>
+            <p className="text-xs text-muted font-medium">Entrés</p>
           </div>
           <div className="rounded-[var(--radius-button)] bg-surface-muted border border-border px-3 py-2 text-center">
             <p className="text-lg font-semibold text-foreground tabular-nums">{Math.max(0, acceptedCount - checkedInCount)}</p>
-            <p className="text-[10px] text-muted font-medium">À accueillir</p>
+            <p className="text-xs text-muted font-medium">À accueillir</p>
           </div>
           <div className="rounded-[var(--radius-button)] bg-surface-muted border border-border px-3 py-2 text-center">
             <p className="text-lg font-semibold text-foreground tabular-nums">{guests.length}</p>
-            <p className="text-[10px] text-muted font-medium">Invités</p>
+            <p className="text-xs text-muted font-medium">Invités</p>
           </div>
         </div>
       </div>
@@ -326,16 +326,16 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
               {selectedGuest.phone ? ` · ${selectedGuest.phone}` : ''}
             </p>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-border bg-surface">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-border bg-surface">
                 RSVP {rsvpLabel(selectedGuest.rsvp)}
               </span>
               {selectedGuest.category && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-border bg-surface">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-border bg-surface">
                   {selectedGuest.category}
                 </span>
               )}
               {selectedGuest.checkedInAt && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-2xs">
                   Authentifié
                 </span>
               )}

@@ -141,11 +141,11 @@ export default function PublicEventZoneStudio3D({
             <h4 className="text-xs font-bold text-foreground">
               Définition des zones de paiement 3D
             </h4>
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               Interactif
             </span>
           </div>
-          <p className="text-[11px] text-muted">
+          <p className="text-xs text-muted">
             {roomName
               ? `Salle : ${roomName} · Visualisez et assignez les tables aux tarifs en 3D.`
               : 'Attribuez chaque table à sa zone tarifaire (VIP, Carré d’Or, Standard).'}
@@ -177,7 +177,7 @@ export default function PublicEventZoneStudio3D({
 
               {showAutoDistributeMenu && (
                 <div className="absolute right-0 top-full mt-1.5 z-30 w-64 rounded-xl border border-border bg-surface p-1.5 shadow-xl text-left space-y-1 animate-in fade-in zoom-in-95">
-                  <p className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                  <p className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-muted">
                     Stratégie spatiale
                   </p>
                   <button
@@ -186,7 +186,7 @@ export default function PublicEventZoneStudio3D({
                     className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-primary/10 hover:text-primary transition"
                   >
                     <span className="font-semibold block">Devant scène / Estrade (VIP)</span>
-                    <span className="text-[10px] text-muted block">Zones chères près de la scène, Standard au fond</span>
+                    <span className="text-xs text-muted block">Zones chères près de la scène, Standard au fond</span>
                   </button>
                   <button
                     type="button"
@@ -194,7 +194,7 @@ export default function PublicEventZoneStudio3D({
                     className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-primary/10 hover:text-primary transition"
                   >
                     <span className="font-semibold block">Carré d’Or central</span>
-                    <span className="text-[10px] text-muted block">Zone VIP au centre d’honneur, cercles concentriques</span>
+                    <span className="text-xs text-muted block">Zone VIP au centre d’honneur, cercles concentriques</span>
                   </button>
                   <button
                     type="button"
@@ -202,7 +202,7 @@ export default function PublicEventZoneStudio3D({
                     className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-primary/10 hover:text-primary transition"
                   >
                     <span className="font-semibold block">Répartition équilibrée</span>
-                    <span className="text-[10px] text-muted block">Répartition proportionnelle équitable des places</span>
+                    <span className="text-xs text-muted block">Répartition proportionnelle équitable des places</span>
                   </button>
                 </div>
               )}
@@ -228,7 +228,7 @@ export default function PublicEventZoneStudio3D({
 
           {/* Modèles rapides */}
           <div className="flex flex-wrap items-center gap-1.5 pb-1">
-            <span className="text-[10px] text-muted font-medium mr-1">Modèles prédéfinis :</span>
+            <span className="text-xs text-muted font-medium mr-1">Modèles prédéfinis :</span>
             {TICKETING_ZONE_PRESETS.map((preset) => (
               <button
                 key={preset.id}
@@ -243,7 +243,7 @@ export default function PublicEventZoneStudio3D({
                   onUpdatePricingZones(newZones);
                   setPaintZoneId(newZones[0]?.id ?? null);
                 }}
-                className="px-2 py-1 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition shadow-2xs flex items-center gap-1.5"
+                className="px-2.5 py-1 rounded-md text-xs font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition shadow-2xs flex items-center gap-1.5"
                 title={`${preset.description} (${preset.zones.map((z) => `${z.name} ${formatFc(z.priceFc)}`).join(' · ')})`}
               >
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: preset.zones[0].color }} />
@@ -334,10 +334,10 @@ export default function PublicEventZoneStudio3D({
                 style={{ backgroundColor: stat.zone.color || '#c4a35a' }}
               />
               <span className="truncate max-w-[120px]">{stat.zone.name}</span>
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {stat.zone.priceFc > 0 ? formatFc(stat.zone.priceFc) : '0 FC'}
               </span>
-              <span className="text-[10px] text-muted tabular-nums">
+              <span className="text-xs text-muted tabular-nums">
                 ({stat.seatCount} pl.)
               </span>
               {isPaintActive && <Check className="w-3.5 h-3.5 text-primary ml-0.5" />}
@@ -349,7 +349,7 @@ export default function PublicEventZoneStudio3D({
       {/* Rendu 3D de la salle avec les zones */}
       {previewBlueprint ? (
         <div className="relative rounded-2xl overflow-hidden border border-border bg-foreground shadow-[var(--shadow-soft)]">
-          <div className="absolute top-2 left-2 z-20 flex items-center gap-1 bg-foreground/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-[10px] font-semibold text-background">
+          <div className="absolute top-2 left-2 z-20 flex items-center gap-1 bg-foreground/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-xs font-semibold text-background">
             <Box className="w-3 h-3 text-primary" />
             <span>Vue 3D des zones · Cliquez sur une table pour l&apos;assigner</span>
           </div>
@@ -366,7 +366,7 @@ export default function PublicEventZoneStudio3D({
                 type="button"
                 onClick={() => setQuality(opt.id)}
                 className={cn(
-                  'px-2 py-0.5 rounded-full text-[10px] font-semibold transition',
+                  'px-2.5 py-0.5 rounded-full text-xs font-semibold transition',
                   quality === opt.id
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-background/70 hover:text-background'
@@ -399,7 +399,7 @@ export default function PublicEventZoneStudio3D({
                 </span>
                 {activeSelectedTable.pricingZoneId && (
                   <span
-                    className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs"
+                    className="px-2 py-0.5 rounded text-xs font-bold text-white shadow-2xs"
                     style={{
                       backgroundColor:
                         pricingZones.find((z) => z.id === activeSelectedTable.pricingZoneId)?.color ||
@@ -411,16 +411,21 @@ export default function PublicEventZoneStudio3D({
                 )}
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-muted">Modifier zone :</span>
+                <span className="text-xs font-semibold text-muted">Modifier zone :</span>
                 {pricingZones.map((z) => (
                   <button
                     key={z.id}
                     type="button"
                     onClick={() => onAssignTableZone(activeSelectedTable.id, z.id)}
-                    className="w-5 h-5 rounded-full border border-border transition hover:scale-110 active:scale-95"
-                    style={{ backgroundColor: z.color || '#c4a35a' }}
+                    className="min-w-11 min-h-11 sm:min-w-8 sm:min-h-8 inline-flex items-center justify-center rounded-full touch-manipulation transition hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     title={`Assigner à ${z.name}`}
-                  />
+                    aria-label={`Assigner la table sélectionnée à la zone ${z.name}`}
+                  >
+                    <span
+                      className="w-5 h-5 rounded-full border border-border"
+                      style={{ backgroundColor: z.color || '#c4a35a' }}
+                    />
+                  </button>
                 ))}
               </div>
             </div>
@@ -463,7 +468,7 @@ export default function PublicEventZoneStudio3D({
         </div>
 
         {/* Barre de répartition segmentée */}
-        <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex border border-border">
+        <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden flex border border-border">
           {ticketingSummary.byZone.map((stat) => (
             <div
               key={stat.zone.id}

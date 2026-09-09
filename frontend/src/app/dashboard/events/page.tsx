@@ -3260,7 +3260,7 @@ Merci de confirmer votre présence :
  <h3 className="text-lg font-bold text-foreground">
  {editingGuestId ? "Modifier l'invité" : "Ajouter un invité"}
  </h3>
- <button onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }} className="text-muted hover:text-foreground transition">
+ <button type="button" onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }} className="text-muted hover:text-foreground transition" aria-label="Fermer la fenêtre">
  <XCircle className="w-6 h-6" />
  </button>
  </div>
@@ -3423,12 +3423,14 @@ Merci de confirmer votre présence :
  <h3 className="text-lg font-bold text-foreground">Importer des invités en bloc</h3>
  </div>
  <button 
+ type="button"
  onClick={() => {
  setShowImportModal(false);
  setParsedPreview(null);
  setImportText('');
  }} 
  className="text-muted hover:text-foreground transition"
+ aria-label="Fermer la fenêtre"
  >
  <XCircle className="w-6 h-6" />
  </button>
@@ -3664,7 +3666,7 @@ Merci de confirmer votre présence :
  </div>
  <h3 className="text-lg font-bold text-foreground">Envoyer une invitation groupée</h3>
  </div>
- <button onClick={() => setShowBulkInviteModal(false)} className="text-muted hover:text-foreground transition">
+ <button type="button" onClick={() => setShowBulkInviteModal(false)} className="text-muted hover:text-foreground transition" aria-label="Fermer la fenêtre">
  <XCircle className="w-6 h-6" />
  </button>
  </div>
@@ -4184,7 +4186,7 @@ Merci de confirmer votre présence :
  </div>
  <h3 className="text-lg font-bold text-foreground">Partager l'invitation</h3>
  </div>
- <button onClick={() => setSharingGuest(null)} className="text-muted hover:text-muted transition">
+ <button type="button" onClick={() => setSharingGuest(null)} className="text-muted hover:text-muted transition" aria-label="Fermer la fenêtre">
  <XCircle className="w-6 h-6" />
  </button>
  </div>
@@ -4274,8 +4276,9 @@ Merci de confirmer votre présence :
  </div>
  <div className="pt-4 border-t border-border-subtle flex justify-end">
  <button 
+ type="button"
  onClick={() => setSharingGuest(null)}
- className="px-6 py-2.5 bg-background hover:bg-surface-muted text-white font-semibold rounded-xl text-sm transition"
+ className="px-6 py-2.5 bg-surface-muted hover:bg-surface text-foreground font-semibold rounded-xl text-sm transition border border-border"
  >
  Fermer
  </button>

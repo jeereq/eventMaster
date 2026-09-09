@@ -852,7 +852,7 @@ export default function TablePlanner({
                       />
                       <span className="truncate max-w-[100px]">{zone.name}</span>
                       {stats && (
-                        <span className="text-[10px] text-muted tabular-nums">
+                        <span className="text-xs text-muted tabular-nums">
                           ({stats.tableCount} tbl.)
                         </span>
                       )}
@@ -914,7 +914,7 @@ export default function TablePlanner({
             </Room3DErrorBoundary>
 
             {/* Hint en haut du canvas */}
-            <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-foreground/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-[10px] font-semibold text-background">
+            <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 bg-foreground/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-background/20 text-xs font-semibold text-background">
               <Box className="w-3 h-3 text-primary" />
               <span>
                 {paintZoneId
@@ -933,13 +933,13 @@ export default function TablePlanner({
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-xs sm:text-sm text-foreground">{active3DTable.name}</span>
-                      <span className="text-[11px] font-medium text-muted">
+                      <span className="text-xs font-medium text-muted">
                         {assignedGuests.length}/{active3DTable.capacity} places assignées
                         {freeSeats > 0 ? ` (${freeSeats} libre${freeSeats > 1 ? 's' : ''})` : ' (complète)'}
                       </span>
                       {zone && (
                         <span
-                          className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-2xs"
+                          className="px-2 py-0.5 rounded text-xs font-bold text-white shadow-2xs"
                           style={{ backgroundColor: zone.color || DEFAULT_ZONE_COLOR }}
                         >
                           {zone.name}
@@ -947,20 +947,20 @@ export default function TablePlanner({
                       )}
                     </div>
                     {assignedGuests.length > 0 ? (
-                      <p className="text-[11px] text-muted truncate max-w-md sm:max-w-xl">
+                      <p className="text-xs text-muted truncate max-w-md sm:max-w-xl">
                         <span className="font-medium text-foreground">Invités : </span>
                         {assignedGuests.slice(0, 4).map((g) => g.name).join(', ')}
                         {assignedGuests.length > 4 ? ` et ${assignedGuests.length - 4} autre(s)` : ''}
                       </p>
                     ) : (
-                      <p className="text-[10px] text-muted italic">Aucun invité assigné à cette table pour l&apos;instant</p>
+                      <p className="text-xs text-muted italic">Aucun invité assigné à cette table pour l&apos;instant</p>
                     )}
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {zonePricing && pricingZones.length > 0 && (
-                      <div className="flex items-center gap-1 mr-1">
-                        <span className="text-[10px] text-muted hidden sm:inline">Zone :</span>
+                      <div className="flex items-center gap-0.5 sm:gap-1 mr-1">
+                        <span className="text-xs font-semibold text-muted hidden sm:inline">Zone :</span>
                         {pricingZones.map((z) => (
                           <button
                             key={z.id}
@@ -970,16 +970,20 @@ export default function TablePlanner({
                                 prev.map((t) => (t.id === active3DTable.id ? { ...t, pricingZoneId: z.id } : t))
                               )
                             }
-                            className={cn(
-                              'w-5 h-5 rounded-full border transition hover:scale-110 active:scale-95',
-                              active3DTable.pricingZoneId === z.id
-                                ? 'ring-2 ring-primary border-white'
-                                : 'border-border'
-                            )}
-                            style={{ backgroundColor: z.color || DEFAULT_ZONE_COLOR }}
+                            className="min-w-11 min-h-11 sm:min-w-8 sm:min-h-8 inline-flex items-center justify-center rounded-full touch-manipulation transition hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                             title={`Assigner à ${z.name}`}
                             aria-label={`Assigner la table ${active3DTable.name} à la zone ${z.name}`}
-                          />
+                          >
+                            <span
+                              className={cn(
+                                'w-5 h-5 rounded-full border transition',
+                                active3DTable.pricingZoneId === z.id
+                                  ? 'ring-2 ring-primary border-white shadow-2xs'
+                                  : 'border-border'
+                              )}
+                              style={{ backgroundColor: z.color || DEFAULT_ZONE_COLOR }}
+                            />
+                          </button>
                         ))}
                       </div>
                     )}
@@ -1350,23 +1354,23 @@ export default function TablePlanner({
  {zone ? ` · ${zone.name}` : ''}
  </p>
                           {paintZoneId && (
-                            <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                            <p className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
                               Cliquer pour assigner à la zone {pricingZones.find((z) => z.id === paintZoneId)?.name}
                             </p>
                           )}
  {assignedGuests.length > 0 ? (
  <div className="pt-1 border-t border-border space-y-0.5">
  {assignedGuests.slice(0, 5).map(({ seatIndex, name }) => (
- <p key={seatIndex} className="text-[10px] text-muted truncate">
+ <p key={seatIndex} className="text-xs text-muted truncate">
  #{seatIndex + 1} · {name}
  </p>
  ))}
  {assignedGuests.length > 5 && (
- <p className="text-[10px] text-muted">+{assignedGuests.length - 5} autres</p>
+ <p className="text-xs text-muted">+{assignedGuests.length - 5} autres</p>
  )}
  </div>
  ) : (
- <p className="text-[10px] text-muted">Table libre</p>
+ <p className="text-xs text-muted">Table libre</p>
  )}
  </div>
  </div>
@@ -1608,7 +1612,7 @@ export default function TablePlanner({
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-amber-500" />
                 <p className="text-sm font-bold text-foreground">Tarification & Répartition des zones de billetterie</p>
-                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <span className="text-xs uppercase font-extrabold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 tracking-wider">
                   Événement payant
                 </span>
  </div>
@@ -1660,7 +1664,7 @@ export default function TablePlanner({
             </div>
 
             {/* Segmented progress bar */}
-            <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex border border-border">
+            <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden flex border border-border">
               {ticketingSummary.byZone.map((stat) => (
                 <div
                   key={stat.zone.id}
@@ -1724,7 +1728,7 @@ export default function TablePlanner({
                     </div>
                   </div>
                   {isPaintActive ? (
-                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-black bg-primary-solid text-primary-foreground tracking-wide animate-pulse motion-reduce:animate-none">
+                    <span className="ml-1 px-1.5 py-0.5 rounded text-xs uppercase font-black bg-primary-solid text-primary-foreground tracking-wide animate-pulse motion-reduce:animate-none">
                       Actif
                     </span>
                   ) : (
@@ -2001,7 +2005,9 @@ export default function TablePlanner({
   <div className="relative mb-3">
     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
     <input
+      id="guest-sidebar-search"
       type="text"
+      aria-label="Rechercher un invité dans la liste"
       placeholder="Rechercher un invité..."
       value={guestSearch}
       onChange={e => setGuestSearch(e.target.value)}
@@ -2131,7 +2137,9 @@ export default function TablePlanner({
   <div className="relative">
     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
     <input
+      id="assign-guest-search"
       type="text"
+      aria-label="Filtrer les invités disponibles pour ce siège"
       placeholder="Rechercher..."
       value={guestSearch}
       onChange={e => setGuestSearch(e.target.value)}
@@ -2144,18 +2152,19 @@ export default function TablePlanner({
  ) : (
  filteredUnassignedGuests.map(g => (
  <button
+ type="button"
  key={g.id}
  onClick={() => handleAssignGuest(selectedSeat.tableId, selectedSeat.seatIndex, g.id)}
  className="w-full text-left p-2.5 bg-surface border border-border/80 hover:border-primary/40 rounded-[var(--radius-button)] shadow-sm hover:shadow transition flex items-center justify-between text-xs group"
  >
  <div>
  <span className="font-semibold text-foreground block leading-tight">{g.firstName} {g.lastName}</span>
- <span className="text-[10px] text-muted flex items-center gap-1 mt-0.5">
+ <span className="text-xs text-muted flex items-center gap-1 mt-0.5">
    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
    {g.category || 'Général'}
  </span>
  </div>
- <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+ <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
  Choisir
  </span>
  </button>
@@ -2189,8 +2198,9 @@ export default function TablePlanner({
 
  <div className="space-y-4">
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
+ <label htmlFor="new-table-name" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
  <input
+ id="new-table-name"
  type="text"
  placeholder="Ex: Table d'honneur, Table 1..."
  value={newTableName}
@@ -2201,8 +2211,9 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
+ <label htmlFor="new-table-shape" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
  <select
+ id="new-table-shape"
  value={newTableShape}
  onChange={(e) => setNewTableShape(e.target.value as TableShape)}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
@@ -2215,8 +2226,9 @@ export default function TablePlanner({
  </div>
 
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
+ <label htmlFor="new-table-capacity" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
  <input
+ id="new-table-capacity"
  type="number"
  min={2}
  max={24}
@@ -2229,8 +2241,9 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
+ <label htmlFor="new-chair-type" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
  <select
+ id="new-chair-type"
  value={newChairType}
  onChange={(e) => setNewChairType(e.target.value as ChairType)}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
@@ -2241,10 +2254,11 @@ export default function TablePlanner({
  </select>
  </div>
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
+ <label htmlFor="new-table-color" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
  <Palette className="w-3 h-3" /> Couleur
  </label>
  <input
+ id="new-table-color"
  type="color"
  value={newTableColor}
  onChange={(e) => setNewTableColor(e.target.value)}
@@ -2293,8 +2307,9 @@ export default function TablePlanner({
 
  <div className="space-y-4">
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
+ <label htmlFor="edit-table-name" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
  <input
+ id="edit-table-name"
  type="text"
  value={editingTable.name}
  onChange={(e) => setEditingTable({ ...editingTable, name: e.target.value })}
@@ -2304,8 +2319,9 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
+ <label htmlFor="edit-table-shape" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
  <select
+ id="edit-table-shape"
  value={editingTable.shape}
  onChange={(e) => setEditingTable({ ...editingTable, shape: e.target.value as TableShape })}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
@@ -2318,8 +2334,9 @@ export default function TablePlanner({
  </div>
 
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
+ <label htmlFor="edit-table-capacity" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
  <input
+ id="edit-table-capacity"
  type="number"
  min={2}
  max={24}
@@ -2332,8 +2349,9 @@ export default function TablePlanner({
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
+ <label htmlFor="edit-chair-type" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
  <select
+ id="edit-chair-type"
  value={editingTable.chairType || 'BANQUET'}
  onChange={(e) => setEditingTable({ ...editingTable, chairType: e.target.value })}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
@@ -2344,10 +2362,11 @@ export default function TablePlanner({
  </select>
  </div>
  <div>
- <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
+ <label htmlFor="edit-table-color" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
  <Palette className="w-3 h-3" /> Couleur
  </label>
  <input
+ id="edit-table-color"
  type="color"
  value={editingTable.tableColor || '#ffffff'}
  onChange={(e) => setEditingTable({ ...editingTable, tableColor: e.target.value })}
@@ -2356,9 +2375,12 @@ export default function TablePlanner({
  </div>
  </div>
  {caps.canRotate ? (
- <label className="block text-xs font-medium text-muted uppercase tracking-wider space-y-1.5">
+ <div>
+ <label htmlFor="edit-table-rotation" className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">
  Rotation ({editingTable.rotation || 0}°)
+ </label>
  <input
+ id="edit-table-rotation"
  type="range"
  min={0}
  max={345}
@@ -2367,7 +2389,7 @@ export default function TablePlanner({
  onChange={(e) => setEditingTable({ ...editingTable, rotation: Number(e.target.value) })}
  className="w-full"
  />
- </label>
+ </div>
  ) : null}
  {caps.canLock ? (
  <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted cursor-pointer">
@@ -2452,7 +2474,7 @@ export default function TablePlanner({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground">Scène & Devant</span>
-                    <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <span className="text-xs uppercase font-extrabold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 tracking-wider">
                       Populaire
                     </span>
                   </div>

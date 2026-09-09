@@ -123,11 +123,11 @@ export default function EventGuestGuidelinesEditor({
                     key={id}
                     type="button"
                     onClick={() => selectDressPreset(id)}
-                    className={`text-left p-2.5 rounded-xl border text-[10px] font-bold transition ${
- guidelines.dressCode.presetId === id
- ? 'bg-primary/10 border-primary text-primary ring-1 ring-primary/30'
- : 'border-border text-muted hover:bg-surface-muted'
- }`}
+                    className={`text-left p-2.5 rounded-xl border text-xs font-bold transition ${
+                      guidelines.dressCode.presetId === id
+                        ? 'bg-primary/10 border-primary text-primary ring-1 ring-primary/30'
+                        : 'border-border text-muted hover:bg-surface-muted'
+                    }`}
                   >
                     {DRESS_CODE_PRESETS[id].label}
                     <span className="block font-normal text-muted mt-0.5 line-clamp-2">
@@ -173,7 +173,7 @@ export default function EventGuestGuidelinesEditor({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted">Exemples</span>
-                  <button type="button" onClick={addExample} className="text-[10px] font-bold text-primary flex items-center gap-1">
+                  <button type="button" onClick={addExample} className="text-xs font-bold text-primary flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Ajouter
                   </button>
                 </div>
@@ -215,7 +215,7 @@ export default function EventGuestGuidelinesEditor({
                 type="button"
                 onClick={() => addRecommendation(type)}
                 disabled={guidelines.recommendations.some((r) => r.type === type)}
-                className="px-2.5 py-1 rounded-lg border border-border text-[10px] font-bold text-muted hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2.5 py-1.5 rounded-lg border border-border text-xs font-bold text-muted hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 + {RECOMMENDATION_PRESETS[type].label}
               </button>
@@ -223,7 +223,7 @@ export default function EventGuestGuidelinesEditor({
             <button
               type="button"
               onClick={() => addRecommendation('custom')}
-              className="px-2.5 py-1 rounded-lg border border-primary/30 text-[10px] font-bold text-primary hover:bg-primary/10"
+              className="px-2.5 py-1.5 rounded-lg border border-primary/30 text-xs font-bold text-primary hover:bg-primary/10"
             >
               + Autre
             </button>
@@ -332,7 +332,7 @@ export default function EventGuestGuidelinesEditor({
             )}
           </div>
         )}
-        <p className="text-[10px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           Variables invitation : {'{{dressCode}}'}, {'{{dressCodeShort}}'}, {'{{recommendations}}'}, {'{{guestNotes}}'}, {'{{guestGuidelines}}'}
         </p>
       </div>
@@ -378,7 +378,7 @@ function GuidelineImageField({
           type="button"
           disabled={full || uploading}
           onClick={() => inputRef.current?.click()}
-          className="text-[10px] font-bold text-primary inline-flex items-center gap-1 disabled:opacity-40"
+          className="text-xs font-bold text-primary inline-flex items-center gap-1 disabled:opacity-40"
         >
           {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImagePlus className="w-3 h-3" />}
           {full ? 'Maximum atteint' : 'Ajouter une image'}
