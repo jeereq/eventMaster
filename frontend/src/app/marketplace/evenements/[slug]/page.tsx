@@ -137,7 +137,8 @@ function MarketplaceEventDetailInner() {
         priceCaption={event && !event.paid ? 'Entrée libre' : undefined}
         hideBooking
         paymentInProgress={paymentInProgress}
-        inquireLabel={event?.paid ? 'Billet' : 'S’inscrire'}
+        listingKind="event"
+        inquireLabel={event?.paid ? 'Payer le billet' : 'Prendre mon billet'}
         details={event ? (
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-3 max-w-prose">

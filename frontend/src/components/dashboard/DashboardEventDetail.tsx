@@ -130,7 +130,8 @@ export default function DashboardEventDetail() {
       priceUnitLabel={event?.paid ? '/ personne' : null}
       priceCaption={event && !event.paid ? 'Entrée libre' : undefined}
       hideBooking
-      inquireLabel={event?.paid ? 'Billet' : 'S’inscrire'}
+      listingKind="event"
+      inquireLabel={event?.paid ? 'Payer le billet' : 'Prendre mon billet'}
       details={event ? (
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-3 max-w-prose">

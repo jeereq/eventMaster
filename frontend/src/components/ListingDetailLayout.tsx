@@ -10,7 +10,7 @@ import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
 import { CLOSE_PAYMENT_CONFIRM } from '@/lib/pendingTicketPayment';
 import { isVideoUrl, listingSrcSet, sizedMediaUrl, type MarketplaceActivityPreviewItem, type PublicService, type PublicVenue } from '@/lib/marketplace';
 import MarketplaceFormTabs, { listingTabPanelId, type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { ArrowLeft, Play } from 'lucide-react';
+import { ArrowLeft, Play, Ticket } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
 import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 import ListingActivityHighlights from '@/components/marketplace/ListingActivityHighlights';
@@ -219,33 +219,28 @@ export default function ListingDetailLayout({
     setMobileModalOpen(true);
   };
 
-  useEffect(() => {
-    const onInquire = () => {
-      if (window.matchMedia('(min-width: 1024px)').matches) return;
-      if (showCommerce) {
-        setMobileAction('inquire');
-        setMobileModalOpen(true);
-        return;
-      }
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const scrollToContact = (action: 'inquire' | 'book') => {
+    setMobileAction(action);
+    if (onTab && viewTab !== 'details') {
+      onTab('details');
+    }
+    const reduceMotion = typeof window !== 'undefined'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.setTimeout(() => {
       document.getElementById('listing-contact')?.scrollIntoView({
         behavior: reduceMotion ? 'auto' : 'smooth',
         block: 'start',
       });
+    }, 50);
+  };
+
+  useEffect(() => {
+    const onInquire = () => {
+      scrollToContact('inquire');
     };
     window.addEventListener(LISTING_INQUIRE_EVENT, onInquire);
     return () => window.removeEventListener(LISTING_INQUIRE_EVENT, onInquire);
-  }, [showCommerce]);
-
-  const scrollToContact = (action: 'inquire' | 'book') => {
-    setMobileAction(action);
-    const reduceMotion = typeof window !== 'undefined'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById('listing-contact')?.scrollIntoView({
-      behavior: reduceMotion ? 'auto' : 'smooth',
-      block: 'start',
-    });
-  };
+  }, []);
 
   const commerceTabClass = (active: boolean) =>
     cn(
@@ -539,7 +534,9 @@ export default function ListingDetailLayout({
           ? showCommerce
             ? 'pb-[calc(var(--em-listing-dock)+0.75rem)] md:pb-16 lg:pb-10'
             : 'pb-8 sm:pb-10'
-          : 'page-container pt-3 pb-20 sm:pt-5 lg:py-8 lg:pb-10',
+          : showCommerce
+            ? 'page-container pt-3 pb-36 sm:pt-5 sm:pb-32 lg:py-8 lg:pb-10'
+            : 'page-container pt-3 pb-20 sm:pt-5 lg:py-8 lg:pb-10',
       )}
     >
       <button
@@ -690,7 +687,15 @@ export default function ListingDetailLayout({
                 </div>
               ) : null}
 
-              {isLgUp && showCommerce ? (
+              {/* Sur mobile, afficher le bloc prix et le titre pour une identification immédiate de la billetterie / réservation */}
+              <div className="lg:hidden pt-4 border-t border-border space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  {listingKind === 'event' ? 'Billetterie & Inscription' : 'Demande & Réservation'}
+                </p>
+                {priceBlock}
+              </div>
+
+              {showCommerce ? (
                 commercePanel
               ) : preview ? (
                 <p className="text-xs text-muted leading-relaxed">
@@ -707,13 +712,13 @@ export default function ListingDetailLayout({
       {!error && showCommerce && (
         <div
           className={cn(
-            'lg:hidden fixed inset-x-0 z-30 border-t border-border bg-background/95 backdrop-blur-md',
+            'lg:hidden fixed inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-md shadow-[0_-8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
             embedded
-              ? 'bottom-[var(--em-dash-bottom-nav)] pb-3 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
-              : 'bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+              ? 'bottom-[var(--em-dash-bottom-nav)] pb-2.5 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+              : 'bottom-[var(--em-site-bottom-nav)] pb-2.5 md:bottom-0 md:pb-[max(0.75rem,env(safe-area-inset-bottom))]',
           )}
         >
-          <div className="page-container pt-3 flex items-center gap-3">
+          <div className="page-container pt-2.5 flex items-center gap-3">
             {loading ? (
               <>
                 <div className="min-w-0 flex-1">
@@ -726,12 +731,18 @@ export default function ListingDetailLayout({
               <>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate tabular-nums">{priceLabel}</p>
+                  {priceUnitLabel ? <p className="text-[11px] text-muted truncate">{priceUnitLabel}</p> : null}
                 </div>
-                <Button size="md" className="shrink-0 min-h-11" onClick={() => openMobileCommerce('inquire')}>
+                <Button
+                  size="md"
+                  className="shrink-0 min-h-11 font-bold shadow-xs flex items-center gap-1.5"
+                  onClick={() => scrollToContact('inquire')}
+                >
+                  <Ticket className="w-4 h-4" />
                   {inquireLabel}
                 </Button>
                 {showBooking ? (
-                <Button size="md" variant="secondary" className="shrink-0 min-h-11" onClick={() => openMobileCommerce('book')}>
+                <Button size="md" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>
                   {bookLabel}
                 </Button>
                 ) : null}
