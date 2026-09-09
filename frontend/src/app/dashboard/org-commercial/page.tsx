@@ -107,11 +107,11 @@ export default function OrgCommercialPage() {
  </div>
  </div>
 
- <div className="bg-primary text-white rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div className="bg-primary-solid text-primary-foreground rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
  <div>
- <p className="text-white/80 text-sm font-semibold">Votre code parrainage organisation</p>
+ <p className="text-primary-foreground/80 text-sm font-semibold">Votre code parrainage organisation</p>
  <p className="text-2xl font-black tracking-wider">{data.referralCode}</p>
- <p className="text-white/80 text-xs mt-1">
+ <p className="text-primary-foreground/80 text-xs mt-1">
  {Math.round(data.commissionRate * 100)} % au premier paiement, puis {Math.round((data.renewalCommissionRate ?? 0.2) * 100)} % sur les factures suivantes
  </p>
  </div>

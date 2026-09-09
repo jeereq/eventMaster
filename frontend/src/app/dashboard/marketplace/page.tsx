@@ -418,7 +418,7 @@ export default function MarketplaceDeskPage() {
           onClick={() => setTab('services')}
           className={cn(
             'px-3 py-1.5 rounded-full text-xs font-semibold border',
-            tab === 'services' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+            tab === 'services' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
           Prestations
@@ -428,7 +428,7 @@ export default function MarketplaceDeskPage() {
           onClick={() => setTab('rentals')}
           className={cn(
             'px-3 py-1.5 rounded-full text-xs font-semibold border',
-            tab === 'rentals' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+            tab === 'rentals' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
           Matériel & Équipements
@@ -438,7 +438,7 @@ export default function MarketplaceDeskPage() {
           onClick={() => setTab('inquiries')}
           className={cn(
             'px-3 py-1.5 rounded-full text-xs font-semibold border',
-            tab === 'inquiries' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+            tab === 'inquiries' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
           Demandes{newCount > 0 ? ` (${newCount})` : ''}
@@ -448,7 +448,7 @@ export default function MarketplaceDeskPage() {
           onClick={() => setTab('bookings')}
           className={cn(
             'px-3 py-1.5 rounded-full text-xs font-semibold border',
-            tab === 'bookings' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+            tab === 'bookings' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
           Réservations{bookings.length > 0 ? ` (${bookings.length})` : ''}

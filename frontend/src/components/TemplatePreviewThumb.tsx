@@ -43,7 +43,7 @@ export default function TemplatePreviewThumb({
  el.type === 'button' ? (
  <div
  key={i}
- className="text-[9px] font-bold text-white bg-primary px-2 py-0.5 rounded-md text-center mx-auto w-fit mt-1"
+ className="text-[9px] font-bold text-primary-foreground bg-primary-solid px-2 py-0.5 rounded-md text-center mx-auto w-fit mt-1"
  >
  {el.text?.slice(0, 24) || 'Bouton'}
  </div>

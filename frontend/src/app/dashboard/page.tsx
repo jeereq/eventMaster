@@ -4527,7 +4527,7 @@ function DashboardPageContent() {
                                         setModalApprovedAmount('');
                                       }}
                                       className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition ${selected
-                                          ? 'bg-primary text-white border-primary'
+                                          ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                                           : 'bg-white text-muted border-border hover:text-foreground'
                                         }`}
                                     >

@@ -655,7 +655,7 @@ export default function EventTicketCheckoutForm({
                                     !s.available
                                       ? 'opacity-40 cursor-not-allowed border-border text-muted'
                                       : active
-                                        ? 'bg-primary text-white border-primary shadow-xs'
+                                        ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                                         : 'border-border hover:border-primary text-foreground'
                                   }`}
                                   style={!active && zoneColor ? { borderColor: zoneColor } : undefined}

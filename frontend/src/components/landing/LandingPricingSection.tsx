@@ -380,7 +380,7 @@ export default function LandingPricingSection({
  )}
 
  {plan.badge && !plan.highlighted && (
- <div className="absolute top-4 right-4 bg-primary text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
+ <div className="absolute top-4 right-4 bg-primary-solid text-primary-foreground text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
  <Sparkles className="w-3 h-3" />
  {plan.badge}
  </div>

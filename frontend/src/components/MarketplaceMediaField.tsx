@@ -245,7 +245,7 @@ export default function MarketplaceMediaField({
                 <img src={currentUrl} alt={`Photo ${galleryIndex + 1} de la galerie`} className="w-full h-full object-contain bg-surface-muted" />
               )}
               {galleryIndex === 0 && (
-                <span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wider bg-primary text-white px-2 py-0.5 rounded-md">
+                <span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wider bg-primary-solid text-primary-foreground px-2 py-0.5 rounded-md">
                   Couverture
                 </span>
               )}
@@ -309,7 +309,7 @@ export default function MarketplaceMediaField({
                   </span>
                 )}
                 {i === 0 && (
-                  <span className="absolute bottom-0.5 left-0.5 text-[9px] font-bold bg-primary text-white px-1 rounded">
+                  <span className="absolute bottom-0.5 left-0.5 text-[9px] font-bold bg-primary-solid text-primary-foreground px-1 rounded">
                     1
                   </span>
                 )}

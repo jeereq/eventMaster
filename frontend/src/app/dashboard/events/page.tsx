@@ -3727,7 +3727,7 @@ Merci de confirmer votre présence :
  <button 
  type="submit"
  disabled={isBulkSending || bulkAudience.reachable === 0}
- className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-1.5 disabled:bg-primary/50 disabled:cursor-not-allowed"
+ className="flex-1 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-sm transition shadow-md shadow-primary-solid/10 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
  >
  {isBulkSending ? (
  <>

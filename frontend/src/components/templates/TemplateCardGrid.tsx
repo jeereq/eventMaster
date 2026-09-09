@@ -227,7 +227,7 @@ export default function TemplateCardGrid({
               <button
                 type="button"
                 onClick={() => onDuplicate(t)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl text-xs transition"
               >
                 <Copy className="w-4 h-4" />
                 {layout === 'grid' ? 'Utiliser ce modèle' : ''}

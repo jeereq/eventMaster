@@ -4420,7 +4420,7 @@ export default function TemplatesPage() {
  setCropPanY(0);
  setCropZoom(1);
  }}
- className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${cropAspectRatio === ratio.id ? 'bg-primary text-white shadow-md shadow-primary/10' : 'bg-surface-muted border border-border text-muted hover:bg-surface-muted'}`}
+ className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${cropAspectRatio === ratio.id ? 'bg-primary-solid text-primary-foreground shadow-md shadow-primary-solid/10' : 'bg-surface-muted border border-border text-muted hover:bg-surface-muted'}`}
  >
  {ratio.label}
  </button>

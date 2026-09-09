@@ -165,7 +165,7 @@ function FilterSelect({
 }) {
   return (
     <label className="space-y-1 min-w-0">
-      <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+      <span className="block text-xs font-semibold uppercase tracking-wider text-muted">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -190,7 +190,7 @@ function FilterPills({
 }) {
   return (
     <div className="space-y-1 min-w-0">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
       <div className="flex flex-wrap gap-1">
         {options.map((option) => (
           <button
@@ -198,9 +198,9 @@ function FilterPills({
             type="button"
             onClick={() => onChange(option.id)}
             className={cn(
-              'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition',
+              'px-2.5 py-1 rounded-[var(--radius-button)] text-xs font-semibold border transition',
               value === option.id
-                ? 'bg-primary text-white border-primary'
+                ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'border-border text-muted hover:text-foreground hover:border-primary/40',
             )}
           >
@@ -414,14 +414,14 @@ function PrepLane({
       ) : null}
 
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           {searching
             ? 'Recherche…'
             : `${isVenue ? venues.length : services.length} résultat${(isVenue ? venues.length : services.length) > 1 ? 's' : ''}`}
           {dateKey ? ' · disponibles à la date de l’événement' : ''}
         </p>
         {filterActive ? (
-          <button type="button" onClick={clearFilters} className="text-[11px] font-semibold text-primary hover:underline">
+          <button type="button" onClick={clearFilters} className="text-xs font-semibold text-primary hover:underline">
             Réinitialiser les filtres
           </button>
         ) : null}
@@ -516,12 +516,12 @@ function ResultRow({
       <Cover src={cover} fallback={icon} />
       <button type="button" onClick={onDetails} className="min-w-0 flex-1 text-left">
         <p className="text-sm font-semibold truncate">{title}</p>
-        <p className="text-[11px] text-muted truncate">{meta.filter(Boolean).join(' · ')}</p>
+        <p className="text-xs text-muted truncate">{meta.filter(Boolean).join(' · ')}</p>
       </button>
       {already ? (
         <Check className={cn('w-4 h-4 shrink-0', LANE_TONE[tone].check)} />
       ) : price != null ? (
-        <span className="text-[11px] font-semibold shrink-0 hidden sm:inline">{formatFc(price)}</span>
+        <span className="text-xs font-semibold shrink-0 hidden sm:inline">{formatFc(price)}</span>
       ) : null}
       <button
         type="button"
@@ -977,7 +977,7 @@ export default function EventPrepPanel({
                         className="min-w-0 text-left"
                       >
                         <p className="text-sm font-semibold truncate">{group.orgName}</p>
-                        <p className="text-[11px] text-muted">
+                        <p className="text-xs text-muted">
                           {offers.length} offre{offers.length > 1 ? 's' : ''}
                           {booked ? ` · ${booked} résa` : ''}
                           {missing ? ` · ${missing} sans devis` : ''}
@@ -1094,7 +1094,7 @@ export default function EventPrepPanel({
                 {tab.label}
                 <span className={cn(
                   'min-w-5 h-5 px-1 rounded-full text-[10px] inline-flex items-center justify-center',
-                  tab.count > 0 ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
+                  tab.count > 0 ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
                 )}>
                   {tab.count}
                 </span>
@@ -1349,7 +1349,7 @@ function PrepFinalComposer({
                   className={cn(
                     'px-2.5 py-1.5 rounded-[var(--radius-button)] text-[11px] font-semibold border transition',
                     venueSource === option.id
-                      ? 'bg-primary text-white border-primary'
+                      ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                       : 'border-border text-muted hover:text-foreground',
                   )}
                 >
@@ -1380,7 +1380,7 @@ function PrepFinalComposer({
                             onClick={() => setVendorPicks((prev) => ({ ...prev, [option.slug]: id }))}
                             className={cn(
                               'px-2 py-1 rounded-[var(--radius-button)] text-[10px] font-semibold border',
-                              pick === id ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+                              pick === id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
                             )}
                           >
                             {caption}
@@ -1471,7 +1471,7 @@ function SelectedCard({
       <Cover src={cover} fallback={icon} />
       <button type="button" onClick={onDetails} className="min-w-0 flex-1 text-left">
         <p className="text-sm font-semibold truncate">{title}</p>
-        <p className="text-[11px] text-muted truncate">
+        <p className="text-xs text-muted truncate">
           {meta.filter(Boolean).join(' · ')}
           {price != null ? ` · ${formatFc(price)}` : ''}
         </p>

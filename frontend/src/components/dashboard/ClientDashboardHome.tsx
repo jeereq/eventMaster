@@ -318,7 +318,7 @@ export default function ClientDashboardHome() {
               />
               <button
                 type="submit"
-                className="absolute right-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary/90 transition flex items-center gap-1.5 touch-manipulation cursor-pointer"
+                className="absolute right-2 px-4 py-2 rounded-lg bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer"
               >
                 <span>Rechercher</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -328,28 +328,28 @@ export default function ClientDashboardHome() {
 
           {/* Suggestions de recherche en 1 clic */}
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-            <span className="text-[11px] font-medium text-muted mr-1">Idées rapides :</span>
+            <span className="text-xs font-medium text-muted mr-1">Idées rapides :</span>
             <Link
               href="/dashboard/catalogue?kind=venue&q=Gombe"
-              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
+              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition"
             >
               Salles à la Gombe
             </Link>
             <Link
               href="/dashboard/catalogue?kind=service&cat=caterer"
-              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
+              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition"
             >
               Traiteurs &amp; Buffets
             </Link>
             <Link
               href="/dashboard/catalogue?kind=service&cat=dj"
-              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-[11px] font-medium text-foreground transition"
+              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition"
             >
               DJ &amp; Sonorisation
             </Link>
             <Link
               href="/dashboard/catalogue?tab=plan&planView=ai"
-              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-[11px] font-bold text-primary transition inline-flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" />
               Simulateur de pack
@@ -586,7 +586,7 @@ export default function ClientDashboardHome() {
 
           <Link
             href="/dashboard/billing"
-            className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition shadow-xs shadow-primary/20 flex items-center gap-1.5 shrink-0"
+            className="px-4 py-2.5 rounded-xl bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold transition shadow-xs shadow-primary/20 flex items-center gap-1.5 shrink-0"
           >
             <span>Choisir un forfait</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -602,7 +602,7 @@ export default function ClientDashboardHome() {
             <p className="font-bold text-foreground">
               Information sur votre type de compte : Compte Client Gratuit
             </p>
-            <p className="text-[11px] text-muted leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               Votre compte actuel est un <strong>Compte Client Particulier</strong> (gratuit : recherche de prestataires, devis, billets, simulations IA). Pour organiser des événements ou publier des offres, contactez le support EventMaster : <strong>seul un Super Admin peut changer le type de ce compte</strong>. Vous pouvez aussi ouvrir un compte organisateur ou prestataire distinct à l’inscription.
             </p>
           </div>
@@ -613,19 +613,19 @@ export default function ClientDashboardHome() {
           <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                   Particulier
                 </span>
                 <span className="text-xs font-bold text-foreground">Dès 60 000 FC / trim.</span>
               </div>
               <h4 className="text-sm font-bold text-foreground">Mariages & Fêtes privées</h4>
-              <p className="text-[11px] text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 Formules 50, 100, 200 ou +200 invités valables 90 jours. Invitations WhatsApp, QR codes d&apos;accès et éditeur 2D/3D complet inclus.
               </p>
             </div>
             <Link
               href="/dashboard/billing?plan=PERSONAL_100"
-              className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
+              className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
             >
               Voir Particulier 100 <ArrowRight className="w-3 h-3" />
             </Link>
@@ -634,19 +634,19 @@ export default function ClientDashboardHome() {
           <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between h-full gap-3">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20 text-primary">
+                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20 text-primary">
                   Professionnel
                 </span>
                 <span className="text-xs font-bold text-foreground">Dès 30 000 FC / mois</span>
               </div>
               <h4 className="text-sm font-bold text-foreground">Business & Premium</h4>
-              <p className="text-[11px] text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 De 150 à 1 000 invités par mois. Idéal pour plusieurs événements par an, avec OCR de texte, desk d&apos;accueil smartphone et billetterie en ligne.
               </p>
             </div>
             <Link
               href="/dashboard/billing?plan=STANDARD"
-              className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
+              className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
             >
               Découvrir Business <ArrowRight className="w-3 h-3" />
             </Link>
@@ -695,7 +695,7 @@ export default function ClientDashboardHome() {
           </Link>
           <Link
             href="/dashboard/catalogue"
-            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs"
+            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs"
           >
             Explorer le catalogue
           </Link>

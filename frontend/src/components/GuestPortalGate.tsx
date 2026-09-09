@@ -119,7 +119,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
           <button
             type="button"
             onClick={() => void retryLegalStatus()}
-            className="inline-flex items-center justify-center min-h-11 px-4 rounded-[var(--radius-button)] bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="inline-flex items-center justify-center min-h-11 px-4 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-sm font-semibold hover:bg-primary-solid-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             Réessayer
           </button>

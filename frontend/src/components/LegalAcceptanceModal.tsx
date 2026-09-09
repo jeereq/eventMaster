@@ -45,7 +45,7 @@ export default function LegalAcceptanceModal({
       containerClassName="z-[200]"
       title={
         <span className="flex items-center gap-3">
-          <span className="p-2 rounded-[var(--radius-button)] bg-primary text-white shrink-0">
+          <span className="p-2 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </span>
           {title}

@@ -852,7 +852,7 @@ export default function EventConfigForm({
                     className={cn(
                       'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
                       isCurrent
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary-solid text-primary-foreground'
                         : 'bg-surface text-muted border border-border'
                     )}
                   >

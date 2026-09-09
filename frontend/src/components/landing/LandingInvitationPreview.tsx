@@ -268,7 +268,7 @@ function renderLegacyElement(el: LandingTemplate['elements'][number], compact?: 
     return (
       <div className="flex justify-center my-1">
         <span
-          className={`inline-block rounded-xl font-bold text-white bg-primary shadow-sm ${
+          className={`inline-block rounded-xl font-bold text-primary-foreground bg-primary-solid shadow-sm ${
             compact ? 'px-3 py-1 text-xs' : 'px-5 py-2.5 text-sm'
           }`}
         >

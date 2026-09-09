@@ -85,7 +85,7 @@ function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
             className={cn(
               'px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border',
               i <= idx
-                ? 'bg-primary text-white border-primary'
+                ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'border-border text-muted bg-surface',
             )}
           >

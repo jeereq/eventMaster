@@ -176,7 +176,7 @@ export default function MarketplaceInquiriesPanel({
           className={cn(
             'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
             !status || status === 'all'
-              ? 'bg-primary text-white border-primary'
+              ? 'bg-primary-solid text-primary-foreground border-primary-solid'
               : 'border-border text-muted hover:text-foreground',
           )}
         >

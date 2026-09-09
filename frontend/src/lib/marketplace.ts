@@ -1098,11 +1098,11 @@ export function catalogueKindAccent(kind?: CatalogueDisplayKind | string | null)
     };
   }
   return {
-    iconBox: 'bg-primary text-white',
-    badge: 'bg-primary text-white',
+    iconBox: 'bg-primary-solid text-primary-foreground',
+    badge: 'bg-primary-solid text-primary-foreground',
     cover: 'bg-primary/12 text-primary',
     border: 'border-primary/30 hover:border-primary/60',
-    bar: 'bg-primary',
+    bar: 'bg-primary-solid',
   };
 }
 

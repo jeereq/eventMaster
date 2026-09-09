@@ -308,7 +308,7 @@ export default function EventGuestGuidelinesEditor({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="w-full py-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground rounded-xl text-xs font-bold flex items-center justify-center gap-2"
           >
             {saving ? <span>Enregistrement…</span> : <><Save className="w-4 h-4" /> Enregistrer les infos invités</>}
           </button>

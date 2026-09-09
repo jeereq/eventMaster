@@ -204,11 +204,22 @@ export default function LandingInvitationAiGenerator({
   const [dragOver, setDragOver] = useState(false);
   const [previewTab, setPreviewTab] = useState<'card' | 'artwork' | 'details'>('card');
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
+  const copyColorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [embedText, setEmbedText] = useState(false);
   const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
   const [contextSource, setContextSource] = useState<InvitationContextSource>('none');
   const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (copyColorTimeoutRef.current) clearTimeout(copyColorTimeoutRef.current);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      if (stageTimeoutRef.current) clearTimeout(stageTimeoutRef.current);
+    };
+  }, []);
 
   const logAction = (
     type: FormActionItem['type'],
@@ -263,7 +274,11 @@ export default function LandingInvitationAiGenerator({
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       void navigator.clipboard.writeText(color);
       setCopiedColorKey(key);
-      setTimeout(() => setCopiedColorKey(null), 1800);
+      if (copyColorTimeoutRef.current) clearTimeout(copyColorTimeoutRef.current);
+      copyColorTimeoutRef.current = setTimeout(() => {
+        setCopiedColorKey(null);
+        copyColorTimeoutRef.current = null;
+      }, 1800);
     }
   };
 
@@ -391,7 +406,9 @@ export default function LandingInvitationAiGenerator({
   };
 
   const scrollResultIntoView = () => {
-    window.setTimeout(() => {
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = window.setTimeout(() => {
+      scrollTimeoutRef.current = null;
       const el = resultRef.current;
       if (!el) return;
       const reduced =
@@ -481,7 +498,8 @@ export default function LandingInvitationAiGenerator({
             ? 'Composition de la carte et de la typographie…'
             : 'Composition de la carte à partir du brief…',
     );
-    const tick = window.setTimeout(() => {
+    if (stageTimeoutRef.current) clearTimeout(stageTimeoutRef.current);
+    stageTimeoutRef.current = window.setTimeout(() => {
       if (seq !== generationSeq.current) return;
       setActiveStep(2);
       setStage(
@@ -533,7 +551,10 @@ export default function LandingInvitationAiGenerator({
       setActiveStep(0);
       setStage(null);
     } finally {
-      window.clearTimeout(tick);
+      if (stageTimeoutRef.current) {
+        clearTimeout(stageTimeoutRef.current);
+        stageTimeoutRef.current = null;
+      }
       if (seq === generationSeq.current) {
         setBusy(false);
       }

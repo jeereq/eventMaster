@@ -281,10 +281,10 @@ export default function OrganizerDashboardHome({
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <Link
             href="/dashboard/events"
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Événements</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Événements</span>
               <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                 <Calendar className="w-4 h-4" />
               </div>
@@ -293,16 +293,16 @@ export default function OrganizerDashboardHome({
               <p className="text-2xl font-black text-foreground tracking-tight">
                 {usage ? formatQuota(usage.events, limits?.maxEvents) : events.length}
               </p>
-              <p className="text-[11px] text-muted mt-0.5">Événements créés</p>
+              <p className="text-xs text-muted mt-0.5">Événements créés</p>
             </div>
           </Link>
 
           <Link
             href="/dashboard/events"
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Invités</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Invités</span>
               <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
                 <Users className="w-4 h-4" />
               </div>
@@ -311,16 +311,16 @@ export default function OrganizerDashboardHome({
               <p className="text-2xl font-black text-foreground tracking-tight">
                 {usage ? formatQuota(usage.guests, limits?.maxGuests) : '—'}
               </p>
-              <p className="text-[11px] text-muted mt-0.5">Invités enregistrés</p>
+              <p className="text-xs text-muted mt-0.5">Invités enregistrés</p>
             </div>
           </Link>
 
           <Link
             href={isVendor ? '/dashboard/marketplace' : '/dashboard/rooms'}
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">
                 {isVendor ? 'Prestations' : 'Salles & Plans'}
               </span>
               <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
@@ -333,7 +333,7 @@ export default function OrganizerDashboardHome({
                   ? (usage ? formatQuota(usage.services, limits?.maxServices) : '—')
                   : (usage ? formatQuota(usage.rooms, limits?.maxRooms) : '—')}
               </p>
-              <p className="text-[11px] text-muted mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 {isVendor ? 'Prestations vitrine' : 'Plans 2D/3D créés'}
               </p>
             </div>
@@ -341,10 +341,10 @@ export default function OrganizerDashboardHome({
 
           <Link
             href="/dashboard/bookings"
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Devis & Packs</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis & Packs</span>
               <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
                 <Wallet className="w-4 h-4" />
               </div>
@@ -354,13 +354,13 @@ export default function OrganizerDashboardHome({
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />
                 Actifs
               </p>
-              <p className="text-[11px] text-muted mt-0.5">Demandes & réservations</p>
+              <p className="text-xs text-muted mt-0.5">Demandes & réservations</p>
             </div>
           </Link>
 
           <Link
             href={isManager ? '/dashboard/invoices' : '/dashboard/billing'}
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 dark:bg-slate-900/80 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1"
+            className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-muted uppercase tracking-wider">
@@ -641,9 +641,9 @@ export default function OrganizerDashboardHome({
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <Link
                   href="/dashboard/catalogue?tab=plan&planView=ai"
-                  className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary text-white hover:bg-primary-hover transition inline-flex items-center gap-1"
+                  className="text-xs font-bold px-2.5 py-1 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition inline-flex items-center gap-1"
                 >
-                  <Sparkles className="w-2.5 h-2.5" /> Simuler 3 Packs IA
+                  <Sparkles className="w-3 h-3" /> Simuler 3 Packs IA
                 </Link>
                 <Link
                   href="/dashboard/catalogue?kind=venue"
@@ -780,7 +780,7 @@ export default function OrganizerDashboardHome({
               </p>
               <Link
                 href="/dashboard/events"
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg text-sm transition"
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-lg text-sm transition"
               >
                 Créer mon premier événement
               </Link>
@@ -922,7 +922,7 @@ export default function OrganizerDashboardHome({
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <Link
                 href="/dashboard/billing"
-                className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition shadow-xs shadow-primary/20 flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold transition shadow-xs shadow-primary/20 flex items-center gap-1.5"
               >
                 <span>Changer de formule</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -936,16 +936,16 @@ export default function OrganizerDashboardHome({
             <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 hover:border-emerald-500/40 transition">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                     Particulier
                   </span>
-                  <span className="text-[11px] font-bold text-foreground">Dès 60 000 FC</span>
+                  <span className="text-xs font-bold text-foreground">Dès 60 000 FC</span>
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Mariages & Célébrations</h4>
-                  <p className="text-[11px] text-muted mt-0.5">Pour événements privés sans abonnement mensuel contraignant.</p>
+                  <p className="text-xs text-muted mt-0.5">Pour événements privés sans abonnement mensuel contraignant.</p>
                 </div>
-                <div className="space-y-1 text-[11px] text-muted pt-1">
+                <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Particulier 50</strong> : 60 000 FC / trim.</p>
                   <p>• <strong>Particulier 100</strong> : 90 000 FC / trim.</p>
                   <p>• <strong>Particulier 200</strong> : 120 000 FC / trim.</p>
@@ -954,7 +954,7 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
+                className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
                 Découvrir Particulier <ArrowRight className="w-3 h-3" />
               </Link>
@@ -964,16 +964,16 @@ export default function OrganizerDashboardHome({
             <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between h-full gap-3 shadow-xs">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary/20 text-primary">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-primary/20 text-primary">
                     Populaire · B2B
                   </span>
-                  <span className="text-[11px] font-bold text-foreground">Dès 30 000 FC</span>
+                  <span className="text-xs font-bold text-foreground">Dès 30 000 FC</span>
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Business & Premium</h4>
-                  <p className="text-[11px] text-muted mt-0.5">Pour organisateurs réguliers, entreprises & agences.</p>
+                  <p className="text-xs text-muted mt-0.5">Pour organisateurs réguliers, entreprises & agences.</p>
                 </div>
-                <div className="space-y-1 text-[11px] text-muted pt-1">
+                <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Business</strong> : 30 000 FC / mois (150 inv.)</p>
                   <p>• <strong>Premium</strong> : 55 000 FC / mois (500 inv.)</p>
                   <p>• <strong>Premium Plus</strong> : 85 000 FC / mois (1 000 inv.)</p>
@@ -982,7 +982,7 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
+                className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
               >
                 Passer en Business <ArrowRight className="w-3 h-3" />
               </Link>
@@ -992,16 +992,16 @@ export default function OrganizerDashboardHome({
             <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 hover:border-amber-500/40 transition">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300">
                     Grand Volume
                   </span>
-                  <span className="text-[11px] font-bold text-foreground">Dès 350 000 FC</span>
+                  <span className="text-xs font-bold text-foreground">Dès 350 000 FC</span>
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Enterprise & Salons</h4>
-                  <p className="text-[11px] text-muted mt-0.5">Concerts, salons, festivals et gestion multi-agences.</p>
+                  <p className="text-xs text-muted mt-0.5">Concerts, salons, festivals et gestion multi-agences.</p>
                 </div>
-                <div className="space-y-1 text-[11px] text-muted pt-1">
+                <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Enterprise</strong> : 350 000 FC / mois (3 500 inv.)</p>
                   <p>• <strong>Enterprise Pro</strong> : 525 000 FC / mois (5 000 inv.)</p>
                   <p>• <strong>Enterprise Unlimited</strong> : 700 000 FC / mois</p>
@@ -1010,7 +1010,7 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-amber-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
+                className="text-xs font-bold text-amber-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
                 Voir Enterprise <ArrowRight className="w-3 h-3" />
               </Link>
@@ -1020,16 +1020,16 @@ export default function OrganizerDashboardHome({
             <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 hover:border-purple-500/40 transition">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300">
                     Vitrine Marketplace
                   </span>
-                  <span className="text-[11px] font-bold text-foreground">Dès 9 900 FC</span>
+                  <span className="text-xs font-bold text-foreground">Dès 9 900 FC</span>
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Salles & Prestataires</h4>
-                  <p className="text-[11px] text-muted mt-0.5">Visibilité maximale sur le catalogue en RDC.</p>
+                  <p className="text-xs text-muted mt-0.5">Visibilité maximale sur le catalogue en RDC.</p>
                 </div>
-                <div className="space-y-1 text-[11px] text-muted pt-1">
+                <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Forfait Prestataire</strong> : 9 900 FC / mois</p>
                   <p>• <strong>Forfait Salle</strong> : 14 900 FC / mois</p>
                   <p>• <strong>Forfait Catalogue Mixte</strong> : 19 900 FC / mois</p>
@@ -1038,7 +1038,7 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/billing"
-                className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
+                className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
                 Découvrir Vitrine <ArrowRight className="w-3 h-3" />
               </Link>
@@ -1076,7 +1076,7 @@ export default function OrganizerDashboardHome({
           </Link>
           <Link
             href={isManager ? '/dashboard/publications' : '/dashboard/catalogue'}
-            className="flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center text-center px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-xs"
+            className="flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center text-center px-3.5 py-2 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs"
           >
             {isManager ? 'Réalisations' : 'Explorer le marketplace'}
           </Link>

@@ -86,7 +86,7 @@ export default function SubscriptionDiscountRequestModal({
             aria-pressed={mode === 'percent'}
             onClick={() => setMode('percent')}
             className={`flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold ${
-              mode === 'percent' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              mode === 'percent' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted'
             }`}
           >
             <Percent className="w-3.5 h-3.5" /> Pourcentage
@@ -96,7 +96,7 @@ export default function SubscriptionDiscountRequestModal({
             aria-pressed={mode === 'amount'}
             onClick={() => setMode('amount')}
             className={`flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold ${
-              mode === 'amount' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              mode === 'amount' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted'
             }`}
           >
             <Wallet className="w-3.5 h-3.5" /> Montant souhaité

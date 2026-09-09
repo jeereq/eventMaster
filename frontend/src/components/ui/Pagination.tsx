@@ -148,7 +148,7 @@ export default function Pagination({
             className={cn(
               'min-w-8 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
               safePage === p
-                ? 'bg-primary text-white shadow-sm'
+                ? 'bg-primary-solid text-primary-foreground shadow-sm'
                 : 'border border-border bg-surface text-muted hover:bg-surface-muted',
             )}
             aria-current={safePage === p ? 'page' : undefined}

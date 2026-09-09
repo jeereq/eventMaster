@@ -1600,7 +1600,7 @@ export default function TablePlanner({
                     </div>
                   </div>
                   {isPaintActive ? (
-                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-black bg-primary text-white tracking-wide animate-pulse motion-reduce:animate-none">
+                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-black bg-primary-solid text-primary-foreground tracking-wide animate-pulse motion-reduce:animate-none">
                       Actif
                     </span>
                   ) : (
@@ -1640,7 +1640,7 @@ export default function TablePlanner({
               <button
                 type="button"
                 onClick={() => setPaintZoneId(null)}
-                className="px-3 py-1.5 min-h-[32px] rounded text-xs font-semibold bg-primary text-white hover:bg-primary-hover transition shrink-0"
+                className="px-3 py-1.5 min-h-[32px] rounded text-xs font-semibold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shrink-0"
               >
                 Quitter (Échap)
               </button>

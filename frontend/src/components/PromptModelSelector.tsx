@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages, Crown } from 'lucide-react';
 import {
   INVITATION_PROMPT_MODELS,
@@ -40,9 +40,16 @@ export default function PromptModelSelector({
     defaultCategory ?? (intent === 'clone' ? 'clone' : 'coutumier');
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>(initialCategory);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPanel = layout === 'panel';
   const uid = useId();
   const modelsPanelId = `${uid}-prompt-models`;
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setActiveCategory(defaultCategory ?? (intent === 'clone' ? 'clone' : 'coutumier'));
@@ -57,7 +64,11 @@ export default function PromptModelSelector({
     if (disabled) return;
     onSelectPrompt(model.prompt);
     setCopiedId(model.id);
-    setTimeout(() => setCopiedId(null), 1800);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopiedId(null);
+      copyTimeoutRef.current = null;
+    }, 1800);
   };
 
   const categoryTabId = (id: CategoryFilter) => `${uid}-cat-${id}`;

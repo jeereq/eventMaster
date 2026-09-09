@@ -249,9 +249,9 @@ export default function EventWorkflowPanel({
                     className={cn(
                       'w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-2xs',
                       isActive
-                        ? 'border-primary bg-primary text-white motion-reduce:scale-100 scale-105'
+                        ? 'border-primary-solid bg-primary-solid text-primary-foreground motion-reduce:scale-100 scale-105'
                         : isCompleted
-                          ? 'border-primary bg-primary text-white'
+                          ? 'border-primary-solid bg-primary-solid text-primary-foreground'
                           : isCurrent
                             ? 'border-primary/50 text-primary bg-primary/10'
                             : 'border-border bg-surface-muted text-muted',

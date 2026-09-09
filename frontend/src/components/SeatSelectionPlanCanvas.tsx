@@ -366,7 +366,7 @@ export default function SeatSelectionPlanCanvas({
                           'absolute w-8 h-8 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center text-[10px] sm:text-[8px] font-bold transition z-20 touch-manipulation active:scale-95 before:content-[\'\'] before:absolute before:-inset-2.5 before:rounded-full',
                           !seat.available && 'opacity-35 cursor-not-allowed bg-muted text-muted border-border',
                           seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
-                          isSelected && 'bg-primary text-white border-primary scale-110 shadow-md font-extrabold ring-2 ring-primary/40',
+                          isSelected && 'bg-primary-solid text-primary-foreground border-primary-solid scale-110 shadow-md font-extrabold ring-2 ring-primary-solid/40',
                         )}
                         title={
                           seat.available

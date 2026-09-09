@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Link2, Check } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { buildReferralRegisterUrl } from '@/lib/referralLink';
@@ -12,11 +12,22 @@ interface ReferralShareButtonsProps {
 
 export default function ReferralShareButtons({ referralCode, className = '' }: ReferralShareButtonsProps) {
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const registerUrl = useMemo(() => buildReferralRegisterUrl(referralCode), [referralCode]);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    };
+  }, []);
 
   const flash = (kind: 'code' | 'link') => {
     setCopied(kind);
-    window.setTimeout(() => setCopied(null), 2000);
+    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    flashTimeoutRef.current = window.setTimeout(() => {
+      setCopied(null);
+      flashTimeoutRef.current = null;
+    }, 2000);
   };
 
   const copyCode = async () => {

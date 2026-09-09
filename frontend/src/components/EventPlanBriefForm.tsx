@@ -64,7 +64,7 @@ function FieldSelect({
       >
         {children}
       </select>
-      {hint ? <span className="block text-[11px] text-muted leading-relaxed">{hint}</span> : null}
+      {hint ? <span className="block text-xs text-muted leading-relaxed">{hint}</span> : null}
     </label>
   );
 }
@@ -269,7 +269,7 @@ export default function EventPlanBriefForm({
             : ' (toute l’enveloppe).'}
         </p>
         {rows.length > 0 ? (
-          <p className="text-[11px] text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             Répartition actuelle : {rows.map((row) => `${row.label} ${row.pct} % → ${formatFc(row.amountFc)}`).join(' · ')}
             {shareSum !== 100 ? ` · total ${shareSum} % (${formatFc(allocated)}) — rééquilibré à 100 % au lancement.` : ''}
           </p>
@@ -278,7 +278,7 @@ export default function EventPlanBriefForm({
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted">Salle</p>
-        <p className="text-[11px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           Choisissez si un lieu doit figurer dans chaque pack. « Si ça rentre » ajoute une salle seulement s’il reste de l’argent.
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -294,7 +294,7 @@ export default function EventPlanBriefForm({
               onClick={() => setIncludeVenue(id)}
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-semibold border',
-                brief.includeVenue === id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                brief.includeVenue === id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
               )}
             >
               {label}
@@ -305,7 +305,7 @@ export default function EventPlanBriefForm({
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted">Prestataires</p>
-        <p className="text-[11px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           Traiteur, photo, DJ… Un clic fait tourner : <strong className="text-foreground">obligatoire</strong> → <strong className="text-foreground">si ça rentre</strong> → <strong className="text-foreground">exclu</strong>.
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -318,8 +318,8 @@ export default function EventPlanBriefForm({
                 onClick={() => setSlot(category)}
                 title={SLOT_HINT[priority]}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
-                  priority === 'required' && 'bg-primary text-white border-primary',
+                  'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
+                  priority === 'required' && 'bg-primary-solid text-primary-foreground border-primary-solid',
                   priority === 'optional' && 'bg-primary/10 text-primary border-primary/40',
                   priority === 'excluded' && 'bg-surface text-muted border-border line-through decoration-muted/70',
                 )}
@@ -333,7 +333,7 @@ export default function EventPlanBriefForm({
         {suggestedTrades.length < SERVICE_TRADE_CATEGORIES.length ? (
           <button
             type="button"
-            className="text-[11px] font-semibold text-primary"
+            className="text-xs font-semibold text-primary"
             onClick={() => setShowAllTrades((value) => !value)}
           >
             {showAllTrades ? 'Masquer les autres prestataires' : 'Afficher tous les prestataires'}
@@ -343,7 +343,7 @@ export default function EventPlanBriefForm({
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted">Matériel & Équipements</p>
-        <p className="text-[11px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           Mobilier, sonorisation, véhicules, tentes, habits. Même logique, séparée des prestataires de service.
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -356,8 +356,8 @@ export default function EventPlanBriefForm({
                 onClick={() => setSlot(category)}
                 title={SLOT_HINT[priority]}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
-                  priority === 'required' && 'bg-primary text-white border-primary',
+                  'px-2.5 py-1 rounded-full text-xs font-semibold border transition',
+                  priority === 'required' && 'bg-primary-solid text-primary-foreground border-primary-solid',
                   priority === 'optional' && 'bg-primary/10 text-primary border-primary/40',
                   priority === 'excluded' && 'bg-surface text-muted border-border line-through decoration-muted/70',
                 )}
@@ -371,7 +371,7 @@ export default function EventPlanBriefForm({
         {suggestedRentals.length < SERVICE_RENTAL_CATEGORIES.length ? (
           <button
             type="button"
-            className="text-[11px] font-semibold text-primary"
+            className="text-xs font-semibold text-primary"
             onClick={() => setShowAllRentals((value) => !value)}
           >
             {showAllRentals ? 'Masquer les autres équipements' : 'Afficher tout le matériel & équipements'}
@@ -414,13 +414,13 @@ export default function EventPlanBriefForm({
                   Preset {eventTypeLabel(brief.eventType)}
                 </button>
               </div>
-              <p className="text-[11px] text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 Chaque curseur fixe la part de l’enveloppe utile. Le pourcentage et le montant exact s’affichent ensemble.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {rows.map((row) => (
                   <label key={row.key} className="space-y-1">
-                    <span className="flex justify-between gap-2 text-[11px] font-semibold text-muted">
+                    <span className="flex justify-between gap-2 text-xs font-semibold text-muted">
                       <span>{row.label}</span>
                       <span>{row.pct} % · {formatFc(row.amountFc)}</span>
                     </span>
@@ -495,7 +495,7 @@ export default function EventPlanBriefForm({
 
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted">Équipements souhaités pour la salle</p>
-              <p className="text-[11px] text-muted leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 Cochez ce que vous voulez (parking, groupe électrogène…). Selon le champ ci-dessus, ce sera un plus ou un filtre bloquant.
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -511,8 +511,8 @@ export default function EventPlanBriefForm({
                           : [...brief.venueAmenities, item.id],
                       })}
                       className={cn(
-                        'px-2.5 py-1 rounded-full text-[11px] font-semibold border',
-                        active ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                        'px-2.5 py-1 rounded-full text-xs font-semibold border',
+                        active ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
                       )}
                     >
                       {item.label}
@@ -552,14 +552,14 @@ export default function EventPlanBriefForm({
                 <button
                   type="button"
                   onClick={() => onLoadBrief(item)}
-                  className="px-2.5 py-1 text-[11px] font-semibold hover:text-primary"
+                  className="px-2.5 py-1 text-xs font-semibold hover:text-primary"
                 >
                   {item.name}
                 </button>
                 <button
                   type="button"
                   onClick={() => void onDeleteBrief(item.id)}
-                  className="px-2 text-[11px] text-muted hover:text-rose-600"
+                  className="px-2 text-xs text-muted hover:text-rose-600"
                   aria-label={`Supprimer ${item.name}`}
                 >
                   ×

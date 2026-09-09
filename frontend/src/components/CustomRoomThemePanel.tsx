@@ -75,12 +75,12 @@ export default function CustomRoomThemePanel({
  return (
  <div className="space-y-2 pt-2 border-t border-border">
  <div className="flex items-center justify-between gap-2">
- <p className="text-[10px] font-bold uppercase text-muted">Thèmes personnalisés</p>
+ <p className="text-xs font-bold uppercase text-muted">Thèmes personnalisés</p>
  <div className="flex gap-1">
  <button
  type="button"
  onClick={startFromActive}
- className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border text-muted text-[10px] font-bold hover:bg-white"
+ className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border text-muted text-xs font-bold hover:bg-surface-muted transition"
  title="Reprendre le thème actif"
  >
  <Copy className="w-3 h-3" />
@@ -89,7 +89,7 @@ export default function CustomRoomThemePanel({
  <button
  type="button"
  onClick={() => setEditing((v) => !v)}
- className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/15"
+ className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary text-xs font-bold hover:bg-primary/15 transition"
  >
  <Plus className="w-3 h-3" />
  {editing ? 'Annuler' : 'Créer'}
@@ -98,8 +98,8 @@ export default function CustomRoomThemePanel({
  </div>
 
  {editing && (
- <div className="p-3 bg-white rounded-xl border border-primary/20 space-y-2">
- <label className="block text-[10px] space-y-0.5">
+ <div className="p-3 bg-surface rounded-xl border border-primary/20 space-y-2">
+ <label className="block text-xs space-y-0.5">
  <span className="font-semibold text-muted">Nom du thème</span>
  <input
  value={draft.name ?? ''}
@@ -107,7 +107,7 @@ export default function CustomRoomThemePanel({
  className="w-full px-2 py-1.5 rounded-lg border text-xs"
  />
  </label>
- <label className="block text-[10px] space-y-0.5">
+ <label className="block text-xs space-y-0.5">
  <span className="font-semibold text-muted">Description</span>
  <input
  value={draft.description ?? ''}
@@ -117,19 +117,19 @@ export default function CustomRoomThemePanel({
  />
  </label>
  <div className="grid grid-cols-2 gap-2">
- <label className="text-[10px] space-y-0.5">
+ <label className="text-xs space-y-0.5">
  <span className="font-semibold text-muted">Couleur accent</span>
  <input type="color" value={draft.accentColor ?? '#6366f1'} onChange={(e) => setDraft({ ...draft, accentColor: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
  </label>
- <label className="text-[10px] space-y-0.5">
+ <label className="text-xs space-y-0.5">
  <span className="font-semibold text-muted">Tables</span>
  <input type="color" value={draft.defaultTableColor ?? '#ffffff'} onChange={(e) => setDraft({ ...draft, defaultTableColor: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
  </label>
- <label className="text-[10px] space-y-0.5">
+ <label className="text-xs space-y-0.5">
  <span className="font-semibold text-muted">Fond du canvas</span>
  <input type="color" value={canvasColor} onChange={(e) => setDraft({ ...draft, canvasBackground: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
  </label>
- <label className="text-[10px] space-y-0.5">
+ <label className="text-xs space-y-0.5">
  <span className="font-semibold text-muted">Contour salle</span>
  <input
  type="color"
@@ -145,12 +145,12 @@ export default function CustomRoomThemePanel({
  className="w-full h-8 rounded-lg border cursor-pointer"
  />
  </label>
- <label className="text-[10px] space-y-0.5">
+ <label className="text-xs space-y-0.5">
  <span className="font-semibold text-muted">Bordure tables</span>
  <input type="color" value={draft.tableBorderColor ?? '#6366f1'} onChange={(e) => setDraft({ ...draft, tableBorderColor: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
  </label>
  </div>
- <label className="block text-[10px] space-y-0.5">
+ <label className="block text-xs space-y-0.5">
  <span className="font-semibold text-muted">Type de sol</span>
  <select
  value={draft.defaultFloorType ?? 'parquet'}
@@ -166,7 +166,7 @@ export default function CustomRoomThemePanel({
  type="button"
  onClick={handleCreate}
  disabled={!draft.name?.trim()}
- className="w-full py-2 rounded-lg bg-primary text-white text-[10px] font-bold flex items-center justify-center gap-1 disabled:opacity-50"
+ className="w-full py-2 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold flex items-center justify-center gap-1 disabled:opacity-50 transition"
  >
  <Save className="w-3 h-3" /> Enregistrer le thème
  </button>
@@ -180,10 +180,10 @@ export default function CustomRoomThemePanel({
  <button
  type="button"
  onClick={() => onApplyTheme(theme.id)}
- className={`flex-1 text-left py-2 px-2.5 rounded-lg border text-[10px] font-bold transition ${
+ className={`flex-1 text-left py-2 px-2.5 rounded-lg border text-xs font-bold transition ${
  activeThemeId === theme.id
  ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
- : 'border-border text-muted hover:bg-white'
+ : 'border-border text-muted hover:bg-surface-muted'
  }`}
  >
  <span className="flex items-center gap-1.5">

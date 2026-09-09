@@ -107,7 +107,7 @@ function StoryCard({
         <button
           type="button"
           onClick={onDirections}
-          className="flex-1 h-8 rounded-[var(--radius-button)] bg-primary text-white text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
+          className="flex-1 h-8 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary-solid-hover transition"
         >
           <Navigation className="w-3.5 h-3.5" />
           Y aller

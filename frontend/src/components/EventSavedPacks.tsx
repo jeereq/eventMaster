@@ -283,7 +283,7 @@ export default function EventSavedPacks({
                             >
                               <span className={cn(
                                 'w-4 h-4 rounded border flex items-center justify-center text-[10px]',
-                                checked ? 'bg-primary border-primary text-white' : 'border-border',
+                                checked ? 'bg-primary-solid border-primary-solid text-primary-foreground' : 'border-border',
                               )}>
                                 {checked ? '✓' : ''}
                               </span>

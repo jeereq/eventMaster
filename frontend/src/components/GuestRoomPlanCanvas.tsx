@@ -450,14 +450,14 @@ export default function GuestRoomPlanCanvas({
                   {/* Pin / Beacon flottant au-dessus de la table de l'invité */}
                   {isGuest && (
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-pulse motion-reduce:animate-none">
-                      <div className="px-2.5 py-1 rounded-full bg-primary text-white text-[11px] font-extrabold tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary/40">
+                      <div className="px-2.5 py-1 rounded-full bg-primary-solid text-primary-foreground text-[11px] font-extrabold tracking-tight whitespace-nowrap shadow-lg flex items-center gap-1.5 border border-white/40 ring-2 ring-primary-solid/40">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75 motion-reduce:hidden"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300"></span>
                         </span>
                         <span>Vous êtes ici</span>
                       </div>
-                      <div className="w-1.5 h-1.5 rotate-45 bg-primary -mt-1 border-r border-b border-white/30" />
+                      <div className="w-1.5 h-1.5 rotate-45 bg-primary-solid -mt-1 border-r border-b border-white/30" />
                     </div>
                   )}
 

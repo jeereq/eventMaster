@@ -35,7 +35,7 @@ function MultiPills({
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition',
               active
-                ? 'bg-primary text-white border-primary'
+                ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
             )}
           >

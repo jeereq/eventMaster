@@ -289,7 +289,7 @@ export default function TicketsPage() {
                       className={cn(
                         'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation',
                         when === id
-                          ? 'bg-primary text-white border-primary shadow-xs'
+                          ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
                       )}
                     >
@@ -313,7 +313,7 @@ export default function TicketsPage() {
                       className={cn(
                         'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation',
                         entry === id
-                          ? 'bg-primary text-white border-primary shadow-xs'
+                          ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
                       )}
                     >

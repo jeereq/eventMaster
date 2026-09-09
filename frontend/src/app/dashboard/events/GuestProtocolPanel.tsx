@@ -439,7 +439,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
                 className={cn(
                   'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
                   listFilter === opt.id
-                    ? 'bg-primary text-white border-primary'
+                    ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                     : 'border-border text-muted hover:text-foreground',
                 )}
               >

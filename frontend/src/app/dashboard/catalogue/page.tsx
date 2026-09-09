@@ -518,7 +518,7 @@ function ClientMarketplaceInner() {
             className={cn(
               'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation shrink-0',
               isSelected
-                ? 'bg-primary text-white border-primary shadow-xs'
+                ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                 : 'border-white/25 dark:border-white/10 bg-surface/95 text-muted hover:text-foreground hover:border-primary/40 shadow-sm',
             )}
           >
@@ -763,7 +763,7 @@ function ClientMarketplaceInner() {
                     className={cn(
                       'px-3 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
                       favKind === id
-                        ? 'bg-primary text-white border-primary shadow-xs'
+                        ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                         : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
                     )}
                   >
@@ -948,7 +948,7 @@ function ClientMarketplaceInner() {
                 {planView === 'ai' ? (
                   <div className="flex items-center justify-between p-3.5 rounded-2xl bg-primary/10 border border-primary/25">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-primary-solid text-primary-foreground flex items-center justify-center shrink-0">
                         <Sparkles className="w-4 h-4" />
                       </div>
                       <div>

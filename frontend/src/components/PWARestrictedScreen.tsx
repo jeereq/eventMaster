@@ -124,7 +124,7 @@ export default function PWARestrictedScreen() {
 
       <header className="border-b border-border bg-surface/50 backdrop-blur-md px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="bg-primary p-2 rounded-xl text-white">
+          <div className="bg-primary-solid p-2 rounded-xl text-primary-foreground">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
@@ -183,7 +183,7 @@ export default function PWARestrictedScreen() {
                 )}
               >
                 {plan.badge && (
-                  <span className="absolute top-0 right-4 transform -translate-y-1/2 bg-primary text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="absolute top-0 right-4 transform -translate-y-1/2 bg-primary-solid text-primary-foreground text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                     {plan.badge}
                   </span>
                 )}
@@ -209,7 +209,7 @@ export default function PWARestrictedScreen() {
                     className={cn(
                       'w-full py-1.5 rounded-lg text-center text-[10px] font-bold transition',
                       requestedPlan === plan.id
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary-solid text-primary-foreground'
                         : 'bg-surface-muted text-foreground',
                     )}
                   >
@@ -269,7 +269,7 @@ export default function PWARestrictedScreen() {
               <button
                 type="submit"
                 disabled={submitting || hasPendingRequest}
-                className="w-full py-3 bg-primary hover:bg-primary-hover disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs transition shadow-lg shadow-primary/10 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 bg-primary-solid hover:bg-primary-solid-hover disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed text-primary-foreground font-bold rounded-xl text-xs transition shadow-lg shadow-primary/10 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {submitting ? (
                   <>

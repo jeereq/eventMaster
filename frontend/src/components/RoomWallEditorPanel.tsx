@@ -121,7 +121,7 @@ export default function RoomWallEditorPanel({
         <button
           type="button"
           onClick={addWall}
-          className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary text-white text-xs font-bold"
+          className="inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold"
         >
           <Plus className="w-3.5 h-3.5" /> Mur
         </button>

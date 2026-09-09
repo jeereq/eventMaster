@@ -340,7 +340,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
             type="button"
             onClick={() => window.print()}
             disabled={!pdfReady}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:opacity-95 transition disabled:opacity-50"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover transition disabled:opacity-50"
           >
             {pdfReady ? 'Imprimer' : 'Préparation…'}
           </button>

@@ -136,7 +136,7 @@ export default function ProductTourOverlay() {
           <button
             type="button"
             onClick={nextStep}
-            className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-white transition"
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground transition"
           >
             {isLast ? 'Terminer' : 'Suivant'}
             {!isLast && <ChevronRight className="w-3.5 h-3.5" />}

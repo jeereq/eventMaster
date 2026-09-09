@@ -293,7 +293,7 @@ export default function SubscriptionApprovalModal({
                 disabled={submitting || feedback?.type === 'success'}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                   discountMode === 'percent'
-                    ? 'bg-primary text-white border-primary'
+                    ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                     : 'border-border  text-muted '
                 }`}
               >
@@ -305,7 +305,7 @@ export default function SubscriptionApprovalModal({
                 disabled={submitting || feedback?.type === 'success'}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                   discountMode === 'amount'
-                    ? 'bg-primary text-white border-primary'
+                    ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                     : 'border-border  text-muted '
                 }`}
               >

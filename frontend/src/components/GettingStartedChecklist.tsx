@@ -345,7 +345,7 @@ export default function GettingStartedChecklist({
                 onStepClick(nextStep.markOnClick);
                 onCreateEvent();
               }}
-              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-sm font-medium transition"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-sm font-medium transition"
             >
               Continuer : {nextStep.title}
               <ChevronRight className="w-4 h-4" />
@@ -354,7 +354,7 @@ export default function GettingStartedChecklist({
             <Link
               href={nextStep.href}
               onClick={() => onStepClick(nextStep.markOnClick)}
-              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary hover:bg-primary-hover text-white text-sm font-medium transition"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-sm font-medium transition"
             >
               Continuer : {nextStep.title}
               <ChevronRight className="w-4 h-4" />
