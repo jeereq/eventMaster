@@ -11,6 +11,7 @@ const invoiceController_1 = require("../controllers/invoiceController");
 const adminOpsController_1 = require("../controllers/adminOpsController");
 const adminCatalogController_1 = require("../controllers/adminCatalogController");
 const adminPaymentsController_1 = require("../controllers/adminPaymentsController");
+const adminAiTokensController_1 = require("../controllers/adminAiTokensController");
 const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
 // Personnel plateforme (Super Admin + Commercial sans organisation)
@@ -23,6 +24,7 @@ router.post('/invoices/:id/send', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMME
 router.patch('/invoices/:id/paid', (0, auth_1.requireRole)(['SUPER_ADMIN']), invoiceController_1.markAdminInvoicePaid);
 router.get('/subscriptions/requests', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), subscriptionController_1.getAdminSubscriptionRequests);
 router.post('/subscriptions/requests/:id/approve', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), subscriptionController_1.approveSubscriptionRequest);
+router.post('/subscriptions/requests/:id/quote', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), subscriptionController_1.quoteSubscriptionDiscount);
 router.post('/subscriptions/requests/:id/reject', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), subscriptionController_1.rejectSubscriptionRequest);
 router.post('/tenants', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), adminController_1.createTenant);
 router.get('/tenants/:id/subscription-history', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), adminController_1.getTenantSubscriptionHistory);
@@ -57,6 +59,8 @@ router.patch('/catalog/venues/:id/unpublish', adminCatalogController_1.unpublish
 router.patch('/catalog/offerings/:id/unpublish', adminCatalogController_1.unpublishServiceOffering);
 router.get('/payments/overview', adminPaymentsController_1.getAdminPaymentsOverview);
 router.get('/payments/attempts', adminPaymentsController_1.listAdminPaymentAttempts);
+router.get('/ai-tokens/usage', adminAiTokensController_1.getAdminAiTokenUsage);
+router.post('/ai-tokens/grant', adminAiTokensController_1.grantAdminAiTokens);
 router.put('/tenants/:id', adminController_1.updateTenantPlanOrLicense);
 router.delete('/tenants/:id', adminController_1.deleteTenant);
 router.get('/users', adminController_1.getAllUsers);

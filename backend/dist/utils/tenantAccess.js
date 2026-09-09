@@ -20,6 +20,7 @@ function formatTenantResponse(tenant) {
         id: tenant.id,
         name: tenant.name,
         plan: tenant.plan,
+        pendingPlan: tenant.pendingPlan || null,
         licenseActive: tenant.licenseActive,
         licenseExpiresAt: tenant.licenseExpiresAt,
         managerId: tenant.managerId,

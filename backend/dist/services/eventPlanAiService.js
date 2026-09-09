@@ -7,6 +7,7 @@ const publicVenue_1 = require("../utils/publicVenue");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
 const rdcCities_1 = require("../utils/rdcCities");
 const eventPlanBrief_1 = require("./eventPlanBrief");
+const geminiJsonClient_ts_1 = require("./geminiJsonClient.js");
 const HOLD_BOOKING_STATUSES = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 8;
@@ -193,10 +194,29 @@ async function loadCatalog(opts) {
     const rentals = rankedServices.filter((row) => row.kind === 'rental').slice(0, 24);
     return { venues, services: [...trades, ...rentals] };
 }
+async function askPlannerJson(system, user) {
+    if ((0, geminiJsonClient_ts_1.getGeminiApiKey)()) {
+        try {
+            const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
+                system,
+                userText: user,
+                temperature: 0.55,
+                timeoutMs: 45_000,
+                failMessage: 'Gemini n’a pas renvoyé de packs utilisables.',
+            });
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                return parsed;
+            }
+        }
+        catch (error) {
+            console.warn('[eventPlanAi] Gemini failed, falling back to OpenAI:', error?.message);
+        }
+    }
+    return askOpenAi(system, user);
+}
 async function askOpenAi(system, user) {
     const key = String(process.env.OPENAI_API_KEY || '').trim();
     if (!key) {
-        // Si la clé OpenAI n'est pas définie sur le serveur, basculer proprement sur le moteur heuristique intelligent
         return { packages: [] };
     }
     const controller = new AbortController();
@@ -362,7 +382,7 @@ async function simulateEventPlanAi(userId, body) {
         },
         catalog: compact,
     });
-    const ai = await askOpenAi(system, user);
+    const ai = await askPlannerJson(system, user);
     const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
     const hydrate = (style, venueSlug, serviceSlugs, summary, rationale, extraWarnings) => {
         const venue = includeVenue

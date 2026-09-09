@@ -21,27 +21,18 @@ const qrCode_1 = require("../utils/qrCode");
 const brandedMessaging_1 = require("../utils/brandedMessaging");
 const brandingUtils_1 = require("../utils/brandingUtils");
 const guestMessageCopy_1 = require("../utils/guestMessageCopy");
+const eventPlace_1 = require("../utils/eventPlace");
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const publicVenue_1 = require("../utils/publicVenue");
+const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
+const platformNotificationService_1 = require("../services/platformNotificationService");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function isEventDatePassed(eventDate) {
     return new Date(eventDate).getTime() < Date.now();
 }
 // Helper function to extract guest phone number
 function getGuestPhone(guest) {
-    if (guest.preferences && typeof guest.preferences === 'object') {
-        const prefs = guest.preferences;
-        if (prefs.phone)
-            return prefs.phone;
-        if (prefs.telephone)
-            return prefs.telephone;
-    }
-    const emailStr = guest.email.trim();
-    const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
-    if (isPhone) {
-        return emailStr;
-    }
-    return null;
+    return (0, guestIdentity_1.extractGuestPhone)(guest);
 }
 function getUserPhone(user) {
     if (user.phone?.trim())
@@ -87,7 +78,10 @@ async function notifyOrganizerOfRsvp(params) {
     const statusLabel = rsvp === 'ACCEPTED' ? 'Présence confirmée (Oui)' : 'Absence (Décliné)';
     const preferencesDetails = formatPreferencesDetails(preferences);
     const ownerSubject = `[RSVP] ${guest.firstName} ${guest.lastName} — ${rsvp === 'ACCEPTED' ? 'Présent' : 'Décliné'}`;
-    const dashboardUrl = `${FRONTEND_URL}/dashboard/events`;
+    const dashboardPath = params.eventId
+        ? `/dashboard/events/${params.eventId}`
+        : '/dashboard/events';
+    const dashboardUrl = `${FRONTEND_URL}${dashboardPath}`;
     const orgBrand = await (0, brandedMessaging_1.loadOrgBrand)(params.tenantId);
     const ownerTextBody = `Bonjour ${organizer.name || 'Organisateur'},\n\n` +
         `Un invité vient de répondre à votre invitation pour l'événement "${eventTitle}".\n\n` +
@@ -122,6 +116,21 @@ async function notifyOrganizerOfRsvp(params) {
         orgName: orgBrand.orgName,
     });
     const ownerWhatsappBody = (0, brandedMessaging_1.wrapBrandedWhatsApp)(ownerWhatsappRendered.body, orgBrand.orgName);
+    if (params.tenantId) {
+        await (0, platformNotificationService_1.notifyTenantOperators)(params.tenantId, {
+            type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP,
+            title: `RSVP — ${statusLabel}`,
+            message: `${guest.firstName} ${guest.lastName} · ${eventTitle}`,
+            metadata: {
+                href: dashboardPath,
+                eventId: params.eventId || null,
+                eventTitle,
+            },
+            email: { subject: ownerSubject, text: ownerTextBody, html: ownerHtmlBody },
+            whatsapp: ownerWhatsappBody,
+        });
+        return;
+    }
     const organizerPhone = getUserPhone(organizer);
     const results = [];
     if (isValidEmail(organizer.email)) {
@@ -169,8 +178,12 @@ async function getGuestRsvpDetails(req, res) {
                         description: true,
                         date: true,
                         location: true,
+                        city: true,
+                        commune: true,
+                        neighborhood: true,
                         latitude: true,
                         longitude: true,
+                        isPublic: true,
                         tablePlan: true,
                         eventProgram: true,
                         guestGuidelines: true,
@@ -213,9 +226,16 @@ async function getGuestRsvpDetails(req, res) {
         let roomLayoutPreview = null;
         let sourceRoomType = null;
         let previewLightingPreset = null;
+        let pricingZones = [];
         const eventObj = guest.event;
         if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
             const plan = eventObj.tablePlan;
+            pricingZones = Array.isArray(plan.pricingZones) ? plan.pricingZones : [];
+            const isPublicEvent = Boolean(guest.event?.isPublic);
+            const sharingPolicy = (plan.neighborSharingPolicy && typeof plan.neighborSharingPolicy === 'object' ? plan.neighborSharingPolicy : null);
+            const policyMode = sharingPolicy?.mode ?? (isPublicEvent ? 'first_name' : 'full');
+            const shareSameTable = sharingPolicy?.shareSameTable !== false; // default true
+            const shareSameZone = Boolean(sharingPolicy?.shareSameZone); // default false
             if (Array.isArray(plan.tables)) {
                 tablePlanOverview = plan.tables.map((table) => ({
                     id: table.id,
@@ -230,6 +250,7 @@ async function getGuestRsvpDetails(req, res) {
                         const entry = Object.entries(table.seats || {}).find(([, id]) => id === guestId);
                         return entry ? parseInt(entry[0], 10) : undefined;
                     })(),
+                    pricingZoneId: table.pricingZoneId,
                     chairType: table.chairType,
                     chairImageUrl: table.chairImageUrl,
                     tableColor: table.tableColor,
@@ -244,26 +265,101 @@ async function getGuestRsvpDetails(req, res) {
                     const guestSeatEntry = seatEntries.find(([, id]) => id === guestId);
                     if (guestSeatEntry) {
                         const seatIndex = parseInt(guestSeatEntry[0], 10);
-                        const neighborIds = seatEntries
-                            .filter(([, id]) => id && id !== guestId)
-                            .map(([, id]) => id);
+                        const tableZone = pricingZones.find((z) => z.id === table.pricingZoneId);
                         let neighbors = [];
-                        if (neighborIds.length > 0) {
-                            const neighborGuests = await db_1.prisma.guest.findMany({
-                                where: { id: { in: neighborIds } },
-                                select: {
-                                    id: true,
-                                    firstName: true,
-                                    lastName: true,
-                                },
-                            });
-                            neighbors = neighborGuests.map((g) => {
-                                const neighborSeat = seatEntries.find(([, id]) => id === g.id);
-                                return {
-                                    ...g,
-                                    seatIndex: neighborSeat ? parseInt(neighborSeat[0], 10) : undefined,
-                                };
-                            });
+                        if (shareSameTable) {
+                            const neighborIds = seatEntries
+                                .filter(([, id]) => id && id !== guestId)
+                                .map(([, id]) => id);
+                            if (neighborIds.length > 0) {
+                                const neighborGuests = await db_1.prisma.guest.findMany({
+                                    where: { id: { in: neighborIds } },
+                                    select: {
+                                        id: true,
+                                        firstName: true,
+                                        lastName: true,
+                                    },
+                                });
+                                neighbors = neighborGuests.map((g) => {
+                                    const neighborSeat = seatEntries.find(([, id]) => id === g.id);
+                                    const seatIdx = neighborSeat ? parseInt(neighborSeat[0], 10) : undefined;
+                                    if (policyMode === 'hidden') {
+                                        return {
+                                            id: g.id,
+                                            firstName: 'Participant',
+                                            lastName: '',
+                                            anonymous: true,
+                                            seatIndex: seatIdx,
+                                        };
+                                    }
+                                    if (policyMode === 'first_name') {
+                                        return {
+                                            id: g.id,
+                                            firstName: g.firstName,
+                                            lastName: g.lastName ? `${g.lastName.charAt(0).toUpperCase()}.` : '',
+                                            anonymous: false,
+                                            seatIndex: seatIdx,
+                                        };
+                                    }
+                                    return {
+                                        ...g,
+                                        anonymous: false,
+                                        seatIndex: seatIdx,
+                                    };
+                                });
+                            }
+                        }
+                        // Calcul des convives de la même zone si shareSameZone est activé
+                        let zoneNeighbors = [];
+                        let zoneNeighborsCount = 0;
+                        if (table.pricingZoneId) {
+                            const otherZoneTables = plan.tables.filter((t) => t.id !== table.id && t.pricingZoneId === table.pricingZoneId);
+                            const otherZoneGuestIds = [];
+                            for (const zt of otherZoneTables) {
+                                const zSeats = zt.seats || {};
+                                for (const gid of Object.values(zSeats)) {
+                                    if (gid && gid !== guestId) {
+                                        otherZoneGuestIds.push({ guestId: gid, tableName: zt.name });
+                                    }
+                                }
+                            }
+                            zoneNeighborsCount = otherZoneGuestIds.length;
+                            if (shareSameZone && otherZoneGuestIds.length > 0) {
+                                const ids = otherZoneGuestIds.map((item) => item.guestId);
+                                const zoneGuests = await db_1.prisma.guest.findMany({
+                                    where: { id: { in: ids } },
+                                    select: { id: true, firstName: true, lastName: true },
+                                    take: 30,
+                                });
+                                zoneNeighbors = zoneGuests.map((g) => {
+                                    const item = otherZoneGuestIds.find((x) => x.guestId === g.id);
+                                    if (policyMode === 'hidden') {
+                                        return {
+                                            id: g.id,
+                                            firstName: 'Participant',
+                                            lastName: '',
+                                            tableName: item?.tableName || 'Table',
+                                            anonymous: true,
+                                        };
+                                    }
+                                    if (policyMode === 'first_name') {
+                                        return {
+                                            id: g.id,
+                                            firstName: g.firstName,
+                                            lastName: g.lastName ? `${g.lastName.charAt(0).toUpperCase()}.` : '',
+                                            tableName: item?.tableName || 'Table',
+                                            anonymous: false,
+                                        };
+                                    }
+                                    return {
+                                        id: g.id,
+                                        firstName: g.firstName,
+                                        lastName: g.lastName,
+                                        tableName: item?.tableName || 'Table',
+                                        anonymous: false,
+                                    };
+                                });
+                            }
                         }
                         tableDetails = {
                             tableName: table.name,
@@ -272,7 +368,18 @@ async function getGuestRsvpDetails(req, res) {
                             seatIndex,
                             chairType: table.chairType,
                             chairImageUrl: table.chairImageUrl,
+                            pricingZoneId: table.pricingZoneId || null,
+                            zoneName: tableZone?.name || null,
+                            zoneColor: tableZone?.color || null,
+                            privacyPolicy: {
+                                mode: policyMode,
+                                shareSameTable,
+                                shareSameZone,
+                                isPublic: isPublicEvent,
+                            },
                             neighbors,
+                            zoneNeighborsCount,
+                            zoneNeighbors: shareSameZone ? zoneNeighbors : undefined,
                         };
                         break;
                     }
@@ -362,6 +469,7 @@ async function getGuestRsvpDetails(req, res) {
             seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
             tableDetails,
             tablePlanOverview,
+            pricingZones,
             planFixtures,
             roomOutline,
             roomThemeId,
@@ -482,7 +590,7 @@ async function submitRsvp(req, res) {
             const qrCodeUrl = (0, qrCode_1.buildGuestQrImageUrl)(guest.id, 300);
             const orgBrand = (0, brandedMessaging_1.orgBrandFromTenant)(guest.event.tenant);
             const subject = `Confirmation de votre présence - ${guest.event.title}`;
-            const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\n${guestMessageCopy_1.GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
+            const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${(0, eventPlace_1.formatEventPlace)(guest.event) || guest.event.location || 'Non défini'}\n\n${guestMessageCopy_1.GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
             const htmlBody = (0, brandedMessaging_1.wrapBrandedEmail)({
                 branding: orgBrand.branding,
                 orgName: orgBrand.orgName,
@@ -498,7 +606,7 @@ async function submitRsvp(req, res) {
           </div>
           ${(0, brandedMessaging_1.brandedEventDetailsHtml)(orgBrand.branding, [
                     { label: 'Date', value: formattedDate },
-                    { label: 'Lieu', value: guest.event.location || 'Non défini' },
+                    { label: 'Lieu', value: (0, eventPlace_1.formatEventPlace)(guest.event) || guest.event.location || 'Non défini' },
                 ])}
         `,
                 footerNote: guestMessageCopy_1.GUEST_COPY.rsvpEmailFooter,
@@ -507,7 +615,7 @@ async function submitRsvp(req, res) {
                 firstName: guest.firstName,
                 title: guest.event.title,
                 date: formattedDate,
-                location: guest.event.location || 'Non défini',
+                location: (0, eventPlace_1.formatEventPlace)(guest.event) || guest.event.location || 'Non défini',
                 orgName: orgBrand.orgName,
             });
             const whatsappCaption = (0, brandedMessaging_1.wrapBrandedWhatsApp)(whatsappRendered.body, orgBrand.orgName, {
@@ -566,6 +674,7 @@ async function submitRsvp(req, res) {
                             email: guest.email,
                         },
                         eventTitle: guest.event.title,
+                        eventId: guest.eventId,
                         rsvp,
                         preferences: preferences || {},
                         tenantId: guest.event.tenantId,
@@ -604,6 +713,9 @@ async function downloadSeatingInvitationPdf(req, res) {
                         description: true,
                         date: true,
                         location: true,
+                        city: true,
+                        commune: true,
+                        neighborhood: true,
                         guestGuidelines: true,
                         tablePlan: true,
                     },

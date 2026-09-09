@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AI_TOKEN_PACK_PRICE_CDF = exports.AI_TOKEN_PACK_COUNT = void 0;
+exports.AI_TOKEN_PACK_PRICE_CDF = exports.AI_TOKEN_PACK_COUNT = exports.AI_TOKEN_MIN_COUNT = exports.AI_TOKEN_MIN_AMOUNT_CDF = exports.AI_TOKEN_BASE_PRICE_CDF = exports.AI_TOKEN_BASE_COUNT = void 0;
+exports.currentAiTokenPricing = currentAiTokenPricing;
+exports.calculateTokensForAmount = calculateTokensForAmount;
+exports.calculateAmountForTokens = calculateAmountForTokens;
 exports.initiateAiTokenPayment = initiateAiTokenPayment;
 exports.findAiTokenOrderForFlexPay = findAiTokenOrderForFlexPay;
 exports.verifyAndFinalizeAiTokenOrder = verifyAndFinalizeAiTokenOrder;
@@ -8,19 +11,53 @@ exports.getDeviceAiTokensSummary = getDeviceAiTokensSummary;
 const db_1 = require("../db");
 const paymentTraceService_1 = require("./paymentTraceService");
 const aiSimulationWalletService_1 = require("./aiSimulationWalletService");
+const platformSettingsService_1 = require("./platformSettingsService");
+const aiTokenPricing_1 = require("./aiTokenPricing");
+function currentAiTokenPricing() {
+    return (0, aiTokenPricing_1.resolveAiTokenPricing)((0, platformSettingsService_1.loadPlatformSettings)());
+}
 const flexPayCardService_1 = require("./flexPayCardService");
+const flexPayChargeCurrency_1 = require("./flexPayChargeCurrency");
+exports.AI_TOKEN_BASE_COUNT = 6;
+exports.AI_TOKEN_BASE_PRICE_CDF = 2500;
+exports.AI_TOKEN_MIN_AMOUNT_CDF = 2500;
+exports.AI_TOKEN_MIN_COUNT = 6;
 exports.AI_TOKEN_PACK_COUNT = 6;
 exports.AI_TOKEN_PACK_PRICE_CDF = 2500;
+function calculateTokensForAmount(amountFc, pricing = currentAiTokenPricing()) {
+    return (0, aiTokenPricing_1.calculateTokensForAmount)(amountFc, pricing);
+}
+function calculateAmountForTokens(tokensCount, pricing = currentAiTokenPricing()) {
+    return (0, aiTokenPricing_1.calculateAmountForTokens)(tokensCount, pricing);
+}
 // Mémoire de secours en cas d'indisponibilité momentanée de la table DB
 const memoryOrders = new Map();
 /**
  * Crée une commande et lance le paiement réel FlexPay (Mobile Money ou Carte).
+ * Applique une tarification proportionnelle (2 500 FC / 6 jetons) avec un minimum payable de 2 500 FC.
  */
 async function initiateAiTokenPayment(input) {
     const paymentMethod = input.paymentMethod === 'card' ? 'card' : 'mobile';
-    const tokensCount = input.tokensCount && input.tokensCount > 0 ? input.tokensCount : exports.AI_TOKEN_PACK_COUNT;
-    const amountFc = input.amountFc && input.amountFc > 0 ? input.amountFc : exports.AI_TOKEN_PACK_PRICE_CDF;
+    let amountFc;
+    let tokensCount;
+    const pricing = currentAiTokenPricing();
+    if (input.amountFc && input.amountFc > 0) {
+        if (input.amountFc < pricing.minAmountCdf) {
+            throw new Error(`Le montant minimum de recharge est de ${pricing.minAmountCdf.toLocaleString('fr-FR')} FC (soit ${pricing.minCount} jeton${pricing.minCount > 1 ? 's' : ''}).`);
+        }
+        amountFc = Math.round(input.amountFc);
+        tokensCount = calculateTokensForAmount(amountFc, pricing);
+    }
+    else if (input.tokensCount && input.tokensCount > 0) {
+        tokensCount = Math.max(pricing.minCount, Math.round(input.tokensCount));
+        amountFc = calculateAmountForTokens(tokensCount, pricing);
+    }
+    else {
+        amountFc = pricing.minAmountCdf;
+        tokensCount = pricing.minCount;
+    }
     let normalizedPhone = null;
+    const chargeCurrency = (0, flexPayChargeCurrency_1.parseFlexPayChargeCurrency)(input.currency, paymentMethod);
     if (paymentMethod === 'mobile') {
         normalizedPhone = (0, flexPayCardService_1.normalizeFlexPayPhone)(input.phone || '');
         if (!normalizedPhone) {
@@ -36,7 +73,7 @@ async function initiateAiTokenPayment(input) {
                 deviceId: input.deviceId || null,
                 tokensCount,
                 amountFc,
-                currency: 'CDF',
+                currency: chargeCurrency,
                 status: 'PENDING',
                 paymentMethod,
                 phone: normalizedPhone || input.phone || null,
@@ -53,7 +90,7 @@ async function initiateAiTokenPayment(input) {
             deviceId: input.deviceId || null,
             tokensCount,
             amountFc,
-            currency: 'CDF',
+            currency: chargeCurrency,
             status: 'PENDING',
             paymentMethod,
             phone: normalizedPhone || input.phone || null,
@@ -69,10 +106,11 @@ async function initiateAiTokenPayment(input) {
     if (paymentMethod === 'mobile') {
         let flex;
         if ((0, flexPayCardService_1.isFlexPayCardConfigured)()) {
+            const charge = (0, flexPayChargeCurrency_1.resolveFlexPayCharge)(amountFc, chargeCurrency, (0, platformSettingsService_1.loadPlatformSettings)().usdExchangeRateCdf);
             flex = await (0, flexPayCardService_1.createFlexPayMobileCheckout)({
                 reference,
-                amount: amountFc,
-                currency: 'CDF',
+                amount: charge.amount,
+                currency: charge.currency,
                 phone: normalizedPhone,
                 callbackUrl,
             });
@@ -111,6 +149,7 @@ async function initiateAiTokenPayment(input) {
             status: 'PENDING',
             tokensCount,
             amountFc,
+            currency: chargeCurrency,
             message: 'Une demande de paiement a été envoyée sur votre téléphone. Veuillez valider le code secret PIN sur votre mobile.',
         };
     }

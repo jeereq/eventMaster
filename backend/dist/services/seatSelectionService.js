@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.purgeExpiredSeatHolds = purgeExpiredSeatHolds;
 exports.listSeatInventory = listSeatInventory;
 exports.assertSeatAvailable = assertSeatAvailable;
+exports.checkSeatsAvailability = checkSeatsAvailability;
 exports.createSeatHold = createSeatHold;
 exports.createMultipleSeatHolds = createMultipleSeatHolds;
 exports.assignSeatInTablePlan = assignSeatInTablePlan;
@@ -29,7 +30,12 @@ async function listSeatInventory(eventId) {
     await purgeExpiredSeatHolds(eventId);
     const event = await db_1.prisma.event.findUnique({
         where: { id: eventId },
-        select: { tablePlan: true, ticketPricingMode: true, ticketPriceFc: true },
+        select: {
+            tablePlan: true,
+            ticketPricingMode: true,
+            ticketPriceFc: true,
+            room: { select: { layoutBlueprint: true, roomType: true } },
+        },
     });
     const plan = event?.tablePlan;
     const tables = planTables(plan);
@@ -42,8 +48,8 @@ async function listSeatInventory(eventId) {
     for (const table of tables) {
         const cap = Math.max(0, Number(table.capacity) || 0);
         for (let i = 0; i < cap; i++) {
+            // Tant que le paiement n'est pas validé, la place est toujours libre
             const taken = Boolean(table.seats?.[i] ?? table.seats?.[String(i)]);
-            const held = holdKeys.has(`${table.id}:${i}`);
             const pricing = event
                 ? (0, ticketPricingService_1.resolveSeatPrice)({
                     ticketPricingMode: event.ticketPricingMode,
@@ -59,7 +65,7 @@ async function listSeatInventory(eventId) {
                 y: table.y,
                 shape: table.shape || 'round',
                 capacity: cap,
-                available: !taken && !held,
+                available: !taken,
                 priceFc: pricing.priceFc,
                 pricingZoneId: pricing.pricingZoneId,
                 pricingZoneName: pricing.pricingZoneName,
@@ -74,6 +80,9 @@ async function listSeatInventory(eventId) {
         floorType: plan?.floorType ?? null,
         floorImageUrl: plan?.floorImageUrl ?? null,
         depthAmount: typeof plan?.depthAmount === 'number' ? plan.depthAmount : 0,
+        pricingZones: Array.isArray(plan?.pricingZones) ? plan?.pricingZones : [],
+        roomLayoutBlueprint: event?.room?.layoutBlueprint ?? null,
+        roomType: event?.room?.roomType ?? null,
     };
 }
 async function assertSeatAvailable(eventId, tableId, seatIndex) {
@@ -91,15 +100,33 @@ async function assertSeatAvailable(eventId, tableId, seatIndex) {
     if (seatIndex < 0 || seatIndex >= table.capacity)
         throw new Error('Siège invalide.');
     const occupied = Boolean(table.seats?.[seatIndex] ?? table.seats?.[String(seatIndex)]);
-    if (occupied)
-        throw new Error('Ce siège est déjà occupé.');
-    const hold = await db_1.prisma.seatHold.findUnique({
-        where: { eventId_tableId_seatIndex: { eventId, tableId, seatIndex } },
-    });
-    if (hold && hold.expiresAt > new Date()) {
-        throw new Error('Ce siège est temporairement réservé par un autre acheteur.');
+    if (occupied) {
+        throw new Error(`Le siège n°${seatIndex + 1} à la table « ${table.name || tableId} » est déjà réservé.`);
     }
     return table;
+}
+async function checkSeatsAvailability(eventId, seats) {
+    const event = await db_1.prisma.event.findUnique({
+        where: { id: eventId },
+        select: { tablePlan: true },
+    });
+    const tables = planTables(event?.tablePlan);
+    const unavailable = [];
+    for (const s of seats) {
+        const table = tables.find((t) => t.id === s.tableId);
+        if (!table) {
+            unavailable.push({ ...s });
+            continue;
+        }
+        const isOccupied = Boolean(table.seats?.[s.seatIndex] ?? table.seats?.[String(s.seatIndex)]);
+        if (isOccupied || s.seatIndex < 0 || s.seatIndex >= table.capacity) {
+            unavailable.push({ tableId: s.tableId, seatIndex: s.seatIndex, tableName: table.name });
+        }
+    }
+    return {
+        allAvailable: unavailable.length === 0,
+        unavailable,
+    };
 }
 async function createSeatHold(opts) {
     await assertSeatAvailable(opts.eventId, opts.tableId, opts.seatIndex);

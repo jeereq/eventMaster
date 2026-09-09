@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = void 0;
+exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
+exports.sanitizeAudioNotifications = sanitizeAudioNotifications;
 exports.sanitizeEnabledCities = sanitizeEnabledCities;
 exports.sanitizeAuthOtpChannels = sanitizeAuthOtpChannels;
 exports.getAuthOtpChannels = getAuthOtpChannels;
@@ -18,6 +19,7 @@ exports.savePlatformSettings = savePlatformSettings;
 exports.savePlatformSettingsDurable = savePlatformSettingsDurable;
 exports.hydratePlatformSettingsFromDb = hydratePlatformSettingsFromDb;
 exports.getPublicSiteConfig = getPublicSiteConfig;
+exports.getSubscriptionDiscountAccess = getSubscriptionDiscountAccess;
 exports.getContactDestinations = getContactDestinations;
 exports.maskSecretsForAdmin = maskSecretsForAdmin;
 exports.mergeSettingsUpdate = mergeSettingsUpdate;
@@ -26,11 +28,42 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const db_1 = require("../db");
 const ratePercent_1 = require("../utils/ratePercent");
+const aiTokenPricing_1 = require("./aiTokenPricing");
+const welcomeAiTokensPolicy_1 = require("./welcomeAiTokensPolicy");
+const subscriptionDiscountAccess_1 = require("./subscriptionDiscountAccess");
 const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
 exports.settingsFilePath = settingsFilePath;
 const PLATFORM_CONFIG_ID = 'default';
 /** Cache processus : source de vérité après hydratation BD (le fichier est un secours local). */
 let memoryCache = null;
+exports.AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent'];
+exports.DEFAULT_AUDIO_NOTIFICATIONS = {
+    enabled: true,
+    volume: 70,
+    events: 'bell',
+    billing: 'urgent',
+    commissions: 'chime',
+    catalog: 'bell',
+    tasks: 'soft',
+    default: 'chime',
+};
+function isAudioPreset(value) {
+    return typeof value === 'string' && exports.AUDIO_NOTIFICATION_PRESETS.includes(value);
+}
+function sanitizeAudioNotifications(raw) {
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const volume = Number(src.volume);
+    return {
+        enabled: src.enabled !== false,
+        volume: Number.isFinite(volume) ? Math.max(0, Math.min(100, Math.round(volume))) : exports.DEFAULT_AUDIO_NOTIFICATIONS.volume,
+        events: isAudioPreset(src.events) ? src.events : exports.DEFAULT_AUDIO_NOTIFICATIONS.events,
+        billing: isAudioPreset(src.billing) ? src.billing : exports.DEFAULT_AUDIO_NOTIFICATIONS.billing,
+        commissions: isAudioPreset(src.commissions) ? src.commissions : exports.DEFAULT_AUDIO_NOTIFICATIONS.commissions,
+        catalog: isAudioPreset(src.catalog) ? src.catalog : exports.DEFAULT_AUDIO_NOTIFICATIONS.catalog,
+        tasks: isAudioPreset(src.tasks) ? src.tasks : exports.DEFAULT_AUDIO_NOTIFICATIONS.tasks,
+        default: isAudioPreset(src.default) ? src.default : exports.DEFAULT_AUDIO_NOTIFICATIONS.default,
+    };
+}
 exports.DEFAULT_PLATFORM_SETTINGS = {
     platformName: 'EventMaster',
     platformTagline: 'Préparez votre événement en un clic.',
@@ -70,6 +103,11 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     usdExchangeRateCdf: 2800,
     enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
     authOtpChannels: 'BOTH',
+    aiTokenPriceCdf: aiTokenPricing_1.DEFAULT_AI_TOKEN_PRICE_CDF,
+    aiTokenMinPurchaseCdf: aiTokenPricing_1.DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
+    welcomeAiGrants: welcomeAiTokensPolicy_1.DEFAULT_WELCOME_GRANT_RULES,
+    audioNotifications: exports.DEFAULT_AUDIO_NOTIFICATIONS,
+    subscriptionDiscountAccess: subscriptionDiscountAccess_1.DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
 };
 exports.PLATFORM_CITY_CATALOG = [
     'Kinshasa',
@@ -195,6 +233,11 @@ function normalizeStoredRates(settings) {
         usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
         enabledCities: sanitizeEnabledCities(settings.enabledCities),
         authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+        aiTokenPriceCdf: (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf),
+        aiTokenMinPurchaseCdf: (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(settings.aiTokenMinPurchaseCdf, (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf)),
+        welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
+        audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+        subscriptionDiscountAccess: (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess),
     };
 }
 function buildNextSettings(partial) {
@@ -215,6 +258,11 @@ function buildNextSettings(partial) {
     next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
     next.enabledCities = sanitizeEnabledCities(next.enabledCities);
     next.authOtpChannels = sanitizeAuthOtpChannels(next.authOtpChannels);
+    next.aiTokenPriceCdf = (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(next.aiTokenPriceCdf);
+    next.aiTokenMinPurchaseCdf = (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
+    next.welcomeAiGrants = (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(next.welcomeAiGrants);
+    next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
+    next.subscriptionDiscountAccess = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(next.subscriptionDiscountAccess);
     next.ticketPaymentProvider = 'flexpay_card';
     next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
     next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -303,7 +351,22 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
         enabledCities: sanitizeEnabledCities(settings.enabledCities),
         authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+        aiTokenPriceCdf: (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf),
+        aiTokenMinPurchaseCdf: (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(settings.aiTokenMinPurchaseCdf, (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf)),
+        welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
+        audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+        subscriptionDiscountAccess: (() => {
+            const access = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess);
+            return {
+                enabled: access.enabled,
+                periodStart: access.periodStart,
+                periodEnd: access.periodEnd,
+            };
+        })(),
     };
+}
+function getSubscriptionDiscountAccess(settings = loadPlatformSettings()) {
+    return (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess);
 }
 function getContactDestinations(settings = loadPlatformSettings()) {
     return {

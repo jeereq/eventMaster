@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ACCOUNT_KIND_SUPERADMIN_ONLY = exports.PROTOCOL_CREATIVE_DENIED = void 0;
 exports.resolveOrgAccess = resolveOrgAccess;
 exports.getAccessibleEventIds = getAccessibleEventIds;
 exports.getManageableEventIds = getManageableEventIds;
@@ -12,6 +13,7 @@ exports.canManageRoom = canManageRoom;
 exports.canAccessRoom = canAccessRoom;
 exports.assertCanCreateEvent = assertCanCreateEvent;
 exports.assertCanCreateRoom = assertCanCreateRoom;
+exports.protocolCreativeDeniedMessage = protocolCreativeDeniedMessage;
 exports.assertCanViewBilling = assertCanViewBilling;
 exports.assertCanViewInvoices = assertCanViewInvoices;
 exports.isValidStaffRole = isValidStaffRole;
@@ -263,6 +265,15 @@ async function assertCanCreateEvent(userId, tenantId) {
 async function assertCanCreateRoom(userId, tenantId) {
     const access = await resolveOrgAccess(userId, tenantId);
     return access.canCreateRooms;
+}
+exports.PROTOCOL_CREATIVE_DENIED = 'Le rôle protocole ne peut pas créer de modèles d’invitation ni de plans de salle.';
+exports.ACCOUNT_KIND_SUPERADMIN_ONLY = 'Seul un Super Admin peut changer le type de compte.';
+/** Bloque la création / composition IA de modèles et de plans si l’utilisateur est protocole. */
+async function protocolCreativeDeniedMessage(userId, tenantId) {
+    if (!userId || !tenantId)
+        return null;
+    const access = await resolveOrgAccess(userId, tenantId);
+    return access.isProtocolOnly ? exports.PROTOCOL_CREATIVE_DENIED : null;
 }
 async function assertCanViewBilling(userId, tenantId) {
     const access = await resolveOrgAccess(userId, tenantId);

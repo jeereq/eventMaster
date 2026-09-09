@@ -229,11 +229,18 @@ async function runEventPlanAi(req, source, rateLimitKey) {
         error.status = 400;
         throw error;
     }
-    const userId = req.user?.id || null;
-    await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, userId);
+    const actor = req.user;
+    const userId = actor?.id || null;
+    const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(actor);
+    await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, userId, aiSimulationWalletService_1.AI_SIMULATION_TOKEN_COST, { unlimited });
     const result = await (0, eventPlanAiService_1.simulateEventPlanAi)(rateLimitKey, body);
-    const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, userId);
     const historyId = await persistSimulation(req, result, source);
+    const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, userId, aiSimulationWalletService_1.AI_SIMULATION_TOKEN_COST, {
+        action: 'budget_simulation',
+        source: unlimited && actor?.impersonatedBy ? 'support' : source,
+        relatedId: historyId,
+        unlimited,
+    });
     return { ...result, historyId, remaining: allowance.totalRemaining, allowance };
 }
 async function planEventAi(req, res) {
@@ -310,8 +317,9 @@ async function checkoutAiTokens(req, res) {
         const paymentMethod = String(rawBody.paymentMethod || 'mobile').toLowerCase() === 'card' ? 'card' : 'mobile';
         const phone = typeof rawBody.phone === 'string' ? rawBody.phone.trim() : '';
         const operator = typeof rawBody.operator === 'string' ? rawBody.operator.trim() : undefined;
-        const tokensCount = Number(rawBody.tokensCount) || 15;
-        const amountFc = Number(rawBody.amountFc) || 2500;
+        const currency = typeof rawBody.currency === 'string' ? rawBody.currency.trim() : undefined;
+        const rawTokensCount = Number(rawBody.tokensCount);
+        const rawAmountFc = Number(rawBody.amountFc);
         const deviceId = typeof rawBody.deviceId === 'string' ? rawBody.deviceId.trim() : null;
         const userId = req.user?.id || null;
         const result = await (0, aiTokenFlexPayService_1.initiateAiTokenPayment)({
@@ -320,8 +328,9 @@ async function checkoutAiTokens(req, res) {
             paymentMethod: paymentMethod,
             phone,
             operator,
-            tokensCount,
-            amountFc,
+            tokensCount: Number.isFinite(rawTokensCount) && rawTokensCount > 0 ? rawTokensCount : undefined,
+            amountFc: Number.isFinite(rawAmountFc) && rawAmountFc > 0 ? rawAmountFc : undefined,
+            currency,
         });
         res.status(200).json(result);
     }
@@ -338,10 +347,16 @@ async function getAiTokensDeviceBalance(req, res) {
             return;
         }
         const summary = await (0, aiTokenFlexPayService_1.getDeviceAiTokensSummary)(deviceId);
-        const userId = req.user?.id || null;
+        const actor = req.user;
+        const userId = actor?.id || null;
         try {
             const allowance = await (0, aiSimulationWalletService_1.getAiSimulationWalletAllowance)(deviceId, userId);
-            res.status(200).json({ ...summary, ...allowance });
+            res.status(200).json({
+                ...summary,
+                ...allowance,
+                unlimited: (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(actor) || allowance.unlimited,
+                canSimulate: (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(actor) || allowance.canSimulate,
+            });
             return;
         }
         catch (err) {
@@ -687,7 +702,7 @@ async function listMyTickets(req, res) {
         });
         const orders = await db_1.prisma.ticketOrder.findMany({
             where: {
-                status: 'PAID',
+                status: { in: ['PAID', 'PENDING'] },
                 OR: [
                     { userId: user.id },
                     { buyerEmail: { equals: email, mode: 'insensitive' } },
@@ -697,7 +712,7 @@ async function listMyTickets(req, res) {
                 event: { select: { title: true, slug: true, date: true, location: true, isPublic: true } },
                 guests: { select: { id: true, email: true }, orderBy: { createdAt: 'asc' } },
             },
-            orderBy: { paidAt: 'desc' },
+            orderBy: [{ createdAt: 'desc' }],
             take: 100,
         });
         return res.json({
@@ -705,9 +720,11 @@ async function listMyTickets(req, res) {
                 const primary = order.guests.find((g) => g.email.toLowerCase() === email) || order.guests[0];
                 return {
                     orderId: order.id,
+                    status: order.status,
                     quantity: order.quantity,
                     amountFc: order.amountFc,
                     paidAt: order.paidAt,
+                    createdAt: order.createdAt,
                     buyerName: order.buyerName,
                     event: order.event,
                     guestId: primary?.id || null,

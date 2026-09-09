@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.formatPhoneE164 = void 0;
 exports.sendRealEmail = sendRealEmail;
 exports.sendRealWhatsApp = sendRealWhatsApp;
 exports.sendRealWhatsAppLocation = sendRealWhatsAppLocation;
@@ -11,18 +12,8 @@ exports.sendRealWhatsAppDocument = sendRealWhatsAppDocument;
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const notificationConfig_1 = require("../config/notificationConfig");
 (0, notificationConfig_1.logNotificationConfigStatus)();
-function formatPhoneE164(to) {
-    let formattedTo = to.trim().replace(/[\s\-()]/g, '');
-    if (!formattedTo.startsWith('+')) {
-        if (formattedTo.startsWith('0')) {
-            formattedTo = '+243' + formattedTo.slice(1);
-        }
-        else {
-            formattedTo = '+' + formattedTo;
-        }
-    }
-    return formattedTo;
-}
+const phone_1 = require("../utils/phone");
+Object.defineProperty(exports, "formatPhoneE164", { enumerable: true, get: function () { return phone_1.formatPhoneE164; } });
 /**
  * Envoie un e-mail via SendGrid uniquement (aucune simulation).
  */
@@ -81,7 +72,14 @@ async function sendUltraMsgRequest(endpoint, formattedTo, params) {
         const isSent = data.sent === 'true' || data.sent === true || data.success || data.id;
         if (response.ok && isSent) {
             const messageId = data.id || 'um-sent';
-            console.log(`[Notification Service] UltraMsg ${endpoint} sent successfully to ${formattedTo}. ID: ${messageId}`);
+            const isPendingAuth = typeof data.message === 'string' &&
+                data.message.toLowerCase().includes('not authenticated');
+            if (isPendingAuth) {
+                console.warn(`[Notification Service] UltraMsg ${endpoint} mis en attente pour ${formattedTo} (ATTENTION : l'instance UltraMsg n'est pas connectée à WhatsApp / en attente de scan du QR Code). Message: ${data.message}`);
+            }
+            else {
+                console.log(`[Notification Service] UltraMsg ${endpoint} sent successfully to ${formattedTo}. ID: ${messageId}`);
+            }
             return { success: true, simulated: false, messageSid: messageId };
         }
         const errMsg = data.error || data.message || JSON.stringify(data);
@@ -97,7 +95,7 @@ async function sendUltraMsgRequest(endpoint, formattedTo, params) {
  * Send a real WhatsApp message using UltraMsg or fall back to simulation
  */
 async function sendRealWhatsApp(to, body) {
-    const formattedTo = formatPhoneE164(to);
+    const formattedTo = (0, phone_1.formatPhoneE164)(to);
     const { ultramsgInstanceId, ultramsgToken } = (0, notificationConfig_1.getNotificationCredentials)();
     if (!ultramsgInstanceId || !ultramsgToken) {
         console.log(`[Simulation] Sending UltraMsg WhatsApp to ${formattedTo}:\nBody: ${body}\n`);
@@ -112,7 +110,7 @@ async function sendRealWhatsApp(to, body) {
  * Send a real WhatsApp Location message using UltraMsg or fall back to simulation
  */
 async function sendRealWhatsAppLocation(to, address, lat, lng) {
-    const formattedTo = formatPhoneE164(to);
+    const formattedTo = (0, phone_1.formatPhoneE164)(to);
     const { ultramsgInstanceId, ultramsgToken } = (0, notificationConfig_1.getNotificationCredentials)();
     if (!ultramsgInstanceId || !ultramsgToken) {
         console.log(`[Simulation] Sending UltraMsg WhatsApp Location to ${formattedTo}:\nAddress: ${address}\nGPS: ${lat}, ${lng}\n`);
@@ -129,7 +127,7 @@ async function sendRealWhatsAppLocation(to, address, lat, lng) {
  * Send a real WhatsApp Image using UltraMsg or fall back to simulation
  */
 async function sendRealWhatsAppImage(to, imageUrl, caption) {
-    const formattedTo = formatPhoneE164(to);
+    const formattedTo = (0, phone_1.formatPhoneE164)(to);
     const { ultramsgInstanceId, ultramsgToken } = (0, notificationConfig_1.getNotificationCredentials)();
     if (!ultramsgInstanceId || !ultramsgToken) {
         console.log(`[Simulation] Sending UltraMsg WhatsApp Image to ${formattedTo}:\nImage URL: ${imageUrl}\nCaption: ${caption}\n`);
@@ -145,7 +143,7 @@ async function sendRealWhatsAppImage(to, imageUrl, caption) {
  * Send a WhatsApp document (PDF) using UltraMsg or fall back to simulation
  */
 async function sendRealWhatsAppDocument(to, documentUrl, filename, caption) {
-    const formattedTo = formatPhoneE164(to);
+    const formattedTo = (0, phone_1.formatPhoneE164)(to);
     const { ultramsgInstanceId, ultramsgToken } = (0, notificationConfig_1.getNotificationCredentials)();
     if (!ultramsgInstanceId || !ultramsgToken) {
         console.log(`[Simulation] Sending UltraMsg WhatsApp Document to ${formattedTo}:\nDocument: ${documentUrl}\nFilename: ${filename}\n`);

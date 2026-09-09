@@ -38,11 +38,18 @@ export function resolveGuestContactEmail(opts: {
 
 export function extractGuestPhone(guest: {
   phone?: string | null;
+  phoneCountryCode?: string | null;
   email?: string;
   preferences?: unknown;
 }): string | null {
   if (guest.phone?.trim()) {
-    return normalizePhone(guest.phone);
+    const raw = normalizePhone(guest.phone);
+    if (raw && !raw.startsWith('+') && guest.phoneCountryCode?.trim()) {
+      const cc = guest.phoneCountryCode.trim().replace(/[^\d+]/g, '');
+      const prefix = cc.startsWith('+') ? cc : `+${cc}`;
+      return `${prefix}${raw.replace(/^0+/, '')}`;
+    }
+    return raw;
   }
 
   if (guest.preferences && typeof guest.preferences === 'object') {

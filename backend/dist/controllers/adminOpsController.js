@@ -52,7 +52,14 @@ async function getOpsOverview(req, res) {
             db_1.prisma.tenant.count({ where: licenseExpiringWhere }),
             db_1.prisma.tenant.findMany({
                 where: licenseExpiringWhere,
-                include: {
+                select: {
+                    id: true,
+                    name: true,
+                    plan: true,
+                    accountKind: true,
+                    licenseActive: true,
+                    licenseExpiresAt: true,
+                    createdAt: true,
                     manager: { select: { name: true, email: true } },
                 },
                 orderBy: { licenseExpiresAt: 'asc' },
@@ -67,7 +74,14 @@ async function getOpsOverview(req, res) {
             db_1.prisma.platformInvoice.count({ where: { status: { in: ['SENT', 'PENDING'] } } }),
             db_1.prisma.tenant.findMany({
                 where: { createdAt: { gte: since7Days } },
-                include: {
+                select: {
+                    id: true,
+                    name: true,
+                    plan: true,
+                    accountKind: true,
+                    licenseActive: true,
+                    licenseExpiresAt: true,
+                    createdAt: true,
                     manager: { select: { name: true, email: true } },
                 },
                 orderBy: { createdAt: 'desc' },

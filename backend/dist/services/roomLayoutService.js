@@ -147,17 +147,21 @@ function generateAmphitheaterBlueprint(params, chairType) {
         for (let r = 0; r < rowsPerTier; r++) {
             const progress = (tier * rowsPerTier + r) / (tierCount * rowsPerTier - 1 || 1);
             const y = 25 + progress * 60;
-            const curve = 0.15 + tier * 0.08;
+            const curve = Math.round(36 + tier * 8);
             furniture.push({
                 id: uid('row'),
                 kind: 'row',
                 label: `Gradin ${tier + 1} — Rangée ${r + 1}`,
-                seatCount: seatsPerRow,
+                seatCount: seatsPerRow + tier * 2,
                 chairType,
                 tier,
                 x: 50,
                 y,
                 curve,
+                aisleSplit: true,
+                elevationM: Number(((tier + 1) * 0.28).toFixed(2)),
+                focusX: 50,
+                focusY: 12,
             });
             rowIndex++;
         }

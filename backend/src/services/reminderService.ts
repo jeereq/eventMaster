@@ -13,6 +13,7 @@ import {
 import { escapeHtml } from '../utils/brandingUtils';
 import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
 import { rewriteStaleGuestMessageCopy } from '../utils/guestMessageCopy';
+import { extractGuestPhone } from '../utils/guestIdentity';
 import { processTaskDueReminders } from './taskDueReminderService';
 import fs from 'fs';
 import path from 'path';
@@ -53,17 +54,7 @@ function saveLastReminders(reminders: Record<string, string>) {
 
 // Helper function to extract guest phone number
 function getGuestPhone(guest: any): string | null {
-  if (guest.preferences && typeof guest.preferences === 'object') {
-    const prefs = guest.preferences as any;
-    if (prefs.phone) return prefs.phone;
-    if (prefs.telephone) return prefs.telephone;
-  }
-  const emailStr = guest.email.trim();
-  const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
-  if (isPhone) {
-    return emailStr;
-  }
-  return null;
+  return extractGuestPhone(guest);
 }
 
 // Main logic to process reminders

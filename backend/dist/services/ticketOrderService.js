@@ -153,6 +153,9 @@ async function fulfillTicketOrder(orderId, stripeSession) {
         amountFc: order.amountFc,
         quantity: order.quantity,
         eventTitle: event.title,
+        eventId: event.id,
+        tenantId: event.tenantId,
+        tenantName: event.tenant.name,
     }).catch((err) => console.error('[Ticket] notify payment:', err));
     const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
     if (primary) {

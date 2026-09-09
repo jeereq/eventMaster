@@ -23,7 +23,6 @@ const publicVenue_1 = require("../utils/publicVenue");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
 const listingDetails_1 = require("../utils/listingDetails");
 const marketplaceFeedController_1 = require("./marketplaceFeedController");
-const client_1 = require("@prisma/client");
 const planFeaturesService_1 = require("../services/planFeaturesService");
 const platformNotificationService_1 = require("../services/platformNotificationService");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
@@ -567,14 +566,8 @@ async function upsertRoomListing(req, res) {
             },
         });
         if (wantPublic) {
-            const tenant = await db_1.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, accountKind: true } });
+            const tenant = await db_1.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
             await ensureVendorProfile(tenantId, tenant?.name || room.name, place.city || listing.city);
-            if (tenant && tenant.accountKind === client_1.TenantAccountKind.ORGANIZER) {
-                await db_1.prisma.tenant.update({
-                    where: { id: tenantId },
-                    data: { accountKind: client_1.TenantAccountKind.BOTH },
-                });
-            }
         }
         return res.json(listing);
     }
@@ -1016,12 +1009,6 @@ async function upsertService(req, res) {
             : await db_1.prisma.serviceOffering.create({
                 data: { ...data, tenantId, vendorProfileId: profile.id, slug },
             });
-        if (wantPublic && tenant?.accountKind === client_1.TenantAccountKind.ORGANIZER) {
-            await db_1.prisma.tenant.update({
-                where: { id: tenantId },
-                data: { accountKind: client_1.TenantAccountKind.BOTH },
-            });
-        }
         return res.json(offering);
     }
     catch (error) {

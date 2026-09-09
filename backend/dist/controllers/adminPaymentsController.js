@@ -31,6 +31,18 @@ function parseStatus(value) {
 function parseChannel(value) {
     return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
+function parseDateField(value) {
+    return String(value || '').trim().toLowerCase() === 'paid' ? 'paid' : 'created';
+}
+function parseProvider(value) {
+    return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+function parseAmountBound(value) {
+    if (value === undefined || value === null || value === '')
+        return undefined;
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
 function dateRange(req) {
     const from = typeof req.query.from === 'string' ? req.query.from.trim() : '';
     const to = typeof req.query.to === 'string' ? req.query.to.trim() : '';
@@ -153,8 +165,8 @@ function matchesQ(row, q) {
 }
 async function collectAttempts(opts) {
     const take = opts.takePerSource ?? 400;
-    const createdAt = opts.createdAt;
-    const whereDate = createdAt ? { createdAt } : {};
+    const dateField = opts.dateField === 'paid' ? 'paidAt' : 'createdAt';
+    const whereDate = opts.dateRange ? { [dateField]: opts.dateRange } : {};
     const [tickets, aiOrders, subscriptions] = await Promise.all([
         opts.kind === 'all' || opts.kind === 'ticket'
             ? db_1.prisma.ticketOrder.findMany({
@@ -216,6 +228,11 @@ async function collectAttempts(opts) {
             createdAt: row.createdAt.toISOString(),
             updatedAt: null,
             paidAt: row.paidAt?.toISOString() || null,
+            entityId: row.id,
+            eventTitle: row.event?.title || null,
+            eventSlug: row.event?.slug || null,
+            quantity: row.quantity,
+            rawStatus: row.status,
         });
     }
     for (const row of aiOrders) {
@@ -245,6 +262,9 @@ async function collectAttempts(opts) {
             createdAt: row.createdAt.toISOString(),
             updatedAt: row.updatedAt.toISOString(),
             paidAt: row.paidAt?.toISOString() || null,
+            entityId: row.id,
+            tokensCount: row.tokensCount,
+            rawStatus: row.status,
         });
     }
     for (const row of subscriptions) {
@@ -276,6 +296,11 @@ async function collectAttempts(opts) {
             createdAt: row.createdAt.toISOString(),
             updatedAt: row.updatedAt.toISOString(),
             paidAt: row.paidAt?.toISOString() || null,
+            entityId: row.id,
+            requestedPlan: row.requestedPlan,
+            tenantName: row.tenant?.name || null,
+            proofOfPayment: row.proofOfPayment,
+            rawStatus: row.status,
         });
     }
     return rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -285,8 +310,25 @@ async function getAdminPaymentsOverview(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const createdAt = dateRange(req);
-        const rows = await collectAttempts({ kind: 'all', createdAt, takePerSource: 2000 });
+        const kind = parseKind(req.query.kind);
+        const status = parseStatus(req.query.status);
+        const channel = parseChannel(req.query.channel);
+        const provider = parseProvider(req.query.provider);
+        const range = dateRange(req);
+        const dateField = parseDateField(req.query.dateField);
+        const minFc = parseAmountBound(req.query.minFc);
+        const maxFc = parseAmountBound(req.query.maxFc);
+        let rows = await collectAttempts({ kind, dateRange: range, dateField, takePerSource: 2000 });
+        if (status !== 'all')
+            rows = rows.filter((row) => row.status === status);
+        if (channel)
+            rows = rows.filter((row) => row.channel === channel);
+        if (provider)
+            rows = rows.filter((row) => String(row.paymentProvider || '').toLowerCase() === provider);
+        if (minFc !== undefined)
+            rows = rows.filter((row) => row.amountFc >= minFc);
+        if (maxFc !== undefined)
+            rows = rows.filter((row) => row.amountFc <= maxFc);
         const bySourceMap = new Map();
         const byKindMap = new Map();
         const totals = emptyBucket();
@@ -335,13 +377,23 @@ async function listAdminPaymentAttempts(req, res) {
         const kind = parseKind(req.query.kind);
         const status = parseStatus(req.query.status);
         const channel = parseChannel(req.query.channel);
+        const provider = parseProvider(req.query.provider);
         const q = searchQ(req);
-        const createdAt = dateRange(req);
-        let rows = await collectAttempts({ kind, createdAt, takePerSource: 800 });
+        const range = dateRange(req);
+        const dateField = parseDateField(req.query.dateField);
+        const minFc = parseAmountBound(req.query.minFc);
+        const maxFc = parseAmountBound(req.query.maxFc);
+        let rows = await collectAttempts({ kind, dateRange: range, dateField, takePerSource: 800 });
         if (status !== 'all')
             rows = rows.filter((row) => row.status === status);
         if (channel)
             rows = rows.filter((row) => row.channel === channel);
+        if (provider)
+            rows = rows.filter((row) => String(row.paymentProvider || '').toLowerCase() === provider);
+        if (minFc !== undefined)
+            rows = rows.filter((row) => row.amountFc >= minFc);
+        if (maxFc !== undefined)
+            rows = rows.filter((row) => row.amountFc <= maxFc);
         if (q)
             rows = rows.filter((row) => matchesQ(row, q));
         const total = rows.length;

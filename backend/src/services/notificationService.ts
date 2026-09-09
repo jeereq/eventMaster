@@ -7,17 +7,9 @@ import {
 
 logNotificationConfigStatus();
 
-function formatPhoneE164(to: string): string {
-  let formattedTo = to.trim().replace(/[\s\-()]/g, '');
-  if (!formattedTo.startsWith('+')) {
-    if (formattedTo.startsWith('0')) {
-      formattedTo = '+243' + formattedTo.slice(1);
-    } else {
-      formattedTo = '+' + formattedTo;
-    }
-  }
-  return formattedTo;
-}
+import { formatPhoneE164 } from '../utils/phone';
+
+export { formatPhoneE164 };
 
 /**
  * Envoie un e-mail via SendGrid uniquement (aucune simulation).
@@ -97,7 +89,16 @@ async function sendUltraMsgRequest(
 
     if (response.ok && isSent) {
       const messageId = data.id || 'um-sent';
-      console.log(`[Notification Service] UltraMsg ${endpoint} sent successfully to ${formattedTo}. ID: ${messageId}`);
+      const isPendingAuth =
+        typeof data.message === 'string' &&
+        data.message.toLowerCase().includes('not authenticated');
+      if (isPendingAuth) {
+        console.warn(
+          `[Notification Service] UltraMsg ${endpoint} mis en attente pour ${formattedTo} (ATTENTION : l'instance UltraMsg n'est pas connectée à WhatsApp / en attente de scan du QR Code). Message: ${data.message}`,
+        );
+      } else {
+        console.log(`[Notification Service] UltraMsg ${endpoint} sent successfully to ${formattedTo}. ID: ${messageId}`);
+      }
       return { success: true, simulated: false, messageSid: messageId };
     }
 

@@ -51,6 +51,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = require("../db");
 const auth_1 = require("../middleware/auth");
 const tenantAccess_1 = require("../utils/tenantAccess");
+const welcomeAiTokens_1 = require("../services/welcomeAiTokens");
 const plansConfig_1 = require("../config/plansConfig");
 const legalService_1 = require("../services/legalService");
 const permissionsService_1 = require("../services/permissionsService");
@@ -120,7 +121,7 @@ async function register(req, res) {
                 error: 'Les inscriptions sont actuellement fermées. Contactez le support pour créer une organisation.',
             });
         }
-        const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind } = req.body;
+        const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind, intent: rawIntent, plan: rawPlan } = req.body;
         if (!email || !password || !name) {
             return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name)' });
         }
@@ -156,6 +157,7 @@ async function register(req, res) {
             }
         }
         const accountKind = (0, tenantAccess_1.parseAccountKind)(rawAccountKind);
+        const pendingPlan = (0, plansConfig_1.resolvePendingSignupPlan)(typeof rawPlan === 'string' ? rawPlan : null, accountKind);
         const resolvedTenantName = String(tenantName || '').trim() || (accountKind === 'CLIENT' ? String(name).trim() : '');
         if (!resolvedTenantName) {
             return res.status(400).json({ error: 'Le nom de l’organisation est obligatoire.' });
@@ -165,6 +167,7 @@ async function register(req, res) {
                 data: {
                     name: resolvedTenantName,
                     plan: 'FREE',
+                    pendingPlan: pendingPlan ?? undefined,
                     accountKind,
                     referredByCommercialId,
                     referredByOrgUserId,
@@ -196,6 +199,27 @@ async function register(req, res) {
             ipAddress: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || null,
             userAgent: req.headers['user-agent'] || null,
         });
+        let welcomeTokens = { granted: false, offer: 'none', tokensCount: 0, valueFc: 0 };
+        try {
+            const grant = await (0, welcomeAiTokens_1.grantWelcomeAiTokens)({
+                userId: result.user.id,
+                tenantId: result.tenant.id,
+                accountKind,
+                intent: typeof rawIntent === 'string' ? rawIntent : null,
+                planKey: pendingPlan,
+                moment: 'signup',
+            });
+            welcomeTokens = {
+                granted: !grant.skipped,
+                offer: grant.offer.key,
+                tokensCount: grant.tokensCount,
+                valueFc: grant.valueFc,
+            };
+        }
+        catch (grantError) {
+            console.error('[register] welcome AI tokens:', grantError);
+            welcomeTokens = { granted: false, offer: 'error', tokensCount: 0, valueFc: 0 };
+        }
         const sentVia = await issueAndSendOtp({
             userId: result.user.id,
             name,
@@ -215,6 +239,7 @@ async function register(req, res) {
             email: result.user.email,
             user: publicUser(result.user),
             tenant: (0, tenantAccess_1.formatTenantResponse)(result.tenant),
+            welcomeTokens,
         });
     }
     catch (error) {
@@ -434,6 +459,9 @@ async function updateProfile(req, res) {
             return res.status(401).json({ error: 'Non authentifié.' });
         }
         const { name, phone, phoneCountryCode, nationalNumber, avatarUrl, password, tenantName, accountKind } = req.body;
+        if (accountKind !== undefined && accountKind !== null && String(accountKind).trim() !== '') {
+            return res.status(403).json({ error: permissionsService_1.ACCOUNT_KIND_SUPERADMIN_ONLY });
+        }
         if (!name) {
             return res.status(400).json({ error: 'Le nom est obligatoire.' });
         }
@@ -452,38 +480,19 @@ async function updateProfile(req, res) {
         if (password && password.trim() !== '') {
             updateData.passwordHash = await bcryptjs_1.default.hash(password, 10);
         }
-        const wantsAccountKind = accountKind === 'ORGANIZER' || accountKind === 'VENDOR' || accountKind === 'BOTH' || accountKind === 'CLIENT';
-        if (wantsAccountKind && req.user.tenantId) {
-            const access = await (0, permissionsService_1.resolveOrgAccess)(req.user.id, req.user.tenantId);
-            if (!access.isOwner && access.level !== 'manager' && access.level !== 'client') {
-                return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent changer le type de compte.' });
-            }
-        }
+        const profileAccess = req.user.tenantId
+            ? await (0, permissionsService_1.resolveOrgAccess)(req.user.id, req.user.tenantId)
+            : null;
         const result = await db_1.prisma.$transaction(async (tx) => {
             const updatedUser = await tx.user.update({
                 where: { id: req.user.id },
                 data: updateData,
             });
             let updatedTenant = null;
-            let planResetToFree = false;
             if (req.user.tenantId) {
-                const currentTenant = await tx.tenant.findUnique({
-                    where: { id: req.user.tenantId },
-                    select: { plan: true },
-                });
                 const tenantData = {};
-                if (tenantName)
+                if (tenantName && !profileAccess?.isProtocolOnly)
                     tenantData.name = tenantName;
-                if (wantsAccountKind) {
-                    const nextKind = (0, tenantAccess_1.parseAccountKind)(accountKind);
-                    tenantData.accountKind = nextKind;
-                    const currentPlan = currentTenant?.plan || 'FREE';
-                    if (nextKind === 'CLIENT' || !(0, plansConfig_1.isPlanAllowedForAccountKind)(currentPlan, nextKind)) {
-                        if (currentPlan !== 'FREE')
-                            planResetToFree = true;
-                        tenantData.plan = 'FREE';
-                    }
-                }
                 if (Object.keys(tenantData).length > 0) {
                     updatedTenant = await tx.tenant.update({
                         where: { id: req.user.tenantId },
@@ -496,13 +505,10 @@ async function updateProfile(req, res) {
                     });
                 }
             }
-            return { user: updatedUser, tenant: updatedTenant, planResetToFree };
+            return { user: updatedUser, tenant: updatedTenant };
         });
         return res.json({
-            message: result.planResetToFree
-                ? 'Profil mis à jour. L’ancien forfait n’était pas destiné à ce type de compte : l’espace est passé à l’essai Essentials. Choisissez un forfait adapté dans Facturation.'
-                : 'Profil mis à jour avec succès !',
-            planResetToFree: result.planResetToFree,
+            message: 'Profil mis à jour avec succès !',
             user: publicUser(result.user),
             tenant: result.tenant ? (0, tenantAccess_1.formatTenantResponse)(result.tenant) : null,
         });

@@ -64,3 +64,20 @@ export function resolvePhoneFields(input: {
 
   return { phone: null, phoneCountryCode: cc };
 }
+
+/** Formate un numéro de téléphone en notation E.164 (+243...) pour UltraMsg / WhatsApp / SMS */
+export function formatPhoneE164(to: string): string {
+  let formattedTo = to.trim().replace(/[\s\-()]/g, '');
+  if (!formattedTo.startsWith('+')) {
+    if (formattedTo.startsWith('00')) {
+      formattedTo = '+' + formattedTo.slice(2);
+    } else if (formattedTo.startsWith('0')) {
+      formattedTo = '+243' + formattedTo.slice(1);
+    } else if (formattedTo.length === 9 && /^[89]/.test(formattedTo)) {
+      formattedTo = '+243' + formattedTo;
+    } else {
+      formattedTo = '+' + formattedTo;
+    }
+  }
+  return formattedTo;
+}

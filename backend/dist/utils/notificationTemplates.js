@@ -67,6 +67,7 @@ function userWhatsAppNumber(user) {
     return phone;
 }
 exports.FAMILY_LABEL_FR = {
+    events: 'Événements',
     billing: 'Facturation',
     commissions: 'Commissions',
     catalog: 'Catalogue',

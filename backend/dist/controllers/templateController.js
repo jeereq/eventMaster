@@ -21,6 +21,7 @@ const aiSimulationWalletService_1 = require("../services/aiSimulationWalletServi
 const aiTemplateComposeHistoryService_1 = require("../services/aiTemplateComposeHistoryService");
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const cloudinaryConfig_1 = require("../config/cloudinaryConfig");
+const permissionsService_1 = require("../services/permissionsService");
 async function persistTemplateCompose(opts) {
     try {
         const saved = await (0, aiTemplateComposeHistoryService_1.saveAiTemplateComposeRun)(opts);
@@ -114,6 +115,11 @@ async function createTemplate(req, res) {
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
+        if (!isSuperAdmin && req.user?.id && tenantId) {
+            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(req.user.id, tenantId);
+            if (denied)
+                return res.status(403).json({ error: denied });
+        }
         if (!name || !content) {
             return res.status(400).json({ error: 'Les champs name et content sont requis' });
         }
@@ -201,6 +207,11 @@ async function updateTemplate(req, res) {
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
+        if (!isSuperAdmin && req.user?.id && tenantId) {
+            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(req.user.id, tenantId);
+            if (denied)
+                return res.status(403).json({ error: denied });
+        }
         const existingTemplate = await db_1.prisma.template.findFirst({
             where: isSuperAdmin ? { id } : { id, tenantId },
         });
@@ -256,6 +267,11 @@ async function duplicateTemplate(req, res) {
         const { name, targetTenantId } = req.body ?? {};
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
+        }
+        if (!isSuperAdmin && req.user?.id && tenantId) {
+            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(req.user.id, tenantId);
+            if (denied)
+                return res.status(403).json({ error: denied });
         }
         const source = await db_1.prisma.template.findFirst({
             where: isSuperAdmin
@@ -344,6 +360,11 @@ async function deleteTemplate(req, res) {
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
+        if (!isSuperAdmin && req.user?.id && tenantId) {
+            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(req.user.id, tenantId);
+            if (denied)
+                return res.status(403).json({ error: denied });
+        }
         const existingTemplate = await db_1.prisma.template.findFirst({
             where: isSuperAdmin ? { id } : { id, tenantId },
         });
@@ -370,26 +391,39 @@ async function composeTemplateWithAi(req, res) {
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
+        if (!isSuperAdmin && req.user.id && tenantId) {
+            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(req.user.id, tenantId);
+            if (denied)
+                return res.status(403).json({ error: denied });
+        }
         if (!isSuperAdmin && tenantId) {
             await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'customTemplates');
         }
         const body = req.body && typeof req.body === 'object' ? req.body : {};
         const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
         if (!deviceId) {
-            return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer un jeton IA.' });
+            return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
         }
         const prompt = typeof body.prompt === 'string' ? body.prompt : '';
         const generateBackground = body.generateBackground !== false;
+        const embedText = body.embedText === true;
+        const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
+        const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
         const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
-        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, req.user.id);
+        const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(req.user);
+        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, req.user.id, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
         const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)({
             userId: req.user.id,
             tenantId: isSuperAdmin ? null : tenantId,
             prompt,
             imageUrls,
             generateBackground,
+            embedText,
+            deviceId,
+            authUserId: req.user.id,
+            contextSource,
+            artStyle,
         });
-        const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, req.user.id);
         const historyId = await persistTemplateCompose({
             userId: req.user.id,
             deviceId,
@@ -398,6 +432,12 @@ async function composeTemplateWithAi(req, res) {
             referenceUrls: imageUrls,
             content: result.content,
             stage: result.stage,
+        });
+        const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, req.user.id, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, {
+            action: 'invitation_compose',
+            source: unlimited && req.user.impersonatedBy ? 'support' : 'studio',
+            relatedId: historyId,
+            unlimited,
         });
         return res.json({
             content: result.content,
@@ -426,24 +466,37 @@ async function composeTemplateWithAi(req, res) {
 async function publicComposeTemplateWithAi(req, res) {
     try {
         const user = req.user;
+        if (user?.id && user.tenantId) {
+            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(user.id, user.tenantId);
+            if (denied)
+                return res.status(403).json({ error: denied });
+        }
         const body = req.body && typeof req.body === 'object' ? req.body : {};
         const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
         if (!deviceId) {
-            return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer un jeton IA.' });
+            return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
         }
         const prompt = typeof body.prompt === 'string' ? body.prompt : '';
         const generateBackground = body.generateBackground !== false;
+        const embedText = body.embedText === true;
+        const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
+        const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
         const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
         const rateKey = user?.id || req.ip || deviceId;
-        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, user?.id || null);
+        const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(user);
+        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, user?.id || null, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
         const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)({
             userId: rateKey,
             tenantId: user?.tenantId || null,
             prompt,
             imageUrls,
             generateBackground,
+            embedText,
+            deviceId,
+            authUserId: user?.id || null,
+            contextSource,
+            artStyle,
         });
-        const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, user?.id || null);
         const historyId = await persistTemplateCompose({
             userId: user?.id || null,
             deviceId,
@@ -452,6 +505,12 @@ async function publicComposeTemplateWithAi(req, res) {
             referenceUrls: imageUrls,
             content: result.content,
             stage: result.stage,
+        });
+        const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, user?.id || null, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, {
+            action: 'invitation_compose',
+            source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
+            relatedId: historyId,
+            unlimited,
         });
         return res.json({
             content: result.content,

@@ -44,7 +44,13 @@ function resolveGuestContactEmail(opts) {
 }
 function extractGuestPhone(guest) {
     if (guest.phone?.trim()) {
-        return normalizePhone(guest.phone);
+        const raw = normalizePhone(guest.phone);
+        if (raw && !raw.startsWith('+') && guest.phoneCountryCode?.trim()) {
+            const cc = guest.phoneCountryCode.trim().replace(/[^\d+]/g, '');
+            const prefix = cc.startsWith('+') ? cc : `+${cc}`;
+            return `${prefix}${raw.replace(/^0+/, '')}`;
+        }
+        return raw;
     }
     if (guest.preferences && typeof guest.preferences === 'object') {
         const prefs = guest.preferences;

@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.submitSubscriptionRequest = submitSubscriptionRequest;
+exports.submitDiscountRequest = submitDiscountRequest;
+exports.quoteSubscriptionDiscount = quoteSubscriptionDiscount;
 exports.getMySubscriptionRequests = getMySubscriptionRequests;
 exports.getAdminSubscriptionRequests = getAdminSubscriptionRequests;
 exports.approveSubscriptionRequest = approveSubscriptionRequest;
@@ -19,8 +21,10 @@ const adminAuditService_1 = require("../services/adminAuditService");
 const platformNotificationService_1 = require("../services/platformNotificationService");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 const platformSettingsService_1 = require("../services/platformSettingsService");
+const subscriptionDiscountAccess_1 = require("../services/subscriptionDiscountAccess");
 const subscriptionActivationService_1 = require("../services/subscriptionActivationService");
 const subscriptionFlexPayCheckoutService_1 = require("../services/subscriptionFlexPayCheckoutService");
+const subscriptionDiscountQuoteService_1 = require("../services/subscriptionDiscountQuoteService");
 const flexPayCardService_1 = require("../services/flexPayCardService");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 // 1. Submit a subscription request (Tenant)
@@ -81,6 +85,156 @@ async function submitSubscriptionRequest(req, res) {
     catch (error) {
         console.error('Erreur lors de la soumission de la demande d\'abonnement:', error);
         return res.status(500).json({ error: 'Erreur lors de la soumission de la demande.' });
+    }
+}
+async function submitDiscountRequest(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        if (!tenantId) {
+            return res.status(403).json({ error: 'Tenant non identifié.' });
+        }
+        const discountGate = (0, subscriptionDiscountAccess_1.resolveSubscriptionDiscountAccess)(tenantId, (0, platformSettingsService_1.getSubscriptionDiscountAccess)());
+        if (!discountGate.allowed) {
+            return res.status(403).json({ error: discountGate.reason });
+        }
+        const { requestedPlan, durationDays, requestedDiscountPercent, requestedAmount, note } = req.body || {};
+        if (!requestedPlan || !plansConfig_1.PAID_PLAN_KEYS.includes(requestedPlan)) {
+            return res.status(400).json({ error: 'Le forfait demandé est invalide.' });
+        }
+        const tenant = await db_1.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { accountKind: true, name: true },
+        });
+        if (!tenant || !(0, plansConfig_1.isPlanAllowedForAccountKind)(requestedPlan, tenant.accountKind)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planAudienceMismatchMessage)(requestedPlan, tenant?.accountKind),
+            });
+        }
+        const days = (0, plansConfig_1.resolveDurationDaysForPlan)(requestedPlan, durationDays != null ? parseInt(String(durationDays), 10) : null);
+        if (isNaN(days) || days <= 0) {
+            return res.status(400).json({ error: 'La durée demandée est invalide.' });
+        }
+        const parsedPercent = requestedDiscountPercent !== undefined && requestedDiscountPercent !== null && requestedDiscountPercent !== ''
+            ? parseFloat(String(requestedDiscountPercent))
+            : undefined;
+        const parsedAmount = requestedAmount !== undefined && requestedAmount !== null && requestedAmount !== ''
+            ? parseFloat(String(requestedAmount))
+            : undefined;
+        if (parsedPercent !== undefined && (isNaN(parsedPercent) || parsedPercent < 1 || parsedPercent > 80)) {
+            return res.status(400).json({ error: 'Le rabais demandé doit être compris entre 1 et 80 %.' });
+        }
+        if (parsedAmount !== undefined && (isNaN(parsedAmount) || parsedAmount < 0)) {
+            return res.status(400).json({ error: 'Le montant souhaité est invalide.' });
+        }
+        if (parsedPercent === undefined && parsedAmount === undefined) {
+            return res.status(400).json({ error: 'Indiquez un pourcentage de rabais ou un montant souhaité.' });
+        }
+        const noteText = String(note || '').trim();
+        if (noteText.length < 8) {
+            return res.status(400).json({ error: 'Expliquez brièvement le motif de votre demande de rabais (8 caractères min.).' });
+        }
+        const existing = await db_1.prisma.subscriptionRequest.findFirst({
+            where: { tenantId, requestKind: 'discount', status: { in: ['PENDING', 'QUOTED'] } },
+            select: { id: true, status: true },
+        });
+        if (existing) {
+            return res.status(409).json({
+                error: existing.status === 'QUOTED'
+                    ? 'Un devis de rabais est déjà en attente de paiement. Ouvrez votre historique pour payer.'
+                    : 'Une demande de rabais est déjà en cours d’examen.',
+                requestId: existing.id,
+            });
+        }
+        const baseAmount = (0, subscriptionDiscountQuoteService_1.computeCatalogBaseAmount)(requestedPlan, days);
+        const request = await db_1.prisma.subscriptionRequest.create({
+            data: {
+                tenantId,
+                requestedPlan: requestedPlan,
+                durationDays: days,
+                status: 'PENDING',
+                requestKind: 'discount',
+                discountRequestNote: noteText.slice(0, 800),
+                requestedDiscountPercent: parsedPercent ?? null,
+                requestedAmount: parsedAmount ?? null,
+                baseAmount,
+            },
+        });
+        void (0, subscriptionDiscountQuoteService_1.notifyDiscountRequestSubmitted)({
+            tenantId,
+            tenantName: tenant.name,
+            requestId: request.id,
+            requestedPlan,
+            durationDays: days,
+            requestedDiscountPercent: parsedPercent ?? null,
+            requestedAmount: parsedAmount ?? null,
+        });
+        return res.status(201).json({
+            message: 'Votre demande de rabais a été envoyée. Le Superadmin ou le commercial global la validera, puis vous recevrez un lien de paiement.',
+            request,
+        });
+    }
+    catch (error) {
+        console.error('Erreur demande de rabais:', error);
+        return res.status(500).json({ error: 'Impossible de soumettre la demande de rabais.' });
+    }
+}
+async function quoteSubscriptionDiscount(req, res) {
+    try {
+        if (!(0, platformAccess_1.isPlatformStaff)(req.user?.role)) {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+        }
+        const requestId = req.params.id;
+        const { discountPercent, approvedAmount } = req.body ?? {};
+        const parsedDiscount = discountPercent !== undefined && discountPercent !== null && discountPercent !== ''
+            ? parseFloat(String(discountPercent))
+            : undefined;
+        const parsedApproved = approvedAmount !== undefined && approvedAmount !== null && approvedAmount !== ''
+            ? parseFloat(String(approvedAmount))
+            : undefined;
+        if (parsedDiscount !== undefined && (isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100)) {
+            return res.status(400).json({ error: 'La réduction doit être entre 0 et 100 %.' });
+        }
+        if (parsedApproved !== undefined && (isNaN(parsedApproved) || parsedApproved < 0)) {
+            return res.status(400).json({ error: 'Le montant approuvé est invalide.' });
+        }
+        const request = await db_1.prisma.subscriptionRequest.findUnique({
+            where: { id: requestId },
+            select: { tenantId: true },
+        });
+        if (!request) {
+            return res.status(404).json({ error: 'Demande d\'abonnement non trouvée.' });
+        }
+        if ((0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) && req.user?.id) {
+            const owns = await (0, platformCommercialScope_1.assertCommercialOwnsTenant)(req.user.id, request.tenantId);
+            if (!owns) {
+                return res.status(403).json({ error: 'Vous ne pouvez valider que les demandes des organisations que vous avez parrainées.' });
+            }
+        }
+        const result = await (0, subscriptionDiscountQuoteService_1.approveDiscountQuote)({
+            requestId,
+            reviewerId: req.user.id,
+            discountPercent: parsedDiscount,
+            approvedAmount: parsedApproved,
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'SUBSCRIPTION_DISCOUNT_QUOTED',
+            targetType: 'SubscriptionRequest',
+            targetId: requestId,
+            tenantId: request.tenantId,
+            summary: `Rabais validé · ${Math.round(result.pricing.finalAmount)} FC`,
+            metadata: { approvedAmount: result.pricing.finalAmount, payHref: result.payHref },
+        });
+        return res.json({
+            message: `Rabais validé (${Math.round(result.pricing.finalAmount).toLocaleString('fr-FR')} FC). Un lien de paiement a été envoyé à l’organisation.`,
+            request: result.request,
+            payHref: result.payHref,
+            canPayOnline: result.canPayOnline,
+            quoteExpiresAt: result.quoteExpiresAt,
+        });
+    }
+    catch (error) {
+        console.error('Erreur validation rabais:', error);
+        return res.status(400).json({ error: error?.message || 'Impossible de valider le rabais.' });
     }
 }
 // 2. Get my subscription requests (Tenant)
@@ -184,8 +338,13 @@ async function approveSubscriptionRequest(req, res) {
         if (!request) {
             return res.status(404).json({ error: 'Demande d\'abonnement non trouvée.' });
         }
-        if (request.status !== 'PENDING') {
+        if (request.status !== 'PENDING' && request.status !== 'QUOTED') {
             return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
+        }
+        if (request.requestKind === 'discount' && request.status === 'PENDING') {
+            return res.status(400).json({
+                error: 'Validez d’abord le rabais pour envoyer le lien de paiement. L’activation n’est possible qu’après paiement, ou manuellement une fois le devis envoyé.',
+            });
         }
         if (!(0, plansConfig_1.isPlanAllowedForAccountKind)(request.requestedPlan, request.tenant.accountKind)) {
             return res.status(403).json({
@@ -346,7 +505,7 @@ async function rejectSubscriptionRequest(req, res) {
         if (!request) {
             return res.status(404).json({ error: 'Demande d\'abonnement non trouvée.' });
         }
-        if (request.status !== 'PENDING') {
+        if (request.status !== 'PENDING' && request.status !== 'QUOTED') {
             return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
         }
         if ((0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) && req.user?.id) {
@@ -379,10 +538,19 @@ async function rejectSubscriptionRequest(req, res) {
 }
 // 6. Get public/authenticated subscription plans from settings
 async function getSubscriptionPlans(req, res) {
+    const access = (0, platformSettingsService_1.getSubscriptionDiscountAccess)();
+    const gate = (0, subscriptionDiscountAccess_1.resolveSubscriptionDiscountAccess)(req.user?.tenantId, access);
     return res.json({
         ...(0, plansConfig_1.getPlansConfiguration)(),
         saasPaymentMode: (0, platformSettingsService_1.getSaasPaymentMode)(),
         onlinePaymentsEnabled: (0, platformSettingsService_1.isOnlinePaymentsEnabled)(),
+        discountRequestsAllowed: gate.allowed,
+        discountCampaign: {
+            enabled: access.enabled,
+            periodStart: access.periodStart,
+            periodEnd: access.periodEnd,
+            periodActive: gate.periodActive,
+        },
     });
 }
 /**
@@ -412,7 +580,7 @@ async function checkoutSubscriptionFlexPay(req, res) {
                 error: 'Paiements FlexPay non configurés. Contactez le support.',
             });
         }
-        const { requestedPlan, durationDays, paymentMethod, phone } = req.body || {};
+        const { requestedPlan, durationDays, paymentMethod, phone, operator, currency } = req.body || {};
         const method = paymentMethod === 'mobile' ? 'mobile' : 'card';
         if (!requestedPlan || !plansConfig_1.PAID_PLAN_KEYS.includes(requestedPlan)) {
             return res.status(400).json({ error: 'Le forfait demandé est invalide.' });
@@ -447,6 +615,7 @@ async function checkoutSubscriptionFlexPay(req, res) {
                 approvedAmount: amountFc,
                 paymentProvider: method === 'mobile' ? 'flexpay_mobile' : 'flexpay_card',
                 flexPayReference: null,
+                flexPayChannel: method === 'mobile' && operator ? String(operator).trim().toLowerCase() : null,
             },
         });
         try {
@@ -455,6 +624,7 @@ async function checkoutSubscriptionFlexPay(req, res) {
                 tenantName: tenant.name,
                 method,
                 phone,
+                currency,
             });
             return res.status(201).json(result);
         }
@@ -484,15 +654,6 @@ async function retrySubscriptionFlexPay(req, res) {
         const requestId = String(req.params.id || '');
         if (!tenantId)
             return res.status(403).json({ error: 'Tenant non identifié.' });
-        if ((0, platformSettingsService_1.getSaasPaymentMode)() !== 'flexpay') {
-            return res.status(400).json({
-                error: 'Le paiement FlexPay des forfaits est désactivé.',
-                saasPaymentMode: 'manual',
-            });
-        }
-        if (!(0, platformSettingsService_1.isOnlinePaymentsEnabled)()) {
-            return res.status(503).json({ error: 'Les paiements en ligne sont temporairement désactivés.' });
-        }
         const request = await db_1.prisma.subscriptionRequest.findFirst({
             where: { id: requestId, tenantId },
             include: { tenant: { select: { name: true } } },
@@ -502,19 +663,40 @@ async function retrySubscriptionFlexPay(req, res) {
         if (request.status === 'APPROVED') {
             return res.status(400).json({ error: 'Cette demande est déjà payée et approuvée.' });
         }
-        if (request.status !== 'PENDING' && request.status !== 'REJECTED') {
+        const isQuotedPay = request.status === 'QUOTED';
+        if (!isQuotedPay && (0, platformSettingsService_1.getSaasPaymentMode)() !== 'flexpay') {
+            return res.status(400).json({
+                error: 'Le paiement FlexPay des forfaits est désactivé.',
+                saasPaymentMode: 'manual',
+            });
+        }
+        if (!(0, platformSettingsService_1.isOnlinePaymentsEnabled)()) {
+            return res.status(503).json({ error: 'Les paiements en ligne sont temporairement désactivés.' });
+        }
+        if (request.status !== 'PENDING' && request.status !== 'REJECTED' && request.status !== 'QUOTED') {
             return res.status(400).json({ error: 'Cette demande ne peut pas être relancée.' });
+        }
+        if (isQuotedPay && request.quoteExpiresAt && request.quoteExpiresAt < new Date()) {
+            return res.status(410).json({ error: 'Ce devis a expiré. Déposez une nouvelle demande de rabais.' });
         }
         const rawMethod = String(req.body?.paymentMethod || '').toLowerCase();
         const fallback = request.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card';
         const method = rawMethod === 'mobile' || rawMethod === 'card' ? rawMethod : fallback;
         const phone = req.body?.phone ?? null;
+        const operator = typeof req.body?.operator === 'string' ? req.body.operator.trim().toLowerCase() : '';
+        if (method === 'mobile' && operator) {
+            await db_1.prisma.subscriptionRequest.update({
+                where: { id: request.id },
+                data: { flexPayChannel: operator },
+            });
+        }
         try {
             const result = await (0, subscriptionFlexPayCheckoutService_1.initiateFlexPaySessionForRequest)({
                 request,
                 tenantName: request.tenant.name,
                 method: method,
                 phone,
+                currency: req.body?.currency,
             });
             return res.json({
                 ...result,
@@ -525,7 +707,7 @@ async function retrySubscriptionFlexPay(req, res) {
         catch (err) {
             await db_1.prisma.subscriptionRequest.update({
                 where: { id: request.id },
-                data: { status: 'REJECTED' },
+                data: { status: (0, subscriptionDiscountQuoteService_1.statusAfterFailedQuotedPayment)(request.status) },
             });
             return res.status(502).json({
                 error: err?.message || 'Impossible de relancer le paiement FlexPay.',
@@ -591,7 +773,7 @@ async function verifySubscriptionFlexPay(req, res) {
         if (checked.status === 'failed') {
             await db_1.prisma.subscriptionRequest.update({
                 where: { id: request.id },
-                data: { status: 'REJECTED', ...meta },
+                data: { status: (0, subscriptionDiscountQuoteService_1.statusAfterFailedQuotedPayment)(request.status), ...meta },
             });
             return res.json({
                 paid: false,

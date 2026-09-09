@@ -14,9 +14,10 @@ import {
   messageAlreadyGreets,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
-import { extractGuestEmail } from '../utils/guestIdentity';
+import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
 import { formatEventPlace } from '../utils/eventPlace';
+import { GUEST_COPY, rewriteStaleGuestMessageCopy } from '../utils/guestMessageCopy';
 
 function applyInvitePlaceholders(
   text: string,
@@ -54,15 +55,7 @@ async function verifyEventAccess(
 }
 
 function getGuestPhone(guest: any): string | null {
-  if (guest.preferences && typeof guest.preferences === 'object') {
-    const prefs = guest.preferences as any;
-    if (prefs.phone) return prefs.phone;
-    if (prefs.telephone) return prefs.telephone;
-  }
-  const emailStr = guest.email.trim();
-  const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
-  if (isPhone) return emailStr;
-  return null;
+  return extractGuestPhone(guest);
 }
 
 // Get all invitations for an event

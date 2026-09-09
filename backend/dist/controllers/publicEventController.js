@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.listPublicEvents = listPublicEvents;
 exports.getPublicEvent = getPublicEvent;
 exports.listPublicEventSeats = listPublicEventSeats;
+exports.checkEventSeatsAvailability = checkEventSeatsAvailability;
 exports.checkoutPublicEvent = checkoutPublicEvent;
 exports.getTicketOrderBySession = getTicketOrderBySession;
 const db_1 = require("../db");
@@ -11,11 +12,13 @@ const seatSelectionService_1 = require("../services/seatSelectionService");
 const ticketPricingService_1 = require("../services/ticketPricingService");
 const plansConfig_1 = require("../config/plansConfig");
 const publicVenue_1 = require("../utils/publicVenue");
+const eventPlace_1 = require("../utils/eventPlace");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
 const rdcCities_1 = require("../utils/rdcCities");
 const platformSettingsService_1 = require("../services/platformSettingsService");
 const prismaJson_1 = require("../utils/prismaJson");
 const flexPayCardService_1 = require("../services/flexPayCardService");
+const flexPayChargeCurrency_1 = require("../services/flexPayChargeCurrency");
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 function serializePublicPost(post) {
     let media = [];
@@ -56,7 +59,10 @@ function serializePublicEvent(event) {
         title: event.title,
         description: event.description,
         date: event.date,
-        location: event.location,
+        location: (0, eventPlace_1.formatEventPlace)(event) || event.location,
+        city: event.city || null,
+        commune: event.commune || null,
+        neighborhood: event.neighborhood || null,
         latitude: event.latitude,
         longitude: event.longitude,
         orgName: event.tenant.name,
@@ -132,7 +138,12 @@ async function listPublicEvents(req, res) {
                                     }]
                                 : []),
                             ...locationBits.map((bit) => ({
-                                location: { contains: bit, mode: 'insensitive' },
+                                OR: [
+                                    { location: { contains: bit, mode: 'insensitive' } },
+                                    { city: { contains: bit, mode: 'insensitive' } },
+                                    { commune: { contains: bit, mode: 'insensitive' } },
+                                    { neighborhood: { contains: bit, mode: 'insensitive' } },
+                                ],
                             })),
                         ],
                     }
@@ -214,6 +225,33 @@ async function listPublicEventSeats(req, res) {
     catch (error) {
         console.error('[Public events] seats', error);
         return res.status(500).json({ error: 'Impossible de charger les places.' });
+    }
+}
+async function checkEventSeatsAvailability(req, res) {
+    try {
+        const slug = String(req.params.slug || '').trim();
+        const event = await db_1.prisma.event.findFirst({
+            where: { slug },
+            select: { id: true, seatSelectionEnabled: true, tablePlan: true },
+        });
+        if (!event)
+            return res.status(404).json({ error: 'Événement introuvable ou privé.' });
+        if (!event.seatSelectionEnabled) {
+            return res.json({ allAvailable: true, unavailable: [] });
+        }
+        const rawSeats = Array.isArray(req.body?.seats) ? req.body.seats : [];
+        const seats = rawSeats
+            .map((s) => ({
+            tableId: String(s.tableId || ''),
+            seatIndex: Number(s.seatIndex),
+        }))
+            .filter((s) => s.tableId && Number.isFinite(s.seatIndex) && s.seatIndex >= 0);
+        const result = await (0, seatSelectionService_1.checkSeatsAvailability)(event.id, seats);
+        return res.json(result);
+    }
+    catch (error) {
+        console.error('[Public events] check seats', error);
+        return res.status(500).json({ error: 'Impossible de vérifier la disponibilité des places.' });
     }
 }
 async function checkoutPublicEvent(req, res) {
@@ -364,6 +402,19 @@ async function checkoutPublicEvent(req, res) {
         const paymentProvider = paid
             ? (paymentMethod === 'mobile' ? 'flexpay_mobile' : 'flexpay_card')
             : null;
+        // Règle d'or : Vérifier la disponibilité de la place AVANT d'initier tout paiement
+        if (event.seatSelectionEnabled && requestedSeats.length > 0) {
+            try {
+                for (const s of requestedSeats) {
+                    await (0, seatSelectionService_1.assertSeatAvailable)(event.id, s.tableId, s.seatIndex);
+                }
+            }
+            catch (err) {
+                return res.status(409).json({
+                    error: err?.message || 'Un ou plusieurs sièges sélectionnés ne sont plus disponibles. Veuillez choisir une autre place.',
+                });
+            }
+        }
         const order = await db_1.prisma.ticketOrder.create({
             data: {
                 eventId: event.id,
@@ -383,20 +434,6 @@ async function checkoutPublicEvent(req, res) {
                 selectedSeats: seatsWithPricing.length > 0 ? (0, prismaJson_1.toPrismaJson)(seatsWithPricing) : undefined,
             },
         });
-        if (event.seatSelectionEnabled && requestedSeats.length > 0) {
-            try {
-                await (0, seatSelectionService_1.createMultipleSeatHolds)({
-                    eventId: event.id,
-                    seats: requestedSeats,
-                    buyerEmail,
-                    orderId: order.id,
-                });
-            }
-            catch (err) {
-                await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
-                return res.status(409).json({ error: err?.message || 'Un ou plusieurs sièges sélectionnés sont indisponibles.' });
-            }
-        }
         if (!paid) {
             const fulfilled = await (0, ticketOrderService_1.fulfillTicketOrder)(order.id);
             const primary = fulfilled?.guests?.find((g) => g.email.toLowerCase() === buyerEmail) || fulfilled?.guests?.[0];
@@ -421,13 +458,15 @@ async function checkoutPublicEvent(req, res) {
                     await db_1.prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
                     return res.status(400).json({ error: 'Numéro Mobile Money requis (243…).' });
                 }
+                const operator = String(req.body?.operator || '').trim().toLowerCase() || null;
+                const charge = (0, flexPayChargeCurrency_1.resolveFlexPayCharge)(amountFc, (0, flexPayChargeCurrency_1.parseFlexPayChargeCurrency)(req.body?.currency, 'mobile'), (0, platformSettingsService_1.loadPlatformSettings)().usdExchangeRateCdf);
                 const apiBase = (0, flexPayCardService_1.getPublicApiBaseUrl)();
                 const reference = (0, flexPayCardService_1.buildFlexPayReference)('tk', order.id);
                 try {
                     const flex = await (0, flexPayCardService_1.createFlexPayMobileCheckout)({
                         reference,
-                        amount: amountFc,
-                        currency: 'CDF',
+                        amount: charge.amount,
+                        currency: charge.currency,
                         phone,
                         callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
                     });
@@ -437,6 +476,7 @@ async function checkoutPublicEvent(req, res) {
                             paymentProvider: 'flexpay_mobile',
                             flexPayOrderNumber: flex.orderNumber,
                             flexPayReference: reference,
+                            flexPayChannel: operator,
                         },
                     });
                     return res.json({
@@ -445,6 +485,7 @@ async function checkoutPublicEvent(req, res) {
                         provider: 'flexpay_mobile',
                         orderId: order.id,
                         orderNumber: flex.orderNumber,
+                        currency: charge.currency,
                         message: 'Demande envoyée sur votre téléphone. Confirmez le paiement Mobile Money, puis ouvrez la page de succès.',
                     });
                 }

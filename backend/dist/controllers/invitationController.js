@@ -14,6 +14,7 @@ const brandedMessaging_1 = require("../utils/brandedMessaging");
 const brandingUtils_1 = require("../utils/brandingUtils");
 const guestIdentity_1 = require("../utils/guestIdentity");
 const whatsappTone_1 = require("../utils/whatsappTone");
+const eventPlace_1 = require("../utils/eventPlace");
 const guestMessageCopy_1 = require("../utils/guestMessageCopy");
 function applyInvitePlaceholders(text, vars) {
     return text
@@ -33,18 +34,7 @@ async function verifyEventAccess(userId, tenantId, eventId, requireManage = fals
     return (0, permissionsService_1.canAccessEvent)(userId, tenantId, eventId);
 }
 function getGuestPhone(guest) {
-    if (guest.preferences && typeof guest.preferences === 'object') {
-        const prefs = guest.preferences;
-        if (prefs.phone)
-            return prefs.phone;
-        if (prefs.telephone)
-            return prefs.telephone;
-    }
-    const emailStr = guest.email.trim();
-    const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
-    if (isPhone)
-        return emailStr;
-    return null;
+    return (0, guestIdentity_1.extractGuestPhone)(guest);
 }
 // Get all invitations for an event
 async function getInvitations(req, res) {
@@ -182,7 +172,7 @@ async function sendInvitation(req, res) {
                 rsvpLink,
                 title: event.title || '',
                 description: event.description || '',
-                location: event.location || '',
+                location: (0, eventPlace_1.formatEventPlace)(event) || event.location || '',
                 date: formattedDate,
                 orgName: orgBrand.orgName,
             };

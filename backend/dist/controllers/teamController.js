@@ -18,6 +18,7 @@ const commercialService_1 = require("../services/commercialService");
 const authController_1 = require("./authController");
 const phone_1 = require("../utils/phone");
 const platformSettingsService_1 = require("../services/platformSettingsService");
+const welcomeAiTokens_1 = require("../services/welcomeAiTokens");
 const userSelect = {
     id: true,
     name: true,
@@ -162,6 +163,17 @@ async function createTeamMember(req, res) {
             method,
             invitedToTeam: true,
         });
+        try {
+            await (0, welcomeAiTokens_1.grantWelcomeAiTokens)({
+                userId: newUser.id,
+                tenantId,
+                orgRole,
+                moment: 'team_create',
+            });
+        }
+        catch (grantError) {
+            console.error('[team] welcome AI tokens:', grantError);
+        }
         const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
         const refreshed = await db_1.prisma.user.findUnique({
             where: { id: newUser.id },

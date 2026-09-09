@@ -16,6 +16,7 @@ exports.checkFlexPayCardOrder = checkFlexPayCardOrder;
 exports.parseFlexPayCallbackPayload = parseFlexPayCallbackPayload;
 exports.getPublicApiBaseUrl = getPublicApiBaseUrl;
 const platformSettingsService_1 = require("./platformSettingsService");
+const flexPayChargeCurrency_1 = require("./flexPayChargeCurrency");
 function parseOptionalNumber(value) {
     if (value === undefined || value === null || value === '')
         return null;
@@ -199,7 +200,7 @@ async function createFlexPayMobileCheckout(input) {
         type: '1',
         phone,
         reference: safeReference,
-        amount: String(Math.max(1, Math.round(input.amount))),
+        amount: (0, flexPayChargeCurrency_1.formatFlexPayApiAmount)(input.amount, input.currency || 'CDF'),
         currency: input.currency || 'CDF',
         callbackUrl: input.callbackUrl,
     };

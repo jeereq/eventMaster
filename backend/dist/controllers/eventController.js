@@ -6,6 +6,8 @@ exports.getEventById = getEventById;
 exports.updateEvent = updateEvent;
 exports.deleteEvent = deleteEvent;
 exports.importRoomLayout = importRoomLayout;
+exports.getOrgTicketingSummary = getOrgTicketingSummary;
+exports.listOrgTicketOrders = listOrgTicketOrders;
 exports.listEventTicketOrders = listEventTicketOrders;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
@@ -17,6 +19,7 @@ const tableAssignmentNotificationService_1 = require("../services/tableAssignmen
 const prismaJson_1 = require("../utils/prismaJson");
 const slug_1 = require("../utils/slug");
 const publicVenue_1 = require("../utils/publicVenue");
+const eventPlace_1 = require("../utils/eventPlace");
 function rejectPaidTicketingIfDisabled(body, res) {
     const wantsPublic = body.isPublic === true || body.isPublic === 'true';
     const wantsPaid = body.ticketingEnabled === true || body.ticketingEnabled === 'true';
@@ -30,7 +33,28 @@ function rejectPaidTicketingIfDisabled(body, res) {
 }
 function serializeEvent(event) {
     const { _count, ...rest } = event;
-    return { ...rest, feedPostCount: _count?.posts ?? 0 };
+    return {
+        ...rest,
+        feedPostCount: _count?.posts ?? 0,
+        placeLabel: (0, eventPlace_1.formatEventPlace)(rest),
+    };
+}
+function eventPlaceData(body, forCreate) {
+    const city = parseOptionalString(body.city);
+    const commune = parseOptionalString(body.commune);
+    const neighborhood = parseOptionalString(body.neighborhood);
+    if (forCreate) {
+        return {
+            city: city ?? null,
+            commune: commune ?? null,
+            neighborhood: neighborhood ?? null,
+        };
+    }
+    return {
+        ...(city !== undefined ? { city } : {}),
+        ...(commune !== undefined ? { commune } : {}),
+        ...(neighborhood !== undefined ? { neighborhood } : {}),
+    };
 }
 const EVENT_KIND_IDS = new Set([
     'WEDDING',
@@ -202,6 +226,12 @@ async function createEvent(req, res) {
                 tablePlanData = (0, roomLayoutService_1.blueprintToTablePlan)(room.layoutBlueprint);
             }
         }
+        if (req.body.tablePlan && typeof req.body.tablePlan === 'object') {
+            tablePlanData = {
+                ...(tablePlanData || {}),
+                ...req.body.tablePlan,
+            };
+        }
         if (req.body.pricingZones !== undefined) {
             tablePlanData = (0, ticketPricingService_1.mergePricingZonesIntoTablePlan)(tablePlanData ?? { tables: [] }, Array.isArray(req.body.pricingZones) ? req.body.pricingZones : []);
         }
@@ -226,18 +256,13 @@ async function createEvent(req, res) {
                     : {}),
                 ...visibility,
                 ...eventDossierData(req.body, true),
+                ...eventPlaceData(req.body, true),
             },
             include: {
                 room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
                 _count: { select: { posts: true } },
             },
         });
-        if (tenant?.accountKind === 'VENDOR') {
-            await db_1.prisma.tenant.update({
-                where: { id: tenantId },
-                data: { accountKind: 'BOTH' },
-            });
-        }
         return res.status(201).json(serializeEvent(event));
     }
     catch (error) {
@@ -325,6 +350,7 @@ async function updateEvent(req, res) {
                     : {}),
                 ...visibility,
                 ...eventDossierData(req.body, false),
+                ...eventPlaceData(req.body, false),
             },
             include: {
                 room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
@@ -442,6 +468,187 @@ async function importRoomLayout(req, res) {
         return res.status(500).json({ error: 'Impossible d\'importer le plan de la salle.' });
     }
 }
+async function getOrgTicketingSummary(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
+        if (!tenantId || !userId)
+            return res.status(403).json({ error: 'Tenant non identifié' });
+        const accessible = await (0, permissionsService_1.getAccessibleEventIds)(userId, tenantId);
+        if (Array.isArray(accessible) && accessible.length === 0) {
+            return res.json({
+                summary: {
+                    totalRevenueFc: 0,
+                    paidTicketsCount: 0,
+                    pendingTicketsCount: 0,
+                    paidOrdersCount: 0,
+                    pendingOrdersCount: 0,
+                    totalOrdersCount: 0,
+                    checkedInGuestsCount: 0,
+                },
+                events: [],
+            });
+        }
+        const eventFilter = {
+            tenantId,
+            ...(Array.isArray(accessible) ? { id: { in: accessible } } : {}),
+            OR: [{ ticketingEnabled: true }, { ticketOrders: { some: {} } }],
+        };
+        const events = await db_1.prisma.event.findMany({
+            where: eventFilter,
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                date: true,
+                location: true,
+                isPublic: true,
+                ticketingEnabled: true,
+                ticketPriceFc: true,
+                ticketPricingMode: true,
+                ticketsSold: true,
+                ticketsTotal: true,
+                tablePlan: true,
+                _count: {
+                    select: {
+                        ticketOrders: true,
+                        guests: true,
+                    },
+                },
+            },
+            orderBy: { date: 'desc' },
+        });
+        const orderWhere = {
+            event: { tenantId },
+            ...(Array.isArray(accessible) ? { eventId: { in: accessible } } : {}),
+        };
+        const [paidAggregate, pendingAggregate, totalOrdersCount, checkedInGuestsCount] = await Promise.all([
+            db_1.prisma.ticketOrder.aggregate({
+                where: { ...orderWhere, status: 'PAID' },
+                _sum: { amountFc: true, quantity: true },
+                _count: { _all: true },
+            }),
+            db_1.prisma.ticketOrder.aggregate({
+                where: { ...orderWhere, status: 'PENDING' },
+                _sum: { amountFc: true, quantity: true },
+                _count: { _all: true },
+            }),
+            db_1.prisma.ticketOrder.count({ where: orderWhere }),
+            db_1.prisma.guest.count({
+                where: {
+                    ticketOrderId: { not: null },
+                    checkedInAt: { not: null },
+                    event: { tenantId, ...(Array.isArray(accessible) ? { id: { in: accessible } } : {}) },
+                },
+            }),
+        ]);
+        return res.json({
+            summary: {
+                totalRevenueFc: paidAggregate._sum.amountFc || 0,
+                paidTicketsCount: paidAggregate._sum.quantity || 0,
+                pendingTicketsCount: pendingAggregate._sum.quantity || 0,
+                paidOrdersCount: paidAggregate._count._all || 0,
+                pendingOrdersCount: pendingAggregate._count._all || 0,
+                totalOrdersCount,
+                checkedInGuestsCount,
+            },
+            events,
+        });
+    }
+    catch (error) {
+        console.error('getOrgTicketingSummary', error);
+        return res.status(500).json({ error: 'Impossible de calculer la synthèse billetterie.' });
+    }
+}
+async function listOrgTicketOrders(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
+        if (!tenantId || !userId)
+            return res.status(403).json({ error: 'Tenant non identifié' });
+        const accessible = await (0, permissionsService_1.getAccessibleEventIds)(userId, tenantId);
+        if (Array.isArray(accessible) && accessible.length === 0) {
+            return res.json({ orders: [], total: 0 });
+        }
+        const { eventId, status, q, page, limit } = req.query;
+        const where = {
+            event: { tenantId },
+            ...(Array.isArray(accessible) ? { eventId: { in: accessible } } : {}),
+        };
+        if (eventId && typeof eventId === 'string' && eventId !== 'all') {
+            if (Array.isArray(accessible) && !accessible.includes(eventId)) {
+                return res.status(403).json({ error: 'Accès non autorisé à cet événement.' });
+            }
+            where.eventId = eventId;
+        }
+        if (status && typeof status === 'string' && status !== 'all') {
+            where.status = status.toUpperCase();
+        }
+        if (q && typeof q === 'string' && q.trim()) {
+            const query = q.trim();
+            where.OR = [
+                { buyerName: { contains: query, mode: 'insensitive' } },
+                { buyerEmail: { contains: query, mode: 'insensitive' } },
+                { buyerPhone: { contains: query } },
+                { flexPayOrderNumber: { contains: query, mode: 'insensitive' } },
+                { flexPayReference: { contains: query, mode: 'insensitive' } },
+                {
+                    guests: {
+                        some: {
+                            OR: [
+                                { firstName: { contains: query, mode: 'insensitive' } },
+                                { lastName: { contains: query, mode: 'insensitive' } },
+                                { phone: { contains: query } },
+                            ],
+                        },
+                    },
+                },
+            ];
+        }
+        const pageSize = Math.min(200, Math.max(1, Number(limit) || 50));
+        const pageNum = Math.max(1, Number(page) || 1);
+        const [orders, total] = await Promise.all([
+            db_1.prisma.ticketOrder.findMany({
+                where,
+                include: {
+                    event: {
+                        select: {
+                            id: true,
+                            title: true,
+                            slug: true,
+                            date: true,
+                            location: true,
+                            ticketPricingMode: true,
+                            tablePlan: true,
+                        },
+                    },
+                    guests: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            phone: true,
+                            rsvp: true,
+                            checkedInAt: true,
+                            seatVerified: true,
+                            category: true,
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: pageSize,
+                skip: (pageNum - 1) * pageSize,
+            }),
+            db_1.prisma.ticketOrder.count({ where }),
+        ]);
+        return res.json({ orders, total });
+    }
+    catch (error) {
+        console.error('listOrgTicketOrders', error);
+        return res.status(500).json({ error: 'Impossible de charger les billets.' });
+    }
+}
 async function listEventTicketOrders(req, res) {
     try {
         const tenantId = req.user?.tenantId;
@@ -454,7 +661,21 @@ async function listEventTicketOrders(req, res) {
         }
         const orders = await db_1.prisma.ticketOrder.findMany({
             where: { eventId, event: { tenantId } },
-            include: { guests: { select: { id: true, email: true, firstName: true, lastName: true, rsvp: true } } },
+            include: {
+                guests: {
+                    select: {
+                        id: true,
+                        email: true,
+                        firstName: true,
+                        lastName: true,
+                        phone: true,
+                        rsvp: true,
+                        checkedInAt: true,
+                        seatVerified: true,
+                        category: true,
+                    },
+                },
+            },
             orderBy: { createdAt: 'desc' },
             take: 200,
         });

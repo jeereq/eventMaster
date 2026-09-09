@@ -18,6 +18,7 @@ exports.mergePlansForSave = mergePlansForSave;
 exports.isPaidPlan = isPaidPlan;
 exports.paidPlanKeysForAccountKind = paidPlanKeysForAccountKind;
 exports.isPlanAllowedForAccountKind = isPlanAllowedForAccountKind;
+exports.resolvePendingSignupPlan = resolvePendingSignupPlan;
 exports.accountKindForPlanAssignment = accountKindForPlanAssignment;
 exports.planAudienceMismatchMessage = planAudienceMismatchMessage;
 exports.normalizePlanKey = normalizePlanKey;
@@ -492,6 +493,19 @@ function isPlanAllowedForAccountKind(planKey, kind) {
         return true;
     return paidPlanKeysForAccountKind(kind).includes(normalized);
 }
+/** Forfait d’inscription à mémoriser (null si gratuit, inconnu ou incompatible avec le kind). */
+function resolvePendingSignupPlan(planKey, accountKind) {
+    if (!planKey || !String(planKey).trim())
+        return null;
+    const normalized = normalizePlanKey(planKey);
+    if (normalized === 'FREE')
+        return null;
+    if (!exports.PLAN_KEYS.includes(normalized))
+        return null;
+    if (!isPlanAllowedForAccountKind(normalized, accountKind))
+        return null;
+    return normalized;
+}
 /** Type de compte à poser quand un admin assigne un forfait. */
 function accountKindForPlanAssignment(planKey, currentKind) {
     const normalized = normalizePlanKey(planKey);
@@ -512,7 +526,7 @@ function accountKindForPlanAssignment(planKey, currentKind) {
 }
 function planAudienceMismatchMessage(planKey, kind) {
     if (kind === 'CLIENT') {
-        return 'Un compte client ne souscrit pas d’abonnement SaaS. Passez organisateur ou prestataire dans Mon compte, puis choisissez un forfait.';
+        return 'Un compte client ne souscrit pas d’abonnement SaaS. Contactez le support EventMaster pour faire passer le compte en organisateur ou prestataire, puis choisissez un forfait.';
     }
     const plan = getPlanLimits(planKey);
     if (kind === 'VENDOR') {

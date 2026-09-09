@@ -22,8 +22,18 @@ exports.PLATFORM_NOTIFICATION_TYPE = {
     EVENT_TASK_DUE: 'EVENT_TASK_DUE',
     EVENT_TASK_COMPLETED: 'EVENT_TASK_COMPLETED',
     PAYMENT_RECEIVED: 'PAYMENT_RECEIVED',
+    TICKET_SALE: 'TICKET_SALE',
+    TICKET_PAYMENT_FAILED: 'TICKET_PAYMENT_FAILED',
+    EVENT_RSVP: 'EVENT_RSVP',
+    DISCOUNT_REQUEST_PENDING: 'DISCOUNT_REQUEST_PENDING',
+    DISCOUNT_QUOTE_READY: 'DISCOUNT_QUOTE_READY',
 };
 exports.NOTIFICATION_FAMILIES = {
+    events: [
+        exports.PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP,
+        exports.PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
+        exports.PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED,
+    ],
     billing: [
         exports.PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_APPROVAL,
         exports.PLATFORM_NOTIFICATION_TYPE.ADMIN_ACTIVATION,
@@ -34,6 +44,8 @@ exports.NOTIFICATION_FAMILIES = {
         exports.PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
         exports.PLATFORM_NOTIFICATION_TYPE.INVOICE_ISSUED,
         exports.PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED,
+        exports.PLATFORM_NOTIFICATION_TYPE.DISCOUNT_REQUEST_PENDING,
+        exports.PLATFORM_NOTIFICATION_TYPE.DISCOUNT_QUOTE_READY,
     ],
     commissions: [
         exports.PLATFORM_NOTIFICATION_TYPE.MONTHLY_COMMISSION_DUE,
@@ -50,7 +62,7 @@ exports.NOTIFICATION_FAMILIES = {
         exports.PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_COMPLETED,
     ],
 };
-exports.NOTIFICATION_PREF_FAMILIES = ['billing', 'commissions', 'catalog', 'tasks'];
+exports.NOTIFICATION_PREF_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks'];
 function typesForFamily(family) {
     if (!family)
         return undefined;
@@ -59,6 +71,8 @@ function typesForFamily(family) {
     return types ? [...types] : undefined;
 }
 function familyForType(type) {
+    if (exports.NOTIFICATION_FAMILIES.events.includes(type))
+        return 'events';
     if (exports.NOTIFICATION_FAMILIES.billing.includes(type))
         return 'billing';
     if (exports.NOTIFICATION_FAMILIES.commissions.includes(type))

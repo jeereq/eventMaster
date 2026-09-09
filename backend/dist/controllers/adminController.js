@@ -31,6 +31,7 @@ exports.getAdminSettings = getAdminSettings;
 exports.updateAdminSettings = updateAdminSettings;
 const db_1 = require("../db");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const tenantAccess_1 = require("../utils/tenantAccess");
 const plansConfig_1 = require("../config/plansConfig");
 const subscriptionPlanCatalogService_1 = require("../services/subscriptionPlanCatalogService");
 const commercialService_1 = require("../services/commercialService");
@@ -43,6 +44,7 @@ const phone_1 = require("../utils/phone");
 const platformSettingsService_1 = require("../services/platformSettingsService");
 const adminAuditService_1 = require("../services/adminAuditService");
 const adminPager_1 = require("../utils/adminPager");
+const welcomeAiTokens_1 = require("../services/welcomeAiTokens");
 // Get global system statistics and list of all tenants (Super Admin only)
 async function getSystemStats(req, res) {
     try {
@@ -115,6 +117,27 @@ async function getSystemStats(req, res) {
                 ? db_1.prisma.event.count({ where: { date: { gte: now }, tenant: tenantWhere } })
                 : db_1.prisma.event.count({ where: { date: { gte: now } } }),
         ]);
+        const [ownerCount, staffUserCount, clientUserCount, noTenantUserCount] = await Promise.all([
+            db_1.prisma.tenant.count({
+                where: { ...tenantWhere, managerId: { not: null } },
+            }),
+            commercialId
+                ? db_1.prisma.user.count({
+                    where: {
+                        tenant: tenantWhere,
+                        OR: [{ eventStaff: { some: {} } }, { roomStaff: { some: {} } }],
+                    },
+                })
+                : db_1.prisma.user.count({
+                    where: {
+                        OR: [{ eventStaff: { some: {} } }, { roomStaff: { some: {} } }],
+                    },
+                }),
+            commercialId
+                ? db_1.prisma.user.count({ where: { tenant: { ...tenantWhere, accountKind: 'CLIENT' } } })
+                : db_1.prisma.user.count({ where: { tenant: { accountKind: 'CLIENT' } } }),
+            commercialId ? Promise.resolve(0) : db_1.prisma.user.count({ where: { tenantId: null } }),
+        ]);
         const planCounts = {};
         for (const row of planGroups)
             planCounts[row.plan] = row._count._all;
@@ -134,11 +157,16 @@ async function getSystemStats(req, res) {
                 events: eventCount,
                 guests: guestCount,
                 verifiedUsers,
+                unverifiedUsers: Math.max(0, userCount - verifiedUsers),
                 licensesActive,
                 checkedIn,
                 openTasks,
                 overdueTasks,
                 upcomingEvents,
+                owners: ownerCount,
+                staffUsers: staffUserCount,
+                clientUsers: clientUserCount,
+                noTenantUsers: noTenantUserCount,
             },
             planCounts,
             accountKindCounts,
@@ -182,6 +210,7 @@ async function listAdminTenants(req, res) {
         if (q) {
             (0, adminPager_1.prismaAnd)(where, {
                 OR: [
+                    { id: q },
                     { name: { contains: q, mode: 'insensitive' } },
                     { manager: { name: { contains: q, mode: 'insensitive' } } },
                     { manager: { email: { contains: q, mode: 'insensitive' } } },
@@ -376,13 +405,15 @@ async function createTenant(req, res) {
         if (!(0, platformAccess_1.isPlatformStaff)(req.user?.role)) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
         }
-        const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
+        const { name, plan, licenseActive, licenseExpiresAt, licenseKey, accountKind: rawAccountKind } = req.body;
         if (!name) {
             return res.status(400).json({ error: 'Le nom de l\'organisation est requis.' });
         }
         const nextPlanKey = (0, plansConfig_1.normalizePlanKey)(plan || 'FREE');
         const nextPlan = nextPlanKey;
-        const accountKind = (0, plansConfig_1.accountKindForPlanAssignment)(nextPlanKey, 'ORGANIZER');
+        const accountKind = req.user?.role === 'SUPER_ADMIN' && rawAccountKind
+            ? (0, tenantAccess_1.parseAccountKind)(rawAccountKind)
+            : (0, plansConfig_1.accountKindForPlanAssignment)(nextPlanKey, 'ORGANIZER');
         const newTenant = await db_1.prisma.tenant.create({
             data: {
                 name,
@@ -416,14 +447,16 @@ async function updateTenantPlanOrLicense(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
-        const { name, plan, licenseActive, licenseExpiresAt, licenseKey, billing, } = req.body;
+        const { name, plan, licenseActive, licenseExpiresAt, licenseKey, billing, accountKind: rawAccountKind, } = req.body;
         const existing = await db_1.prisma.tenant.findUnique({ where: { id } });
         if (!existing) {
             return res.status(404).json({ error: 'Organisation introuvable.' });
         }
         const newPlanKey = (0, plansConfig_1.normalizePlanKey)(String(plan ?? existing.plan));
         const newPlan = newPlanKey;
-        const nextAccountKind = (0, plansConfig_1.accountKindForPlanAssignment)(newPlanKey, existing.accountKind);
+        const nextAccountKind = req.user?.role === 'SUPER_ADMIN' && rawAccountKind
+            ? (0, tenantAccess_1.parseAccountKind)(rawAccountKind, existing.accountKind)
+            : existing.accountKind;
         let nextExpiry = licenseExpiresAt !== undefined
             ? licenseExpiresAt
                 ? new Date(licenseExpiresAt)
@@ -449,6 +482,7 @@ async function updateTenantPlanOrLicense(req, res) {
                     : billingPayload?.extendLicense || billingPayload?.issueInvoice
                         ? (0, plansConfig_1.billingCycleFromDurationDays)(durationDays)
                         : undefined,
+                pendingPlan: newPlanKey === 'FREE' ? existing.pendingPlan : null,
             },
         });
         let billingResult = null;
@@ -495,6 +529,19 @@ async function updateTenantPlanOrLicense(req, res) {
         const commercialNote = billingResult?.commercialNotified.length
             ? ` Commerciaux informés : ${billingResult.commercialNotified.join(', ')}.`
             : '';
+        if (newPlanKey !== 'FREE' && existing.managerId) {
+            try {
+                await (0, welcomeAiTokens_1.grantWelcomeAtPlanActivation)({
+                    userId: existing.managerId,
+                    tenantId: id,
+                    planKey: newPlanKey,
+                    accountKind: nextAccountKind,
+                });
+            }
+            catch (err) {
+                console.error('[admin] welcome forfait payant:', err);
+            }
+        }
         await (0, adminAuditService_1.auditReq)(req, {
             action: 'TENANT_UPDATE',
             targetType: 'tenant',
@@ -604,26 +651,59 @@ async function getAllUsers(req, res) {
         const [users, total] = await Promise.all([
             db_1.prisma.user.findMany({
                 where,
-                include: { tenant: { select: { name: true } } },
+                include: {
+                    tenant: {
+                        select: {
+                            name: true,
+                            plan: true,
+                            accountKind: true,
+                            licenseActive: true,
+                            licenseExpiresAt: true,
+                            managerId: true,
+                        },
+                    },
+                    _count: {
+                        select: {
+                            eventStaff: true,
+                            roomStaff: true,
+                            managedTenants: true,
+                            referredTenants: true,
+                        },
+                    },
+                },
                 orderBy: { createdAt: 'desc' },
                 skip,
                 take: pageSize,
             }),
             db_1.prisma.user.count({ where }),
         ]);
-        return res.json((0, adminPager_1.listPayload)(users.map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role,
-            orgRole: u.orgRole,
-            tenantId: u.tenantId,
-            isEmailVerified: u.isEmailVerified,
-            tenantName: u.tenant?.name || 'Aucun (Super Admin)',
-            createdAt: u.createdAt,
-            commissionRate: u.commissionRate,
-            renewalCommissionRate: u.renewalCommissionRate,
-        })), total, page, pageSize));
+        return res.json((0, adminPager_1.listPayload)(users.map((u) => {
+            const isOwner = Boolean(u.tenant && u.tenant.managerId === u.id) || u._count.managedTenants > 0;
+            return {
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                phone: u.phone,
+                role: u.role,
+                orgRole: u.orgRole,
+                tenantId: u.tenantId,
+                isEmailVerified: u.isEmailVerified,
+                tenantName: u.tenant?.name || (u.role === 'SUPER_ADMIN' || u.role === 'COMMERCIAL' ? 'Aucune (plateforme)' : 'Sans organisation'),
+                tenantPlan: u.tenant?.plan || null,
+                tenantAccountKind: u.tenant?.accountKind || null,
+                tenantLicenseActive: u.tenant?.licenseActive ?? null,
+                tenantLicenseExpiresAt: u.tenant?.licenseExpiresAt || null,
+                isOwner,
+                eventStaffCount: u._count.eventStaff,
+                roomStaffCount: u._count.roomStaff,
+                referredTenantsCount: u._count.referredTenants,
+                referralCode: u.referralCode,
+                createdAt: u.createdAt,
+                updatedAt: u.updatedAt,
+                commissionRate: u.commissionRate,
+                renewalCommissionRate: u.renewalCommissionRate,
+            };
+        }), total, page, pageSize));
     }
     catch (error) {
         console.error('Erreur lors de la récupération des utilisateurs:', error);

@@ -7,6 +7,7 @@ const plansConfig_1 = require("../config/plansConfig");
 const tenantBillingService_1 = require("./tenantBillingService");
 const invoiceService_1 = require("./invoiceService");
 const paymentTraceService_1 = require("./paymentTraceService");
+const welcomeAiTokens_1 = require("./welcomeAiTokens");
 function generateLicenseKey() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -26,13 +27,14 @@ async function activateSubscriptionRequest(requestId, opts) {
                     licenseActive: true,
                     licenseExpiresAt: true,
                     accountKind: true,
+                    managerId: true,
                 },
             },
         },
     });
     if (!request)
         throw new Error('Demande d’abonnement introuvable.');
-    if (request.status !== 'PENDING') {
+    if (request.status !== 'PENDING' && request.status !== 'QUOTED') {
         return { alreadyProcessed: true, request };
     }
     if (!(0, plansConfig_1.isPlanAllowedForAccountKind)(request.requestedPlan, request.tenant.accountKind)) {
@@ -99,6 +101,7 @@ async function activateSubscriptionRequest(requestId, opts) {
                 licenseKey: newLicenseKey,
                 licenseExpiryWarningFor: null,
                 billingCycle: (0, plansConfig_1.billingCycleFromDurationDays)(durationDays),
+                pendingPlan: null,
             },
         }),
     ]);
@@ -109,6 +112,14 @@ async function activateSubscriptionRequest(requestId, opts) {
             amountFc: pricing.finalAmount,
             plan: request.requestedPlan,
         }).catch((err) => console.error('[Subscription] notify payment:', err));
+    }
+    if (request.tenant.managerId) {
+        void (0, welcomeAiTokens_1.grantWelcomeAtPlanActivation)({
+            userId: request.tenant.managerId,
+            tenantId: request.tenantId,
+            planKey: request.requestedPlan,
+            accountKind: request.tenant.accountKind,
+        }).catch((err) => console.error('[Subscription] welcome forfait payant:', err));
     }
     void (async () => {
         try {

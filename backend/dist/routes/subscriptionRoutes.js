@@ -7,6 +7,7 @@ const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
 router.get('/plans', subscriptionController_1.getSubscriptionPlans);
 router.post('/request', subscriptionController_1.submitSubscriptionRequest);
+router.post('/request-discount', subscriptionController_1.submitDiscountRequest);
 router.post('/checkout', subscriptionController_1.checkoutSubscriptionFlexPay);
 router.get('/requests/:id/verify', subscriptionController_1.verifySubscriptionFlexPay);
 router.post('/requests/:id/retry-payment', subscriptionController_1.retrySubscriptionFlexPay);

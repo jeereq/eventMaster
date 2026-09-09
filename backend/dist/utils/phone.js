@@ -5,6 +5,7 @@ exports.normalizeCountryCode = normalizeCountryCode;
 exports.normalizeNationalNumber = normalizeNationalNumber;
 exports.composeE164 = composeE164;
 exports.resolvePhoneFields = resolvePhoneFields;
+exports.formatPhoneE164 = formatPhoneE164;
 function normalizeCountryCode(raw, fallback = '+243') {
     if (!raw?.trim())
         return fallback;
@@ -63,4 +64,23 @@ function resolvePhoneFields(input) {
         return { phone: raw, phoneCountryCode: null };
     }
     return { phone: null, phoneCountryCode: cc };
+}
+/** Formate un numéro de téléphone en notation E.164 (+243...) pour UltraMsg / WhatsApp / SMS */
+function formatPhoneE164(to) {
+    let formattedTo = to.trim().replace(/[\s\-()]/g, '');
+    if (!formattedTo.startsWith('+')) {
+        if (formattedTo.startsWith('00')) {
+            formattedTo = '+' + formattedTo.slice(2);
+        }
+        else if (formattedTo.startsWith('0')) {
+            formattedTo = '+243' + formattedTo.slice(1);
+        }
+        else if (formattedTo.length === 9 && /^[89]/.test(formattedTo)) {
+            formattedTo = '+243' + formattedTo;
+        }
+        else {
+            formattedTo = '+' + formattedTo;
+        }
+    }
+    return formattedTo;
 }

@@ -8,11 +8,13 @@ const subscriptionPlanCatalogService_1 = require("../services/subscriptionPlanCa
 const messageTemplateService_1 = require("../services/messageTemplateService");
 const platformSettingsService_1 = require("../services/platformSettingsService");
 const auth_1 = require("../middleware/auth");
+const contactReasons_1 = require("../config/contactReasons");
 const marketplaceController_1 = require("../controllers/marketplaceController");
 const marketplaceFeedController_1 = require("../controllers/marketplaceFeedController");
 const publicEventController_1 = require("../controllers/publicEventController");
 const marketplaceClientController_1 = require("../controllers/marketplaceClientController");
 const templateController_1 = require("../controllers/templateController");
+const roomController_1 = require("../controllers/roomController");
 const flexPayController_1 = require("../controllers/flexPayController");
 const router = (0, express_1.Router)();
 /** GET /api/public/site — identité & contact (sans secrets) */
@@ -85,10 +87,15 @@ router.get('/activity', marketplaceFeedController_1.getPublicMarketplaceFeed);
 router.get('/events', publicEventController_1.listPublicEvents);
 router.get('/events/:slug', publicEventController_1.getPublicEvent);
 router.get('/events/:slug/seats', publicEventController_1.listPublicEventSeats);
+router.post('/events/:slug/check-seats', auth_1.optionalAuth, publicEventController_1.checkEventSeatsAvailability);
 router.post('/events/:slug/checkout', auth_1.requireAuth, publicEventController_1.checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', publicEventController_1.getTicketOrderBySession);
 router.post('/event-plan-ai', auth_1.optionalAuth, marketplaceClientController_1.publicPlanEventAi);
 router.post('/templates/ai/compose', auth_1.optionalAuth, templateController_1.publicComposeTemplateWithAi);
+router.post('/rooms/ai/compose', auth_1.optionalAuth, roomController_1.publicComposeRoomPlan);
+router.get('/rooms/ai/history', auth_1.optionalAuth, roomController_1.listPublicAiRoomPlanComposes);
+router.get('/rooms/ai/history/:id', auth_1.optionalAuth, roomController_1.getPublicAiRoomPlanCompose);
+router.post('/rooms/ai/history/claim', auth_1.requireAuth, roomController_1.claimPublicAiRoomPlanComposes);
 router.get('/templates/ai/history', auth_1.optionalAuth, templateController_1.listPublicAiTemplateComposes);
 router.get('/templates/ai/history/:id', auth_1.optionalAuth, templateController_1.getPublicAiTemplateCompose);
 router.post('/templates/ai/history/claim', auth_1.requireAuth, templateController_1.claimPublicAiTemplateComposes);
@@ -102,6 +109,14 @@ router.get('/payments/flexpay/callback', flexPayController_1.flexPayCardCallback
 router.get('/payments/flexpay/return', flexPayController_1.flexPayCardReturn);
 router.get('/payments/flexpay/orders/:orderId/verify', flexPayController_1.verifyFlexPayCardOrder);
 router.post('/payments/flexpay/orders/:orderId/retry', auth_1.requireAuth, flexPayController_1.retryFlexPayTicketOrder);
+router.post('/payments/flexpay/orders/:orderId/cancel', auth_1.requireAuth, flexPayController_1.cancelFlexPayTicketOrder);
+function escapeContactHtml(value) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+}
 // POST /api/public/contact
 router.post('/contact', async (req, res) => {
     try {
@@ -112,33 +127,37 @@ router.post('/contact', async (req, res) => {
                 message: settings.maintenanceMessage || 'La plateforme est en maintenance.',
             });
         }
-        const { name, email, subject, message } = req.body;
-        if (!name || !email || !subject || !message) {
+        const { name, email, subject, message, reason: rawReason } = req.body;
+        const reason = (0, contactReasons_1.resolveContactReason)(rawReason);
+        if (!name || !email || !subject || !message || !reason) {
             return res
                 .status(400)
-                .json({ error: 'Tous les champs sont requis (nom, email, sujet, message).' });
+                .json({ error: 'Tous les champs sont requis (raison, nom, email, sujet, message).' });
         }
         const { email: adminEmail, whatsapp: adminWhatsApp, platformName, } = (0, platformSettingsService_1.getContactDestinations)(settings);
-        const emailSubject = `[${platformName} Contact] ${subject}`;
-        const emailText = `Nouveau message de contact ${platformName}\n\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
+        const composedSubject = `[${reason.label}] ${subject}`;
+        const emailSubject = `[${platformName} Contact] ${composedSubject}`;
+        const emailText = `Nouveau message de contact ${platformName}\n\nRaison : ${reason.label}\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
         const emailHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
         <h2 style="color: #312e81; margin-top: 0;">Nouveau message de contact</h2>
-        <p><strong>Nom :</strong> ${name}</p>
-        <p><strong>Email :</strong> <a href="mailto:${email}">${email}</a></p>
-        <p><strong>Sujet :</strong> ${subject}</p>
+        <p><strong>Raison :</strong> ${escapeContactHtml(reason.label)}</p>
+        <p><strong>Nom :</strong> ${escapeContactHtml(String(name))}</p>
+        <p><strong>Email :</strong> <a href="mailto:${escapeContactHtml(String(email))}">${escapeContactHtml(String(email))}</a></p>
+        <p><strong>Sujet :</strong> ${escapeContactHtml(String(subject))}</p>
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px;">
-          <p style="margin: 0; white-space: pre-line; color: #334155;">${message}</p>
+          <p style="margin: 0; white-space: pre-line; color: #334155;">${escapeContactHtml(String(message))}</p>
         </div>
-        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">${platformName} — formulaire de contact public</p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">${escapeContactHtml(platformName)} — formulaire de contact public</p>
       </div>
     `;
         const emailResult = await (0, notificationService_1.sendRealEmail)(adminEmail, emailSubject, emailText, emailHtml);
         const whatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('CONTACT_ADMIN_WHATSAPP', {
-            name,
-            email,
-            subject,
-            message,
+            name: String(name),
+            email: String(email),
+            subject: composedSubject,
+            reason: reason.label,
+            message: String(message),
         });
         const whatsappResult = await (0, notificationService_1.sendRealWhatsApp)(adminWhatsApp, (0, messageTemplateService_1.polishWhatsAppBody)(whatsappRendered.body));
         const channels = [];

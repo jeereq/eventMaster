@@ -14,6 +14,7 @@ const brandedMessaging_1 = require("../utils/brandedMessaging");
 const brandingUtils_1 = require("../utils/brandingUtils");
 const whatsappTone_1 = require("../utils/whatsappTone");
 const guestMessageCopy_1 = require("../utils/guestMessageCopy");
+const guestIdentity_1 = require("../utils/guestIdentity");
 const taskDueReminderService_1 = require("./taskDueReminderService");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
@@ -51,19 +52,7 @@ function saveLastReminders(reminders) {
 }
 // Helper function to extract guest phone number
 function getGuestPhone(guest) {
-    if (guest.preferences && typeof guest.preferences === 'object') {
-        const prefs = guest.preferences;
-        if (prefs.phone)
-            return prefs.phone;
-        if (prefs.telephone)
-            return prefs.telephone;
-    }
-    const emailStr = guest.email.trim();
-    const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
-    if (isPhone) {
-        return emailStr;
-    }
-    return null;
+    return (0, guestIdentity_1.extractGuestPhone)(guest);
 }
 // Main logic to process reminders
 async function processReminders() {

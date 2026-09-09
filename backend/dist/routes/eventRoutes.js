@@ -19,6 +19,9 @@ router.get('/', eventController_1.getEvents);
 router.post('/', eventController_1.createEvent);
 router.get('/tasks/inbox', eventTaskController_1.listMyEventTasks);
 router.get('/workspace-stats', eventStatsController_1.getWorkspaceStats);
+// Ticketing (Billetterie organisation & protocole)
+router.get('/ticketing/summary', eventController_1.getOrgTicketingSummary);
+router.get('/ticketing/orders', eventController_1.listOrgTicketOrders);
 router.get('/:id', eventController_1.getEventById);
 router.put('/:id', eventController_1.updateEvent);
 router.post('/:id/import-room-layout', eventController_1.importRoomLayout);
