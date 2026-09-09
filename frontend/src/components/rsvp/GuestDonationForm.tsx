@@ -275,7 +275,7 @@ export default function GuestDonationForm({
                     'min-h-11 px-2.5 py-2 rounded-xl text-xs font-bold border transition touch-manipulation text-center',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50',
                     isSelected
-                      ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
+                      ? 'bg-rose-700 hover:bg-rose-800 text-white border-rose-800 shadow-sm dark:bg-rose-600 dark:border-rose-500'
                       : 'border-border bg-surface-muted/50 text-foreground hover:bg-surface-muted hover:border-border/80',
                   )}
                 >
@@ -437,7 +437,7 @@ export default function GuestDonationForm({
           variant="primary"
           size="lg"
           disabled={submitting || effectiveAmount < minAmount}
-          className="w-full min-h-12 text-sm font-bold shadow-md bg-rose-600 hover:bg-rose-700"
+          className="w-full min-h-12 text-sm font-bold shadow-md bg-rose-700 hover:bg-rose-800 text-white dark:bg-rose-600 dark:hover:bg-rose-700"
           leftIcon={
             submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />

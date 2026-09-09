@@ -914,7 +914,7 @@ export default function RsvpPage() {
                     <button
                       type="button"
                       onClick={() => goGuestTab('donations')}
-                      className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-sm"
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-2.5 px-4 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold transition shadow-sm dark:bg-rose-600 dark:hover:bg-rose-700"
                     >
                       <Heart className="w-3.5 h-3.5 fill-white" />
                       <span>Faire un don solidaire</span>
@@ -1721,7 +1721,7 @@ export default function RsvpPage() {
                   type="button"
                   disabled={savingIdentity}
                   onClick={() => setIsEditIdentityOpen(false)}
-                  className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition"
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label="Fermer"
                 >
                   <X className="w-5 h-5" />

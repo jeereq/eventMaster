@@ -353,15 +353,19 @@ export default function GuestTablePlanView({
                     <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                       Mon emplacement 3D
                     </p>
-                    {tableDetails?.zoneName && (
+                    {(tableDetails?.zoneName || ticketPlacement?.zoneName) && (
                       <span className="px-1.5 py-0.5 rounded text-xs font-bold uppercase bg-primary/20 text-primary border border-primary/30 truncate">
-                        {tableDetails.zoneName}
+                        {tableDetails?.zoneName || ticketPlacement?.zoneName}
                       </span>
                     )}
                   </div>
                   <p className="text-xs font-bold text-white truncate">
-                    {tableDetails?.tableName ?? 'Votre table'}
-                    {tableDetails?.seatIndex !== undefined ? ` · Siège n°${tableDetails.seatIndex + 1}` : ''}
+                    {tableDetails?.tableName || ticketPlacement?.tableName || 'Votre table'}
+                    {tableDetails?.seatIndex !== undefined
+                      ? ` · Siège n°${tableDetails.seatIndex + 1}`
+                      : ticketPlacement?.seatNumber
+                        ? ` · Siège n°${ticketPlacement.seatNumber}`
+                        : ''}
                   </p>
                 </div>
               </div>
@@ -672,10 +676,20 @@ export default function GuestTablePlanView({
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-[80] bg-background flex flex-col p-2 sm:p-4" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Plan de la salle en plein écran"
+        className="fixed inset-0 z-[80] bg-background flex flex-col p-2 sm:p-4"
+        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      >
         <div className="flex items-center justify-between mb-2 shrink-0">
           <p className="text-sm font-semibold text-foreground truncate">Plan de la salle · {theme.name}</p>
-          <button type="button" onClick={() => setIsFullscreen(false)} className="px-3 py-1.5 border border-border bg-surface text-foreground rounded-[var(--radius-button)] text-xs font-semibold hover:bg-surface-muted transition shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(false)}
+            className="min-h-11 px-3.5 inline-flex items-center justify-center border border-border bg-surface text-foreground rounded-[var(--radius-button)] text-xs font-semibold hover:bg-surface-muted transition shrink-0 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
             Fermer
           </button>
         </div>
