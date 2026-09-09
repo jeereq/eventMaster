@@ -195,6 +195,7 @@ export default function AdminPlatformSettings({
                 key={item.id}
                 type="button"
                 onClick={() => setSection(item.id)}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
                   'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition',
                   active
@@ -1392,15 +1393,19 @@ function DonationsAccessEditor({
 
           {access.mode === 'restricted' && (
             <div className="space-y-2 bg-surface p-4 border border-border rounded-xl">
-              <label className={labelClass}>Organisations expressément autorisées ({access.tenantIds.length})</label>
+              <label className={labelClass} htmlFor="donations-tenant-search">
+                Organisations expressément autorisées ({access.tenantIds.length})
+              </label>
               <p className="text-xs text-muted">
                 Recherchez et ajoutez les organisations autorisées à activer des dons libres.
               </p>
               <input
+                id="donations-tenant-search"
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher une organisation par nom…"
+                aria-label="Rechercher une organisation à autoriser"
                 className={fieldClass}
               />
               {searching ? <p className="text-xs text-muted">Recherche en cours…</p> : null}
@@ -1425,16 +1430,16 @@ function DonationsAccessEditor({
                   {access.tenantIds.map((id) => (
                     <span
                       key={id}
-                      className="inline-flex items-center gap-1.5 min-h-10 pl-3.5 pr-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20"
+                      className="inline-flex items-center gap-1.5 min-h-11 pl-3.5 pr-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20"
                     >
                       {named[id] || id.slice(0, 8)}
                       <button
                         type="button"
                         aria-label={`Retirer ${named[id] || 'cette organisation'}`}
                         onClick={() => patch({ tenantIds: access.tenantIds.filter((item) => item !== id) })}
-                        className="w-7 h-7 -mr-0.5 inline-flex items-center justify-center rounded-full hover:bg-primary/20 text-primary touch-manipulation active:scale-95 transition"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full hover:bg-primary/20 text-primary touch-manipulation active:scale-95 transition"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </span>
                   ))}

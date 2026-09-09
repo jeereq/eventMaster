@@ -487,20 +487,26 @@ export default function AdminEventsPage() {
           </div>
         }
       >
-        <label className="block space-y-1.5">
+        <label className="block space-y-1.5" htmlFor="moderation-reason-input">
           <span className="text-xs font-medium text-muted">
             {moderation?.isBlocked ? 'Commentaire (optionnel)' : 'Motif (obligatoire)'}
           </span>
           <textarea
+            id="moderation-reason-input"
             value={moderationReason}
             onChange={(e) => setModerationReason(e.target.value)}
             rows={4}
             maxLength={500}
+            required={!moderation?.isBlocked}
+            aria-required={!moderation?.isBlocked}
+            aria-describedby={!moderation?.isBlocked ? 'moderation-reason-hint' : undefined}
             placeholder={moderation?.isBlocked ? "Raison du déblocage" : "Ex. contenu inapproprié, non-respect des règles…"}
             className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           {!moderation?.isBlocked && (
-            <span className="text-[11px] text-muted">{moderationReason.trim().length}/8 caractères min.</span>
+            <span id="moderation-reason-hint" className="text-[11px] text-muted">
+              {moderationReason.trim().length}/8 caractères min.
+            </span>
           )}
         </label>
       </Modal>

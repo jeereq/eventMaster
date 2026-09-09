@@ -570,7 +570,7 @@ export default function AdminAiTokensPage() {
         />
       ) : (
         <div className={cn('overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface', loading && 'opacity-70')}>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Historique des mouvements de jetons IA">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
                 <th className="px-3 py-2.5 font-semibold">Quand</th>

@@ -714,6 +714,7 @@ export default function EventTicketCheckoutForm({
                         <button
                           key={amt}
                           type="button"
+                          aria-pressed={active}
                           onClick={() => setDonationAmountFc(String(amt))}
                           className={cn(
                             'min-h-11 px-2.5 py-2 text-xs font-bold rounded-lg border transition flex items-center justify-center text-center touch-manipulation active:scale-95',
@@ -845,6 +846,7 @@ export default function EventTicketCheckoutForm({
                     <button
                       key={zone.id}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => setSelectedZoneId(zone.id)}
                       className={`flex items-center justify-between gap-2 p-2.5 min-h-11 rounded border text-left text-sm transition ${
                         active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
