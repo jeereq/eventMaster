@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { getGuestRsvpDetails, submitRsvp, getGuestAllInvitations, downloadSeatingInvitationPdf, getGuestQrPng } from '../controllers/rsvpController';
+import {
+  getGuestRsvpDetails,
+  submitRsvp,
+  getGuestAllInvitations,
+  downloadSeatingInvitationPdf,
+  getGuestQrPng,
+  submitGuestDonation,
+} from '../controllers/rsvpController';
 import { submitGuestShare, getEventFeed, createEventComment, getPublicEventShares, toggleLikeEventPost } from '../controllers/feedController';
 import { acceptGuestLegalHandler, getGuestLegalStatusHandler } from '../controllers/legalController';
 
@@ -12,6 +19,7 @@ router.get('/:guestId/seating-invitation.pdf', downloadSeatingInvitationPdf);
 router.get('/:guestId/qr.png', getGuestQrPng);
 router.get('/:guestId', getGuestRsvpDetails);
 router.post('/:guestId', submitRsvp);
+router.post('/:guestId/donations', submitGuestDonation);
 
 // Guest feed and sharing routes
 router.post('/:guestId/share', submitGuestShare);

@@ -19,6 +19,7 @@ import { api } from '@/lib/api';
 import { ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { TableShape } from '@/lib/tablePlanUtils';
 import type { PricingZone } from '@/lib/ticketPricing';
+import type { GuestTicketPlacement } from '@/app/rsvp/guestRsvpTypes';
 
 type GuestPlanView = PlanViewMode;
 
@@ -126,6 +127,7 @@ interface GuestTablePlanViewProps {
   pricingZones?: PricingZone[] | null;
   guestFirstName: string;
   guestLastName: string;
+  ticketPlacement?: GuestTicketPlacement | null;
   immersive?: boolean;
 }
 
@@ -182,6 +184,7 @@ export default function GuestTablePlanView({
   pricingZones = null,
   guestFirstName,
   guestLastName,
+  ticketPlacement = null,
   placementAccessible = false,
   immersive = false,
 }: GuestTablePlanViewProps) {
@@ -274,14 +277,25 @@ export default function GuestTablePlanView({
 
   if (!tableDetails && (!tablePlanOverview || tablePlanOverview.length === 0)) {
     return (
-      <div className="text-center py-12 space-y-3 max-w-xs mx-auto">
+      <div className="text-center py-12 space-y-3 max-w-sm mx-auto">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary border border-primary/15">
           <LayoutGrid className="w-6 h-6" />
         </div>
-        <h3 className="font-display font-semibold text-foreground text-base">Plan de table en cours</h3>
-        <p className="text-muted text-xs leading-relaxed">
-          Les organisateurs finalisent le placement. Revenez bientôt.
-        </p>
+        <div className="space-y-1">
+          <h3 className="font-display font-semibold text-foreground text-base">
+            {ticketPlacement?.hasTicket ? 'Billet réservé & confirmé' : 'Plan de table en cours'}
+          </h3>
+          {ticketPlacement?.zoneName && (
+            <p className="text-xs font-bold text-primary">
+              Zone assignée : {ticketPlacement.zoneName}
+            </p>
+          )}
+          <p className="text-muted text-xs leading-relaxed">
+            {ticketPlacement?.hasTicket
+              ? 'Votre paiement a bien été validé. La disposition exacte des tables et de votre siège est en cours de finalisation par les organisateurs.'
+              : 'Les organisateurs finalisent le placement. Revenez bientôt.'}
+          </p>
+        </div>
       </div>
     );
   }

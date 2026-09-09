@@ -29,8 +29,29 @@ import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
 import { resolvePhoneFields } from '../utils/phone';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { notifyTenantOperators } from '../services/platformNotificationService';
+import {
+  getDonationsAccess,
+  isOnlinePaymentsEnabled,
+  loadPlatformSettings,
+} from '../services/platformSettingsService';
+import {
+  resolveDonationsAccess,
+  extractEventDonationsConfig,
+} from '../services/donationsAccess';
+import {
+  isFlexPayCardConfigured,
+  buildFlexPayReference,
+  createFlexPayCardCheckout,
+  createFlexPayMobileCheckout,
+  getPublicApiBaseUrl,
+} from '../services/flexPayCardService';
+import {
+  parseFlexPayChargeCurrency,
+  resolveFlexPayCharge,
+} from '../services/flexPayChargeCurrency';
+import { toPrismaJson } from '../utils/prismaJson';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 
 function isEventDatePassed(eventDate: Date | string): boolean {
   return new Date(eventDate).getTime() < Date.now();
@@ -195,9 +216,22 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     const guest = await prisma.guest.findUnique({
       where: { id: guestId },
       include: {
+        ticketOrder: {
+          select: {
+            id: true,
+            tableId: true,
+            seatIndex: true,
+            selectedSeats: true,
+            pricingZoneId: true,
+            status: true,
+            quantity: true,
+            amountFc: true,
+          },
+        },
         event: {
           select: {
             id: true,
+            tenantId: true,
             title: true,
             description: true,
             date: true,
@@ -209,6 +243,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             longitude: true,
             isPublic: true,
             tablePlan: true,
+            eventPrep: true,
             eventProgram: true,
             guestGuidelines: true,
             rsvpForm: true,
@@ -217,7 +252,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
                 layoutBlueprint: true,
               },
             },
-            tenant: { select: { name: true, branding: true } },
+            tenant: { select: { id: true, name: true, branding: true } },
             invitations: {
               where: {
                 templateId: { not: null }
@@ -249,8 +284,54 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       guest.rsvp = 'ACCEPTED';
     }
 
+    // Réconciliation de la place réservée via le billet (TicketOrder)
+    const order = guest.ticketOrder;
+    let reservedTableId: string | null = order?.tableId ?? null;
+    let reservedSeatIndex: number | null = order?.seatIndex ?? null;
+
+    if (order?.selectedSeats && Array.isArray(order.selectedSeats) && order.selectedSeats.length > 0) {
+      const rawSeats = order.selectedSeats as Array<{ tableId?: unknown; seatIndex?: unknown }>;
+      if ((order.quantity ?? 1) > 1) {
+        const orderGuests = await prisma.guest.findMany({
+          where: { ticketOrderId: order.id },
+          select: { id: true },
+          orderBy: { createdAt: 'asc' },
+        });
+        const guestIdx = orderGuests.findIndex((g) => g.id === guest.id);
+        const seatItem = rawSeats[guestIdx >= 0 ? guestIdx : 0] || rawSeats[0];
+        if (seatItem) {
+          reservedTableId = String(seatItem.tableId);
+          reservedSeatIndex = Number(seatItem.seatIndex);
+        }
+      } else if (rawSeats[0]) {
+        reservedTableId = String(rawSeats[0].tableId);
+        reservedSeatIndex = Number(rawSeats[0].seatIndex);
+      }
+    }
+
+    // Auto-attribution et synchronisation en mémoire du plan de table
+    const eventObj = guest.event as any;
+    if (eventObj?.tablePlan && typeof eventObj.tablePlan === 'object' && Array.isArray(eventObj.tablePlan.tables)) {
+      if (reservedTableId && reservedSeatIndex != null) {
+        const targetTable = eventObj.tablePlan.tables.find((t: any) => t.id === reservedTableId);
+        if (targetTable) {
+          if (!targetTable.seats) targetTable.seats = {};
+          if (targetTable.seats[String(reservedSeatIndex)] !== guestId) {
+            targetTable.seats[String(reservedSeatIndex)] = guestId;
+            // Persistance asynchrone non-bloquante pour synchroniser la base
+            prisma.event.update({
+              where: { id: guest.eventId },
+              data: { tablePlan: toPrismaJson(eventObj.tablePlan) },
+            }).catch(() => undefined);
+          }
+        }
+      }
+    }
+
     const forPrint = req.query.print === '1';
-    const hasSeatAssignment = Boolean(findGuestSeatInTablePlan(guest.event.tablePlan, guestId));
+    const hasSeatAssignment =
+      Boolean(findGuestSeatInTablePlan(guest.event.tablePlan, guestId)) ||
+      (reservedTableId != null && reservedSeatIndex != null);
     const placementAccessible =
       canGuestAccessPlacement(guest) || (forPrint && hasSeatAssignment);
 
@@ -324,10 +405,16 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           x: table.x,
           y: table.y,
           occupiedCount: Object.values(table.seats || {}).filter(Boolean).length,
-          isGuestTable: Object.values(table.seats || {}).includes(guestId),
+          isGuestTable:
+            Object.values(table.seats || {}).includes(guestId) ||
+            (reservedTableId != null && table.id === reservedTableId),
           guestSeatIndex: (() => {
             const entry = Object.entries(table.seats || {}).find(([, id]) => id === guestId);
-            return entry ? parseInt(entry[0], 10) : undefined;
+            if (entry) return parseInt(entry[0], 10);
+            if (reservedTableId != null && table.id === reservedTableId && reservedSeatIndex != null) {
+              return reservedSeatIndex;
+            }
+            return undefined;
           })(),
           pricingZoneId: table.pricingZoneId,
           chairType: table.chairType,
@@ -474,6 +561,34 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             break;
           }
         }
+
+        // Si non trouvé par ID exact, mais que l'invité a une réservation issue de son billet
+        if (!tableDetails && reservedTableId != null && reservedSeatIndex != null) {
+          const fallbackTable = plan.tables.find((t: any) => t.id === reservedTableId);
+          if (fallbackTable) {
+            const seatIndex = reservedSeatIndex;
+            const tableZone = pricingZones.find((z: any) => z.id === fallbackTable.pricingZoneId);
+            tableDetails = {
+              tableName: fallbackTable.name || `Table ${fallbackTable.id.slice(0, 6)}`,
+              shape: fallbackTable.shape || 'round',
+              capacity: fallbackTable.capacity || 8,
+              seatIndex,
+              chairType: fallbackTable.chairType,
+              chairImageUrl: fallbackTable.chairImageUrl,
+              pricingZoneId: fallbackTable.pricingZoneId || null,
+              zoneName: tableZone?.name || null,
+              zoneColor: tableZone?.color || null,
+              privacyPolicy: {
+                mode: policyMode,
+                shareSameTable,
+                shareSameZone,
+                isPublic: isPublicEvent,
+              },
+              neighbors: [],
+              zoneNeighborsCount: 0,
+            };
+          }
+        }
       }
 
       const room = eventObj.room as any;
@@ -548,6 +663,69 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
         });
     }
 
+    const isTicketGuest = Boolean(guest.ticketOrderId || guest.category === 'Billet');
+    const assignedZoneId = tableDetails?.pricingZoneId || order?.pricingZoneId || null;
+    const assignedZone = pricingZones.find((z: any) => z.id === assignedZoneId);
+    const effectiveSeatIndex = tableDetails?.seatIndex ?? reservedSeatIndex ?? null;
+
+    const ticketPlacement = {
+      hasTicket: isTicketGuest,
+      isAssigned: Boolean(tableDetails || (reservedTableId && reservedSeatIndex != null)),
+      orderId: order?.id || null,
+      pricingZoneId: assignedZoneId,
+      zoneName: tableDetails?.zoneName || assignedZone?.name || null,
+      zoneColor: tableDetails?.zoneColor || assignedZone?.color || null,
+      tableId: tableDetails
+        ? (eventObj?.tablePlan?.tables?.find((t: any) => t.name === tableDetails.tableName)?.id || reservedTableId)
+        : reservedTableId,
+      tableName: tableDetails?.tableName || (reservedTableId ? (eventObj?.tablePlan?.tables?.find((t: any) => t.id === reservedTableId)?.name || 'Votre table') : null),
+      seatIndex: effectiveSeatIndex,
+      seatNumber: effectiveSeatIndex != null ? effectiveSeatIndex + 1 : null,
+    };
+
+    let donationsData: {
+      enabled: boolean;
+      cause: string | null;
+      targetAmountFc: number | null;
+      minAmountFc: number;
+      suggestedAmountsFc: number[];
+      collectedAmountFc: number;
+      donorsCount: number;
+      progressPercent: number | null;
+    } | null = null;
+
+    const donationsAccess = getDonationsAccess();
+    const eventTenantId = (guest.event as any).tenantId;
+    const platformCheck = resolveDonationsAccess(eventTenantId, donationsAccess);
+    const donationsConfig = extractEventDonationsConfig((guest.event as any).eventPrep);
+
+    if (platformCheck.allowed && donationsConfig?.enabled) {
+      const paidDonations = await prisma.ticketOrder.aggregate({
+        where: {
+          eventId: guest.eventId,
+          status: 'PAID',
+          pricingZoneId: 'donation',
+        },
+        _sum: { amountFc: true },
+        _count: { _all: true },
+      });
+
+      const collectedAmountFc = paidDonations._sum.amountFc || 0;
+      const target = donationsConfig.targetAmountFc;
+      const progressPercent = target && target > 0 ? Math.min(100, Math.round((collectedAmountFc / target) * 100)) : null;
+
+      donationsData = {
+        enabled: true,
+        cause: donationsConfig.cause,
+        targetAmountFc: donationsConfig.targetAmountFc,
+        minAmountFc: donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000,
+        suggestedAmountsFc: donationsConfig.suggestedAmountsFc || donationsAccess.defaultSuggestedAmountsFc,
+        collectedAmountFc,
+        donorsCount: paidDonations._count._all || 0,
+        progressPercent,
+      };
+    }
+
     return res.json({
       ...guestWithoutEvent,
       event: eventForClient,
@@ -568,6 +746,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       roomLayoutPreview,
       sourceRoomType,
       previewLightingPreset,
+      ticketPlacement,
+      donations: donationsData,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
     });
@@ -978,5 +1158,185 @@ export async function getGuestQrPng(req: Request, res: Response) {
   } catch (error: any) {
     console.error('Erreur génération QR:', error);
     return res.status(500).json({ error: 'Impossible de générer le QR code.' });
+  }
+}
+
+/**
+ * Permet à un invité d'effectuer un don solidaire directement depuis son espace invité.
+ * POST /api/rsvp/:guestId/donations
+ * body: { amountFc, isAnonymous?, donationNote?, paymentMethod?: 'mobile'|'card', phone?, currency? }
+ */
+export async function submitGuestDonation(req: Request, res: Response) {
+  try {
+    const guestId = req.params.guestId as string;
+    const guest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            tenantId: true,
+            eventPrep: true,
+            tenant: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    if (!guest || !guest.event) {
+      return res.status(404).json({ error: 'Invité ou événement introuvable.' });
+    }
+
+    const donationsAccess = getDonationsAccess();
+    const platformCheck = resolveDonationsAccess(guest.event.tenantId, donationsAccess);
+    if (!platformCheck.allowed) {
+      return res.status(403).json({ error: platformCheck.reason || 'Les donations sont désactivées pour cette organisation.' });
+    }
+
+    const donationsConfig = extractEventDonationsConfig(guest.event.eventPrep);
+    if (!donationsConfig || !donationsConfig.enabled) {
+      return res.status(400).json({ error: 'Les donations ne sont pas activées sur cet événement.' });
+    }
+
+    const rawAmount = Number(req.body?.amountFc || req.body?.donationAmountFc);
+    const minAmount = donationsConfig.minAmountFc || donationsAccess.minAmountFc || 1000;
+    if (!Number.isFinite(rawAmount) || rawAmount < minAmount) {
+      return res.status(400).json({
+        error: `Le montant minimum pour un don est de ${minAmount.toLocaleString('fr-FR')} FC.`,
+      });
+    }
+    const amountFc = Math.round(rawAmount);
+    const isAnonymous = Boolean(req.body?.isAnonymous);
+    const donationNote = typeof req.body?.donationNote === 'string' ? req.body.donationNote.trim().slice(0, 500) : null;
+
+    const rawMethod = String(req.body?.paymentMethod || 'mobile').toLowerCase();
+    const paymentMethod = rawMethod === 'card' ? 'card' : 'mobile';
+    const paymentProvider = paymentMethod === 'mobile' ? 'flexpay_mobile' : 'flexpay_card';
+
+    if (!isOnlinePaymentsEnabled()) {
+      return res.status(403).json({ error: 'Les paiements en ligne sont actuellement désactivés.' });
+    }
+
+    if (!isFlexPayCardConfigured()) {
+      return res.status(503).json({
+        error: 'Paiements FlexPay non configurés. Réessayez plus tard ou contactez le support.',
+      });
+    }
+
+    const buyerName = `${guest.firstName} ${guest.lastName}`.trim() || 'Invité';
+    const buyerEmail = guest.email;
+    const buyerPhone = String(req.body?.phone || guest.phone || '').trim();
+
+    const order = await prisma.ticketOrder.create({
+      data: {
+        eventId: guest.event.id,
+        buyerName: isAnonymous ? 'Donateur Anonyme' : buyerName,
+        buyerEmail,
+        buyerPhone: buyerPhone || null,
+        quantity: 1,
+        amountFc,
+        unitPriceFc: amountFc,
+        pricingZoneId: 'donation',
+        status: 'PENDING',
+        paymentProvider,
+        selectedSeats: toPrismaJson({
+          kind: 'DONATION',
+          isAnonymous,
+          donationNote,
+          originalBuyerName: buyerName,
+          donorGuestId: guest.id,
+          donorAttendancePass: false,
+        }),
+      },
+    });
+
+    if (paymentProvider === 'flexpay_mobile') {
+      if (!buyerPhone) {
+        await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+        return res.status(400).json({ error: 'Numéro Mobile Money requis (ex. 243…).' });
+      }
+
+      const charge = resolveFlexPayCharge(
+        amountFc,
+        parseFlexPayChargeCurrency(req.body?.currency, 'mobile'),
+        loadPlatformSettings().usdExchangeRateCdf,
+      );
+      const apiBase = getPublicApiBaseUrl();
+      const reference = buildFlexPayReference('dn', order.id);
+
+      try {
+        const flex = await createFlexPayMobileCheckout({
+          reference,
+          amount: charge.amount,
+          currency: charge.currency,
+          phone: buyerPhone,
+          callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+        });
+
+        await prisma.ticketOrder.update({
+          where: { id: order.id },
+          data: {
+            paymentProvider: 'flexpay_mobile',
+            flexPayOrderNumber: flex.orderNumber,
+            flexPayReference: reference,
+          },
+        });
+
+        return res.status(201).json({
+          paid: false,
+          pending: true,
+          orderId: order.id,
+          method: 'mobile',
+          amountCustomer: charge.amount,
+          currencyCustomer: charge.currency,
+          orderNumber: flex.orderNumber,
+          message: 'Demande de paiement Mobile Money envoyée sur votre téléphone. Veuillez valider avec votre code PIN.',
+        });
+      } catch (err: any) {
+        await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+        return res.status(502).json({ error: err?.message || 'Erreur lors de l’initialisation FlexPay Mobile.' });
+      }
+    }
+
+    // flexpay_card
+    const charge = resolveFlexPayCharge(amountFc, 'USD', loadPlatformSettings().usdExchangeRateCdf);
+    const apiBase = getPublicApiBaseUrl();
+    const reference = buildFlexPayReference('dn', order.id);
+    try {
+      const flex = await createFlexPayCardCheckout({
+        reference,
+        amount: charge.amount,
+        currency: charge.currency,
+        description: `Don solidaire: ${guest.event.title}`.slice(0, 100),
+        callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
+        approveUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationSuccess=1&orderId=${order.id}`,
+        cancelUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationCancelled=1`,
+      });
+
+      await prisma.ticketOrder.update({
+        where: { id: order.id },
+        data: {
+          paymentProvider: 'flexpay_card',
+          flexPayOrderNumber: flex.orderNumber,
+          flexPayReference: reference,
+        },
+      });
+
+      return res.status(201).json({
+        paid: false,
+        pending: true,
+        orderId: order.id,
+        method: 'card',
+        paymentUrl: flex.url,
+      });
+    } catch (err: any) {
+      await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+      return res.status(502).json({ error: err?.message || 'Erreur lors de l’initialisation du paiement par carte.' });
+    }
+  } catch (err: any) {
+    console.error('Erreur submitGuestDonation:', err);
+    return res.status(500).json({ error: 'Erreur lors de l’enregistrement de votre don.' });
   }
 }

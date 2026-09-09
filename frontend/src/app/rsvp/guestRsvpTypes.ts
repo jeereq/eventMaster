@@ -1,5 +1,29 @@
 import type { GuestGuidelines } from '@/lib/guestGuidelines';
 
+export interface GuestTicketPlacement {
+  hasTicket: boolean;
+  isAssigned: boolean;
+  orderId?: string | null;
+  pricingZoneId?: string | null;
+  zoneName?: string | null;
+  zoneColor?: string | null;
+  tableId?: string | null;
+  tableName?: string | null;
+  seatIndex?: number | null;
+  seatNumber?: number | null;
+}
+
+export interface GuestDonationsConfig {
+  enabled: boolean;
+  cause: string | null;
+  targetAmountFc: number | null;
+  minAmountFc: number;
+  suggestedAmountsFc: number[];
+  collectedAmountFc: number;
+  donorsCount: number;
+  progressPercent: number | null;
+}
+
 export interface GuestRsvpData {
   id: string;
   firstName: string;
@@ -106,4 +130,6 @@ export interface GuestRsvpData {
     sidebar?: string;
   } | null;
   organizationName?: string;
+  ticketPlacement?: GuestTicketPlacement | null;
+  donations?: GuestDonationsConfig | null;
 }

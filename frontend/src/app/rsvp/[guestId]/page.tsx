@@ -16,7 +16,9 @@ import {
   Loader2, Award, Image, Send, Heart, LayoutGrid, MessageCircle,
   ChevronLeft, ChevronRight, X, ThumbsUp, Download, Navigation,
   QrCode, Maximize2, Printer, User, UserCog, Pencil, Utensils, Sparkles,
+  Ticket,
 } from 'lucide-react';
+import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
 import {
   type RsvpField,
   buildRsvpPreferencesPayload,
@@ -83,8 +85,8 @@ export default function RsvpPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Guest Dashboard states
-  const [activeGuestTab, setActiveGuestTab] = useState<'badge' | 'table' | 'route' | 'guestbook' | 'feed'>(() => {
-    if (initialTabParam === 'table' || initialTabParam === 'route' || initialTabParam === 'guestbook' || initialTabParam === 'feed') {
+  const [activeGuestTab, setActiveGuestTab] = useState<'badge' | 'table' | 'route' | 'donations' | 'guestbook' | 'feed'>(() => {
+    if (initialTabParam === 'table' || initialTabParam === 'route' || initialTabParam === 'donations' || initialTabParam === 'guestbook' || initialTabParam === 'feed') {
       return initialTabParam;
     }
     return 'badge';
@@ -144,63 +146,78 @@ export default function RsvpPage() {
   );
   useInvitationFonts(invitationFontFamilies, needsInvitationFonts);
 
-  const guestTabIds = ['badge', 'table', 'route', 'guestbook', 'feed'] as const;
-  const goGuestTab = (id: string) => {
-    if (!(guestTabIds as readonly string[]).includes(id)) return;
-    setActiveGuestTab(id as typeof activeGuestTab);
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${window.location.search}#${id}`,
-    );
-  };
+  const hasDonations = Boolean(guest?.donations?.enabled);
 
-  useEffect(() => {
-    const raw = window.location.hash.replace('#', '');
-    if (raw === 'badge' || raw === 'table' || raw === 'route' || raw === 'guestbook' || raw === 'feed') {
-      setActiveGuestTab(raw);
+  const guestTabIds = useMemo(() => {
+    return [
+      'badge',
+      'table',
+      'route',
+      ...(hasDonations ? ['donations' as const] : []),
+      'guestbook',
+      'feed',
+    ] as const;
+  }, [hasDonations]);
+
+  const goGuestTab = useCallback((id: string) => {
+    const raw = id.trim().toLowerCase();
+    if (raw === 'badge' || raw === 'table' || raw === 'route' || raw === 'donations' || raw === 'guestbook' || raw === 'feed') {
+      setActiveGuestTab(raw as typeof activeGuestTab);
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}#${raw}`,
+      );
     }
   }, []);
 
   useEffect(() => {
-    async function loadRsvpDetails() {
-      if (!guestId) return;
-      try {
-        const data = await api.get(`/rsvp/${guestId}`);
-        setGuest(data);
-        setGuestFirstName(data.firstName || '');
-        setGuestLastName(data.lastName || '');
-        setGuestPhone(data.phone || data.preferences?.phone || '');
-        setRsvpLocked(Boolean(data.rsvpLocked));
-        const isTicketOrPublic = Boolean(
-          data.ticketOrderId || data.category === 'Billet' || data.event?.isPublic,
-        );
-        if ((data.rsvp && data.rsvp !== 'PENDING') || isTicketOrPublic) {
-          setRsvpStatus(data.rsvp === 'DECLINED' ? 'DECLINED' : 'ACCEPTED');
-          setSubmitted(true);
-        }
-        if (data.preferences) {
-          setAllergies(data.preferences.allergies || '');
-          setSpecialMeal(data.preferences.specialMeal || 'none');
-          setAdditionalNotes(data.preferences.notes || '');
-          const templateContent = data.event?.invitations?.[0]?.template?.content;
-          const elements = templateContent?.elements || [];
-          const rsvpFields = ensureMandatoryRsvpFields(
-            elements
-              .filter((el: { type?: string }) => el.type === 'rsvp-block')
-              .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []),
-          );
-          setCustomFieldValues(restoreFieldValuesFromPreferences(rsvpFields, data.preferences));
-        }
-      } catch (err: any) {
-        console.error('Error fetching RSVP details:', err);
-        setError('Le lien d\'invitation est invalide ou a expiré.');
-      } finally {
-        setLoading(false);
-      }
+    const raw = window.location.hash.replace('#', '');
+    if (raw === 'badge' || raw === 'table' || raw === 'route' || raw === 'donations' || raw === 'guestbook' || raw === 'feed') {
+      setActiveGuestTab(raw as typeof activeGuestTab);
     }
-    loadRsvpDetails();
+  }, []);
+
+  const loadRsvpDetails = useCallback(async () => {
+    if (!guestId) return;
+    try {
+      const data = await api.get(`/rsvp/${guestId}`);
+      setGuest(data);
+      setGuestFirstName(data.firstName || '');
+      setGuestLastName(data.lastName || '');
+      setGuestPhone(data.phone || data.preferences?.phone || '');
+      setRsvpLocked(Boolean(data.rsvpLocked));
+      const isTicketOrPublic = Boolean(
+        data.ticketOrderId || data.category === 'Billet' || data.event?.isPublic,
+      );
+      if ((data.rsvp && data.rsvp !== 'PENDING') || isTicketOrPublic) {
+        setRsvpStatus(data.rsvp === 'DECLINED' ? 'DECLINED' : 'ACCEPTED');
+        setSubmitted(true);
+      }
+      if (data.preferences) {
+        setAllergies(data.preferences.allergies || '');
+        setSpecialMeal(data.preferences.specialMeal || 'none');
+        setAdditionalNotes(data.preferences.notes || '');
+        const templateContent = data.event?.invitations?.[0]?.template?.content;
+        const elements = templateContent?.elements || [];
+        const rsvpFields = ensureMandatoryRsvpFields(
+          elements
+            .filter((el: { type?: string }) => el.type === 'rsvp-block')
+            .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []),
+        );
+        setCustomFieldValues(restoreFieldValuesFromPreferences(rsvpFields, data.preferences));
+      }
+    } catch (err: any) {
+      console.error('Error fetching RSVP details:', err);
+      setError('Le lien d\'invitation est invalide ou a expiré.');
+    } finally {
+      setLoading(false);
+    }
   }, [guestId]);
+
+  useEffect(() => {
+    loadRsvpDetails();
+  }, [loadRsvpDetails]);
 
   const loadGuestFeed = async (silent = false) => {
     if (!guest?.event?.id) return;
@@ -632,6 +649,7 @@ export default function RsvpPage() {
         { id: 'badge', label: 'Pass QR', shortLabel: 'QR', icon: <Award className="w-4 h-4" /> },
         { id: 'table', label: 'Ma table', shortLabel: 'Table', icon: <LayoutGrid className="w-4 h-4" /> },
         { id: 'route', label: 'Lieu', shortLabel: 'Lieu', icon: <Navigation className="w-4 h-4" /> },
+        ...(hasDonations ? [{ id: 'donations', label: 'Faire un don', shortLabel: 'Don', icon: <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" /> }] : []),
         { id: 'guestbook', label: "Livre d'or", shortLabel: 'Livre', icon: <Heart className="w-4 h-4" /> },
         { id: 'feed', label: 'Actualités', shortLabel: 'Actu', icon: <MessageCircle className="w-4 h-4" /> },
       ];
@@ -666,8 +684,9 @@ export default function RsvpPage() {
             <GuestHowTo
               steps={[
                 'Montrez le pass QR à l’accueil',
-                'Ouvrez Table pour votre siège',
+                'Ouvrez Table pour votre place exacte',
                 'Ouvrez Lieu pour l’itinéraire',
+                ...(hasDonations ? ['Ouvrez Don pour soutenir la cause solidaire'] : []),
               ]}
             />
             {/* 1. BADGE & INFOS TAB */}
@@ -789,6 +808,119 @@ export default function RsvpPage() {
                     Changer mes coordonnées
                   </button>
                 </div>
+
+                {/* Carte de placement assigné (très visible pour les billets payés et invités placés) */}
+                {(guest.ticketPlacement?.isAssigned || guest.tableDetails?.tableName) && (
+                  <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:p-5 space-y-3.5 text-left shadow-xs">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
+                        <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+                        <span>Votre place réservée</span>
+                      </span>
+                      {guest.ticketPlacement?.zoneName && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface border border-border">
+                          <Sparkles className="w-3 h-3 text-amber-500" />
+                          <span>{guest.ticketPlacement.zoneName}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-0.5 min-w-0">
+                        <p className="text-[11px] uppercase font-bold text-muted tracking-wider">Table assignée</p>
+                        <p className="text-lg sm:text-xl font-display font-bold text-foreground truncate">
+                          {guest.ticketPlacement?.tableName || guest.tableDetails?.tableName || 'Table assignée'}
+                        </p>
+                      </div>
+
+                      {(guest.ticketPlacement?.seatNumber != null || guest.tableDetails?.seatIndex != null) && (
+                        <div className="rounded-xl px-4 py-2 border border-primary/30 bg-surface text-center shrink-0 shadow-xs">
+                          <p className="text-[10px] uppercase font-bold text-muted tracking-wider">Siège</p>
+                          <p className="text-lg sm:text-xl font-black text-primary tabular-nums">
+                            n° {guest.ticketPlacement?.seatNumber ?? ((guest.tableDetails?.seatIndex ?? 0) + 1)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-1 flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={() => goGuestTab('table')}
+                        className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 py-2 px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition shadow-sm"
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                        <span>Voir ma place sur le plan (2D / 3D)</span>
+                      </button>
+                      {guest.seatingInvitationPdfUrl && (
+                        <a
+                          href={guest.seatingInvitationPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-1.5 min-h-11 py-2 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted transition"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>PDF</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Si l'invité a acheté un billet mais sans placement de table encore attribué */}
+                {guest.ticketPlacement?.hasTicket && !guest.ticketPlacement?.isAssigned && !guest.tableDetails?.tableName && (
+                  <div className="rounded-2xl border border-border bg-surface-muted/40 p-4 space-y-2 text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-border text-xs font-bold text-foreground">
+                        <Ticket className="w-3.5 h-3.5 text-primary" />
+                        <span>Billet confirmé</span>
+                      </span>
+                      {guest.ticketPlacement?.zoneName && (
+                        <span className="text-xs font-semibold text-primary">
+                          Zone {guest.ticketPlacement.zoneName}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Votre billet est validé. Votre table et votre numéro de place précis vous seront indiqués par l&apos;équipe d&apos;accueil à votre entrée dans la salle.
+                    </p>
+                  </div>
+                )}
+
+                {/* Bandeau de campagne solidaire si les dons sont activés */}
+                {hasDonations && guest.donations && (
+                  <div className="rounded-2xl border border-rose-500/25 bg-rose-500/5 p-4 sm:p-5 space-y-3 text-left">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs font-bold">
+                        <Heart className="w-3 h-3 fill-rose-500/30" />
+                        Campagne de dons solidaires
+                      </span>
+                      {guest.donations.progressPercent != null && (
+                        <span className="text-xs font-bold text-rose-700 dark:text-rose-300 tabular-nums">
+                          {guest.donations.progressPercent}% collectés
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-foreground">
+                        {guest.donations.cause || 'Soutenez la cause solidaire de l’événement'}
+                      </h4>
+                      <p className="text-xs text-muted leading-relaxed">
+                        Vous pouvez faire un don solidaire à montant libre directement via Mobile Money ou Carte bancaire.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => goGuestTab('donations')}
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-sm"
+                    >
+                      <Heart className="w-3.5 h-3.5 fill-white" />
+                      <span>Faire un don solidaire</span>
+                    </button>
+                  </div>
+                )}
 
                 <section className="space-y-4 px-0.5">
                   <div>
@@ -941,13 +1073,34 @@ export default function RsvpPage() {
                     pricingZones={guest.pricingZones ?? null}
                     guestFirstName={guest.firstName}
                     guestLastName={guest.lastName}
+                    ticketPlacement={guest.ticketPlacement ?? null}
                     immersive
                   />
               </div>
             )}
             </div>
 
-            {/* 3. LIVRE D'OR TAB */}
+            {/* 3. DONS SOLIDAIRES TAB */}
+            {hasDonations && guest.donations && (
+              <div id="guest-panel-donations" role="tabpanel" aria-labelledby="guest-tab-donations" hidden={activeGuestTab !== 'donations'}>
+                {activeGuestTab === 'donations' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <GuestDonationForm
+                      guestId={guestId}
+                      guestName={`${guest.firstName} ${guest.lastName}`}
+                      guestEmail={guest.email}
+                      guestPhone={guest.phone}
+                      donations={guest.donations}
+                      onDonationSuccess={() => {
+                        loadRsvpDetails();
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 4. LIVRE D'OR TAB */}
             <div id="guest-panel-guestbook" role="tabpanel" aria-labelledby="guest-tab-guestbook" hidden={activeGuestTab !== 'guestbook'}>
             {activeGuestTab === 'guestbook' && (
               <div className="space-y-4 animate-fade-in">
@@ -1446,8 +1599,12 @@ export default function RsvpPage() {
               <div className="text-left min-w-0">
                 <p className="text-sm font-bold leading-tight truncate">Mon Pass d&apos;entrée QR</p>
                 <p className="text-xs text-white/80 truncate">
-                  {guest.tableDetails?.tableName
-                    ? `${guest.tableDetails.tableName}${guest.tableDetails.seatIndex != null ? ` • Place ${guest.tableDetails.seatIndex + 1}` : ''}`
+                  {guest.ticketPlacement?.tableName || guest.tableDetails?.tableName
+                    ? `${guest.ticketPlacement?.tableName || guest.tableDetails?.tableName}${
+                        (guest.ticketPlacement?.seatNumber != null || guest.tableDetails?.seatIndex != null)
+                          ? ` • Place ${guest.ticketPlacement?.seatNumber ?? ((guest.tableDetails?.seatIndex ?? 0) + 1)}`
+                          : ''
+                      }`
                     : 'Ouvrir le pass pour l’accueil'}
                 </p>
               </div>
@@ -1490,12 +1647,21 @@ export default function RsvpPage() {
                 </h3>
               </div>
 
-              {guest.tableDetails?.tableName && (
+              {(guest.ticketPlacement?.isAssigned || guest.tableDetails?.tableName) && (
                 <div className="py-2.5 px-4 rounded-xl bg-surface-muted border border-border text-left">
-                  <p className="text-xs uppercase font-bold text-muted tracking-wider">Placement assigné</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs uppercase font-bold text-muted tracking-wider">Placement assigné</p>
+                    {guest.ticketPlacement?.zoneName && (
+                      <span className="text-xs font-semibold text-primary">
+                        Zone {guest.ticketPlacement.zoneName}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-base font-extrabold text-foreground">
-                    {guest.tableDetails.tableName}
-                    {guest.tableDetails.seatIndex != null ? ` • Siège n° ${guest.tableDetails.seatIndex + 1}` : ''}
+                    {guest.ticketPlacement?.tableName || guest.tableDetails?.tableName}
+                    {(guest.ticketPlacement?.seatNumber != null || guest.tableDetails?.seatIndex != null)
+                      ? ` • Siège n° ${guest.ticketPlacement?.seatNumber ?? ((guest.tableDetails?.seatIndex ?? 0) + 1)}`
+                      : ''}
                   </p>
                 </div>
               )}
