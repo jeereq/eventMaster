@@ -569,6 +569,7 @@ export default function RoomLayoutPreview({
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
   const [mounted, setMounted] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [localForce2d, setLocalForce2d] = useState(false);
   const isMobile = useIsMobileViewport();
 
   useEffect(() => {
@@ -602,7 +603,7 @@ export default function RoomLayoutPreview({
 
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const lightingPreset = lightingPresetOverride ?? blueprint.metadata.lightingPreset ?? 'auto';
-  const useWebGL = !force2d && quality !== 'thumb' && mounted;
+  const useWebGL = !force2d && !localForce2d && quality !== 'thumb' && mounted;
   const canExpand = (allowMobileExpand ?? quality === 'showcase') && useWebGL && isMobile;
 
   const webglBlueprint = quality === 'showcase'
@@ -637,7 +638,10 @@ export default function RoomLayoutPreview({
       ) : (
         <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-foreground', canvasClass, className)}>
           {useWebGL ? (
-            <Room3DErrorBoundary className="absolute inset-0 h-full w-full">
+            <Room3DErrorBoundary
+              className="absolute inset-0 h-full w-full"
+              onFallbackTo2D={() => setLocalForce2d(true)}
+            >
               <WebGLPreviewCanvas
                 webglBlueprint={webglBlueprint}
                 quality={quality}
@@ -715,7 +719,13 @@ export default function RoomLayoutPreview({
             </button>
           </div>
           <div className="relative flex-1 min-h-0">
-            <Room3DErrorBoundary className="absolute inset-0 h-full w-full">
+            <Room3DErrorBoundary
+              className="absolute inset-0 h-full w-full"
+              onFallbackTo2D={() => {
+                setLocalForce2d(true);
+                setExpanded(false);
+              }}
+            >
               <WebGLPreviewCanvas
                 webglBlueprint={webglBlueprint}
                 quality={quality}

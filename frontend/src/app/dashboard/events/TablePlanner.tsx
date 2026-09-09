@@ -411,7 +411,8 @@ export default function TablePlanner({
   const plannerWidthM = roomLayoutBlueprint?.canvas?.widthM ?? 20;
   const plannerHeightM = roomLayoutBlueprint?.canvas?.heightM ?? 16;
 
- const previewQuality = caps.canShowcaseRender ? 'showcase' as const : 'standard' as const;
+  const [safe3DMode, setSafe3DMode] = useState(false);
+  const previewQuality = caps.canShowcaseRender && !safe3DMode ? 'showcase' as const : 'standard' as const;
 
  const previewLighting = previewLightingPreset
    ?? (initialTablePlan?.lightingPreset && initialTablePlan.lightingPreset !== 'auto'
@@ -892,6 +893,7 @@ export default function TablePlanner({
             <Room3DErrorBoundary
               className="absolute inset-0 h-full w-full flex flex-col items-center justify-center p-6 bg-surface-muted text-center"
               onFallbackTo2D={() => setPlannerView('2d')}
+              onResetSafeMode={() => setSafe3DMode(true)}
             >
               <RoomLayoutPreview
                 blueprint={previewBlueprint}

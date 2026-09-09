@@ -278,19 +278,27 @@ export function RoomUplights({
             <cylinderGeometry args={[0.06, 0.08, 0.12, 12]} />
             <meshStandardMaterial color="#292524" metalness={0.55} roughness={0.4} />
           </mesh>
+          <mesh position={[0, 0.08, 0]}>
+            <sphereGeometry args={[0.022, 8, 8]} />
+            <meshStandardMaterial
+              color="#fef08a"
+              emissive="#f59e0b"
+              emissiveIntensity={2.5}
+              roughness={0.2}
+            />
+          </mesh>
           <mesh position={[0, 0.12, 0]}>
             <coneGeometry args={[0.2, 0.55, 16]} />
             <meshStandardMaterial
               color="#fef9c3"
               transparent
-              opacity={0.12}
+              opacity={0.15}
               emissive="#fbbf24"
-              emissiveIntensity={0.35}
+              emissiveIntensity={0.45}
               depthWrite={false}
               side={THREE.DoubleSide}
             />
           </mesh>
-          <pointLight position={[0, 0.35, 0]} intensity={0.4} color="#fde68a" distance={7} decay={2} />
         </group>
       ))}
     </group>
@@ -913,7 +921,6 @@ export function CatalogueChandelierFixture({
         color={lightColor}
         distance={lightRadius}
         decay={2}
-        castShadow
       />
     </group>
   );

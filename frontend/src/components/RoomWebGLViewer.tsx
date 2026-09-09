@@ -422,16 +422,13 @@ function NightLedStrip({
       />
       <object3D ref={targetRef} position={ledTarget} />
 
-      {[-0.35, -0.15, 0, 0.15, 0.35].map((t) => (
-        <pointLight
-          key={t}
-          position={[ledSpan * t, ledY - 0.08, ledZ + 0.06]}
-          intensity={0.55}
-          color="#eef2ff"
-          distance={4.5}
-          decay={2}
-        />
-      ))}
+      <pointLight
+        position={[0, ledY - 0.08, ledZ + 0.06]}
+        intensity={1.2}
+        color="#eef2ff"
+        distance={6}
+        decay={2}
+      />
     </group>
   );
 }
@@ -2251,6 +2248,26 @@ function CinematicCameraController({
   return null;
 }
 
+/** Sous-gestionnaire d'erreur pour les effets non critiques (Environment HDRI, Post-Processing) */
+class Room3DSubErrorBoundary extends React.Component<
+  { children: React.ReactNode; name?: string; fallback?: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    console.warn(`[RoomWebGLViewer] Effet 3D optionnel '${this.props.name ?? 'secondaire'}' ignoré suite à une erreur :`, error?.message || error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? null;
+    }
+    return this.props.children;
+  }
+}
+
 function SceneContent({
   blueprint: rawBlueprint,
   selected = [],
@@ -2378,10 +2395,12 @@ function SceneContent({
       ) : null}
 
       {qualitySettings.environment ? (
-        <Environment
-          preset={lighting.environmentPreset}
-          environmentIntensity={lighting.environmentIntensity * (qualitySettings.environmentIntensity / 0.28)}
-        />
+        <Room3DSubErrorBoundary name="Environment">
+          <Environment
+            preset={lighting.environmentPreset}
+            environmentIntensity={lighting.environmentIntensity * (qualitySettings.environmentIntensity / 0.28)}
+          />
+        </Room3DSubErrorBoundary>
       ) : null}
 
       {walkthroughActive ? (
@@ -2819,7 +2838,9 @@ function SceneContent({
       />
 
       {qualitySettings.quality === 'showcase' && !reduceMotion ? (
-        <RoomShowcasePostProcessing lighting={lighting} />
+        <Room3DSubErrorBoundary name="PostProcessing">
+          <RoomShowcasePostProcessing lighting={lighting} />
+        </Room3DSubErrorBoundary>
       ) : null}
     </>
   );
@@ -3107,6 +3128,12 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         camera={{ position: [0, 18, 12], fov: qualitySettings.fov, near: 0.1, far: 200 }}
         onPointerMissed={() => onSelect(null)}
         onCreated={({ gl }) => {
+          const dom = gl.domElement;
+          const handleContextLost = (event: Event) => {
+            event.preventDefault();
+            console.warn('[RoomWebGLViewer] webglcontextlost intercepté pour éviter le crash fatal.');
+          };
+          dom.addEventListener('webglcontextlost', handleContextLost, false);
           gl.shadowMap.type = qualitySettings.softShadows
             ? THREE.PCFSoftShadowMap
             : THREE.BasicShadowMap;

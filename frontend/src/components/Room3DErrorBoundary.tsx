@@ -8,6 +8,7 @@ interface Props {
   children: ReactNode;
   fallbackTitle?: string;
   onFallbackTo2D?: () => void;
+  onResetSafeMode?: () => void;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export default class Room3DErrorBoundary extends Component<Props, State> {
 
   handleRetry = () => {
     this.setState({ hasError: false, error: null });
+    this.props.onResetSafeMode?.();
   };
 
   render() {
@@ -55,6 +57,18 @@ export default class Room3DErrorBoundary extends Component<Props, State> {
               Le pilote graphique (WebGL) de votre navigateur a rencontré une interruption. Vous pouvez relancer la scène 3D ou continuer sur la vue 2D.
             </p>
           </div>
+
+          {this.state.error?.message && (
+            <details className="text-left max-w-md w-full p-2.5 rounded-xl bg-surface border border-border/80 text-xs text-muted">
+              <summary className="cursor-pointer font-medium hover:text-foreground transition select-none">
+                Détails techniques de l’interruption
+              </summary>
+              <p className="mt-1 font-mono text-[11px] break-all text-rose-500 whitespace-pre-wrap">
+                {this.state.error.message}
+              </p>
+            </details>
+          )}
+
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
             <Button
               size="sm"
