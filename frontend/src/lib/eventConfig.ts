@@ -28,6 +28,13 @@ export const EVENT_KINDS_PRO: EventKindId[] = [...EVENT_KIND_IDS];
 
 export type EventConfigTab = 'essentials' | 'place' | 'access' | 'welcome';
 
+export const EVENT_CONFIG_TAB_DETAILS: Record<EventConfigTab, { label: string; subtitle: string }> = {
+  essentials: { label: 'Essentiel', subtitle: 'Titre & Date' },
+  place: { label: 'Lieu', subtitle: 'Salle & Adresse' },
+  access: { label: 'Accès', subtitle: 'Billetterie & Confidentialité' },
+  welcome: { label: 'Accueil', subtitle: 'Dress code & Thème' },
+};
+
 export const EVENT_CONFIG_TABS: Array<{ id: EventConfigTab; label: string }> = [
   { id: 'essentials', label: 'Essentiel' },
   { id: 'place', label: 'Lieu' },
@@ -154,6 +161,11 @@ export function toDateTimeLocalValue(iso?: string | null): string {
 export function nextEventConfigTab(tab: EventConfigTab): EventConfigTab | null {
   const index = EVENT_CONFIG_TABS.findIndex((item) => item.id === tab);
   return EVENT_CONFIG_TABS[index + 1]?.id ?? null;
+}
+
+export function previousEventConfigTab(tab: EventConfigTab): EventConfigTab | null {
+  const index = EVENT_CONFIG_TABS.findIndex((item) => item.id === tab);
+  return index > 0 ? EVENT_CONFIG_TABS[index - 1]?.id ?? null : null;
 }
 
 export function firstInvalidEventConfigTab(input: {

@@ -21,9 +21,19 @@ import {
   Box,
   Coins,
   ArrowRight,
+  ArrowLeft,
   ChevronRight,
   Info,
   ShieldCheck,
+  AlertCircle,
+  PartyPopper,
+  Crown,
+  Zap,
+  Sliders,
+  X,
+  Heart,
+  Briefcase,
+  Users,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
@@ -51,6 +61,7 @@ import PublicEventZoneStudio3D from '@/components/PublicEventZoneStudio3D';
 import type { TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import {
   EVENT_CONFIG_TABS,
+  EVENT_CONFIG_TAB_DETAILS,
   EVENT_KIND_LABELS,
   EVENT_KINDS_PRO,
   EVENT_KINDS_SIMPLE,
@@ -58,6 +69,7 @@ import {
   guidelinesFromEvent,
   kindFromEvent,
   nextEventConfigTab,
+  previousEventConfigTab,
   parseWeddingNames,
   photosFromEvent,
   toDateTimeLocalValue,
@@ -96,6 +108,16 @@ const SIMPLE_DRESS_PRESETS: Array<Exclude<DressCodePresetId, 'custom' | 'white_t
   'outdoor',
   'black_tie',
 ];
+
+const KIND_ICONS: Record<EventKindId, React.ComponentType<{ className?: string }>> = {
+  WEDDING: Heart,
+  BIRTHDAY: PartyPopper,
+  BAPTISM: Sparkles,
+  CORPORATE: Briefcase,
+  CONFERENCE: Users,
+  GALA: Crown,
+  OTHER: Calendar,
+};
 
 type RoomOption = {
   id: string;
@@ -761,9 +783,21 @@ export default function EventConfigForm({
     await submit();
   };
 
+  const handlePrev = () => {
+    const prev = previousEventConfigTab(tab);
+    if (prev) {
+      setFormError('');
+      setTab(prev);
+    }
+  };
+
   const handleNext = () => {
     if (tab === 'essentials' && (!title.trim() || !date)) {
-      setFormError('Indiquez au moins un titre et une date.');
+      setFormError('Indiquez au moins un titre et une date pour continuer.');
+      return;
+    }
+    if (tab === 'place' && (!location.trim() || !commune.trim() || !neighborhood.trim())) {
+      setFormError('Indiquez le lieu, la commune et le quartier.');
       return;
     }
     const next = nextEventConfigTab(tab);
@@ -773,10 +807,89 @@ export default function EventConfigForm({
     }
   };
 
+  const isTabCompleted = (tabId: EventConfigTab) => {
+    if (tabId === 'essentials') return Boolean(title.trim() && date);
+    if (tabId === 'place') return Boolean(location.trim() && commune.trim() && neighborhood.trim());
+    if (tabId === 'access') {
+      if (!complete || !isPublic) return true;
+      if (!ticketing) return true;
+      if (ticketPricingMode === 'global') return Boolean(ticketPrice && Number(ticketPrice) > 0);
+      return pricingZones.length > 0 || Boolean(ticketPrice);
+    }
+    if (tabId === 'welcome') return true;
+    return false;
+  };
+
+  const tabStatus = useMemo(() => {
+    const essentialsDone = Boolean(title.trim() && date);
+    const placeDone = Boolean(location.trim() && commune.trim() && neighborhood.trim());
+    const accessDone =
+      !complete ||
+      !isPublic ||
+      !ticketing ||
+      (ticketPricingMode === 'global'
+        ? Boolean(ticketPrice && Number(ticketPrice) > 0)
+        : pricingZones.length > 0 || Boolean(ticketPrice));
+    const allRequiredDone = essentialsDone && placeDone && accessDone;
+
+    return {
+      essentialsDone,
+      placeDone,
+      accessDone,
+      allRequiredDone,
+    };
+  }, [title, date, location, commune, neighborhood, complete, isPublic, ticketing, ticketPricingMode, ticketPrice, pricingZones]);
+
+  const formattedDatePreview = useMemo(() => {
+    if (!date) return null;
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, [date]);
+
+  const durationPreview = useMemo(() => {
+    if (!date || !endsAt) return null;
+    const start = new Date(date);
+    const end = new Date(endsAt);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs <= 0) return { error: true, text: "L'heure de fin doit être postérieure au début" };
+    const diffHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+    const endFormatted = end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return {
+      error: false,
+      text: `Durée prévue : ${diffHours}h (jusqu'à ${endFormatted})`,
+    };
+  }, [date, endsAt]);
+
+  const progressPercentage = useMemo(() => {
+    let score = 0;
+    if (title.trim()) score += 25;
+    if (date) score += 25;
+    if (location.trim()) score += 20;
+    if (commune.trim() && neighborhood.trim()) score += 15;
+    if (roomId || latitude) score += 5;
+    if (guestGuidelines?.dressCode?.enabled || themeId) score += 5;
+    if (photos.length > 0 || eventProgram.slots.length > 0) score += 5;
+    return Math.min(100, Math.max(10, score));
+  }, [title, date, location, commune, neighborhood, roomId, latitude, guestGuidelines, themeId, photos, eventProgram]);
+
+  const activeTheme = useMemo(
+    () => INVITATION_COLOR_THEMES.find((t) => t.id === themeId),
+    [themeId],
+  );
+
   const tabNeedsAttention = (id: EventConfigTab) => {
     if (id === 'essentials') return !title.trim() || !date;
     if (id === 'place') return !location.trim() || !commune.trim() || !neighborhood.trim();
-    if (id === 'access') return complete && isPublic;
+    if (id === 'access') return complete && isPublic && ticketing && ticketPricingMode === 'global' && !ticketPrice;
     return false;
   };
 
@@ -787,93 +900,187 @@ export default function EventConfigForm({
       title={editingId ? 'Configurer l’événement' : 'Nouvel événement'}
       description={
         complete
-          ? 'Renseignez l’essentiel. Vous pouvez enregistrer depuis n’importe quel onglet.'
-          : 'Titre, date, lieu, commune et quartier suffisent. Passez les autres onglets si vous voulez aller vite.'
+          ? 'Renseignez les détails de l’événement. Les onglets se complètent librement.'
+          : 'Mode Express : titre, date et lieu suffisent pour démarrer en quelques clics.'
       }
       size="xl"
       footer={
-        <div className="flex w-full flex-wrap items-center justify-end gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-            Annuler
-          </Button>
-          {!complete && tab !== 'welcome' && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => void handleSkip()} disabled={saving || (!editingId && createDisabled)}>
-              Passer et {editingId ? 'enregistrer' : 'créer'}
+        <div className="flex w-full flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+              Annuler
             </Button>
-          )}
-          {tab !== 'welcome' && (
-            <Button type="button" variant="secondary" size="sm" onClick={handleNext}>
-              Suivant
+            {tabStatus.allRequiredDone ? (
+              <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Champs obligatoires validés
+              </span>
+            ) : (
+              <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                <AlertCircle className="w-3.5 h-3.5" />
+                Titre, date et lieu requis
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            {tab !== 'essentials' && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<ArrowLeft className="w-4 h-4" />}
+                onClick={handlePrev}
+              >
+                Précédent
+              </Button>
+            )}
+
+            {tab !== 'welcome' && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                onClick={handleNext}
+              >
+                Suivant
+              </Button>
+            )}
+
+            <Button
+              type="submit"
+              form="event-config-form"
+              size="sm"
+              loading={saving}
+              disabled={!editingId && createDisabled}
+              title={!editingId && createDisabledTitle ? createDisabledTitle : undefined}
+              className="font-bold shadow-xs"
+              rightIcon={<Check className="w-4 h-4" />}
+            >
+              {editingId ? 'Enregistrer les modifications' : 'Créer l’événement'}
             </Button>
-          )}
-          <Button
-            type="submit"
-            form="event-config-form"
-            size="sm"
-            loading={saving}
-            disabled={!editingId && createDisabled}
-            title={!editingId && createDisabledTitle ? createDisabledTitle : undefined}
-          >
-            {editingId ? 'Enregistrer' : 'Créer'}
-          </Button>
+          </div>
         </div>
       }
     >
       <form id="event-config-form" onSubmit={handleFormSubmit} className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex gap-1 p-1 rounded-2xl bg-surface-muted border border-border overflow-x-auto w-full sm:w-auto">
+        {/* En-tête Stepper & Mode Switcher */}
+        <div className="space-y-3 pb-3 border-b border-border">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            {/* Mode switch */}
+            <div className="inline-flex items-center rounded-xl bg-surface-muted p-1 border border-border shrink-0 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setMode('simple')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
+                  !complete
+                    ? 'bg-surface text-foreground shadow-2xs font-bold ring-1 ring-border/50'
+                    : 'text-muted hover:text-foreground'
+                )}
+                title="Formulaire rapide : Titre, date et lieu en 30 secondes"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Mode Express</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('complete')}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation',
+                  complete
+                    ? 'bg-surface text-foreground shadow-2xs font-bold ring-1 ring-border/50'
+                    : 'text-muted hover:text-foreground'
+                )}
+                title="Formulaire complet : Billetterie, zones tarifaires 3D, staff et programme"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>Mode Avancé</span>
+              </button>
+            </div>
+
+            {/* Progression & status badge */}
+            <div className="flex items-center gap-2 text-xs">
+              <div className="w-24 sm:w-28 h-2 bg-surface-muted rounded-full overflow-hidden border border-border">
+                <div
+                  className="h-full bg-primary transition-all duration-300 rounded-full"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              <span className="font-semibold text-[11px] text-muted whitespace-nowrap">
+                {progressPercentage}%
+              </span>
+              {tabStatus.allRequiredDone ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <CheckCircle2 className="w-3 h-3" /> Prêt
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  Champs requis
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Stepper Tabs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="tablist" aria-label="Étapes de configuration">
             {EVENT_CONFIG_TABS.map((item, idx) => {
-              const Icon =
-                item.id === 'essentials'
-                  ? Sparkles
-                  : item.id === 'place'
-                  ? MapPin
-                  : item.id === 'access'
-                  ? Ticket
-                  : LayoutGrid;
+              const details = EVENT_CONFIG_TAB_DETAILS[item.id];
               const isCurrent = tab === item.id;
+              const isCompleted = isTabCompleted(item.id);
               const hasAttention = tabNeedsAttention(item.id);
+
               return (
                 <button
                   key={item.id}
                   type="button"
+                  role="tab"
+                  aria-selected={isCurrent}
                   onClick={() => {
                     setFormError('');
                     setTab(item.id);
                   }}
                   className={cn(
-                    'relative min-h-11 px-3.5 py-2 rounded-xl text-xs font-semibold transition whitespace-nowrap flex items-center gap-2',
+                    'p-2.5 rounded-xl border text-left transition flex items-start gap-2.5 min-h-12 touch-manipulation',
                     isCurrent
-                      ? 'bg-surface text-foreground shadow-sm ring-1 ring-border'
-                      : 'text-muted hover:text-foreground hover:bg-surface/50',
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/25 shadow-xs'
+                      : 'border-border bg-surface hover:bg-surface-muted/60 text-muted'
                   )}
                 >
-                  <span
+                  <div
                     className={cn(
-                      'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
-                      isCurrent
-                        ? 'bg-primary-solid text-primary-foreground'
-                        : 'bg-surface text-muted border border-border'
+                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 transition-colors',
+                      isCompleted && !isCurrent
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                        : isCurrent
+                        ? 'bg-primary-solid text-primary-foreground shadow-2xs'
+                        : 'bg-surface-muted text-muted border border-border'
                     )}
                   >
-                    {idx + 1}
-                  </span>
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span>{item.label}</span>
-                  {hasAttention && (
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" title="Champ requis" />
-                  )}
+                    {isCompleted && !isCurrent ? (
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    ) : (
+                      <span>{idx + 1}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1">
+                      <span className={cn('text-xs font-bold truncate', isCurrent ? 'text-foreground' : 'text-foreground/80')}>
+                        {details.label}
+                      </span>
+                      {hasAttention && !isCompleted && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Champ requis" />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted truncate leading-tight">
+                      {details.subtitle}
+                    </p>
+                  </div>
                 </button>
               );
             })}
           </div>
-          <button
-            type="button"
-            onClick={() => setMode(complete ? 'simple' : 'complete')}
-            className="text-xs font-semibold text-primary hover:underline px-2 py-1 min-h-11 inline-flex items-center"
-          >
-            {complete ? 'Formulaire simple' : 'Formulaire complet'}
-          </button>
         </div>
 
         {formError && (
@@ -883,39 +1090,53 @@ export default function EventConfigForm({
         )}
 
         {tab === 'essentials' && (
-          <section className="space-y-3">
-            <div className="flex flex-wrap gap-1.5">
-              {kinds.map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  onClick={() => applyKind(eventKind === kind ? '' : kind)}
-                  className={cn(
-                    'inline-flex min-h-9 items-center px-3.5 py-1.5 rounded-full text-xs font-semibold border transition',
-                    eventKind === kind
-                      ? 'bg-foreground text-background border-foreground shadow-xs'
-                      : 'bg-surface text-muted border-border hover:text-foreground hover:border-foreground/30',
-                  )}
-                >
-                  {EVENT_KIND_LABELS[kind]}
-                </button>
-              ))}
+          <section className="space-y-4">
+            <div className="space-y-1.5">
+              <span className="block text-xs font-semibold text-muted">Type d’événement</span>
+              <div className="flex flex-wrap gap-2">
+                {kinds.map((kind) => {
+                  const KindIcon = KIND_ICONS[kind] || Calendar;
+                  const isSelected = eventKind === kind;
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => applyKind(isSelected ? '' : kind)}
+                      className={cn(
+                        'inline-flex min-h-10 items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
+                        isSelected
+                          ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
+                          : 'bg-surface text-foreground/80 border-border hover:border-primary/40 hover:bg-surface-muted',
+                      )}
+                    >
+                      <KindIcon className={cn('w-3.5 h-3.5 shrink-0', isSelected ? 'text-primary-foreground' : 'text-primary')} />
+                      <span>{EVENT_KIND_LABELS[kind]}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {eventKind === 'WEDDING' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input
-                  label="Prénom 1"
-                  value={partnerFirst}
-                  onChange={(e) => applyPartner(e.target.value, partnerSecond)}
-                  placeholder="Claire"
-                />
-                <Input
-                  label="Prénom 2"
-                  value={partnerSecond}
-                  onChange={(e) => applyPartner(partnerFirst, e.target.value)}
-                  placeholder="Alexandre"
-                />
+              <div className="rounded-2xl border border-rose-500/25 bg-rose-500/5 dark:bg-rose-950/20 p-3.5 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
+                  <Heart className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>Prénoms des futurs mariés (titre généré automatiquement)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Prénom conjoint(e) 1"
+                    value={partnerFirst}
+                    onChange={(e) => applyPartner(e.target.value, partnerSecond)}
+                    placeholder="Claire"
+                  />
+                  <Input
+                    label="Prénom conjoint(e) 2"
+                    value={partnerSecond}
+                    onChange={(e) => applyPartner(partnerFirst, e.target.value)}
+                    placeholder="Alexandre"
+                  />
+                </div>
               </div>
             )}
 
@@ -947,17 +1168,18 @@ export default function EventConfigForm({
                   onClick={() => {
                     if (!title) return;
                     const hints = [
-                      "Préparez-vous à vivre un moment inoubliable...",
+                      "Préparez-vous à vivre un moment inoubliable avec nous.",
                       "Nous sommes ravis de vous convier à cet événement exceptionnel.",
                       "Rejoignez-nous pour célébrer ensemble dans la joie et la bonne humeur.",
-                      "Une journée magique pleine de surprises vous attend."
+                      "Une journée festive et chaleureuse pleine de surprises vous attend."
                     ];
                     setDescription(`Bienvenue à "${title}". ${hints[Math.floor(Math.random() * hints.length)]}`);
                   }}
-                  className="text-[10px] font-semibold text-primary/80 hover:text-primary transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  title="Générer une description magique basée sur le titre"
+                  disabled={!title.trim()}
+                  className="text-[11px] font-semibold text-primary hover:text-primary-hover disabled:opacity-40 transition-colors inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 touch-manipulation"
+                  title="Suggérer un texte d'accueil chaleureux basé sur le titre"
                 >
-                  <Sparkles className="w-3 h-3" /> Assistant IA
+                  <Sparkles className="w-3 h-3" /> Suggérer un texte
                 </button>
               </div>
               <textarea
@@ -972,7 +1194,7 @@ export default function EventConfigForm({
             <div className={cn('grid grid-cols-1 gap-3', complete ? 'sm:grid-cols-2' : '')}>
               <div className="space-y-1.5">
                 <Input
-                  label="Date & heure"
+                  label="Date & heure de début"
                   type="datetime-local"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
@@ -1041,6 +1263,35 @@ export default function EventConfigForm({
                 </div>
               )}
             </div>
+
+            {/* Aperçu lisible de la date & durée */}
+            {(formattedDatePreview || durationPreview) && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {formattedDatePreview && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-muted border border-border text-xs text-foreground font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span className="capitalize">{formattedDatePreview}</span>
+                  </div>
+                )}
+                {durationPreview && (
+                  <div
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium',
+                      durationPreview.error
+                        ? 'bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400'
+                        : 'bg-surface-muted border-border text-muted',
+                    )}
+                  >
+                    {durationPreview.error ? (
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    ) : (
+                      <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                    )}
+                    <span>{durationPreview.text}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {!complete && (
               <div className="space-y-3">
@@ -1133,7 +1384,7 @@ export default function EventConfigForm({
         )}
 
         {tab === 'place' && (
-          <section className="space-y-3">
+          <section className="space-y-4">
             <Input
               label="Lieu / salle"
               value={location}
@@ -1149,10 +1400,36 @@ export default function EventConfigForm({
               onChange={applyPlace}
               hint="Commune et quartier aident les invités à se repérer. La carte se cadre sur la commune."
             />
+
+            {selectedRoom && (
+              <div className="flex items-center justify-between p-3 rounded-2xl border border-primary/25 bg-primary/5 dark:bg-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-foreground truncate">{selectedRoom.name}</p>
+                    <p className="text-[11px] text-muted truncate">
+                      {selectedRoom.capacity ? `${selectedRoom.capacity} places assises · ` : ''}
+                      {selectedRoom.floor ? `Étage : ${selectedRoom.floor} · ` : ''}
+                      {selectedRoomBlueprint ? '✓ Plan 3D rattaché' : 'Lieu sans plan'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => applyRoom('')}
+                  className="text-xs text-rose-600 font-semibold hover:underline shrink-0 px-2 py-1"
+                >
+                  Détacher la salle
+                </button>
+              </div>
+            )}
+
             <label className="block space-y-1.5">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
                 <Building2 className="w-3.5 h-3.5" />
-                Salle (optionnel)
+                Sélectionner une salle enregistrée (optionnel)
               </span>
               <select
                 value={roomId}
@@ -1269,26 +1546,46 @@ export default function EventConfigForm({
             )}
 
             <div className="space-y-3 pt-1 border-t border-border">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Localisation GPS</h4>
                   <p className="text-xs text-muted mt-0.5">
-                    {latitude && longitude
-                      ? `${latitude}, ${longitude}`
-                      : 'Optionnel — pin WhatsApp à l’acceptation RSVP'}
+                    {latitude && longitude ? (
+                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Coordonnées actives ({latitude}, {longitude})
+                      </span>
+                    ) : (
+                      'Optionnel — pour le pin WhatsApp et l’itinéraire GPS'
+                    )}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void searchLocationOnMap()}
-                  disabled={searchingLocation}
-                  className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1 disabled:opacity-50"
-                >
-                  {searchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                  Rechercher le lieu
-                </button>
+                <div className="flex items-center gap-2">
+                  {latitude && longitude && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLatitude('');
+                        setLongitude('');
+                      }}
+                      className="text-xs text-rose-600 font-semibold hover:underline"
+                    >
+                      Effacer GPS
+                    </button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void searchLocationOnMap()}
+                    disabled={searchingLocation}
+                    leftIcon={searchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                  >
+                    Rechercher sur la carte
+                  </Button>
+                </div>
               </div>
-              {searchError && <p className="text-xs text-rose-600">{searchError}</p>}
+              {searchError && <p className="text-xs text-rose-600 font-medium">{searchError}</p>}
               <div
                 id="event-config-map-picker"
                 className="w-full h-48 bg-surface-muted rounded-[var(--radius-card)] border border-border overflow-hidden relative"
@@ -1332,6 +1629,19 @@ export default function EventConfigForm({
                     <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
                       Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
                     </p>
+                  )}
+
+                  {ticketing && (
+                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 space-y-2">
+                      <div className="flex items-center gap-2 font-bold text-xs text-primary">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span>Validation automatique de présence & Billets partagés</span>
+                      </div>
+                      <ul className="text-[11px] text-muted space-y-1 pl-4 list-disc leading-relaxed">
+                        <li><strong>Présence validée automatiquement :</strong> Dès qu’un participant paie son billet, son statut passe directement à Présent (RSVP validé).</li>
+                        <li><strong>Billets partagés personnalisables :</strong> Les bénéficiaires d’un lot de billets peuvent chacun personnaliser leur nom, prénom et téléphone sur leur pass d’accès.</li>
+                      </ul>
+                    </div>
                   )}
 
                   {ticketing && (
@@ -1802,39 +2112,67 @@ export default function EventConfigForm({
                   <EventGuestGuidelinesEditor value={guestGuidelines} onChange={setGuestGuidelines} compact />
                 </div>
                 <div className="space-y-3 pt-1 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Thème de l'invitation</h4>
-                  </div>
-                  <p className="text-[11px] text-muted leading-relaxed">
-                    Choisissez la couleur qui habillera le portail invité et le RSVP.
-                  </p>
-                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                    {INVITATION_COLOR_THEMES.map(theme => (
-                      <button
-                        key={theme.id}
-                        type="button"
-                        onClick={() => setThemeId(theme.id)}
-                        className={cn(
-                          "relative w-10 h-10 rounded-full border-2 transition overflow-hidden group",
-                          themeId === theme.id ? "border-foreground ring-2 ring-foreground/20" : "border-transparent hover:border-border"
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-2">Thème visuel de l'invitation & portail</h4>
+                      <p className="text-[11px] text-muted">
+                        {activeTheme ? (
+                          <>
+                            Actif : <strong className="text-foreground">{activeTheme.name}</strong> — {activeTheme.description}
+                          </>
+                        ) : (
+                          'Palette par défaut'
                         )}
-                        style={{ backgroundColor: theme.palette.background }}
-                        title={theme.name}
+                      </p>
+                    </div>
+                    {themeId && (
+                      <button
+                        type="button"
+                        onClick={() => setThemeId(null)}
+                        className="text-[11px] font-semibold text-primary hover:underline"
                       >
-                        <div 
-                          className="absolute inset-0 m-auto w-5 h-5 rounded-full" 
-                          style={{ backgroundColor: theme.palette.primary }}
-                        />
-                        <div 
-                          className="absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full" 
-                          style={{ backgroundColor: theme.palette.accent }}
-                        />
+                        Réinitialiser
                       </button>
-                    ))}
+                    )}
                   </div>
-                  <div className="mt-2">
-                    <Link href={`/dashboard/templates?previewTheme=${themeId || 'default'}`} target="_blank" className="text-xs font-semibold text-primary hover:underline">
-                      Prévisualiser l'espace invité ↗
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2.5">
+                    {INVITATION_COLOR_THEMES.map((theme) => {
+                      const isSelected = themeId === theme.id;
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => setThemeId(theme.id)}
+                          className={cn(
+                            'relative w-11 h-11 rounded-2xl border-2 transition overflow-hidden group touch-manipulation flex items-center justify-center',
+                            isSelected
+                              ? 'border-primary ring-2 ring-primary/40 shadow-xs scale-105'
+                              : 'border-border/80 hover:border-primary/50 hover:scale-105',
+                          )}
+                          style={{ backgroundColor: theme.palette.background }}
+                          title={`${theme.name} (${theme.description})`}
+                        >
+                          <div
+                            className="w-5 h-5 rounded-full shadow-2xs"
+                            style={{ backgroundColor: theme.palette.primary }}
+                          />
+                          <div
+                            className="absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full border border-white/50"
+                            style={{ backgroundColor: theme.palette.accent }}
+                          />
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                              <Check className="w-4 h-4 text-white stroke-[3] drop-shadow" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-1">
+                    <Link href={`/dashboard/templates?previewTheme=${themeId || 'default'}`} target="_blank" className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
+                      <span>Prévisualiser l'espace invité</span>
+                      <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
                 </div>
