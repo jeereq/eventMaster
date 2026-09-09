@@ -102,8 +102,8 @@ export default function LandingHeroStreamlined() {
           </h1>
 
           <p className="text-xs sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
-            <span className="sm:hidden">Salles, prestataires, plans 3D et invitations WhatsApp en RDC.</span>
-            <span className="hidden sm:inline">Salles prestigieuses, prestataires d’exception, plans de table 3D et invitations WhatsApp — choisissez d’abord votre projet.</span>
+            <span className="sm:hidden">Salles, prestataires, plans 2D/3D, billetterie et invitations WhatsApp en RDC.</span>
+            <span className="hidden sm:inline">Salles d’exception, plans 2D/3D photoréalistes, billetterie avec présence auto-validée et invitations WhatsApp — choisissez votre projet.</span>
           </p>
 
           {user ? (

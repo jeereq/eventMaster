@@ -11,8 +11,8 @@ export default function PrivacyPage() {
   return (
     <LegalPageShell
       title="Politique de confidentialité"
-      subtitle="Comment EventMaster collecte, utilise, protège et traite vos données personnelles, incluant le Studio IA, la billetterie multi-zone et les paiements sécurisés."
-      lastUpdated="7 septembre 2026"
+      subtitle="Comment EventMaster collecte, utilise, protège et traite vos données personnelles, incluant le Studio IA, la billetterie multi-zone, la présence auto-validée, la personnalisation invité et les paiements sécurisés."
+      lastUpdated="9 septembre 2026"
       version={PRIVACY_VERSION}
     >
       <Section title="1. Responsables de traitement et Appartenance au Groupe Tekango">
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
             <strong>Comptes utilisateurs &amp; Profils :</strong> Nom, prénom, adresse e-mail, numéro de téléphone WhatsApp (indicatif international + numéro), mot de passe chiffré (hachage bcrypt avec sel), rôle d&apos;accès (propriétaire, manager, protocole, commercial), nom d&apos;organisation ou raison sociale, adresse professionnelle.
           </li>
           <li>
-            <strong>Billetterie &amp; Commandes de billets multi-zones :</strong> Nom et prénom de l&apos;acheteur, adresse e-mail de délivrance du billet, numéro de téléphone, intitulé de l&apos;événement, quantité de billets, zone tarifaire choisie (VIP, Carré d&apos;Or, Standard, etc.), tarif payé en Francs Congolais (CDF), siège ou table attribué le cas échéant, référence unique de commande et QR Code d&apos;accès cryptographique unique.
+            <strong>Billetterie &amp; Commandes de billets multi-zones :</strong> Nom et prénom de l&apos;acheteur, adresse e-mail de délivrance du billet, numéro de téléphone, intitulé de l&apos;événement, quantité de billets, zone tarifaire choisie (VIP, Carré d&apos;Or, Standard, etc.), tarif payé en Francs Congolais (CDF) ou USD, siège ou table attribué le cas échéant, référence unique de commande, statut de présence automatiquement confirmé (RSVP « ACCEPTED ») et QR Code d&apos;accès cryptographique unique.
           </li>
           <li>
             <strong>Paiements &amp; Transactions financières (FlexPay) :</strong> Horodatage de l&apos;opération, montant et devise (Francs Congolais — FC / USD), statut du paiement (validé, en attente, refusé), mode de règlement utilisé (Carte bancaire Visa/Mastercard ou Mobile Money : M-Pesa, Orange Money, Airtel Money, Afrimoney), numéro de téléphone de facturation mobile, numéro de transaction et référence de commande FlexPay. 
@@ -51,15 +51,18 @@ export default function PrivacyPage() {
             <em className="text-muted text-xs">Note importante : EventMaster ne collecte, ne visualise et ne conserve aucun numéro complet de carte bancaire, ni code secret PIN Mobile Money. Ces données sensibles sont traitées directement par notre processeur de paiement certifié FlexPay conforme aux normes PCI-DSS.</em>
           </li>
           <li>
-            <strong>Studio IA &amp; Données de modélisation spatiale :</strong> Photographies de salles de réception, croquis, plans d&apos;architectes ou documents 2D téléversés par l&apos;utilisateur pour analyse par vision artificielle. 
+            <strong>Studio IA &amp; Données de modélisation spatiale :</strong> Photographies de salles de réception, croquis, plans d&apos;architectes ou documents 2D téléversés par l&apos;utilisateur pour analyse par vision artificielle et rendu 3D WebGL (matériaux PBR, caméras cinématiques). 
             <br />
             <em className="text-muted text-xs">Garantie stricte : Les photos importées sont traitées exclusivement pour déduire la géométrie de la salle et la disposition du mobilier (tables, chaises, allées, portes, scènes). EventMaster n&apos;effectue aucune identification biométrique ni reconnaissance faciale sur les personnes pouvant figurer fortuitement sur ces clichés.</em>
           </li>
           <li>
-            <strong>Invitations multilingues &amp; Modèles d&apos;IA :</strong> Briefs textuels de célébration, textes rédigés ou reformulés par les modèles d&apos;intelligence artificielle (en Français ou dans les langues nationales congolaises : Lingala, Swahili, Kikongo, Tshiluba), variables d&apos;invitation personnalisées et choix de tonalité.
+            <strong>Invitations multilingues, Contexte &amp; Respect des visages (Google Gemini) :</strong> Briefs textuels de célébration, choix de la source de contexte (profil organisationnel ou historique de requêtes récent), textes rédigés ou reformulés par l&apos;IA (en Français et dans les 4 langues nationales congolaises : Lingala, Swahili, Kikongo, Tshiluba), et photographies de référence destinées à la préservation fidèle des visages réels (ancrage d&apos;identité sans retouche déformante ni conservation biométrique permanente).
           </li>
           <li>
-            <strong>Grand livre de consommation des jetons IA :</strong> Historique horodaté des requêtes de génération (nature de l&apos;action : composition de plan, vision de photo, reformulation d&apos;invitation), nombre de jetons débités ou crédités, solde restant attaché à l&apos;organisation.
+            <strong>Simulateur de budget IA (/simulateur) :</strong> Critères de simulation transmis volontairement par l&apos;utilisateur (type d&apos;événement, ville, commune, jauge d&apos;invités, fourchette budgétaire en Francs Congolais ou Dollars) pour le calcul de formules estimatives et l&apos;appariement transparent avec les prestataires certifiés du catalogue.
+          </li>
+          <li>
+            <strong>Grand livre de consommation des jetons IA :</strong> Historique horodaté des requêtes de génération et de simulation, nombre de crédits ou jetons débités ou rechargés, solde restant attaché à l&apos;utilisateur ou à l&apos;organisation.
           </li>
           <li>
             <strong>Traçabilité des plans de salle (`RoomActionContext`) :</strong> Identifiant de l&apos;utilisateur ayant modifié le plan, rôle au sein de l&apos;équipe, horodatage précis, nature de l&apos;action (ajout, déplacement, suppression de tables, modification des zones tarifaires, optimisation des espacements), source de l&apos;action (manuelle, raccourci, Studio IA, modèle) et delta de places assises.
@@ -68,7 +71,7 @@ export default function PrivacyPage() {
             <strong>Contrôle d&apos;accès &amp; Scan le jour J (Protocole) :</strong> Horodatage précis du scan d&apos;entrée, statut de validation du billet (présence confirmée, scan unique enregistré, tentative de doublon détectée), identifiant de l&apos;agent protocole ou du dispositif de scan ayant validé l&apos;accès.
           </li>
           <li>
-            <strong>Invités &amp; Confirmations RSVP :</strong> Nom, prénom, numéro de téléphone WhatsApp, adresse e-mail, catégorie d&apos;invité, statut de réponse RSVP (accepté, décliné), préférences alimentaires ou personnalisées, messages déposés sur le livre d&apos;or et photos partagées dans le fil d&apos;actualité.
+            <strong>Invités, Confirmations RSVP &amp; Personnalisation des accès partagés :</strong> Nom, prénom, numéro de téléphone WhatsApp (format international E.164), adresse e-mail, catégorie d&apos;invité, statut de réponse RSVP (accepté, décliné), faculté offerte à chaque porteur de billet ou invité de rectifier lui-même ses nom, prénom, téléphone et préférences alimentaires (allergies, régime végétarien, notes pratiques), messages déposés sur le livre d&apos;or et photos partagées dans le fil d&apos;actualité.
           </li>
           <li>
             <strong>Marketplace &amp; Prestations :</strong> Fiches de salles ou de services (descriptifs, tarifs indicatifs, photos et vidéos hébergées via Cloudinary, géolocalisation et calendrier de disponibilité).
@@ -84,8 +87,9 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Création et gestion des comptes :</strong> authentification sécurisée par code OTP (e-mail ou WhatsApp), gestion des privilèges d&apos;équipe et administration multi-tenant ;</li>
           <li><strong>Modélisation spatiale assistée par IA :</strong> analyse visuelle des photos de salle et génération assistée de plans de salle 2D zénithaux et 3D WebGL via des modèles d&apos;intelligence artificielle (Google Gemini) ;</li>
-          <li><strong>Création d&apos;invitations multilingues :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba) ;</li>
-          <li><strong>Gestion de la billetterie électronique multi-zones :</strong> répartition des tables et sièges par zone tarifaire, calcul prévisionnel des recettes, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
+          <li><strong>Création d&apos;invitations multilingues :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba) avec prise en compte du contexte choisi et préservation éthique des visages ;</li>
+          <li><strong>Simulation de budget prévisionnel (/simulateur) :</strong> estimation de packs budgétaires (Éco, Équilibré, Confort) en FC et USD basés sur les capacités et les tarifs réels du catalogue d&apos;espaces et de prestataires ;</li>
+          <li><strong>Gestion de la billetterie électronique multi-zones :</strong> répartition des tables et sièges par zone tarifaire, confirmation automatique de présence (RSVP « ACCEPTED ») dès l&apos;achat, personnalisation nominative des billets partagés par leurs bénéficiaires, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
           <li><strong>Traitement des paiements et reversements :</strong> validation des règlements via FlexPay (Cartes &amp; Mobile Money en CDF/USD), recharges de jetons IA, émission des reçus/factures et reversement des recettes nettes de billetterie aux organisateurs (payouts) ;</li>
           <li><strong>Sécurité du contrôle d&apos;accès le jour J :</strong> vérification instantanée de la validité du billet, traçabilité des accès, placement des invités et blocage des tentatives de double scan frauduleux ;</li>
           <li><strong>Acheminement des communications d&apos;événements :</strong> envoi d&apos;invitations interactives, relances de confirmation RSVP et notifications de service (sur instruction expresse de l&apos;organisateur) ;</li>

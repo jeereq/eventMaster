@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.splitBuyerName = splitBuyerName;
-exports.companionTicketEmail = companionTicketEmail;
-exports.ticketsRemaining = ticketsRemaining;
+exports.ticketsRemaining = exports.companionTicketEmail = exports.splitBuyerName = void 0;
 exports.fulfillTicketOrder = fulfillTicketOrder;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
@@ -12,28 +10,11 @@ const seatSelectionService_1 = require("./seatSelectionService");
 const brandedMessaging_1 = require("../utils/brandedMessaging");
 const brandingUtils_1 = require("../utils/brandingUtils");
 const guestMessageCopy_1 = require("../utils/guestMessageCopy");
+const ticketOrderUtils_1 = require("../utils/ticketOrderUtils");
+Object.defineProperty(exports, "splitBuyerName", { enumerable: true, get: function () { return ticketOrderUtils_1.splitBuyerName; } });
+Object.defineProperty(exports, "companionTicketEmail", { enumerable: true, get: function () { return ticketOrderUtils_1.companionTicketEmail; } });
+Object.defineProperty(exports, "ticketsRemaining", { enumerable: true, get: function () { return ticketOrderUtils_1.ticketsRemaining; } });
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-function splitBuyerName(fullName) {
-    const parts = fullName.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0)
-        return { firstName: 'Invité', lastName: 'Billet' };
-    if (parts.length === 1)
-        return { firstName: parts[0], lastName: 'Billet' };
-    return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
-}
-function companionTicketEmail(baseEmail, index, orderId) {
-    const at = baseEmail.lastIndexOf('@');
-    if (at < 1)
-        return `billet-${orderId.slice(0, 8)}-${index}@tickets.eventmaster.local`;
-    const local = baseEmail.slice(0, at);
-    const domain = baseEmail.slice(at + 1);
-    return `${local}+billet${index}-${orderId.slice(0, 8)}@${domain}`;
-}
-function ticketsRemaining(event) {
-    if (event.ticketsTotal == null)
-        return null;
-    return Math.max(0, event.ticketsTotal - event.ticketsSold);
-}
 async function fulfillTicketOrder(orderId, stripeSession) {
     const order = await db_1.prisma.ticketOrder.findUnique({
         where: { id: orderId },
@@ -48,7 +29,7 @@ async function fulfillTicketOrder(orderId, stripeSession) {
         return order;
     }
     const event = order.event;
-    const remaining = ticketsRemaining(event);
+    const remaining = (0, ticketOrderUtils_1.ticketsRemaining)(event);
     if (remaining != null && remaining < order.quantity) {
         await db_1.prisma.ticketOrder.update({
             where: { id: orderId },
@@ -61,17 +42,17 @@ async function fulfillTicketOrder(orderId, stripeSession) {
     if (guestCount + order.quantity > limits.maxGuests) {
         throw new Error('Quota d’invités de l’organisation atteint. Contactez l’organisateur.');
     }
-    const { firstName, lastName } = splitBuyerName(order.buyerName);
+    const { firstName, lastName } = (0, ticketOrderUtils_1.splitBuyerName)(order.buyerName);
     const guestPayloads = Array.from({ length: order.quantity }, (_, i) => {
-        const email = i === 0 ? order.buyerEmail.trim().toLowerCase() : companionTicketEmail(order.buyerEmail, i + 1, order.id);
+        const email = i === 0 ? order.buyerEmail.trim().toLowerCase() : (0, ticketOrderUtils_1.companionTicketEmail)(order.buyerEmail, i + 1, order.id);
         return {
             eventId: event.id,
             firstName: i === 0 ? firstName : `Invité ${i + 1}`,
             lastName,
             email,
             phone: i === 0 ? order.buyerPhone : null,
-            category: event.ticketingEnabled && event.ticketPriceFc > 0 ? 'Billet' : 'Public',
-            rsvp: event.ticketPriceFc > 0 ? 'ACCEPTED' : 'PENDING',
+            category: event.ticketingEnabled ? 'Billet' : 'Public',
+            rsvp: 'ACCEPTED',
             ticketOrderId: order.id,
             ...(i === 0 && order.buyerPhone ? { preferences: { phone: order.buyerPhone } } : {}),
         };

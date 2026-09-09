@@ -252,37 +252,37 @@ export default function LegalTermsPreviewModal({
                 <p className="text-muted">
                   <strong>EventMaster</strong> est une plateforme SaaS complète éditée par le{' '}
                   <strong>Groupe Tekango</strong>. Elle réunit la gestion d’événements, les invitations interactives WhatsApp/e-mail,
-                  les plans 2D/3D, la <strong>billetterie en ligne sécurisée (Ticketing)</strong> et les <strong>paiements FlexPay</strong> (Cartes bancaires &amp; Mobile Money).
+                  les plans 2D/3D photoréalistes, le <strong>Simulateur de budget IA (/simulateur)</strong>, la <strong>billetterie en ligne avec présence auto-validée</strong> et les <strong>paiements FlexPay</strong> (Cartes bancaires &amp; Mobile Money).
                 </p>
               </div>
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <Ticket className="w-4 h-4 text-primary" />
-                  2. Billetterie multi-zones &amp; e-Billets QR
+                  2. Billetterie multi-zones, Présence auto-validée &amp; Personnalisation
                 </h3>
                 <p className="text-muted">
-                  Tarification par zone (VIP, Carré d’Or, Standard) avec répartition spatiale automatisée. Chaque billet acheté génère instantanément un e-billet nominatif doté d’un <strong>QR Code unique et infalsifiable</strong> (téléchargeable en PDF et disponible dans « Mes billets »). Le jour J, le contrôle d’accès applique la règle du <strong>scan unique</strong>.
+                  Tarification par zone avec choix de place sur le plan. Tout achat de billet valide immédiatement la présence de l&apos;invité (RSVP « ACCEPTED »). Pour les billets partagés entre proches ou collègues, chaque bénéficiaire peut personnaliser ses nom, prénom, numéro WhatsApp et régimes alimentaires sur son portail. Le jour J, le contrôle d’accès applique la règle du <strong>scan unique</strong>.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <CreditCard className="w-4 h-4 text-primary" />
-                  3. Paiements sécurisés FlexPay, Abonnements &amp; Jetons IA
+                  3. Paiements sécurisés FlexPay, Abonnements, Jetons IA &amp; Simulateur
                 </h3>
                 <p className="text-muted">
-                  Les paiements sont traités via le prestataire agréé <strong>FlexPay</strong> (Visa, Mastercard, M-Pesa, Orange Money, Airtel Money, Afrimoney). Les recharges de jetons d&apos;intelligence artificielle (Studio IA) sont facturées en Francs Congolais (CDF). EventMaster ne stocke aucun numéro complet de carte bancaire ni code secret. Les recettes nettes de billetterie sont reversées à l’organisateur (payouts).
+                  Paiements sécurisés via <strong>FlexPay</strong> (Visa, Mastercard, M-Pesa, Orange Money, Airtel Money, Afrimoney) en Francs Congolais (CDF) et devises. Simulations budgétaires en FC &amp; USD au taux officiel du jour. Recharges de jetons d&apos;IA pour l’aménagement et les invitations. EventMaster ne stocke aucun numéro complet de carte bancaire ni code secret. Les recettes nettes de billetterie sont reversées à l’organisateur (payouts).
                 </p>
               </div>
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  4. Studio IA &amp; Sécurité des aménagements
+                  4. Studio IA, Rendu 3D photoréaliste &amp; Respect des visages
                 </h3>
                 <p className="text-muted">
-                  Modélisation 2D/3D assistée par IA (Google Gemini) depuis des briefs ou photos de salle, invitations en langues nationales (Lingala, Swahili, Kikongo, Tshiluba) et moteur d&apos;espacement physique. L&apos;assistance logicielle ne remplace pas les diagnostics réglementaires ERP/PMR sous la responsabilité de l&apos;organisateur.
+                  Modélisation 2D/3D WebGL (matériaux PBR, caméras cinéma), contextualisation des invitations (organisation ou historique) et respect éthique des visages selon les directives de Google Gemini (fidélité stricte sans altération artificielle). L&apos;assistance logicielle ne remplace pas les diagnostics réglementaires ERP/PMR.
                 </p>
               </div>
 
@@ -303,7 +303,7 @@ export default function LegalTermsPreviewModal({
                 </h3>
                 <p className="text-muted">
                   Billets : l’organisateur décide, EventMaster n’exécute qu’après instruction et si les fonds sont disponibles.
-                  Abonnements : la période payée va jusqu’à son terme, sans prorata. Jetons IA déjà consommés : non remboursables.
+                  Abonnements : la période payée va jusqu’à son terme, sans prorata. Jetons IA et simulations déjà consommés : non remboursables.
                   Erreur de paiement : support avec le numéro de transaction FlexPay.
                 </p>
               </div>
@@ -314,7 +314,7 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Conditions Générales d’Utilisation</h3>
-        <p className="text-xs text-muted">Version {TERMS_VERSION} · En vigueur au 7 septembre 2026</p>
+                <p className="text-xs text-muted">Version {TERMS_VERSION} · En vigueur au 9 septembre 2026</p>
               </div>
 
               <section className="space-y-1.5">
@@ -325,23 +325,23 @@ export default function LegalTermsPreviewModal({
               </section>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-foreground">Article 2 — Billetterie en ligne &amp; e-Billets (Ticketing)</h4>
+                <h4 className="font-bold text-foreground">Article 2 — Billetterie en ligne, Présence auto-validée &amp; Billets partagés</h4>
                 <p className="text-muted">
-                  L’organisateur définit ses quotas et ses tarifs (globaux ou par zone/siège). Tout achat validé émet un e-billet muni d’un QR Code unique et infalsifiable. Le scan à l’entrée est unique et bloque toute réutilisation frauduleuse. L’organisateur demeure le seul garant de l’événement et des éventuels remboursements.
+                  L’organisateur définit ses quotas et ses tarifs (globaux ou par zone/siège). Tout achat validé émet un e-billet muni d’un QR Code unique et valide automatiquement la présence de l&apos;invité (RSVP « ACCEPTED »). Les bénéficiaires de billets partagés peuvent personnaliser leurs nom, prénom, numéro WhatsApp et régimes alimentaires sur leur espace dédié. Le scan à l’entrée est unique et bloque toute réutilisation frauduleuse.
                 </p>
               </section>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-foreground">Article 3 — Paiements sécurisés, Abonnements &amp; Jetons IA</h4>
+                <h4 className="font-bold text-foreground">Article 3 — Paiements sécurisés, Abonnements, Jetons IA &amp; Simulateur de budget</h4>
                 <p className="text-muted">
-                  Les transactions sont traitées via le processeur agréé FlexPay (Cartes Visa/Mastercard et Mobile Money M-Pesa, Orange Money, Airtel Money, Afrimoney). L&apos;accès aux fonctionnalités avancées d&apos;intelligence artificielle (Studio IA, vision sur plans) consomme des jetons d&apos;IA non remboursables une fois le calcul exécuté.
+                  Les transactions sont traitées via le processeur agréé FlexPay (Cartes Visa/Mastercard et Mobile Money M-Pesa, Orange Money, Airtel Money, Afrimoney). Le simulateur de budget propose des formules chiffrées en FC et USD au taux officiel. L&apos;accès aux fonctionnalités avancées d&apos;intelligence artificielle consomme des crédits/jetons d&apos;IA non remboursables une fois le calcul exécuté.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 4 — Studio IA, Plans 2D/3D &amp; Sécurité spatiale</h4>
                 <p className="text-muted">
-                  L&apos;outil d&apos;optimisation des espacements applique des normes physiques (1,40 m entre tables, dégagement des issues). L&apos;organisateur et l&apos;exploitant de la salle demeurent seuls juridiquement responsables de la conformité du plan réel exécuté le jour J au regard des règlements locaux de sécurité incendie et d&apos;accueil du public (ERP/PMR).
+                  Plans 2D cotés et rendu 3D WebGL photoréaliste (matériaux PBR, caméras cinéma, zones tarifaires). L&apos;outil applique des normes physiques (1,40 m entre tables, dégagement des issues). L&apos;organisateur et l&apos;exploitant demeurent seuls juridiquement responsables de la conformité du plan réel exécuté le jour J au regard des règlements locaux ERP/PMR.
                 </p>
               </section>
 
@@ -365,27 +365,27 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Politique de Confidentialité &amp; Données</h3>
-                <p className="text-xs text-muted">Version {PRIVACY_VERSION} · En vigueur au 7 septembre 2026</p>
+                <p className="text-xs text-muted">Version {PRIVACY_VERSION} · En vigueur au 9 septembre 2026</p>
               </div>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">1. Données de billetterie &amp; Paiement</h4>
                 <p className="text-muted">
-                  Nous traitons les coordonnées des acheteurs (nom, e-mail, téléphone WhatsApp, place réservée), les identifiants de transaction FlexPay et les horodatages de scan QR le jour de l’événement. Les données bancaires sensibles sont traitées directement par FlexPay.
+                  Coordonnées des acheteurs (nom, e-mail, téléphone WhatsApp E.164, place réservée), statut de présence automatiquement confirmé dès l&apos;achat, personnalisation possible par le bénéficiaire d&apos;un billet partagé, identifiants de transaction FlexPay et horodatages de scan QR le jour J. Les données bancaires sensibles sont traitées directement par FlexPay.
                 </p>
               </section>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-foreground">2. Studio IA &amp; Médias importés</h4>
+                <h4 className="font-bold text-foreground">2. Studio IA, Médias importés &amp; Respect des visages</h4>
                 <p className="text-muted">
-                  Les photographies de salle et croquis téléversés sont traités exclusivement pour extraire les contours et le mobilier du plan. Aucune identification biométrique faciale n&apos;est réalisée sur les personnes pouvant figurer sur les clichés.
+                  Photographies de salle traitées pour extraire le plan 2D/3D sans reconnaissance faciale de surveillance. Pour les invitations, possibilité de choisir la source de contexte (organisation ou historique) et respect des directives Google Gemini (restitution honnête et fidèle des visages de référence sans idéalisation trompeuse).
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">3. Finalités des traitements</h4>
                 <p className="text-muted">
-                  Les données sont utilisées pour l’émission des e-billets, le traitement des paiements, la modélisation spatiale assistée par IA, la génération d&apos;invitations multilingues (Français, Lingala, Swahili, Kikongo, Tshiluba), la prévention de la fraude au contrôle d’accès et l&apos;édition des justificatifs fiscaux.
+                  Émission des e-billets avec présence auto-validée, simulation budgétaire en FC/USD sur page dédiée, modélisation 2D/3D photoréaliste, génération d&apos;invitations multilingues (Français, Lingala, Swahili, Kikongo, Tshiluba), contrôle d’accès anti-doublon et justification fiscale.
                 </p>
               </section>
 
@@ -409,13 +409,13 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Politique de remboursement</h3>
-                <p className="text-xs text-muted">Version {REFUND_VERSION} · En vigueur au 8 septembre 2026</p>
+                <p className="text-xs text-muted">Version {REFUND_VERSION} · En vigueur au 9 septembre 2026</p>
               </div>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">1. Billets d’événements</h4>
                 <p className="text-muted">
-                  L’organisateur est le seul garant de la tenue de l’événement. EventMaster ne rembourse un acheteur que sur instruction formelle de l’organisateur, et seulement si les fonds sont encore disponibles. Un billet déjà scanné, falsifié ou revendu hors canal officiel n’est pas remboursable.
+                  L’organisateur est le seul garant de la tenue de l’événement. Les billets achetés confèrent une présence automatiquement confirmée mais demeurent soumis aux conditions de remboursement de l&apos;organisateur. Un billet déjà scanné, falsifié ou revendu hors canal officiel n’est pas remboursable.
                 </p>
               </section>
 
@@ -427,9 +427,9 @@ export default function LegalTermsPreviewModal({
               </section>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-foreground">3. Jetons IA</h4>
+                <h4 className="font-bold text-foreground">3. Jetons IA &amp; Simulations de budget</h4>
                 <p className="text-muted">
-                  Les jetons consommés par un traitement effectivement exécuté ne sont pas remboursables. Un pack débité deux fois, ou un paiement sans crédit de jetons, est corrigé après vérification du reçu FlexPay.
+                  Les simulations budgétaires et requêtes IA d&apos;aménagement consommées par un traitement effectivement exécuté ne sont pas remboursables. Un pack débité deux fois, ou un paiement sans crédit de jetons, est corrigé après vérification du reçu FlexPay.
                 </p>
               </section>
 

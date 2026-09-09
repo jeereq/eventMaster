@@ -14,7 +14,7 @@ export default function RefundPage() {
     <LegalPageShell
       title="Politique de remboursement"
       subtitle="Règles applicables aux billets, abonnements, jetons d’intelligence artificielle, acomptes marketplace et erreurs de paiement."
-      lastUpdated="8 septembre 2026"
+      lastUpdated="9 septembre 2026"
       version={REFUND_VERSION}
     >
       <Section title="1. Objet">
@@ -24,7 +24,7 @@ export default function RefundPage() {
           <Link href="/terms" className="text-primary font-semibold hover:underline">
             conditions d’utilisation
           </Link>{' '}
-          (article 3.5 et article 4).
+          (article 3.6 et article 4).
         </p>
         <p>
           EventMaster est un intermédiaire technique. Les fonds de billetterie sont encaissés pour le compte de
@@ -46,6 +46,9 @@ export default function RefundPage() {
           <li>
             EventMaster ne reverse un remboursement à l’acheteur que sur instruction formelle de l’organisateur, et
             seulement si les fonds correspondants sont encore disponibles (avant ou après payout, selon le cas).
+          </li>
+          <li>
+            Tout billet acheté valide automatiquement la présence de son porteur. La personnalisation d&apos;un billet partagé (modification du nom, prénom ou coordonnées par le bénéficiaire) n&apos;altère pas les conditions de vente initiales ni le droit au remboursement, qui demeure placé sous l&apos;autorité exclusive de l&apos;organisateur.
           </li>
           <li>
             Un billet déjà scanné à l’entrée (règle du scan unique) n’est pas remboursable, sauf instruction contraire
@@ -79,15 +82,14 @@ export default function RefundPage() {
         </ul>
       </Section>
 
-      <Section title="4. Jetons d’intelligence artificielle">
+      <Section title="4. Jetons d’intelligence artificielle & Simulations de budget">
         <p>
-          Les jetons IA (Studio de plan, vision sur photos de salle, composition d’invitations) sont consommés à
-          chaque traitement effectivement exécuté.
+          Les simulations du simulateur de budget IA (/simulateur) et les requêtes du Studio d’aménagement (plans 2D/3D, vision artificielle sur photos de salle, composition d’invitations) sont décomptées au fur et à mesure de leur exécution.
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Les jetons déjà consommés ne sont pas remboursables.</li>
+          <li>Les crédits et jetons consommés par un traitement d&apos;intelligence artificielle exécuté ne sont pas remboursables.</li>
           <li>
-            Un pack de recharge débité deux fois, ou un paiement confirmé sans crédit de jetons, est corrigé après
+            Un pack de recharge débité deux fois, ou un paiement confirmé sans crédit de jetons ou de simulations, est corrigé après
             vérification du reçu FlexPay.
           </li>
         </ul>

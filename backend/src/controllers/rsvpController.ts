@@ -684,6 +684,7 @@ export async function submitRsvp(req: Request, res: Response) {
       : (guest.rsvp === 'DECLINED' ? 'DECLINED' : 'ACCEPTED');
 
     const previousRsvp = guest.rsvp;
+    const wasPending = previousRsvp === 'PENDING';
     const statusChanged = previousRsvp !== targetRsvp;
 
     // Prise en compte du prénom et du nom
@@ -740,7 +741,7 @@ export async function submitRsvp(req: Request, res: Response) {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     }) : '';
 
-    if (targetRsvp === 'ACCEPTED' && (statusChanged || previousRsvp === 'PENDING')) {
+    if (targetRsvp === 'ACCEPTED' && (statusChanged || wasPending)) {
       const qrCodeUrl = buildGuestQrImageUrl(guest.id, 300);
       const orgBrand = orgBrandFromTenant(guest.event.tenant);
 

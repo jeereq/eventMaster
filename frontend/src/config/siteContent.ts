@@ -12,12 +12,13 @@ export const SITE_CONTACT = {
 } as const;
 
 export const FOOTER_FEATURES = [
-  'Préparez votre événement en un clic',
-  'Invitations, réponses, plan de table, accueil QR',
-  'Marketplace : salles, prestataires, matériel & équipements',
-  'Favoris, packs budget et réservations',
-  'Événements publics et billets',
-  'Tout dans le navigateur — l’app arrive bientôt',
+  'Préparez votre événement de A à Z en un clic',
+  'Invitations WhatsApp IA, réponses & personnalisation invité',
+  'Billetterie en ligne, présence auto-validée & pass QR',
+  'Plans de table 2D & 3D photoréalistes avec caméras cinéma',
+  'Simulateur budget IA dédié en Francs Congolais & USD',
+  'Marketplace : salles, prestataires certifiés, matériel & devis',
+  '100% dans le navigateur mobile et ordinateur',
 ] as const;
 
 export const FOOTER_PRODUCT = [
@@ -41,7 +42,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Préparez votre événement en un clic : invitations, plan de table, accueil QR, plus un marketplace pour salles et prestataires. Tout se fait dans le navigateur.';
+  'Plateforme tout-en-un pour vos événements en RDC : invitations WhatsApp IA, billetterie multi-zones avec présence auto-validée, plans de table 2D/3D immersifs, simulateur de budget et marketplace de salles & prestataires certifiés.';
 
 export interface FaqItem {
   id: string;
@@ -54,7 +55,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'Un outil pour préparer un événement en un clic : invitations, réponses, plan de table, accueil QR le jour J, et un marketplace pour trouver (ou publier) salles et prestataires. Pas besoin d’app : tout marche dans le navigateur, y compris sur téléphone.',
+      'Une plateforme tout-en-un pour préparer un événement en toute sérénité : invitations interactives avec IA, billetterie en ligne avec validation automatique de présence, personnalisation des pass pour billets partagés, plans de salle 2D et 3D photoréalistes, accueil QR le jour J, simulateur de budget IA et marketplace de lieux et talents en RDC. Tout fonctionne directement dans le navigateur, sur smartphone comme sur ordinateur.',
   },
   {
     id: 'mobile-app',
@@ -72,7 +73,19 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'public-events',
     question: 'Puis-je organiser un événement public avec billets payants ?',
     answer:
-      'Oui. Choisissez Public à la création : la fiche apparaît sur le marketplace. Inscription gratuite, ou billets payants. Un événement Privé reste sur liste d’invités uniquement.',
+      'Oui. Choisissez Public à la création : l’événement apparaît sur le marketplace. Vous pouvez configurer des tarifs par zone (VIP, Standard, Fosse...) avec choix de place sur le plan. Lors de l’achat d’un billet (via M-Pesa, Orange Money, Airtel, Afrimoney ou Carte), la présence de l’invité est automatiquement validée (RSVP confirmé) et son pass QR sécurisé est généré immédiatement.',
+  },
+  {
+    id: 'shared-tickets-personalization',
+    question: 'Comment les invités peuvent-ils modifier leurs coordonnées sur un billet ou une invitation partagée ?',
+    answer:
+      'Lorsqu’un proche ou une entreprise achète plusieurs billets ou partage un lien d’invitation, chaque destinataire peut ouvrir son lien personnel pour modifier son prénom, son nom et son numéro WhatsApp, et préciser ses préférences alimentaires (allergies, régime particulier). Le pass QR individuel et les données d’émargement de l’organisateur sont immédiatement mis à jour.',
+  },
+  {
+    id: 'ai-invitations-context',
+    question: 'Comment fonctionnent le Studio d’invitation IA et le respect des visages ?',
+    answer:
+      'Le Studio IA permet de choisir votre source de contexte (profil de votre organisation ou historique de recherche). Les textes sont enrichis en Français et dans les 4 langues nationales congolaises (Lingala, Swahili, Kikongo, Tshiluba). Pour les visages, notre technologie suit les préconisations éthiques de Google Gemini : elle restitue honnêtement les traits réels des photos de référence, sans embellissement artificiel ni déformation trompeuse.',
   },
   {
     id: 'marketplace-venues',
@@ -96,7 +109,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'event-packs',
     question: 'Comment fonctionne la simulation d’événement et de packs budget par IA ?',
     answer:
-      'Indiquez votre type d’événement (mariage, fête, gala), votre budget en Dollar ($) converti en Francs Congolais (CDF), votre ville et votre nombre d’invités sur la page Simulateur. Vous disposez de 4 simulations complètes gratuites sans compte préalable. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et génère instantanément 3 formules optimisées (Économique, Équilibré, Confort). Une fois les essais gratuits terminés, vous pouvez recharger 6 simulations supplémentaires pour 2 500 FC (payables par Orange Money, M-Pesa, Airtel Money ou Carte). Une fois connecté, vous accédez aux coordonnées complètes et fiches directes des prestataires.',
+      'Rendez-vous sur la page dédiée /simulateur : sélectionnez un scénario type prêt à l’emploi (Mariage Élégance, Anniversaire, Gala d’Entreprise) ou personnalisez votre ville, nombre d’invités et budget en Francs Congolais ou Dollars au taux officiel du jour. Vous disposez de 4 simulations complètes gratuites sans compte préalable. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et compose instantanément 3 formules réelles (Éco, Équilibré, Confort). Les recharges s’effectuent en Francs Congolais par Mobile Money ou Carte.',
   },
   {
     id: 'free-trial',
@@ -114,7 +127,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'room-editor-plans',
     question: 'Quelles fonctions de l’éditeur de salles sont incluses selon mon abonnement ?',
     answer:
-      'L’éditeur de salles est délimité par le niveau d’éditeur du forfait (visible dans Facturation) :\n\n• Essentiel (découverte) — tables simples, déplacement et suppression. Pas de thèmes ni d’éléments décoratifs (fixtures).\n• Business — rangées, duplication, verrouillage, grille ; entrées, allées et couloirs.\n• Premium / Premium Plus — thèmes, sol, scène, buffet, zones (piste, VIP), rotation, rendu showcase ; escaliers entre étages et balcons.\n• Complet (Particulier, Enterprise, forfaits Salle / Salle & presta) — tout le Premium, plus périmètre, tapis, thèmes personnalisés et images custom.\n\nLes modèles multi-étages (Duplex, Villa…) et la vue empilée sont disponibles dès que vous avez accès à l’éditeur ; créer un escalier ou un balcon exige le niveau Premium (ou Complet) avec thèmes/fixtures activés. Pour monter de niveau : Facturation → changer de forfait.',
+      'L’éditeur de salles propose des plans 2D cotés et une visualisation 3D photoréaliste PBR (nappages, miroirs, chandeliers) avec caméras cinéma et zones tarifaires de billetterie. Les fonctions avancées sont délimitées par le niveau d’éditeur du forfait (visible dans Facturation) :\n\n• Essentiel (découverte) — tables simples, déplacement et suppression. Pas de thèmes ni d’éléments décoratifs (fixtures).\n• Business — rangées, duplication, verrouillage, grille ; entrées, allées et couloirs.\n• Premium / Premium Plus — thèmes, sol, scène, buffet, zones (piste, VIP), rotation, rendu showcase ; escaliers entre étages et balcons.\n• Complet (Particulier, Enterprise, forfaits Salle / Salle & presta) — tout le Premium, plus périmètre, tapis, thèmes personnalisés et images custom.\n\nLes modèles multi-étages (Duplex, Villa…) et la vue empilée sont disponibles dès que vous avez accès à l’éditeur ; créer un escalier ou un balcon exige le niveau Premium (ou Complet) avec thèmes/fixtures activés.',
   },
   {
     id: 'b2c-annual',

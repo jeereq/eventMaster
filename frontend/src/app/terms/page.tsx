@@ -13,20 +13,21 @@ export default function TermsPage() {
   return (
     <LegalPageShell
       title="Conditions d'utilisation"
-      subtitle="Les présentes conditions régissent l'accès et l'utilisation de la plateforme EventMaster, incluant le Studio IA, la billetterie multi-zone, la modélisation de salle 2D/3D et les paiements sécurisés."
-      lastUpdated="7 septembre 2026"
+      subtitle="Les présentes conditions régissent l'accès et l'utilisation de la plateforme EventMaster, incluant le Studio IA, la billetterie multi-zone avec présence auto-validée, le simulateur de budget, la modélisation de salle 2D/3D et les paiements sécurisés."
+      lastUpdated="9 septembre 2026"
       version={TERMS_VERSION}
     >
       <Section title="1. Objet & Présentation de la plateforme">
         <p>
           <strong>EventMaster</strong> est un projet et une plateforme logicielle SaaS multi-tenant éditée par le <strong>Groupe Tekango</strong>. 
           Elle propose un ensemble d&apos;outils intégrés dédiés à l&apos;organisation et à la gestion d&apos;événements privés et professionnels :
-          création d&apos;invitations interactives multilingues (Français et langues nationales de la RDC : Lingala, Swahili, Kikongo, Tshiluba), 
-          routage et confirmations RSVP instantanées sur WhatsApp, <strong>Studio d&apos;Aménagement IA</strong> avec modélisation 2D zénithale et 3D WebGL de salles, 
-          moteur d&apos;espacement et de dégagement physique réel, plans de table, protocole d&apos;accueil et contrôle d&apos;accès le jour J (scan QR ultra-rapide anti-doublon), 
+          création d&apos;invitations interactives multilingues avec respect de l&apos;identité et contextualisation IA (Français et langues nationales de la RDC : Lingala, Swahili, Kikongo, Tshiluba), 
+          routage et confirmations RSVP instantanées sur WhatsApp, <strong>Simulateur de budget IA dédié</strong> en Francs Congolais (CDF) et Dollars ($), 
+          <strong>Studio d&apos;Aménagement IA</strong> avec modélisation 2D zénithale cotée et rendu 3D WebGL photoréaliste de salles (matériaux PBR, caméras cinématiques), 
+          moteur d&apos;espacement et de dégagement physique réel, plans de table avec sélection interactive de place, protocole d&apos;accueil et contrôle d&apos;accès le jour J (scan QR ultra-rapide anti-doublon), 
           fil d&apos;actualité média, livre d&apos;or en ligne, gestion collaborative d&apos;équipes avec journal d&apos;actions contextuel, 
-          marketplace de prestataires et de salles, ainsi qu&apos;un module complet de <strong>billetterie en ligne sécurisée (Ticketing multi-zones)</strong> 
-          et de <strong>paiements multicanaux sécurisés (cartes bancaires et Mobile Money en Francs Congolais — CDF et devises acceptées)</strong>.
+          marketplace de prestataires et de salles certifiés, ainsi qu&apos;un module complet de <strong>billetterie en ligne sécurisée (Ticketing multi-zones avec présence auto-validée et personnalisation des billets partagés)</strong> 
+          et de <strong>paiements multicanaux sécurisés (cartes bancaires et Mobile Money en Francs Congolais — CDF et devises acceptées via FlexPay)</strong>.
         </p>
         <p>
           <strong>Important (Appartenance au Groupe Tekango) :</strong> En tant que service développé par le Groupe Tekango, l&apos;utilisateur reconnaît et accepte
@@ -90,7 +91,19 @@ export default function TermsPage() {
         </ul>
 
         <p>
-          <strong>3.3 Contrôle d&apos;accès et validation le jour J (Scan Protocole).</strong>
+          <strong>3.3 Validation automatique de présence & Personnalisation des billets partagés.</strong>
+        </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            <strong>Validation automatique de présence :</strong> Dès validation d&apos;un achat de billet sur un événement public ou payant, la présence de l&apos;invité est automatiquement enregistrée et confirmée (statut RSVP « ACCEPTED »). L&apos;invité accède directement à son portail d&apos;accueil, à son pass QR et à ses consignes d&apos;accès sans nécessiter de validation manuelle supplémentaire.
+          </li>
+          <li>
+            <strong>Personnalisation des billets partagés :</strong> Lorsqu&apos;un acheteur commande plusieurs billets pour des tiers ou qu&apos;un lien d&apos;invitation est transmis à un convive, chaque bénéficiaire a la faculté de compléter ou mettre à jour ses coordonnées personnelles (prénom, nom, numéro de téléphone WhatsApp normalisé E.164) et ses préférences d&apos;accueil (contraintes alimentaires, allergies, requêtes particulières) directement depuis son portail invité. Cette mise à jour réactualise immédiatement le badge QR nominatif et le registre d&apos;émargement de l&apos;organisateur.
+          </li>
+        </ul>
+
+        <p>
+          <strong>3.4 Contrôle d&apos;accès et validation le jour J (Scan Protocole).</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>L&apos;accès à l&apos;événement est subordonné à la présentation et à la validation du QR Code officiel par le personnel protocole muni de l&apos;outil de scan EventMaster.</li>
@@ -99,7 +112,7 @@ export default function TermsPage() {
         </ul>
 
         <p>
-          <strong>3.4 Reversement des recettes de billetterie (Payouts).</strong>
+          <strong>3.5 Reversement des recettes de billetterie (Payouts).</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>EventMaster encaisse les règlements des acheteurs pour le compte de l&apos;organisateur en qualité de mandataire technique d&apos;encaissement.</li>
@@ -108,7 +121,7 @@ export default function TermsPage() {
         </ul>
 
         <p>
-          <strong>3.5 Annulation d&apos;événement, modifications et politique de remboursement.</strong>
+          <strong>3.6 Annulation d&apos;événement, modifications et politique de remboursement.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>L&apos;organisateur est le seul garant de la bonne tenue de l&apos;événement, de sa programmation artistique ou professionnelle et de la conformité du lieu.</li>
@@ -123,7 +136,7 @@ export default function TermsPage() {
         </ul>
 
         <p>
-          <strong>3.6 Lutte contre la fraude et interdiction de revente spéculative.</strong>
+          <strong>3.7 Lutte contre la fraude et interdiction de revente spéculative.</strong>
         </p>
         <p>
           Il est strictement interdit de reproduire, falsifier, revendre à des tarifs supérieurs à la valeur faciale ou commercialiser des billets EventMaster sur des canaux non officiels. Tout comportement frauduleux entraîne l&apos;invalidation immédiate du billet sans remboursement et d&apos;éventuelles poursuites.
@@ -168,17 +181,20 @@ export default function TermsPage() {
         <TermsMarketplaceRates />
 
         <p className="mt-4">
-          <strong>4.4 Système de Jetons IA (AI Tokens) & Grand Livre de Consommation.</strong>
+          <strong>4.4 Système de Jetons IA (AI Tokens), Simulateur de Budget & Grand Livre de Consommation.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong>Utilisation des jetons :</strong> L&apos;accès aux fonctionnalités d&apos;intelligence artificielle avancées (composition automatique de plan depuis un brief, analyse de photos ou croquis d&apos;aménagement via vision artificielle, reformulation d&apos;invitations en langues nationales) requiert des jetons d&apos;intelligence artificielle (ex. 10 jetons par génération de plan).
+            <strong>Simulateur de budget IA dédié (/simulateur) :</strong> Les utilisateurs ont accès à une interface spécialisée de simulation budgétaire proposant des scénarios clés en main (Mariage, Anniversaire, Gala d’Entreprise) et des estimations chiffrées en Francs Congolais (CDF) et Dollars ($) au taux officiel du jour. Des simulations gratuites de bienvenue sont offertes, puis des recharges peuvent être acquises via Mobile Money ou Carte bancaire.
+          </li>
+          <li>
+            <strong>Utilisation des jetons d’aménagement :</strong> L&apos;accès aux fonctionnalités d&apos;intelligence artificielle avancées (composition automatique de plan depuis un brief, analyse de photos ou croquis d&apos;aménagement via vision artificielle, reformulation d&apos;invitations en langues nationales) requiert des jetons d&apos;intelligence artificielle (ex. 10 jetons par génération de plan).
           </li>
           <li>
             <strong>Attribution et recharges :</strong> Des jetons de bienvenue ou des quotas périodiques peuvent être alloués selon les forfaits souscrits. L&apos;organisateur peut acquérir des packs de recharge supplémentaires en Francs Congolais (CDF) par Mobile Money ou carte bancaire via FlexPay.
           </li>
           <li>
-            <strong>Consommation définitive :</strong> Tout appel à l&apos;API de traitement d&apos;intelligence artificielle lancé par l&apos;utilisateur décrémente automatiquement le solde du grand livre (ledger). Une fois le traitement exécuté par les modèles d&apos;IA, les jetons consommés ne sont pas remboursables.
+            <strong>Consommation définitive :</strong> Tout appel à l&apos;API de traitement d&apos;intelligence artificielle lancé par l&apos;utilisateur décrémente automatiquement le solde du grand livre (ledger). Une fois le traitement exécuté par les modèles d&apos;IA, les jetons et crédits consommés ne sont pas remboursables.
           </li>
           <li>
             <strong>Durée de validité :</strong> Les jetons acquis demeurent valables tant que le compte de l&apos;organisation reste actif, sans date de péremption arbitraire.
@@ -188,7 +204,7 @@ export default function TermsPage() {
 
       <Section title="5. Studio IA, Plans 2D/3D & Normes Physiques d'Espacement">
         <p>
-          EventMaster fournit des outils de modélisation spatiale interactifs assistés par intelligence artificielle (Google Gemini) pour faciliter l&apos;agencement de réceptions, salles de fête, restaurants et espaces d&apos;accueil.
+          EventMaster fournit des outils de modélisation spatiale interactifs assistés par intelligence artificielle (Google Gemini) pour faciliter l&apos;agencement de réceptions, salles de fête, restaurants et espaces d&apos;accueil, combinant plans 2D cotés et visualisations 3D WebGL photoréalistes (matériaux PBR, caméras cinématiques, zones tarifaires).
         </p>
         
         <p>
@@ -232,11 +248,12 @@ export default function TermsPage() {
           EventMaster met à disposition des modèles d&apos;invitation et un studio de génération assisté par IA prenant en charge le Français ainsi que les quatre langues nationales de la République Démocratique du Congo : <strong>Lingala, Swahili, Kikongo et Tshiluba</strong>.
         </p>
         <p>
-          <strong>6.1 Utilisation éthique et protection de l&apos;identité.</strong>
+          <strong>6.1 Utilisation éthique, source de contexte & respect des visages (Google Gemini).</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Le système intègre des garde-fous stricts empêchant l&apos;altération trompeuse ou dégradante des visages et l&apos;usurpation d&apos;identité des participants.</li>
-          <li>L&apos;organisateur est seul responsable de l&apos;exactitude des informations rédigées et de la bienséance des textes d&apos;invitation partagés.</li>
+          <li><strong>Choix de la source de contexte :</strong> L&apos;utilisateur peut choisir d&apos;appliquer le profil contextuel de son organisation ou son historique de recherche récent pour personnaliser les propositions graphiques et textuelles générées.</li>
+          <li><strong>Restitution honnête des visages :</strong> Conformément aux principes éthiques et aux directives techniques de Google Gemini, notre moteur applique un ancrage d&apos;identité strict assurant une représentation fidèle et honnête des personnes fournies en référence, sans embellissement artificiel trompeur, déformation ou retouche dégradante.</li>
+          <li>L&apos;organisateur est seul responsable de l&apos;exactitude des informations rédigées et de la bienséance des textes et images d&apos;invitation partagés.</li>
         </ul>
         <p>
           <strong>6.2 Acheminement WhatsApp & Consentement préalable (Opt-in).</strong>

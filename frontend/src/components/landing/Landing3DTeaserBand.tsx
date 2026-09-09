@@ -52,24 +52,24 @@ export default function Landing3DTeaserBand() {
                 Modélisez vos réceptions au millimètre et placez vos invités
               </h2>
               <p className="text-sm text-stage-foreground/80 leading-relaxed">
-                Tables, allées et éclairages : explorez un plan 2D coté ou une visite 3D dans le navigateur, puis ouvrez l’éditeur.
+                Tables, allées, lustres et finitions réalistes : visualisez votre plan 2D coté ou plongez en 3D photoréaliste (angles de vue cinéma, zones de billetterie et placement de table).
               </p>
               <ul className="grid grid-cols-2 gap-2 pt-1 text-xs text-stage-foreground/90 font-medium">
                 <li className="flex items-center gap-1.5">
                   <LayoutGrid className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
-                  Plan 2D coté
+                  Plan 2D coté &amp; Allées
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
-                  Visite 3D 360°
+                  Rendu 3D &amp; Caméras cinéma
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
-                  Placement VIP
+                  Tarifs par zone &amp; Sièges
                 </li>
                 <li className="flex items-center gap-1.5">
                   <ScanLine className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
-                  Accueil QR
+                  Accueil QR &amp; Présence
                 </li>
               </ul>
               <div className="flex flex-col sm:flex-row gap-2.5 pt-1">

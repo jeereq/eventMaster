@@ -24,6 +24,7 @@ const guestMessageCopy_1 = require("../utils/guestMessageCopy");
 const eventPlace_1 = require("../utils/eventPlace");
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const publicVenue_1 = require("../utils/publicVenue");
+const phone_1 = require("../utils/phone");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 const platformNotificationService_1 = require("../services/platformNotificationService");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -209,6 +210,16 @@ async function getGuestRsvpDetails(req, res) {
         });
         if (!guest) {
             return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
+        }
+        // Si l'invité possède un billet ou s'il s'agit d'un événement public avec billetterie / inscription,
+        // sa présence est validée dès l'obtention du billet.
+        if (guest.rsvp === 'PENDING' &&
+            (guest.ticketOrderId || guest.category === 'Billet' || Boolean(guest.event?.isPublic))) {
+            await db_1.prisma.guest.update({
+                where: { id: guest.id },
+                data: { rsvp: 'ACCEPTED' },
+            }).catch(() => undefined);
+            guest.rsvp = 'ACCEPTED';
         }
         const forPrint = req.query.print === '1';
         const hasSeatAssignment = Boolean((0, commercialService_1.findGuestSeatInTablePlan)(guest.event.tablePlan, guestId));
@@ -545,8 +556,8 @@ async function getGuestAllInvitations(req, res) {
 async function submitRsvp(req, res) {
     try {
         const guestId = req.params.guestId;
-        const { rsvp, preferences } = req.body; // Expects rsvp: 'ACCEPTED' | 'DECLINED' and preferences: object
-        if (!rsvp || !['ACCEPTED', 'DECLINED'].includes(rsvp)) {
+        const { rsvp, preferences, firstName, lastName, phone, phoneCountryCode } = req.body;
+        if (rsvp && !['ACCEPTED', 'DECLINED'].includes(rsvp)) {
             return res.status(400).json({ error: 'Le statut RSVP doit être ACCEPTED ou DECLINED.' });
         }
         const guest = await db_1.prisma.guest.findUnique({
@@ -568,36 +579,78 @@ async function submitRsvp(req, res) {
         }
         if (isEventDatePassed(guest.event.date)) {
             return res.status(403).json({
-                error: 'La date de célébration est passée. Votre réponse RSVP ne peut plus être modifiée.',
+                error: 'La date de célébration est passée. Vos informations ne peuvent plus être modifiées.',
                 rsvpLocked: true,
             });
         }
+        const isTicketOrPublic = Boolean(guest.ticketOrderId ||
+            guest.category === 'Billet' ||
+            guest.event?.isPublic ||
+            guest.event?.ticketingEnabled);
+        // Déterminer le statut RSVP :
+        // Si explicitement fourni, on le prend. Sinon, pour un billet ou événement public, c'est 'ACCEPTED', sinon statut actuel.
+        const targetRsvp = rsvp
+            ? rsvp
+            : (guest.rsvp === 'DECLINED' ? 'DECLINED' : 'ACCEPTED');
         const previousRsvp = guest.rsvp;
-        const statusChanged = previousRsvp !== rsvp;
-        const normalizedPreferences = (0, rsvpPreferences_1.normalizeGuestPreferences)(preferences);
+        const wasPending = previousRsvp === 'PENDING';
+        const statusChanged = previousRsvp !== targetRsvp;
+        // Prise en compte du prénom et du nom
+        const cleanFirstName = typeof firstName === 'string' ? firstName.trim().slice(0, 80) : undefined;
+        const cleanLastName = typeof lastName === 'string' ? lastName.trim().slice(0, 80) : undefined;
+        const nameChanged = Boolean((cleanFirstName && cleanFirstName !== guest.firstName) ||
+            (cleanLastName !== undefined && cleanLastName !== guest.lastName));
+        // Normalisation du téléphone
+        let nextPhone = guest.phone;
+        let nextCountryCode = guest.phoneCountryCode;
+        if (phone !== undefined || phoneCountryCode !== undefined) {
+            const resolved = (0, phone_1.resolvePhoneFields)({
+                phone: phone !== undefined ? phone : guest.phone,
+                phoneCountryCode: phoneCountryCode !== undefined ? phoneCountryCode : guest.phoneCountryCode,
+            });
+            nextPhone = resolved.phone;
+            nextCountryCode = resolved.phoneCountryCode;
+        }
+        // Normalisation des préférences
+        const mergedPreferences = {
+            ...(guest.preferences || {}),
+            ...(preferences ? (0, rsvpPreferences_1.normalizeGuestPreferences)(preferences) : {}),
+        };
+        if (nextPhone) {
+            mergedPreferences.phone = nextPhone;
+        }
+        const updateData = {
+            rsvp: targetRsvp,
+            preferences: mergedPreferences,
+            phone: nextPhone,
+            phoneCountryCode: nextCountryCode,
+        };
+        if (cleanFirstName) {
+            updateData.firstName = cleanFirstName;
+        }
+        if (cleanLastName !== undefined) {
+            updateData.lastName = cleanLastName;
+        }
         const updatedGuest = await db_1.prisma.guest.update({
             where: { id: guestId },
-            data: {
-                rsvp,
-                preferences: normalizedPreferences,
-            },
+            data: updateData,
         });
-        // Send QR Code notifications asynchronously if RSVP is accepted
+        // Send QR Code notifications asynchronously if RSVP is accepted AND (statusChanged or newly accepted)
         const formattedDate = guest.event.date ? new Date(guest.event.date).toLocaleDateString('fr-FR', {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
         }) : '';
-        if (rsvp === 'ACCEPTED') {
+        if (targetRsvp === 'ACCEPTED' && (statusChanged || wasPending)) {
             const qrCodeUrl = (0, qrCode_1.buildGuestQrImageUrl)(guest.id, 300);
             const orgBrand = (0, brandedMessaging_1.orgBrandFromTenant)(guest.event.tenant);
             const subject = `Confirmation de votre présence - ${guest.event.title}`;
-            const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${(0, eventPlace_1.formatEventPlace)(guest.event) || guest.event.location || 'Non défini'}\n\n${guestMessageCopy_1.GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
+            const textBody = `Bonjour ${updatedGuest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${(0, eventPlace_1.formatEventPlace)(guest.event) || guest.event.location || 'Non défini'}\n\n${guestMessageCopy_1.GUEST_COPY.afterRsvp}\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
             const htmlBody = (0, brandedMessaging_1.wrapBrandedEmail)({
                 branding: orgBrand.branding,
                 orgName: orgBrand.orgName,
                 title: 'Présence confirmée',
                 eyebrow: guest.event.title,
                 innerHtml: `
-          <p style="text-align:center;color:${orgBrand.branding.primary};font-weight:700;margin:0 0 16px;">Merci, ${(0, brandingUtils_1.escapeHtml)(guest.firstName)} !</p>
+          <p style="text-align:center;color:${orgBrand.branding.primary};font-weight:700;margin:0 0 16px;">Merci, ${(0, brandingUtils_1.escapeHtml)(updatedGuest.firstName)} !</p>
           <p>Votre présence à <strong>${(0, brandingUtils_1.escapeHtml)(guest.event.title)}</strong> a été enregistrée.</p>
           <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
             <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:10px;">Votre badge</span>
@@ -612,7 +665,7 @@ async function submitRsvp(req, res) {
                 footerNote: guestMessageCopy_1.GUEST_COPY.rsvpEmailFooter,
             });
             const whatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('RSVP_CONFIRMATION_WHATSAPP', {
-                firstName: guest.firstName,
+                firstName: updatedGuest.firstName,
                 title: guest.event.title,
                 date: formattedDate,
                 location: (0, eventPlace_1.formatEventPlace)(guest.event) || guest.event.location || 'Non défini',
@@ -625,13 +678,13 @@ async function submitRsvp(req, res) {
             (async () => {
                 try {
                     // 1. Send Email if valid email address
-                    const destEmail = (0, guestIdentity_1.extractGuestEmail)(guest);
+                    const destEmail = (0, guestIdentity_1.extractGuestEmail)(updatedGuest);
                     if (destEmail) {
                         console.log(`[RSVP Controller] Sending confirmation email with QR Code to ${destEmail}...`);
                         await (0, notificationService_1.sendRealEmail)(destEmail, subject, textBody, htmlBody);
                     }
                     // 2. WhatsApp avec image QR
-                    const phone = getGuestPhone(guest);
+                    const phone = getGuestPhone(updatedGuest);
                     if (phone) {
                         console.log(`[RSVP Controller] Sending confirmation WhatsApp Image with QR Code to ${phone}...`);
                         await (0, notificationService_1.sendRealWhatsAppImage)(phone, qrCodeUrl, whatsappCaption);
@@ -657,8 +710,8 @@ async function submitRsvp(req, res) {
                 }
             })();
         }
-        // Notifier l'organisateur (email + WhatsApp) à chaque changement de statut RSVP
-        if (statusChanged) {
+        // Notifier l'organisateur (email + WhatsApp) à chaque changement de statut RSVP ou de coordonnées
+        if (statusChanged || nameChanged) {
             (async () => {
                 try {
                     const organizer = await resolveEventOrganizer(guest.event.tenantId, guest.event.tenant?.manager ?? null);
@@ -669,14 +722,14 @@ async function submitRsvp(req, res) {
                     await notifyOrganizerOfRsvp({
                         organizer,
                         guest: {
-                            firstName: guest.firstName,
-                            lastName: guest.lastName,
-                            email: guest.email,
+                            firstName: updatedGuest.firstName,
+                            lastName: updatedGuest.lastName,
+                            email: updatedGuest.email,
                         },
                         eventTitle: guest.event.title,
                         eventId: guest.eventId,
-                        rsvp,
-                        preferences: preferences || {},
+                        rsvp: targetRsvp,
+                        preferences: updateData.preferences || {},
                         tenantId: guest.event.tenantId,
                     });
                 }
@@ -686,11 +739,16 @@ async function submitRsvp(req, res) {
             })();
         }
         return res.json({
-            message: 'Votre réponse RSVP a été enregistrée avec succès.',
+            message: nameChanged
+                ? 'Vos coordonnées ont été mises à jour avec succès.'
+                : 'Votre réponse RSVP a été enregistrée avec succès.',
             guest: {
                 id: updatedGuest.id,
                 firstName: updatedGuest.firstName,
                 lastName: updatedGuest.lastName,
+                email: updatedGuest.email,
+                phone: updatedGuest.phone,
+                phoneCountryCode: updatedGuest.phoneCountryCode,
                 rsvp: updatedGuest.rsvp,
                 preferences: updatedGuest.preferences,
             },
