@@ -219,7 +219,7 @@ export default function LandingVisualBanner() {
                   <div className="pt-2.5 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <Link
                       href={item.href}
-                      className="min-h-11 inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-primary hover:text-primary-hover group/link transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-[var(--radius-button)]"
+                      className="min-h-11 inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-primary hover:text-primary-hover group/link transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-[var(--radius-button)]"
                       aria-label={`Explorer : ${item.title}`}
                     >
                       <span className="sm:hidden">Explorer</span>
@@ -229,7 +229,7 @@ export default function LandingVisualBanner() {
 
                     <Link
                       href={budgetHref}
-                      className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       aria-label={user
                         ? 'Ouvrir le simulateur budget dans le tableau de bord (1 jeton)'
                         : 'Estimer un budget avec 3 formules IA (1 jeton)'}

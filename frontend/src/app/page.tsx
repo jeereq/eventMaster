@@ -15,8 +15,8 @@ import { Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { ArrowRight } from 'lucide-react';
 
-const LandingAiSimulationShowcase = dynamic(
-  () => import('@/components/landing/LandingAiSimulationShowcase'),
+const LandingSimulatorTeaser = dynamic(
+  () => import('@/components/landing/LandingSimulatorTeaser'),
   { loading: () => <LandingSectionFallback label="Chargement du simulateur IA…" /> },
 );
 
@@ -48,7 +48,7 @@ export default function Home() {
         </LandingLazyMount>
         <Landing3DTeaserBand />
         <LandingLazyMount label="Chargement du simulateur IA…" eagerHash="simulateur-ia">
-          <LandingAiSimulationShowcase />
+          <LandingSimulatorTeaser />
         </LandingLazyMount>
         <FaqSection
           subtitle="Tout ce que vous devez savoir pour organiser votre événement en toute sérénité."

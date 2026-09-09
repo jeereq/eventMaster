@@ -78,12 +78,11 @@ export function resolveAiFabPlacement(input: {
   if (onHome) {
     return {
       mood: 'celebrate',
-      label: 'Studios IA',
-      subtitle: 'Budget · invitation · salle',
-      ariaLabel: 'Aller aux studios IA : budget, invitation et plan de salle',
+      label: 'Simulateur IA',
+      subtitle: 'Estimer mon budget',
+      ariaLabel: 'Aller au simulateur de budget IA',
       title: `Budget, invitation et plan de salle · ${aiTokenCostLegend()}`,
-      click: 'scroll',
-      scrollId: 'simulateur-ia',
+      click: 'href',
       href: PUBLIC_SIMULATOR_PATH,
       modalTitle: 'Studios IA',
       modalDescription: `Trois ateliers : packs budget, carte invitation, plan 2D / 3D. ${aiTokenCostLegend()}.`,

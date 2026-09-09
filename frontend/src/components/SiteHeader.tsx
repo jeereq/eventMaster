@@ -28,7 +28,7 @@ interface SiteHeaderProps {
 
 const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/marketplace', label: 'Marketplace' },
-  { href: '/#simulateur-ia', label: 'Simulateur' },
+  { href: '/simulateur', label: 'Simulateur' },
   { href: '/activite', label: 'Réalisations' },
   { href: '/plans-3d', label: 'Plans 2D/3D' },
   { href: '/modeles', label: 'Modèles' },
@@ -118,8 +118,8 @@ export default function SiteHeader({
     if (href === '/activite') {
       return pathname === '/activite' || pathname.startsWith('/activite/');
     }
-    if (href === '/#simulateur-ia') {
-      return pathname === '/' && currentHash === '#simulateur-ia';
+    if (href === '/simulateur') {
+      return pathname === '/simulateur' || pathname.startsWith('/simulateur');
     }
     if (href === '/contact') {
       return pathname === '/contact';

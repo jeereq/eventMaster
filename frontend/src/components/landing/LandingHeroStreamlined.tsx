@@ -101,8 +101,9 @@ export default function LandingHeroStreamlined() {
             </span>
           </h1>
 
-          <p className="hidden sm:block text-base text-muted leading-relaxed max-w-xl mx-auto">
-            Salles prestigieuses, prestataires d’exception, plans de table 3D et invitations WhatsApp — choisissez d’abord votre projet.
+          <p className="text-xs sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
+            <span className="sm:hidden">Salles, prestataires, plans 3D et invitations WhatsApp en RDC.</span>
+            <span className="hidden sm:inline">Salles prestigieuses, prestataires d’exception, plans de table 3D et invitations WhatsApp — choisissez d’abord votre projet.</span>
           </p>
 
           {user ? (
@@ -120,18 +121,18 @@ export default function LandingHeroStreamlined() {
             </div>
           ) : null}
 
-          <div className="hidden sm:flex pt-1 flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted">
+          <div className="flex pt-1 flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1.5 text-[11px] sm:text-xs text-muted">
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{cityLabel}</span>
             </span>
-            <span className="hidden min-[480px]:inline text-border">·</span>
+            <span className="text-border">·</span>
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>Mobile Money & Cartes</span>
             </span>
-            <span className="hidden sm:inline text-border">·</span>
-            <span className="hidden sm:inline-flex items-center gap-1">
+            <span className="text-border">·</span>
+            <span className="inline-flex items-center gap-1">
               <Smartphone className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>100% dans le navigateur</span>
             </span>

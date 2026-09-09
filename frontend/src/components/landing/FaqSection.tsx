@@ -75,7 +75,7 @@ export default function FaqSection({
                   type="button"
                   id={`faq-trigger-${item.id}`}
                   onClick={() => setOpenId(isOpen ? null : item.id)}
-                  className="relative z-10 w-full min-h-11 flex items-center justify-between gap-4 px-4 sm:px-5 py-4 text-left transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                  className="relative z-10 w-full min-h-12 flex items-center justify-between gap-4 px-4 sm:px-5 py-3.5 text-left transition cursor-pointer touch-manipulation active:bg-surface-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                   aria-expanded={isOpen}
                   aria-controls={`faq-panel-${item.id}`}
                 >

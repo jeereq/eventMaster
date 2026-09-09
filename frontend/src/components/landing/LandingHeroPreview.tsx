@@ -244,7 +244,7 @@ export default function LandingHeroPreview({
                       <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg em-glow-icon-box shrink-0 flex items-center justify-center">
                         <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
-                      <span className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                      <span className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">
                         {act.title}
                       </span>
                     </div>
@@ -253,7 +253,7 @@ export default function LandingHeroPreview({
                     </span>
                   </div>
 
-                  <p className="hidden sm:block text-xs text-muted leading-relaxed line-clamp-3">
+                  <p className="text-xs text-muted leading-relaxed line-clamp-2 sm:line-clamp-3">
                     {act.description}
                   </p>
                 </div>
@@ -261,7 +261,7 @@ export default function LandingHeroPreview({
                 <div className="mt-auto pt-1 sm:pt-2">
                   <div
                     className={cn(
-                      'w-full min-h-11 py-1.5 sm:py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold flex items-center justify-between transition-all duration-200',
+                      'w-full min-h-11 py-1.5 sm:py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold flex items-center justify-between transition-all duration-200 touch-manipulation active:scale-[0.98]',
                       act.highlight
                         ? 'bg-primary-solid text-primary-foreground shadow-sm shadow-primary/30 group-hover:bg-primary-solid-hover'
                         : 'bg-surface-muted text-foreground border border-border group-hover:border-primary/40 group-hover:text-primary',
@@ -277,10 +277,10 @@ export default function LandingHeroPreview({
         </div>
 
         {/* Note de réassurance sous la grille */}
-        <div className="hidden sm:flex pt-2 border-t border-border/80 flex-wrap items-center justify-between gap-2 text-xs text-muted">
-          <div className="flex items-center gap-2">
+        <div className="flex pt-2 border-t border-border/80 flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-muted">
+          <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span>Zéro installation requise · Fonctionne à 100% dans votre navigateur</span>
+            <span>Zéro installation requise · 100% dans le navigateur</span>
           </div>
           <span className="font-semibold text-primary">
             Gratuit pour démarrer

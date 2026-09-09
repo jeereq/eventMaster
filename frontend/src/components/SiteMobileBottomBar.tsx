@@ -9,8 +9,7 @@ import { cn } from '@/lib/cn';
 import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 
-const SIMULATOR_HREF = '/#simulateur-ia';
-const SIMULATOR_SECTION_ID = 'simulateur-ia';
+const SIMULATOR_HREF = '/simulateur';
 
 export interface MobileNavItem {
   id: string;
@@ -60,7 +59,7 @@ function isItemActive(itemHref: string, pathname: string, currentHash: string): 
     return pathname === '/' && (!currentHash || currentHash === '#' || currentHash === '');
   }
   if (itemHref === SIMULATOR_HREF) {
-    return pathname === '/' && currentHash === `#${SIMULATOR_SECTION_ID}`;
+    return pathname === '/simulateur' || pathname.startsWith('/simulateur');
   }
   if (itemHref === '/plans-3d') {
     return pathname === '/plans-3d' || pathname === '/editeur' || pathname.startsWith('/plans-3d/');
@@ -106,11 +105,6 @@ export default function SiteMobileBottomBar({
         }
       }
       return;
-    }
-    if (item.id === 'simulator' && pathname === '/') {
-      e.preventDefault();
-      revealAndScrollToSection(SIMULATOR_SECTION_ID);
-      setCurrentHash(`#${SIMULATOR_SECTION_ID}`);
     }
   };
 
