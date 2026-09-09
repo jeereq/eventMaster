@@ -109,7 +109,7 @@ const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.Compon
 ];
 
 const fieldClass =
-  'w-full px-4 py-2.5 bg-white dark:bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition';
+  'w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition';
 const labelClass = 'text-xs font-bold text-muted uppercase tracking-wider';
 const sectionCardClass = 'bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4';
 
@@ -267,7 +267,7 @@ export default function AdminPlatformSettings({
               Maintenance et inscriptions. L’activation du mode maintenance demande une confirmation.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex items-center gap-3 cursor-pointer bg-white dark:bg-background p-4 border border-border rounded-xl hover:bg-surface-muted/50 transition">
+              <label className="flex items-center gap-3 cursor-pointer bg-surface p-4 border border-border rounded-xl hover:bg-surface-muted/50 transition">
                 <input
                   type="checkbox"
                   checked={Boolean(value.maintenanceMode)}
@@ -281,7 +281,7 @@ export default function AdminPlatformSettings({
                   </span>
                 </div>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer bg-white dark:bg-background p-4 border border-border rounded-xl hover:bg-surface-muted/50 transition">
+              <label className="flex items-center gap-3 cursor-pointer bg-surface p-4 border border-border rounded-xl hover:bg-surface-muted/50 transition">
                 <input
                   type="checkbox"
                   checked={value.allowRegistration !== false}
@@ -330,7 +330,7 @@ export default function AdminPlatformSettings({
                         'min-h-11 px-3 py-2.5 rounded-xl border text-left transition',
                         active
                           ? 'bg-primary/10 border-primary/40 text-foreground'
-                          : 'bg-white dark:bg-background border-border text-muted hover:text-foreground',
+                          : 'bg-surface border-border text-muted hover:text-foreground',
                       )}
                     >
                       <span className="block text-sm font-semibold">{opt.label}</span>
@@ -346,7 +346,7 @@ export default function AdminPlatformSettings({
         {section === 'payments' && (
           <div className={sectionCardClass}>
             <SectionTitle icon={Wallet}>Paiements</SectionTitle>
-            <label className="flex items-center gap-3 cursor-pointer bg-white dark:bg-background p-4 border border-border rounded-xl hover:bg-surface-muted/50 transition">
+            <label className="flex items-center gap-3 cursor-pointer bg-surface p-4 border border-border rounded-xl hover:bg-surface-muted/50 transition">
               <input
                 type="checkbox"
                 checked={value.onlinePaymentsEnabled !== false}
@@ -1324,7 +1324,7 @@ function DonationsAccessEditor({
         Vous pouvez autoriser tout le monde sans restrictions ou restreindre l’accès à une ou plusieurs organisations spécifiques.
       </p>
 
-      <label className="flex items-center justify-between gap-3 min-h-11 cursor-pointer bg-white dark:bg-background p-3.5 border border-border rounded-xl">
+      <label className="flex items-center justify-between gap-3 min-h-11 cursor-pointer bg-surface p-3.5 border border-border rounded-xl">
         <div>
           <span className="text-sm font-semibold text-foreground block">Activer la fonctionnalité de dons libres</span>
           <span className="text-xs text-muted">Désactivé = aucun événement ne peut proposer de collecte de dons sur la plateforme</span>
@@ -1349,7 +1349,7 @@ function DonationsAccessEditor({
                   'p-3.5 rounded-xl border text-left transition flex items-start gap-3',
                   access.mode === 'all'
                     ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary/20'
-                    : 'bg-white dark:bg-background border-border text-muted hover:text-foreground',
+                    : 'bg-surface border-border text-muted hover:text-foreground',
                 )}
               >
                 <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold', access.mode === 'all' ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
@@ -1368,7 +1368,7 @@ function DonationsAccessEditor({
                   'p-3.5 rounded-xl border text-left transition flex items-start gap-3',
                   access.mode === 'restricted'
                     ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary/20'
-                    : 'bg-white dark:bg-background border-border text-muted hover:text-foreground',
+                    : 'bg-surface border-border text-muted hover:text-foreground',
                 )}
               >
                 <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold', access.mode === 'restricted' ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
@@ -1417,16 +1417,16 @@ function DonationsAccessEditor({
                   {access.tenantIds.map((id) => (
                     <span
                       key={id}
-                      className="inline-flex items-center gap-1.5 min-h-9 pl-3 pr-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20"
+                      className="inline-flex items-center gap-1.5 min-h-10 pl-3.5 pr-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20"
                     >
                       {named[id] || id.slice(0, 8)}
                       <button
                         type="button"
                         aria-label={`Retirer ${named[id] || 'cette organisation'}`}
                         onClick={() => patch({ tenantIds: access.tenantIds.filter((item) => item !== id) })}
-                        className="w-5 h-5 inline-flex items-center justify-center rounded-full hover:bg-primary/20 text-primary"
+                        className="w-7 h-7 -mr-0.5 inline-flex items-center justify-center rounded-full hover:bg-primary/20 text-primary touch-manipulation active:scale-95 transition"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </span>
                   ))}

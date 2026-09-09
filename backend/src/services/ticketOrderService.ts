@@ -196,7 +196,7 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
       innerHtml: `
         <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${escapeHtml(order.buyerName)}</strong>,</p>
         <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Nous vous remercions très chaleureusement pour votre contribution solidaire de <strong>${order.amountFc.toLocaleString('fr-FR')} FC</strong> en soutien à <strong>${escapeHtml(event.title)}</strong>.</p>
-        ${donationMeta?.donationNote ? `<p style="margin:0 0 16px;font-size:14px;color:#475569;font-style:italic;border-left:3px solid #6366f1;padding-left:12px;">« ${escapeHtml(String(donationMeta.donationNote))} »</p>` : ''}
+        ${donationMeta?.donationNote ? `<div style="margin:0 0 16px;padding:12px 14px;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;color:#475569;font-style:italic;">« ${escapeHtml(String(donationMeta.donationNote))} »</div>` : ''}
         ${rsvpUrl ? `<p style="margin:0 0 16px;font-size:14px;color:#334155;">Un pass d’accès invité vous a été attribué pour l'événement.</p>` : ''}
       `,
       ...(rsvpUrl ? { cta: { href: rsvpUrl, label: 'Ouvrir mon espace invité' } } : {}),

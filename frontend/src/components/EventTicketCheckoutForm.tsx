@@ -494,9 +494,17 @@ export default function EventTicketCheckoutForm({
     <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3.5">
       {/* Switcher Billets / Don si les deux sont disponibles */}
       {hasDonations && (event.ticketingEnabled || !event.paid) && (
-        <div className="grid grid-cols-2 p-1 bg-surface-muted rounded-xl border border-border gap-1">
+        <div
+          role="tablist"
+          aria-label="Mode de contribution"
+          className="grid grid-cols-2 p-1 bg-surface-muted rounded-xl border border-border gap-1"
+        >
           <button
             type="button"
+            role="tab"
+            id="checkout-tab-ticket"
+            aria-selected={checkoutTab === 'ticket'}
+            aria-controls="checkout-panel-ticket"
             onClick={() => setCheckoutTab('ticket')}
             className={cn(
               'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
@@ -510,11 +518,15 @@ export default function EventTicketCheckoutForm({
           </button>
           <button
             type="button"
+            role="tab"
+            id="checkout-tab-donation"
+            aria-selected={checkoutTab === 'donation'}
+            aria-controls="checkout-panel-donation"
             onClick={() => setCheckoutTab('donation')}
             className={cn(
               'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
               checkoutTab === 'donation'
-                ? 'bg-surface text-rose-600 dark:text-rose-400 shadow-2xs border border-border'
+                ? 'bg-surface text-rose-700 dark:text-rose-400 shadow-2xs border border-border'
                 : 'text-muted hover:text-foreground',
             )}
           >
@@ -594,7 +606,12 @@ export default function EventTicketCheckoutForm({
           description="Un compte est requis pour réserver une place ou effectuer un don. Après connexion, vous revenez à cette fiche."
         />
       ) : checkoutTab === 'donation' ? (
-        <div className="space-y-4">
+        <div
+          id="checkout-panel-donation"
+          role="tabpanel"
+          aria-labelledby="checkout-tab-donation"
+          className="space-y-4"
+        >
           {/* Cause soutenue */}
           {donationsConfig?.cause && (
             <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 space-y-1">
@@ -633,7 +650,15 @@ export default function EventTicketCheckoutForm({
               </div>
 
               {donationsConfig.targetAmountFc && (
-                <div className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border">
+                <div
+                  role="progressbar"
+                  aria-label="Progression de la collecte de dons"
+                  aria-valuenow={donationsConfig.collectedAmountFc || 0}
+                  aria-valuemin={0}
+                  aria-valuemax={donationsConfig.targetAmountFc}
+                  aria-valuetext={`${formatFc(donationsConfig.collectedAmountFc || 0)} récoltés sur un objectif de ${formatFc(donationsConfig.targetAmountFc)}`}
+                  className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border"
+                >
                   <div
                     className="h-full bg-gradient-to-r from-rose-500 to-amber-500 transition-all duration-500 rounded-full"
                     style={{
@@ -682,7 +707,7 @@ export default function EventTicketCheckoutForm({
                   <label className="text-xs font-semibold text-foreground block">
                     Suggestions rapides de montant
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
                     {donationsConfig.suggestedAmountsFc.map((amt) => {
                       const active = Number(donationAmountFc) === amt;
                       return (
@@ -691,9 +716,9 @@ export default function EventTicketCheckoutForm({
                           type="button"
                           onClick={() => setDonationAmountFc(String(amt))}
                           className={cn(
-                            'py-2 px-1 text-xs font-bold rounded-lg border transition text-center touch-manipulation active:scale-95',
+                            'min-h-11 px-2.5 py-2 text-xs font-bold rounded-lg border transition flex items-center justify-center text-center touch-manipulation active:scale-95',
                             active
-                              ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                              ? 'bg-rose-700 text-white border-rose-700 shadow-xs'
                               : 'bg-surface hover:bg-surface-muted text-foreground border-border',
                           )}
                         >
@@ -786,7 +811,7 @@ export default function EventTicketCheckoutForm({
               onCurrencyChange={setCurrency}
             />
 
-            <Button type="submit" loading={busy} fullWidth className="min-h-11 bg-rose-600 hover:bg-rose-700 text-white font-bold">
+            <Button type="submit" loading={busy} fullWidth className="min-h-11 bg-rose-700 hover:bg-rose-800 text-white font-bold">
               Confirmer et verser mon don de {formatFc(effectiveDonationFc)}
             </Button>
           </form>
@@ -794,7 +819,13 @@ export default function EventTicketCheckoutForm({
       ) : event.soldOut ? (
         <p className="text-sm text-muted">Plus de places disponibles pour la billetterie.</p>
       ) : (
-        <form onSubmit={submit} className="space-y-3">
+        <form
+          id="checkout-panel-ticket"
+          role="tabpanel"
+          aria-labelledby="checkout-tab-ticket"
+          onSubmit={submit}
+          className="space-y-3"
+        >
           {token && user && (
             <p className="text-xs text-muted">
               Connecté en tant que {user.name || user.email}. Les billets apparaîtront dans{' '}
@@ -1015,19 +1046,19 @@ export default function EventTicketCheckoutForm({
                   type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   disabled={quantity <= 1}
-                  className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40 active:scale-95 transition touch-manipulation"
+                  className="w-11 h-11 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40 active:scale-95 transition touch-manipulation"
                   aria-label="Diminuer"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <div className="w-16 h-10 sm:h-9 rounded-lg border border-border bg-surface flex items-center justify-center font-bold text-sm text-foreground tabular-nums">
+                <div className="w-16 h-11 rounded-lg border border-border bg-surface flex items-center justify-center font-bold text-sm text-foreground tabular-nums">
                   {quantity}
                 </div>
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => Math.min(8, q + 1))}
                   disabled={quantity >= 8}
-                  className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40 active:scale-95 transition touch-manipulation"
+                  className="w-11 h-11 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40 active:scale-95 transition touch-manipulation"
                   aria-label="Augmenter"
                 >
                   <Plus className="w-4 h-4" />
