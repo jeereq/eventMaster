@@ -231,13 +231,22 @@ export function buildTablePlanPreviewBlueprint(
   const meta = metadataFromPlan(tablePlan, tables);
 
   if (roomBlueprint) {
-    const base = ensureBlueprintDefaults(structuredClone(roomBlueprint));
+    let base: RoomLayoutBlueprint;
+    try {
+      base = ensureBlueprintDefaults(structuredClone(roomBlueprint));
+    } catch {
+      try {
+        base = ensureBlueprintDefaults(JSON.parse(JSON.stringify(roomBlueprint)));
+      } catch {
+        base = ensureBlueprintDefaults({ ...roomBlueprint });
+      }
+    }
     // Conserver le mobilier décoratif non-table et non-rangée de la salle (bars, scène, podium, etc.)
     // Les rangées et tables sont déjà incluses et synchronisées dans tableFurniture
-    const existingDecor = base.furniture.filter((f) => f.kind !== 'table' && f.kind !== 'row' && f.kind !== 'zone');
+    const existingDecor = (base.furniture || []).filter((f) => f && f.kind !== 'table' && f.kind !== 'row' && f.kind !== 'zone');
     const combinedFurniture = [
       ...zoneFurniture,
-      ...(tableFurniture.length > 0 ? tableFurniture : base.furniture.filter((f) => f.kind === 'table' || f.kind === 'row')),
+      ...(tableFurniture.length > 0 ? tableFurniture : (base.furniture || []).filter((f) => f && (f.kind === 'table' || f.kind === 'row'))),
       ...existingDecor,
     ];
 

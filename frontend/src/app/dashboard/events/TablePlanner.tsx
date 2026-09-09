@@ -408,8 +408,8 @@ export default function TablePlanner({
     return [];
   }, [roomLayoutBlueprint, initialTablePlan?.roomOutline]);
 
-  const plannerWidthM = roomLayoutBlueprint?.canvas.widthM ?? 20;
-  const plannerHeightM = roomLayoutBlueprint?.canvas.heightM ?? 16;
+  const plannerWidthM = roomLayoutBlueprint?.canvas?.widthM ?? 20;
+  const plannerHeightM = roomLayoutBlueprint?.canvas?.heightM ?? 16;
 
  const previewQuality = caps.canShowcaseRender ? 'showcase' as const : 'standard' as const;
 
@@ -1194,7 +1194,7 @@ export default function TablePlanner({
                 walls={tablePlannerWalls}
                 canvasWidthM={plannerWidthM}
                 canvasHeightM={plannerHeightM}
-                activeStoryId={roomLayoutBlueprint?.metadata.activeStoryId}
+                activeStoryId={roomLayoutBlueprint?.metadata?.activeStoryId}
                 showDoorSwings={true}
               />
             )}

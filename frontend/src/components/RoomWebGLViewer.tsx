@@ -9,6 +9,7 @@ import {
   RoomLayoutBlueprint,
   RoomWallSegment,
   RoomWallOpening,
+  ensureBlueprintDefaults,
   outlinePolygonPoints,
   resolveBlueprintWalls,
   resolveFurnitureSurfaceAt,
@@ -2251,8 +2252,8 @@ function CinematicCameraController({
 }
 
 function SceneContent({
-  blueprint,
-  selected,
+  blueprint: rawBlueprint,
+  selected = [],
   onSelect,
   onMoveItem,
   onMoveEnd,
@@ -2283,8 +2284,9 @@ function SceneContent({
   cameraTargetPose?: TargetCameraPose | null;
   onCameraTargetArrived?: () => void;
 }) {
-  const widthM = blueprint.canvas?.widthM ?? 20;
-  const heightM = blueprint.canvas?.heightM ?? 16;
+  const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
+  const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
+  const heightM = Number.isFinite(blueprint.canvas?.heightM) && (blueprint.canvas?.heightM ?? 0) > 0 ? blueprint.canvas.heightM : 16;
   const depthAmount = resolveDepthAmount(blueprint.metadata ?? {});
   const theme = getRoomTheme(blueprint.metadata?.roomThemeId, blueprint);
   const floorType = blueprint.metadata?.floorType ?? theme.defaultFloorType;
@@ -2824,8 +2826,8 @@ function SceneContent({
 }
 
 const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function RoomWebGLViewer({
-  blueprint,
-  selected,
+  blueprint: rawBlueprint,
+  selected = [],
   onSelect,
   onMoveItem,
   onMoveEnd,
@@ -2841,8 +2843,9 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   onWalkthroughProgress,
   onWalkthroughComplete,
   paused = false,
-  blockedSeats,
+  blockedSeats = [],
 }, ref) {
+  const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
   const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
   const hideLabels = presentationMode || previewMode || walkthroughActive;
@@ -2884,8 +2887,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
   const handleSelectPreset = useCallback((key: CameraPresetKey) => {
     setActivePreset(key);
-    const widthM = blueprint.canvas?.widthM ?? 20;
-    const heightM = blueprint.canvas?.heightM ?? 16;
+    const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
+    const heightM = Number.isFinite(blueprint.canvas?.heightM) && (blueprint.canvas?.heightM ?? 0) > 0 ? blueprint.canvas.heightM : 16;
     let pos: [number, number, number];
     let target: [number, number, number];
     switch (key) {
@@ -2910,7 +2913,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       pos: new THREE.Vector3(...pos),
       target: new THREE.Vector3(...target),
     });
-  }, [blueprint.canvas.widthM, blueprint.canvas.heightM]);
+  }, [blueprint.canvas?.widthM, blueprint.canvas?.heightM]);
 
   const handleResetCamera = useCallback(() => {
     setActivePreset(null);
@@ -3160,7 +3163,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           </div>
           {previewMode ? (
             <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
-              {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
+              {blueprint.canvas?.widthM ?? 20}×{blueprint.canvas?.heightM ?? 16} m
             </div>
           ) : null}
         </div>

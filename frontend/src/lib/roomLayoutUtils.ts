@@ -2440,9 +2440,32 @@ export function wallLengthMeters(wall: RoomWallSegment, canvas: { widthM: number
 }
 
 export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  if (!blueprint) {
+    return {
+      version: 1,
+      roomType: 'BANQUET',
+      roomOutline: defaultRoomOutline('rectangle'),
+      canvas: { widthM: 20, heightM: 16 },
+      fixtures: [],
+      furniture: [],
+      walls: [],
+      metadata: {
+        totalSeats: 0,
+        tableCount: 0,
+        defaultTableColor: '#ffffff',
+        stories: [{ id: 'story-rdc', label: 'RDC', elevationM: 0 }],
+        activeStoryId: 'story-rdc',
+        foundation: { kind: 'none', heightM: 0 },
+      },
+    };
+  }
   const metadata = blueprint.metadata ?? ({} as RoomLayoutBlueprint['metadata']);
   const outline = blueprint.roomOutline ?? defaultRoomOutline('rectangle');
   const canvas = blueprint.canvas ?? { widthM: 20, heightM: 16 };
+  const safeCanvas = {
+    widthM: Number.isFinite(canvas.widthM) && canvas.widthM > 0 ? canvas.widthM : 20,
+    heightM: Number.isFinite(canvas.heightM) && canvas.heightM > 0 ? canvas.heightM : 16,
+  };
   const stories =
     Array.isArray(metadata.stories) && metadata.stories.length > 0
       ? metadata.stories
@@ -2453,13 +2476,16 @@ export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLay
       : stories[0]!.id;
   return {
     ...blueprint,
-    canvas,
+    canvas: safeCanvas,
     roomOutline: outline,
+    fixtures: Array.isArray(blueprint.fixtures) ? blueprint.fixtures : [],
+    furniture: Array.isArray(blueprint.furniture) ? blueprint.furniture : [],
     walls: Array.isArray(blueprint.walls)
       ? blueprint.walls
       : wallsFromRoomOutline(outline, { withEntrance: true }),
     metadata: {
       ...metadata,
+      totalSeats: metadata.totalSeats ?? 0,
       defaultTableColor: metadata.defaultTableColor ?? '#ffffff',
       stories,
       activeStoryId,
