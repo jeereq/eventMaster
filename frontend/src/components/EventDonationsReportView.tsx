@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   Filter,
+  Loader2,
 } from 'lucide-react';
 import { Button, Input, StatusPill, Badge, EmptyState } from '@/components/ui';
 import type { EventDonationsReportResponse, EventDonationItem } from '@/lib/donationsReport';
@@ -150,7 +151,13 @@ export default function EventDonationsReportView({
             size="sm"
             onClick={handleExportCsv}
             disabled={downloadingCsv || loading || (summary?.totalAttemptsCount ?? 0) === 0}
-            leftIcon={<Download className={cn('w-3.5 h-3.5', downloadingCsv && 'animate-bounce')} />}
+            leftIcon={
+              downloadingCsv ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )
+            }
           >
             Exporter (CSV)
           </Button>
@@ -267,7 +274,7 @@ export default function EventDonationsReportView({
             <span className="text-muted tabular-nums">
               {formatFc(summary.collectedAmountFc)} sur {formatFc(summary.targetAmountFc)}
               {summary.collectedAmountFc < summary.targetAmountFc && (
-                <span className="text-rose-600 dark:text-rose-400 ml-1">
+                <span className="text-rose-700 dark:text-rose-300 ml-1">
                   (Reste {formatFc(summary.targetAmountFc - summary.collectedAmountFc)})
                 </span>
               )}
@@ -283,7 +290,7 @@ export default function EventDonationsReportView({
             className="w-full h-3 rounded-full bg-surface-muted overflow-hidden border border-border/50"
           >
             <div
-              className="h-full bg-gradient-to-r from-rose-500 via-rose-600 to-primary transition-all duration-500 rounded-full"
+              className="h-full bg-gradient-to-r from-rose-500 via-rose-600 to-primary transition-all duration-500 motion-reduce:transition-none rounded-full"
               style={{ width: `${Math.max(2, summary.progressPercent || 0)}%` }}
             />
           </div>
@@ -334,8 +341,19 @@ export default function EventDonationsReportView({
               placeholder="Rechercher par nom, email, note, réf..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-11"
+              aria-label="Rechercher parmi les dons solidaires"
+              className="pl-9 pr-9 h-11"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Effacer la recherche"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Filtre de statut de paiement */}
@@ -483,7 +501,7 @@ export default function EventDonationsReportView({
                   </div>
 
                   <div className="flex flex-col sm:items-end shrink-0">
-                    <span className="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                    <span className="text-base sm:text-lg font-black text-rose-700 dark:text-rose-300 tabular-nums">
                       {formatFc(donation.amountFc)}
                     </span>
                     {donation.guest && (

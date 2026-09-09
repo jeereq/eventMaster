@@ -452,7 +452,8 @@ export default function OrgTicketingView({
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground p-1"
+                  aria-label="Effacer la recherche"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground"
                 >
                   <XCircle className="w-3.5 h-3.5" />
                 </button>

@@ -2170,6 +2170,7 @@ Merci de confirmer votre présence :
  onClick={() => handleWorkflowNavigate('donations')}
  className="rounded-xl border border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10 transition px-3 py-2 text-center touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
  title="Voir le reporting des dons solidaires"
+ aria-label="Voir le reporting des dons solidaires de l’événement"
  >
  <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center justify-center gap-1">
  <Heart className="w-3 h-3 fill-rose-500/30" />

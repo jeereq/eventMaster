@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   ArrowUpRight,
   TrendingUp,
+  Loader2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -150,7 +151,13 @@ export default function AdminDonationsPage() {
             size="sm"
             onClick={handleExportCsv}
             disabled={downloadingCsv || loading || (summary?.totalAttemptsCount ?? 0) === 0}
-            leftIcon={<Download className={cn('w-3.5 h-3.5', downloadingCsv && 'animate-bounce')} />}
+            leftIcon={
+              downloadingCsv ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )
+            }
           >
             Exporter (CSV)
           </Button>
@@ -260,7 +267,7 @@ export default function AdminDonationsPage() {
               <div key={ch.channel} className="rounded-xl border border-border bg-surface-muted/40 p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-foreground truncate">{ch.label}</span>
-                  <span className="font-black text-rose-600 dark:text-rose-400">{ch.percent}%</span>
+                  <span className="font-black text-rose-700 dark:text-rose-300">{ch.percent}%</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-border overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-rose-500 to-rose-600 rounded-full" style={{ width: `${ch.percent}%` }} />
@@ -276,7 +283,11 @@ export default function AdminDonationsPage() {
       )}
 
       {/* Onglets de navigation des sous-sections */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+      <div
+        role="tablist"
+        aria-label="Sections du reporting des dons solidaires"
+        className="flex flex-wrap items-center gap-2 border-b border-border pb-3"
+      >
         {([
           ['overview', 'Vue générale & Transactions', Heart],
           ['events', 'Top Événements collecteurs', Calendar],
@@ -285,8 +296,9 @@ export default function AdminDonationsPage() {
           <button
             key={id}
             type="button"
+            role="tab"
+            aria-selected={viewTab === id}
             onClick={() => setViewTab(id)}
-            aria-pressed={viewTab === id}
             className={cn(
               'inline-flex items-center gap-2 px-3.5 py-2 min-h-11 rounded-xl text-xs font-semibold transition touch-manipulation',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
@@ -341,7 +353,7 @@ export default function AdminDonationsPage() {
                         <span className="truncate max-w-xs">{ev.eventTitle}</span>
                       </td>
                       <td className="py-3.5 px-4 text-muted truncate max-w-[160px]">{ev.tenantName}</td>
-                      <td className="py-3.5 px-4 font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                      <td className="py-3.5 px-4 font-black text-rose-700 dark:text-rose-300 tabular-nums">
                         {formatFc(ev.collectedAmountFc)}
                       </td>
                       <td className="py-3.5 px-4 text-muted tabular-nums">
@@ -366,7 +378,8 @@ export default function AdminDonationsPage() {
                       <td className="py-3.5 pl-4 text-right">
                         <Link
                           href={`/dashboard/events/${ev.eventId}?tab=donations`}
-                          className="inline-flex items-center gap-1 text-primary hover:underline font-semibold"
+                          className="min-h-11 min-w-11 inline-flex items-center justify-end gap-1 text-primary hover:underline font-semibold"
+                          aria-label={`Consulter le rapport de dons de ${ev.eventTitle}`}
                         >
                           <span>Rapport</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
@@ -413,14 +426,15 @@ export default function AdminDonationsPage() {
                         <span>{t.tenantName}</span>
                       </td>
                       <td className="py-3.5 px-4 text-muted tabular-nums">{t.eventsCount}</td>
-                      <td className="py-3.5 px-4 font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                      <td className="py-3.5 px-4 font-black text-rose-700 dark:text-rose-300 tabular-nums">
                         {formatFc(t.collectedAmountFc)}
                       </td>
                       <td className="py-3.5 px-4 text-foreground font-semibold tabular-nums">{t.donorsCount}</td>
                       <td className="py-3.5 pl-4 text-right">
                         <Link
                           href={`/dashboard?tab=tenants&q=${encodeURIComponent(t.tenantName)}`}
-                          className="inline-flex items-center gap-1 text-primary hover:underline font-semibold"
+                          className="min-h-11 min-w-11 inline-flex items-center justify-end gap-1 text-primary hover:underline font-semibold"
+                          aria-label={`Consulter la fiche de ${t.tenantName}`}
                         >
                           <span>Voir fiche</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
@@ -449,8 +463,19 @@ export default function AdminDonationsPage() {
                   placeholder="Recherche nom, événement, réf…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-11"
+                  aria-label="Recherche de transactions de dons solidaires"
+                  className="pl-9 pr-9 h-11"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Effacer la recherche"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                )}
               </div>
 
               {/* Période */}
@@ -602,7 +627,7 @@ export default function AdminDonationsPage() {
                       </div>
 
                       <div className="flex flex-col sm:items-end shrink-0">
-                        <span className="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                        <span className="text-base sm:text-lg font-black text-rose-700 dark:text-rose-300 tabular-nums">
                           {formatFc(donation.amountFc)}
                         </span>
                       </div>
