@@ -41,7 +41,7 @@ function Mat({
   ior,
 }: MatProps) {
   const gold = color === '#c9a227' || color === '#d4af37' || color === '#d97706';
-  const hasTransmission = (typeof transmission === 'number' && transmission > 0) || (transparent && typeof opacity === 'number' && opacity < 0.9);
+  const hasTransmission = typeof transmission === 'number' && transmission > 0;
 
   if (hasTransmission) {
     return (

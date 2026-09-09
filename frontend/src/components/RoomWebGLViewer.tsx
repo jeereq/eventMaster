@@ -1347,33 +1347,33 @@ function PlaceSetting({
         <boxGeometry args={[0.007, 0.0025, 0.07]} />
         <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
       </mesh>
-      {/* 6. Duo de verres à pied physiques (Verre à eau + Verre à vin) */}
+      {/* 6. Duo de verres à pied en cristal transparent */}
       <group position={[0.055, 0.004, 0.082]}>
         <mesh position={[0, 0.002, 0]}>
-          <cylinderGeometry args={[0.013, 0.014, 0.0025, 14]} />
-          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+          <cylinderGeometry args={[0.013, 0.014, 0.0025, 12]} />
+          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
         </mesh>
         <mesh position={[0, 0.022, 0]}>
           <cylinderGeometry args={[0.002, 0.002, 0.038, 8]} />
-          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
         </mesh>
         <mesh position={[0, 0.052, 0]}>
-          <cylinderGeometry args={[0.015, 0.009, 0.032, 16]} />
-          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+          <cylinderGeometry args={[0.015, 0.009, 0.032, 12]} />
+          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
         </mesh>
       </group>
       <group position={[0.08, 0.004, 0.062]}>
         <mesh position={[0, 0.002, 0]}>
-          <cylinderGeometry args={[0.011, 0.012, 0.002, 14]} />
-          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+          <cylinderGeometry args={[0.011, 0.012, 0.002, 12]} />
+          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
         </mesh>
         <mesh position={[0, 0.02, 0]}>
           <cylinderGeometry args={[0.0018, 0.0018, 0.034, 8]} />
-          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
         </mesh>
         <mesh position={[0, 0.046, 0]}>
-          <cylinderGeometry args={[0.013, 0.007, 0.028, 16]} />
-          <meshPhysicalMaterial color={glass} transmission={0.95} roughness={0.03} ior={1.52} transparent opacity={0.92} />
+          <cylinderGeometry args={[0.013, 0.007, 0.028, 12]} />
+          <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
         </mesh>
       </group>
     </group>
@@ -1499,19 +1499,20 @@ function TableMesh({
           selected={tableHalo}
         />
       </group>
-      {(hasCouverts || (showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 2)) && Array.from({ length: Math.min(capacity, 10) }).map((_, i) => {
-        const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
-        const r = Math.max(size[0], size[1]) * 0.28;
-        return (
-          <PlaceSetting
-            key={`c-${i}`}
-            style={couvertStyle}
-            position={[Math.cos(a) * r, topY + 0.055, Math.sin(a) * r]}
-            rotationY={-a}
-          />
-        );
-      })}
-      {(hasCenterpiece || (showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && (
+      {(hasCouverts || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity <= 10)) &&
+        Array.from({ length: Math.min(capacity, 8) }).map((_, i) => {
+          const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
+          const r = Math.max(size[0], size[1]) * 0.28;
+          return (
+            <PlaceSetting
+              key={`c-${i}`}
+              style={couvertStyle}
+              position={[Math.cos(a) * r, topY + 0.055, Math.sin(a) * r]}
+              rotationY={-a}
+            />
+          );
+        })}
+      {(hasCenterpiece || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && (
         <group position={[0, topY, 0]}>
           {centerpieceStyle === 'greeneryRunner' ? (
             <GreeneryRunnerMesh length={Math.max(size[0], size[1]) * 0.72} selected={selected} />
@@ -2240,7 +2241,9 @@ function CinematicCameraController({
         ctrl.update();
       }
       animatingRef.current = false;
-      onArrival?.();
+      setTimeout(() => {
+        onArrival?.();
+      }, 0);
     }
   });
 
@@ -2280,11 +2283,11 @@ function SceneContent({
   cameraTargetPose?: TargetCameraPose | null;
   onCameraTargetArrived?: () => void;
 }) {
-  const widthM = blueprint.canvas.widthM;
-  const heightM = blueprint.canvas.heightM;
-  const depthAmount = resolveDepthAmount(blueprint.metadata);
-  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
-  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
+  const widthM = blueprint.canvas?.widthM ?? 20;
+  const heightM = blueprint.canvas?.heightM ?? 16;
+  const depthAmount = resolveDepthAmount(blueprint.metadata ?? {});
+  const theme = getRoomTheme(blueprint.metadata?.roomThemeId, blueprint);
+  const floorType = blueprint.metadata?.floorType ?? theme.defaultFloorType;
   const walls = resolveBlueprintWalls(blueprint);
   const wallHeightM = walls[0]?.heightM ?? 3;
   const stackView = blueprint.metadata.stackView === true;
@@ -2881,8 +2884,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
 
   const handleSelectPreset = useCallback((key: CameraPresetKey) => {
     setActivePreset(key);
-    const widthM = blueprint.canvas.widthM;
-    const heightM = blueprint.canvas.heightM;
+    const widthM = blueprint.canvas?.widthM ?? 20;
+    const heightM = blueprint.canvas?.heightM ?? 16;
     let pos: [number, number, number];
     let target: [number, number, number];
     switch (key) {

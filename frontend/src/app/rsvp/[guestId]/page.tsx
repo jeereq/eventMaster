@@ -11,7 +11,7 @@ import Link from 'next/link';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
 import type { ChairType, RoomLayoutBlueprint, RoomOutlineShape } from '@/lib/roomLayoutUtils';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
-import {
+import { 
   Calendar, MapPin, CheckCircle2, AlertCircle,
   Loader2, Award, Image, Send, Heart, LayoutGrid, MessageCircle,
   ChevronLeft, ChevronRight, X, ThumbsUp, Download, Navigation,
@@ -609,16 +609,16 @@ export default function RsvpPage() {
                         <span>
                           {new Date(guest.event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                      </div>
+                    </div>
                       <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                        <button
-                          type="button"
+                    <button
+                      type="button"
                           onClick={() => setShowFullScreenQr(true)}
                           className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                        >
+                    >
                           <Maximize2 className="w-4 h-4" aria-hidden />
                           Pass plein écran
-                        </button>
+                    </button>
                         <Link
                           href={`/rsvp/${guestId}/print`}
                           target="_blank"
@@ -628,7 +628,7 @@ export default function RsvpPage() {
                           <Printer className="w-4 h-4" aria-hidden />
                           Imprimer
                         </Link>
-                      </div>
+                  </div>
                     </div>
                   </div>
                 </div>
@@ -643,7 +643,7 @@ export default function RsvpPage() {
                         {guest.event.description}
                       </p>
                     ) : null}
-                  </div>
+                        </div>
 
                   <ul className="space-y-3 text-sm text-muted">
                     <li className="flex items-start gap-3">
@@ -664,7 +664,7 @@ export default function RsvpPage() {
                       <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
                       <span>
                         <span className="font-semibold text-foreground block">Lieu</span>
-                        {guest.event.location}
+                          {guest.event.location}
                       </span>
                     </li>
                   </ul>
@@ -687,13 +687,13 @@ export default function RsvpPage() {
                 />
 
                 {!rsvpLocked && (
-                  <button
+                <button
                     type="button"
-                    onClick={() => setSubmitted(false)}
+                  onClick={() => setSubmitted(false)}
                     className="w-full min-h-11 py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                  >
-                    Modifier ma réponse
-                  </button>
+                >
+                  Modifier ma réponse
+                </button>
                 )}
               </div>
             )}
@@ -715,7 +715,7 @@ export default function RsvpPage() {
                   <p className="text-sm font-semibold text-foreground">Lieu non renseigné</p>
                   <p className="text-xs text-muted">L’organisateur n’a pas encore indiqué l’adresse de réception.</p>
                 </GuestPortalCard>
-              )}
+            )}
               </div>
             )}
             </div>
@@ -941,7 +941,7 @@ export default function RsvpPage() {
                                       src={photo} 
                                       alt={`Photo ${pIdx + 1} du livre d'or`}
                                       onClick={() => openGuestImageModal(photosList, pIdx, `livre-dor-${guestSlug}`)}
-                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                       loading="lazy"
                                       decoding="async"
                                     />
@@ -1058,7 +1058,7 @@ export default function RsvpPage() {
                                           `feed-${sanitizeFilenamePart(post.id)}`
                                         );
                                       }}
-                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                       loading="lazy"
                                       decoding="async"
                                     />
@@ -1131,17 +1131,17 @@ export default function RsvpPage() {
                                 <label htmlFor={`feed-comment-${post.id}`} className="sr-only">
                                   Commentaire sur cette publication
                                 </label>
-                                <input
+                              <input
                                   id={`feed-comment-${post.id}`}
-                                  type="text"
+                                type="text"
                                   placeholder="Ex. : Super photo !"
-                                  value={guestCommentContents[post.id] || ''}
-                                  onChange={(e) => setGuestCommentContents({ ...guestCommentContents, [post.id]: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleCreateGuestComment(post.id);
-                                  }}
+                                value={guestCommentContents[post.id] || ''}
+                                onChange={(e) => setGuestCommentContents({ ...guestCommentContents, [post.id]: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleCreateGuestComment(post.id);
+                                }}
                                   className="w-full min-h-11 px-3.5 py-2.5 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-xl text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
-                                />
+                              />
                               </div>
                               <button
                                 type="button"
@@ -1171,7 +1171,7 @@ export default function RsvpPage() {
 
         {/* Expanded Image Modal with Carousel */}
         {expandedImages.length > 0 && (
-          <div
+          <div 
             ref={lightboxPanelRef}
             className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center z-50 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
             role="dialog"
@@ -1188,16 +1188,16 @@ export default function RsvpPage() {
               className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-[var(--radius-card)] flex items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <img
-                src={expandedImages[expandedImageIndex]}
+              <img 
+                src={expandedImages[expandedImageIndex]} 
                 alt={
                   expandedImagePrefix.startsWith('livre')
                     ? `Photo du livre d'or ${expandedImageIndex + 1} sur ${expandedImages.length}`
                     : `Média ${expandedImageIndex + 1} sur ${expandedImages.length}`
                 }
-                className="max-h-[85vh] max-w-full object-contain"
+                className="max-h-[85vh] max-w-full object-contain" 
               />
-
+              
               <button
                 type="button"
                 onClick={(e) => {

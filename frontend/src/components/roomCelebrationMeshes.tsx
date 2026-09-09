@@ -415,9 +415,13 @@ function CandleGlow({
       </mesh>
       <mesh position={[0, height * 0.78, 0]}>
         <sphereGeometry args={[0.018, 8, 8]} />
-        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={1.8} />
+        <meshStandardMaterial
+          color="#fbbf24"
+          emissive="#f59e0b"
+          emissiveIntensity={2.2}
+          roughness={0.2}
+        />
       </mesh>
-      <pointLight position={[0, height * 0.82, 0]} color="#f59e0b" intensity={0.35} distance={1.4} decay={2} />
     </group>
   );
 }

@@ -170,17 +170,19 @@ function estimateCanvasM(
   tables: TablePlanPreviewTable[],
   outline?: RoomLayoutBlueprint['roomOutline'],
 ) {
-  if (outline) {
+  if (outline && Number.isFinite(outline.w) && Number.isFinite(outline.h)) {
     return {
       widthM: Math.max(12, Math.round(outline.w * 0.24)),
       heightM: Math.max(10, Math.round(outline.h * 0.24)),
     };
   }
-  if (tables.length === 0) {
+  if (!tables || tables.length === 0) {
     return { widthM: 20, heightM: 15 };
   }
-  const maxX = Math.max(...tables.map((t) => t.x + 8), 88);
-  const maxY = Math.max(...tables.map((t) => t.y + 8), 88);
+  const validXs = tables.map((t) => (Number.isFinite(t.x) ? t.x + 8 : 40));
+  const validYs = tables.map((t) => (Number.isFinite(t.y) ? t.y + 8 : 40));
+  const maxX = Math.max(...validXs, 88);
+  const maxY = Math.max(...validYs, 88);
   return {
     widthM: Math.max(12, Math.round(maxX * 0.22)),
     heightM: Math.max(10, Math.round(maxY * 0.22)),

@@ -26,6 +26,7 @@ import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
+import Room3DErrorBoundary from '@/components/Room3DErrorBoundary';
 import { cn } from '@/lib/cn';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 
@@ -636,18 +637,20 @@ export default function RoomLayoutPreview({
       ) : (
         <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-foreground', canvasClass, className)}>
           {useWebGL ? (
-            <WebGLPreviewCanvas
-              webglBlueprint={webglBlueprint}
-              quality={quality}
-              lightingPreset={lightingPreset}
-              selectedTableId={selectedTableId}
-              selectedTableIds={selectedTableIds}
-              onSelectTable={onSelectTable}
-              onSelectZone={onSelectZone}
-              selectedSeats={selectedSeats}
-              blockedSeats={blockedSeats}
-              onSelectSeat={onSelectSeat}
-            />
+            <Room3DErrorBoundary className="absolute inset-0 h-full w-full">
+              <WebGLPreviewCanvas
+                webglBlueprint={webglBlueprint}
+                quality={quality}
+                lightingPreset={lightingPreset}
+                selectedTableId={selectedTableId}
+                selectedTableIds={selectedTableIds}
+                onSelectTable={onSelectTable}
+                onSelectZone={onSelectZone}
+                selectedSeats={selectedSeats}
+                blockedSeats={blockedSeats}
+                onSelectSeat={onSelectSeat}
+              />
+            </Room3DErrorBoundary>
           ) : (
             <FlatShowcasePreview
               blueprint={blueprint}
@@ -712,19 +715,21 @@ export default function RoomLayoutPreview({
             </button>
           </div>
           <div className="relative flex-1 min-h-0">
-            <WebGLPreviewCanvas
-              webglBlueprint={webglBlueprint}
-              quality={quality}
-              lightingPreset={lightingPreset}
-              selectedTableId={selectedTableId}
-              selectedTableIds={selectedTableIds}
-              onSelectTable={onSelectTable}
-              onSelectZone={onSelectZone}
-              selectedSeats={selectedSeats}
-              blockedSeats={blockedSeats}
-              onSelectSeat={onSelectSeat}
-              className="rounded-none"
-            />
+            <Room3DErrorBoundary className="absolute inset-0 h-full w-full">
+              <WebGLPreviewCanvas
+                webglBlueprint={webglBlueprint}
+                quality={quality}
+                lightingPreset={lightingPreset}
+                selectedTableId={selectedTableId}
+                selectedTableIds={selectedTableIds}
+                onSelectTable={onSelectTable}
+                onSelectZone={onSelectZone}
+                selectedSeats={selectedSeats}
+                blockedSeats={blockedSeats}
+                onSelectSeat={onSelectSeat}
+                className="rounded-none"
+              />
+            </Room3DErrorBoundary>
           </div>
           <p className="text-xs text-background/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             Glissez ou flèches pour orbiter · pincez ou +/− pour zoomer

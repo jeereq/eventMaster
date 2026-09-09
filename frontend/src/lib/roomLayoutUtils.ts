@@ -2440,27 +2440,30 @@ export function wallLengthMeters(wall: RoomWallSegment, canvas: { widthM: number
 }
 
 export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  const metadata = blueprint.metadata ?? ({} as RoomLayoutBlueprint['metadata']);
   const outline = blueprint.roomOutline ?? defaultRoomOutline('rectangle');
+  const canvas = blueprint.canvas ?? { widthM: 20, heightM: 16 };
   const stories =
-    Array.isArray(blueprint.metadata.stories) && blueprint.metadata.stories.length > 0
-      ? blueprint.metadata.stories
+    Array.isArray(metadata.stories) && metadata.stories.length > 0
+      ? metadata.stories
       : [{ id: 'story-rdc', label: 'RDC', elevationM: 0 }];
   const activeStoryId =
-    blueprint.metadata.activeStoryId && stories.some((s) => s.id === blueprint.metadata.activeStoryId)
-      ? blueprint.metadata.activeStoryId
+    metadata.activeStoryId && stories.some((s) => s.id === metadata.activeStoryId)
+      ? metadata.activeStoryId
       : stories[0]!.id;
   return {
     ...blueprint,
+    canvas,
     roomOutline: outline,
     walls: Array.isArray(blueprint.walls)
       ? blueprint.walls
       : wallsFromRoomOutline(outline, { withEntrance: true }),
     metadata: {
-      ...blueprint.metadata,
-      defaultTableColor: blueprint.metadata.defaultTableColor ?? '#ffffff',
+      ...metadata,
+      defaultTableColor: metadata.defaultTableColor ?? '#ffffff',
       stories,
       activeStoryId,
-      foundation: blueprint.metadata.foundation ?? { kind: 'none', heightM: 0 },
+      foundation: metadata.foundation ?? { kind: 'none', heightM: 0 },
     },
   };
 }
