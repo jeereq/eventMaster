@@ -1340,10 +1340,16 @@ function DonationsAccessEditor({
       {access.enabled && (
         <div className="space-y-4 pl-1">
           <div className="space-y-2">
-            <label className={labelClass}>Politique d’éligibilité des organisations</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className={labelClass} id="donations-mode-label">Politique d’éligibilité des organisations</label>
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              role="radiogroup"
+              aria-labelledby="donations-mode-label"
+            >
               <button
                 type="button"
+                role="radio"
+                aria-checked={access.mode === 'all'}
                 onClick={() => patch({ mode: 'all' })}
                 className={cn(
                   'p-3.5 rounded-xl border text-left transition flex items-start gap-3',
@@ -1363,6 +1369,8 @@ function DonationsAccessEditor({
 
               <button
                 type="button"
+                role="radio"
+                aria-checked={access.mode === 'restricted'}
                 onClick={() => patch({ mode: 'restricted' })}
                 className={cn(
                   'p-3.5 rounded-xl border text-left transition flex items-start gap-3',

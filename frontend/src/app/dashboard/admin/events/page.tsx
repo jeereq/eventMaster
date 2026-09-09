@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Calendar, Eye, Loader2, LogIn, MapPin, Trash2, AlertTriangle, Heart
+  Calendar, Eye, Loader2, LogIn, MapPin, Trash2, AlertTriangle, Heart, X
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -197,17 +197,34 @@ export default function AdminEventsPage() {
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="search"
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-          placeholder="Rechercher un événement, un lieu, une organisation…"
-          className="flex-1 bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground"
-        />
+        <div className="relative flex-1">
+          <input
+            type="search"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            placeholder="Rechercher un événement, un lieu, une organisation…"
+            aria-label="Rechercher un événement, un lieu ou une organisation"
+            className="w-full bg-surface-muted border border-border rounded-xl pl-3.5 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          {qInput && (
+            <button
+              type="button"
+              onClick={() => {
+                setQInput('');
+                setPage(1);
+              }}
+              aria-label="Effacer la recherche d'événements"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-foreground rounded-full hover:bg-surface transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={when}
             onChange={(e) => { setWhen(e.target.value); setPage(1); }}
+            aria-label="Filtrer par date de l'événement"
             className={filterClass}
           >
             <option value="ALL">Toutes les dates</option>
@@ -217,6 +234,7 @@ export default function AdminEventsPage() {
           <select
             value={visibility}
             onChange={(e) => { setVisibility(e.target.value); setPage(1); }}
+            aria-label="Filtrer par visibilité public ou privé"
             className={filterClass}
           >
             <option value="ALL">Public / privé</option>
@@ -226,6 +244,7 @@ export default function AdminEventsPage() {
           <select
             value={ticketing}
             onChange={(e) => { setTicketing(e.target.value); setPage(1); }}
+            aria-label="Filtrer par billetterie"
             className={filterClass}
           >
             <option value="ALL">Billetterie</option>
@@ -235,6 +254,7 @@ export default function AdminEventsPage() {
           <select
             value={donations}
             onChange={(e) => { setDonations(e.target.value); setPage(1); }}
+            aria-label="Filtrer par collecte de dons solidaires"
             className={filterClass}
           >
             <option value="ALL">Collecte de dons</option>
@@ -244,6 +264,7 @@ export default function AdminEventsPage() {
           <select
             value={gps}
             onChange={(e) => { setGps(e.target.value); setPage(1); }}
+            aria-label="Filtrer par coordonnées GPS"
             className={filterClass}
           >
             <option value="ALL">GPS</option>
@@ -351,21 +372,29 @@ export default function AdminEventsPage() {
                         setModeration({ id: e.id, title: e.title, isBlocked: (e as any).isBlockedByAdmin });
                         setModerationReason('');
                       }}
-                      className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
                       title={(e as any).isBlockedByAdmin ? "Débloquer l'événement" : "Bloquer l'événement"}
+                      aria-label={(e as any).isBlockedByAdmin ? `Débloquer l'événement ${e.title}` : `Bloquer l'événement ${e.title}`}
                     >
                       <AlertTriangle className="w-4 h-4" />
                     </button>
                     {viewMode === 'list' ? (
-                      <button type="button" onClick={() => setDetails(e)} className="inline-flex items-center" title="Voir détails">
+                      <button
+                        type="button"
+                        onClick={() => setDetails(e)}
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
+                        title="Voir détails"
+                        aria-label={`Voir les détails de l'événement ${e.title}`}
+                      >
                         <ListRowAction />
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setDetails(e)}
-                        className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
                         title="Détails"
+                        aria-label={`Voir les détails de l'événement ${e.title}`}
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -377,16 +406,18 @@ export default function AdminEventsPage() {
                         void openWorkspace(e.tenantId);
                       }}
                       disabled={openingId === e.tenantId}
-                      className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition disabled:opacity-50"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50"
                       title="Ouvrir l’espace"
+                      aria-label={`Ouvrir l'espace organisation de ${e.title}`}
                     >
                       {openingId === e.tenantId ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDelete(e.id, e.title)}
-                      className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
                       title="Supprimer"
+                      aria-label={`Supprimer l'événement ${e.title}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

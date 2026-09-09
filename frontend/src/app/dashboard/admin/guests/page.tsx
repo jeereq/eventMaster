@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, Eye, Loader2, LogIn, Trash2, Users } from 'lucide-react';
+import { Download, Eye, Loader2, LogIn, Trash2, Users, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -221,15 +221,36 @@ export default function AdminGuestsPage() {
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="search"
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-          placeholder="Rechercher un invité, un e-mail, un événement…"
-          className="flex-1 bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground"
-        />
+        <div className="relative flex-1">
+          <input
+            type="search"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            placeholder="Rechercher un invité, un e-mail, un événement…"
+            aria-label="Rechercher un invité, un e-mail ou un événement"
+            className="w-full bg-surface-muted border border-border rounded-xl pl-3.5 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          {qInput && (
+            <button
+              type="button"
+              onClick={() => {
+                setQInput('');
+                setPage(1);
+              }}
+              aria-label="Effacer la recherche d'invités"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-foreground rounded-full hover:bg-surface transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} className={filterClass}>
+          <select
+            value={category}
+            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+            aria-label="Filtrer par catégorie d'invité"
+            className={filterClass}
+          >
             <option value="ALL">Toutes catégories</option>
             <option value="Donateur">Donateur</option>
             <option value="VIP">VIP</option>
@@ -238,23 +259,43 @@ export default function AdminGuestsPage() {
             <option value="Presse">Presse</option>
             <option value="Général">Général</option>
           </select>
-          <select value={rsvp} onChange={(e) => { setRsvp(e.target.value); setPage(1); }} className={filterClass}>
+          <select
+            value={rsvp}
+            onChange={(e) => { setRsvp(e.target.value); setPage(1); }}
+            aria-label="Filtrer par statut RSVP"
+            className={filterClass}
+          >
             <option value="ALL">Tous les RSVP</option>
             <option value="PENDING">En attente</option>
             <option value="ACCEPTED">Accepté</option>
             <option value="DECLINED">Décliné</option>
           </select>
-          <select value={checkin} onChange={(e) => { setCheckin(e.target.value); setPage(1); }} className={filterClass}>
+          <select
+            value={checkin}
+            onChange={(e) => { setCheckin(e.target.value); setPage(1); }}
+            aria-label="Filtrer par présence et enregistrement"
+            className={filterClass}
+          >
             <option value="ALL">Présence</option>
             <option value="in">Enregistrés</option>
             <option value="out">Non enregistrés</option>
           </select>
-          <select value={pdf} onChange={(e) => { setPdf(e.target.value); setPage(1); }} className={filterClass}>
+          <select
+            value={pdf}
+            onChange={(e) => { setPdf(e.target.value); setPage(1); }}
+            aria-label="Filtrer par livraison du PDF d'invitation"
+            className={filterClass}
+          >
             <option value="ALL">PDF invitation</option>
             <option value="delivered">PDF livré</option>
             <option value="missing">PDF non livré</option>
           </select>
-          <select value={org} onChange={(e) => { setOrg(e.target.value); setPage(1); }} className={filterClass}>
+          <select
+            value={org}
+            onChange={(e) => { setOrg(e.target.value); setPage(1); }}
+            aria-label="Filtrer par organisation"
+            className={filterClass}
+          >
             <option value="ALL">Toutes les organisations</option>
             {tenants.map((t) => (
               <option key={t.id} value={t.name}>{t.name}</option>
@@ -333,15 +374,22 @@ export default function AdminGuestsPage() {
                 actions={
                   <>
                     {viewMode === 'list' ? (
-                      <button type="button" onClick={() => setDetails(g)} className="inline-flex items-center" title="Voir détails">
+                      <button
+                        type="button"
+                        onClick={() => setDetails(g)}
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
+                        title="Voir détails"
+                        aria-label={`Voir les détails de l'invité ${g.firstName} ${g.lastName}`}
+                      >
                         <ListRowAction />
                       </button>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setDetails(g)}
-                        className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
                         title="Détails"
+                        aria-label={`Voir les détails de l'invité ${g.firstName} ${g.lastName}`}
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -354,8 +402,9 @@ export default function AdminGuestsPage() {
                           void openWorkspace(g.tenantId as string);
                         }}
                         disabled={openingId === g.tenantId}
-                        className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition disabled:opacity-50"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50"
                         title="Ouvrir l’espace"
+                        aria-label={`Ouvrir l'espace organisation de ${g.tenantName || 'l\'invité'}`}
                       >
                         {openingId === g.tenantId ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                       </button>
@@ -363,8 +412,9 @@ export default function AdminGuestsPage() {
                     <button
                       type="button"
                       onClick={() => handleDelete(g.id, `${g.firstName} ${g.lastName}`)}
-                      className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
                       title="Supprimer"
+                      aria-label={`Supprimer l'invité ${g.firstName} ${g.lastName}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

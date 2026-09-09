@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Coins, Eye, Loader2 } from 'lucide-react';
+import { Coins, Eye, Loader2, X } from 'lucide-react';
 import AdminFinanceDetailsModal, { type AdminTokenDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -292,18 +292,43 @@ export default function AdminAiTokensPage() {
         <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_8rem_auto] gap-2">
           <div className="relative">
             <input
+              type="text"
+              role="combobox"
+              aria-expanded={grantHits.length > 0 && !grantUser}
+              aria-autocomplete="list"
+              aria-controls="grant-user-listbox"
+              aria-label="Rechercher un utilisateur pour offrir des jetons"
               value={grantQuery}
               onChange={(event) => {
                 setGrantQuery(event.target.value);
                 setGrantUser(null);
               }}
               placeholder="Rechercher un utilisateur (e-mail ou nom)"
-              className="w-full min-h-11 px-3 rounded-xl border border-border bg-background text-sm"
+              className="w-full min-h-11 pl-3 pr-8 rounded-xl border border-border bg-background text-sm"
             />
+            {grantQuery ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setGrantQuery('');
+                  setGrantUser(null);
+                  setGrantHits([]);
+                }}
+                aria-label="Effacer la recherche d'utilisateur"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-foreground rounded-full hover:bg-surface-muted transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            ) : null}
             {grantHits.length > 0 && !grantUser ? (
-              <ul className="absolute z-10 mt-1 w-full border border-border rounded-xl bg-surface shadow-lg max-h-56 overflow-auto">
+              <ul
+                id="grant-user-listbox"
+                role="listbox"
+                aria-label="Utilisateurs trouvés"
+                className="absolute z-10 mt-1 w-full border border-border rounded-xl bg-surface shadow-lg max-h-56 overflow-auto"
+              >
                 {grantHits.map((hit) => (
-                  <li key={hit.id}>
+                  <li key={hit.id} role="option" aria-selected={false}>
                     <button
                       type="button"
                       className="w-full text-left px-3 py-2 text-sm hover:bg-surface-muted"

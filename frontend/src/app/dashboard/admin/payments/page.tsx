@@ -385,7 +385,7 @@ export default function AdminPaymentsPage() {
           />
         ) : (
           <div className="overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Récapitulatif des paiements par source et canal">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-wider text-muted">
                   <th className="px-3 py-2.5 font-semibold">Source</th>

@@ -169,8 +169,17 @@ function StatTiles({
 }: {
   items: Array<{ label: string; value: React.ReactNode }>;
 }) {
+  const gridCols =
+    items.length === 1
+      ? 'grid-cols-1'
+      : items.length === 2
+        ? 'grid-cols-2'
+        : items.length === 4
+          ? 'grid-cols-2 sm:grid-cols-4'
+          : 'grid-cols-2 sm:grid-cols-3';
+
   return (
-    <div className={cn('grid gap-2', items.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
+    <div className={cn('grid gap-2', gridCols)}>
       {items.map((item) => (
         <div
           key={item.label}
