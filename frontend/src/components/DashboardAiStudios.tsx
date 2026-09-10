@@ -86,38 +86,38 @@ export default function DashboardAiStudios({
   const studioOptions: StudioOption[] = [
     {
       id: 'budget',
-      title: 'Simulateur Budget & Formules',
+      title: 'Simulateur Budget',
       subtitle: 'Formules clés en main & Devis',
-      description: 'Chiffre automatiquement 3 propositions complètes (Éco, Recommandée, Confort) avec salles réelles et prestataires vérifiés.',
+      description: 'Chiffre 3 formules complètes (Éco, Recommandée, Confort) avec prestataires réels.',
       icon: Wand2,
       badge: '3 formules catalogue',
       pillColor: 'text-amber-700 bg-amber-500/15 border-amber-500/30 dark:text-amber-300',
       iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-      features: ['Salles adaptées', 'Traiteurs & Déco', 'Estimation globale en FC & USD'],
+      features: ['Salles adaptées', 'Traiteurs & Déco', 'Estimation FC & USD'],
     },
     {
       id: 'invite',
-      title: 'Studio Invitations & Faire-part',
+      title: 'Studio Invitations',
       subtitle: 'Cartes 9:16 WhatsApp & RSVP',
-      description: 'Générez des cartons d’invitation verticaux sur mesure prêts à être partagés sur WhatsApp avec lien de confirmation RSVP invité.',
+      description: 'Cartons d’invitation personnalisés 9:16 pour WhatsApp avec confirmation RSVP invité.',
       icon: Mail,
       badge: 'Format WhatsApp 9:16',
       pillColor: 'text-pink-700 bg-pink-500/15 border-pink-500/30 dark:text-pink-300',
       iconBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-      features: ['Cartons 9:16 Story', 'Partage WhatsApp en 1 clic', 'Lien RSVP invité'],
+      features: ['Format 9:16 mobile', 'Partage WhatsApp', 'Lien RSVP invité'],
     },
     ...(showRoom
       ? [
           {
             id: 'room' as DashboardAiStudioId,
-            title: 'Studio Plans de Salle 2D / 3D',
+            title: 'Studio Plans 3D',
             subtitle: 'Aménagement & Visite 3D',
-            description: 'Configurez la disposition des tables (rondes, banquets), podiums et buffets, puis visualisez le rendu dans l’espace 3D immersif.',
+            description: 'Disposition des tables, podiums et circulation avec visite 3D immersive.',
             icon: Building2,
             badge: 'Rendu 3D immersif',
             pillColor: 'text-sky-700 bg-sky-500/15 border-sky-500/30 dark:text-sky-300',
             iconBg: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-            features: ['Tables & Chaises', 'Circulation des invités', 'Visite 3D interactive'],
+            features: ['Tables & Chaises', 'Circulation', 'Visite 3D'],
           },
         ]
       : []),
@@ -153,24 +153,16 @@ export default function DashboardAiStudios({
         className="rounded-2xl border border-primary/20 bg-gradient-to-b from-surface via-surface to-surface-muted/50 p-4 sm:p-5 shadow-xs space-y-4"
         aria-label="Sélection des studios créatifs actifs"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3.5">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-primary-foreground shadow-xs">
-                <Sparkles className="w-3.5 h-3.5" />
-                Studios actifs
-              </span>
-              <span className="text-xs text-muted font-medium">
-                · 3 ateliers de conception disponibles
-              </span>
-            </div>
-            <h2 className="text-base sm:text-lg font-bold text-foreground">
-              Choisissez votre atelier de travail
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+          <div className="space-y-0.5">
+            <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Studios actifs
             </h2>
+            <p className="text-xs text-muted">
+              Sélectionnez un atelier : calcul de budget, invitations ou plan de salle 3D.
+            </p>
           </div>
-          <p className="text-xs text-muted max-w-sm sm:text-right leading-relaxed">
-            Basculez librement entre le calcul de votre budget, la composition de vos faire-part et l’agencement en 3D.
-          </p>
         </div>
 
         {/* ─── GRILLE DES OPTIONS DE STUDIOS ACTIFS ─── */}

@@ -54,11 +54,11 @@ interface ClientIntentConfig {
 const CLIENT_INTENTS: ClientIntentConfig[] = [
   {
     id: 'venue',
-    title: 'Trouver la salle idéale',
+    title: 'Trouver une salle',
     badge: 'Lieux & Espaces',
-    tagline: 'Salles de fête, jardins, terrasses et domaines de réception',
+    tagline: 'Salles, jardins et domaines de réception',
     description:
-      'Découvrez de superbes lieux à Kinshasa, Lubumbashi et en RDC avec photos, tarifs transparents, capacités d’accueil et visites 3D immersives.',
+      'Lieux de réception avec tarifs transparents, capacités d’accueil réelles et visites 3D immersives.',
     icon: Building2,
     accentColor: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400',
     ctaLabel: 'Parcourir les salles',
@@ -70,18 +70,18 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
       { label: 'Conférences & Salons', href: '/dashboard/catalogue?kind=venue&type=conference' },
     ],
     features: [
-      'Visites 3D immersives et plans de salle',
-      'Disponibilités vérifiées en direct',
-      'Demandes de devis gratuites et sans engagement',
+      'Visites 3D et plans de salle',
+      'Disponibilités vérifiées',
+      'Devis gratuits et sans engagement',
     ],
   },
   {
     id: 'service',
-    title: 'Trouver les bons prestataires',
-    badge: 'Prestataires & Prestations',
+    title: 'Trouver des prestataires',
+    badge: 'Prestataires',
     tagline: 'Traiteurs, décorateurs, photographes, DJ et animation',
     description:
-      'Découvrez le travail des professionnels, consultez leurs photos et vidéos récentes, et demandez un devis personnalisé pour votre fête.',
+      'Professionnels vérifiés avec portfolios, avis et devis sur-mesure pour votre réception.',
     icon: Utensils,
     accentColor: 'from-amber-500/10 to-orange-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400',
     ctaLabel: 'Voir les prestataires',
@@ -93,21 +93,21 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
       { label: 'DJ & Sonorisation', href: '/dashboard/catalogue?kind=service&cat=dj' },
     ],
     features: [
-      'Portfolios photos et vidéos récents',
-      'Échanges directs et devis personnalisés',
-      'Prestataires vérifiés et recommandés',
+      'Portfolios récents',
+      'Devis personnalisés directs',
+      'Prestataires recommandés',
     ],
   },
   {
     id: 'rental',
-    title: 'Louer du matériel & des véhicules',
+    title: 'Louer du matériel & véhicules',
     badge: 'Mobilier & Matériel',
     tagline: 'Chaises VIP, tables, chapiteaux, sonorisation et cortèges',
     description:
-      'Tout pour équiper votre lieu et embellir votre réception : mobilier de prestige, tentes, sonorisation, éclairage et véhicules de cortège.',
+      'Mobilier de réception, tentes, sonorisation, éclairage et voitures de cortège.',
     icon: Truck,
     accentColor: 'from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300',
-    ctaLabel: 'Voir le matériel disponible',
+    ctaLabel: 'Voir le matériel',
     ctaHref: '/dashboard/catalogue?kind=rental',
     quickFilters: [
       { label: 'Tentes & Chapiteaux', href: '/dashboard/catalogue?kind=rental&cat=tent' },
@@ -116,18 +116,18 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
       { label: 'Voitures de cortège', href: '/dashboard/catalogue?kind=rental&cat=cars' },
     ],
     features: [
-      'Tarifs clairs à la journée ou au forfait',
-      'Options de livraison et d’installation sur place',
-      'Matériel vérifié et prêt pour votre date',
+      'Tarifs clairs à la journée',
+      'Livraison et installation',
+      'Disponibilité garantie',
     ],
   },
   {
     id: 'event',
-    title: 'Prendre mes billets pour un événement',
-    badge: 'Sorties & Billetterie',
-    tagline: 'Concerts, festivals, galas, soirées et spectacles',
+    title: 'Prendre mes billets',
+    badge: 'Billetterie',
+    tagline: 'Concerts, festivals, galas et soirées',
     description:
-      'Achetez vos places facilement par Mobile Money ou carte bancaire et recevez instantanément votre billet avec QR code d’accès.',
+      'Achetez vos places par Mobile Money ou carte et recevez instantanément votre pass QR.',
     icon: Ticket,
     accentColor: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
     ctaLabel: 'Voir les événements',
@@ -139,21 +139,21 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
       { label: 'Mes billets achetés', href: '/dashboard/tickets' },
     ],
     features: [
-      'Paiement simple par Mobile Money, Visa et Mastercard',
-      'e-Billets téléchargeables en PDF avec QR code d’accès',
-      'Entrée fluide et rapide le jour J',
+      'Mobile Money et cartes bancaires',
+      'Pass QR instantané',
+      'Accès fluide le jour J',
     ],
   },
   {
     id: 'template',
-    title: 'Créer un faire-part & invitations WhatsApp',
-    badge: 'Invitations & Faire-part',
-    tagline: 'Faire-part interactifs et invitations numériques prêtes à partager',
+    title: 'Faire-part & Invitations',
+    badge: 'Invitations',
+    tagline: 'Cartes interactives prêtes à partager',
     description:
-      'Créez de superbes cartes d’invitation personnalisées pour vos proches et partagez-les en direct sur WhatsApp avec vos invités.',
+      'Cartes d’invitation personnalisées 9:16 avec confirmation RSVP à partager sur WhatsApp.',
     icon: Mail,
     accentColor: 'from-pink-500/10 to-rose-500/10 border-pink-500/30 text-pink-600 dark:text-pink-400',
-    ctaLabel: 'Ouvrir le Studio Invitations',
+    ctaLabel: 'Créer une invitation',
     ctaHref: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite',
     quickFilters: [
       { label: 'Studio invitations IA', href: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite' },
@@ -161,9 +161,9 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
       { label: 'Invitations mariage', href: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite' },
     ],
     features: [
-      'Génération assistée par IA et styles sur-mesure',
-      'Format vertical 9:16 idéal pour téléphones et WhatsApp',
-      'Partage instantané et sans frais avec vos proches',
+      'Styles personnalisés assistés par IA',
+      'Format vertical 9:16 pour mobile',
+      'Partage WhatsApp en 1 clic',
     ],
   },
 ];
@@ -250,13 +250,9 @@ export default function ClientDashboardHome() {
         <div className="relative space-y-4 max-w-3xl">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
-                <Sparkles className="w-3.5 h-3.5" />
-                Espace Client
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                 <ShieldCheck className="w-3 h-3" />
-                100 % gratuit · Aucun abonnement requis
+                100 % gratuit · Sans abonnement
               </span>
             </div>
 
@@ -264,7 +260,7 @@ export default function ClientDashboardHome() {
               Bonjour{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋
             </h1>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Explorez les meilleures salles et prestataires de réception, simulez votre budget en 1 clic ou réservez vos sorties en RDC. Aucun abonnement à payer : vous réglez uniquement vos billets ou vos réservations directement auprès des professionnels.
+              Trouvez vos lieux et prestataires, simulez votre budget et réservez vos billets en direct.
             </p>
           </div>
 
@@ -342,7 +338,7 @@ export default function ClientDashboardHome() {
                 stats.quotesCount.toLocaleString('fr-FR')
               )}
             </p>
-            <p className="text-xs text-muted mt-0.5">Demandes &amp; devis reçus</p>
+            <p className="text-xs text-muted mt-0.5">Devis reçus</p>
           </div>
         </Link>
 
@@ -365,7 +361,7 @@ export default function ClientDashboardHome() {
                 stats.bookingsCount.toLocaleString('fr-FR')
               )}
             </p>
-            <p className="text-xs text-muted mt-0.5">Dates confirmées</p>
+            <p className="text-xs text-muted mt-0.5">Confirmées</p>
           </div>
         </Link>
 
@@ -388,7 +384,7 @@ export default function ClientDashboardHome() {
                 stats.ticketsCount.toLocaleString('fr-FR')
               )}
             </p>
-            <p className="text-xs text-muted mt-0.5">Pass d’accès &amp; QR</p>
+            <p className="text-xs text-muted mt-0.5">Pass QR</p>
           </div>
         </Link>
 
@@ -411,7 +407,7 @@ export default function ClientDashboardHome() {
                 stats.packsCount.toLocaleString('fr-FR')
               )}
             </p>
-            <p className="text-xs text-muted mt-0.5">Simulations sauvegardées</p>
+            <p className="text-xs text-muted mt-0.5">Simulations</p>
           </div>
         </Link>
 
@@ -434,7 +430,7 @@ export default function ClientDashboardHome() {
                 favoriteItems.length.toLocaleString('fr-FR')
               )}
             </p>
-            <p className="text-xs text-muted mt-0.5">Vos coups de cœur</p>
+            <p className="text-xs text-muted mt-0.5">Favoris</p>
           </div>
         </Link>
       </div>
@@ -442,24 +438,21 @@ export default function ClientDashboardHome() {
       {/* ─── SECTION STUDIOS CRÉATIFS & SIMULATEURS ACTIFS (MISE EN VALEUR) ─── */}
       <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-linear-to-br from-primary/5 via-surface to-surface-muted p-5 sm:p-6 space-y-4 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-primary-foreground">
-                <Wand2 className="w-3.5 h-3.5" />
-                Studios créatifs actifs
-              </span>
-              <span className="text-xs text-muted">· Outils interactifs à votre disposition</span>
-            </div>
-            <h2 className="text-lg font-extrabold text-foreground">
-              Simulez, concevez et préparez votre fête
+          <div className="space-y-0.5">
+            <h2 className="text-base sm:text-lg font-extrabold text-foreground flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" />
+              Studios de préparation
             </h2>
+            <p className="text-xs text-muted">
+              Simulez votre budget, créez vos invitations et agencez votre salle en 3D.
+            </p>
           </div>
 
           <Link
             href="/dashboard/catalogue?tab=plan&planView=ai"
             className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-center"
           >
-            <span>Ouvrir le simulateur complet</span>
+            <span>Simulateur complet</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -477,15 +470,15 @@ export default function ClientDashboardHome() {
                 </div>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Studio actif
+                  Actif
                 </span>
               </div>
               <div>
                 <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
-                  Simulateur de Budget &amp; Packs
+                  Simulateur de Budget
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Indiquez votre budget en CDF ou USD : l’IA compose automatiquement 3 formules (Éco, Équilibré, Confort) avec salle, traiteur, déco et sono.
+                  3 formules chiffrées (Éco, Recommandée, Confort) selon votre budget avec prestataires réels.
                 </p>
               </div>
             </div>
@@ -507,15 +500,15 @@ export default function ClientDashboardHome() {
                 </div>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Studio actif
+                  Actif
                 </span>
               </div>
               <div>
                 <h3 className="text-sm font-bold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
-                  Studio Cartes &amp; Faire-part
+                  Studio Invitations
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Créez des invitations numériques élégantes au format 9:16 pour WhatsApp avec confirmation de présence (RSVP) pour vos invités.
+                  Cartes d’invitation 9:16 pour WhatsApp avec confirmation RSVP en direct.
                 </p>
               </div>
             </div>
@@ -537,15 +530,15 @@ export default function ClientDashboardHome() {
                 </div>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Studio actif
+                  Actif
                 </span>
               </div>
               <div>
                 <h3 className="text-sm font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
-                  Studio Plans de Salle 2D / 3D
+                  Studio Plans 3D
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Modélisez votre salle à partir d’une photo ou d’un brief : positionnez les tables, allées et visualisez l’espace en 3D immersive.
+                  Agencement des tables, allées et visite 3D immersive de votre lieu de fête.
                 </p>
               </div>
             </div>
@@ -560,12 +553,12 @@ export default function ClientDashboardHome() {
       {/* ─── DÉCOUVERTE PAR UNIVERS (SALLES, PRESTAS, LOCATION, BILLETS) ─── */}
       <div className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
             <Compass className="w-5 h-5 text-primary" />
-            Que souhaitez-vous organiser aujourd’hui ?
+            Explorer par univers
           </h2>
           <p className="text-xs text-muted">
-            Accédez directement à ce dont vous avez besoin pour préparer votre événement en toute sérénité.
+            Sélectionnez une catégorie pour préparer votre événement.
           </p>
         </div>
 
@@ -628,51 +621,45 @@ export default function ClientDashboardHome() {
         </div>
       </div>
 
-      {/* ─── COMMENT ÇA MARCHE (100% SÉRÉNITÉ · SANS ABONNEMENT) ─── */}
+      {/* ─── COMMENT ÇA MARCHE ─── */}
       <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Simplicité &amp; Sérénité
-            </span>
-          </div>
+        <div className="space-y-0.5">
           <h3 className="text-base sm:text-lg font-bold text-foreground">
-            Comment fonctionne votre Espace Client sur EventMaster ?
+            Fonctionnement en 3 étapes
           </h3>
           <p className="text-xs text-muted">
-            Un fonctionnement transparent conçu pour vous faciliter la vie à chaque étape de votre fête.
+            Simple, direct et sans engagement.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border/80 space-y-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+          <div className="p-3.5 rounded-xl bg-surface-muted/50 border border-border/80 space-y-1.5">
+            <div className="w-6 h-6 rounded-md bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
               1
             </div>
-            <h4 className="text-xs font-bold text-foreground">Explorez &amp; Simulez librement</h4>
+            <h4 className="text-xs font-bold text-foreground">Explorez &amp; Simulez</h4>
             <p className="text-xs text-muted leading-relaxed">
-              Consultez gratuitement les fiches des salles et prestataires, testez notre simulateur IA de budget et sauvegardez vos favoris.
+              Consultez les fiches, estimez votre budget et retenez vos coups de cœur.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border/80 space-y-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-xs">
+          <div className="p-3.5 rounded-xl bg-surface-muted/50 border border-border/80 space-y-1.5">
+            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-xs">
               2
             </div>
-            <h4 className="text-xs font-bold text-foreground">Demandez des devis en 1 clic</h4>
+            <h4 className="text-xs font-bold text-foreground">Demandez vos devis</h4>
             <p className="text-xs text-muted leading-relaxed">
-              Envoyez vos demandes sans aucun engagement. Les professionnels vous répondent directement avec des devis chiffrés et personnalisés.
+              Contactez directement les prestataires pour recevoir des offres chiffrées.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border/80 space-y-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-xs">
+          <div className="p-3.5 rounded-xl bg-surface-muted/50 border border-border/80 space-y-1.5">
+            <div className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-xs">
               3
             </div>
-            <h4 className="text-xs font-bold text-foreground">Bloquez votre date en direct</h4>
+            <h4 className="text-xs font-bold text-foreground">Bloquez votre date</h4>
             <p className="text-xs text-muted leading-relaxed">
-              Validez votre réservation : l’acompte est versé directement au professionnel hors plateforme. Vos billets achetés sont sécurisés par QR code.
+              Versez l’acompte en direct au professionnel et suivez vos pass QR.
             </p>
           </div>
         </div>
@@ -681,12 +668,12 @@ export default function ClientDashboardHome() {
       {/* ─── GUIDE RAPIDE & ASSISTANCE ─── */}
       <div className="p-4 sm:p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <HelpCircle className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <HelpCircle className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-foreground">Besoin de conseils pour votre événement ?</p>
-            <p className="text-[11px] text-muted">Parcourez notre guide ou explorez les réalisations pour trouver l’inspiration.</p>
+            <p className="text-xs font-bold text-foreground">Besoin de conseils ?</p>
+            <p className="text-[11px] text-muted">Consultez notre guide pratique ou explorez les prestataires du catalogue.</p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
@@ -694,13 +681,13 @@ export default function ClientDashboardHome() {
             href="/dashboard/guide"
             className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl border border-border hover:bg-surface-muted text-xs font-semibold text-foreground transition"
           >
-            Consulter le guide
+            Guide pratique
           </Link>
           <Link
             href="/dashboard/catalogue"
             className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs"
           >
-            Explorer le marketplace
+            Explorer
           </Link>
         </div>
       </div>
