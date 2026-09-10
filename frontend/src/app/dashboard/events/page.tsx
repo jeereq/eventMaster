@@ -3237,8 +3237,24 @@ Merci de confirmer votre présence :
       <ConfirmDialog
         open={pendingDestructive?.type === 'event'}
         onClose={() => !confirmBusy && setPendingDestructive(null)}
-        title="Supprimer l’événement ?"
-        description="Cet événement et tous ses invités seront supprimés. Cette action est irréversible."
+        title={
+          (() => {
+            const evId = pendingDestructive?.type === 'event' ? pendingDestructive.id : '';
+            const ev = events.find((e) => e.id === evId);
+            return (ev?.ticketsSold ?? 0) > 0
+              ? `Supprimer cet événement (${ev?.ticketsSold} billets vendus) ?`
+              : 'Supprimer l’événement ?';
+          })()
+        }
+        description={
+          (() => {
+            const evId = pendingDestructive?.type === 'event' ? pendingDestructive.id : '';
+            const ev = events.find((e) => e.id === evId);
+            return (ev?.ticketsSold ?? 0) > 0
+              ? `⚠️ ATTENTION CRITIQUE : Cet événement a déjà enregistré ${ev?.ticketsSold} billet(s) vendu(s) ! La suppression entraînera la perte définitive de toutes les données d'achat, de placement et d'accès des acheteurs. Cette action est irréversible.`
+              : 'Cet événement et tous ses invités seront supprimés. Cette action est irréversible.';
+          })()
+        }
         confirmLabel="Supprimer"
         tone="danger"
         loading={confirmBusy}
@@ -3256,8 +3272,26 @@ Merci de confirmer votre présence :
       <ConfirmDialog
         open={pendingDestructive?.type === 'guest'}
         onClose={() => !confirmBusy && setPendingDestructive(null)}
-        title="Supprimer cet invité ?"
-        description="L’invité sera retiré de la liste. Ses réponses RSVP et sa place seront perdues."
+        title={
+          (() => {
+            const gId = pendingDestructive?.type === 'guest' ? pendingDestructive.id : '';
+            const g = guests.find((item) => item.id === gId);
+            const isTicket = Boolean(g?.preferences?.ticketOrderId || g?.category === 'Billet');
+            return isTicket
+              ? `Supprimer cet acheteur de billet (${g?.firstName} ${g?.lastName}) ?`
+              : 'Supprimer cet invité ?';
+          })()
+        }
+        description={
+          (() => {
+            const gId = pendingDestructive?.type === 'guest' ? pendingDestructive.id : '';
+            const g = guests.find((item) => item.id === gId);
+            const isTicket = Boolean(g?.preferences?.ticketOrderId || g?.category === 'Billet');
+            return isTicket
+              ? `⚠️ ATTENTION : Cet invité est lié à un billet acheté (${g?.firstName} ${g?.lastName}). Sa suppression annulera son pass d'accès payé, son QR code et sa place attribuée.`
+              : 'L’invité sera retiré de la liste. Ses réponses RSVP et sa place seront perdues.';
+          })()
+        }
         confirmLabel="Supprimer"
         tone="danger"
         loading={confirmBusy}

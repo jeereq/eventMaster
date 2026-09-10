@@ -34,6 +34,7 @@ import {
   Heart,
   Briefcase,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
@@ -237,6 +238,15 @@ export default function EventConfigForm({
   );
   const donationsAllowedByAdmin = donationAccessStatus.allowed;
 
+  // Sous-onglets pour scinder les formulaires volumineux
+  const [accessSubTab, setAccessSubTab] = useState<'ticketing' | 'seating' | 'donations' | 'program'>('ticketing');
+  const [essentialsSubTab, setEssentialsSubTab] = useState<'general' | 'details'>('general');
+  const [placeSubTab, setPlaceSubTab] = useState<'room' | 'address'>('room');
+
+  // Sécurité et validation explicite en cas de billets déjà vendus
+  const [pendingTicketRisks, setPendingTicketRisks] = useState<Array<{ title: string; risk: string }> | null>(null);
+  const [ticketRiskConfirmed, setTicketRiskConfirmed] = useState(false);
+
   useEffect(() => {
     if (!onlinePaymentsEnabled && ticketing) setTicketing(false);
   }, [onlinePaymentsEnabled, ticketing]);
@@ -244,6 +254,11 @@ export default function EventConfigForm({
   useEffect(() => {
     if (!open) return;
     setTab('essentials');
+    setAccessSubTab('ticketing');
+    setEssentialsSubTab('general');
+    setPlaceSubTab('room');
+    setPendingTicketRisks(null);
+    setTicketRiskConfirmed(false);
     setMode(defaultMode);
     setFormError('');
     setSearchError('');
@@ -806,6 +821,63 @@ export default function EventConfigForm({
 
   const missingTab = firstInvalidEventConfigTab({ title, date, location, commune, neighborhood });
 
+  const getTicketHolderRisks = () => {
+    if (!initialEvent?.ticketsSold || initialEvent.ticketsSold <= 0) return [];
+    const risks: Array<{ title: string; risk: string }> = [];
+
+    // 1. Billetterie désactivée
+    if (initialEvent.ticketingEnabled && !ticketing) {
+      risks.push({
+        title: 'Désactivation de la billetterie payante',
+        risk: `Vous désactivez la billetterie alors que ${initialEvent.ticketsSold} billet(s) ont déjà été achetés. Les acheteurs ne pourront plus accéder aux fonctions de leurs billets.`,
+      });
+    }
+
+    // 2. Choix de places désactivé
+    if (initialEvent.seatSelectionEnabled && !seatSelection) {
+      risks.push({
+        title: 'Désactivation du choix des places sur plan',
+        risk: 'Des participants ont réservé des sièges précis. La désactivation du choix de place risque de masquer ou dissocier leurs réservations de places.',
+      });
+    }
+
+    // 3. Changement de salle
+    if (initialEvent.roomId && roomId !== initialEvent.roomId) {
+      risks.push({
+        title: 'Changement de salle de réception',
+        risk: 'Changer de salle modifie la disposition 2D/3D et entraîne la désynchronisation ou la perte des places déjà attribuées aux acheteurs.',
+      });
+    }
+
+    // 4. Capacité totale inférieure aux billets vendus
+    if (ticketsTotal && Number(ticketsTotal) < initialEvent.ticketsSold) {
+      risks.push({
+        title: 'Capacité inférieure au nombre de billets vendus',
+        risk: `La nouvelle capacité renseignée (${ticketsTotal}) est inférieure au nombre de billets déjà vendus (${initialEvent.ticketsSold}).`,
+      });
+    }
+
+    // 5. Abandon des zones tarifaires 3D
+    if (initialEvent.ticketPricingMode === 'by_zone' && ticketPricingMode !== 'by_zone') {
+      risks.push({
+        title: 'Suppression du mode zones tarifaires au profit du tarif unique',
+        risk: 'Des billets ont été achetés dans des zones tarifaires distinctes (VIP, Standard...). Ce changement réinitialise la structure tarifaire.',
+      });
+    }
+
+    // 6. Changement de date de l’événement
+    if (initialEvent.date && date && new Date(date).getTime() !== new Date(initialEvent.date).getTime()) {
+      const oldD = new Date(initialEvent.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+      const newD = new Date(date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+      risks.push({
+        title: 'Modification de la date / heure de l’événement',
+        risk: `La date passe de ${oldD} à ${newD}. Les billets émis et les confirmations d’achat contiendront une date caduque si aucun avis n'est envoyé.`,
+      });
+    }
+
+    return risks;
+  };
+
   const submit = async () => {
     if (missingTab) {
       setTab(missingTab);
@@ -829,6 +901,21 @@ export default function EventConfigForm({
         return;
       }
     }
+
+    // Interception de sécurité : Si des billets ont été vendus et que des changements à risque sont détectés
+    const ticketRisks = getTicketHolderRisks();
+    if (ticketRisks.length > 0 && !ticketRiskConfirmed) {
+      setPendingTicketRisks(ticketRisks);
+      return;
+    }
+
+    setFormError('');
+    await onSave(buildPayload());
+  };
+
+  const handleConfirmTicketRisks = async () => {
+    setTicketRiskConfirmed(true);
+    setPendingTicketRisks(null);
     setFormError('');
     await onSave(buildPayload());
   };
@@ -953,7 +1040,8 @@ export default function EventConfigForm({
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
       onClose={onClose}
       title={editingId ? 'Configurer l’événement' : 'Nouvel événement'}
@@ -1150,292 +1238,364 @@ export default function EventConfigForm({
 
         {tab === 'essentials' && (
           <section className="space-y-4">
-            <div className="space-y-1.5">
-              <span className="block text-xs font-semibold text-muted">Type d’événement</span>
-              <div className="flex flex-wrap gap-2">
-                {kinds.map((kind) => {
-                  const KindIcon = KIND_ICONS[kind] || Calendar;
-                  const isSelected = eventKind === kind;
-                  return (
-                    <button
-                      key={kind}
-                      type="button"
-                      onClick={() => applyKind(isSelected ? '' : kind)}
-                      className={cn(
-                        'inline-flex min-h-10 items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
-                        isSelected
-                          ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
-                          : 'bg-surface text-foreground/80 border-border hover:border-primary/40 hover:bg-surface-muted',
-                      )}
-                    >
-                      <KindIcon className={cn('w-3.5 h-3.5 shrink-0', isSelected ? 'text-primary-foreground' : 'text-primary')} />
-                      <span>{EVENT_KIND_LABELS[kind]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {eventKind === 'WEDDING' && (
-              <div className="rounded-2xl border border-rose-500/25 bg-rose-500/5 dark:bg-rose-950/20 p-3.5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
-                  <Heart className="w-4 h-4 text-rose-500 shrink-0" />
-                  <span>Prénoms des futurs mariés (titre généré automatiquement)</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Prénom conjoint(e) 1"
-                    value={partnerFirst}
-                    onChange={(e) => applyPartner(e.target.value, partnerSecond)}
-                    placeholder="Claire"
-                  />
-                  <Input
-                    label="Prénom conjoint(e) 2"
-                    value={partnerSecond}
-                    onChange={(e) => applyPartner(partnerFirst, e.target.value)}
-                    placeholder="Alexandre"
-                  />
-                </div>
-              </div>
-            )}
-
             {complete && (
-              <Input
-                label="Client / dossier"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="ex. Famille Mbemba"
-              />
-            )}
-
-            <Input
-              label="Titre"
-              value={title}
-              onChange={(e) => {
-                setTitleManual(true);
-                setTitle(e.target.value);
-              }}
-              placeholder={eventKind === 'WEDDING' ? 'Mariage de Claire & Alexandre' : 'ex. Anniversaire de Léa'}
-              required
-            />
-
-            <label className="block space-y-1.5 relative group">
-              <div className="flex items-center justify-between">
-                <span className="block text-xs font-semibold text-muted">Description</span>
+              <div className="flex items-center gap-1.5 p-1 bg-surface-muted border border-border rounded-xl max-w-sm">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!title) return;
-                    const hints = [
-                      "Préparez-vous à vivre un moment inoubliable avec nous.",
-                      "Nous sommes ravis de vous convier à cet événement exceptionnel.",
-                      "Rejoignez-nous pour célébrer ensemble dans la joie et la bonne humeur.",
-                      "Une journée festive et chaleureuse pleine de surprises vous attend."
-                    ];
-                    setDescription(`Bienvenue à "${title}". ${hints[Math.floor(Math.random() * hints.length)]}`);
-                  }}
-                  disabled={!title.trim()}
-                  className="text-[11px] font-semibold text-primary hover:text-primary-hover disabled:opacity-40 transition-colors inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 touch-manipulation"
-                  title="Suggérer un texte d'accueil chaleureux basé sur le titre"
+                  onClick={() => setEssentialsSubTab('general')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    essentialsSubTab === 'general'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
+                  )}
                 >
-                  <Sparkles className="w-3 h-3" /> Suggérer un texte
+                  <Calendar className="w-3.5 h-3.5 text-primary" />
+                  <span>Identité &amp; Horaires</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEssentialsSubTab('details')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    essentialsSubTab === 'details'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
+                  )}
+                >
+                  <Users className="w-3.5 h-3.5 text-primary" />
+                  <span>Logistique &amp; Accès</span>
                 </button>
               </div>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optionnel — ambiance, précisions générales…"
-                rows={3}
-                className={TEXTAREA_CLASS}
-              />
-            </label>
+            )}
 
-            <div className={cn('grid grid-cols-1 gap-3', complete ? 'sm:grid-cols-2' : '')}>
-              <div className="space-y-1.5">
+            {/* Sous-onglet 1 : Identité & Horaires (ou formulaire direct en mode express) */}
+            {(!complete || essentialsSubTab === 'general') && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <span className="block text-xs font-semibold text-muted">Type d’événement</span>
+                  <div className="flex flex-wrap gap-2">
+                    {kinds.map((kind) => {
+                      const KindIcon = KIND_ICONS[kind] || Calendar;
+                      const isSelected = eventKind === kind;
+                      return (
+                        <button
+                          key={kind}
+                          type="button"
+                          onClick={() => applyKind(isSelected ? '' : kind)}
+                          className={cn(
+                            'inline-flex min-h-10 items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition touch-manipulation',
+                            isSelected
+                              ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
+                              : 'bg-surface text-foreground/80 border-border hover:border-primary/40 hover:bg-surface-muted',
+                          )}
+                        >
+                          <KindIcon className={cn('w-3.5 h-3.5 shrink-0', isSelected ? 'text-primary-foreground' : 'text-primary')} />
+                          <span>{EVENT_KIND_LABELS[kind]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {eventKind === 'WEDDING' && (
+                  <div className="rounded-2xl border border-rose-500/25 bg-rose-500/5 dark:bg-rose-950/20 p-3.5 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
+                      <Heart className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>Prénoms des futurs mariés (titre généré automatiquement)</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Input
+                        label="Prénom conjoint(e) 1"
+                        value={partnerFirst}
+                        onChange={(e) => applyPartner(e.target.value, partnerSecond)}
+                        placeholder="Claire"
+                      />
+                      <Input
+                        label="Prénom conjoint(e) 2"
+                        value={partnerSecond}
+                        onChange={(e) => applyPartner(partnerFirst, e.target.value)}
+                        placeholder="Alexandre"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <Input
-                  label="Date & heure de début"
-                  type="datetime-local"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  label="Titre de l'événement"
+                  value={title}
+                  onChange={(e) => {
+                    setTitleManual(true);
+                    setTitle(e.target.value);
+                  }}
+                  placeholder={eventKind === 'WEDDING' ? 'Mariage de Claire & Alexandre' : 'ex. Anniversaire de Léa'}
                   required
                 />
-                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                  <span className="text-[10px] text-muted font-medium">Raccourcis :</span>
-                  <button
-                    type="button"
-                    onClick={() => setDatePreset('this_saturday')}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
-                  >
-                    Ce samedi (18h)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDatePreset('next_saturday')}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
-                  >
-                    Samedi prochain
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDatePreset('in_month')}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
-                  >
-                    Dans 1 mois
-                  </button>
-                </div>
-              </div>
 
-              {complete && (
-                <div className="space-y-1.5">
-                  <Input
-                    label="Heure de fin (optionnel)"
-                    type="datetime-local"
-                    value={endsAt}
-                    onChange={(e) => setEndsAt(e.target.value)}
-                  />
-                  {date && (
+                <div className={cn('grid grid-cols-1 gap-3', complete ? 'sm:grid-cols-2' : '')}>
+                  <div className="space-y-1.5">
+                    <Input
+                      label="Date & heure de début"
+                      type="datetime-local"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      required
+                    />
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="text-[10px] text-muted font-medium">Durée :</span>
+                      <span className="text-[10px] text-muted font-medium">Raccourcis :</span>
                       <button
                         type="button"
-                        onClick={() => setEndsAtPreset(2)}
+                        onClick={() => setDatePreset('this_saturday')}
                         className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                       >
-                        +2h
+                        Ce samedi (18h)
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEndsAtPreset(4)}
+                        onClick={() => setDatePreset('next_saturday')}
                         className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                       >
-                        +4h
+                        Samedi prochain
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEndsAtPreset(6, true)}
+                        onClick={() => setDatePreset('in_month')}
                         className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
                       >
-                        Soirée (minuit)
+                        Dans 1 mois
                       </button>
+                    </div>
+                  </div>
+
+                  {complete && (
+                    <div className="space-y-1.5">
+                      <Input
+                        label="Heure de fin (optionnel)"
+                        type="datetime-local"
+                        value={endsAt}
+                        onChange={(e) => setEndsAt(e.target.value)}
+                      />
+                      {date && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <span className="text-[10px] text-muted font-medium">Durée :</span>
+                          <button
+                            type="button"
+                            onClick={() => setEndsAtPreset(2)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                          >
+                            +2h
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEndsAtPreset(4)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                          >
+                            +4h
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEndsAtPreset(6, true)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+                          >
+                            Soirée (minuit)
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Aperçu lisible de la date & durée */}
-            {(formattedDatePreview || durationPreview) && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {formattedDatePreview && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-muted border border-border text-xs text-foreground font-medium">
-                    <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="capitalize">{formattedDatePreview}</span>
+                {/* Aperçu lisible de la date & durée */}
+                {(formattedDatePreview || durationPreview) && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {formattedDatePreview && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-muted border border-border text-xs text-foreground font-medium">
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span className="capitalize">{formattedDatePreview}</span>
+                      </div>
+                    )}
+                    {durationPreview && (
+                      <div
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium',
+                          durationPreview.error
+                            ? 'bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400'
+                            : 'bg-surface-muted border-border text-muted',
+                        )}
+                      >
+                        {durationPreview.error ? (
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                        )}
+                        <span>{durationPreview.text}</span>
+                      </div>
+                    )}
                   </div>
                 )}
-                {durationPreview && (
-                  <div
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium',
-                      durationPreview.error
-                        ? 'bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400'
-                        : 'bg-surface-muted border-border text-muted',
-                    )}
-                  >
-                    {durationPreview.error ? (
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    ) : (
-                      <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
-                    )}
-                    <span>{durationPreview.text}</span>
+
+                {!complete && (
+                  <div className="space-y-3">
+                    <Input
+                      label="Lieu"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="ex. Hôtel Fleuve Congo"
+                      leftIcon={<MapPin className="w-4 h-4" />}
+                    />
+                    <CityLocationFields
+                      city={city}
+                      commune={commune}
+                      neighborhood={neighborhood}
+                      onChange={applyPlace}
+                      hint="Ville, commune et quartier — pour les invitations et le pin de rendez-vous."
+                    />
+                  </div>
+                )}
+
+                {complete && (
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setEssentialsSubTab('details')}
+                      rightIcon={<ChevronRight className="w-4 h-4" />}
+                    >
+                      Continuer : Logistique &amp; Accès
+                    </Button>
                   </div>
                 )}
               </div>
             )}
 
-            {!complete && (
-              <div className="space-y-3">
-                <Input
-                  label="Lieu"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="ex. Hôtel Fleuve Congo"
-                  leftIcon={<MapPin className="w-4 h-4" />}
-                />
-                <CityLocationFields
-                  city={city}
-                  commune={commune}
-                  neighborhood={neighborhood}
-                  onChange={applyPlace}
-                  hint="Ville, commune et quartier — pour les invitations et le pin de rendez-vous."
-                />
-              </div>
-            )}
-            {complete && (
-              <Input
-                label="Effectif estimé"
-                type="number"
-                min={1}
-                value={estimatedGuests}
-                onChange={(e) => setEstimatedGuests(e.target.value)}
-                placeholder="ex. 180"
-              />
-            )}
+            {/* Sous-onglet 2 : Logistique, Client & Accès (mode complet uniquement) */}
+            {complete && essentialsSubTab === 'details' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Client / dossier"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="ex. Famille Mbemba"
+                  />
+                  <Input
+                    label="Effectif estimé"
+                    type="number"
+                    min={1}
+                    value={estimatedGuests}
+                    onChange={(e) => setEstimatedGuests(e.target.value)}
+                    placeholder="ex. 180"
+                  />
+                </div>
 
-            {complete && (
-              <div className="space-y-2 pt-1 border-t border-border">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                  Visibilité & Accès
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPublic(false);
-                      setTicketing(false);
-                    }}
-                    className={cn(
-                      'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
-                      !isPublic
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
-                        : 'border-border bg-surface hover:bg-surface-muted'
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-bold text-xs text-foreground">
-                        <GlobeLock className="w-4 h-4 text-primary" />
-                        <span>Événement Privé</span>
-                      </div>
-                      {!isPublic && <Check className="w-4 h-4 text-primary" />}
-                    </div>
-                    <p className="text-[11px] text-muted leading-relaxed">
-                      Sur invitation nominative. Lien RSVP unique par convive, placement sur plan de table privé.
-                    </p>
-                  </button>
+                <label className="block space-y-1.5 relative group">
+                  <div className="flex items-center justify-between">
+                    <span className="block text-xs font-semibold text-muted">Description de l’événement</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!title) return;
+                        const hints = [
+                          "Préparez-vous à vivre un moment inoubliable avec nous.",
+                          "Nous sommes ravis de vous convier à cet événement exceptionnel.",
+                          "Rejoignez-nous pour célébrer ensemble dans la joie et la bonne humeur.",
+                          "Une journée festive et chaleureuse pleine de surprises vous attend."
+                        ];
+                        setDescription(`Bienvenue à "${title}". ${hints[Math.floor(Math.random() * hints.length)]}`);
+                      }}
+                      disabled={!title.trim()}
+                      className="text-[11px] font-semibold text-primary hover:text-primary-hover disabled:opacity-40 transition-colors inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 touch-manipulation"
+                      title="Suggérer un texte d'accueil chaleureux basé sur le titre"
+                    >
+                      <Sparkles className="w-3 h-3" /> Suggérer un texte
+                    </button>
+                  </div>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optionnel — ambiance, précisions générales…"
+                    rows={3}
+                    className={TEXTAREA_CLASS}
+                  />
+                </label>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPublic(true);
-                      if (onlinePaymentsEnabled) setTicketing(true);
-                    }}
-                    className={cn(
-                      'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
-                      isPublic
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
-                        : 'border-border bg-surface hover:bg-surface-muted'
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-bold text-xs text-foreground">
-                        <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span>Événement Public & Billetterie</span>
+                <div className="space-y-2 pt-1 border-t border-border">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                    Visibilité &amp; Accès
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPublic(false);
+                        setTicketing(false);
+                      }}
+                      className={cn(
+                        'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
+                        !isPublic
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
+                          : 'border-border bg-surface hover:bg-surface-muted'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-xs text-foreground">
+                          <GlobeLock className="w-4 h-4 text-primary" />
+                          <span>Événement Privé</span>
+                        </div>
+                        {!isPublic && <Check className="w-4 h-4 text-primary" />}
                       </div>
-                      {isPublic && <Check className="w-4 h-4 text-primary" />}
-                    </div>
-                    <p className="text-[11px] text-muted leading-relaxed">
-                      Fiche marketplace ouverte, billetterie multi-zones 3D, paiements Mobile Money & Carte.
-                    </p>
-                  </button>
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        Sur invitation nominative. Lien RSVP unique par convive, placement sur plan de table privé.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPublic(true);
+                        if (onlinePaymentsEnabled) setTicketing(true);
+                      }}
+                      className={cn(
+                        'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
+                        isPublic
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
+                          : 'border-border bg-surface hover:bg-surface-muted'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-xs text-foreground">
+                          <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>Événement Public &amp; Billetterie</span>
+                        </div>
+                        {isPublic && <Check className="w-4 h-4 text-primary" />}
+                      </div>
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        Fiche marketplace ouverte, billetterie multi-zones 3D, paiements Mobile Money &amp; Carte.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEssentialsSubTab('general')}
+                    leftIcon={<ArrowLeft className="w-4 h-4" />}
+                  >
+                    Identité &amp; Horaires
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setTab('place')}
+                    rightIcon={<ChevronRight className="w-4 h-4" />}
+                  >
+                    Étape suivante : Lieu
+                  </Button>
                 </div>
               </div>
             )}
@@ -1444,824 +1604,1235 @@ export default function EventConfigForm({
 
         {tab === 'place' && (
           <section className="space-y-4">
-            <Input
-              label="Lieu / salle"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="ex. Hôtel Fleuve Congo"
-              required
-              leftIcon={<MapPin className="w-4 h-4" />}
-            />
-            <CityLocationFields
-              city={city}
-              commune={commune}
-              neighborhood={neighborhood}
-              onChange={applyPlace}
-              hint="Commune et quartier aident les invités à se repérer. La carte se cadre sur la commune."
-            />
-
-            {selectedRoom && (
-              <div className="flex items-center justify-between p-3 rounded-2xl border border-primary/25 bg-primary/5 dark:bg-primary/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">{selectedRoom.name}</p>
-                    <p className="text-[11px] text-muted truncate">
-                      {selectedRoom.capacity ? `${selectedRoom.capacity} places assises · ` : ''}
-                      {selectedRoom.floor ? `Étage : ${selectedRoom.floor} · ` : ''}
-                      {selectedRoomBlueprint ? '✓ Plan 3D rattaché' : 'Lieu sans plan'}
-                    </p>
-                  </div>
-                </div>
+            {complete && (
+              <div className="flex items-center gap-1.5 p-1 bg-surface-muted border border-border rounded-xl max-w-sm">
                 <button
                   type="button"
-                  onClick={() => applyRoom('')}
-                  className="text-xs text-rose-600 font-semibold hover:underline shrink-0 px-2 py-1"
+                  onClick={() => setPlaceSubTab('room')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    placeSubTab === 'room'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
+                  )}
                 >
-                  Détacher la salle
+                  <Building2 className="w-3.5 h-3.5 text-primary" />
+                  <span>Salle &amp; Modèle 3D</span>
+                  {selectedRoom && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlaceSubTab('address')}
+                  className={cn(
+                    'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    placeSubTab === 'address'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
+                  )}
+                >
+                  <MapPin className="w-3.5 h-3.5 text-primary" />
+                  <span>Adresse &amp; GPS</span>
                 </button>
               </div>
             )}
 
-            <label className="block space-y-1.5">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-                <Building2 className="w-3.5 h-3.5" />
-                Sélectionner une salle enregistrée (optionnel)
-              </span>
-              <select
-                value={roomId}
-                onChange={(e) => applyRoom(e.target.value)}
-                disabled={loadingRooms}
-                className={SELECT_CLASS}
-              >
-                <option value="">Aucune — lieu libre</option>
-                {rooms.map((room) => (
-                  <option key={room.id} value={room.id}>
-                    {room.name}
-                    {room.floor ? ` (${room.floor})` : ''}
-                    {room.capacity ? ` · ${room.capacity} pl.` : ''}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-muted">
-                {rooms.length === 0 ? (
-                  <>
-                    Créez des salles dans{' '}
-                    <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
-                      Salles
-                    </Link>
-                    , ou parcourez le marketplace.
-                  </>
-                ) : (
-                  'Préremplit le lieu et lie le staff. À la création, le plan de table est importé si un modèle existe.'
-                )}{' '}
-                <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">
-                  Trouver une salle
-                </Link>
-                {' · '}
-                <Link href="/marketplace/prestataires" className="font-semibold text-primary hover:underline">
-                  Trouver un prestataire
-                </Link>
-              </p>
-            </label>
+            {/* Sous-onglet 1 : Salle & Modèle 3D (ou en mode express si sélectionné) */}
+            {(!complete || placeSubTab === 'room') && (
+              <div className="space-y-4">
+                {selectedRoom && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl border border-primary/25 bg-primary/5 dark:bg-primary/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">{selectedRoom.name}</p>
+                        <p className="text-[11px] text-muted truncate">
+                          {selectedRoom.capacity ? `${selectedRoom.capacity} places assises · ` : ''}
+                          {selectedRoom.floor ? `Étage : ${selectedRoom.floor} · ` : ''}
+                          {selectedRoomBlueprint ? '✓ Plan 3D rattaché' : 'Lieu sans plan'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => applyRoom('')}
+                      className="text-xs text-rose-600 font-semibold hover:underline shrink-0 px-2 py-1"
+                    >
+                      Détacher la salle
+                    </button>
+                  </div>
+                )}
 
-            {selectedRoom && (
-              <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/30 p-3 sm:p-4 space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-0.5 min-w-0">
-                    <h4 className="text-xs font-semibold text-foreground">Aperçu de la salle</h4>
-                    {selectedRoomBlueprint ? (
-                      <p className="text-[11px] text-muted leading-relaxed">
-                        Ambiance{' '}
-                        <span className="font-semibold text-foreground">
-                          {lightingPresetLabels[roomPreviewLighting]}
-                        </span>
-                        {eventProgram.slots[0]
-                          ? ` · créneau « ${eventProgram.slots[0].label} »`
-                          : ' · définissez un créneau dans Accès pour ajuster l’éclairage'}
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-muted leading-relaxed">
-                        Cette salle n’a pas encore de modèle. Créez-en un dans{' '}
+                <label className="block space-y-1.5">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+                    <Building2 className="w-3.5 h-3.5" />
+                    Sélectionner une salle enregistrée (optionnel)
+                  </span>
+                  <select
+                    value={roomId}
+                    onChange={(e) => applyRoom(e.target.value)}
+                    disabled={loadingRooms}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="">Aucune — lieu libre</option>
+                    {rooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.name}
+                        {room.floor ? ` (${room.floor})` : ''}
+                        {room.capacity ? ` · ${room.capacity} pl.` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-muted">
+                    {rooms.length === 0 ? (
+                      <>
+                        Créez des salles dans{' '}
                         <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
                           Salles
                         </Link>
-                        .
-                      </p>
+                        , ou parcourez le marketplace.
+                      </>
+                    ) : (
+                      'Préremplit le lieu et lie le staff. À la création, le plan de table est importé si un modèle existe.'
+                    )}{' '}
+                    <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">
+                      Trouver une salle
+                    </Link>
+                    {' · '}
+                    <Link href="/marketplace/prestataires" className="font-semibold text-primary hover:underline">
+                      Trouver un prestataire
+                    </Link>
+                  </p>
+                </label>
+
+                {selectedRoom && (
+                  <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/30 p-3 sm:p-4 space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-0.5 min-w-0">
+                        <h4 className="text-xs font-semibold text-foreground">Aperçu de la salle</h4>
+                        {selectedRoomBlueprint ? (
+                          <p className="text-[11px] text-muted leading-relaxed">
+                            Ambiance{' '}
+                            <span className="font-semibold text-foreground">
+                              {lightingPresetLabels[roomPreviewLighting]}
+                            </span>
+                            {eventProgram.slots[0]
+                              ? ` · créneau « ${eventProgram.slots[0].label} »`
+                              : ' · définissez un créneau dans Accès pour ajuster l’éclairage'}
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-muted leading-relaxed">
+                            Cette salle n’a pas encore de modèle. Créez-en un dans{' '}
+                            <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
+                              Salles
+                            </Link>
+                            .
+                          </p>
+                        )}
+                      </div>
+                      {selectedRoomBlueprint && (
+                        <div className="flex shrink-0 gap-1 rounded-full border border-border bg-surface p-0.5">
+                          {([
+                            { id: 'standard' as const, label: 'Rapide' },
+                            { id: 'showcase' as const, label: '3D showcase' },
+                          ]).map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setRoomPreviewQuality(opt.id)}
+                              className={cn(
+                                'px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
+                                roomPreviewQuality === opt.id
+                                  ? 'bg-foreground text-background'
+                                  : 'text-muted hover:text-foreground',
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedRoomBlueprint ? (
+                      <>
+                        <RoomLayoutPreview
+                          blueprint={selectedRoomBlueprint}
+                          quality={roomPreviewQuality}
+                          lightingPreset={roomPreviewLighting}
+                          showMeta
+                          className="[&_.em-floor-canvas]:rounded-xl"
+                        />
+                        <p className="text-[11px] text-muted leading-relaxed">
+                          Orbitez pour inspecter la salle. Le plan de table sera importé automatiquement à la création.{' '}
+                          <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
+                            Modifier le modèle
+                          </Link>
+                        </p>
+                      </>
+                    ) : (
+                      <div className="aspect-[4/3] rounded-xl border border-dashed border-border bg-surface flex flex-col items-center justify-center gap-2 text-center px-4">
+                        <LayoutGrid className="w-8 h-8 text-muted" />
+                        <p className="text-xs text-muted">
+                          Aucun plan disponible pour « {selectedRoom.name} ».
+                        </p>
+                      </div>
                     )}
                   </div>
-                  {selectedRoomBlueprint && (
-                    <div className="flex shrink-0 gap-1 rounded-full border border-border bg-surface p-0.5">
-                      {([
-                        { id: 'standard' as const, label: 'Rapide' },
-                        { id: 'showcase' as const, label: '3D showcase' },
-                      ]).map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setRoomPreviewQuality(opt.id)}
-                          className={cn(
-                            'px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
-                            roomPreviewQuality === opt.id
-                              ? 'bg-foreground text-background'
-                              : 'text-muted hover:text-foreground',
-                          )}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                )}
 
-                {selectedRoomBlueprint ? (
-                  <>
-                    <RoomLayoutPreview
-                      blueprint={selectedRoomBlueprint}
-                      quality={roomPreviewQuality}
-                      lightingPreset={roomPreviewLighting}
-                      showMeta
-                      className="[&_.em-floor-canvas]:rounded-xl"
-                    />
-                    <p className="text-[11px] text-muted leading-relaxed">
-                      Orbitez pour inspecter la salle. Le plan de table sera importé automatiquement à la création.
-                      {' '}
-                      <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
-                        Modifier le modèle
-                      </Link>
-                    </p>
-                  </>
-                ) : (
-                  <div className="aspect-[4/3] rounded-xl border border-dashed border-border bg-surface flex flex-col items-center justify-center gap-2 text-center px-4">
-                    <LayoutGrid className="w-8 h-8 text-muted" />
-                    <p className="text-xs text-muted">
-                      Aucun plan disponible pour « {selectedRoom.name} ».
-                    </p>
+                {complete && (
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPlaceSubTab('address')}
+                      rightIcon={<ChevronRight className="w-4 h-4" />}
+                    >
+                      Continuer : Adresse &amp; GPS
+                    </Button>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="space-y-3 pt-1 border-t border-border">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Localisation GPS</h4>
-                  <p className="text-xs text-muted mt-0.5">
-                    {latitude && longitude ? (
-                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Coordonnées actives ({latitude}, {longitude})
-                      </span>
-                    ) : (
-                      'Optionnel — pour le pin WhatsApp et l’itinéraire GPS'
-                    )}
+            {/* Sous-onglet 2 : Adresse & Coordonnées GPS */}
+            {(!complete || placeSubTab === 'address') && (
+              <div className="space-y-4">
+                <Input
+                  label="Lieu / salle"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="ex. Hôtel Fleuve Congo"
+                  required
+                  leftIcon={<MapPin className="w-4 h-4" />}
+                />
+                <CityLocationFields
+                  city={city}
+                  commune={commune}
+                  neighborhood={neighborhood}
+                  onChange={applyPlace}
+                  hint="Commune et quartier aident les invités à se repérer. La carte se cadre sur la commune."
+                />
+
+                <div className="space-y-3 pt-1 border-t border-border">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Localisation GPS</h4>
+                      <p className="text-xs text-muted mt-0.5">
+                        {latitude && longitude ? (
+                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Coordonnées actives ({latitude}, {longitude})
+                          </span>
+                        ) : (
+                          'Optionnel — pour le pin WhatsApp et l’itinéraire GPS'
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {latitude && longitude && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLatitude('');
+                            setLongitude('');
+                          }}
+                          className="text-xs text-rose-600 font-semibold hover:underline"
+                        >
+                          Effacer GPS
+                        </button>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void searchLocationOnMap()}
+                        disabled={searchingLocation}
+                        leftIcon={searchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                      >
+                        Rechercher sur la carte
+                      </Button>
+                    </div>
+                  </div>
+                  {searchError && <p className="text-xs text-rose-600 font-medium">{searchError}</p>}
+                  <div
+                    id="event-config-map-picker"
+                    className="w-full h-48 bg-surface-muted rounded-[var(--radius-card)] border border-border overflow-hidden relative"
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center text-muted text-xs">
+                      Chargement de la carte…
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted">
+                    Cliquez sur la carte ou faites glisser le marqueur — les coordonnées GPS sont enregistrées automatiquement.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {latitude && longitude && (
-                    <button
+
+                {complete && (
+                  <div className="pt-2 flex items-center justify-between">
+                    <Button
                       type="button"
-                      onClick={() => {
-                        setLatitude('');
-                        setLongitude('');
-                      }}
-                      className="text-xs text-rose-600 font-semibold hover:underline"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPlaceSubTab('room')}
+                      leftIcon={<ArrowLeft className="w-4 h-4" />}
                     >
-                      Effacer GPS
-                    </button>
-                  )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void searchLocationOnMap()}
-                    disabled={searchingLocation}
-                    leftIcon={searchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                  >
-                    Rechercher sur la carte
-                  </Button>
-                </div>
+                      Salle &amp; Modèle 3D
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setTab('access')}
+                      rightIcon={<ChevronRight className="w-4 h-4" />}
+                    >
+                      Étape suivante : Accès
+                    </Button>
+                  </div>
+                )}
               </div>
-              {searchError && <p className="text-xs text-rose-600 font-medium">{searchError}</p>}
-              <div
-                id="event-config-map-picker"
-                className="w-full h-48 bg-surface-muted rounded-[var(--radius-card)] border border-border overflow-hidden relative"
-              >
-                <div className="absolute inset-0 flex items-center justify-center text-muted text-xs">
-                  Chargement de la carte…
-                </div>
-              </div>
-              <p className="text-[11px] text-muted">
-                Cliquez sur la carte ou faites glisser le marqueur — les coordonnées GPS sont enregistrées automatiquement.
-              </p>
-            </div>
+            )}
           </section>
         )}
 
         {tab === 'access' && (
-          <section className="space-y-3">
+          <section className="space-y-4">
             {complete && isPublic && (
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5">
-                  <label className={`flex items-start gap-3 text-sm cursor-pointer ${!onlinePaymentsEnabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={ticketing}
-                      disabled={!onlinePaymentsEnabled}
-                      onChange={(e) => setTicketing(e.target.checked)}
-                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
-                    />
-                    <div>
-                      <span className="inline-flex items-center gap-1.5 font-bold text-foreground">
-                        <Ticket className="w-4 h-4 text-primary" />
-                        Billetterie en ligne payante
-                      </span>
-                      <p className="text-[11px] text-muted mt-0.5">
-                        Paiement sécurisé par Mobile Money (Orange Money, M-Pesa, Airtel Money) et Carte bancaire.
-                      </p>
-                    </div>
-                  </label>
-
-                  {!onlinePaymentsEnabled && (
-                    <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
-                      Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
-                    </p>
+              <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-surface-muted border border-border rounded-2xl mb-2">
+                <button
+                  type="button"
+                  onClick={() => setAccessSubTab('ticketing')}
+                  className={cn(
+                    'flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    accessSubTab === 'ticketing'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
                   )}
+                >
+                  <Ticket className="w-3.5 h-3.5 text-primary" />
+                  <span>Billetterie &amp; Tarifs</span>
+                  {ticketing && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                </button>
 
-                  {ticketing && (
-                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 space-y-2">
-                      <div className="flex items-center gap-2 font-bold text-xs text-primary">
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>Validation automatique de présence & Billets partagés</span>
-                      </div>
-                      <ul className="text-[11px] text-muted space-y-1 pl-4 list-disc leading-relaxed">
-                        <li><strong>Présence validée automatiquement :</strong> Dès qu’un participant paie son billet, son statut passe directement à Présent (RSVP validé).</li>
-                        <li><strong>Billets partagés personnalisables :</strong> Les bénéficiaires d’un lot de billets peuvent chacun personnaliser leur nom, prénom et téléphone sur leur pass d’accès.</li>
-                      </ul>
-                    </div>
+                <button
+                  type="button"
+                  onClick={() => setAccessSubTab('seating')}
+                  className={cn(
+                    'flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    accessSubTab === 'seating'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
                   )}
+                >
+                  <Box className="w-3.5 h-3.5 text-primary" />
+                  <span>Places &amp; Voisins</span>
+                  {seatSelection && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                </button>
 
-                  {ticketing && (
-                    <div className="space-y-3.5 pt-2 border-t border-border">
-                      <div>
-                        <p className="text-xs font-bold text-foreground mb-1.5">Mode tarifaire</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          <button
-                            type="button"
-                            onClick={() => setTicketPricingMode('global')}
-                            className={cn(
-                              'p-3 rounded-xl border text-left transition relative flex flex-col gap-1 min-h-11',
-                              ticketPricingMode === 'global'
-                                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
-                                : 'border-border bg-surface hover:bg-surface-muted'
-                            )}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-foreground">Tarif Unique</span>
-                              {ticketPricingMode === 'global' && <Check className="w-3.5 h-3.5 text-primary" />}
-                            </div>
-                            <span className="text-[11px] text-muted">Un prix unique pour tous les billets de l’événement.</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setTicketPricingMode('by_zone');
-                              if (pricingZones.length === 0) {
-                                setPricingZones([createEmptyPricingZone(0), createEmptyPricingZone(1)]);
-                              }
-                            }}
-                            className={cn(
-                              'p-3 rounded-xl border text-left transition relative flex flex-col gap-1 min-h-11',
-                              ticketPricingMode === 'by_zone'
-                                ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
-                                : 'border-border bg-surface hover:bg-surface-muted'
-                            )}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
-                                <Box className="w-3.5 h-3.5 text-primary" />
-                                Zones Tarifaires 3D
-                              </span>
-                              {ticketPricingMode === 'by_zone' && <Check className="w-3.5 h-3.5 text-primary" />}
-                            </div>
-                            <span className="text-[11px] text-muted">Catégories distinctes (VIP, Carré d’Or, Standard) avec modélisation 3D et tarifs distincts.</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {ticketPricingMode === 'global' ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                          <Input
-                            label="Prix du billet (FC)"
-                            type="number"
-                            min={0}
-                            value={ticketPrice}
-                            onChange={(e) => setTicketPrice(e.target.value)}
-                            placeholder="ex. 25000"
-                            required
-                          />
-                          <Input
-                            label="Nombre de places (optionnel)"
-                            type="number"
-                            min={1}
-                            value={ticketsTotal}
-                            onChange={(e) => setTicketsTotal(e.target.value)}
-                            placeholder="Illimité"
-                          />
-                        </div>
-                      ) : (
-                        <div className="space-y-3 pt-1">
-                          <PublicEventZoneStudio3D
-                            blueprint={selectedRoomBlueprint}
-                            pricingZones={pricingZones}
-                            onUpdatePricingZones={setPricingZones}
-                            tables={availableTables}
-                            tableZoneAssignments={tableZoneAssignments}
-                            onAssignTableZone={(tableId, zoneId) =>
-                              setTableZoneAssignments((prev) => ({ ...prev, [tableId]: zoneId }))
-                            }
-                            onBulkAssignTables={(assignments, updatedZones) => {
-                              setTableZoneAssignments((prev) => ({ ...prev, ...assignments }));
-                              if (updatedZones) setPricingZones(updatedZones);
-                            }}
-                            roomName={selectedRoom?.name}
-                            lightingPreset={roomPreviewLighting}
-                            onOpenRoomPicker={() => setTab('place')}
-                          />
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                            <Input
-                              label="Prix par défaut (FC, optionnel)"
-                              type="number"
-                              min={0}
-                              value={ticketPrice}
-                              onChange={(e) => setTicketPrice(e.target.value)}
-                              placeholder="ex. 15000"
-                            />
-                            <Input
-                              label="Nombre de places total (optionnel)"
-                              type="number"
-                              min={1}
-                              value={ticketsTotal}
-                              onChange={(e) => setTicketsTotal(e.target.value)}
-                              placeholder="Illimité"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                <button
+                  type="button"
+                  onClick={() => setAccessSubTab('donations')}
+                  className={cn(
+                    'flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    accessSubTab === 'donations'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
                   )}
+                >
+                  <Heart className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Dons libres</span>
+                  {donationsEnabled && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />}
+                </button>
 
-                  {!ticketing && (
-                    <Input
-                      label="Capacité (optionnel)"
-                      type="number"
-                      min={1}
-                      value={ticketsTotal}
-                      onChange={(e) => setTicketsTotal(e.target.value)}
-                      placeholder="Illimité"
-                    />
+                <button
+                  type="button"
+                  onClick={() => setAccessSubTab('program')}
+                  className={cn(
+                    'flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5',
+                    accessSubTab === 'program'
+                      ? 'bg-surface text-foreground shadow-2xs border border-border/80'
+                      : 'text-muted hover:text-foreground'
                   )}
-                  <p className="text-[11px] text-muted">
-                    {ticketing
-                      ? 'Paiements par Mobile Money et Carte (FlexPay). L’acheteur reçoit son billet avec QR Code unique et son lien d’accès.'
-                      : 'Inscription gratuite : le visiteur renseigne son nom et téléphone, puis reçoit son pass d’accès.'}
-                  </p>
-                </div>
+                >
+                  <Clock className="w-3.5 h-3.5 text-primary" />
+                  <span>Ambiance &amp; RSVP</span>
+                  {formTemplateId && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                </button>
+              </div>
+            )}
 
-                <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-2">
-                  <label className="flex items-start gap-2.5 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={seatSelection}
-                      onChange={(e) => setSeatSelection(e.target.checked)}
-                      className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
-                    />
-                    <div>
-                      <span className="font-bold text-foreground">
-                        Activer le choix de place sur le plan 2D / 3D à l’achat
-                      </span>
-                      <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
-                        Permet aux acheteurs de choisir leur siège ou table directement sur le plan interactif 2D ou 3D. 1 billet = 1 siège garanti.
-                      </span>
-                    </div>
-                  </label>
-                </div>
-
-                {/* Confidentialité & Partage entre participants */}
-                <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-primary" />
-                      <span className="font-bold text-xs text-foreground">
-                        Confidentialité & Partage entre convives (Événement public)
-                      </span>
-                    </div>
-                    <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                      RGPD & Vie privée
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted leading-relaxed">
-                    Déterminez si les participants peuvent voir les identités des personnes assises à leur table, allée ou zone sur les plans 2D/3D.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1" role="radiogroup" aria-label="Mode de visibilité des voisins">
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={neighborSharingMode === 'first_name'}
-                      onClick={() => setNeighborSharingMode('first_name')}
-                      className={cn(
-                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                        neighborSharingMode === 'first_name'
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
-                          : 'border-border bg-surface hover:bg-surface-muted'
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-foreground">Prénoms seuls</span>
-                        {neighborSharingMode === 'first_name' && <Check className="w-3.5 h-3.5 text-primary" />}
-                      </div>
-                      <span className="text-[10px] text-muted leading-snug">
-                        Prénom visible (ex. &quot;Sarah M.&quot;). Idéal pour la convivialité et la discrétion. (Recommandé)
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={neighborSharingMode === 'hidden'}
-                      onClick={() => setNeighborSharingMode('hidden')}
-                      className={cn(
-                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                        neighborSharingMode === 'hidden'
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
-                          : 'border-border bg-surface hover:bg-surface-muted'
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-foreground">Anonymat total</span>
-                        {neighborSharingMode === 'hidden' && <Check className="w-3.5 h-3.5 text-primary" />}
-                      </div>
-                      <span className="text-[10px] text-muted leading-snug">
-                        Aucun nom visible. Les sièges apparaissent simplement &quot;Occupés&quot;.
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={neighborSharingMode === 'full'}
-                      onClick={() => setNeighborSharingMode('full')}
-                      className={cn(
-                        'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                        neighborSharingMode === 'full'
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
-                          : 'border-border bg-surface hover:bg-surface-muted'
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-foreground">Partage complet</span>
-                        {neighborSharingMode === 'full' && <Check className="w-3.5 h-3.5 text-primary" />}
-                      </div>
-                      <span className="text-[10px] text-muted leading-snug">
-                        Prénom et nom affichés. Adapté aux conférences ou galas d&apos;affaires.
-                      </span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-border">
-                    <label className="flex items-start gap-2.5 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={shareSameTable}
-                        onChange={(e) => setShareSameTable(e.target.checked)}
-                        className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
-                      />
-                      <div>
-                        <span className="font-semibold text-foreground">
-                          Autoriser le partage des informations entre personnes de la même table
-                        </span>
-                        <span className="block text-[10.5px] text-muted mt-0.5">
-                          Si décoché, l&apos;invité ne voit aucun détail sur les autres sièges de sa table.
-                        </span>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-2.5 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={shareSameZone}
-                        onChange={(e) => setShareSameZone(e.target.checked)}
-                        className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
-                      />
-                      <div>
-                        <span className="font-semibold text-foreground">
-                          Autoriser le partage des informations entre voisins de la même allée ou zone
-                        </span>
-                        <span className="block text-[10.5px] text-muted mt-0.5">
-                          Permet aux participants d&apos;une même zone tarifaire ou allée de voir la liste des convives présents.
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Collecte de dons à montant libre */}
-                <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
-                  <div className="flex items-start justify-between gap-3">
-                    <label className={cn('flex items-start gap-3', donationsAllowedByAdmin ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed')}>
-                      <input
-                        type="checkbox"
-                        checked={donationsEnabled}
-                        disabled={!donationsAllowedByAdmin}
-                        onChange={(e) => setDonationsEnabled(e.target.checked)}
-                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
-                      />
-                      <div>
-                        <span className="inline-flex items-center gap-1.5 font-bold text-foreground text-sm">
-                          <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
-                          Collecte de dons à montant libre
-                        </span>
-                        <p className="text-[11px] text-muted mt-0.5">
-                          Permet aux participants et donateurs d’effectuer un don financier solidaire libre en FC ou USD via Mobile Money et Carte bancaire.
-                        </p>
-                      </div>
-                    </label>
-                    <span
-                      className={cn(
-                        'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
-                        donationsAllowedByAdmin
-                          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                          : 'text-amber-700 dark:text-amber-300 bg-amber-500/15',
-                      )}
-                    >
-                      {donationsAllowedByAdmin ? 'Autorisé' : 'Restreint'}
-                    </span>
-                  </div>
-
-                  {!donationsAllowedByAdmin && (
-                    <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
-                      <p className="font-semibold flex items-center gap-1.5">
-                        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                        Option soumise à autorisation de l'administrateur
-                      </p>
-                      <p className="text-[11px] leading-relaxed text-muted">
-                        La collecte de dons à montant libre est actuellement restreinte par la politique du Super Admin pour votre organisation.
-                        Contactez le support EventMaster pour demander l&apos;activation des donations pour vos événements.
-                      </p>
-                    </div>
-                  )}
-
-                  {donationsAllowedByAdmin && donationsEnabled && (
-                    <div className="space-y-3.5 pt-2 border-t border-border">
-                      <Input
-                        label="Cause / Motif de la collecte"
-                        value={donationCause}
-                        onChange={(e) => setDonationCause(e.target.value)}
-                        placeholder="ex. Soutien aux orphelinats de Kinshasa, levée de fonds pour bourses scolaires..."
-                      />
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <Input
-                          label="Objectif cible en FC (optionnel — affiche une jauge de collecte)"
-                          type="number"
-                          min={0}
-                          value={donationTargetFc}
-                          onChange={(e) => setDonationTargetFc(e.target.value)}
-                          placeholder="ex. 10000000"
-                        />
-                        <Input
-                          label="Montant minimum d'un don (FC)"
-                          type="number"
-                          min={100}
-                          step={500}
-                          value={donationMinAmountFc}
-                          onChange={(e) => setDonationMinAmountFc(e.target.value)}
-                          placeholder="1000"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted block">
-                          Suggestions rapides de montants (FC, séparés par virgules)
-                        </label>
-                        <Input
-                          value={donationSuggestedFc}
-                          onChange={(e) => setDonationSuggestedFc(e.target.value)}
-                          placeholder="2500, 5000, 10000, 25000, 50000, 100000"
-                        />
-                        <div className="flex flex-wrap gap-1 pt-0.5">
-                          {donationSuggestedFc
-                            .split(/[,;\s]+/)
-                            .map((s) => Number(s.trim()))
-                            .filter((n) => Number.isFinite(n) && n > 0)
-                            .map((amt) => (
-                              <span key={amt} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
-                                {amt.toLocaleString('fr-FR')} FC
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-
-                      <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer pt-1">
+            {complete && isPublic ? (
+              <>
+                {/* SOUS-ONGLET 1 : Billetterie & Tarifs */}
+                {accessSubTab === 'ticketing' && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5">
+                      <label className={`flex items-start gap-3 text-sm cursor-pointer ${!onlinePaymentsEnabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
                         <input
                           type="checkbox"
-                          checked={donorAttendancePass}
-                          onChange={(e) => setDonorAttendancePass(e.target.checked)}
+                          checked={ticketing}
+                          disabled={!onlinePaymentsEnabled}
+                          onChange={(e) => setTicketing(e.target.checked)}
+                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
+                        />
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 font-bold text-foreground">
+                            <Ticket className="w-4 h-4 text-primary" />
+                            Billetterie en ligne payante
+                          </span>
+                          <p className="text-[11px] text-muted mt-0.5">
+                            Paiement sécurisé par Mobile Money (Orange Money, M-Pesa, Airtel Money) et Carte bancaire.
+                          </p>
+                        </div>
+                      </label>
+
+                      {!onlinePaymentsEnabled && (
+                        <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
+                          Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
+                        </p>
+                      )}
+
+                      {ticketing && (
+                        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 space-y-2">
+                          <div className="flex items-center gap-2 font-bold text-xs text-primary">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            <span>Validation automatique de présence &amp; Billets partagés</span>
+                          </div>
+                          <ul className="text-[11px] text-muted space-y-1 pl-4 list-disc leading-relaxed">
+                            <li><strong>Présence validée automatiquement :</strong> Dès qu’un participant paie son billet, son statut passe directement à Présent (RSVP validé).</li>
+                            <li><strong>Billets partagés personnalisables :</strong> Les bénéficiaires d’un lot de billets peuvent chacun personnaliser leur nom, prénom et téléphone sur leur pass d’accès.</li>
+                          </ul>
+                        </div>
+                      )}
+
+                      {ticketing && (
+                        <div className="space-y-3.5 pt-2 border-t border-border">
+                          <div>
+                            <p className="text-xs font-bold text-foreground mb-1.5">Mode tarifaire</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => setTicketPricingMode('global')}
+                                className={cn(
+                                  'p-3 rounded-xl border text-left transition relative flex flex-col gap-1 min-h-11',
+                                  ticketPricingMode === 'global'
+                                    ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                                    : 'border-border bg-surface hover:bg-surface-muted'
+                                )}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-xs text-foreground">Tarif Unique</span>
+                                  {ticketPricingMode === 'global' && <Check className="w-3.5 h-3.5 text-primary" />}
+                                </div>
+                                <span className="text-[11px] text-muted">Un prix unique pour tous les billets de l’événement.</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTicketPricingMode('by_zone');
+                                  if (pricingZones.length === 0) {
+                                    setPricingZones([createEmptyPricingZone(0), createEmptyPricingZone(1)]);
+                                  }
+                                }}
+                                className={cn(
+                                  'p-3 rounded-xl border text-left transition relative flex flex-col gap-1 min-h-11',
+                                  ticketPricingMode === 'by_zone'
+                                    ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                                    : 'border-border bg-surface hover:bg-surface-muted'
+                                )}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                                    <Box className="w-3.5 h-3.5 text-primary" />
+                                    Zones Tarifaires 3D
+                                  </span>
+                                  {ticketPricingMode === 'by_zone' && <Check className="w-3.5 h-3.5 text-primary" />}
+                                </div>
+                                <span className="text-[11px] text-muted">Catégories distinctes (VIP, Carré d’Or, Standard) avec modélisation 3D et tarifs distincts.</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {ticketPricingMode === 'global' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                              <Input
+                                label="Prix du billet (FC)"
+                                type="number"
+                                min={0}
+                                value={ticketPrice}
+                                onChange={(e) => setTicketPrice(e.target.value)}
+                                placeholder="ex. 25000"
+                                required
+                              />
+                              <Input
+                                label="Nombre de places (optionnel)"
+                                type="number"
+                                min={1}
+                                value={ticketsTotal}
+                                onChange={(e) => setTicketsTotal(e.target.value)}
+                                placeholder="Illimité"
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-3 pt-1">
+                              <PublicEventZoneStudio3D
+                                blueprint={selectedRoomBlueprint}
+                                pricingZones={pricingZones}
+                                onUpdatePricingZones={setPricingZones}
+                                tables={availableTables}
+                                tableZoneAssignments={tableZoneAssignments}
+                                onAssignTableZone={(tableId, zoneId) =>
+                                  setTableZoneAssignments((prev) => ({ ...prev, [tableId]: zoneId }))
+                                }
+                                onBulkAssignTables={(assignments, updatedZones) => {
+                                  setTableZoneAssignments((prev) => ({ ...prev, ...assignments }));
+                                  if (updatedZones) setPricingZones(updatedZones);
+                                }}
+                                roomName={selectedRoom?.name}
+                                lightingPreset={roomPreviewLighting}
+                                onOpenRoomPicker={() => setTab('place')}
+                              />
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                <Input
+                                  label="Prix par défaut (FC, optionnel)"
+                                  type="number"
+                                  min={0}
+                                  value={ticketPrice}
+                                  onChange={(e) => setTicketPrice(e.target.value)}
+                                  placeholder="ex. 15000"
+                                />
+                                <Input
+                                  label="Nombre de places total (optionnel)"
+                                  type="number"
+                                  min={1}
+                                  value={ticketsTotal}
+                                  onChange={(e) => setTicketsTotal(e.target.value)}
+                                  placeholder="Illimité"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {!ticketing && (
+                        <Input
+                          label="Capacité (optionnel)"
+                          type="number"
+                          min={1}
+                          value={ticketsTotal}
+                          onChange={(e) => setTicketsTotal(e.target.value)}
+                          placeholder="Illimité"
+                        />
+                      )}
+                      <p className="text-[11px] text-muted">
+                        {ticketing
+                          ? 'Paiements par Mobile Money et Carte (FlexPay). L’acheteur reçoit son billet avec QR Code unique et son lien d’accès.'
+                          : 'Inscription gratuite : le visiteur renseigne son nom et téléphone, puis reçoit son pass d’accès.'}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setAccessSubTab('seating')}
+                        rightIcon={<ChevronRight className="w-4 h-4" />}
+                      >
+                        Suivant : Places &amp; Voisins
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SOUS-ONGLET 2 : Places & Voisins */}
+                {accessSubTab === 'seating' && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-border bg-surface p-3.5 space-y-2">
+                      <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={seatSelection}
+                          onChange={(e) => setSeatSelection(e.target.checked)}
                           className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
                         />
                         <div>
-                          <span className="font-semibold">Attribuer un pass invité « Donateur » avec badge QR</span>
-                          <span className="block text-[11px] text-muted">
-                            Si activé, chaque donateur reçoit automatiquement un pass d’accès confirmé et son QR code pour assister à l’événement.
+                          <span className="font-bold text-foreground">
+                            Activer le choix de place sur le plan 2D / 3D à l’achat
+                          </span>
+                          <span className="block text-[11px] text-muted mt-0.5 leading-relaxed">
+                            Permet aux acheteurs de choisir leur siège ou table directement sur le plan interactif 2D ou 3D. 1 billet = 1 siège garanti.
                           </span>
                         </div>
                       </label>
                     </div>
-                  )}
-                </div>
 
-                <div className="space-y-2 pt-2 border-t border-border">
-                  <p className="text-xs font-semibold text-foreground">Programme & ambiance</p>
-                  <p className="text-[11px] text-muted">
-                    Créneaux Soleil / Crépuscule / Nuit — reflétés dans l’aperçu salle et la vue extérieure.
-                  </p>
-                  {eventProgram.slots.map((slot) => (
-                    <div key={slot.id} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-2 rounded border border-border bg-surface-muted/40">
-                      <Input
-                        label="Titre"
-                        value={slot.label}
-                        onChange={(e) => setEventProgram((p) => ({
-                          ...p,
-                          slots: p.slots.map((s) => (s.id === slot.id ? { ...s, label: e.target.value } : s)),
-                        }))}
-                      />
-                      <Input
-                        label="Début (HH:mm)"
-                        value={slot.startsAt}
-                        onChange={(e) => setEventProgram((p) => ({
-                          ...p,
-                          slots: p.slots.map((s) => (s.id === slot.id ? { ...s, startsAt: e.target.value } : s)),
-                        }))}
-                        placeholder="18:00"
-                      />
-                      <label className="text-xs space-y-1 block">
-                        <span className="text-muted">Ambiance</span>
-                        <select
-                          className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm"
-                          value={slot.lighting ?? 'dusk'}
-                          onChange={(e) => setEventProgram((p) => ({
-                            ...p,
-                            slots: p.slots.map((s) => (s.id === slot.id
-                              ? { ...s, lighting: e.target.value as Exclude<LightingPreset, 'auto'> }
-                              : s)),
-                          }))}
+                    {/* Confidentialité & Partage entre participants */}
+                    <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-primary" />
+                          <span className="font-bold text-xs text-foreground">
+                            Confidentialité &amp; Partage entre convives (Événement public)
+                          </span>
+                        </div>
+                        <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                          RGPD &amp; Vie privée
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        Déterminez si les participants peuvent voir les identités des personnes assises à leur table, allée ou zone sur les plans 2D/3D.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1" role="radiogroup" aria-label="Mode de visibilité des voisins">
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={neighborSharingMode === 'first_name'}
+                          onClick={() => setNeighborSharingMode('first_name')}
+                          className={cn(
+                            'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                            neighborSharingMode === 'first_name'
+                              ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                              : 'border-border bg-surface hover:bg-surface-muted'
+                          )}
                         >
-                          {(['day', 'dusk', 'night'] as const).map((k) => (
-                            <option key={k} value={k}>{lightingPresetLabels[k]}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <button
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-foreground">Prénoms seuls</span>
+                            {neighborSharingMode === 'first_name' && <Check className="w-3.5 h-3.5 text-primary" />}
+                          </div>
+                          <span className="text-[10px] text-muted leading-snug">
+                            Prénom visible (ex. &quot;Sarah M.&quot;). Idéal pour la convivialité et la discrétion. (Recommandé)
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={neighborSharingMode === 'hidden'}
+                          onClick={() => setNeighborSharingMode('hidden')}
+                          className={cn(
+                            'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                            neighborSharingMode === 'hidden'
+                              ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                              : 'border-border bg-surface hover:bg-surface-muted'
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-foreground">Anonymat total</span>
+                            {neighborSharingMode === 'hidden' && <Check className="w-3.5 h-3.5 text-primary" />}
+                          </div>
+                          <span className="text-[10px] text-muted leading-snug">
+                            Aucun nom visible. Les sièges apparaissent simplement &quot;Occupés&quot;.
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={neighborSharingMode === 'full'}
+                          onClick={() => setNeighborSharingMode('full')}
+                          className={cn(
+                            'p-2.5 rounded-xl border text-left transition flex flex-col gap-1 min-h-11 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                            neighborSharingMode === 'full'
+                              ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                              : 'border-border bg-surface hover:bg-surface-muted'
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-foreground">Partage complet</span>
+                            {neighborSharingMode === 'full' && <Check className="w-3.5 h-3.5 text-primary" />}
+                          </div>
+                          <span className="text-[10px] text-muted leading-snug">
+                            Prénom et nom affichés. Adapté aux conférences ou galas d&apos;affaires.
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        <label className="flex items-start gap-2.5 text-xs cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={shareSameTable}
+                            onChange={(e) => setShareSameTable(e.target.checked)}
+                            className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                          />
+                          <div>
+                            <span className="font-semibold text-foreground">
+                              Autoriser le partage des informations entre personnes de la même table
+                            </span>
+                            <span className="block text-[10.5px] text-muted mt-0.5">
+                              Si décoché, l&apos;invité ne voit aucun détail sur les autres sièges de sa table.
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className="flex items-start gap-2.5 text-xs cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={shareSameZone}
+                            onChange={(e) => setShareSameZone(e.target.checked)}
+                            className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                          />
+                          <div>
+                            <span className="font-semibold text-foreground">
+                              Autoriser le partage des informations entre voisins de la même allée ou zone
+                            </span>
+                            <span className="block text-[10.5px] text-muted mt-0.5">
+                              Permet aux participants d&apos;une même zone tarifaire ou allée de voir la liste des convives présents.
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between">
+                      <Button
                         type="button"
-                        className="text-xs text-rose-600 font-semibold py-2"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAccessSubTab('ticketing')}
+                        leftIcon={<ArrowLeft className="w-4 h-4" />}
+                      >
+                        Billetterie &amp; Tarifs
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setAccessSubTab('donations')}
+                        rightIcon={<ChevronRight className="w-4 h-4" />}
+                      >
+                        Suivant : Dons libres
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SOUS-ONGLET 3 : Dons libres */}
+                {accessSubTab === 'donations' && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <label className={cn('flex items-start gap-3', donationsAllowedByAdmin ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed')}>
+                          <input
+                            type="checkbox"
+                            checked={donationsEnabled}
+                            disabled={!donationsAllowedByAdmin}
+                            onChange={(e) => setDonationsEnabled(e.target.checked)}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
+                          />
+                          <div>
+                            <span className="inline-flex items-center gap-1.5 font-bold text-foreground text-sm">
+                              <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />
+                              Collecte de dons à montant libre
+                            </span>
+                            <p className="text-[11px] text-muted mt-0.5">
+                              Permet aux participants et donateurs d’effectuer un don financier solidaire libre en FC ou USD via Mobile Money et Carte bancaire.
+                            </p>
+                          </div>
+                        </label>
+                        <span
+                          className={cn(
+                            'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+                            donationsAllowedByAdmin
+                              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                              : 'text-amber-700 dark:text-amber-300 bg-amber-500/15',
+                          )}
+                        >
+                          {donationsAllowedByAdmin ? 'Autorisé' : 'Restreint'}
+                        </span>
+                      </div>
+
+                      {!donationsAllowedByAdmin && (
+                        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                          <p className="font-semibold flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                            Option soumise à autorisation de l'administrateur
+                          </p>
+                          <p className="text-[11px] leading-relaxed text-muted">
+                            La collecte de dons à montant libre est actuellement restreinte par la politique du Super Admin pour votre organisation.
+                            Contactez le support EventMaster pour demander l&apos;activation des donations pour vos événements.
+                          </p>
+                        </div>
+                      )}
+
+                      {donationsAllowedByAdmin && donationsEnabled && (
+                        <div className="space-y-3.5 pt-2 border-t border-border">
+                          <Input
+                            label="Cause / Motif de la collecte"
+                            value={donationCause}
+                            onChange={(e) => setDonationCause(e.target.value)}
+                            placeholder="ex. Soutien aux orphelinats de Kinshasa, levée de fonds pour bourses scolaires..."
+                          />
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Input
+                              label="Objectif cible en FC (optionnel — affiche une jauge de collecte)"
+                              type="number"
+                              min={0}
+                              value={donationTargetFc}
+                              onChange={(e) => setDonationTargetFc(e.target.value)}
+                              placeholder="ex. 10000000"
+                            />
+                            <Input
+                              label="Montant minimum d'un don (FC)"
+                              type="number"
+                              min={100}
+                              step={500}
+                              value={donationMinAmountFc}
+                              onChange={(e) => setDonationMinAmountFc(e.target.value)}
+                              placeholder="1000"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-muted block">
+                              Suggestions rapides de montants (FC, séparés par virgules)
+                            </label>
+                            <Input
+                              value={donationSuggestedFc}
+                              onChange={(e) => setDonationSuggestedFc(e.target.value)}
+                              placeholder="2500, 5000, 10000, 25000, 50000, 100000"
+                            />
+                            <div className="flex flex-wrap gap-1 pt-0.5">
+                              {donationSuggestedFc
+                                .split(/[,;\s]+/)
+                                .map((s) => Number(s.trim()))
+                                .filter((n) => Number.isFinite(n) && n > 0)
+                                .map((amt) => (
+                                  <span key={amt} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-muted text-foreground border border-border">
+                                    {amt.toLocaleString('fr-FR')} FC
+                                  </span>
+                                ))}
+                            </div>
+                          </div>
+
+                          <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={donorAttendancePass}
+                              onChange={(e) => setDonorAttendancePass(e.target.checked)}
+                              className="rounded border-border mt-0.5 w-4 h-4 text-primary focus:ring-primary/30"
+                            />
+                            <div>
+                              <span className="font-semibold">Attribuer un pass invité « Donateur » avec badge QR</span>
+                              <span className="block text-[11px] text-muted">
+                                Si activé, chaque donateur reçoit automatiquement un pass d’accès confirmé et son QR code pour assister à l’événement.
+                              </span>
+                            </div>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAccessSubTab('seating')}
+                        leftIcon={<ArrowLeft className="w-4 h-4" />}
+                      >
+                        Places &amp; Voisins
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setAccessSubTab('program')}
+                        rightIcon={<ChevronRight className="w-4 h-4" />}
+                      >
+                        Suivant : Ambiance &amp; RSVP
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SOUS-ONGLET 4 : Ambiance & RSVP */}
+                {accessSubTab === 'program' && (
+                  <div className="space-y-4">
+                    <div className="space-y-2 p-3.5 rounded-2xl border border-border bg-surface">
+                      <p className="text-xs font-semibold text-foreground">Programme &amp; ambiance</p>
+                      <p className="text-[11px] text-muted">
+                        Créneaux Soleil / Crépuscule / Nuit — reflétés dans l’aperçu salle et la vue extérieure.
+                      </p>
+                      {eventProgram.slots.map((slot) => (
+                        <div key={slot.id} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-2 rounded-xl border border-border bg-surface-muted/40">
+                          <Input
+                            label="Titre"
+                            value={slot.label}
+                            onChange={(e) => setEventProgram((p) => ({
+                              ...p,
+                              slots: p.slots.map((s) => (s.id === slot.id ? { ...s, label: e.target.value } : s)),
+                            }))}
+                          />
+                          <Input
+                            label="Début (HH:mm)"
+                            value={slot.startsAt}
+                            onChange={(e) => setEventProgram((p) => ({
+                              ...p,
+                              slots: p.slots.map((s) => (s.id === slot.id ? { ...s, startsAt: e.target.value } : s)),
+                            }))}
+                            placeholder="18:00"
+                          />
+                          <label className="text-xs space-y-1 block">
+                            <span className="text-muted">Ambiance</span>
+                            <select
+                              className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm"
+                              value={slot.lighting ?? 'dusk'}
+                              onChange={(e) => setEventProgram((p) => ({
+                                ...p,
+                                slots: p.slots.map((s) => (s.id === slot.id
+                                  ? { ...s, lighting: e.target.value as Exclude<LightingPreset, 'auto'> }
+                                  : s)),
+                              }))}
+                            >
+                              {(['day', 'dusk', 'night'] as const).map((k) => (
+                                <option key={k} value={k}>{lightingPresetLabels[k]}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            type="button"
+                            className="text-xs text-rose-600 font-semibold py-2"
+                            onClick={() => setEventProgram((p) => ({
+                              ...p,
+                              slots: p.slots.filter((s) => s.id !== slot.id),
+                            }))}
+                          >
+                            Retirer
+                          </button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
                         onClick={() => setEventProgram((p) => ({
                           ...p,
-                          slots: p.slots.filter((s) => s.id !== slot.id),
+                          slots: [...p.slots, createProgramSlot({
+                            label: `Créneau ${p.slots.length + 1}`,
+                            startsAt: p.slots.length === 0 ? '14:00' : '19:00',
+                            lighting: p.slots.length === 0 ? 'day' : 'night',
+                          })],
                         }))}
                       >
-                        Retirer
-                      </button>
+                        Ajouter un créneau
+                      </Button>
                     </div>
-                  ))}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setEventProgram((p) => ({
-                      ...p,
-                      slots: [...p.slots, createProgramSlot({
-                        label: `Créneau ${p.slots.length + 1}`,
-                        startsAt: p.slots.length === 0 ? '14:00' : '19:00',
-                        lighting: p.slots.length === 0 ? 'day' : 'night',
-                      })],
-                    }))}
-                  >
-                    Ajouter un créneau
-                  </Button>
-                </div>
-              </div>
-            )}
 
-            {!complete && (
-              <p className="text-xs text-muted leading-relaxed">
-                Événement privé par défaut. Les rappels et le formulaire RSVP peuvent attendre.
-              </p>
-            )}
+                    <label className="block space-y-1.5">
+                      <span className="block text-xs font-semibold text-muted">Rappels RSVP</span>
+                      <select
+                        value={reminderFrequency}
+                        onChange={(e) => setReminderFrequency(e.target.value)}
+                        className={SELECT_CLASS}
+                      >
+                        <option value="NONE">Pas de rappel automatique</option>
+                        <option value="DAILY">Chaque jour</option>
+                        <option value="EVERY_3_DAYS">Tous les 3 jours</option>
+                        <option value="EVERY_5_DAYS">Tous les 5 jours</option>
+                        <option value="WEEKLY">Chaque semaine</option>
+                      </select>
+                      <p className="text-[11px] text-muted">Envoyés aux invités encore « en attente ».</p>
+                    </label>
 
-            <label className="block space-y-1.5">
-              <span className="block text-xs font-semibold text-muted">Rappels RSVP</span>
-              <select
-                value={reminderFrequency}
-                onChange={(e) => setReminderFrequency(e.target.value)}
-                className={SELECT_CLASS}
-              >
-                <option value="NONE">Pas de rappel automatique</option>
-                <option value="DAILY">Chaque jour</option>
-                <option value="EVERY_3_DAYS">Tous les 3 jours</option>
-                <option value="EVERY_5_DAYS">Tous les 5 jours</option>
-                <option value="WEEKLY">Chaque semaine</option>
-              </select>
-              <p className="text-[11px] text-muted">Envoyés aux invités encore « en attente ».</p>
-            </label>
+                    <div className="block space-y-2">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+                        <LayoutTemplate className="w-3.5 h-3.5" />
+                        Modèle de réponses d’invitation
+                      </span>
+                      <p className="text-[11px] text-muted">
+                        Choisissez le visuel RSVP que vos invités verront. Aperçu en direct.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormTemplateId('')}
+                          className={cn(
+                            'rounded-xl border p-3 text-left min-h-[7rem] flex flex-col justify-between transition',
+                            !formTemplateId
+                              ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                              : 'border-border hover:border-primary/40',
+                          )}
+                        >
+                          <span className="text-[11px] font-bold text-foreground">Plus tard</span>
+                          <span className="text-[10px] text-muted">Je configurerai le formulaire ensuite.</span>
+                        </button>
+                        {templates.map((item) => {
+                          const selected = formTemplateId === item.id;
+                          const preview = templateContentToLandingPreview({
+                            id: item.id,
+                            name: item.name,
+                            content: item.content,
+                          });
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => setFormTemplateId(item.id)}
+                              className={cn(
+                                'rounded-xl border overflow-hidden text-left transition relative',
+                                selected
+                                  ? 'border-primary ring-2 ring-primary/30'
+                                  : 'border-border hover:border-primary/40',
+                              )}
+                            >
+                              <div className="pointer-events-none max-h-[140px] overflow-hidden">
+                                <LandingInvitationPreview template={preview} compact className="!rounded-none !border-0 !shadow-none !min-h-[120px] !max-h-[140px]" />
+                              </div>
+                              <div className="px-2 py-1.5 border-t border-border bg-surface flex items-center justify-between gap-1">
+                                <span className="text-[11px] font-semibold text-foreground truncate">{item.name}</span>
+                                {selected ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : null}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {templates.length === 0 ? (
+                        <p className="text-[11px] text-muted">
+                          Aucun modèle pour l’instant. Créez-en un dans{' '}
+                          <Link href="/dashboard/templates" className="font-semibold text-primary hover:underline">
+                            Modèles
+                          </Link>
+                          .
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-muted">
+                          Une invitation e-mail sera créée (ou mise à jour) avec ce modèle.
+                        </p>
+                      )}
+                    </div>
 
-            <div className="block space-y-2">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-                <LayoutTemplate className="w-3.5 h-3.5" />
-                Modèle de réponses d’invitation
-              </span>
-              <p className="text-[11px] text-muted">
-                Choisissez le visuel RSVP que vos invités verront. Aperçu en direct.
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormTemplateId('')}
-                  className={cn(
-                    'rounded-xl border p-3 text-left min-h-[7rem] flex flex-col justify-between transition',
-                    !formTemplateId
-                      ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                      : 'border-border hover:border-primary/40',
-                  )}
-                >
-                  <span className="text-[11px] font-bold text-foreground">Plus tard</span>
-                  <span className="text-[10px] text-muted">Je configurerai le formulaire ensuite.</span>
-                </button>
-                {templates.map((item) => {
-                  const selected = formTemplateId === item.id;
-                  const preview = templateContentToLandingPreview({
-                    id: item.id,
-                    name: item.name,
-                    content: item.content,
-                  });
-                  return (
-                    <button
-                      key={item.id}
+                    <div className="space-y-3 pt-1 border-t border-border">
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-2">Contact jour J</h4>
+                      <Input
+                        label="Nom"
+                        value={contactName}
+                        onChange={(e) => setContactName(e.target.value)}
+                        placeholder="ex. Chef protocole"
+                      />
+                      <PhoneInput
+                        label="Téléphone"
+                        countryCode={contactCc}
+                        national={contactNational}
+                        onCountryCodeChange={setContactCc}
+                        onNationalChange={setContactNational}
+                      />
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAccessSubTab('donations')}
+                        leftIcon={<ArrowLeft className="w-4 h-4" />}
+                      >
+                        Dons libres
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setTab('welcome')}
+                        rightIcon={<ChevronRight className="w-4 h-4" />}
+                      >
+                        Étape suivante : Accueil
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Événement privé ou mode simple */
+              <div className="space-y-4">
+                {!complete && (
+                  <p className="text-xs text-muted leading-relaxed">
+                    Événement privé par défaut. Les rappels et le formulaire RSVP peuvent attendre.
+                  </p>
+                )}
+
+                {complete && (
+                  <div className="space-y-2 p-3.5 rounded-2xl border border-border bg-surface">
+                    <p className="text-xs font-semibold text-foreground">Programme &amp; ambiance</p>
+                    <p className="text-[11px] text-muted">
+                      Créneaux Soleil / Crépuscule / Nuit — reflétés dans l’aperçu salle et la vue extérieure.
+                    </p>
+                    {eventProgram.slots.map((slot) => (
+                      <div key={slot.id} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-2 rounded-xl border border-border bg-surface-muted/40">
+                        <Input
+                          label="Titre"
+                          value={slot.label}
+                          onChange={(e) => setEventProgram((p) => ({
+                            ...p,
+                            slots: p.slots.map((s) => (s.id === slot.id ? { ...s, label: e.target.value } : s)),
+                          }))}
+                        />
+                        <Input
+                          label="Début (HH:mm)"
+                          value={slot.startsAt}
+                          onChange={(e) => setEventProgram((p) => ({
+                            ...p,
+                            slots: p.slots.map((s) => (s.id === slot.id ? { ...s, startsAt: e.target.value } : s)),
+                          }))}
+                          placeholder="18:00"
+                        />
+                        <label className="text-xs space-y-1 block">
+                          <span className="text-muted">Ambiance</span>
+                          <select
+                            className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm"
+                            value={slot.lighting ?? 'dusk'}
+                            onChange={(e) => setEventProgram((p) => ({
+                              ...p,
+                              slots: p.slots.map((s) => (s.id === slot.id
+                                ? { ...s, lighting: e.target.value as Exclude<LightingPreset, 'auto'> }
+                                : s)),
+                            }))}
+                          >
+                            {(['day', 'dusk', 'night'] as const).map((k) => (
+                              <option key={k} value={k}>{lightingPresetLabels[k]}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          className="text-xs text-rose-600 font-semibold py-2"
+                          onClick={() => setEventProgram((p) => ({
+                            ...p,
+                            slots: p.slots.filter((s) => s.id !== slot.id),
+                          }))}
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                    ))}
+                    <Button
                       type="button"
-                      onClick={() => setFormTemplateId(item.id)}
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setEventProgram((p) => ({
+                        ...p,
+                        slots: [...p.slots, createProgramSlot({
+                          label: `Créneau ${p.slots.length + 1}`,
+                          startsAt: p.slots.length === 0 ? '14:00' : '19:00',
+                          lighting: p.slots.length === 0 ? 'day' : 'night',
+                        })],
+                      }))}
+                    >
+                      Ajouter un créneau
+                    </Button>
+                  </div>
+                )}
+
+                <label className="block space-y-1.5">
+                  <span className="block text-xs font-semibold text-muted">Rappels RSVP</span>
+                  <select
+                    value={reminderFrequency}
+                    onChange={(e) => setReminderFrequency(e.target.value)}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="NONE">Pas de rappel automatique</option>
+                    <option value="DAILY">Chaque jour</option>
+                    <option value="EVERY_3_DAYS">Tous les 3 jours</option>
+                    <option value="EVERY_5_DAYS">Tous les 5 jours</option>
+                    <option value="WEEKLY">Chaque semaine</option>
+                  </select>
+                  <p className="text-[11px] text-muted">Envoyés aux invités encore « en attente ».</p>
+                </label>
+
+                <div className="block space-y-2">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    Modèle de réponses d’invitation
+                  </span>
+                  <p className="text-[11px] text-muted">
+                    Choisissez le visuel RSVP que vos invités verront. Aperçu en direct.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormTemplateId('')}
                       className={cn(
-                        'rounded-xl border overflow-hidden text-left transition relative',
-                        selected
-                          ? 'border-primary ring-2 ring-primary/30'
+                        'rounded-xl border p-3 text-left min-h-[7rem] flex flex-col justify-between transition',
+                        !formTemplateId
+                          ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
                           : 'border-border hover:border-primary/40',
                       )}
                     >
-                      <div className="pointer-events-none max-h-[140px] overflow-hidden">
-                        <LandingInvitationPreview template={preview} compact className="!rounded-none !border-0 !shadow-none !min-h-[120px] !max-h-[140px]" />
-                      </div>
-                      <div className="px-2 py-1.5 border-t border-border bg-surface flex items-center justify-between gap-1">
-                        <span className="text-[11px] font-semibold text-foreground truncate">{item.name}</span>
-                        {selected ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : null}
-                      </div>
+                      <span className="text-[11px] font-bold text-foreground">Plus tard</span>
+                      <span className="text-[10px] text-muted">Je configurerai le formulaire ensuite.</span>
                     </button>
-                  );
-                })}
-              </div>
-              {templates.length === 0 ? (
-                <p className="text-[11px] text-muted">
-                  Aucun modèle pour l’instant. Créez-en un dans{' '}
-                  <Link href="/dashboard/templates" className="font-semibold text-primary hover:underline">
-                    Modèles
-                  </Link>
-                  .
-                </p>
-              ) : (
-                <p className="text-[11px] text-muted">
-                  Une invitation e-mail sera créée (ou mise à jour) avec ce modèle.
-                </p>
-              )}
-            </div>
+                    {templates.map((item) => {
+                      const selected = formTemplateId === item.id;
+                      const preview = templateContentToLandingPreview({
+                        id: item.id,
+                        name: item.name,
+                        content: item.content,
+                      });
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setFormTemplateId(item.id)}
+                          className={cn(
+                            'rounded-xl border overflow-hidden text-left transition relative',
+                            selected
+                              ? 'border-primary ring-2 ring-primary/30'
+                              : 'border-border hover:border-primary/40',
+                          )}
+                        >
+                          <div className="pointer-events-none max-h-[140px] overflow-hidden">
+                            <LandingInvitationPreview template={preview} compact className="!rounded-none !border-0 !shadow-none !min-h-[120px] !max-h-[140px]" />
+                          </div>
+                          <div className="px-2 py-1.5 border-t border-border bg-surface flex items-center justify-between gap-1">
+                            <span className="text-[11px] font-semibold text-foreground truncate">{item.name}</span>
+                            {selected ? <Check className="w-3.5 h-3.5 text-primary shrink-0" /> : null}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {templates.length === 0 ? (
+                    <p className="text-[11px] text-muted">
+                      Aucun modèle pour l’instant. Créez-en un dans{' '}
+                      <Link href="/dashboard/templates" className="font-semibold text-primary hover:underline">
+                        Modèles
+                      </Link>
+                      .
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted">
+                      Une invitation e-mail sera créée (ou mise à jour) avec ce modèle.
+                    </p>
+                  )}
+                </div>
 
-            {complete && (
-              <div className="space-y-3 pt-1 border-t border-border">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-2">Contact jour J</h4>
-                <Input
-                  label="Nom"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  placeholder="ex. Chef protocole"
-                />
-                <PhoneInput
-                  label="Téléphone"
-                  countryCode={contactCc}
-                  national={contactNational}
-                  onCountryCodeChange={setContactCc}
-                  onNationalChange={setContactNational}
-                />
+                {complete && (
+                  <div className="space-y-3 pt-1 border-t border-border">
+                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-2">Contact jour J</h4>
+                    <Input
+                      label="Nom"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder="ex. Chef protocole"
+                    />
+                    <PhoneInput
+                      label="Téléphone"
+                      countryCode={contactCc}
+                      national={contactNational}
+                      onCountryCodeChange={setContactCc}
+                      onNationalChange={setContactNational}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -2434,5 +3005,76 @@ export default function EventConfigForm({
         )}
       </form>
     </Modal>
-  );
+
+    <Modal
+      open={pendingTicketRisks !== null && pendingTicketRisks.length > 0}
+      onClose={() => {
+        setPendingTicketRisks(null);
+        setTicketRiskConfirmed(false);
+      }}
+      title={
+        <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span>Validation requise : Billets déjà vendus</span>
+        </div>
+      }
+      description="Cette modification impacte directement des acheteurs qui possèdent déjà un billet valide pour cet événement."
+      size="md"
+      footer={
+        <div className="flex items-center justify-end gap-2 w-full">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setPendingTicketRisks(null);
+              setTicketRiskConfirmed(false);
+            }}
+          >
+            Annuler
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={!ticketRiskConfirmed}
+            onClick={handleConfirmTicketRisks}
+            leftIcon={<AlertTriangle className="w-4 h-4" />}
+          >
+            Confirmer et appliquer
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4 py-2">
+        <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 text-xs text-rose-900 dark:text-rose-200">
+          <p className="font-semibold mb-1">
+            Attention : {initialEvent?.ticketsSold ?? 'Des'} billet(s) ont déjà été vendu(s) pour cet événement.
+          </p>
+          <p className="text-rose-700 dark:text-rose-300">
+            Les changements détectés peuvent créer des incohérences ou entraîner la perte de droits d’accès et réservations de places :
+          </p>
+          <ul className="list-disc list-inside mt-2 space-y-1 font-medium">
+            {pendingTicketRisks?.map((item, idx) => (
+              <li key={idx}>
+                <span className="font-semibold text-rose-950 dark:text-rose-100">{item.title} : </span>
+                <span>{item.risk}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-surface-muted/40 cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={ticketRiskConfirmed}
+            onChange={(e) => setTicketRiskConfirmed(e.target.checked)}
+            className="rounded border-border mt-0.5 w-4 h-4 text-rose-600 focus:ring-rose-500/30"
+          />
+          <span className="text-foreground font-medium leading-relaxed">
+            Je confirme avoir pris connaissance de ces risques de perte de données et j’assume expressément la validation de ces changements.
+          </span>
+        </label>
+      </div>
+    </Modal>
+  </>
+);
 }

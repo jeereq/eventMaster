@@ -5,7 +5,7 @@ import {
  Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
   HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box,
   Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal,
-  ZoomIn, ZoomOut, Columns, ShieldCheck, Grid, RotateCcw
+  ZoomIn, ZoomOut, Columns, ShieldCheck, Grid, RotateCcw, Sun
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
@@ -414,10 +414,13 @@ export default function TablePlanner({
   const [safe3DMode, setSafe3DMode] = useState(false);
   const previewQuality = caps.canShowcaseRender && !safe3DMode ? 'showcase' as const : 'standard' as const;
 
- const previewLighting = previewLightingPreset
-   ?? (initialTablePlan?.lightingPreset && initialTablePlan.lightingPreset !== 'auto'
-     ? initialTablePlan.lightingPreset
-     : 'dusk');
+  const [activeLightingPreset, setActiveLightingPreset] = useState<LightingPreset>(() => {
+    return previewLightingPreset
+      ?? (initialTablePlan?.lightingPreset && initialTablePlan.lightingPreset !== 'auto'
+        ? initialTablePlan.lightingPreset
+        : 'dusk');
+  });
+  const [is3DFullscreen, setIs3DFullscreen] = useState(false);
 
   // Add a new table
  const handleAddTable = () => {
@@ -461,9 +464,28 @@ export default function TablePlanner({
 
  // Delete a table and free its guests
  const handleDeleteTable = (tableId: string) => {
- if (!confirm('Voulez-vous vraiment supprimer cette table ? Tous les invités installés à cette table seront libérés.')) return;
- setTables(tables.filter(t => t.id !== tableId));
- if (activeTableId === tableId) setActiveTableId(null);
+   const tableToDelete = tables.find((t) => t.id === tableId);
+   const seatedGuestIds = tableToDelete ? (Object.values(tableToDelete.seats).filter(Boolean) as string[]) : [];
+   const ticketGuests = seatedGuestIds
+     .map((id) => guests.find((g) => g.id === id))
+     .filter((g) => g && (g.category === 'Billet' || Boolean((g.preferences as any)?.ticketOrderId)));
+
+   if (ticketGuests.length > 0) {
+     const names = ticketGuests.map((g) => `${g?.firstName} ${g?.lastName}`).join(', ');
+     if (
+       !confirm(
+         `⚠️ ATTENTION : Cette table contient des participants ayant déjà acheté leur billet (${names}).\n\nSupprimer cette table va annuler leur attribution de place payée. Confirmez-vous cette action ?`,
+       )
+     ) {
+       return;
+     }
+   } else if (
+     !confirm('Voulez-vous vraiment supprimer cette table ? Tous les invités installés à cette table seront libérés.')
+   ) {
+     return;
+   }
+   setTables(tables.filter((t) => t.id !== tableId));
+   if (activeTableId === tableId) setActiveTableId(null);
  };
 
  // Open edit modal for table
@@ -762,7 +784,8 @@ export default function TablePlanner({
    tables,
    fixtures: fixtures.length ? fixtures : undefined,
    pricingZones,
-        neighborSharingPolicy,
+   neighborSharingPolicy,
+   lightingPreset: activeLightingPreset,
  });
  alert('Plan de table sauvegardé avec succès !');
  } catch (err) {
@@ -898,7 +921,7 @@ export default function TablePlanner({
               <RoomLayoutPreview
                 blueprint={previewBlueprint}
                 quality={previewQuality}
-                lightingPreset={previewLighting}
+                lightingPreset={activeLightingPreset}
                 selectedTableId={activeTableId}
                 onSelectTable={(tableId) => {
                   if (paintZoneId) {
@@ -923,6 +946,37 @@ export default function TablePlanner({
                   ? `Pinceau actif : touchez une table pour l'assigner à ${pricingZones.find((z) => z.id === paintZoneId)?.name}`
                   : 'Touchez une table en 3D pour la sélectionner et modifier sa zone'}
               </span>
+            </div>
+
+            {/* Contrôles Lumières & Plein Écran */}
+            <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-foreground/80 hover:bg-foreground/90 backdrop-blur-md px-2 py-1 rounded-full border border-background/20 text-background text-xs font-semibold shadow-sm transition">
+                <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <select
+                  value={activeLightingPreset}
+                  onChange={(e) => setActiveLightingPreset(e.target.value as LightingPreset)}
+                  className="bg-transparent text-[11px] font-semibold text-background border-none focus:ring-0 cursor-pointer pr-3 py-0"
+                  title="Changer l'ambiance lumineuse 3D"
+                >
+                  <option value="day" className="bg-surface text-foreground">Soleil de midi</option>
+                  <option value="dusk" className="bg-surface text-foreground">Crépuscule</option>
+                  <option value="night" className="bg-surface text-foreground">Nuit LED</option>
+                  <option value="banquet" className="bg-surface text-foreground">Banquet chaud</option>
+                  <option value="conference" className="bg-surface text-foreground">Conférence</option>
+                  <option value="tent" className="bg-surface text-foreground">Tente</option>
+                  <option value="neutral" className="bg-surface text-foreground">Studio neutre</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIs3DFullscreen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-foreground/80 hover:bg-foreground backdrop-blur-md border border-background/20 text-xs font-semibold text-background transition shadow-sm"
+                title="Agrandir en plein écran"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Agrandir</span>
+              </button>
             </div>
 
             {/* Carte de la table 3D active sélectionnée */}
@@ -1011,6 +1065,90 @@ export default function TablePlanner({
             </button>
             .
           </p>
+        </div>
+      )}
+
+      {/* Modale Plein Écran 3D Immersive */}
+      {is3DFullscreen && (
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-foreground/95 backdrop-blur-md p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-background/20 gap-3">
+            <div className="flex items-center gap-2.5 text-background">
+              <div className="bg-primary/20 text-primary p-2 rounded-xl">
+                <Box className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm sm:text-base text-background">Vue 3D Immersive du Plan</h3>
+                <p className="text-[11px] text-background/70">
+                  {roomName || 'Salle'} · {tables.length} tables · {tables.reduce((acc, t) => acc + t.capacity, 0)} places
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Sélecteur de lumière dans la modale plein écran */}
+              <div className="flex items-center gap-1.5 bg-background/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-background/20 text-background">
+                <Sun className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="text-xs font-semibold hidden sm:inline">Lumière :</span>
+                <select
+                  value={activeLightingPreset}
+                  onChange={(e) => setActiveLightingPreset(e.target.value as LightingPreset)}
+                  className="bg-transparent text-xs font-bold text-background border-none focus:ring-0 cursor-pointer pr-4 py-0"
+                >
+                  <option value="day" className="bg-surface text-foreground">Soleil de midi</option>
+                  <option value="dusk" className="bg-surface text-foreground">Crépuscule</option>
+                  <option value="night" className="bg-surface text-foreground">Nuit (LED)</option>
+                  <option value="banquet" className="bg-surface text-foreground">Banquet chaud</option>
+                  <option value="conference" className="bg-surface text-foreground">Conférence neutre</option>
+                  <option value="tent" className="bg-surface text-foreground">Tente / extérieur</option>
+                  <option value="neutral" className="bg-surface text-foreground">Studio neutre</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIs3DFullscreen(false)}
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl bg-background/20 hover:bg-background/30 text-background transition"
+                aria-label="Quitter le plein écran"
+              >
+                <Minimize2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="relative flex-1 min-h-[400px] mt-3 rounded-2xl overflow-hidden border border-background/20 bg-background/5">
+            <Room3DErrorBoundary
+              className="absolute inset-0 h-full w-full flex flex-col items-center justify-center p-6 bg-surface-muted text-center"
+              onFallbackTo2D={() => {
+                setIs3DFullscreen(false);
+                setPlannerView('2d');
+              }}
+              onResetSafeMode={() => setSafe3DMode(true)}
+            >
+              <RoomLayoutPreview
+                blueprint={previewBlueprint}
+                quality={previewQuality}
+                lightingPreset={activeLightingPreset}
+                selectedTableId={activeTableId}
+                onSelectTable={(tableId) => setActiveTableId(tableId)}
+                showMeta={false}
+                className="absolute inset-0 h-full w-full"
+              />
+            </Room3DErrorBoundary>
+
+            {/* Hint de navigation bas */}
+            <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-foreground/90 backdrop-blur-md border border-background/20 text-xs text-background">
+              <div className="flex items-center gap-3">
+                <span>🖱️ <strong>Rotation 3D :</strong> Clic gauche &amp; glisser</span>
+                <span>🔍 <strong>Zoom :</strong> Molette / Pincement tactile</span>
+                <span>↔️ <strong>Translation :</strong> Clic droit &amp; glisser</span>
+              </div>
+              {active3DTable && (
+                <span className="font-bold text-amber-300">
+                  Table active : {active3DTable.name} ({active3DTable.capacity} places)
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

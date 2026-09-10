@@ -64,6 +64,8 @@ export type EventConfigSource = {
   ticketPricingMode?: TicketPricingMode | string | null;
   tablePlan?: { pricingZones?: PricingZone[] } | null;
   ticketsTotal?: number | null;
+  ticketsSold?: number | null;
+  seatSelectionEnabled?: boolean | null;
   photos?: string[] | null;
   guestGuidelines?: GuestGuidelines | null;
   eventKind?: string | null;
