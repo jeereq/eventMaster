@@ -14,14 +14,14 @@ const SIM_METHODS: Array<{
 }> = [
   {
     id: 'manual',
-    label: 'Par critères, sans IA',
-    description: 'Vous fixez le budget, la ville, la date et les prestataires. EventMaster calcule 3 packs budget dans l’enveloppe.',
+    label: 'Par critères (Direct)',
+    description: 'Calcul selon votre budget, ville et prestataires souhaités.',
     icon: MousePointerClick,
   },
   {
     id: 'ai',
     label: 'Assisté par l’IA',
-    description: 'Vous décrivez l’événement. L’IA propose un mix salle, prestataires et matériel — un pack budget, pas un plan de salle.',
+    description: 'Composition automatique selon vos envies et contraintes.',
     icon: Wand2,
   },
 ];
@@ -48,8 +48,7 @@ export default function EventPlanMethodPicker({
       <div className="space-y-2">
         <h2 className="text-sm font-bold text-foreground">1. Composer le pack budget</h2>
         <p className="text-xs text-muted leading-relaxed max-w-2xl">
-          Un pack budget assemble salle, prestataires et matériel pour les devis. Ce n’est pas le plan de salle 3D.
-          Vous pouvez lancer les deux méthodes, puis retenir un mix.
+          Choisissez une méthode pour générer vos packs salle, prestataires et équipements.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SIM_METHODS.map((item) => {
@@ -141,8 +140,8 @@ export default function EventPlanMethodPicker({
             </span>
             <span className="block text-xs text-muted leading-relaxed">
               {simReady || counts.final > 0
-                ? 'Choisissez le pack budget utilisé pour les devis et les réservations — issu des critères, de l’IA, ou d’un mix. Le plan de salle se crée à part, dans Salles.'
-                : 'Lancez d’abord une simulation (critères ou IA) pour retenir un pack budget.'}
+                ? 'Pack budget retenu pour vos devis et réservations.'
+                : 'Lancez d’abord une simulation pour débloquer le pack final.'}
             </span>
           </span>
           {value === 'final' ? (

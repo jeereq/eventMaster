@@ -189,8 +189,8 @@ export default function TicketsPage() {
         title={isOrgRole && activeTab === 'org' ? 'Billetterie de l’organisation' : 'Mes billets & pass'}
         description={
           isOrgRole && activeTab === 'org'
-            ? 'Suivi des ventes, gestion des commandes, émargement et contrôle d’accès jour J.'
-            : 'Retrouvez tous vos billets d’événements, vos justificatifs et vos pass avec QR code d’accès.'
+            ? 'Suivi des ventes, gestion des commandes et contrôle d’accès jour J.'
+            : 'Vos billets et pass QR pour le jour J.'
         }
         breadcrumbs={
           <Breadcrumbs
@@ -273,7 +273,7 @@ export default function TicketsPage() {
             <EmptyState
               icon={<Ticket className="w-5 h-5" />}
               title="Aucun billet pour le moment"
-              description="Inscrivez-vous à un événement ou achetez votre place depuis les événements du catalogue : vos pass avec QR code apparaîtront aussitôt ici."
+              description="Découvrez les événements du catalogue pour obtenir vos billets et pass d’accès."
               action={
                 <Link href={agendaHref}>
                   <Button size="sm">Découvrir les événements</Button>
@@ -284,9 +284,9 @@ export default function TicketsPage() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)]">
             {/* Filtres d'état rapides (Date & Entrée) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/70">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex flex-wrap gap-1" role="group" aria-label="Date">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/70 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" role="group" aria-label="Date">
                   {([
                     ['all', 'Toutes dates'],
                     ['upcoming', 'À venir'],
@@ -297,7 +297,7 @@ export default function TicketsPage() {
                       type="button"
                       onClick={() => setWhen(id)}
                       className={cn(
-                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation',
+                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
                         when === id
                           ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
@@ -310,7 +310,7 @@ export default function TicketsPage() {
 
                 <span className="text-muted/40 hidden sm:inline">|</span>
 
-                <div className="flex flex-wrap gap-1" role="group" aria-label="Entrée">
+                <div className="flex items-center gap-1 shrink-0" role="group" aria-label="Entrée">
                   {([
                     ['all', 'Tous tarifs'],
                     ['paid', 'Payants'],
@@ -321,7 +321,7 @@ export default function TicketsPage() {
                       type="button"
                       onClick={() => setEntry(id)}
                       className={cn(
-                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation',
+                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
                         entry === id
                           ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
@@ -333,7 +333,7 @@ export default function TicketsPage() {
                 </div>
               </div>
 
-              <span className="text-[11px] font-medium text-muted">
+              <span className="text-[11px] font-medium text-muted shrink-0 whitespace-nowrap pl-2">
                 {filtered.length} billet{filtered.length > 1 ? 's' : ''}
                 {filtered.length !== tickets.length ? ` / ${tickets.length}` : ''}
               </span>
@@ -345,7 +345,8 @@ export default function TicketsPage() {
                 <Input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Rechercher par titre, lieu, nom de l’acheteur…"
+                  placeholder="Titre, lieu, acheteur…"
+                  aria-label="Rechercher un billet"
                   leftIcon={<Ticket className="w-4 h-4" />}
                 />
               </div>

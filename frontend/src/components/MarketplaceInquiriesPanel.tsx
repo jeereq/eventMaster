@@ -333,16 +333,16 @@ export default function MarketplaceInquiriesPanel({
     return (
       <EmptyState
         icon={<Inbox className="w-5 h-5" />}
-        title={organizerView ? 'Aucune demande en cours' : 'Votre boîte de réception est vide'}
+        title={organizerView ? 'Aucune demande de devis' : 'Boîte de réception vide'}
         description={
           organizerView
-            ? 'Explorez notre catalogue et contactez les prestataires qui correspondent à vos envies.'
+            ? 'Contactez des prestataires depuis le catalogue pour recevoir vos devis.'
             : 'Les demandes de devis apparaîtront ici.'
         }
         action={
           organizerView ? (
             <Link href="/dashboard/catalogue">
-              <Button size="sm">Parcourir le marketplace</Button>
+              <Button size="sm">Explorer le catalogue</Button>
             </Link>
           ) : undefined
         }
@@ -358,12 +358,12 @@ export default function MarketplaceInquiriesPanel({
     <div className="space-y-4">
       {activeError && <Alert variant="error">{activeError}</Alert>}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap pb-1">
         <button
           type="button"
           onClick={() => setStatus('')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
             !status || status === 'all'
               ? 'bg-primary-solid text-primary-foreground border-primary-solid'
               : 'border-border text-muted hover:text-foreground',
@@ -375,7 +375,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('NEW')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
             status === 'NEW'
               ? 'bg-amber-500 text-white border-amber-500'
               : 'border-border text-muted hover:text-foreground',
@@ -387,7 +387,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('QUOTED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
             status === 'QUOTED'
               ? 'bg-emerald-600 text-white border-emerald-600'
               : 'border-border text-muted hover:text-foreground',
@@ -399,7 +399,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('CONTACTED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
             status === 'CONTACTED'
               ? 'bg-sky-600 text-white border-sky-600'
               : 'border-border text-muted hover:text-foreground',
@@ -411,7 +411,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('DECLINED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
             status === 'DECLINED'
               ? 'bg-rose-600 text-white border-rose-600'
               : 'border-border text-muted hover:text-foreground',
@@ -423,7 +423,7 @@ export default function MarketplaceInquiriesPanel({
           type="button"
           onClick={() => setStatus('BOOKED')}
           className={cn(
-            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
             status === 'BOOKED'
               ? 'bg-emerald-700 text-white border-emerald-700'
               : 'border-border text-muted hover:text-foreground',

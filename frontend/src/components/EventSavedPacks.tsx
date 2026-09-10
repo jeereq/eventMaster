@@ -117,18 +117,18 @@ export default function EventSavedPacks({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Mes packs</h2>
-          <p className="text-xs text-muted mt-0.5">Composez un pack depuis vos favoris, ou retrouvez ceux sauvegardés après une recherche.</p>
+          <p className="text-xs text-muted mt-0.5">Packs sauvegardés et sélections sur-mesure.</p>
         </div>
         <Button size="sm" onClick={() => { setType(eventType); setOpen(true); }} leftIcon={<Plus className="w-4 h-4" />}>
-          Créer un pack parfait
+          Créer un pack
         </Button>
       </div>
 
       {packs.length === 0 ? (
         <EmptyState
           icon={<Bookmark className="w-5 h-5" />}
-          title="Votre sélection est vide"
-          description="Créez des listes de prestataires favoris pour organiser vos idées et comparer vos options."
+          title="Aucun pack sauvegardé"
+          description="Enregistrez vos simulations ou composez un pack depuis vos favoris."
           action={
             <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
               Composer depuis les favoris

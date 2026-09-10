@@ -189,7 +189,7 @@ export default function SimulateurPageClient() {
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       <PublicPageHero
         title="Simulateur de Budget & Formules IA"
-        description="Estimez votre réception en 1 clic : l’IA compose Éco, Équilibré et Confort avec des salles et prestataires certifiés du catalogue. Quatre simulations gratuites, sans carte bancaire."
+        description="Estimez votre réception en 1 clic : 3 formules catalogue clés en main (Éco, Équilibré, Confort)."
         compact
       >
         <div className="pt-2 flex flex-wrap items-center gap-2">
@@ -248,7 +248,7 @@ export default function SimulateurPageClient() {
               </h2>
             </div>
             <p className="text-xs text-muted max-w-sm sm:text-right">
-              Utilisez ce simulateur de budget, puis composez vos cartons d’invitation ou vos plans de salle 3D.
+              Budget, invitations WhatsApp et plans 3D.
             </p>
           </div>
 
@@ -316,7 +316,7 @@ export default function SimulateurPageClient() {
                 <span>Projets types prêts à l’emploi</span>
               </h2>
               <p className="text-xs text-muted">
-                Sélectionnez un modèle pour charger instantanément les paramètres recommandés.
+                Chargez un exemple type en 1 clic.
               </p>
             </div>
 
@@ -326,7 +326,7 @@ export default function SimulateurPageClient() {
                 onClick={handleClearScenario}
                 className="text-xs text-muted hover:text-foreground underline underline-offset-2 self-start sm:self-auto touch-manipulation cursor-pointer min-h-8"
               >
-                Réinitialiser vers simulation libre
+                Simulation libre
               </button>
             )}
           </div>

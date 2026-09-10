@@ -191,35 +191,35 @@ function OrganizerDemandesPage() {
     role === 'vendor'
       ? tab === 'bookings'
         ? 'Réservations reçues'
-        : 'Devis reçus (Salles & Prestations)'
+        : 'Devis reçus'
       : tab === 'bookings'
-        ? 'Vos réservations de dates'
+        ? 'Réservations'
         : tab === 'quotes'
-          ? 'Vos demandes de devis'
+          ? 'Devis'
           : tab === 'packs'
-            ? 'Vos packs enregistrés'
+            ? 'Mes packs'
             : tab === 'favorites'
-              ? 'Vos favoris'
+              ? 'Favoris'
               : 'Devis & réservations';
 
   const pageDescription =
     role === 'vendor'
       ? tab === 'bookings'
-        ? 'Consultez, confirmez ou refusez les réservations reçues pour vos salles, prestations ou matériels.'
-        : 'Gérez et chiffrez les demandes de devis transmises par les organisateurs d’événements.'
+        ? 'Réservations reçues pour vos salles ou prestations.'
+        : 'Demandes de devis transmises par les organisateurs.'
       : isProtocol
         ? tab === 'bookings'
-          ? 'Suivez les réservations liées aux événements que vous accompagnez.'
-          : 'Suivez les devis envoyés aux salles et prestataires pour le protocole.'
+          ? 'Réservations liées aux événements accompagnés.'
+          : 'Devis envoyés pour le protocole.'
         : tab === 'bookings'
-          ? `Suivez vos réservations confirmées. L’acompte (${depositPercent(site)} %) se règle directement auprès du prestataire.`
+          ? 'Vos dates confirmées et acomptes.'
           : tab === 'quotes'
-            ? 'Suivez vos demandes de devis envoyées aux salles et prestataires.'
+            ? 'Vos demandes et devis en attente ou chiffrés.'
             : tab === 'packs'
-              ? 'Retrouvez vos sélections de packs créées pour votre projet.'
+              ? 'Vos sélections et briefs sauvegardés.'
               : tab === 'favorites'
-                ? 'Les lieux, prestataires et équipements que vous avez gardés de côté.'
-                : 'Suivez vos devis, réservations, packs et favoris en toute simplicité.';
+                ? 'Vos fiches et prestataires enregistrés.'
+                : 'Suivez vos devis et réservations en temps réel.';
 
   return (
     <div className="space-y-5 w-full">
@@ -301,7 +301,7 @@ function OrganizerDemandesPage() {
         <div
           role="tablist"
           aria-label="Sections devis et réservations"
-          className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
+          className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border bg-muted/40 p-1 sm:flex-wrap"
         >
           {[
             {
@@ -330,7 +330,7 @@ function OrganizerDemandesPage() {
               aria-selected={tab === item.id}
               onClick={() => setHubTab(item.id)}
               className={cn(
-                'inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition',
+                'inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium transition whitespace-nowrap shrink-0',
                 tab === item.id
                   ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                   : 'text-muted hover:bg-surface/70 hover:text-foreground',

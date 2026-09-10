@@ -634,14 +634,14 @@ function ClientMarketplaceInner() {
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Événements' : 'Marketplace'}
         description={
           tab === 'plan'
-            ? 'Studios créatifs actifs (Budget, Invitations, Plans 3D) : simulez vos coûts, composez vos cartons et retenez un pack pour vos devis.'
+            ? 'Simulez vos coûts, créez vos invitations et agencez vos salles 3D.'
             : tab === 'favorites'
-              ? 'Salles, prestataires et matériel & équipements enregistrés. Filtrez et changez la vue grille ou liste.'
+              ? 'Vos salles, prestataires et équipements enregistrés.'
               : tab === 'packs'
-                ? 'Packs et briefs sauvegardés, à reprendre ou à envoyer en devis.'
+                ? 'Vos sélections et briefs sauvegardés pour devis.'
                 : searchParams.get('kind') === 'event'
-                  ? 'Événements publics du marketplace. Inscrivez-vous ou achetez un billet — il apparaît dans Mes billets.'
-                  : 'Explorez les salles, prestataires et matériel & équipements, enregistrez vos favoris, puis préparez un événement selon votre budget.'
+                  ? 'Événements publics et billetterie en direct.'
+                  : 'Trouvez vos salles, prestataires et équipements à Kinshasa.'
         }
         breadcrumbs={
           <Breadcrumbs
@@ -667,7 +667,7 @@ function ClientMarketplaceInner() {
       <div
         role="tablist"
         aria-label="Sections du marketplace"
-        className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
+        className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border bg-muted/40 p-1 sm:flex-wrap"
       >
         {[
           { id: 'explore' as const, label: 'Explorer', icon: Store },
@@ -682,7 +682,7 @@ function ClientMarketplaceInner() {
             aria-selected={tab === item.id}
             onClick={() => setTab(item.id)}
             className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
+              'inline-flex min-h-10 sm:min-h-11 items-center gap-1.5 rounded-lg px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap shrink-0',
               tab === item.id
                 ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                 : 'text-muted hover:bg-surface/70 hover:text-foreground',

@@ -103,8 +103,8 @@ function DashboardPublicationsPageInner() {
         title="Réalisations"
         description={
           canPublish
-            ? 'Fil des réalisations des salles et prestations — grille type réseau social, et création liée à vos fiches.'
-            : 'Photos et actualités publiées par les salles et les prestations.'
+            ? 'Fil des réalisations et créations de vos fiches.'
+            : 'Photos et actualités des salles et prestataires.'
         }
         breadcrumbs={
           <Breadcrumbs
@@ -212,9 +212,9 @@ function PublicationsGrid({
   return (
     <div className="space-y-6">
       {/* Barre d'outils de filtrage & mode d'affichage */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-surface border border-border/80 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 p-2 rounded-2xl bg-surface border border-border/80 shadow-2xs">
         {/* Filtre par type */}
-        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60">
+        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60 overflow-x-auto no-scrollbar">
           {(
             [
               ['all', 'Tout', 'text-primary border-primary/25'],
@@ -227,7 +227,7 @@ function PublicationsGrid({
               type="button"
               onClick={() => setKind(id)}
               className={cn(
-                'min-h-11 px-3.5 rounded-lg text-xs font-semibold transition touch-manipulation',
+                'min-h-10 px-3 rounded-lg text-xs font-semibold transition touch-manipulation whitespace-nowrap shrink-0',
                 kind === id
                   ? cn('bg-surface shadow-xs font-bold border', activeStyle)
                   : 'text-muted hover:text-foreground',
@@ -239,12 +239,12 @@ function PublicationsGrid({
         </div>
 
         {/* Toggle Mode Grille / Fil */}
-        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60">
+        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setDisplayMode('tiles')}
             className={cn(
-              'min-h-11 px-3 rounded-lg text-xs font-semibold transition touch-manipulation',
+              'min-h-10 px-3 rounded-lg text-xs font-semibold transition touch-manipulation whitespace-nowrap',
               displayMode === 'tiles' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
             )}
           >
@@ -254,7 +254,7 @@ function PublicationsGrid({
             type="button"
             onClick={() => setDisplayMode('feed')}
             className={cn(
-              'min-h-11 px-3 rounded-lg text-xs font-semibold transition touch-manipulation',
+              'min-h-10 px-3 rounded-lg text-xs font-semibold transition touch-manipulation whitespace-nowrap',
               displayMode === 'feed' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
             )}
           >

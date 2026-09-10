@@ -142,13 +142,10 @@ export default function EventPlanBriefForm({
 
   return (
     <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-4">
-      <div className="space-y-2">
+      <div className="space-y-1">
         <h2 className="text-sm font-semibold text-foreground">Brief budget</h2>
-        <p className="text-sm text-muted leading-relaxed">
-          Vous décrivez l’événement et l’enveloppe. EventMaster cherche ensuite <strong className="font-semibold text-foreground">3 packs</strong> (économique, équilibré, confort) dans ce budget : salle, prestataires et matériel & équipements déjà combinés, sans dépasser le maximum.
-        </p>
         <p className="text-xs text-muted leading-relaxed">
-          Vous pouvez tout laisser par défaut et lancer la recherche, ou préciser ville, date, prestataires, matériel & équipements et répartition. Rien n’est réservé : vous comparez, sauvegardez, puis contactez les professionnels.
+          Définissez votre enveloppe : 3 packs complets (Éco, Équilibré, Confort) sont calculés automatiquement.
         </p>
       </div>
 
