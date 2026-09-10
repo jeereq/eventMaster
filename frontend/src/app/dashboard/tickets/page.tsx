@@ -297,7 +297,7 @@ export default function TicketsPage() {
                       type="button"
                       onClick={() => setWhen(id)}
                       className={cn(
-                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
+                        'px-2.5 py-1.5 min-h-[34px] rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
                         when === id
                           ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
@@ -321,7 +321,7 @@ export default function TicketsPage() {
                       type="button"
                       onClick={() => setEntry(id)}
                       className={cn(
-                        'px-2.5 py-1 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
+                        'px-2.5 py-1.5 min-h-[34px] rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
                         entry === id
                           ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
@@ -356,6 +356,7 @@ export default function TicketsPage() {
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
+                    aria-label="Filtrer par lieu"
                     className="w-full h-10 px-3 rounded-xl border border-border bg-surface text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent transition"
                   >
                     <option value="">Tous les lieux</option>

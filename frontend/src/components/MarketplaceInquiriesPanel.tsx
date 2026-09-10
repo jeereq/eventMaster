@@ -377,7 +377,7 @@ export default function MarketplaceInquiriesPanel({
           className={cn(
             'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition whitespace-nowrap shrink-0',
             status === 'NEW'
-              ? 'bg-amber-500 text-white border-amber-500'
+              ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
               : 'border-border text-muted hover:text-foreground',
           )}
         >

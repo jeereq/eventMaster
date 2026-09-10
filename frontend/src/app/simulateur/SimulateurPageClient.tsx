@@ -46,7 +46,7 @@ const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimul
       aria-label="Chargement du simulateur budget IA"
     >
       <div className="space-y-2 max-w-sm">
-        <Sparkles className="w-8 h-8 text-primary mx-auto animate-pulse" />
+        <Sparkles className="w-8 h-8 text-primary mx-auto animate-pulse motion-reduce:animate-none" />
         <p className="text-sm font-semibold text-foreground">Chargement du simulateur budget IA…</p>
         <p className="text-xs text-muted">Préparation du moteur de calcul des formules catalogue.</p>
       </div>
@@ -195,7 +195,7 @@ export default function SimulateurPageClient() {
         <div className="pt-2 flex flex-wrap items-center gap-2">
           {/* Badge taux du jour */}
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-border text-xs font-semibold text-foreground tabular-nums shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
             Taux du jour : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
           </span>
 
@@ -264,7 +264,7 @@ export default function SimulateurPageClient() {
                 </div>
               </div>
               <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                 Actif
               </span>
             </div>

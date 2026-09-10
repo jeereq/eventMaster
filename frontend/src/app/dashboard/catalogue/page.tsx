@@ -609,7 +609,7 @@ function ClientMarketplaceInner() {
               header={
                 <div className="flex items-center justify-between gap-3">
                   <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/95 backdrop-blur-xl border border-border shadow-md text-xs font-bold text-foreground">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                     <span>Mode Focus · Carte interactive</span>
                     <span className="text-muted font-normal">({visible.length} fiches)</span>
                   </div>

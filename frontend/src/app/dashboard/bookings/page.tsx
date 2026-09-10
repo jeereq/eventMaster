@@ -265,7 +265,7 @@ function OrganizerDemandesPage() {
               <Store className="w-4 h-4 text-primary" />
               <span>Demandes reçues (Professionnel / Salle)</span>
               {role === 'vendor' && pendingQuotes > 0 ? (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white shadow-2xs">
                   {pendingQuotes}
                 </span>
               ) : null}
@@ -355,6 +355,7 @@ function OrganizerDemandesPage() {
             <select
               value={eventFilter}
               onChange={(e) => setEventFilter(e.target.value)}
+              aria-label="Filtrer par événement"
               className="w-full h-10 px-3 rounded-xl border border-border bg-surface text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent transition"
             >
               <option value="all">Tous les événements</option>
