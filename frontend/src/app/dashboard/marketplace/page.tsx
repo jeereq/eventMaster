@@ -542,6 +542,7 @@ export default function MarketplaceDeskPage() {
           inquiries={inquiries}
           onMarkContacted={markContacted}
           onConvert={convertInquiry}
+          onChanged={load}
         />
       ) : listingPool.length === 0 ? (
           <EmptyState

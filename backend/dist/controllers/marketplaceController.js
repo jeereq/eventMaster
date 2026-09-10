@@ -1113,6 +1113,10 @@ async function listMyInquiries(req, res) {
                     guestCount: item.guestCount,
                     message: item.message,
                     status: item.status,
+                    quotedAmountFc: item.quotedAmountFc ?? null,
+                    responseNotes: item.responseNotes ?? null,
+                    declineReason: item.declineReason ?? null,
+                    respondedAt: item.respondedAt ?? null,
                     createdAt: item.createdAt,
                     event: item.event,
                     hasBooking: Boolean(booking),
@@ -1147,20 +1151,108 @@ async function updateInquiryStatus(req, res) {
         const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
         if (!access.canManageRooms)
             return res.status(403).json({ error: 'Accès refusé.' });
-        const status = req.body?.status === 'CONTACTED' ? 'CONTACTED' : req.body?.status === 'NEW' ? 'NEW' : null;
-        if (!status)
-            return res.status(400).json({ error: 'Statut invalide.' });
+        const action = typeof req.body?.action === 'string' ? req.body.action.toLowerCase() : '';
+        const requestedStatus = req.body?.status;
         const existing = await db_1.prisma.marketplaceInquiry.findFirst({
             where: {
                 id,
                 OR: [{ listing: { tenantId } }, { offering: { tenantId } }],
             },
+            include: {
+                listing: { select: { headline: true, room: { select: { name: true } } } },
+                offering: { select: { title: true } },
+            },
         });
         if (!existing)
             return res.status(404).json({ error: 'Demande introuvable.' });
+        const inquiryTitle = existing.offering?.title || existing.listing?.headline || existing.listing?.room.name || 'Demande';
+        let updateData = {};
+        if (action === 'quote' || requestedStatus === 'QUOTED') {
+            const quotedAmountFc = Number.parseInt(String(req.body?.quotedAmountFc ?? ''), 10);
+            if (!Number.isFinite(quotedAmountFc) || quotedAmountFc < 0) {
+                return res.status(400).json({ error: 'Montant du devis invalide.' });
+            }
+            const responseNotes = req.body?.responseNotes ? String(req.body.responseNotes).trim().slice(0, 2000) : null;
+            updateData = {
+                status: 'QUOTED',
+                quotedAmountFc,
+                responseNotes,
+                respondedAt: new Date(),
+            };
+            const amountFormatted = `${quotedAmountFc.toLocaleString('fr-FR')} FC`;
+            const notifMsg = `Devis chiffré reçu pour « ${inquiryTitle} » : ${amountFormatted}.${responseNotes ? ` Note : ${responseNotes}` : ''}`;
+            if (existing.fromTenantId) {
+                void (0, platformNotificationService_1.notifyTenantOperators)(existing.fromTenantId, {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+                    title: `Devis chiffré — ${inquiryTitle}`,
+                    message: notifMsg,
+                    metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+                    whatsapp: `Devis chiffré pour « ${inquiryTitle} » : ${amountFormatted}. Consultez les détails sur EventMaster.`,
+                });
+            }
+            const inquirerUser = await db_1.prisma.user.findFirst({
+                where: { email: { equals: existing.fromEmail, mode: 'insensitive' } },
+                select: { id: true },
+            });
+            if (inquirerUser && inquirerUser.id !== userId) {
+                void (0, platformNotificationService_1.notifyUsers)([inquirerUser.id], {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+                    title: `Devis chiffré — ${inquiryTitle}`,
+                    message: notifMsg,
+                    metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+                });
+            }
+        }
+        else if (action === 'decline' || requestedStatus === 'DECLINED') {
+            const declineReason = req.body?.declineReason
+                ? String(req.body.declineReason).trim().slice(0, 500)
+                : 'Indisponible sur cette date ou hors périmètre';
+            const responseNotes = req.body?.responseNotes ? String(req.body.responseNotes).trim().slice(0, 2000) : null;
+            updateData = {
+                status: 'DECLINED',
+                declineReason,
+                responseNotes,
+                respondedAt: new Date(),
+            };
+            const notifMsg = `Votre demande pour « ${inquiryTitle} » a été déclinée. Motif : ${declineReason}.${responseNotes ? ` Précision : ${responseNotes}` : ''}`;
+            if (existing.fromTenantId) {
+                void (0, platformNotificationService_1.notifyTenantOperators)(existing.fromTenantId, {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+                    title: `Demande déclinée — ${inquiryTitle}`,
+                    message: notifMsg,
+                    metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+                });
+            }
+            const inquirerUser = await db_1.prisma.user.findFirst({
+                where: { email: { equals: existing.fromEmail, mode: 'insensitive' } },
+                select: { id: true },
+            });
+            if (inquirerUser && inquirerUser.id !== userId) {
+                void (0, platformNotificationService_1.notifyUsers)([inquirerUser.id], {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+                    title: `Demande déclinée — ${inquiryTitle}`,
+                    message: notifMsg,
+                    metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+                });
+            }
+        }
+        else if (action === 'contacted' || requestedStatus === 'CONTACTED') {
+            updateData = {
+                status: 'CONTACTED',
+                respondedAt: new Date(),
+            };
+        }
+        else if (action === 'new' || requestedStatus === 'NEW') {
+            updateData = {
+                status: 'NEW',
+            };
+        }
+        else {
+            return res.status(400).json({ error: 'Action ou statut invalide.' });
+        }
         const updated = await db_1.prisma.marketplaceInquiry.update({
             where: { id },
-            data: { status },
+            data: updateData,
         });
         return res.json(updated);
     }

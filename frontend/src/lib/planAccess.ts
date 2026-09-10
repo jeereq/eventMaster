@@ -207,7 +207,7 @@ const ROOM_LEVEL_HINT: Record<RoomEditorLevel, string> = {
   complete: 'Salle, Particulier, Salle & presta ou Enterprise 1',
 };
 
-/** Publication d’une salle sur le marketplace (VENUE / CATALOG, ou essai FREE). */
+/** Publication d’une salle sur le marketplace (B2B, VENUE / CATALOG, ou essai FREE). */
 export function canPublishVenueCatalog(
   planFeatures?: PlanCapabilities | null,
   planQuota?: PlanQuotaInfo | null,
@@ -217,9 +217,9 @@ export function canPublishVenueCatalog(
   const maxRooms = planQuota?.limits.maxRooms;
   if (maxRooms != null && maxRooms <= 0) return false;
   const audience = planFeatures?.audience;
-  if (audience === 'VENUE' || audience === 'CATALOG') return true;
+  if (audience === 'VENUE' || audience === 'CATALOG' || audience === 'B2B') return (maxRooms ?? 1) > 0;
   if (planId === 'FREE') return (maxRooms ?? 0) > 0;
-  if (audience === 'B2B' || audience === 'SERVICE') return false;
+  if (audience === 'SERVICE') return false;
   return (maxRooms ?? 0) > 0;
 }
 

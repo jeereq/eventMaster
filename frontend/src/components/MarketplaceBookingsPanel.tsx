@@ -8,6 +8,7 @@ import {
   Button,
   EmptyState,
   Input,
+  Modal,
   Pagination,
   paginateItems,
   ProjectCard,
@@ -50,6 +51,14 @@ const KIND_OPTIONS = [
   { id: 'venue', label: 'Salles' },
   { id: 'service', label: 'Prestataires' },
   { id: 'rental', label: 'Matériel & Équipements' },
+] as const;
+
+const DECLINE_BOOKING_REASONS = [
+  'Date indisponible / Conflit d’agenda',
+  'Capacité ou équipement non disponible',
+  'Conditions ou contraintes logistiques',
+  'Changement de programme de l’événement',
+  'Autre motif personnalisé',
 ] as const;
 
 function toneFor(status: MarketplaceBookingStatus): 'amber' | 'emerald' | 'slate' | 'rose' {
@@ -126,6 +135,11 @@ export default function MarketplaceBookingsPanel({
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [acceptAmount, setAcceptAmount] = useState<Record<string, string>>({});
+  const [cancelModal, setCancelModal] = useState<{ item: MarketplaceBookingItem; action: 'decline' | 'cancel' } | null>(null);
+  const [cancelReasonChoice, setCancelReasonChoice] = useState<string>(DECLINE_BOOKING_REASONS[0]);
+  const [cancelCustomReason, setCancelCustomReason] = useState('');
+  const [cancelNotes, setCancelNotes] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('marketplace-desk-bookings', 9);
   const { mode, setViewMode, columns, setGridColumns, gridClassName } = useViewMode(
@@ -391,7 +405,18 @@ export default function MarketplaceBookingsPanel({
                       >
                         Accepter
                       </Button>
-                      <Button size="sm" variant="ghost" loading={busy} onClick={() => run(item.id, 'decline')} leftIcon={<XCircle className="w-3.5 h-3.5" />}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setCancelModal({ item, action: 'decline' });
+                          setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
+                          setCancelCustomReason('');
+                          setCancelNotes('');
+                        }}
+                        leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-500" />}
+                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      >
                         Refuser
                       </Button>
                     </>
@@ -407,7 +432,17 @@ export default function MarketplaceBookingsPanel({
                     </Button>
                   ) : null}
                   {(item.status === 'ACCEPTED' || (item.status === 'REQUESTED' && !isVendor)) ? (
-                    <Button size="sm" variant="ghost" loading={busy} onClick={() => run(item.id, 'cancel')}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setCancelModal({ item, action: 'cancel' });
+                        setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
+                        setCancelCustomReason('');
+                        setCancelNotes('');
+                      }}
+                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    >
                       Annuler
                     </Button>
                   ) : null}
@@ -459,9 +494,16 @@ export default function MarketplaceBookingsPanel({
                   description={next.detail}
                   actions={actions}
                 >
-                  {mode === 'grid' && item.notes ? (
-                    <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.notes}</p>
-                  ) : null}
+                  <div className="space-y-1.5 pt-1">
+                    {item.status === 'CANCELLED' && item.declineReason ? (
+                      <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-2 text-xs text-rose-800 dark:text-rose-200">
+                        <span className="font-semibold">Motif :</span> {item.declineReason}
+                      </div>
+                    ) : null}
+                    {mode === 'grid' && item.notes ? (
+                      <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.notes}</p>
+                    ) : null}
+                  </div>
                 </ProjectCard>
               );
             })}
@@ -476,6 +518,116 @@ export default function MarketplaceBookingsPanel({
           />
         </>
       )}
+
+      {/* MODALE REFUS / ANNULATION RÉSERVATION */}
+      <Modal
+        open={Boolean(cancelModal)}
+        onClose={() => {
+          if (!cancelSubmitting) setCancelModal(null);
+        }}
+        title={cancelModal?.action === 'decline' ? 'Refuser la réservation' : 'Annuler la réservation'}
+        description={
+          cancelModal
+            ? `Précisez la raison pour laquelle vous ${cancelModal.action === 'decline' ? 'refusez' : 'annulez'} la réservation de « ${cancelModal.item.title} ».`
+            : undefined
+        }
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={cancelSubmitting}
+              onClick={() => setCancelModal(null)}
+            >
+              Retour
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              loading={cancelSubmitting}
+              onClick={async () => {
+                if (!cancelModal) return;
+                const finalReason =
+                  cancelReasonChoice === 'Autre motif personnalisé'
+                    ? cancelCustomReason.trim() || 'Indisponible'
+                    : cancelReasonChoice;
+                const fullReason = cancelNotes.trim()
+                  ? `${finalReason} — ${cancelNotes.trim()}`
+                  : finalReason;
+                setCancelSubmitting(true);
+                try {
+                  await run(cancelModal.item.id, cancelModal.action, { reason: fullReason });
+                  setCancelModal(null);
+                } finally {
+                  setCancelSubmitting(false);
+                }
+              }}
+              leftIcon={<XCircle className="w-4 h-4" />}
+            >
+              {cancelModal?.action === 'decline' ? 'Confirmer le refus' : 'Confirmer l’annulation'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-foreground">
+              Motif de l’annulation *
+            </label>
+            <div className="space-y-1.5">
+              {DECLINE_BOOKING_REASONS.map((reason) => (
+                <label
+                  key={reason}
+                  className={cn(
+                    'flex items-center gap-2.5 p-2 rounded-xl border text-xs cursor-pointer transition',
+                    cancelReasonChoice === reason
+                      ? 'border-primary bg-primary/5 font-medium text-foreground'
+                      : 'border-border bg-surface text-muted hover:border-primary/50',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="bookingCancelReason"
+                    value={reason}
+                    checked={cancelReasonChoice === reason}
+                    onChange={() => setCancelReasonChoice(reason)}
+                    className="accent-primary"
+                  />
+                  <span>{reason}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {cancelReasonChoice === 'Autre motif personnalisé' ? (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Précisez le motif *
+              </label>
+              <Input
+                placeholder="Ex: Événement reprogrammé, travaux d’entretien..."
+                value={cancelCustomReason}
+                onChange={(e) => setCancelCustomReason(e.target.value)}
+                required
+              />
+            </div>
+          ) : null}
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">
+              Remarque ou message explicatif (optionnel)
+            </label>
+            <textarea
+              rows={3}
+              value={cancelNotes}
+              onChange={(e) => setCancelNotes(e.target.value)}
+              placeholder="Ex: Nous restons à votre disposition pour convenir d'une autre date ultérieurement."
+              className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-xs text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

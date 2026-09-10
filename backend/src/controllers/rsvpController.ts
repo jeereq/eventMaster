@@ -380,7 +380,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     let previewLightingPreset: string | null = null;
     let pricingZones: any[] = [];
 
-    const eventObj = guest.event as any;
+    // eventObj déjà déclaré plus haut
     if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
       const plan = eventObj.tablePlan;
       pricingZones = Array.isArray(plan.pricingZones) ? plan.pricingZones : [];
@@ -1419,6 +1419,7 @@ export async function submitGuestDonation(req: Request, res: Response) {
         callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
         approveUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationSuccess=1&orderId=${order.id}`,
         cancelUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationCancelled=1`,
+        declineUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationDeclined=1`,
       });
 
       await prisma.ticketOrder.update({
@@ -1435,7 +1436,7 @@ export async function submitGuestDonation(req: Request, res: Response) {
         pending: true,
         orderId: order.id,
         method: 'card',
-        paymentUrl: flex.url,
+        paymentUrl: flex.redirectUrl,
       });
     } catch (err: any) {
       await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });

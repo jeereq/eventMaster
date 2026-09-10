@@ -113,9 +113,9 @@ async function assertVenueCatalogPublish(tenantId) {
         throw new PlanFeatureError('Organisation introuvable.');
     const { audience, maxRooms, name } = snapshot.features;
     const isTrial = snapshot.plan === 'FREE' && maxRooms > 0;
-    const isCatalogPlan = audience === 'VENUE' || audience === 'CATALOG';
-    if ((!isCatalogPlan && !isTrial) || maxRooms <= 0) {
-        throw new PlanFeatureError(`La publication d’une salle au catalogue n’est pas incluse dans ${name}. Choisissez le forfait Salle ou Salle & presta.`);
+    const isCatalogOrB2BPlan = audience === 'VENUE' || audience === 'CATALOG' || audience === 'B2B';
+    if ((!isCatalogOrB2BPlan && !isTrial) || maxRooms <= 0) {
+        throw new PlanFeatureError(`La publication d’une salle au catalogue n’est pas incluse dans ${name}. Choisissez un forfait B2B, Salle ou Salle & presta avec quota de salles.`);
     }
 }
 async function assertOrgManagerQuota(tenantId, addingManager = true) {

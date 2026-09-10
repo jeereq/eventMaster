@@ -421,7 +421,11 @@ export interface MarketplaceInquiryItem {
   eventDate: string | null;
   guestCount: number | null;
   message: string;
-  status: 'NEW' | 'CONTACTED';
+  status: 'NEW' | 'CONTACTED' | 'QUOTED' | 'DECLINED';
+  quotedAmountFc?: number | null;
+  responseNotes?: string | null;
+  declineReason?: string | null;
+  respondedAt?: string | null;
   createdAt: string;
   event: { id: string; title: string; date: string } | null;
   hasBooking?: boolean;
@@ -546,6 +550,8 @@ export interface MarketplaceBookingItem {
   commissionFc: number;
   status: MarketplaceBookingStatus;
   depositMarkedAt: string | null;
+  declineReason?: string | null;
+  declinedAt?: string | null;
   notes: string | null;
   createdAt: string;
   event: { id: string; title: string; date: string } | null;
@@ -565,7 +571,10 @@ export function bookingNextStep(
 ): { title: string; detail: string } {
   const isVendor = item.viewerRole === 'vendor';
   if (item.status === 'CANCELLED') {
-    return { title: 'Annulée', detail: 'Aucune action requise.' };
+    return {
+      title: 'Annulée / Refusée',
+      detail: item.declineReason ? `Motif : ${item.declineReason}` : 'Aucune action requise.',
+    };
   }
   if (item.status === 'COMPLETED') {
     return { title: 'Terminée', detail: 'L’événement est passé.' };
@@ -575,7 +584,7 @@ export function bookingNextStep(
   }
   if (item.status === 'REQUESTED') {
     return isVendor
-      ? { title: 'À traiter', detail: 'Vérifiez le montant, puis acceptez ou refusez.' }
+      ? { title: 'À traiter', detail: 'Vérifiez le montant, puis acceptez ou refusez avec motif.' }
       : { title: 'En attente', detail: 'Le professionnel n’a pas encore répondu.' };
   }
   if (item.status === 'ACCEPTED' && !item.depositMarkedAt) {
@@ -595,18 +604,29 @@ export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; 
       ? { title: 'Réservation créée', detail: 'Suivez l’acompte et la confirmation dans l’onglet Réservations.' }
       : { title: 'Déjà convertie', detail: 'Une réservation existe déjà pour cette demande.' };
   }
+  if (item.status === 'DECLINED') {
+    return asOrganizer
+      ? { title: 'Devis décliné', detail: item.declineReason ? `Motif : ${item.declineReason}` : 'Le professionnel n’a pas pu donner suite à votre demande.' }
+      : { title: 'Demande refusée', detail: item.declineReason ? `Motif transmis : ${item.declineReason}` : 'Vous avez décliné cette demande de devis.' };
+  }
+  if (item.status === 'QUOTED') {
+    const formatted = item.quotedAmountFc != null ? `${formatFc(item.quotedAmountFc)} FC` : 'Chiffré';
+    return asOrganizer
+      ? { title: `Devis chiffré (${formatted})`, detail: 'Le professionnel vous a transmis son devis. Réservez pour valider la date.' }
+      : { title: `Devis transmis (${formatted})`, detail: 'Proposition envoyée au client. Vous pouvez convertir en réservation.' };
+  }
   if (item.status === 'NEW') {
     return asOrganizer
       ? { title: 'Envoyée', detail: 'Le professionnel n’a pas encore répondu. Vous pouvez déjà réserver si un tarif est publié.' }
       : item.eventDate
-        ? { title: 'Nouveau devis', detail: 'Contactez le client, puis convertissez en réservation si la date convient.' }
+        ? { title: 'Nouveau devis', detail: 'Contactez le client, puis chiffrez le devis ou refusez avec motif.' }
         : { title: 'Nouveau devis', detail: 'Contactez le client, puis marquez la demande comme contactée.' };
   }
   if (asOrganizer) {
     return { title: 'Prise en charge', detail: 'Le professionnel vous a contacté. Réservez depuis l’événement si un tarif est publié.' };
   }
   return item.eventDate
-    ? { title: 'Prêt à réserver', detail: 'Convertissez cette demande en réservation pour suivre l’acompte et bloquer la date.' }
+    ? { title: 'Prêt à chiffrer / réserver', detail: 'Chiffrez le devis ou convertissez directement en réservation pour bloquer la date.' }
     : { title: 'Contacté', detail: 'Pas de date indiquée : convenez d’un jour avant de créer une réservation.' };
 }
 

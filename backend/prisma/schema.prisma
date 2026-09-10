@@ -87,6 +87,8 @@ enum VenuePriceUnit {
 enum MarketplaceInquiryStatus {
   NEW
   CONTACTED
+  QUOTED
+  DECLINED
 }
 
 enum MarketplaceBookingStatus {
@@ -787,6 +789,10 @@ model MarketplaceInquiry {
   guestCount  Int?
   message     String
   status      MarketplaceInquiryStatus  @default(NEW)
+  quotedAmountFc Int?
+  responseNotes String?
+  declineReason String?
+  respondedAt   DateTime?
   fromTenantId String?
   fromTenant   Tenant?                  @relation("InquiryFromTenant", fields: [fromTenantId], references: [id], onDelete: SetNull)
   createdAt   DateTime                  @default(now())
@@ -822,6 +828,8 @@ model MarketplaceBooking {
   status             MarketplaceBookingStatus  @default(REQUESTED)
   depositMarkedAt    DateTime?
   notes              String?
+  declineReason      String?
+  declinedAt         DateTime?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 

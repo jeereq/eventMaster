@@ -195,20 +195,49 @@ async function fulfillTicketOrder(orderId, stripeSession) {
                     parsedSeats.map((s, idx) => ` - Place ${idx + 1} : table ${s.tableId} · siège ${s.seatIndex + 1}`).join('\n') +
                     '\n';
         }
-        const subject = `Votre billet — ${event.title}`;
-        const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR et itinéraire) :\n${rsvpUrl}\n\n${guestMessageCopy_1.GUEST_COPY.ticket}\n\nOrganisé par ${event.tenant.name}.\n`;
+        let multiPassesText = '';
+        let multiPassesHtml = '';
+        if (paid?.guests && paid.guests.length > 1) {
+            multiPassesText =
+                `\nVos pass d’accès individuels avec QR code distinct (${paid.guests.length}) :\n` +
+                    paid.guests
+                        .map((g, idx) => {
+                        const s = parsedSeats[idx];
+                        const sInfo = s ? ` (Table ${s.tableId}, place n°${s.seatIndex + 1})` : '';
+                        return ` - Pass ${idx + 1} [${idx === 0 ? order.buyerName : g.firstName}] : ${FRONTEND_URL}/rsvp/${g.id}${sInfo}`;
+                    })
+                        .join('\n') +
+                    '\nVous pouvez transférer directement ces liens uniques à vos accompagnateurs.\n';
+            multiPassesHtml = `
+        <div style="margin:18px 0;padding:16px;background-color:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+          <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0f172a;">Vos ${paid.guests.length} pass d’accès individuels (QR code distinct par personne) :</p>
+          <ul style="margin:0;padding-left:20px;font-size:13px;color:#334155;line-height:1.7;">
+            ${paid.guests
+                .map((g, idx) => {
+                const s = parsedSeats[idx];
+                const sInfo = s ? ` &middot; <span style="color:#059669;font-weight:600;">Table ${(0, brandingUtils_1.escapeHtml)(String(s.tableId))}, place n°${s.seatIndex + 1}</span>` : '';
+                return `<li><strong>Billet ${idx + 1}</strong> (${(0, brandingUtils_1.escapeHtml)(idx === 0 ? order.buyerName : g.firstName)}) : <a href="${FRONTEND_URL}/rsvp/${g.id}" style="color:#059669;text-decoration:underline;font-weight:600;">Ouvrir le pass ${idx + 1}</a>${sInfo}</li>`;
+            })
+                .join('')}
+          </ul>
+          <p style="margin:10px 0 0;font-size:12px;color:#64748b;">Astuce : transmettez directement le lien du Billet 2 à votre accompagnateur pour qu'il ait son propre pass QR sur son téléphone.</p>
+        </div>
+      `;
+        }
+        const subject = `Vos billets (${order.quantity}) — ${event.title}`;
+        const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}${multiPassesText}\nAccéder à votre pass d’entrée principal :\n${rsvpUrl}\n\n${guestMessageCopy_1.GUEST_COPY.ticket}\n\nOrganisé par ${event.tenant.name}.\n`;
         const html = (0, brandedMessaging_1.wrapBrandedEmail)({
             branding: orgBrand.branding,
             orgName: orgBrand.orgName,
-            title: 'Billet confirmé',
+            title: order.quantity > 1 ? `${order.quantity} Billets confirmés` : 'Billet confirmé',
             eyebrow: event.title,
             innerHtml: `
         <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Bonjour <strong>${(0, brandingUtils_1.escapeHtml)(order.buyerName)}</strong>,</p>
-        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Votre inscription à <strong>${(0, brandingUtils_1.escapeHtml)(event.title)}</strong> est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).</p>
-        ${seatLine ? `<p style="margin:0 0 16px;font-size:14px;color:#475569;white-space:pre-line;">${(0, brandingUtils_1.escapeHtml)(seatLine.trim())}</p>` : ''}
+        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">Votre inscription à <strong>${(0, brandingUtils_1.escapeHtml)(event.title)}</strong> est confirmée pour <strong>${order.quantity} place${order.quantity > 1 ? 's' : ''}</strong>.</p>
+        ${multiPassesHtml || (seatLine ? `<p style="margin:0 0 16px;font-size:14px;color:#475569;white-space:pre-line;">${(0, brandingUtils_1.escapeHtml)(seatLine.trim())}</p>` : '')}
         ${(0, brandedMessaging_1.brandedEventDetailsHtml)(orgBrand.branding, [{ label: 'Lieu', value: event.location || '' }])}
       `,
-            cta: { href: rsvpUrl, label: 'Ouvrir mon espace invité' },
+            cta: { href: rsvpUrl, label: order.quantity > 1 ? 'Ouvrir mon premier pass invité' : 'Ouvrir mon espace invité' },
             footerNote: guestMessageCopy_1.GUEST_COPY.ticket,
         });
         void (0, notificationService_1.sendRealEmail)(order.buyerEmail, subject, text, html).catch(() => undefined);

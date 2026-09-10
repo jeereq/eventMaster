@@ -44,6 +44,8 @@ function serializeBooking(row: {
   commissionFc: number;
   status: MarketplaceBookingStatus;
   depositMarkedAt: Date | null;
+  declineReason?: string | null;
+  declinedAt?: Date | null;
   notes: string | null;
   createdAt: Date;
   listing: { slug: string; headline: string | null; room: { name: string } } | null;
@@ -75,6 +77,8 @@ function serializeBooking(row: {
     commissionFc: row.commissionFc,
     status: row.status,
     depositMarkedAt: row.depositMarkedAt,
+    declineReason: row.declineReason ?? null,
+    declinedAt: row.declinedAt ?? null,
     notes: row.notes,
     createdAt: row.createdAt,
     event: row.event,
@@ -398,13 +402,19 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
         return res.status(400).json({ error: 'Une réservation confirmée ne peut plus être annulée ici.' });
       }
       if (!isVendor && !isOrganizer) return res.status(403).json({ error: 'Accès refusé.' });
+      const declineReason = req.body?.reason ? String(req.body.reason).trim().slice(0, 500) : null;
       const updated = await prisma.marketplaceBooking.update({
         where: { id },
-        data: { status: 'CANCELLED' },
+        data: {
+          status: 'CANCELLED',
+          declineReason,
+          declinedAt: new Date(),
+        },
         include: bookingInclude,
       });
-      void notifyBookingStatus(booking, 'Réservation annulée.');
-      return res.json({ booking: serializeBooking(updated), message: 'Réservation annulée.' });
+      const reasonSuffix = declineReason ? ` Motif : ${declineReason}` : '';
+      void notifyBookingStatus(booking, `Réservation ${action === 'decline' ? 'refusée' : 'annulée'}.${reasonSuffix}`);
+      return res.json({ booking: serializeBooking(updated), message: `Réservation ${action === 'decline' ? 'refusée' : 'annulée'}.` });
     }
 
     if (action === 'mark-deposit') {
@@ -538,8 +548,11 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
     const existing = await prisma.marketplaceBooking.findUnique({ where: { inquiryId } });
     if (existing) return res.status(409).json({ error: 'Une réservation existe déjà pour cette demande.' });
 
-    const price = inquiry.listing?.priceFromFc ?? inquiry.offering?.priceFromFc;
-    if (price == null) return res.status(400).json({ error: 'Ajoutez un tarif sur l’offre avant de convertir.' });
+    const customAmount = req.body?.amountFc != null ? Number.parseInt(String(req.body.amountFc), 10) : null;
+    const price = (Number.isFinite(customAmount) && (customAmount ?? 0) >= 0)
+      ? customAmount
+      : (inquiry.quotedAmountFc ?? inquiry.listing?.priceFromFc ?? inquiry.offering?.priceFromFc);
+    if (price == null) return res.status(400).json({ error: 'Ajoutez un tarif sur l’offre ou fournissez un montant pour convertir.' });
 
     const dateKey = toDateKey(inquiry.eventDate);
     const blocked = parseBlockedDates(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);

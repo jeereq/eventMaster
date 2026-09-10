@@ -17,22 +17,50 @@ import { formatFc } from '@/config/landingPricing';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { rememberCurrentCatalogueList, useRememberListReturn } from '@/lib/catalogueQuery';
-import { Bookmark, CalendarCheck, FileText, Heart, Inbox, Loader2, Store, Trash2 } from 'lucide-react';
+import {
+  Bookmark,
+  Building2,
+  CalendarCheck,
+  FileText,
+  Heart,
+  Inbox,
+  Loader2,
+  Store,
+  Trash2,
+} from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import type { SavedEventPack } from '@/lib/eventPlan';
 import { eventTypeLabel } from '@/lib/listingDetails';
+import { canPublishVenueCatalog } from '@/lib/planAccess';
 import { cn } from '@/lib/cn';
 
 type HubTab = 'quotes' | 'bookings' | 'packs' | 'favorites';
 
 function OrganizerDemandesPage() {
   useRememberListReturn();
-  const { access, tenant } = useAuth();
+  const { access, tenant, planFeatures, planQuota } = useAuth();
   const { site } = usePlatformSite();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const canActAsVendor =
+    Boolean(access?.canManageRooms) ||
+    tenant?.accountKind === 'VENDOR' ||
+    tenant?.accountKind === 'BOTH' ||
+    planFeatures?.audience === 'B2B' ||
+    planFeatures?.audience === 'VENUE' ||
+    planFeatures?.audience === 'CATALOG' ||
+    canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
+
+  const requestedRole = searchParams.get('role');
+  const [role, setRole] = useState<'vendor' | 'organizer'>(
+    canActAsVendor && (requestedRole === 'vendor' || (!requestedRole && (tenant?.accountKind === 'VENDOR' || planFeatures?.audience === 'VENUE')))
+      ? 'vendor'
+      : 'organizer',
+  );
+
   const requestedTab = searchParams.get('tab');
   const eventFilter = searchParams.get('event') || 'all';
   const [tab, setTab] = useState<HubTab>(
@@ -41,6 +69,7 @@ function OrganizerDemandesPage() {
       : 'quotes',
   );
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
+  const [commissionDueFc, setCommissionDueFc] = useState(0);
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [packs, setPacks] = useState<SavedEventPack[]>([]);
   const [orgEvents, setOrgEvents] = useState<Array<{ id: string; title: string }>>([]);
@@ -54,13 +83,17 @@ function OrganizerDemandesPage() {
     setLoading(true);
     setError('');
     try {
+      const activeRole = role;
       const [bookingData, inquiryData, packData, eventsData] = await Promise.all([
-        api.get('/marketplace/bookings?role=organizer'),
-        api.get('/marketplace/inquiries?role=organizer'),
-        api.get('/marketplace/event-packs').catch(() => ({ packs: [] })),
+        api.get(`/marketplace/bookings?role=${activeRole}`),
+        api.get(`/marketplace/inquiries?role=${activeRole}`),
+        activeRole === 'organizer' && !isProtocol
+          ? api.get('/marketplace/event-packs').catch(() => ({ packs: [] }))
+          : Promise.resolve({ packs: [] }),
         api.get('/events').catch(() => ({ events: [] })),
       ]);
       setBookings(bookingData.bookings || []);
+      setCommissionDueFc(bookingData.commissionDueFc || 0);
       setInquiries(inquiryData.inquiries || []);
       setPacks(Array.isArray(packData.packs) ? packData.packs : []);
       const eventRows = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
@@ -70,7 +103,7 @@ function OrganizerDemandesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [role, isProtocol]);
 
   useEffect(() => {
     if (tenant?.id) load();
@@ -78,10 +111,30 @@ function OrganizerDemandesPage() {
   }, [tenant?.id, load]);
 
   useEffect(() => {
+    if (requestedRole === 'vendor' && canActAsVendor && role !== 'vendor') {
+      setRole('vendor');
+    } else if (requestedRole === 'organizer' && role !== 'organizer') {
+      setRole('organizer');
+    }
+  }, [requestedRole, canActAsVendor, role]);
+
+  useEffect(() => {
     if (requestedTab === 'quotes' || requestedTab === 'bookings' || requestedTab === 'packs' || requestedTab === 'favorites') {
       setTab(requestedTab);
     }
   }, [requestedTab]);
+
+  const setPerspectiveRole = (newRole: 'vendor' | 'organizer') => {
+    setRole(newRole);
+    if (newRole === 'vendor' && (tab === 'packs' || tab === 'favorites')) {
+      setTab('quotes');
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    if (newRole === 'vendor') params.set('role', 'vendor');
+    else params.delete('role');
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard/bookings?${qs}` : '/dashboard/bookings', { scroll: false });
+  };
 
   const eventOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -121,7 +174,6 @@ function OrganizerDemandesPage() {
 
   const pendingQuotes = visibleInquiries.filter((item) => item.status === 'NEW' && !item.hasBooking).length;
   const openBookings = visibleBookings.filter((item) => item.status === 'REQUESTED' || item.status === 'ACCEPTED').length;
-  const confirmedBookings = visibleBookings.filter((item) => item.status === 'CONFIRMED' || item.status === 'COMPLETED').length;
 
   useEffect(() => {
     if (!isProtocol) return;
@@ -136,25 +188,38 @@ function OrganizerDemandesPage() {
   const showEventFilter = (tab === 'quotes' || tab === 'bookings') && eventOptions.length > 0;
 
   const pageTitle =
-    tab === 'bookings' ? 'Vos réservations de dates'
-      : tab === 'quotes' ? 'Vos demandes de devis'
-        : tab === 'packs' ? 'Vos packs enregistrés'
-          : tab === 'favorites' ? 'Vos favoris'
-            : 'Devis & réservations';
+    role === 'vendor'
+      ? tab === 'bookings'
+        ? 'Réservations reçues'
+        : 'Devis reçus (Salles & Prestations)'
+      : tab === 'bookings'
+        ? 'Vos réservations de dates'
+        : tab === 'quotes'
+          ? 'Vos demandes de devis'
+          : tab === 'packs'
+            ? 'Vos packs enregistrés'
+            : tab === 'favorites'
+              ? 'Vos favoris'
+              : 'Devis & réservations';
 
-  const pageDescription = isProtocol
-    ? tab === 'bookings'
-      ? 'Suivez les réservations liées aux événements que vous accompagnez.'
-      : 'Suivez les devis envoyés aux salles et prestataires pour le protocole.'
-    : tab === 'bookings'
-      ? `Suivez vos réservations confirmées. L’acompte (${depositPercent(site)} %) se règle directement auprès du prestataire.`
-      : tab === 'quotes'
-        ? 'Suivez vos demandes de devis envoyées aux salles et prestataires.'
-        : tab === 'packs'
-          ? 'Retrouvez vos sélections de packs créées pour votre projet.'
-          : tab === 'favorites'
-            ? 'Les lieux, prestataires et équipements que vous avez gardés de côté.'
-            : `Suivez vos devis, réservations, packs et favoris en toute simplicité.`;
+  const pageDescription =
+    role === 'vendor'
+      ? tab === 'bookings'
+        ? 'Consultez, confirmez ou refusez les réservations reçues pour vos salles, prestations ou matériels.'
+        : 'Gérez et chiffrez les demandes de devis transmises par les organisateurs d’événements.'
+      : isProtocol
+        ? tab === 'bookings'
+          ? 'Suivez les réservations liées aux événements que vous accompagnez.'
+          : 'Suivez les devis envoyés aux salles et prestataires pour le protocole.'
+        : tab === 'bookings'
+          ? `Suivez vos réservations confirmées. L’acompte (${depositPercent(site)} %) se règle directement auprès du prestataire.`
+          : tab === 'quotes'
+            ? 'Suivez vos demandes de devis envoyées aux salles et prestataires.'
+            : tab === 'packs'
+              ? 'Retrouvez vos sélections de packs créées pour votre projet.'
+              : tab === 'favorites'
+                ? 'Les lieux, prestataires et équipements que vous avez gardés de côté.'
+                : 'Suivez vos devis, réservations, packs et favoris en toute simplicité.';
 
   return (
     <div className="space-y-5 w-full">
@@ -183,6 +248,53 @@ function OrganizerDemandesPage() {
         }
       />
 
+      {/* SÉLECTEUR DE PERSPECTIVE VENDEUR / ORGANISATEUR */}
+      {canActAsVendor && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-1.5 rounded-2xl border border-border bg-surface-muted/60">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPerspectiveRole('vendor')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition',
+                role === 'vendor'
+                  ? 'bg-surface text-foreground shadow-xs border border-border font-bold'
+                  : 'text-muted hover:text-foreground hover:bg-surface/50',
+              )}
+            >
+              <Store className="w-4 h-4 text-primary" />
+              <span>Demandes reçues (Professionnel / Salle)</span>
+              {role === 'vendor' && pendingQuotes > 0 ? (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                  {pendingQuotes}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerspectiveRole('organizer')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition',
+                role === 'organizer'
+                  ? 'bg-surface text-foreground shadow-xs border border-border font-bold'
+                  : 'text-muted hover:text-foreground hover:bg-surface/50',
+              )}
+            >
+              <Building2 className="w-4 h-4 text-muted-foreground" />
+              <span>Mes demandes (Organisateur)</span>
+            </button>
+          </div>
+
+          <div className="text-[11px] text-muted px-2">
+            {role === 'vendor' ? (
+              <span>Vue dédiée aux prestataires et gestionnaires de salles</span>
+            ) : (
+              <span>Vue dédiée aux réservations que vous avez initiées</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -194,17 +306,17 @@ function OrganizerDemandesPage() {
           {[
             {
               id: 'quotes' as const,
-              label: 'Devis',
+              label: role === 'vendor' ? 'Devis reçus' : 'Devis',
               count: pendingQuotes > 0 ? `${pendingQuotes} en attente` : visibleInquiries.length,
               icon: Inbox,
             },
             {
               id: 'bookings' as const,
-              label: 'Réservations',
+              label: role === 'vendor' ? 'Réservations reçues' : 'Réservations',
               count: openBookings > 0 ? `${openBookings} ouvertes` : visibleBookings.length,
               icon: CalendarCheck,
             },
-            ...(!isProtocol
+            ...(role === 'organizer' && !isProtocol
               ? [
                   { id: 'packs' as const, label: 'Packs', count: packs.length, icon: Bookmark },
                   { id: 'favorites' as const, label: 'Favoris', count: favorites.items.length, icon: Heart },
@@ -226,10 +338,12 @@ function OrganizerDemandesPage() {
             >
               <item.icon className="w-4 h-4 shrink-0" />
               <span>{item.label}</span>
-              <span className={cn(
-                'ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold',
-                tab === item.id ? 'bg-primary/10 text-primary' : 'bg-surface text-muted'
-              )}>
+              <span
+                className={cn(
+                  'ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold',
+                  tab === item.id ? 'bg-primary/10 text-primary' : 'bg-surface text-muted',
+                )}
+              >
                 {item.count}
               </span>
             </button>
@@ -257,13 +371,17 @@ function OrganizerDemandesPage() {
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       ) : tab === 'quotes' ? (
-        <MarketplaceInquiriesPanel inquiries={visibleInquiries} organizerView />
+        <MarketplaceInquiriesPanel
+          inquiries={visibleInquiries}
+          organizerView={role === 'organizer'}
+          onChanged={load}
+        />
       ) : tab === 'bookings' ? (
         <MarketplaceBookingsPanel
           bookings={visibleBookings}
-          commissionDueFc={0}
+          commissionDueFc={role === 'vendor' ? commissionDueFc : 0}
           onChanged={load}
-          organizerView
+          organizerView={role === 'organizer'}
         />
       ) : tab === 'packs' ? (
         packs.length === 0 ? (
@@ -377,7 +495,9 @@ function OrganizerDemandesPage() {
       {!loading && (tab === 'quotes' || tab === 'bookings') && !isProtocol ? (
         <p className="text-[11px] text-muted flex items-center gap-1.5">
           {tab === 'quotes' ? <FileText className="w-3.5 h-3.5" /> : <CalendarCheck className="w-3.5 h-3.5" />}
-          Astuce : sélectionnez une période sur la fiche salle ou prestataire, puis envoyez le devis ou la réservation.
+          {role === 'vendor'
+            ? 'Conseil : répondez rapidement aux devis pour maximiser vos réservations confirmées.'
+            : 'Astuce : sélectionnez une période sur la fiche salle ou prestataire, puis envoyez le devis ou la réservation.'}
         </p>
       ) : null}
     </div>

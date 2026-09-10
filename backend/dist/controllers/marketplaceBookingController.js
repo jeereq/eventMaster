@@ -44,6 +44,8 @@ function serializeBooking(row) {
         commissionFc: row.commissionFc,
         status: row.status,
         depositMarkedAt: row.depositMarkedAt,
+        declineReason: row.declineReason ?? null,
+        declinedAt: row.declinedAt ?? null,
         notes: row.notes,
         createdAt: row.createdAt,
         event: row.event,
@@ -335,13 +337,19 @@ async function updateBooking(req, res) {
             }
             if (!isVendor && !isOrganizer)
                 return res.status(403).json({ error: 'Accès refusé.' });
+            const declineReason = req.body?.reason ? String(req.body.reason).trim().slice(0, 500) : null;
             const updated = await db_1.prisma.marketplaceBooking.update({
                 where: { id },
-                data: { status: 'CANCELLED' },
+                data: {
+                    status: 'CANCELLED',
+                    declineReason,
+                    declinedAt: new Date(),
+                },
                 include: bookingInclude,
             });
-            void notifyBookingStatus(booking, 'Réservation annulée.');
-            return res.json({ booking: serializeBooking(updated), message: 'Réservation annulée.' });
+            const reasonSuffix = declineReason ? ` Motif : ${declineReason}` : '';
+            void notifyBookingStatus(booking, `Réservation ${action === 'decline' ? 'refusée' : 'annulée'}.${reasonSuffix}`);
+            return res.json({ booking: serializeBooking(updated), message: `Réservation ${action === 'decline' ? 'refusée' : 'annulée'}.` });
         }
         if (action === 'mark-deposit') {
             if (booking.status !== 'ACCEPTED') {
@@ -468,9 +476,12 @@ async function convertInquiryToBooking(req, res) {
         const existing = await db_1.prisma.marketplaceBooking.findUnique({ where: { inquiryId } });
         if (existing)
             return res.status(409).json({ error: 'Une réservation existe déjà pour cette demande.' });
-        const price = inquiry.listing?.priceFromFc ?? inquiry.offering?.priceFromFc;
+        const customAmount = req.body?.amountFc != null ? Number.parseInt(String(req.body.amountFc), 10) : null;
+        const price = (Number.isFinite(customAmount) && (customAmount ?? 0) >= 0)
+            ? customAmount
+            : (inquiry.quotedAmountFc ?? inquiry.listing?.priceFromFc ?? inquiry.offering?.priceFromFc);
         if (price == null)
-            return res.status(400).json({ error: 'Ajoutez un tarif sur l’offre avant de convertir.' });
+            return res.status(400).json({ error: 'Ajoutez un tarif sur l’offre ou fournissez un montant pour convertir.' });
         const dateKey = (0, marketplaceDates_1.toDateKey)(inquiry.eventDate);
         const blocked = (0, marketplaceDates_1.parseBlockedDates)(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
         if (!dateKey

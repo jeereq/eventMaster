@@ -12,6 +12,7 @@ router.get('/:guestId/seating-invitation.pdf', rsvpController_1.downloadSeatingI
 router.get('/:guestId/qr.png', rsvpController_1.getGuestQrPng);
 router.get('/:guestId', rsvpController_1.getGuestRsvpDetails);
 router.post('/:guestId', rsvpController_1.submitRsvp);
+router.post('/:guestId/donations', rsvpController_1.submitGuestDonation);
 // Guest feed and sharing routes
 router.post('/:guestId/share', feedController_1.submitGuestShare);
 router.get('/event/:eventId/feed', feedController_1.getEventFeed);

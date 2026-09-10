@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Alert } from '@/components/ui';
+import { PageHeader, Breadcrumbs, Alert, Button } from '@/components/ui';
 import { canPublishVenueCatalog } from '@/lib/planAccess';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
+import { CalendarCheck } from 'lucide-react';
 import RoomsManagement from '../RoomsManagement';
 
 export default function DashboardRoomsPage() {
@@ -47,6 +49,15 @@ export default function DashboardRoomsPage() {
               { label: 'Salles' },
             ]}
           />
+        }
+        action={
+          catalogPublish ? (
+            <Link href="/dashboard/bookings?role=vendor" className="inline-flex">
+              <Button size="sm" variant="secondary" leftIcon={<CalendarCheck className="w-4 h-4" />}>
+                Demandes & Réservations
+              </Button>
+            </Link>
+          ) : null
         }
       />
       <RoomsManagement />
