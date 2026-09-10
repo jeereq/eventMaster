@@ -31,6 +31,8 @@ import {
   FileText,
   LayoutGrid,
   CheckCircle2,
+  Mail,
+  Building2,
 } from 'lucide-react';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
@@ -232,6 +234,78 @@ export default function SimulateurPageClient() {
             />
           </div>
         ) : null}
+
+        {/* ─── STUDIOS CRÉATIFS ACTIFS ─── */}
+        <section aria-label="Studios créatifs actifs" className="rounded-2xl border border-primary/20 bg-surface p-4 sm:p-5 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-3">
+            <div className="space-y-0.5">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-primary-foreground">
+                <Sparkles className="w-3.5 h-3.5" />
+                Studios actifs
+              </span>
+              <h2 className="text-sm font-bold text-foreground">
+                Les 3 ateliers créatifs de préparation
+              </h2>
+            </div>
+            <p className="text-xs text-muted max-w-sm sm:text-right">
+              Utilisez ce simulateur de budget, puis composez vos cartons d’invitation ou vos plans de salle 3D.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="p-3 rounded-xl border-2 border-primary bg-primary/5 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Wand2 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">Simulateur Budget</p>
+                  <p className="text-[10px] text-muted truncate">3 formules catalogue</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Actif
+              </span>
+            </div>
+
+            <Link
+              href="/modeles"
+              className="p-3 rounded-xl border border-border bg-surface hover:border-pink-500/50 hover:bg-pink-500/5 transition flex items-center justify-between gap-2 group cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground group-hover:text-pink-600 transition truncate">Studio Invitations</p>
+                  <p className="text-[10px] text-muted truncate">Cartes 9:16 WhatsApp &amp; RSVP</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-muted group-hover:text-pink-600 transition shrink-0">
+                Ouvrir →
+              </span>
+            </Link>
+
+            <Link
+              href="/plans-3d"
+              className="p-3 rounded-xl border border-border bg-surface hover:border-sky-500/50 hover:bg-sky-500/5 transition flex items-center justify-between gap-2 group cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground group-hover:text-sky-600 transition truncate">Studio Plans 3D</p>
+                  <p className="text-[10px] text-muted truncate">Visite &amp; tables 3D</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-muted group-hover:text-sky-600 transition shrink-0">
+                Ouvrir →
+              </span>
+            </Link>
+          </div>
+        </section>
 
         {/* Barre de sélection rapide de scénarios types */}
         <section aria-labelledby="scenarios-heading" className="space-y-3">

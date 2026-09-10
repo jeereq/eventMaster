@@ -46,7 +46,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
       if (kind === 'event' && (!hub || hub === 'explore')) {
         return { title: 'Événements', subtitle: 'Événements et billetterie' };
       }
-      if (hub === 'plan') return { title: 'Préparer un événement', subtitle: 'Simulateur et packs clé en main' };
+      if (hub === 'plan') return { title: 'Simulateur', subtitle: 'Studios actifs, budget et devis' };
       if (hub === 'favorites') return { title: 'Favoris', subtitle: 'Vos coups de cœur enregistrés' };
       if (hub === 'packs') return { title: 'Mes packs', subtitle: 'Vos sélections sur mesure' };
       return { title: 'Marketplace', subtitle: 'Salles, prestataires et matériel & équipements' };

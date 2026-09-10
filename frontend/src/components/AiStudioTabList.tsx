@@ -86,15 +86,21 @@ export default function AiStudioTabList({
               'inline-flex items-center gap-2.5',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               selected
-                ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                ? 'bg-surface text-foreground shadow-[var(--shadow-soft)] ring-1 ring-primary/30'
                 : 'text-muted hover:text-foreground',
             )}
           >
             <Icon className={cn('w-4 h-4 shrink-0', selected ? 'text-primary-solid' : '')} aria-hidden />
-            <span className="min-w-0">
+            <span className="min-w-0 flex-1">
               <span className="block text-xs font-semibold">{tab.label}</span>
-              <span className="block text-xs text-muted">{tab.hint}</span>
+              <span className="block text-xs text-muted truncate">{tab.hint}</span>
             </span>
+            {selected ? (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Actif
+              </span>
+            ) : null}
           </button>
         );
       })}

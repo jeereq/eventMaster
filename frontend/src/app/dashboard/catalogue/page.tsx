@@ -634,7 +634,7 @@ function ClientMarketplaceInner() {
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Événements' : 'Marketplace'}
         description={
           tab === 'plan'
-            ? 'Studios budget, invitation et plan de salle : simulez, générez, retenez un pack pour les devis.'
+            ? 'Studios créatifs actifs (Budget, Invitations, Plans 3D) : simulez vos coûts, composez vos cartons et retenez un pack pour vos devis.'
             : tab === 'favorites'
               ? 'Salles, prestataires et matériel & équipements enregistrés. Filtrez et changez la vue grille ou liste.'
               : tab === 'packs'
@@ -652,7 +652,7 @@ function ClientMarketplaceInner() {
                   tab === 'favorites'
                     ? 'Favoris'
                     : tab === 'plan'
-                      ? 'Préparer un événement'
+                      ? 'Simulateur'
                       : tab === 'packs'
                         ? 'Mes packs'
                         : searchParams.get('kind') === 'event'
@@ -672,7 +672,7 @@ function ClientMarketplaceInner() {
         {[
           { id: 'explore' as const, label: 'Explorer', icon: Store },
           { id: 'favorites' as const, label: 'Favoris', icon: Heart },
-          { id: 'plan' as const, label: 'Préparer un événement', icon: Wallet },
+          { id: 'plan' as const, label: 'Simulateur', icon: Sparkles },
           { id: 'packs' as const, label: 'Mes packs', icon: Bookmark },
         ].map((item) => (
           <button

@@ -57,7 +57,10 @@ function ticketIsUpcoming(ticket: MyTicket, now: number) {
 
 export default function TicketsPage() {
   const { access, tenant } = useAuth();
-  const [activeTab, setActiveTab] = useState<'org' | 'my'>('org');
+  const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
+  const isOrgRole = !isClient && (access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || access?.level === 'staff' || tenant?.accountKind === 'ORGANIZER');
+
+  const [activeTab, setActiveTab] = useState<'org' | 'my'>(isClient ? 'my' : 'org');
   const [tickets, setTickets] = useState<MyTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -75,15 +78,12 @@ export default function TicketsPage() {
     gridClassName,
   } = useViewMode('em-view-tickets', 'grid', 2);
 
-  const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
-  const isOrgRole = access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || access?.level === 'staff' || tenant?.accountKind === 'ORGANIZER';
-
-  // Si c'est un client pur, l'onglet par défaut est 'my'
+  // Si c'est un client, l'onglet est toujours exclusivement 'my'
   useEffect(() => {
-    if (isClient && !isOrgRole) {
+    if (isClient) {
       setActiveTab('my');
     }
-  }, [isClient, isOrgRole]);
+  }, [isClient]);
 
   const agendaHref = CLIENT_AGENDA_HREF;
 

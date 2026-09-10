@@ -254,7 +254,7 @@ function buildDashboardNav(opts: {
    navSection('Mon Espace', [
     { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Définir vos objectifs, recommandations et synthèse de vos activités' },
     { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
-    { name: 'Simulateur de pack', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' },
+    { name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' },
     { name: 'Mes packs créés', href: '/dashboard/catalogue?tab=packs', tourId: 'nav-my-packs', icon: Bookmark, description: 'Retrouver et gérer tous vos packs d’événements enregistrés' },
     { name: 'Événements', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
    ]),
@@ -299,7 +299,7 @@ function buildDashboardNav(opts: {
   ...(workspace.showBrowseCatalogue
    ? [
       { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, matériel & équipements (comme le client)' },
-      { name: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
+      { name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
       { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Grille de réalisations et création de posts liés aux salles / prestations' },
      ]
    : []),

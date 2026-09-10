@@ -16,9 +16,13 @@ import {
   Truck,
   Mail,
   Compass,
-  Crown,
-  Zap,
+  CheckCircle2,
   ShieldCheck,
+  Wand2,
+  Bookmark,
+  Calendar,
+  Layers,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -29,10 +33,9 @@ import { cn } from '@/lib/cn';
 export type ClientIntent =
   | 'venue'
   | 'service'
-  | 'event'
-  | 'template'
   | 'rental'
-  | 'ai-plan';
+  | 'event'
+  | 'template';
 
 interface ClientIntentConfig {
   id: ClientIntent;
@@ -46,15 +49,6 @@ interface ClientIntentConfig {
   ctaHref: string;
   quickFilters: Array<{ label: string; href: string }>;
   features: string[];
-  isPaidPlanRequired?: boolean;
-  pricingNotice?: {
-    badge: string;
-    title: string;
-    description: string;
-    ctaLabel: string;
-    ctaHref: string;
-    pricingHighlight?: string;
-  };
 }
 
 const CLIENT_INTENTS: ClientIntentConfig[] = [
@@ -64,7 +58,7 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
     badge: 'Lieux & Espaces',
     tagline: 'Salles de fête, jardins, terrasses et domaines de réception',
     description:
-      'Découvrez de superbes lieux à Kinshasa et en RDC avec photos, tarifs transparents, capacités d’accueil et visites 3D immersives.',
+      'Découvrez de superbes lieux à Kinshasa, Lubumbashi et en RDC avec photos, tarifs transparents, capacités d’accueil et visites 3D immersives.',
     icon: Building2,
     accentColor: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400',
     ctaLabel: 'Parcourir les salles',
@@ -73,7 +67,7 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
       { label: 'Mariages & Grands galas', href: '/dashboard/catalogue?kind=venue&type=wedding' },
       { label: 'Salles à la Gombe', href: '/dashboard/catalogue?kind=venue&q=Gombe' },
       { label: 'Jardins & Plein air', href: '/dashboard/catalogue?kind=venue&type=garden' },
-      { label: 'Conférences & Séminaires', href: '/dashboard/catalogue?kind=venue&type=conference' },
+      { label: 'Conférences & Salons', href: '/dashboard/catalogue?kind=venue&type=conference' },
     ],
     features: [
       'Visites 3D immersives et plans de salle',
@@ -95,7 +89,7 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
     quickFilters: [
       { label: 'Traiteurs & Buffets', href: '/dashboard/catalogue?kind=service&cat=caterer' },
       { label: 'Décoration & Scénographie', href: '/dashboard/catalogue?kind=service&cat=decoration' },
-      { label: 'Photo & Vidéo HD', href: '/dashboard/catalogue?kind=service&cat=photographer' },
+      { label: 'Studios Photo & Vidéo', href: '/dashboard/catalogue?kind=service&cat=photographer' },
       { label: 'DJ & Sonorisation', href: '/dashboard/catalogue?kind=service&cat=dj' },
     ],
     features: [
@@ -105,26 +99,26 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
     ],
   },
   {
-    id: 'ai-plan',
-    title: 'Simuler mon pack événement',
-    badge: 'Budget & Pack IA',
-    tagline: 'Une formule sur-mesure calculée selon votre budget et vos invités',
+    id: 'rental',
+    title: 'Louer du matériel & des véhicules',
+    badge: 'Mobilier & Matériel',
+    tagline: 'Chaises VIP, tables, chapiteaux, sonorisation et cortèges',
     description:
-      'Indiquez votre budget en Francs Congolais (CDF), votre ville et votre nombre d’invités : notre assistant sélectionne pour vous la meilleure combinaison salle, traiteur, déco et animation.',
-    icon: Sparkles,
-    accentColor: 'from-amber-500/10 to-emerald-500/10 border-primary/30 text-primary',
-    ctaLabel: 'Lancer une simulation',
-    ctaHref: '/dashboard/catalogue?tab=plan&planView=ai',
+      'Tout pour équiper votre lieu et embellir votre réception : mobilier de prestige, tentes, sonorisation, éclairage et véhicules de cortège.',
+    icon: Truck,
+    accentColor: 'from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300',
+    ctaLabel: 'Voir le matériel disponible',
+    ctaHref: '/dashboard/catalogue?kind=rental',
     quickFilters: [
-      { label: 'Simulation automatique', href: '/dashboard/catalogue?tab=plan&planView=ai' },
-      { label: 'Mes packs enregistrés', href: '/dashboard/catalogue?tab=packs' },
-      { label: 'Ajuster mes critères', href: '/dashboard/catalogue?tab=plan&planView=manual' },
-      { label: 'Finaliser mon choix', href: '/dashboard/catalogue?tab=plan&planView=final' },
+      { label: 'Tentes & Chapiteaux', href: '/dashboard/catalogue?kind=rental&cat=tent' },
+      { label: 'Chaises & Mobilier VIP', href: '/dashboard/catalogue?kind=rental&cat=chairs' },
+      { label: 'Sonorisation & Éclairage', href: '/dashboard/catalogue?kind=rental&cat=sound' },
+      { label: 'Voitures de cortège', href: '/dashboard/catalogue?kind=rental&cat=cars' },
     ],
     features: [
-      'Répartition intelligente du budget par poste (salle, traiteur, déco, photo, DJ)',
-      'Sélection coordonnée de prestataires disponibles en RDC',
-      'Sauvegarde de vos sélections et devis groupé en 1 clic',
+      'Tarifs clairs à la journée ou au forfait',
+      'Options de livraison et d’installation sur place',
+      'Matériel vérifié et prêt pour votre date',
     ],
   },
   {
@@ -154,56 +148,22 @@ const CLIENT_INTENTS: ClientIntentConfig[] = [
     id: 'template',
     title: 'Créer un faire-part & invitations WhatsApp',
     badge: 'Invitations & Faire-part',
-    tagline: 'Faire-part interactifs, réponses RSVP en direct et QR codes invités',
+    tagline: 'Faire-part interactifs et invitations numériques prêtes à partager',
     description:
-      'Pour créer vos propres faire-part personnalisés, envoyer des invitations nominatives par WhatsApp et suivre qui sera présent, passez sur une formule Organisateur (dès 15 $).',
+      'Créez de superbes cartes d’invitation personnalisées pour vos proches et partagez-les en direct sur WhatsApp avec vos invités.',
     icon: Mail,
     accentColor: 'from-pink-500/10 to-rose-500/10 border-pink-500/30 text-pink-600 dark:text-pink-400',
-    ctaLabel: 'Découvrir les modèles de faire-part',
-    ctaHref: '/register?kind=ORGANIZER&intent=personal&action=template',
-    isPaidPlanRequired: true,
-    pricingNotice: {
-      badge: 'Formule Organisateur',
-      title: 'Créez vos faire-part et gérez vos invités en toute simplicité',
-      description:
-        'L’exploration du catalogue et les devis sont 100 % gratuits avec votre compte Client. Pour envoyer de superbes invitations personnalisées sur WhatsApp, collecter les réponses RSVP et générer des badges d’accès QR pour vos invités, activez une formule Organisateur (à partir de 15 $ pour 50 invités).',
-      pricingHighlight: 'Envois WhatsApp nominatifs · Suivi des présences en direct · Badges QR invités inclus',
-      ctaLabel: 'Voir les formules Organisateur',
-      ctaHref: '/register?kind=ORGANIZER&intent=personal&action=template',
-    },
+    ctaLabel: 'Ouvrir le Studio Invitations',
+    ctaHref: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite',
     quickFilters: [
-      { label: 'Mariages & Fiançailles', href: '/register?kind=ORGANIZER&intent=personal&action=template' },
-      { label: 'Anniversaires & Célébrations', href: '/register?kind=ORGANIZER&intent=personal&action=template' },
-      { label: 'Événements Pro & Galas', href: '/register?kind=ORGANIZER&intent=pro&action=event' },
+      { label: 'Studio invitations IA', href: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite' },
+      { label: 'Modèles de faire-part', href: '/modeles' },
+      { label: 'Invitations mariage', href: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite' },
     ],
     features: [
-      'Modèles soignés et personnalisables à votre image',
-      'Envoi direct par WhatsApp avec message nominatif',
-      'Suivi des confirmations (RSVP) et plan de table',
-      'Génération automatique des pass d’accès avec QR code',
-    ],
-  },
-  {
-    id: 'rental',
-    title: 'Louer du matériel & des véhicules',
-    badge: 'Mobilier & Matériel',
-    tagline: 'Chaises VIP, tables, chapiteaux, sonorisation et cortèges',
-    description:
-      'Tout pour équiper votre lieu et embellir votre réception : mobilier de prestige, tentes, sonorisation, éclairage et véhicules de cortège.',
-    icon: Truck,
-    accentColor: 'from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300',
-    ctaLabel: 'Voir le matériel disponible',
-    ctaHref: '/dashboard/catalogue?kind=rental',
-    quickFilters: [
-      { label: 'Tentes & Chapiteaux', href: '/dashboard/catalogue?kind=rental&cat=tent' },
-      { label: 'Chaises & Mobilier VIP', href: '/dashboard/catalogue?kind=rental&cat=chairs' },
-      { label: 'Sonorisation & Éclairage', href: '/dashboard/catalogue?kind=rental&cat=sound' },
-      { label: 'Voitures de cortège', href: '/dashboard/catalogue?kind=rental&cat=cars' },
-    ],
-    features: [
-      'Tarifs clairs à la journée ou au forfait week-end',
-      'Options de livraison et d’installation sur place',
-      'Matériel vérifié et prêt pour votre date',
+      'Génération assistée par IA et styles sur-mesure',
+      'Format vertical 9:16 idéal pour téléphones et WhatsApp',
+      'Partage instantané et sans frais avec vos proches',
     ],
   },
 ];
@@ -227,9 +187,10 @@ export default function ClientDashboardHome() {
     let mounted = true;
     Promise.allSettled([
       api.get('/marketplace/my-tickets'),
-      api.get('/marketplace/my-bookings'),
+      api.get('/marketplace/bookings?role=organizer'),
+      api.get('/marketplace/inquiries?role=organizer'),
       api.get('/marketplace/event-packs'),
-    ]).then(([ticketsRes, bookingsRes, packsRes]) => {
+    ]).then(([ticketsRes, bookingsRes, inquiriesRes, packsRes]) => {
       if (!mounted) return;
       let ticketsCount = 0;
       let quotesCount = 0;
@@ -241,16 +202,15 @@ export default function ClientDashboardHome() {
           ? ticketsRes.value.tickets.length
           : 0;
       }
-      if (bookingsRes.status === 'fulfilled') {
-        const val = bookingsRes.value || {};
-        const inquiries = Array.isArray(val.inquiries) ? val.inquiries : [];
-        const bookings = Array.isArray(val.clientBookings)
-          ? val.clientBookings
-          : Array.isArray(val.bookings)
-            ? val.bookings
-            : [];
-        quotesCount = inquiries.length;
-        bookingsCount = bookings.length;
+      if (inquiriesRes.status === 'fulfilled' && inquiriesRes.value?.inquiries) {
+        quotesCount = Array.isArray(inquiriesRes.value.inquiries)
+          ? inquiriesRes.value.inquiries.length
+          : 0;
+      }
+      if (bookingsRes.status === 'fulfilled' && bookingsRes.value?.bookings) {
+        bookingsCount = Array.isArray(bookingsRes.value.bookings)
+          ? bookingsRes.value.bookings.length
+          : 0;
       }
       if (packsRes.status === 'fulfilled') {
         const pVal = packsRes.value || {};
@@ -283,29 +243,32 @@ export default function ClientDashboardHome() {
 
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
-      {/* ─── BANNIÈRE BIENVENUE & RECHERCHE INTÉGRÉE ─── */}
+      {/* ─── BANNIÈRE BIENVENUE CLIENT & RECHERCHE INTÉGRÉE (100% GRATUIT) ─── */}
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border bg-linear-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-7 shadow-xs">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
 
         <div className="relative space-y-4 max-w-3xl">
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/15 text-primary border border-primary/25">
                 <Sparkles className="w-3.5 h-3.5" />
                 Espace Client
               </span>
-              <span className="text-xs text-muted">· Marketplace &amp; Événements</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                <ShieldCheck className="w-3 h-3" />
+                100 % gratuit · Aucun abonnement requis
+              </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">
               Bonjour{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋
             </h1>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Trouvez votre lieu idéal, de superbes prestataires, vos billets de sortie ou laissez notre simulateur composer un <strong>pack clé en main</strong> adapté à votre budget.
+              Explorez les meilleures salles et prestataires de réception, simulez votre budget en 1 clic ou réservez vos sorties en RDC. Aucun abonnement à payer : vous réglez uniquement vos billets ou vos réservations directement auprès des professionnels.
             </p>
           </div>
 
-          {/* Barre de recherche principale avec raccourcis */}
+          {/* Barre de recherche principale */}
           <form onSubmit={handleSearchSubmit} className="relative">
             <div className="relative flex items-center">
               <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
@@ -313,7 +276,7 @@ export default function ClientDashboardHome() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Une salle à la Gombe, un traiteur, un photographe, du mobilier…"
+                placeholder="Une salle à la Gombe, un traiteur, un DJ, du mobilier, des billets…"
                 className="w-full pl-11 pr-28 py-3.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
               />
               <button
@@ -328,7 +291,7 @@ export default function ClientDashboardHome() {
 
           {/* Suggestions de recherche en 1 clic */}
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-            <span className="text-xs font-medium text-muted mr-1">Idées rapides :</span>
+            <span className="text-xs font-medium text-muted mr-1">Recherches rapides :</span>
             <Link
               href="/dashboard/catalogue?kind=venue&q=Gombe"
               className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition"
@@ -352,7 +315,7 @@ export default function ClientDashboardHome() {
               className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" />
-              Simulateur de pack
+              Simulateur
             </Link>
           </div>
         </div>
@@ -360,53 +323,7 @@ export default function ClientDashboardHome() {
 
       {/* ─── WIDGETS D'ACTIVITÉS EN TEMPS RÉEL (5 CARTES) ─── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        {/* 1. Simulateur & Mes Packs */}
-        <Link
-          href="/dashboard/catalogue?tab=packs"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Packs</span>
-            <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
-              <Sparkles className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
-              {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
-              ) : (
-                stats.packsCount.toLocaleString('fr-FR')
-              )}
-            </p>
-            <p className="text-xs text-muted mt-0.5">Vos projets &amp; simulations</p>
-          </div>
-        </Link>
-
-        {/* 2. Billets */}
-        <Link
-          href="/dashboard/tickets"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Billets</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
-              <Ticket className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
-              {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
-              ) : (
-                stats.ticketsCount.toLocaleString('fr-FR')
-              )}
-            </p>
-            <p className="text-xs text-muted mt-0.5">Vos pass &amp; QR codes</p>
-          </div>
-        </Link>
-
-        {/* 3. Devis envoyés */}
+        {/* 1. Devis */}
         <Link
           href="/dashboard/bookings?tab=quotes"
           className="p-4 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full"
@@ -425,11 +342,11 @@ export default function ClientDashboardHome() {
                 stats.quotesCount.toLocaleString('fr-FR')
               )}
             </p>
-            <p className="text-xs text-muted mt-0.5">Demandes en cours</p>
+            <p className="text-xs text-muted mt-0.5">Demandes &amp; devis reçus</p>
           </div>
         </Link>
 
-        {/* 4. Réservations */}
+        {/* 2. Réservations */}
         <Link
           href="/dashboard/bookings?tab=bookings"
           className="p-4 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full"
@@ -449,6 +366,52 @@ export default function ClientDashboardHome() {
               )}
             </p>
             <p className="text-xs text-muted mt-0.5">Dates confirmées</p>
+          </div>
+        </Link>
+
+        {/* 3. Billets */}
+        <Link
+          href="/dashboard/tickets"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Billets</span>
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+              <Ticket className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
+              {stats.loading ? (
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+              ) : (
+                stats.ticketsCount.toLocaleString('fr-FR')
+              )}
+            </p>
+            <p className="text-xs text-muted mt-0.5">Pass d’accès &amp; QR</p>
+          </div>
+        </Link>
+
+        {/* 4. Mes Packs */}
+        <Link
+          href="/dashboard/catalogue?tab=packs"
+          className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Packs</span>
+            <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+              <Bookmark className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
+              {stats.loading ? (
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+              ) : (
+                stats.packsCount.toLocaleString('fr-FR')
+              )}
+            </p>
+            <p className="text-xs text-muted mt-0.5">Simulations sauvegardées</p>
           </div>
         </Link>
 
@@ -476,7 +439,125 @@ export default function ClientDashboardHome() {
         </Link>
       </div>
 
-      {/* ─── DÉCOUVERTE PAR CATÉGORIES & OBJECTIFS ─── */}
+      {/* ─── SECTION STUDIOS CRÉATIFS & SIMULATEURS ACTIFS (MISE EN VALEUR) ─── */}
+      <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-linear-to-br from-primary/5 via-surface to-surface-muted p-5 sm:p-6 space-y-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-primary-foreground">
+                <Wand2 className="w-3.5 h-3.5" />
+                Studios créatifs actifs
+              </span>
+              <span className="text-xs text-muted">· Outils interactifs à votre disposition</span>
+            </div>
+            <h2 className="text-lg font-extrabold text-foreground">
+              Simulez, concevez et préparez votre fête
+            </h2>
+          </div>
+
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai"
+            className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-center"
+          >
+            <span>Ouvrir le simulateur complet</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          {/* Studio 1: Simulateur Budget & Packs */}
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
+            className="p-4 rounded-2xl border border-primary/30 bg-surface hover:border-primary hover:shadow-xs transition group flex flex-col justify-between gap-3"
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Wand2 className="w-5 h-5" />
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Studio actif
+                </span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
+                  Simulateur de Budget &amp; Packs
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Indiquez votre budget en CDF ou USD : l’IA compose automatiquement 3 formules (Éco, Équilibré, Confort) avec salle, traiteur, déco et sono.
+                </p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-primary">
+              <span>Lancer la simulation</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+            </div>
+          </Link>
+
+          {/* Studio 2: Invitations & Faire-part */}
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
+            className="p-4 rounded-2xl border border-pink-500/30 bg-surface hover:border-pink-500 hover:shadow-xs transition group flex flex-col justify-between gap-3"
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Studio actif
+                </span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
+                  Studio Cartes &amp; Faire-part
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Créez des invitations numériques élégantes au format 9:16 pour WhatsApp avec confirmation de présence (RSVP) pour vos invités.
+                </p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-pink-600 dark:text-pink-400">
+              <span>Personnaliser ma carte</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+            </div>
+          </Link>
+
+          {/* Studio 3: Plans 3D & Visites immersives */}
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
+            className="p-4 rounded-2xl border border-blue-500/30 bg-surface hover:border-blue-500 hover:shadow-xs transition group flex flex-col justify-between gap-3"
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Studio actif
+                </span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                  Studio Plans de Salle 2D / 3D
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Modélisez votre salle à partir d’une photo ou d’un brief : positionnez les tables, allées et visualisez l’espace en 3D immersive.
+                </p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400">
+              <span>Visiter et aménager</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* ─── DÉCOUVERTE PAR UNIVERS (SALLES, PRESTAS, LOCATION, BILLETS) ─── */}
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -494,29 +575,16 @@ export default function ClientDashboardHome() {
             return (
               <div
                 key={intent.id}
-                className={cn(
-                  'p-4 sm:p-5 rounded-2xl border bg-surface transition-all flex flex-col justify-between h-full gap-3 relative hover:border-primary/50 hover:shadow-xs group',
-                  intent.id === 'ai-plan' ? 'border-primary/40 bg-linear-to-br from-primary/5 via-surface to-emerald-500/5' : 'border-border',
-                  intent.isPaidPlanRequired ? 'border-amber-500/30' : '',
-                )}
+                className="p-4 sm:p-5 rounded-2xl border border-border bg-surface transition-all flex flex-col justify-between h-full gap-3 relative hover:border-primary/50 hover:shadow-xs group"
               >
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', intent.accentColor)}>
                       <Icon className="w-5 h-5" />
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {intent.isPaidPlanRequired ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                          <Crown className="w-3 h-3" />
-                          Formule Organisateur
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted text-muted border border-border">
-                          {intent.badge}
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted text-muted border border-border">
+                      {intent.badge}
+                    </span>
                   </div>
 
                   <div>
@@ -544,15 +612,12 @@ export default function ClientDashboardHome() {
                   </div>
 
                   <Button
-                    variant={intent.id === 'ai-plan' ? 'primary' : 'secondary'}
+                    variant="secondary"
                     size="sm"
                     fullWidth
                     onClick={() => router.push(intent.ctaHref)}
                     rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                    className={cn(
-                      'font-bold text-xs',
-                      intent.id === 'ai-plan' ? 'shadow-xs shadow-primary/20' : '',
-                    )}
+                    className="font-bold text-xs"
                   >
                     {intent.ctaLabel}
                   </Button>
@@ -563,114 +628,52 @@ export default function ClientDashboardHome() {
         </div>
       </div>
 
-      {/* ─── THÉMATIQUE 3 : 💎 FORMULES & ABONNEMENTS POUR ORGANISATEURS ─── */}
-      <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/5 via-surface to-surface-muted p-5 sm:p-7 space-y-6 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-border/80">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                <Crown className="w-3.5 h-3.5" />
-                Formules d’Abonnement Organisateur
-              </span>
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                −10 % en paiement annuel
-              </span>
-            </div>
-            <h3 className="text-xl font-bold text-foreground">
-              Envie de créer vos propres faire-part et d’inviter vos proches ?
-            </h3>
-            <p className="text-xs text-muted max-w-2xl leading-relaxed">
-              L’exploration du catalogue est 100 % gratuite. Si vous préparez un mariage, un anniversaire ou une réception et souhaitez envoyer des invitations WhatsApp nominatives et générer des pass QR, activez une formule adaptée.
-            </p>
+      {/* ─── COMMENT ÇA MARCHE (100% SÉRÉNITÉ · SANS ABONNEMENT) ─── */}
+      <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Simplicité &amp; Sérénité
+            </span>
           </div>
-
-          <Link
-            href="/dashboard/billing"
-            className="px-4 py-2.5 rounded-xl bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold transition shadow-xs shadow-primary/20 flex items-center gap-1.5 shrink-0"
-          >
-            <span>Choisir un forfait</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <h3 className="text-base sm:text-lg font-bold text-foreground">
+            Comment fonctionne votre Espace Client sur EventMaster ?
+          </h3>
+          <p className="text-xs text-muted">
+            Un fonctionnement transparent conçu pour vous faciliter la vie à chaque étape de votre fête.
+          </p>
         </div>
 
-        {/* Encadré d'explication claire pour le compte client */}
-        <div className="p-3.5 rounded-xl bg-surface border border-primary/25 flex items-start gap-3 text-xs shadow-xs">
-          <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
-            <ShieldCheck className="w-4 h-4" />
-          </div>
-          <div className="space-y-1">
-            <p className="font-bold text-foreground">
-              Information sur votre type de compte : Compte Client Gratuit
-            </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border/80 space-y-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
+              1
+            </div>
+            <h4 className="text-xs font-bold text-foreground">Explorez &amp; Simulez librement</h4>
             <p className="text-xs text-muted leading-relaxed">
-              Votre compte actuel est un <strong>Compte Client Particulier</strong> (gratuit : recherche de prestataires, devis, billets, simulations IA). Pour organiser des événements ou publier des offres, contactez le support EventMaster : <strong>seul un Super Admin peut changer le type de ce compte</strong>. Vous pouvez aussi ouvrir un compte organisateur ou prestataire distinct à l’inscription.
+              Consultez gratuitement les fiches des salles et prestataires, testez notre simulateur IA de budget et sauvegardez vos favoris.
             </p>
           </div>
-        </div>
 
-        {/* Détails précis des forfaits disponibles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-                  Particulier
-                </span>
-                <span className="text-xs font-bold text-foreground">Dès 60 000 FC / trim.</span>
-              </div>
-              <h4 className="text-sm font-bold text-foreground">Mariages & Fêtes privées</h4>
-              <p className="text-xs text-muted leading-relaxed">
-                Formules 50, 100, 200 ou +200 invités valables 90 jours. Invitations WhatsApp, QR codes d&apos;accès et éditeur 2D/3D complet inclus.
-              </p>
+          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border/80 space-y-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-xs">
+              2
             </div>
-            <Link
-              href="/dashboard/billing?plan=PERSONAL_100"
-              className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
-            >
-              Voir Particulier 100 <ArrowRight className="w-3 h-3" />
-            </Link>
+            <h4 className="text-xs font-bold text-foreground">Demandez des devis en 1 clic</h4>
+            <p className="text-xs text-muted leading-relaxed">
+              Envoyez vos demandes sans aucun engagement. Les professionnels vous répondent directement avec des devis chiffrés et personnalisés.
+            </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col justify-between h-full gap-3">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20 text-primary">
-                  Professionnel
-                </span>
-                <span className="text-xs font-bold text-foreground">Dès 30 000 FC / mois</span>
-              </div>
-              <h4 className="text-sm font-bold text-foreground">Business & Premium</h4>
-              <p className="text-xs text-muted leading-relaxed">
-                De 150 à 1 000 invités par mois. Idéal pour plusieurs événements par an, avec OCR de texte, desk d&apos;accueil smartphone et billetterie en ligne.
-              </p>
+          <div className="p-4 rounded-xl bg-surface-muted/50 border border-border/80 space-y-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-xs">
+              3
             </div>
-            <Link
-              href="/dashboard/billing?plan=STANDARD"
-              className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
-            >
-              Découvrir Business <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          <div className="p-4 rounded-xl border border-border bg-surface flex flex-col justify-between h-full gap-3 sm:col-span-2 lg:col-span-1">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
-                  Prestataires & Salles
-                </span>
-                <span className="text-xs font-bold text-foreground">Dès 9 900 FC / mois</span>
-              </div>
-              <h4 className="text-sm font-bold text-foreground">Vitrine & Référencement</h4>
-              <p className="text-[11px] text-muted leading-relaxed">
-                Publiez vos salles et prestations sur le catalogue pour recevoir des demandes de devis d&apos;organisateurs dans toute la RDC.
-              </p>
-            </div>
-            <Link
-              href="/dashboard/billing?plan=VENUE"
-              className="text-[11px] font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
-            >
-              Voir Formules Prestataire <ArrowRight className="w-3 h-3" />
-            </Link>
+            <h4 className="text-xs font-bold text-foreground">Bloquez votre date en direct</h4>
+            <p className="text-xs text-muted leading-relaxed">
+              Validez votre réservation : l’acompte est versé directement au professionnel hors plateforme. Vos billets achetés sont sécurisés par QR code.
+            </p>
           </div>
         </div>
       </div>
@@ -678,12 +681,12 @@ export default function ClientDashboardHome() {
       {/* ─── GUIDE RAPIDE & ASSISTANCE ─── */}
       <div className="p-4 sm:p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <Zap className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <HelpCircle className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-bold text-foreground">Besoin d’un coup de main pour organiser votre événement ?</p>
-            <p className="text-[11px] text-muted">Parcourez notre guide pratique ou contactez notre équipe pour vous conseiller dans vos choix.</p>
+            <p className="text-xs font-bold text-foreground">Besoin de conseils pour votre événement ?</p>
+            <p className="text-[11px] text-muted">Parcourez notre guide ou explorez les réalisations pour trouver l’inspiration.</p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
@@ -697,7 +700,7 @@ export default function ClientDashboardHome() {
             href="/dashboard/catalogue"
             className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs"
           >
-            Explorer le catalogue
+            Explorer le marketplace
           </Link>
         </div>
       </div>
