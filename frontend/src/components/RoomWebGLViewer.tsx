@@ -1562,15 +1562,53 @@ function TableMesh({
               selected={chairSelected}
               muted={taken}
             />
+
+            {/* Repère 3D spectaculaire au-dessus du siège sélectionné de l'invité */}
+            {chairSelected && (
+              <group position={[0, 0, 0]}>
+                {/* 1. Halo au sol émeraude vif */}
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+                  <ringGeometry args={[0.2, 0.44, 36]} />
+                  <meshBasicMaterial color="#10b981" transparent opacity={0.92} depthWrite={false} />
+                </mesh>
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+                  <circleGeometry args={[0.22, 24]} />
+                  <meshBasicMaterial color="#059669" transparent opacity={0.45} depthWrite={false} />
+                </mesh>
+
+                {/* 2. Faisceau lumineux vertical doux */}
+                <mesh position={[0, 0.45, 0]}>
+                  <cylinderGeometry args={[0.18, 0.3, 0.9, 24, 1, true]} />
+                  <meshBasicMaterial color="#34d399" transparent opacity={0.22} side={THREE.DoubleSide} depthWrite={false} />
+                </mesh>
+
+                {/* 3. Badge flottant 3D avec flèche pointant sur l'assise */}
+                <Html center distanceFactor={7} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
+                  <div className="flex flex-col items-center animate-bounce motion-reduce:animate-none select-none drop-shadow-xl">
+                    <div className="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-black whitespace-nowrap shadow-xl border-2 border-white flex items-center gap-1.5 ring-4 ring-emerald-500/40">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                      </span>
+                      <span>Votre siège n°{i + 1}</span>
+                    </div>
+                    <div className="w-2.5 h-2.5 rotate-45 bg-emerald-600 -mt-1 border-r-2 border-b-2 border-white shadow-xs" />
+                  </div>
+                </Html>
+              </group>
+            )}
           </group>
         );
       })}
       {selected && !hideLabels && (
         <Html center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
-          <div className="px-2 py-1 rounded-md bg-primary-solid text-primary-foreground text-xs font-bold whitespace-nowrap shadow-sm">
-            {seatPicked
-              ? `${name} · chaise ${selectedSeatIndices.map((n) => n + 1).join(', ')}`
-              : `${name} · ${capacity} pl.`}
+          <div className="px-2.5 py-1 rounded-md bg-foreground/90 backdrop-blur-md text-white text-xs font-bold whitespace-nowrap shadow-md border border-white/20 flex items-center gap-1.5">
+            <span className="text-primary-solid font-black">{name}</span>
+            {seatPicked ? (
+              <span className="text-emerald-400 font-extrabold">· Siège n°{selectedSeatIndices.map((n) => n + 1).join(', ')} (Votre place)</span>
+            ) : (
+              <span className="text-white/80">· {capacity} pl.</span>
+            )}
           </div>
         </Html>
       )}

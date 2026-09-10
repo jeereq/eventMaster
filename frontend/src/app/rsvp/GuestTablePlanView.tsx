@@ -194,7 +194,26 @@ export default function GuestTablePlanView({
   const guestFullName = `${guestFirstName} ${guestLastName}`;
   const theme = getRoomTheme(roomThemeId);
   const neighborNames = tableDetails?.neighbors.map((n) => (n.anonymous ? 'Place occupée' : `${n.firstName} ${n.lastName}`.trim())) ?? [];
-  const guestTableId = tablePlanOverview?.find((t) => t.isGuestTable)?.id;
+  const guestTableId = useMemo(() => {
+    return (
+      tablePlanOverview?.find((t) => t.isGuestTable)?.id ||
+      ticketPlacement?.tableId ||
+      null
+    );
+  }, [tablePlanOverview, ticketPlacement?.tableId]);
+
+  const guestSeatIndex = useMemo(() => {
+    if (typeof tableDetails?.seatIndex === 'number') return tableDetails.seatIndex;
+    const overviewTable = tablePlanOverview?.find((t) => t.isGuestTable || t.id === guestTableId);
+    if (typeof overviewTable?.guestSeatIndex === 'number') return overviewTable.guestSeatIndex;
+    if (typeof ticketPlacement?.seatIndex === 'number') return ticketPlacement.seatIndex;
+    if (typeof ticketPlacement?.seatNumber === 'number' && ticketPlacement.seatNumber > 0) {
+      return ticketPlacement.seatNumber - 1;
+    }
+    return undefined;
+  }, [tableDetails?.seatIndex, tablePlanOverview, guestTableId, ticketPlacement?.seatIndex, ticketPlacement?.seatNumber]);
+
+  const guestSeatNumber = typeof guestSeatIndex === 'number' ? guestSeatIndex + 1 : undefined;
 
   const previewBlueprint = useMemo(
     () => {
@@ -335,6 +354,11 @@ export default function GuestTablePlanView({
                 lightingPreset={previewLighting}
                 showMeta={false}
                 selectedTableId={inspectedTableId || guestTableId}
+                selectedSeats={
+                  guestTableId && typeof guestSeatIndex === 'number'
+                    ? [{ tableId: guestTableId, seatIndex: guestSeatIndex }]
+                    : undefined
+                }
                 onSelectTable={(tableId) => setInspectedTableId(tableId)}
                 className={cn(
                   opts.fill ? 'flex-1 min-h-[300px] h-full' : 'min-h-[300px] h-[360px] sm:h-[420px]',
@@ -345,12 +369,12 @@ export default function GuestTablePlanView({
               {/* Beacon HUD 3D "Mon emplacement" */}
               <div className="absolute top-3 left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-foreground/90 backdrop-blur-md px-3.5 py-2 text-background shadow-lg border border-background/20 animate-fade-in pointer-events-none max-w-[85%]">
                 <span className="relative flex h-3 w-3 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 motion-reduce:hidden"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
                       Mon emplacement 3D
                     </p>
                     {(tableDetails?.zoneName || ticketPlacement?.zoneName) && (
@@ -361,11 +385,9 @@ export default function GuestTablePlanView({
                   </div>
                   <p className="text-xs font-bold text-white truncate">
                     {tableDetails?.tableName || ticketPlacement?.tableName || 'Votre table'}
-                    {tableDetails?.seatIndex !== undefined
-                      ? ` · Siège n°${tableDetails.seatIndex + 1}`
-                      : ticketPlacement?.seatNumber
-                        ? ` · Siège n°${ticketPlacement.seatNumber}`
-                        : ''}
+                    {guestSeatNumber != null
+                      ? ` · Siège n°${guestSeatNumber}`
+                      : ''}
                   </p>
                 </div>
               </div>
@@ -444,6 +466,7 @@ export default function GuestTablePlanView({
             depthAmount={depthAmount}
             depthView={depthView}
             guestTableId={guestTableId}
+            guestSeatIndex={guestSeatIndex}
             guestFullName={guestFullName}
             neighborNames={neighborNames}
             height={opts.height}

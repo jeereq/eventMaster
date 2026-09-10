@@ -10,7 +10,7 @@ import {
   furnitureDepthStyle,
 } from '@/lib/roomFloorUtils';
 import FloorDepthFrame from '@/components/FloorDepthFrame';
-import { getTableVisualStyle } from '@/lib/tablePlanUtils';
+import { getTableVisualStyle, getTableShapeLabel, getSeatCoordinates } from '@/lib/tablePlanUtils';
 import {
   computeFitZoom,
   getGuestTableMarkerSize,
@@ -23,7 +23,6 @@ import {
 import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
-import { getTableShapeLabel } from '@/lib/tablePlanUtils';
 import { PlanZoomControls } from '@/components/PlanViewChrome';
 import { MapPin, Sparkles } from 'lucide-react';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
@@ -43,6 +42,7 @@ interface GuestRoomPlanCanvasProps {
   depthAmount?: number | null;
   depthView?: boolean | null;
   guestTableId?: string | null;
+  guestSeatIndex?: number;
   guestFullName?: string;
   neighborNames?: string[];
   height?: number;
@@ -55,14 +55,18 @@ function TableDetailPopover({
   table,
   guestNames,
   pricingZones,
+  guestSeatIndex,
   onClose,
 }: {
   table: GuestTablePlanOverviewItem;
   guestNames?: string[];
   pricingZones?: PricingZone[] | null;
+  guestSeatIndex?: number;
   onClose: () => void;
 }) {
   const zone = table.pricingZoneId ? pricingZones?.find((z) => z.id === table.pricingZoneId) : null;
+  const effectiveSeatIndex = typeof guestSeatIndex === 'number' ? guestSeatIndex : table.guestSeatIndex;
+  const miniVisual = getTableVisualStyle(table.shape, true, table.tableColor, table.tableImageUrl);
 
   return (
     <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-3 w-64 max-w-[90vw] pointer-events-auto animate-fade-in">
@@ -96,19 +100,58 @@ function TableDetailPopover({
         </div>
 
         {table.isGuestTable && (
-          <div className="bg-primary/10 border border-primary/25 rounded-xl p-2.5 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+          <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-2.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
               <span>Mon emplacement</span>
             </div>
-            {typeof table.guestSeatIndex === 'number' && (
-              <p className="text-[11px] font-semibold text-foreground">
-                Siège n°{table.guestSeatIndex + 1} réservé à votre nom
-              </p>
+            {typeof effectiveSeatIndex === 'number' && (
+              <div className="flex items-center justify-between text-xs font-bold text-foreground bg-surface/90 px-2 py-1.5 rounded-lg border border-border">
+                <span>Siège réservé :</span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[11px] font-black shadow-xs">
+                  Siège n°{effectiveSeatIndex + 1}
+                </span>
+              </div>
             )}
+            {/* Schéma miniature de disposition des sièges */}
+            <div className="relative w-36 h-28 mx-auto my-1 flex items-center justify-center">
+              <div
+                className={`relative flex items-center justify-center font-bold text-[10px] text-center shadow-xs ${miniVisual.className}`}
+                style={{
+                  ...miniVisual.style,
+                  width: 58,
+                  height: 40,
+                  fontSize: 10,
+                }}
+              >
+                <span>{table.name.replace(/^Table\s*/i, 'T')}</span>
+                {Array.from({ length: Math.min(table.capacity, 16) }).map((_, sIdx) => {
+                  const coords = getSeatCoordinates(table.shape, table.capacity, sIdx, 36);
+                  const isMine = sIdx === effectiveSeatIndex;
+                  return (
+                    <div
+                      key={sIdx}
+                      style={{
+                        left: `calc(50% + ${coords.x}px)`,
+                        top: `calc(50% + ${coords.y}px)`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                      className={`absolute rounded-full flex items-center justify-center font-black transition-all ${
+                        isMine
+                          ? 'w-5 h-5 bg-emerald-600 text-white text-[9px] ring-2 ring-emerald-400 shadow-md z-20'
+                          : 'w-3.5 h-3.5 bg-surface border border-border text-foreground/80 text-[7.5px] z-10'
+                      }`}
+                      title={isMine ? `Votre siège (n°${sIdx + 1})` : `Siège n°${sIdx + 1}`}
+                    >
+                      {sIdx + 1}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -144,6 +187,7 @@ export default function GuestRoomPlanCanvas({
   depthAmount,
   depthView,
   guestTableId,
+  guestSeatIndex,
   guestFullName,
   neighborNames = [],
   height = 400,
@@ -433,6 +477,12 @@ export default function GuestRoomPlanCanvas({
               const color = table.tableColor ?? theme.defaultTableColor;
               const tableVisual = getTableVisualStyle(table.shape, isGuest || isSelected, color, table.tableImageUrl);
               const depthScale = depthScaleForY(pos.y, amount);
+              const mySeatIdx = typeof guestSeatIndex === 'number'
+                ? guestSeatIndex
+                : typeof table.guestSeatIndex === 'number'
+                  ? table.guestSeatIndex
+                  : undefined;
+              const seatRadius = Math.max(markerSize * 0.72, 30);
 
               return (
                 <div
@@ -466,42 +516,126 @@ export default function GuestRoomPlanCanvas({
                       table={table}
                       pricingZones={pricingZones}
                       guestNames={isGuest ? [guestFullName ?? '', ...neighborNames].filter(Boolean) : undefined}
+                      guestSeatIndex={isGuest ? mySeatIdx : undefined}
                       onClose={() => setSelectedTableId(null)}
                     />
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTableId(isSelected ? null : table.id)}
-                    className={`flex items-center justify-center shrink-0 transition-all overflow-hidden ${
-                      tableVisual.className
-                    } ${
-                      isGuest
-                        ? 'ring-4 ring-primary ring-offset-2 ring-offset-background border-primary shadow-[0_0_24px_rgba(5,150,105,0.45)] scale-105'
-                        : isSelected
-                          ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary'
-                          : 'border-border hover:border-primary'
-                    }`}
-                    style={{
-                      width: markerSize,
-                      height: markerSize,
-                      ...tableVisual.style,
-                      backgroundColor: tableVisual.style?.backgroundColor ?? tableVisual.style?.backgroundImage ? undefined : color,
-                    }}
-                    aria-label={`Table ${table.name}${isGuest ? ' (Votre table)' : ''}`}
-                  >
-                    <span className="text-[9px] font-black text-foreground leading-none px-0.5 text-center line-clamp-2">
-                      {table.name.replace(/^Table\s*/i, 'T')}
-                    </span>
-                  </button>
+
+                  {/* Plateau de la table avec ses sièges disposés autour */}
+                  <div className="relative flex items-center justify-center" style={{ width: markerSize, height: markerSize }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTableId(isSelected ? null : table.id)}
+                      className={`flex items-center justify-center shrink-0 transition-all overflow-hidden ${
+                        tableVisual.className
+                      } ${
+                        isGuest
+                          ? 'ring-4 ring-primary ring-offset-2 ring-offset-background border-primary shadow-[0_0_24px_rgba(5,150,105,0.45)] scale-105'
+                          : isSelected
+                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary'
+                            : 'border-border hover:border-primary'
+                      }`}
+                      style={{
+                        width: markerSize,
+                        height: markerSize,
+                        ...tableVisual.style,
+                        backgroundColor: tableVisual.style?.backgroundColor ?? tableVisual.style?.backgroundImage ? undefined : color,
+                      }}
+                      aria-label={`Table ${table.name}${isGuest ? ' (Votre table)' : ''}`}
+                    >
+                      <span className="text-[9px] font-black text-foreground leading-none px-0.5 text-center line-clamp-2">
+                        {table.name.replace(/^Table\s*/i, 'T')}
+                      </span>
+                    </button>
+
+                    {/* Sièges / Chaises disposés autour de la table */}
+                    {table.capacity > 0 && Array.from({ length: Math.min(table.capacity, 16) }).map((_, seatIdx) => {
+                      const coords = getSeatCoordinates(table.shape, table.capacity, seatIdx, seatRadius);
+                      const isMySeat = isGuest && typeof mySeatIdx === 'number' && seatIdx === mySeatIdx;
+
+                      if (isMySeat) {
+                        return (
+                          <div
+                            key={seatIdx}
+                            className="absolute z-30 flex items-center justify-center pointer-events-auto"
+                            style={{
+                              left: `calc(50% + ${coords.x}px)`,
+                              top: `calc(50% + ${coords.y}px)`,
+                              transform: 'translate(-50%, -50%)',
+                            }}
+                          >
+                            {/* Halo pulsant */}
+                            <span className="animate-ping absolute w-7 h-7 rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden" />
+
+                            {/* Siège vert émeraude éclatant */}
+                            <div
+                              className="relative w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[10px] border-2 border-white ring-4 ring-emerald-400/80 shadow-lg shadow-emerald-600/50 flex items-center justify-center select-none cursor-pointer"
+                              title={`Votre place exacte : Siège n°${seatIdx + 1}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTableId(table.id);
+                              }}
+                            >
+                              {seatIdx + 1}
+                            </div>
+
+                            {/* Badge flottant direct vers le siège */}
+                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-40 whitespace-nowrap pointer-events-none flex flex-col items-center animate-bounce motion-reduce:animate-none">
+                              <div className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-black shadow-md border border-white flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                <span>Mon siège (n°{seatIdx + 1})</span>
+                              </div>
+                              <div className="w-1.5 h-1.5 rotate-45 bg-emerald-600 -mt-0.5 border-r border-b border-white" />
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (isGuest || isSelected) {
+                        return (
+                          <div
+                            key={seatIdx}
+                            className="absolute z-20 flex items-center justify-center"
+                            style={{
+                              left: `calc(50% + ${coords.x}px)`,
+                              top: `calc(50% + ${coords.y}px)`,
+                              transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
+                            }}
+                            title={`Siège n°${seatIdx + 1}`}
+                          >
+                            <div className="w-4 h-4 rounded-full bg-surface border border-border/90 text-foreground font-bold text-[7.5px] shadow-2xs flex items-center justify-center select-none">
+                              {seatIdx + 1}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Pour les autres tables du plan d'ensemble : petits points de chaise architecturaux
+                      return (
+                        <div
+                          key={seatIdx}
+                          className="absolute z-10 pointer-events-none"
+                          style={{
+                            left: `calc(50% + ${coords.x}px)`,
+                            top: `calc(50% + ${coords.y}px)`,
+                            transform: 'translate(-50%, -50%)',
+                          }}
+                        >
+                          <div className="w-1.5 h-1.5 rounded-full bg-foreground/25 dark:bg-foreground/35" />
+                        </div>
+                      );
+                    })}
+                  </div>
 
                   {isGuest ? (
                     <div className="flex flex-col items-center mt-1 z-20">
                       <span className="text-[9px] font-black text-center text-primary bg-primary/15 px-2 py-0.5 rounded-full border border-primary/25 whitespace-nowrap">
                         ★ {table.name}
                       </span>
-                      {typeof table.guestSeatIndex === 'number' && (
-                        <span className="mt-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-200 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap">
-                          Siège n°{table.guestSeatIndex + 1}
+                      {typeof mySeatIdx === 'number' && (
+                        <span className="mt-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-200 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 whitespace-nowrap flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Siège n°{mySeatIdx + 1}
                         </span>
                       )}
                     </div>
