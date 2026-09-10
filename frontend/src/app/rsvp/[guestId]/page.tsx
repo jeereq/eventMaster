@@ -894,9 +894,9 @@ export default function RsvpPage() {
                               {!isCurrent ? (
                                 <Link
                                   href={`/rsvp/${pass.guestId}`}
-                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-9 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition"
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
                                 >
-                                  <QrCode className="w-3.5 h-3.5" />
+                                  <QrCode className="w-4 h-4" aria-hidden />
                                   <span>Afficher ce pass</span>
                                 </Link>
                               ) : (
@@ -906,9 +906,9 @@ export default function RsvpPage() {
                                     setSelectedQrGuestId(pass.guestId);
                                     setShowFullScreenQr(true);
                                   }}
-                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-9 px-2.5 rounded-lg bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition"
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
                                 >
-                                  <Maximize2 className="w-3.5 h-3.5" />
+                                  <Maximize2 className="w-4 h-4" aria-hidden />
                                   <span>Pass plein écran</span>
                                 </button>
                               )}
@@ -921,9 +921,10 @@ export default function RsvpPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="Transmettre ce pass par WhatsApp"
-                                className="inline-flex items-center justify-center min-h-9 px-2.5 rounded-lg border border-border bg-surface text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10 transition"
+                                aria-label={`Transmettre le pass de ${pass.firstName} par WhatsApp`}
+                                className="inline-flex items-center justify-center min-h-11 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 touch-manipulation"
                               >
-                                <MessageCircle className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                                <MessageCircle className="w-4 h-4 mr-1 text-emerald-600" aria-hidden />
                                 <span>WhatsApp</span>
                               </a>
 
@@ -938,12 +939,13 @@ export default function RsvpPage() {
                                   } catch {}
                                 }}
                                 title="Copier le lien unique du pass"
-                                className="inline-flex items-center justify-center min-h-9 px-2.5 rounded-lg border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+                                aria-label={`Copier le lien unique du pass de ${pass.firstName}`}
+                                className="inline-flex items-center justify-center min-h-11 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
                               >
                                 {copiedPassId === pass.guestId ? (
-                                  <Check className="w-3.5 h-3.5 text-primary" />
+                                  <Check className="w-4 h-4 text-primary" aria-hidden />
                                 ) : (
-                                  <Copy className="w-3.5 h-3.5" />
+                                  <Copy className="w-4 h-4" aria-hidden />
                                 )}
                               </button>
 
@@ -960,9 +962,10 @@ export default function RsvpPage() {
                                   setIsEditIdentityOpen(true);
                                 }}
                                 title="Renommer le titulaire du billet"
-                                className="inline-flex items-center justify-center min-h-9 px-2.5 rounded-lg border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+                                aria-label={`Renommer le titulaire du billet : ${pass.firstName} ${pass.lastName}`}
+                                className="inline-flex items-center justify-center min-h-11 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
                               >
-                                <Pencil className="w-3.5 h-3.5" />
+                                <Pencil className="w-4 h-4" aria-hidden />
                               </button>
                             </div>
                           </div>

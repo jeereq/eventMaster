@@ -307,28 +307,28 @@ function SendAudienceStats({
  return (
   <div className="grid grid-cols-2 gap-2 text-xs">
    <div className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
-    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Destinataires</p>
+    <p className="text-xs font-semibold uppercase tracking-wider text-muted">Destinataires</p>
     <p className="text-sm font-bold text-foreground mt-0.5">{stats.total}</p>
    </div>
    <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
-    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Prêts à recevoir</p>
+    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Prêts à recevoir</p>
     <p className="text-sm font-bold text-emerald-800 mt-0.5">{stats.reachable}</p>
    </div>
    {stats.alreadySent > 0 && (
     <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
-     <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Déjà invités</p>
+     <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">Déjà invités</p>
      <p className="text-sm font-bold text-amber-800 mt-0.5">{stats.alreadySent} — seront renvoyés</p>
     </div>
    )}
    {stats.missingEmail > 0 && (
     <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
-     <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700">Sans e-mail</p>
+     <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">Sans e-mail</p>
      <p className="text-sm font-bold text-rose-800 mt-0.5">{stats.missingEmail}</p>
     </div>
    )}
    {stats.missingPhone > 0 && (
     <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
-     <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700">Sans WhatsApp</p>
+     <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">Sans WhatsApp</p>
      <p className="text-sm font-bold text-rose-800 mt-0.5">{stats.missingPhone}</p>
     </div>
    )}
@@ -1854,7 +1854,7 @@ Merci de confirmer votre présence :
 
  if (user?.role === 'SUPER_ADMIN') {
  return (
- <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white border border-border rounded-3xl p-8 text-center max-w-2xl mx-auto">
+ <div className="min-h-[60vh] flex flex-col items-center justify-center bg-surface border border-border rounded-3xl p-8 text-center max-w-2xl mx-auto">
  <div className="bg-primary/10 text-primary p-4 rounded-full mb-6">
  <Calendar className="w-12 h-12" />
  </div>
@@ -3337,12 +3337,12 @@ Merci de confirmer votre présence :
  }}
  />
 
- {/* Guest Modal */}
+  {/* Guest Modal */}
  {showGuestModal && (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
- <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
+ <div role="dialog" aria-modal="true" aria-labelledby="guest-modal-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
  <div className="flex items-center justify-between border-b border-border pb-4">
- <h3 className="text-lg font-bold text-foreground">
+ <h3 id="guest-modal-title" className="text-lg font-bold text-foreground">
  {editingGuestId ? "Modifier l'invité" : "Ajouter un invité"}
  </h3>
  <button type="button" onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }} className="text-muted hover:text-foreground transition" aria-label="Fermer la fenêtre">
@@ -3499,13 +3499,13 @@ Merci de confirmer votre présence :
  {/* CSV & Excel Import Modal */}
  {showImportModal && (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
- <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-2xl p-6 space-y-6 overflow-y-auto max-h-[90vh]">
+ <div role="dialog" aria-modal="true" aria-labelledby="import-modal-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-2xl p-6 space-y-6 overflow-y-auto max-h-[90vh]">
  <div className="flex items-center justify-between border-b border-border pb-4">
  <div className="flex items-center gap-2">
  <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
  <FileSpreadsheet className="w-5 h-5" />
  </div>
- <h3 className="text-lg font-bold text-foreground">Importer des invités en bloc</h3>
+ <h3 id="import-modal-title" className="text-lg font-bold text-foreground">Importer des invités en bloc</h3>
  </div>
  <button 
  type="button"
@@ -3743,13 +3743,13 @@ Merci de confirmer votre présence :
  {/* Bulk Invitation Sending Modal */}
  {showBulkInviteModal && (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
- <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
+ <div role="dialog" aria-modal="true" aria-labelledby="bulk-invite-modal-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
  <div className="flex items-center justify-between border-b border-border pb-4">
  <div className="flex items-center gap-2">
  <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
  <Send className="w-5 h-5" />
  </div>
- <h3 className="text-lg font-bold text-foreground">Envoyer une invitation groupée</h3>
+ <h3 id="bulk-invite-modal-title" className="text-lg font-bold text-foreground">Envoyer une invitation groupée</h3>
  </div>
  <button type="button" onClick={() => setShowBulkInviteModal(false)} className="text-muted hover:text-foreground transition" aria-label="Fermer la fenêtre">
  <XCircle className="w-6 h-6" />
@@ -3992,7 +3992,7 @@ Merci de confirmer votre présence :
   {/* Broadcast Results Modal */}
  {showBroadcastModal && broadcastResults && (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-white rounded-3xl border border-border shadow-2xl w-full max-w-4xl p-6 space-y-6">
+ <div role="dialog" aria-modal="true" aria-labelledby="broadcast-results-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-4xl p-6 space-y-6">
  <div className="flex items-center justify-between border-b border-border-subtle pb-4">
  <div className="flex items-center gap-2">
  <div className={`p-1.5 rounded-lg ${
@@ -4013,7 +4013,7 @@ Merci de confirmer votre présence :
  )}
  </div>
  <div>
- <h3 className="text-lg font-bold text-foreground">
+ <h3 id="broadcast-results-title" className="text-lg font-bold text-foreground">
  {broadcastSummary?.failed === broadcastSummary?.total
  ? 'Échec de l\'envoi'
  : broadcastSummary?.allSimulated
@@ -4045,19 +4045,19 @@ Merci de confirmer votre présence :
  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
  <div className="bg-surface-muted border border-border rounded-xl p-3 text-center">
  <div className="text-xl font-black text-foreground">{broadcastSummary.total}</div>
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Total</div>
+ <div className="text-xs font-bold text-muted uppercase tracking-wider">Total</div>
  </div>
  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
  <div className="text-xl font-black text-emerald-700">{broadcastSummary.sent}</div>
- <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Envoyés</div>
+ <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Envoyés</div>
  </div>
  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
  <div className="text-xl font-black text-amber-700">{broadcastSummary.simulated}</div>
- <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Simulés</div>
+ <div className="text-xs font-bold text-amber-600 uppercase tracking-wider">Simulés</div>
  </div>
  <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center">
  <div className="text-xl font-black text-rose-700">{broadcastSummary.failed}</div>
- <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Échecs</div>
+ <div className="text-xs font-bold text-rose-600 uppercase tracking-wider">Échecs</div>
  </div>
  </div>
  {broadcastSummary.failed > 0 && broadcastSummary.failureReasons && (
@@ -4167,7 +4167,7 @@ Merci de confirmer votre présence :
  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition ${
  copiedGuestId === (res.guestId || index.toString())
  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
- : 'bg-white border-border text-muted hover:bg-surface-muted'
+ : 'bg-surface border-border text-muted hover:bg-surface-muted'
  }`}
  title="Copier le lien d'invitation"
  >
@@ -4263,13 +4263,13 @@ Merci de confirmer votre présence :
  {/* Individual Guest Sharing Modal */}
  {sharingGuest && (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-white rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
+ <div role="dialog" aria-modal="true" aria-labelledby="share-guest-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
  <div className="flex items-center justify-between border-b border-border-subtle pb-4">
  <div className="flex items-center gap-2">
  <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
  <Share2 className="w-5 h-5" />
  </div>
- <h3 className="text-lg font-bold text-foreground">Partager l'invitation</h3>
+ <h3 id="share-guest-title" className="text-lg font-bold text-foreground">Partager l'invitation</h3>
  </div>
  <button type="button" onClick={() => setSharingGuest(null)} className="text-muted hover:text-muted transition" aria-label="Fermer la fenêtre">
  <XCircle className="w-6 h-6" />
@@ -4291,7 +4291,7 @@ Merci de confirmer votre présence :
  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-bold transition ${
  copiedGuestId === sharingGuest.id
  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
- : 'bg-white border-border text-foreground hover:bg-surface-muted'
+ : 'bg-surface border-border text-foreground hover:bg-surface-muted'
  }`}
  >
  {copiedGuestId === sharingGuest.id ? (
@@ -4411,24 +4411,24 @@ Merci de confirmer votre présence :
  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-0.5">
  <div className="grid grid-cols-2 gap-3 bg-surface-muted p-3.5 rounded-[var(--radius-card)] border border-border">
  <div>
- <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Prénom & Nom</div>
+ <div className="text-xs font-semibold text-muted uppercase tracking-wider">Prénom & Nom</div>
  <div className="font-semibold text-foreground text-sm mt-0.5">
  {selectedGuestDetails.firstName} {selectedGuestDetails.lastName}
  </div>
  </div>
  <div>
- <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Catégorie</div>
+ <div className="text-xs font-semibold text-muted uppercase tracking-wider">Catégorie</div>
  <div className="font-semibold text-foreground text-sm mt-0.5">
  {selectedGuestDetails.category || 'Général'}
  </div>
  </div>
  <div className="col-span-2">
- <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">E-mail</div>
+ <div className="text-xs font-semibold text-muted uppercase tracking-wider">E-mail</div>
  <div className="font-semibold text-foreground text-sm mt-0.5 truncate">{displayGuestEmail(selectedGuestDetails.email) || selectedGuestDetails.phone || '—'}</div>
  </div>
  {(selectedGuestDetails.preferences?.phone || selectedGuestDetails.preferences?.telephone) && (
  <div className="col-span-2">
- <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Téléphone</div>
+ <div className="text-xs font-semibold text-muted uppercase tracking-wider">Téléphone</div>
  <div className="font-semibold text-foreground text-sm mt-0.5">
  {selectedGuestDetails.preferences.phone || selectedGuestDetails.preferences.telephone}
  </div>

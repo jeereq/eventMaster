@@ -3688,7 +3688,7 @@ function DashboardPageContent() {
                     )}
 
                     {activeAnalyticsSection === 'plans' && (
-                      <div className="bg-white border border-border rounded-2xl p-6 space-y-6 shadow-sm">
+                      <div className="bg-surface border border-border rounded-2xl p-6 space-y-6 shadow-sm">
                         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                           <PieChart className="w-5 h-5 text-primary" />
                           Répartition des Plans d'Abonnement
@@ -3743,7 +3743,7 @@ function DashboardPageContent() {
                     )}
 
                     {activeAnalyticsSection === 'organisations' && (
-                      <div className="bg-white border border-border rounded-2xl p-6 space-y-6 shadow-sm">
+                      <div className="bg-surface border border-border rounded-2xl p-6 space-y-6 shadow-sm">
                         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                           <TrendingUp className="w-5 h-5 text-primary" />
                           Organisations les Plus Actives
@@ -3776,7 +3776,7 @@ function DashboardPageContent() {
                     )}
 
                     {activeAnalyticsSection === 'revenus' && (
-                      <div className="bg-white border border-border rounded-2xl p-6 space-y-6 shadow-sm">
+                      <div className="bg-surface border border-border rounded-2xl p-6 space-y-6 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                           <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                             <CreditCard className="w-5 h-5 text-primary" />
@@ -4244,14 +4244,15 @@ function DashboardPageContent() {
           {/* Modal: Create or Edit Guest (Super Admin) */}
           {isGuestModalOpen && (
             <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-              <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div role="dialog" aria-modal="true" aria-labelledby="sa-guest-modal-title" className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
                 <div className="px-6 py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between">
-                  <h3 className="font-bold text-foreground flex items-center gap-2">
+                  <h3 id="sa-guest-modal-title" className="font-bold text-foreground flex items-center gap-2">
                     <Users className="w-5 h-5 text-primary" />
                     {guestModalMode === 'create' ? 'Créer un Invité' : 'Modifier l\'Invité'}
                   </h3>
                   <button
                     onClick={() => setIsGuestModalOpen(false)}
+                    aria-label="Fermer la fenêtre"
                     className="p-1.5 text-muted hover:text-muted hover:bg-surface-muted rounded-lg transition"
                   >
                     <X className="w-5 h-5" />

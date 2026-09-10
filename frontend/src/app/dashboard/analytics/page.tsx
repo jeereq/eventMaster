@@ -438,8 +438,8 @@ export default function AnalyticsPage() {
  return (
  <div key={field.id} className="space-y-1.5 border-b border-border-subtle dark:border-border pb-3 last:border-0 last:pb-0">
  <div className="text-xs font-bold text-foreground dark:text-foreground">{field.label}</div>
- <div className="text-[9px] text-muted font-mono">{field.analyticsKey}</div>
- <div className="flex justify-between text-[10px] font-semibold text-muted dark:text-muted">
+ <div className="text-xs text-muted font-mono">{field.analyticsKey}</div>
+ <div className="flex justify-between text-xs font-semibold text-muted dark:text-muted">
  <span>Oui : {yesCount} ({yesPct}%)</span>
  <span>Non : {noCount}</span>
  </div>
@@ -460,13 +460,13 @@ export default function AnalyticsPage() {
  return (
  <div key={field.id} className="space-y-1.5 border-b border-border-subtle dark:border-border pb-3 last:border-0 last:pb-0">
  <div className="text-xs font-bold text-foreground dark:text-foreground">{field.label}</div>
- <div className="text-[9px] text-muted font-mono">{field.analyticsKey}</div>
- <div className="grid grid-cols-3 gap-2 text-[10px] font-semibold text-muted dark:text-muted">
+ <div className="text-xs text-muted font-mono">{field.analyticsKey}</div>
+ <div className="grid grid-cols-3 gap-2 text-xs font-semibold text-muted dark:text-muted">
  <span>Moy. : {avg}</span>
  <span>Min : {min}</span>
  <span>Max : {max}</span>
  </div>
- <div className="text-[10px] text-muted">{totalAnswers} réponse(s)</div>
+ <div className="text-xs text-muted">{totalAnswers} réponse(s)</div>
  </div>
  );
  }

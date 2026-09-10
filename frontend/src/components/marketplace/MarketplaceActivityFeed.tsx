@@ -253,7 +253,7 @@ export function MarketplaceActivityFeedManager({
                   <video src={m.url} className="w-full h-full object-cover" muted />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.url} alt={`Média ${i + 1}`} className="w-full h-full object-cover" />
+                  <img src={m.url} alt={`Média ${i + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 )}
                 <button
                   type="button"
