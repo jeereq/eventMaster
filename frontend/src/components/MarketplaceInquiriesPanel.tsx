@@ -28,6 +28,7 @@ import {
   dashboardServiceHref,
   dashboardVenueHref,
   inquiryNextStep,
+  buildWhatsAppDirectLink,
   type MarketplaceInquiryItem,
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
@@ -42,6 +43,7 @@ import {
   Inbox,
   KeyRound,
   Mail,
+  MessageCircle,
   Phone,
   Sparkles,
   XCircle,
@@ -99,6 +101,7 @@ export default function MarketplaceInquiriesPanel({
   onChanged,
   error: externalError,
   organizerView = false,
+  highlightInquiryId,
 }: {
   inquiries: MarketplaceInquiryItem[];
   onMarkContacted?: (id: string) => Promise<void> | void;
@@ -108,6 +111,7 @@ export default function MarketplaceInquiriesPanel({
   onChanged?: () => Promise<void> | void;
   error?: string;
   organizerView?: boolean;
+  highlightInquiryId?: string | null;
 }) {
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>(initialInquiries);
   const [status, setStatus] = useState('');
@@ -519,8 +523,32 @@ export default function MarketplaceInquiriesPanel({
                 item.guestCount ? `${item.guestCount} invités` : null,
               ].filter(Boolean);
 
+              const waTargetPhone = organizerView ? item.vendorPhone : item.fromPhone;
+              const waPresetMsg = organizerView
+                ? `Bonjour, je vous contacte concernant ma demande de devis pour « ${item.title} » sur EventMaster.`
+                : `Bonjour ${item.fromName}, je fais suite à votre demande de devis pour « ${item.title} » sur EventMaster.`;
+              const waUrl = buildWhatsAppDirectLink(waTargetPhone, waPresetMsg);
+
               const actions = (
                 <div className="flex flex-wrap items-center gap-1.5">
+                  {waUrl ? (
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex"
+                      title="Échanger directement par WhatsApp"
+                    >
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                      >
+                        WhatsApp
+                      </Button>
+                    </a>
+                  ) : null}
+
                   {listingHref ? (
                     mode === 'list' ? (
                       <Link href={listingHref} className="inline-flex">
@@ -621,90 +649,100 @@ export default function MarketplaceInquiriesPanel({
                 </div>
               );
 
+              const isHighlighted = Boolean(highlightInquiryId && item.id === highlightInquiryId);
+
               return (
-                <ProjectCard
-                  key={item.id}
-                  id={item.id}
-                  title={organizerView ? item.title : item.fromName}
-                  layout={mode}
-                  icon={kindIcon(item.kind)}
-                  hideCta
-                  status={statusChip}
-                  overlayMeta={`${kindLabel(item.kind)}${item.vendorName && organizerView ? ` · ${item.vendorName}` : ''}`}
-                  meta={
-                    mode === 'list' ? (
-                      <span className="truncate">{metaBits.join(' · ')}</span>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <p className="truncate text-xs">{metaBits.join(' · ')}</p>
-                        {!organizerView ? (
-                          <p className="text-xs text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <a href={`mailto:${item.fromEmail}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
-                              <Mail className="w-3 h-3" />
-                              {item.fromEmail}
-                            </a>
-                            {item.fromPhone ? (
-                              <a href={`tel:${item.fromPhone}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
-                                <Phone className="w-3 h-3" />
-                                {item.fromPhone}
+                <div key={item.id} className={cn('rounded-[var(--radius-card)] transition', isHighlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background')}>
+                  <ProjectCard
+                    id={item.id}
+                    title={organizerView ? item.title : item.fromName}
+                    layout={mode}
+                    icon={kindIcon(item.kind)}
+                    hideCta
+                    status={statusChip}
+                    overlayMeta={`${kindLabel(item.kind)}${item.vendorName && organizerView ? ` · ${item.vendorName}` : ''}`}
+                    meta={
+                      mode === 'list' ? (
+                        <span className="truncate">{metaBits.join(' · ')}</span>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <p className="truncate text-xs">{metaBits.join(' · ')}</p>
+                          {!organizerView ? (
+                            <p className="text-xs text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              <a href={`mailto:${item.fromEmail}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+                                <Mail className="w-3 h-3" />
+                                {item.fromEmail}
                               </a>
-                            ) : null}
-                          </p>
-                        ) : null}
-                        <p className="text-[11px] text-muted">{new Date(item.createdAt).toLocaleString('fr-FR')}</p>
-                      </div>
-                    )
-                  }
-                  description={mode === 'grid' ? next.detail : next.title}
-                  actions={actions}
-                >
-                  <div className="space-y-2 pt-1">
-                    {/* Bloc devis chiffré */}
-                    {item.status === 'QUOTED' && item.quotedAmountFc != null ? (
-                      <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2.5 text-xs space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                            <Coins className="w-3.5 h-3.5" />
-                            Devis proposé : {formatFc(item.quotedAmountFc)}
-                          </span>
-                          <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                            Acompte (30%) : {formatFc(Math.round(item.quotedAmountFc * 0.3))}
-                          </span>
+                              {item.fromPhone ? (
+                                <a href={`tel:${item.fromPhone}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+                                  <Phone className="w-3 h-3" />
+                                  {item.fromPhone}
+                                </a>
+                              ) : null}
+                            </p>
+                          ) : item.vendorPhone ? (
+                            <p className="text-xs text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              <a href={`tel:${item.vendorPhone}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+                                <Phone className="w-3 h-3" />
+                                {item.vendorPhone}
+                              </a>
+                            </p>
+                          ) : null}
+                          <p className="text-[11px] text-muted">{new Date(item.createdAt).toLocaleString('fr-FR')}</p>
                         </div>
-                        {item.responseNotes ? (
-                          <p className="text-xs text-foreground/90 whitespace-pre-line border-t border-emerald-500/15 pt-1">
-                            {item.responseNotes}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
+                      )
+                    }
+                    description={mode === 'grid' ? next.detail : next.title}
+                    actions={actions}
+                  >
+                    <div className="space-y-2 pt-1">
+                      {/* Bloc devis chiffré */}
+                      {item.status === 'QUOTED' && item.quotedAmountFc != null ? (
+                        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2.5 text-xs space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                              <Coins className="w-3.5 h-3.5" />
+                              Devis proposé : {formatFc(item.quotedAmountFc)}
+                            </span>
+                            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                              Acompte (30%) : {formatFc(Math.round(item.quotedAmountFc * 0.3))}
+                            </span>
+                          </div>
+                          {item.responseNotes ? (
+                            <p className="text-xs text-foreground/90 whitespace-pre-line border-t border-emerald-500/15 pt-1">
+                              {item.responseNotes}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
 
-                    {/* Bloc refusé */}
-                    {item.status === 'DECLINED' ? (
-                      <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-2.5 text-xs text-rose-800 dark:text-rose-200 space-y-1">
-                        <p className="font-semibold flex items-center gap-1.5">
-                          <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                          Demande déclinée
-                        </p>
-                        {item.declineReason ? (
-                          <p className="text-xs">
-                            <span className="font-medium text-rose-900 dark:text-rose-100">Motif :</span> {item.declineReason}
+                      {/* Bloc refusé */}
+                      {item.status === 'DECLINED' ? (
+                        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-2.5 text-xs text-rose-800 dark:text-rose-200 space-y-1">
+                          <p className="font-semibold flex items-center gap-1.5">
+                            <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                            Demande déclinée
                           </p>
-                        ) : null}
-                        {item.responseNotes ? (
-                          <p className="text-[11px] text-muted-foreground whitespace-pre-line border-t border-rose-500/15 pt-1">
-                            {item.responseNotes}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
+                          {item.declineReason ? (
+                            <p className="text-xs">
+                              <span className="font-medium text-rose-900 dark:text-rose-100">Motif :</span> {item.declineReason}
+                            </p>
+                          ) : null}
+                          {item.responseNotes ? (
+                            <p className="text-[11px] text-muted-foreground whitespace-pre-line border-t border-rose-500/15 pt-1">
+                              {item.responseNotes}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
 
-                    {/* Message initial du demandeur */}
-                    {mode === 'grid' && item.message ? (
-                      <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
-                    ) : null}
-                  </div>
-                </ProjectCard>
+                      {/* Message initial du demandeur */}
+                      {mode === 'grid' && item.message ? (
+                        <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
+                      ) : null}
+                    </div>
+                  </ProjectCard>
+                </div>
               );
             })}
           </div>

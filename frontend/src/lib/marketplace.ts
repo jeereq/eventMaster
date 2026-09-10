@@ -433,6 +433,7 @@ export interface MarketplaceInquiryItem {
   bookingStatus?: MarketplaceBookingStatus | null;
   vendorName?: string | null;
   vendorSlug?: string | null;
+  vendorPhone?: string | null;
   listingSlug?: string | null;
   offeringSlug?: string | null;
   offeringCategory?: string | null;
@@ -540,6 +541,7 @@ export interface MarketplaceBookingItem {
   organizerTenantId: string | null;
   vendorName: string;
   vendorSlug?: string | null;
+  vendorPhone?: string | null;
   organizerName: string | null;
   eventDate: string;
   eventEndDate?: string | null;
@@ -759,6 +761,14 @@ export function formatDateKeyFr(key: string) {
   const match = String(key).match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return key;
   return new Date(`${match[1]}-${match[2]}-${match[3]}T12:00:00`).toLocaleDateString('fr-FR');
+}
+
+export function buildWhatsAppDirectLink(phone: string | null | undefined, text: string): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (!digits || digits.length < 8) return null;
+  const encoded = encodeURIComponent(text);
+  return `https://wa.me/${digits}?text=${encoded}`;
 }
 
 export function formatBookingPeriod(start?: string | null, end?: string | null) {

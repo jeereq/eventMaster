@@ -63,6 +63,8 @@ function OrganizerDemandesPage() {
 
   const requestedTab = searchParams.get('tab');
   const eventFilter = searchParams.get('event') || 'all';
+  const highlightInquiryId = searchParams.get('inquiryId');
+  const highlightBookingId = searchParams.get('bookingId');
   const [tab, setTab] = useState<HubTab>(
     requestedTab === 'bookings' || requestedTab === 'packs' || requestedTab === 'favorites'
       ? requestedTab
@@ -376,6 +378,7 @@ function OrganizerDemandesPage() {
           inquiries={visibleInquiries}
           organizerView={role === 'organizer'}
           onChanged={load}
+          highlightInquiryId={highlightInquiryId}
         />
       ) : tab === 'bookings' ? (
         <MarketplaceBookingsPanel
@@ -383,6 +386,7 @@ function OrganizerDemandesPage() {
           commissionDueFc={role === 'vendor' ? commissionDueFc : 0}
           onChanged={load}
           organizerView={role === 'organizer'}
+          highlightBookingId={highlightBookingId}
         />
       ) : tab === 'packs' ? (
         packs.length === 0 ? (

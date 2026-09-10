@@ -513,12 +513,13 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
     });
 
     const listingUrl = `${FRONTEND_URL}/marketplace/salles/${listing.slug}`;
-    const dashboardHref = `${FRONTEND_URL}/dashboard/marketplace`;
+    const vendorDashboardHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&role=vendor&inquiryId=${inquiry.id}`;
+    const clientDashboardHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${inquiry.id}`;
     const operatorCopy = buildInquiryOperatorNotify({
       subjectTitle: listing.room.name,
       ownerOrgName: listing.tenant.name,
       publicUrl: listingUrl,
-      dashboardHref,
+      dashboardHref: vendorDashboardHref,
       inquiry,
     });
 
@@ -529,11 +530,30 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
       metadata: {
         listingId: listing.id,
         inquiryId: inquiry.id,
-        href: dashboardHref,
+        href: vendorDashboardHref,
       },
       email: operatorCopy.email,
       whatsapp: operatorCopy.whatsapp,
     });
+
+    const inquirerUserId = req.user?.id || (await prisma.user.findFirst({
+      where: { email: { equals: inquiry.fromEmail, mode: 'insensitive' } },
+      select: { id: true },
+    }))?.id;
+
+    if (inquirerUserId) {
+      void notifyUsers([inquirerUserId], {
+        type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+        title: `Devis envoyé — ${listing.room.name}`,
+        message: `Votre demande de devis pour « ${listing.room.name} » (${listing.tenant.name}) a bien été transmise. Vous recevrez une notification dès sa prise en charge.`,
+        metadata: {
+          listingId: listing.id,
+          inquiryId: inquiry.id,
+          href: clientDashboardHref,
+        },
+        whatsapp: `Votre demande de devis pour « ${listing.room.name} » a été transmise à ${listing.tenant.name}.\nSuivez l'avancement sur : ${clientDashboardHref}`,
+      });
+    }
 
     await sendRealEmail(
       inquiry.fromEmail,
@@ -1033,15 +1053,37 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
       },
     });
 
+    const vendorDashboardHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&role=vendor&inquiryId=${inquiry.id}`;
+    const clientDashboardHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${inquiry.id}`;
+
     await notifyInquiry({
       ownerOrgName: offering.tenant.name,
       subjectTitle: offering.title,
       publicUrl: `${FRONTEND_URL}/marketplace/prestataires/${offering.slug}`,
-      dashboardHref: `${FRONTEND_URL}/dashboard/marketplace`,
+      dashboardHref: vendorDashboardHref,
       vendorTenantId: offering.tenant.id,
       offeringId: offering.id,
       inquiry,
     });
+
+    const inquirerUserId = req.user?.id || (await prisma.user.findFirst({
+      where: { email: { equals: inquiry.fromEmail, mode: 'insensitive' } },
+      select: { id: true },
+    }))?.id;
+
+    if (inquirerUserId) {
+      void notifyUsers([inquirerUserId], {
+        type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+        title: `Devis envoyé — ${offering.title}`,
+        message: `Votre demande de devis pour « ${offering.title} » (${offering.tenant.name}) a bien été transmise. Vous recevrez une notification dès sa prise en charge.`,
+        metadata: {
+          offeringId: offering.id,
+          inquiryId: inquiry.id,
+          href: clientDashboardHref,
+        },
+        whatsapp: `Votre demande de devis pour « ${offering.title} » a été transmise à ${offering.tenant.name}.\nSuivez l'avancement sur : ${clientDashboardHref}`,
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -1245,7 +1287,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             slug: true,
             headline: true,
             room: { select: { name: true } },
-            tenant: { select: { name: true, vendorProfile: { select: { slug: true, displayName: true } } } },
+            tenant: { select: { name: true, vendorProfile: { select: { slug: true, displayName: true, phone: true } } } },
           },
         },
         offering: {
@@ -1254,7 +1296,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             title: true,
             category: true,
             tenant: { select: { name: true } },
-            vendorProfile: { select: { slug: true, displayName: true } },
+            vendorProfile: { select: { slug: true, displayName: true, phone: true } },
           },
         },
         event: { select: { id: true, title: true, date: true } },
@@ -1305,6 +1347,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             || item.listing?.tenant.name
             || null,
           vendorSlug: item.offering?.vendorProfile?.slug || item.listing?.tenant.vendorProfile?.slug || null,
+          vendorPhone: item.offering?.vendorProfile?.phone || item.listing?.tenant.vendorProfile?.phone || null,
           listingSlug: item.listing?.slug || null,
           offeringSlug: item.offering?.slug || null,
           offeringCategory: item.offering?.category || null,
@@ -1361,13 +1404,14 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
 
       const amountFormatted = `${quotedAmountFc.toLocaleString('fr-FR')} FC`;
       const notifMsg = `Devis chiffré reçu pour « ${inquiryTitle} » : ${amountFormatted}.${responseNotes ? ` Note : ${responseNotes}` : ''}`;
+      const quoteClientHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${existing.id}`;
       if (existing.fromTenantId) {
         void notifyTenantOperators(existing.fromTenantId, {
           type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
           title: `Devis chiffré — ${inquiryTitle}`,
           message: notifMsg,
-          metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
-          whatsapp: `Devis chiffré pour « ${inquiryTitle} » : ${amountFormatted}. Consultez les détails sur EventMaster.`,
+          metadata: { inquiryId: existing.id, href: quoteClientHref },
+          whatsapp: `Devis chiffré pour « ${inquiryTitle} » : ${amountFormatted}.${responseNotes ? ` Note : ${responseNotes}` : ''}\nConsultez les détails sur EventMaster : ${quoteClientHref}`,
         });
       }
       const inquirerUser = await prisma.user.findFirst({
@@ -1379,7 +1423,8 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
           type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
           title: `Devis chiffré — ${inquiryTitle}`,
           message: notifMsg,
-          metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+          metadata: { inquiryId: existing.id, href: quoteClientHref },
+          whatsapp: `Devis chiffré pour « ${inquiryTitle} » : ${amountFormatted}.\nConsultez les détails sur EventMaster : ${quoteClientHref}`,
         });
       }
     } else if (action === 'decline' || requestedStatus === 'DECLINED') {
@@ -1395,12 +1440,13 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
       };
 
       const notifMsg = `Votre demande pour « ${inquiryTitle} » a été déclinée. Motif : ${declineReason}.${responseNotes ? ` Précision : ${responseNotes}` : ''}`;
+      const quoteClientHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${existing.id}`;
       if (existing.fromTenantId) {
         void notifyTenantOperators(existing.fromTenantId, {
           type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
           title: `Demande déclinée — ${inquiryTitle}`,
           message: notifMsg,
-          metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+          metadata: { inquiryId: existing.id, href: quoteClientHref },
         });
       }
       const inquirerUser = await prisma.user.findFirst({
@@ -1412,7 +1458,7 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
           type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
           title: `Demande déclinée — ${inquiryTitle}`,
           message: notifMsg,
-          metadata: { inquiryId: existing.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+          metadata: { inquiryId: existing.id, href: quoteClientHref },
         });
       }
     } else if (action === 'contacted' || requestedStatus === 'CONTACTED') {

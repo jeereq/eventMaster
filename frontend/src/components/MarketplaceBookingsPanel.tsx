@@ -32,6 +32,7 @@ import {
   bookingDateKeys,
   bookingNextStep,
   bookingPipelineIndex,
+  buildWhatsAppDirectLink,
   dashboardServiceHref,
   dashboardVenueHref,
   formatBookingPeriod,
@@ -42,7 +43,7 @@ import {
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import { Building2, CalendarCheck, CheckCircle2, ChevronDown, KeyRound, Sparkles, XCircle } from 'lucide-react';
+import { Building2, CalendarCheck, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, Phone, Sparkles, XCircle } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 
@@ -88,25 +89,32 @@ function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
   const idx = bookingPipelineIndex(item);
   return (
     <ol className="flex flex-wrap items-center gap-1.5" aria-label="Étapes de la réservation">
-      {BOOKING_PIPELINE_STEPS.map((step, i) => (
-        <li key={step.id} className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              'px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border',
-              i <= idx
-                ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-                : 'border-border text-muted bg-surface',
-            )}
-          >
-            {step.label}
-          </span>
-          {i < BOOKING_PIPELINE_STEPS.length - 1 && (
-            <span className="text-border text-[10px]" aria-hidden>
-              →
+      {BOOKING_PIPELINE_STEPS.map((step, i) => {
+        const isCurrent = i === idx;
+        const isPassed = i < idx;
+        return (
+          <li key={step.id} className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                'px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide border transition flex items-center gap-1',
+                isCurrent
+                  ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs ring-2 ring-primary/20'
+                  : isPassed
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                    : 'border-border text-muted bg-surface/60 opacity-60',
+              )}
+            >
+              {isPassed ? <CheckCircle2 className="w-2.5 h-2.5" /> : null}
+              {step.label}
             </span>
-          )}
-        </li>
-      ))}
+            {i < BOOKING_PIPELINE_STEPS.length - 1 && (
+              <span className="text-border text-[10px] select-none" aria-hidden>
+                →
+              </span>
+            )}
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -116,11 +124,13 @@ export default function MarketplaceBookingsPanel({
   commissionDueFc,
   onChanged,
   organizerView = false,
+  highlightBookingId,
 }: {
   bookings: MarketplaceBookingItem[];
   commissionDueFc: number;
   onChanged: () => Promise<void> | void;
   organizerView?: boolean;
+  highlightBookingId?: string | null;
 }) {
   const { site } = usePlatformSite();
   const commissionPct = commissionPercent(site);
@@ -140,6 +150,12 @@ export default function MarketplaceBookingsPanel({
   const [cancelCustomReason, setCancelCustomReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  // Modale Déclaration / Validation d'acompte
+  const [depositModal, setDepositModal] = useState<MarketplaceBookingItem | null>(null);
+  const [depositNote, setDepositNote] = useState('');
+  const [depositSubmitting, setDepositSubmitting] = useState(false);
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('marketplace-desk-bookings', 9);
   const { mode, setViewMode, columns, setGridColumns, gridClassName } = useViewMode(
@@ -382,8 +398,31 @@ export default function MarketplaceBookingsPanel({
                 item.depositMarkedAt ? 'acompte marqué' : null,
               ].filter(Boolean);
 
+              const waPresetMsg = isVendor
+                ? `Bonjour, je vous contacte au sujet de votre réservation pour « ${item.title} » (${formatBookingPeriod(item.eventDate, item.eventEndDate)}) sur EventMaster.`
+                : `Bonjour, je vous contacte au sujet de ma réservation pour « ${item.title} » (${formatBookingPeriod(item.eventDate, item.eventEndDate)}) sur EventMaster.`;
+              const waUrl = buildWhatsAppDirectLink(item.vendorPhone, waPresetMsg);
+
               const actions = (
                 <div className="flex flex-wrap items-center gap-1.5">
+                  {waUrl && !isVendor ? (
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex"
+                      title="Échanger directement par WhatsApp"
+                    >
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                      >
+                        WhatsApp
+                      </Button>
+                    </a>
+                  ) : null}
+
                   {isVendor && item.status === 'REQUESTED' && mode === 'grid' ? (
                     <div className="w-28">
                       <Input
@@ -422,7 +461,16 @@ export default function MarketplaceBookingsPanel({
                     </>
                   ) : null}
                   {item.status === 'ACCEPTED' && !item.depositMarkedAt ? (
-                    <Button size="sm" loading={busy} onClick={() => run(item.id, 'mark-deposit')}>
+                    <Button
+                      size="sm"
+                      loading={busy}
+                      variant="primary"
+                      onClick={() => {
+                        setDepositModal(item);
+                        setDepositNote('');
+                      }}
+                      leftIcon={<Coins className="w-3.5 h-3.5" />}
+                    >
                       {isVendor ? 'Acompte reçu' : 'J’ai versé'}
                     </Button>
                   ) : null}
@@ -457,6 +505,13 @@ export default function MarketplaceBookingsPanel({
                       </Link>
                     )
                   ) : null}
+                  {item.vendorPhone && !isVendor ? (
+                    <a href={`tel:${item.vendorPhone}`} className="inline-flex" title="Appeler le prestataire">
+                      <Button size="sm" variant="ghost" leftIcon={<Phone className="w-3.5 h-3.5" />}>
+                        Appeler
+                      </Button>
+                    </a>
+                  ) : null}
                   {organizerView && item.event?.id ? (
                     <Link href={eventDashboardHref(item.event.id, { tab: 'prep' })} className="inline-flex">
                       <Button size="sm" variant="secondary">Événement</Button>
@@ -465,46 +520,55 @@ export default function MarketplaceBookingsPanel({
                 </div>
               );
 
+              const isHighlighted = Boolean(highlightBookingId && item.id === highlightBookingId);
+
               return (
-                <ProjectCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  layout={mode}
-                  icon={kindIcon(item)}
-                  hideCta
-                  status={statusChip}
-                  overlayMeta={`${kindLabel(item)} · ${isVendor ? 'Reçue' : 'Envoyée'}`}
-                  value={mode === 'list' ? formatFc(item.amountFc) : undefined}
-                  valueMeta={mode === 'list' ? `Acompte ${formatFc(item.depositFc)}` : undefined}
-                  meta={
-                    mode === 'list' ? (
-                      <span className="truncate">{metaBits.join(' · ')}</span>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <p className="truncate text-xs">{metaBits.join(' · ')}</p>
-                        <p className="text-xs text-muted">
-                          {formatFc(item.amountFc)} · acompte {formatFc(item.depositFc)}
-                          {isVendor ? ` · commission ${formatFc(item.commissionFc)}` : ''}
-                        </p>
-                        <BookingStepper item={item} />
-                      </div>
-                    )
-                  }
-                  description={next.detail}
-                  actions={actions}
-                >
-                  <div className="space-y-1.5 pt-1">
-                    {item.status === 'CANCELLED' && item.declineReason ? (
-                      <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-2 text-xs text-rose-800 dark:text-rose-200">
-                        <span className="font-semibold">Motif :</span> {item.declineReason}
-                      </div>
-                    ) : null}
-                    {mode === 'grid' && item.notes ? (
-                      <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.notes}</p>
-                    ) : null}
-                  </div>
-                </ProjectCard>
+                <div key={item.id} className={cn('rounded-[var(--radius-card)] transition', isHighlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background')}>
+                  <ProjectCard
+                    id={item.id}
+                    title={item.title}
+                    layout={mode}
+                    icon={kindIcon(item)}
+                    hideCta
+                    status={statusChip}
+                    overlayMeta={`${kindLabel(item)} · ${isVendor ? 'Reçue' : 'Envoyée'}`}
+                    value={mode === 'list' ? formatFc(item.amountFc) : undefined}
+                    valueMeta={mode === 'list' ? `Acompte ${formatFc(item.depositFc)}` : undefined}
+                    meta={
+                      mode === 'list' ? (
+                        <span className="truncate">{metaBits.join(' · ')}</span>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <p className="truncate text-xs">{metaBits.join(' · ')}</p>
+                          <p className="text-xs text-muted">
+                            {formatFc(item.amountFc)} · acompte {formatFc(item.depositFc)}
+                            {isVendor ? ` · commission ${formatFc(item.commissionFc)}` : ''}
+                          </p>
+                          {item.vendorPhone && !isVendor ? (
+                            <p className="text-xs text-muted flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              <a href={`tel:${item.vendorPhone}`} className="text-primary hover:underline">{item.vendorPhone}</a>
+                            </p>
+                          ) : null}
+                          <BookingStepper item={item} />
+                        </div>
+                      )
+                    }
+                    description={next.detail}
+                    actions={actions}
+                  >
+                    <div className="space-y-1.5 pt-1">
+                      {item.status === 'CANCELLED' && item.declineReason ? (
+                        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-2 text-xs text-rose-800 dark:text-rose-200">
+                          <span className="font-semibold">Motif :</span> {item.declineReason}
+                        </div>
+                      ) : null}
+                      {mode === 'grid' && item.notes ? (
+                        <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.notes}</p>
+                      ) : null}
+                    </div>
+                  </ProjectCard>
+                </div>
               );
             })}
           </div>
@@ -627,6 +691,113 @@ export default function MarketplaceBookingsPanel({
             />
           </div>
         </div>
+      </Modal>
+
+      {/* MODALE DÉCLARATION / VALIDATION D'ACOMPTE */}
+      <Modal
+        open={Boolean(depositModal)}
+        onClose={() => {
+          if (!depositSubmitting) setDepositModal(null);
+        }}
+        title={depositModal?.viewerRole === 'vendor' ? "Valider la réception de l'acompte" : "Déclarer le versement de l'acompte"}
+        description={
+          depositModal
+            ? depositModal.viewerRole === 'vendor'
+              ? `Confirmez que vous avez bien reçu l'acompte de ${formatFc(depositModal.depositFc)} pour « ${depositModal.title} » de la part de ${depositModal.organizerName || 'l\'organisateur'}.`
+              : `Indiquez avoir effectué le versement de l'acompte de ${formatFc(depositModal.depositFc)} pour « ${depositModal.title} » auprès de ${depositModal.vendorName}.`
+            : undefined
+        }
+        size="md"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={depositSubmitting}
+              onClick={() => setDepositModal(null)}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              loading={depositSubmitting}
+              onClick={async () => {
+                if (!depositModal) return;
+                setDepositSubmitting(true);
+                try {
+                  await run(depositModal.id, 'mark-deposit', {
+                    depositNote: depositNote.trim() || undefined,
+                  });
+                  setDepositModal(null);
+                } finally {
+                  setDepositSubmitting(false);
+                }
+              }}
+              leftIcon={<CheckCircle2 className="w-4 h-4" />}
+            >
+              {depositModal?.viewerRole === 'vendor' ? "Confirmer l'acompte reçu" : "J'ai versé l'acompte"}
+            </Button>
+          </div>
+        }
+      >
+        {depositModal ? (
+          <div className="space-y-4 py-2">
+            {/* Récapitulatif financier */}
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted">Montant total prestation :</span>
+                <span className="font-semibold text-foreground">{formatFc(depositModal.amountFc)}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-primary/15">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Coins className="w-4 h-4 text-primary" />
+                  Acompte à verser ({Math.round(depositPct)} %) :
+                </span>
+                <span className="text-sm font-bold text-primary">{formatFc(depositModal.depositFc)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted pt-1">
+                <span>Reste à payer lors du jour J :</span>
+                <span className="font-medium text-foreground">{formatFc(depositModal.amountFc - depositModal.depositFc)}</span>
+              </div>
+            </div>
+
+            {/* Note d'instructions pour le client */}
+            {depositModal.viewerRole !== 'vendor' ? (
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-amber-600" />
+                  Règlement hors plateforme
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Effectuez le paiement directement auprès de <strong>{depositModal.vendorName}</strong> (Mobile Money M-Pesa, Orange Money, Airtel Money, ou virement).
+                </p>
+                {depositModal.vendorPhone ? (
+                  <p className="text-[11px] font-medium pt-1 border-t border-amber-500/20">
+                    Contact du prestataire : <a href={`tel:${depositModal.vendorPhone}`} className="underline font-bold">{depositModal.vendorPhone}</a>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Référence ou transaction Mobile Money */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Référence ou preuve de transaction (optionnel)
+              </label>
+              <Input
+                placeholder="Ex: Réf M-Pesa MP260901.1234, Orange Money ou Note"
+                value={depositNote}
+                onChange={(e) => setDepositNote(e.target.value)}
+              />
+              <p className="text-[11px] text-muted">
+                {depositModal.viewerRole === 'vendor'
+                  ? "Indiquez une référence de reçu ou note interne pour votre comptabilité."
+                  : "Facilite l'identification immédiate de votre versement par le prestataire."}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </div>
   );
