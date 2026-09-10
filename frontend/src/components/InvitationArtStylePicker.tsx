@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Aperture, Clapperboard, Droplets, Paintbrush, Box } from 'lucide-react';
+import { Aperture, Clapperboard, Droplets, Paintbrush, Box, Sparkles, Crown, Scroll, Feather, Zap } from 'lucide-react';
 import {
   INVITATION_ART_STYLES,
   type InvitationArtStyleId,
@@ -13,6 +13,11 @@ function iconFor(id: InvitationArtStyleId) {
   if (id === 'illustration') return Paintbrush;
   if (id === 'aquarelle') return Droplets;
   if (id === 'stylise-3d') return Box;
+  if (id === 'art-deco') return Sparkles;
+  if (id === 'afro-luxe') return Crown;
+  if (id === 'gravure-vintage') return Scroll;
+  if (id === 'minimaliste-luxe') return Feather;
+  if (id === 'cyber-neon') return Zap;
   return Aperture;
 }
 

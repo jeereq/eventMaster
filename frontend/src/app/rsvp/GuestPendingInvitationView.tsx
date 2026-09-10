@@ -832,6 +832,65 @@ export default function GuestPendingInvitationView({
           </>
         )}
 
+        {/* Art Déco Gatsby Frame */}
+        {template && frameType === 'art-deco' && (
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <svg className="w-full h-full text-amber-500" viewBox="0 0 400 600" fill="none" preserveAspectRatio="none">
+              <path d="M20,50 L20,20 L50,20 M350,20 L380,20 L380,50 M380,550 L380,580 L350,580 M50,580 L20,580 L20,550" stroke="currentColor" strokeWidth="2.5" opacity="0.8" />
+              <rect x="26" y="26" width="348" height="548" stroke="currentColor" strokeWidth="0.8" strokeDasharray="6 3" opacity="0.4" />
+              <rect x="32" y="32" width="336" height="536" stroke="currentColor" strokeWidth="1.2" opacity="0.6" />
+              <g transform="translate(200, 32)">
+                <path d="M-30,0 L0,-16 L30,0 L0,16 Z" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="1" />
+                <line x1="-80" y1="0" x2="-35" y2="0" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+                <line x1="35" y1="0" x2="80" y2="0" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+                <circle cx="0" cy="0" r="3" fill="currentColor" />
+              </g>
+              <g transform="translate(200, 568)">
+                <path d="M-30,0 L0,-16 L30,0 L0,16 Z" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="1" />
+                <line x1="-80" y1="0" x2="-35" y2="0" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+                <line x1="35" y1="0" x2="80" y2="0" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+                <circle cx="0" cy="0" r="3" fill="currentColor" />
+              </g>
+              <path d="M20,20 L45,45 M380,20 L355,45 M20,580 L45,555 M380,580 L355,555" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+            </svg>
+          </div>
+        )}
+
+        {/* Deckled Edge Frame (Papier artisanal à bords frangés) */}
+        {template && frameType === 'deckled' && (
+          <div className="absolute inset-2 border-2 border-dashed border-amber-600/35 rounded-2xl pointer-events-none shadow-[inset_0_0_24px_rgba(197,160,89,0.12)]">
+            <div className="absolute inset-1.5 border border-amber-500/25 rounded-xl" />
+          </div>
+        )}
+
+        {/* Embossed Arch Frame (Gaufrage à sec architectural) */}
+        {template && frameType === 'embossed-arch' && (
+          <div className="absolute inset-3 rounded-t-[min(200px,36vw)] rounded-b-2xl pointer-events-none border border-black/5 dark:border-white/10 shadow-[inset_0_2px_5px_rgba(255,255,255,0.7),inset_0_-2px_5px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.06)]">
+            <div className="absolute inset-2 rounded-t-[min(190px,34vw)] rounded-b-xl border border-black/5 dark:border-white/5 opacity-60" />
+          </div>
+        )}
+
+        {/* Passport VIP Frame */}
+        {template && frameType === 'passport-vip' && (
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <div className="absolute inset-3 border-2 border-amber-500/40 rounded-xl" />
+            <div className="absolute inset-4 border border-amber-500/25 rounded-lg border-dashed" />
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 flex items-center gap-2 text-amber-500/70 text-[9px] font-black uppercase tracking-[0.25em] whitespace-nowrap">
+              <span>★</span>
+              <span>PASS OFFICIEL VIP</span>
+              <span>★</span>
+            </div>
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 text-amber-500/50 text-[8px] font-mono tracking-widest whitespace-nowrap">
+              <span>№ 2026-VIP-OFFICIAL</span>
+            </div>
+          </div>
+        )}
+
+        {/* Frosted Glass Frame */}
+        {template && frameType === 'frosted-glass' && (
+          <div className="absolute inset-2 rounded-2xl border border-white/60 dark:border-white/20 bg-white/20 dark:bg-white/5 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)] pointer-events-none" />
+        )}
+
         {/* Boho Botanical Corners */}
         {template && bgPattern === 'boho' && (
           <>

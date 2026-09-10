@@ -79,6 +79,69 @@ export function getTemplateBackgroundStyle(
         background: `radial-gradient(circle at 50% 30%, ${color || '#4a0e17'} 0%, #1a0307 100%)`,
       };
     }
+    if (pattern === 'vellum') {
+      return {
+        backgroundColor: color || '#fcfbf9',
+        backgroundImage: `
+          linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 50%, rgba(245,240,232,0.6) 100%),
+          radial-gradient(circle at 20% 20%, rgba(197,160,89,0.06) 0%, transparent 40%)
+        `,
+        backdropFilter: 'blur(12px)',
+        boxShadow: 'inset 0 0 45px rgba(255,255,255,0.6), inset 0 0 10px rgba(0,0,0,0.03)',
+      };
+    }
+    if (pattern === 'art-deco-geom') {
+      return {
+        backgroundColor: color || '#141414',
+        backgroundImage: `
+          linear-gradient(135deg, rgba(212,175,55,0.08) 25%, transparent 25%),
+          linear-gradient(225deg, rgba(212,175,55,0.08) 25%, transparent 25%),
+          linear-gradient(45deg, rgba(212,175,55,0.08) 25%, transparent 25%),
+          linear-gradient(315deg, rgba(212,175,55,0.08) 25%, transparent 25%)
+        `,
+        backgroundPosition: '16px 0, 16px 0, 0 0, 0 0',
+        backgroundSize: '32px 32px',
+        backgroundRepeat: 'repeat',
+      };
+    }
+    if (pattern === 'kuba-weave') {
+      return {
+        backgroundColor: color || '#24140e',
+        backgroundImage: `
+          linear-gradient(45deg, rgba(217,119,6,0.12) 25%, transparent 25%, transparent 75%, rgba(217,119,6,0.12) 75%),
+          linear-gradient(45deg, rgba(217,119,6,0.12) 25%, transparent 25%, transparent 75%, rgba(217,119,6,0.12) 75%),
+          radial-gradient(circle at 50% 50%, rgba(180,83,9,0.15) 0%, transparent 80%)
+        `,
+        backgroundSize: '24px 24px, 24px 24px, 100% 100%',
+        backgroundPosition: '0 0, 12px 12px, 0 0',
+      };
+    }
+    if (pattern === 'deckled-cotton') {
+      return {
+        backgroundColor: color || '#fbf8f2',
+        backgroundImage: `
+          radial-gradient(circle at 50% 50%, rgba(120,100,70,0.04) 1px, transparent 1px),
+          radial-gradient(circle at 10% 10%, rgba(255,255,255,0.8) 0%, transparent 60%),
+          linear-gradient(0deg, rgba(0,0,0,0.015) 1px, transparent 1px)
+        `,
+        backgroundSize: '12px 12px, 100% 100%, 100% 3px',
+        boxShadow: 'inset 0 0 35px rgba(180,160,130,0.15)',
+      };
+    }
+    if (pattern === 'celestial') {
+      return {
+        backgroundColor: color || '#090a15',
+        backgroundImage: `
+          radial-gradient(1px 1px at 25px 35px, #ffffff, rgba(0,0,0,0)),
+          radial-gradient(1.5px 1.5px at 60px 120px, #a5b4fc, rgba(0,0,0,0)),
+          radial-gradient(2px 2px at 150px 80px, #fef08a, rgba(0,0,0,0)),
+          radial-gradient(1px 1px at 220px 190px, #e0e7ff, rgba(0,0,0,0)),
+          radial-gradient(circle at 80% 20%, rgba(99,102,241,0.18) 0%, transparent 50%),
+          radial-gradient(circle at 20% 80%, rgba(236,72,153,0.12) 0%, transparent 50%)
+        `,
+        backgroundSize: '260px 260px, 320px 320px, 280px 280px, 340px 340px, 100% 100%, 100% 100%',
+      };
+    }
     return { backgroundColor: color || '#faf8f5' };
   }
   return { backgroundColor: color || '#faf8f5' };

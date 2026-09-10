@@ -272,4 +272,60 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
       { id: 'g4', type: 'rsvp-block', text: 'Je danse', color: '#14b8a6', fontSize: '15px', align: 'center' },
     ],
   },
+  {
+    name: 'Art Déco Gatsby — Or & Noir Ébène',
+    showOnLanding: true,
+    global: { bgColor: '#0f0f11', bgType: 'pattern', bgPattern: 'art-deco-geom', frameType: 'art-deco', fontTheme: 'art-deco', landingCategory: 'gala', landingDescription: 'Grand gala des années folles, dorures métalliques et symétrie Gatsby.' },
+    elements: [
+      { id: 'ad1', type: 'text', text: 'THE GREAT GALA 2026', color: '#d4af37', fontSize: '11px', align: 'center', letterSpacing: '0.3em' },
+      { id: 'ad2', type: 'text', text: 'Soirée Prestige Roaring Twenties', color: '#fef3c7', fontSize: '30px', align: 'center', fontFamily: 'Cinzel' },
+      { id: 'ad3', type: 'divider', dividerStyle: 'ornament-flower', color: '#d4af37', align: 'center' },
+      { id: 'ad4', type: 'text', text: 'Smoking & Robe de Soirée · Champagne & Jazz Orchestral', color: '#d1d5db', fontSize: '13px', align: 'center' },
+      { id: 'ad5', type: 'rsvp-block', text: 'Réserver ma table VIP', color: '#d4af37', fontSize: '15px', align: 'center' },
+    ],
+  },
+  {
+    name: 'Afro-Luxe Royal — Velours du Kasaï',
+    showOnLanding: true,
+    global: { bgColor: '#24140e', bgType: 'pattern', bgPattern: 'kuba-weave', frameType: 'gold-border', fontTheme: 'afro-royal', landingCategory: 'wedding', landingDescription: 'Célébration traditionnelle royale, motifs Kuba et broderies d’or.' },
+    elements: [
+      { id: 'al1', type: 'text', text: 'CÉLÉBRATION ROYALE', color: '#f59e0b', fontSize: '11px', align: 'center', letterSpacing: '0.24em' },
+      { id: 'al2', type: 'text', text: 'L’Union Sacrée de Deux Lignées', color: '#fef3c7', fontSize: '30px', align: 'center', fontFamily: 'Playfair Display' },
+      { id: 'al3', type: 'text', text: 'Honneur, tradition et grandeur sous le signe de l’or', color: '#fed7aa', fontSize: '13px', align: 'center' },
+      { id: 'al4', type: 'rsvp-block', text: 'Confirmer votre présence', color: '#ea580c', fontSize: '15px', align: 'center' },
+    ],
+  },
+  {
+    name: 'Quiet Luxury 2026 — Lin & Gaufrage Blanc',
+    showOnLanding: true,
+    global: { bgColor: '#fcfbf9', bgType: 'pattern', bgPattern: 'deckled-cotton', frameType: 'embossed-arch', fontTheme: 'quiet-luxury', landingCategory: 'wedding', landingDescription: 'Mariage haute couture, gaufrage à sec sculptural et élégance discrète.' },
+    elements: [
+      { id: 'ql1', type: 'text', text: 'ENSEMBLE', color: '#78716c', fontSize: '10px', align: 'center', letterSpacing: '0.35em' },
+      { id: 'ql2', type: 'text', text: 'Clara & Alexandre', color: '#1c1917', fontSize: '32px', align: 'center', fontFamily: 'Prata' },
+      { id: 'ql3', type: 'text', text: 'Ont le bonheur de vous convier à la célébration de leur mariage', color: '#57534e', fontSize: '13px', align: 'center', fontFamily: 'Montserrat' },
+      { id: 'ql4', type: 'rsvp-block', text: 'Confirmer ma venue', color: '#44403c', fontSize: '14px', align: 'center' },
+    ],
+  },
+  {
+    name: 'Passeport VIP Gala — Noir & Or Sécurisé',
+    showOnLanding: true,
+    global: { bgColor: '#16181f', bgType: 'pattern', bgPattern: 'gold-dust', frameType: 'passport-vip', fontTheme: 'editorial', landingCategory: 'gala', landingDescription: 'Invitation format passeport diplomatique pour donateurs et invités VIP.' },
+    elements: [
+      { id: 'pv1', type: 'text', text: 'RÉPUBLIQUE DE L’ÉVÉNEMENT · BILLET D’HONNEUR', color: '#d4af37', fontSize: '10px', align: 'center', letterSpacing: '0.2em' },
+      { id: 'pv2', type: 'text', text: 'Grand Gala des Bienfaiteurs', color: '#f8fafc', fontSize: '28px', align: 'center', fontFamily: 'Cinzel' },
+      { id: 'pv3', type: 'text', text: 'Ce passeport donne accès prioritaire au salon VIP et au cocktail d’ouverture.', color: '#94a3b8', fontSize: '12px', align: 'center' },
+      { id: 'pv4', type: 'rsvp-block', text: 'Activer mon badge VIP', color: '#ca8a04', fontSize: '15px', align: 'center' },
+    ],
+  },
+  {
+    name: 'Cyber Keynote 2026 — Verre Dépoli & Néon Cyan',
+    showOnLanding: true,
+    global: { bgColor: '#0b0f19', bgType: 'pattern', bgPattern: 'vellum', frameType: 'frosted-glass', fontTheme: 'modern', landingCategory: 'launch', landingDescription: 'Lancement de produit high-tech, design modulaire et verre dépoli.' },
+    elements: [
+      { id: 'ck1', type: 'text', text: 'NEXT-GEN REVEAL 2026', color: '#06b6d4', fontSize: '11px', align: 'center', letterSpacing: '0.25em' },
+      { id: 'ck2', type: 'text', text: 'Keynote & Soirée Démo', color: '#f8fafc', fontSize: '30px', align: 'center', bold: true },
+      { id: 'ck3', type: 'text', text: 'Immersion technologique · Accès exclusif aux prototypes', color: '#94a3b8', fontSize: '13px', align: 'center' },
+      { id: 'ck4', type: 'rsvp-block', text: 'Réserver mon pass', color: '#0891b2', fontSize: '15px', align: 'center' },
+    ],
+  },
 ];

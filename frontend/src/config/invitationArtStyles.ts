@@ -3,7 +3,12 @@ export type InvitationArtStyleId =
   | 'dessin-anime'
   | 'illustration'
   | 'aquarelle'
-  | 'stylise-3d';
+  | 'stylise-3d'
+  | 'art-deco'
+  | 'afro-luxe'
+  | 'gravure-vintage'
+  | 'minimaliste-luxe'
+  | 'cyber-neon';
 
 export const DEFAULT_INVITATION_ART_STYLE: InvitationArtStyleId = 'realiste';
 
@@ -18,14 +23,19 @@ export const INVITATION_ART_STYLES: Array<{
     summary: 'Photo 85 mm : pores, or, lumière Kinshasa.',
   },
   {
-    id: 'dessin-anime',
-    label: 'Dessin animé',
-    summary: 'Long métrage 2D, plans, lumière unique.',
+    id: 'minimaliste-luxe',
+    label: 'Quiet Luxury',
+    summary: 'Typographie haute couture, espace blanc, gaufrage aveugle.',
   },
   {
-    id: 'illustration',
-    label: 'Illustration',
-    summary: 'Affiche peinte, clair-obscur, volume.',
+    id: 'art-deco',
+    label: 'Art Déco Gatsby',
+    summary: 'Lignes d\'or géométriques, symétrie dorée, Roaring Twenties.',
+  },
+  {
+    id: 'afro-luxe',
+    label: 'Afro-Chic Royal',
+    summary: 'Broderies Kuba & or, wax couture, prestance royale.',
   },
   {
     id: 'aquarelle',
@@ -33,9 +43,29 @@ export const INVITATION_ART_STYLES: Array<{
     summary: 'Lavis en profondeur, pigment et or.',
   },
   {
+    id: 'gravure-vintage',
+    label: 'Letterpress & Gravure',
+    summary: 'Estampe taille-douce, gaufrage d\'encre, sceau de cire.',
+  },
+  {
+    id: 'illustration',
+    label: 'Illustration',
+    summary: 'Affiche peinte, clair-obscur, volume.',
+  },
+  {
     id: 'stylise-3d',
     label: '3D stylisé',
     summary: 'Cinéma 3D, halo, ombres au sol.',
+  },
+  {
+    id: 'dessin-anime',
+    label: 'Dessin animé',
+    summary: 'Long métrage 2D, plans, lumière unique.',
+  },
+  {
+    id: 'cyber-neon',
+    label: 'Cyber & Néon',
+    summary: 'Obsidian, lueur néon holographique, contrastes futuristes.',
   },
 ];
 

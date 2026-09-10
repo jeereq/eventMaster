@@ -14,6 +14,11 @@ describe('invitationArtStyle', () => {
     assert.equal(parseInvitationArtStyle('cartoon'), 'dessin-anime');
     assert.equal(parseInvitationArtStyle('watercolor'), 'aquarelle');
     assert.equal(parseInvitationArtStyle('3d'), 'stylise-3d');
+    assert.equal(parseInvitationArtStyle('gatsby'), 'art-deco');
+    assert.equal(parseInvitationArtStyle('kuba'), 'afro-luxe');
+    assert.equal(parseInvitationArtStyle('letterpress'), 'gravure-vintage');
+    assert.equal(parseInvitationArtStyle('quietluxury'), 'minimaliste-luxe');
+    assert.equal(parseInvitationArtStyle('cyber'), 'cyber-neon');
     assert.equal(parseInvitationArtStyle('inconnu'), 'realiste');
     assert.equal(parseInvitationArtStyle(null), 'realiste');
   });

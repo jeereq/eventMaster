@@ -66,6 +66,36 @@ export const INVITATION_COLOR_THEMES: InvitationColorTheme[] = [
     description: 'Minimal noir & blanc',
     palette: { primary: '#0f172a', secondary: '#334155', accent: '#64748b', background: '#ffffff', isDark: false },
   },
+  {
+    id: 'champagne-black',
+    name: 'Champagne & Noir',
+    description: 'Quiet Luxury & Gala 2026',
+    palette: { primary: '#fdfbf7', secondary: '#e7e2d7', accent: '#d4af37', background: '#0f0f11', isDark: true },
+  },
+  {
+    id: 'royal-burgundy',
+    name: 'Bordeaux & Or Impérial',
+    description: 'Velours royal & solennité',
+    palette: { primary: '#fff1f2', secondary: '#fecdd3', accent: '#f59e0b', background: '#2c070f', isDark: true },
+  },
+  {
+    id: 'sage-eucalyptus',
+    name: 'Sauge & Lin Botanique',
+    description: 'Nature chic & minimal 2026',
+    palette: { primary: '#1e3a2f', secondary: '#3a5a4c', accent: '#606c38', background: '#f5f7f4', isDark: false },
+  },
+  {
+    id: 'cyber-neon',
+    name: 'Cyber & Obsidian',
+    description: 'Tech drop & Soirée électro',
+    palette: { primary: '#f8fafc', secondary: '#94a3b8', accent: '#06b6d4', background: '#0b0f19', isDark: true },
+  },
+  {
+    id: 'sun-terracotta',
+    name: 'Terre d’Ocre & Cuivre',
+    description: 'Afro-Chic chaleureux',
+    palette: { primary: '#431407', secondary: '#7c2d12', accent: '#ea580c', background: '#fffbeb', isDark: false },
+  },
 ];
 
 export type ColorableElement = {

@@ -3,7 +3,12 @@ export type InvitationArtStyleId =
   | 'dessin-anime'
   | 'illustration'
   | 'aquarelle'
-  | 'stylise-3d';
+  | 'stylise-3d'
+  | 'art-deco'
+  | 'afro-luxe'
+  | 'gravure-vintage'
+  | 'minimaliste-luxe'
+  | 'cyber-neon';
 
 export const DEFAULT_INVITATION_ART_STYLE: InvitationArtStyleId = 'realiste';
 
@@ -21,6 +26,22 @@ const ALIASES: Record<string, InvitationArtStyleId> = {
   'stylise-3d': 'stylise-3d',
   '3d': 'stylise-3d',
   pixar: 'stylise-3d',
+  'art-deco': 'art-deco',
+  artdeco: 'art-deco',
+  gatsby: 'art-deco',
+  'afro-luxe': 'afro-luxe',
+  afroluxe: 'afro-luxe',
+  kuba: 'afro-luxe',
+  'gravure-vintage': 'gravure-vintage',
+  letterpress: 'gravure-vintage',
+  engraving: 'gravure-vintage',
+  vintage: 'gravure-vintage',
+  'minimaliste-luxe': 'minimaliste-luxe',
+  quietluxury: 'minimaliste-luxe',
+  minimal: 'minimaliste-luxe',
+  'cyber-neon': 'cyber-neon',
+  cyber: 'cyber-neon',
+  neon: 'cyber-neon',
 };
 
 export function parseInvitationArtStyle(raw: unknown): InvitationArtStyleId {
@@ -34,6 +55,11 @@ export function invitationArtStyleLabel(id: InvitationArtStyleId): string {
   if (id === 'illustration') return 'illustration';
   if (id === 'aquarelle') return 'aquarelle';
   if (id === 'stylise-3d') return '3D stylisé';
+  if (id === 'art-deco') return 'Art Déco Gatsby';
+  if (id === 'afro-luxe') return 'Afro-Chic Royal';
+  if (id === 'gravure-vintage') return 'Letterpress & Gravure';
+  if (id === 'minimaliste-luxe') return 'Quiet Luxury';
+  if (id === 'cyber-neon') return 'Cyber & Néon';
   return 'réaliste';
 }
 
@@ -57,6 +83,16 @@ export function invitationArtStyleScaffoldLine(id: InvitationArtStyleId): string
       return `immersive watercolor and gouache on cotton paper, wet-in-wet depth, receding washes, pigment blooms, paper tooth; keep identity if people appear — no plastic skin, no CGI, no postcard-flat wash`;
     case 'stylise-3d':
       return `immersive cinema 3D still with real volume, ${DEPTH_IMMERSE}, subsurface skin, crafted materials, anamorphic bokeh, warm key and rim light; same people if referenced — not live-action photoreal, no Caucasian default, no toy-flat render`;
+    case 'art-deco':
+      return `prestige Roaring Twenties Art Déco still with spatial depth, ${DEPTH_IMMERSE}, geometric stepped arches, crisp metallic brass and gold chevron filigrees, rich obsidian or emerald lacquered background, warm specular gleam; faithful likeness in gala evening wear if people appear`;
+    case 'afro-luxe':
+      return `regal contemporary Afro-Chic still with tactile richness, ${DEPTH_IMMERSE}, majestic royal Kuba patterns, Kasai velvet weaves, intricate gold thread embroidery, warm golden-hour glow, dignified African grandeur; true melanin and likeness`;
+    case 'gravure-vintage':
+      return `museum-grade copperplate engraving and letterpress print, ${DEPTH_IMMERSE}, deep debossed impression on thick handmade cotton paper, fine intaglio linework, aged gold leaf accents, vintage heraldic elegance`;
+    case 'minimaliste-luxe':
+      return `2026 quiet luxury editorial print still, ${DEPTH_IMMERSE}, generous intentional whitespace, sculptural blind embossing without ink, micro-shadows on heavyweight textured stock, refined Haute Couture restraint`;
+    case 'cyber-neon':
+      return `futuristic tech-drop prestige invitation, ${DEPTH_IMMERSE}, dark anodized titanium, frosted glassmorphism layers, subtle electric cyan and violet edge neon glow, clean laser precision, modern luxury keynote aesthetic`;
     default:
       return 'ultra-photoreal 35mm / 85mm editorial print: tactile cotton paper grain, real gold-foil specularity, fresh florals with dew and pollen, true melanin, pores and fabric weave, warm volumetric daylight; no CGI, no cartoon, no airbrushed beauty faces';
   }
@@ -100,6 +136,34 @@ export function invitationArtStyleImageDirective(id: InvitationArtStyleId): stri
         'Light: three-point prestige (warm key, cool fill, tight rim), practicals in the set, anamorphic highlights. Skin SSS on melanin; gold micro-scratches; cloth gravity.',
         'Forbidden: raw live-action photoreal, ugly game-engine look, Caucasian default avatars, toy-flat orthographic, empty studio infinity backdrop.',
       ].join(' ');
+    case 'art-deco':
+      return [
+        'ART STYLE — ART DÉCO GATSBY (MANDATORY): High-glamour Roaring Twenties aesthetic staged in real three-dimensional space.',
+        `${DEPTH_IMMERSE}. Symmetrical stepped geometric arches, bevelled brass and pure metallic gold chevron borders with sharp reflections. Deep midnight or rich emerald backdrop with polished lacquer specularity.`,
+        'If reference photos exist: depict the hosts in immaculate Black Tie or 1920s haute couture with identity strictly locked. Lighting: high-contrast Hollywood key light with warm metallic rim glints. Forbidden: flat clipart, sloppy symmetry, cheap gradients.',
+      ].join(' ');
+    case 'afro-luxe':
+      return [
+        'ART STYLE — AFRO-CHIC ROYAL (MANDATORY): Majestic African royalty and modern gala grandeur.',
+        `${DEPTH_IMMERSE}. Authentic Kasai velvet geometry, woven raffia textures, raised gold bullion thread embroidery, deep ebony or imperial burgundy textures.`,
+        'If reference photos exist: honor the hosts with dignified royal attire (modernized pagne wax, grand ceremonial cape, intricate crowns/jewels) with melanin and facial structure untouched. Lighting: warm sunset golden hour and rich candlelit bounce.',
+      ].join(' ');
+    case 'gravure-vintage':
+      return [
+        'ART STYLE — LETTERPRESS & GRAVURE VINTAGE (MANDATORY): Heritage intaglio printing and deep relief letterpress impression on tactile handmade cotton paper.',
+        `${DEPTH_IMMERSE}. Hand-etched fine line shading, visible paper deckle and fibers, embossed seals and warm burnished gold leaf highlights.`,
+        'If reference photos exist: render the likeness through exquisite fine-line vintage engraving cross-hatching while preserving unmistakable individual features.',
+      ].join(' ');
+    case 'minimaliste-luxe':
+      return [
+        'ART STYLE — QUIET LUXURY 2026 (MANDATORY): Understated, architectural high-fashion stationery.',
+        `${DEPTH_IMMERSE}. Sculptural blind debossing (relief created solely through paper pressure and soft shadows, no heavy ink clutter), ultra-clean spatial balance, tactile 400gsm cotton cardstock, micro-shadows under soft directional window light.`,
+      ].join(' ');
+    case 'cyber-neon':
+      return [
+        'ART STYLE — CYBER & NÉON TECH (MANDATORY): High-end keynote and VIP nightlife aesthetic.',
+        `${DEPTH_IMMERSE}. Deep obsidian and brushed dark titanium surfaces, translucent frosted glass cards with luminous refraction, refined laser-sharp edge glow in electric cyan, magenta and gold. No cheap 80s arcade clutter; sleek contemporary product-launch luxury.`,
+      ].join(' ');
     default:
       return [
         'ART STYLE — RÉALISTE ULTRA (MANDATORY): Authentic 35mm / 85mm editorial photography of a real printed invitation held in space — cotton-paper tooth, deckled edges if fitting, gold foil catching a true specular, wax and satin with weave and drape, fresh florals with pollen and dew.',
@@ -139,6 +203,31 @@ ${depth}
 - [Style] = cinema 3D still with lens depth, bokeh, rim light, contact shadows — not live-action, not a toy render.
 - People from photos: sculpted likeness in a measurable set, identity locked.
 - Forbidden: raw photoreal, Caucasian default avatars, orthographic flatness.`;
+    case 'art-deco':
+      return `Chosen art style: ART DÉCO GATSBY (geometric prestige).
+${depth}
+- [Style] = 1920s architectural symmetry, metallic gold chevrons, deep black or dark emerald lacquered depth.
+- People from photos: same identity in Black Tie / vintage glamour.
+- Forbidden: cheap clip-art, flat vector lines without metallic reflections.`;
+    case 'afro-luxe':
+      return `Chosen art style: AFRO-CHIC ROYAL (regal African prestige).
+${depth}
+- [Style] = Kuba geometry, Kasai velvet textures, gold embroidery, noble ceremonial atmosphere.
+- People from photos: same identity, royal posture, natural melanin preserved.
+- Forbidden: generic safari clichés, bleached skin, low-quality stock art.`;
+    case 'gravure-vintage':
+      return `Chosen art style: LETTERPRESS & GRAVURE VINTAGE.
+${depth}
+- [Style] = copperplate intaglio line-work, blind letterpress impression, deckled handmade paper, wax seal.
+- People from photos: faithful vintage cross-hatched engraving likeness.`;
+    case 'minimaliste-luxe':
+      return `Chosen art style: QUIET LUXURY 2026.
+${depth}
+- [Style] = architectural whitespace, blind debossed relief, heavyweight natural paper texture, sculptural shadow play.`;
+    case 'cyber-neon':
+      return `Chosen art style: CYBER & NÉON TECH.
+${depth}
+- [Style] = dark titanium, frosted glassmorphism layers, refined laser neon edge accents (cyan/violet/gold).`;
     default:
       return `Chosen art style: RÉALISTE ULTRA (tactile photography).
 - People and décor must read as authentic 35mm photography: visible fine pores, natural melanin undertones, true foil specularity, paper tooth, volumetric shadows, shallow real depth of field.
@@ -168,6 +257,16 @@ export function invitationArtStyleLightNote(id: InvitationArtStyleId): string {
       return 'LIGHT RIG: soft north-window; wet far, dry-brush near; no harsh CGI spotlight.';
     case 'stylise-3d':
       return 'LIGHT RIG: warm key, cool fill, rim separating heads from the set; practicals; real contact shadows.';
+    case 'art-deco':
+      return 'LIGHT RIG: high-contrast Hollywood classic key, warm brass and gold specular gleams, velvet shadow falloff.';
+    case 'afro-luxe':
+      return 'LIGHT RIG: warm golden-hour Kinshasa sunset, rich amber candlelight bounce off gold embroidery and Kasai velvet.';
+    case 'gravure-vintage':
+      return 'LIGHT RIG: directional studio raking light casting tactile relief micro-shadows into deep letterpress debossing.';
+    case 'minimaliste-luxe':
+      return 'LIGHT RIG: soft diffused architectural daylight casting delicate tonal shadows on paper debossing.';
+    case 'cyber-neon':
+      return 'LIGHT RIG: dark obsidian base with dual-tone edge glow (electric cyan & magenta), subtle specular on frosted glass.';
     default:
       return 'LIGHT RIG: single window or late-afternoon Kinshasa daylight, warm bounce, 85mm shallow focus, true specular on foil.';
   }

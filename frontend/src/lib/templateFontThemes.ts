@@ -1,4 +1,11 @@
-export type FontThemeId = 'classic' | 'modern' | 'script' | 'editorial';
+export type FontThemeId =
+  | 'classic'
+  | 'modern'
+  | 'script'
+  | 'editorial'
+  | 'art-deco'
+  | 'quiet-luxury'
+  | 'afro-royal';
 
 export interface FontThemeDef {
   id: FontThemeId;
@@ -36,6 +43,27 @@ export const FONT_THEMES: FontThemeDef[] = [
     titleFont: 'Cinzel',
     bodyFont: 'Prata',
     accentFont: 'Montserrat',
+  },
+  {
+    id: 'art-deco',
+    name: 'Art Déco Gatsby',
+    titleFont: 'Cinzel',
+    bodyFont: 'Montserrat',
+    accentFont: 'Prata',
+  },
+  {
+    id: 'quiet-luxury',
+    name: 'Quiet Luxury',
+    titleFont: 'Prata',
+    bodyFont: 'Montserrat',
+    accentFont: 'Cormorant Garamond',
+  },
+  {
+    id: 'afro-royal',
+    name: 'Afro-Royal',
+    titleFont: 'Playfair Display',
+    bodyFont: 'Cormorant Garamond',
+    accentFont: 'Cinzel',
   },
 ];
 
