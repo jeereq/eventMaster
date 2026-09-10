@@ -42,13 +42,13 @@ const LandingRoomPlanAiStudio = dynamic(
 function StudioPaneFallback({ label }: { label: string }) {
   return (
     <div
-      className="min-h-[16rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse flex items-center justify-center"
+      className="min-h-[16rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none flex items-center justify-center"
       role="status"
       aria-live="polite"
       aria-label={label}
     >
       <div className="flex items-center gap-2.5 text-xs text-muted">
-        <Sparkles className="w-4 h-4 animate-spin text-primary" />
+        <Sparkles className="w-4 h-4 animate-spin motion-reduce:animate-none text-primary" />
         <span>{label}</span>
       </div>
     </div>
@@ -202,7 +202,7 @@ export default function DashboardAiStudios({
 
                   {isSelected ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-2xs">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                       Studio actif
                     </span>
                   ) : (

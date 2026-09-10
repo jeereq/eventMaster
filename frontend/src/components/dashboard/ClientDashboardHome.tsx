@@ -273,7 +273,8 @@ export default function ClientDashboardHome() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Une salle à la Gombe, un traiteur, un DJ, du mobilier, des billets…"
-                className="w-full pl-11 pr-28 py-3.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
+                aria-label="Rechercher une salle, un prestataire ou un équipement"
+                className="w-full pl-11 pr-28 py-3.5 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
               />
               <button
                 type="submit"
@@ -333,7 +334,7 @@ export default function ClientDashboardHome() {
           <div className="mt-3">
             <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
               {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
               ) : (
                 stats.quotesCount.toLocaleString('fr-FR')
               )}
@@ -356,7 +357,7 @@ export default function ClientDashboardHome() {
           <div className="mt-3">
             <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
               {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
               ) : (
                 stats.bookingsCount.toLocaleString('fr-FR')
               )}
@@ -379,7 +380,7 @@ export default function ClientDashboardHome() {
           <div className="mt-3">
             <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
               {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
               ) : (
                 stats.ticketsCount.toLocaleString('fr-FR')
               )}
@@ -402,7 +403,7 @@ export default function ClientDashboardHome() {
           <div className="mt-3">
             <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
               {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
               ) : (
                 stats.packsCount.toLocaleString('fr-FR')
               )}
@@ -425,7 +426,7 @@ export default function ClientDashboardHome() {
           <div className="mt-3">
             <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
               {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse" />
+                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
               ) : (
                 favoriteItems.length.toLocaleString('fr-FR')
               )}
@@ -469,7 +470,7 @@ export default function ClientDashboardHome() {
                   <Wand2 className="w-5 h-5" />
                 </div>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
@@ -499,7 +500,7 @@ export default function ClientDashboardHome() {
                   <Mail className="w-5 h-5" />
                 </div>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
@@ -529,7 +530,7 @@ export default function ClientDashboardHome() {
                   <Building2 className="w-5 h-5" />
                 </div>
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
