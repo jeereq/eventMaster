@@ -456,7 +456,7 @@ export default function GuestTablePlanView({
     ) : null;
 
   const seatDetailSection = tableDetails && (
-    <>
+    <div className="space-y-4">
       <div
         className="rounded-2xl border p-4 sm:p-6 space-y-4 shadow-[0_10px_40px_rgba(15,23,42,0.05)]"
         style={{
@@ -581,12 +581,19 @@ export default function GuestTablePlanView({
         <p className="text-xs text-center text-muted font-medium mt-2">Votre siège est mis en évidence</p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 pt-1">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h4 className="font-semibold text-foreground text-xs flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" />
-            <span>Voisins de table</span>
-          </h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold text-foreground text-xs flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              <span>Voisins de table</span>
+            </h4>
+            {tableDetails.neighbors.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+                {tableDetails.neighbors.length} convive{tableDetails.neighbors.length > 1 ? 's' : ''} à votre table
+              </span>
+            )}
+          </div>
           {tableDetails.privacyPolicy && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded-full border border-border">
               {tableDetails.privacyPolicy.mode === 'hidden' ? (
@@ -617,21 +624,23 @@ export default function GuestTablePlanView({
             </p>
           </div>
         ) : tableDetails.neighbors.length === 0 ? (
-          <p className="text-muted text-xs">Vous êtes seul(e) à cette table pour le moment.</p>
+          <div className="rounded-xl border border-dashed border-border bg-surface/50 p-4 text-center">
+            <p className="text-muted text-xs">Vous êtes le premier convive confirmé à cette table.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {tableDetails.neighbors.map((neighbor) => (
-              <div key={neighbor.id} className="bg-surface border border-border rounded-2xl p-3 flex items-center gap-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-semibold text-[10px] bg-primary/10 text-primary border border-primary/15 shrink-0">
+              <div key={neighbor.id} className="bg-surface border border-border/90 rounded-2xl p-3 flex items-center gap-3 shadow-xs">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs bg-primary/10 text-primary border border-primary/20 shrink-0">
                   {neighbor.anonymous ? '?' : `${neighbor.firstName[0] || ''}${neighbor.lastName[0] || ''}`}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="font-semibold text-foreground text-xs block truncate">
+                  <span className="font-bold text-foreground text-xs block truncate">
                     {neighbor.anonymous ? 'Place réservée' : `${neighbor.firstName} ${neighbor.lastName}`.trim()}
                   </span>
-                  <span className="text-xs text-muted block truncate">
+                  <span className="text-xs text-muted block truncate mt-0.5">
                     {neighbor.seatIndex !== undefined ? `Siège n°${neighbor.seatIndex + 1}` : 'Invité'}
-                    {neighbor.anonymous ? ' · Profil privé' : ''}
+                    {neighbor.anonymous ? ' · Profil privé' : ' · Même table'}
                   </span>
                 </div>
               </div>
@@ -654,7 +663,7 @@ export default function GuestTablePlanView({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {tableDetails.zoneNeighbors.map((zNeighbor, idx) => (
-              <div key={`${zNeighbor.id}-${idx}`} className="bg-surface border border-border rounded-2xl p-2.5 flex items-center gap-2.5 shadow-[0_4px_16px_rgba(15,23,42,0.03)]">
+              <div key={`${zNeighbor.id}-${idx}`} className="bg-surface border border-border rounded-2xl p-2.5 flex items-center gap-2.5 shadow-xs">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs bg-primary/10 text-primary border border-primary/20 shrink-0">
                   {zNeighbor.anonymous ? '?' : `${zNeighbor.firstName[0] || ''}${zNeighbor.lastName[0] || ''}`}
                 </div>
@@ -671,7 +680,7 @@ export default function GuestTablePlanView({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 
   if (isFullscreen) {
@@ -699,7 +708,7 @@ export default function GuestTablePlanView({
   }
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-4 w-full pb-20 sm:pb-28">
       {immersive ? (
         <>
           {planSection({ height: planHeight })}
@@ -708,7 +717,7 @@ export default function GuestTablePlanView({
       ) : (
         <>
           <div className="order-1 md:order-2">{planSection({ height: planHeight })}</div>
-          <div className="order-2 md:order-1 space-y-4">{seatDetailSection}</div>
+          <div className="order-2 md:order-1">{seatDetailSection}</div>
         </>
       )}
     </div>

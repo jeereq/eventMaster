@@ -631,7 +631,7 @@ function ClientMarketplaceInner() {
 
     <div className={cn('space-y-6 w-full', immersiveExplore && 'hidden')}>
       <PageHeader
-        title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Agenda' : 'Marketplace'}
+        title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Événements' : 'Marketplace'}
         description={
           tab === 'plan'
             ? 'Studios budget, invitation et plan de salle : simulez, générez, retenez un pack pour les devis.'
@@ -656,7 +656,7 @@ function ClientMarketplaceInner() {
                       : tab === 'packs'
                         ? 'Mes packs'
                         : searchParams.get('kind') === 'event'
-                          ? 'Agenda'
+                          ? 'Événements'
                           : 'Explorer',
               },
             ]}

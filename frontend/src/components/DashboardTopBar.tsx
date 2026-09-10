@@ -44,7 +44,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
       const hub = searchParams.get('hub');
       const kind = searchParams.get('kind');
       if (kind === 'event' && (!hub || hub === 'explore')) {
-        return { title: 'Agenda', subtitle: 'Événements et billetterie' };
+        return { title: 'Événements', subtitle: 'Événements et billetterie' };
       }
       if (hub === 'plan') return { title: 'Préparer un événement', subtitle: 'Simulateur et packs clé en main' };
       if (hub === 'favorites') return { title: 'Favoris', subtitle: 'Vos coups de cœur enregistrés' };

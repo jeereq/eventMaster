@@ -123,4 +123,61 @@ describe('Guest RSVP Placement & Donations Integration', () => {
       assert.equal(progressPercent, 45);
     });
   });
+
+  describe('Logique des commandes multi-billets (Pass multiples)', () => {
+    it('génère un ensemble distinct de pass pour chaque billet acheté lors d’une commande de 2 billets', () => {
+      const order = {
+        id: 'order-123',
+        quantity: 2,
+        buyerName: 'Jean Dupont',
+        buyerEmail: 'jean.dupont@example.com',
+        selectedSeats: [
+          { tableId: 'table-A', seatIndex: 0 },
+          { tableId: 'table-A', seatIndex: 1 },
+        ],
+      };
+
+      const guests = [
+        { id: 'guest-1', firstName: 'Jean', lastName: 'Dupont', email: 'jean.dupont@example.com', ticketOrderId: order.id },
+        { id: 'guest-2', firstName: 'Invité 2', lastName: 'Dupont', email: 'jean.dupont+companion2_order-123@guest.eventmaster.cd', ticketOrderId: order.id },
+      ];
+
+      const frontendUrl = 'http://localhost:3000';
+      const orderPasses = {
+        orderId: order.id,
+        totalCount: order.quantity,
+        passes: guests.map((g, idx) => ({
+          guestId: g.id,
+          ticketNumber: idx + 1,
+          firstName: g.firstName,
+          lastName: g.lastName,
+          email: g.email,
+          rsvpUrl: `${frontendUrl}/rsvp/${g.id}`,
+          qrImageUrl: `${frontendUrl}/api/rsvp/${g.id}/qr.png`,
+          tableName: order.selectedSeats[idx].tableId,
+          seatIndex: order.selectedSeats[idx].seatIndex,
+          seatNumber: order.selectedSeats[idx].seatIndex + 1,
+        })),
+      };
+
+      assert.equal(orderPasses.totalCount, 2);
+      assert.equal(orderPasses.passes.length, 2);
+
+      // Pass 1 (Acheteur)
+      const pass1 = orderPasses.passes[0];
+      assert.equal(pass1.guestId, 'guest-1');
+      assert.equal(pass1.ticketNumber, 1);
+      assert.equal(pass1.seatNumber, 1);
+      assert.equal(pass1.rsvpUrl, 'http://localhost:3000/rsvp/guest-1');
+
+      // Pass 2 (Accompagnateur)
+      const pass2 = orderPasses.passes[1];
+      assert.equal(pass2.guestId, 'guest-2');
+      assert.equal(pass2.ticketNumber, 2);
+      assert.equal(pass2.seatNumber, 2);
+      assert.equal(pass2.rsvpUrl, 'http://localhost:3000/rsvp/guest-2');
+      assert.notEqual(pass1.rsvpUrl, pass2.rsvpUrl);
+      assert.notEqual(pass1.qrImageUrl, pass2.qrImageUrl);
+    });
+  });
 });

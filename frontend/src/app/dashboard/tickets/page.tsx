@@ -151,7 +151,17 @@ export default function TicketsPage() {
           <Button size="sm">Reprendre le paiement</Button>
         </Link>
       ) : null}
-      {ticket.guestId ? (
+      {ticket.guests && ticket.guests.length > 1 ? (
+        <div className="inline-flex items-center gap-1.5 flex-wrap">
+          {ticket.guests.map((g, idx) => (
+            <Link key={g.id} href={`/rsvp/${g.id}`} className="inline-flex">
+              <Button size="sm" variant={idx === 0 ? 'primary' : 'secondary'} leftIcon={<QrCode className="w-3.5 h-3.5" />}>
+                Pass {idx + 1}
+              </Button>
+            </Link>
+          ))}
+        </div>
+      ) : ticket.guestId ? (
         <Link href={`/rsvp/${ticket.guestId}`} className="inline-flex">
           <Button size="sm" leftIcon={<QrCode className="w-4 h-4" />}>
             Badge QR
@@ -193,7 +203,7 @@ export default function TicketsPage() {
         action={
           <Link href={agendaHref} className="inline-flex">
             <Button size="sm" leftIcon={<Calendar className="w-4 h-4" />}>
-              Agenda
+              Événements
             </Button>
           </Link>
         }
@@ -263,10 +273,10 @@ export default function TicketsPage() {
             <EmptyState
               icon={<Ticket className="w-5 h-5" />}
               title="Aucun billet pour le moment"
-              description="Inscrivez-vous à un événement ou achetez votre place depuis l’agenda du catalogue : vos pass avec QR code apparaîtront aussitôt ici."
+              description="Inscrivez-vous à un événement ou achetez votre place depuis les événements du catalogue : vos pass avec QR code apparaîtront aussitôt ici."
               action={
                 <Link href={agendaHref}>
-                  <Button size="sm">Découvrir l’agenda</Button>
+                  <Button size="sm">Découvrir les événements</Button>
                 </Link>
               }
             />

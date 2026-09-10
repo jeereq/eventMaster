@@ -24,6 +24,28 @@ export interface GuestDonationsConfig {
   progressPercent: number | null;
 }
 
+export interface GuestOrderPass {
+  guestId: string;
+  ticketNumber: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  isCurrentGuest: boolean;
+  rsvpUrl: string;
+  qrImageUrl?: string;
+  tableName?: string | null;
+  seatIndex?: number | null;
+  seatNumber?: number | null;
+  zoneName?: string | null;
+}
+
+export interface GuestOrderPasses {
+  orderId: string;
+  totalCount: number;
+  passes: GuestOrderPass[];
+}
+
 export interface GuestRsvpData {
   id: string;
   firstName: string;
@@ -131,5 +153,6 @@ export interface GuestRsvpData {
   } | null;
   organizationName?: string;
   ticketPlacement?: GuestTicketPlacement | null;
+  orderPasses?: GuestOrderPasses | null;
   donations?: GuestDonationsConfig | null;
 }

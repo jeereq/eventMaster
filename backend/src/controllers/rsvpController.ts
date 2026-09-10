@@ -683,6 +683,111 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       seatNumber: effectiveSeatIndex != null ? effectiveSeatIndex + 1 : null,
     };
 
+    // Récupération de tous les pass associés à la commande si achat groupé de billets
+    let orderPasses: {
+      orderId: string;
+      totalCount: number;
+      passes: Array<{
+        guestId: string;
+        ticketNumber: number;
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string | null;
+        isCurrentGuest: boolean;
+        rsvpUrl: string;
+        qrImageUrl: string;
+        tableName: string | null;
+        seatIndex: number | null;
+        seatNumber: number | null;
+        zoneName: string | null;
+      }>;
+    } | null = null;
+
+    if (guest.ticketOrderId) {
+      const orderGuests = await prisma.guest.findMany({
+        where: { ticketOrderId: guest.ticketOrderId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (orderGuests.length > 0) {
+        const rawSeats = Array.isArray(order?.selectedSeats)
+          ? (order?.selectedSeats as Array<{ tableId?: unknown; seatIndex?: unknown }>)
+          : [];
+        const tablesList = (eventObj?.tablePlan?.tables as any[]) || [];
+
+        const passes = orderGuests.map((og, idx) => {
+          const isCurrent = og.id === guestId;
+          let pTableId: string | null = null;
+          let pSeatIndex: number | null = null;
+
+          if (rawSeats[idx]) {
+            pTableId = rawSeats[idx].tableId ? String(rawSeats[idx].tableId) : null;
+            pSeatIndex = rawSeats[idx].seatIndex != null ? Number(rawSeats[idx].seatIndex) : null;
+          } else if (idx === 0 && order?.tableId != null) {
+            pTableId = order.tableId;
+            pSeatIndex = order.seatIndex;
+          }
+
+          let foundTableName: string | null = null;
+          let foundZoneName: string | null = null;
+
+          for (const tbl of tablesList) {
+            const sObj = tbl.seats || {};
+            const entry = Object.entries(sObj).find(([, gId]) => gId === og.id);
+            if (entry) {
+              foundTableName = tbl.name;
+              pSeatIndex = parseInt(entry[0], 10);
+              const z = pricingZones.find((pz: any) => pz.id === tbl.pricingZoneId);
+              if (z) foundZoneName = z.name;
+              break;
+            }
+          }
+
+          if (!foundTableName && pTableId) {
+            const tbl = tablesList.find((t: any) => t.id === pTableId);
+            if (tbl) {
+              foundTableName = tbl.name;
+              const z = pricingZones.find((pz: any) => pz.id === tbl.pricingZoneId);
+              if (z) foundZoneName = z.name;
+            }
+          }
+
+          const effSeatNumber = pSeatIndex != null ? pSeatIndex + 1 : null;
+
+          return {
+            guestId: og.id,
+            ticketNumber: idx + 1,
+            firstName: og.firstName,
+            lastName: og.lastName,
+            email: og.email,
+            phone: og.phone,
+            isCurrentGuest: isCurrent,
+            rsvpUrl: `${FRONTEND_URL}/rsvp/${og.id}`,
+            qrImageUrl: `${FRONTEND_URL}/api/rsvp/${og.id}/qr.png`,
+            tableName: foundTableName,
+            seatIndex: pSeatIndex,
+            seatNumber: effSeatNumber,
+            zoneName: foundZoneName || assignedZone?.name || null,
+          };
+        });
+
+        orderPasses = {
+          orderId: guest.ticketOrderId,
+          totalCount: Math.max(order?.quantity || 1, orderGuests.length),
+          passes,
+        };
+      }
+    }
+
     let donationsData: {
       enabled: boolean;
       cause: string | null;
@@ -747,6 +852,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       sourceRoomType,
       previewLightingPreset,
       ticketPlacement,
+      orderPasses,
       donations: donationsData,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),

@@ -65,7 +65,7 @@ export function catalogueReturnBackLabel(href: string): string {
     if (hub === 'favorites') return 'Favoris';
     if (hub === 'plan') return 'Préparer un événement';
     if (hub === 'packs') return 'Mes packs';
-    if (params.get('kind') === 'event') return 'Agenda';
+    if (params.get('kind') === 'event') return 'Événements';
     return 'Explorer';
   }
   if (path === '/marketplace') return 'Marketplace';
