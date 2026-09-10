@@ -10,10 +10,15 @@ import {
   type InvitationComposeContext,
 } from './invitationComposeContextUtils.ts';
 import {
+  NANO_BANANA_CRITICAL_CONSTRAINT,
+  NANO_BANANA_STYLE_INSTRUCTION,
   applyEnglishSceneBrief,
   buildEnglishSceneBriefScaffold,
+  buildGenericThematicBackgroundPrompt,
   buildHonestFaceIdentityHeader,
+  buildNanoBananaRawDirectives,
   buildReferenceRoles,
+  isSafetyFilterTriggered,
   parseEnglishSceneBriefFromJson,
   processUserPromptForHonestFaces,
   stripFaceBeautifyLanguage,
@@ -222,4 +227,100 @@ describe('buildHonestFaceIdentityHeader', () => {
     assert.match(buildHonestFaceIdentityHeader(1), /Image 1/);
     assert.equal(buildReferenceRoles(0), '');
   });
+
+  it('injecte obligatoirement les directives RAW et contraintes strictes anti-lissage Nano Banana', () => {
+    const header = buildHonestFaceIdentityHeader(2);
+    assert.match(header, /Style instruction: RAW candid photography/);
+    assert.match(header, /natural skin texture, visible pores, skin blemishes/);
+    assert.match(header, /CRITICAL CONSTRAINT: Do NOT apply any beauty filters/);
+    assert.match(header, /do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing/);
+  });
 });
+
+describe('Nano Banana RAW Directives & Fidelity', () => {
+  it('définit fidèlement les directives de style et contraintes critiques', () => {
+    assert.equal(
+      NANO_BANANA_STYLE_INSTRUCTION,
+      'Style instruction: RAW candid photography, unedited, natural skin texture, visible pores, skin blemishes, slight facial asymmetry, harsh flash photography, 8k UHD, dslr, film grain.',
+    );
+    assert.equal(
+      NANO_BANANA_CRITICAL_CONSTRAINT,
+      'CRITICAL CONSTRAINT: Do NOT apply any beauty filters, do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing. The faces MUST retain the exact natural, unedited texture of the reference images.',
+    );
+    const directives = buildNanoBananaRawDirectives(true);
+    assert.match(directives, /CRITICAL CONSTRAINT/);
+    assert.match(directives, /RAW candid photography/);
+  });
+
+  it('inclut les directives RAW dans imageBrief lors de la présence de visages', () => {
+    const processed = processUserPromptForHonestFaces('Mariage prestige Kinshasa', { referenceCount: 1 });
+    assert.match(processed.imageBrief, /RAW candid photography/);
+    assert.match(processed.imageBrief, /CRITICAL CONSTRAINT/);
+  });
+
+  it('n’injecte pas les directives de visage si aucune photo de référence n’est fournie', () => {
+    const processed = processUserPromptForHonestFaces('Mariage décoratif sans photo', { referenceCount: 0 });
+    assert.doesNotMatch(processed.imageBrief, /RAW candid photography/);
+    assert.equal(processed.identityHeader, '');
+  });
+});
+
+describe('Nano Banana Robustesse & Safety Filter Fallback', () => {
+  it('détecte correctement les rejets de filtre de sécurité dans les chaînes et erreurs', () => {
+    assert.equal(isSafetyFilterTriggered('Safety filter blocked the image generation'), true);
+    assert.equal(isSafetyFilterTriggered(new Error('Candidate was blocked due to SAFETY policy')), true);
+    assert.equal(isSafetyFilterTriggered('Internal server error 500'), false);
+  });
+
+  it('détecte les rejets de sécurité dans les payloads JSON de Gemini', () => {
+    const blockedPrompt = {
+      promptFeedback: {
+        blockReason: 'SAFETY',
+      },
+    };
+    assert.equal(isSafetyFilterTriggered(null, blockedPrompt), true);
+
+    const blockedCandidate = {
+      candidates: [
+        {
+          finishReason: 'SAFETY',
+        },
+      ],
+    };
+    assert.equal(isSafetyFilterTriggered(null, blockedCandidate), true);
+
+    const normalPayload = {
+      candidates: [
+        {
+          finishReason: 'STOP',
+          content: { parts: [{ inlineData: { data: 'b64' } }] },
+        },
+      ],
+    };
+    assert.equal(isSafetyFilterTriggered(null, normalPayload), false);
+  });
+
+  it('génère un prompt de repli thématique sans aucun humain', () => {
+    const originalPrompt = [
+      '=== 1. IDENTITY ANCHOR ===',
+      'Use the attached reference photo.',
+      'Style instruction: RAW candid photography, unedited, natural skin texture, visible pores, skin blemishes, slight facial asymmetry, harsh flash photography, 8k UHD, dslr, film grain.',
+      'CRITICAL CONSTRAINT: Do NOT apply any beauty filters, do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing. The faces MUST retain the exact natural, unedited texture of the reference images.',
+      'Soirée de gala royale, drapés de soie pourpre et chandeliers de cristal à Lubumbashi.',
+    ].join('\n');
+
+    const fallbackPrompt = buildGenericThematicBackgroundPrompt(originalPrompt, {
+      embedText: false,
+      artStyle: 'classique',
+    });
+
+    assert.match(fallbackPrompt, /vertical 9:16 luxury invitation/i);
+    assert.match(fallbackPrompt, /ABSOLUTELY NO human beings/i);
+    assert.match(fallbackPrompt, /STRICT CONSTRAINT: Pure festive décor/i);
+    assert.match(fallbackPrompt, /drapés de soie pourpre/);
+    assert.doesNotMatch(fallbackPrompt, /IDENTITY ANCHOR/);
+    assert.doesNotMatch(fallbackPrompt, /visible pores/);
+    assert.doesNotMatch(fallbackPrompt, /Do NOT apply any beauty filters/);
+  });
+});
+

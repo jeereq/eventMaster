@@ -1,4 +1,19 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
+exports.buildNanoBananaRawDirectives = buildNanoBananaRawDirectives;
+exports.stripFaceBeautifyLanguage = stripFaceBeautifyLanguage;
+exports.buildReferenceRoles = buildReferenceRoles;
+exports.buildHonestFaceIdentityHeader = buildHonestFaceIdentityHeader;
+exports.buildEnglishSceneBriefScaffold = buildEnglishSceneBriefScaffold;
+exports.buildBriefReformulationUserText = buildBriefReformulationUserText;
+exports.parseEnglishSceneBriefFromJson = parseEnglishSceneBriefFromJson;
+exports.applyEnglishSceneBrief = applyEnglishSceneBrief;
+exports.processUserPromptForHonestFaces = processUserPromptForHonestFaces;
+exports.buildGeminiSceneSteps = buildGeminiSceneSteps;
+exports.isSafetyFilterTriggered = isSafetyFilterTriggered;
+exports.buildGenericThematicBackgroundPrompt = buildGenericThematicBackgroundPrompt;
+const invitationArtStyle_ts_1 = require("./invitationArtStyle.js");
 /**
  * Traitement des briefs utilisateur selon les recommandations Gemini Image
  * (Nano Banana) pour un rendu HONNÊTE des visages fournis en référence :
@@ -9,17 +24,6 @@
  * - retirer le langage d’embellissement / blanchiment qui fait dériver le visage
  * - reformuler le brief utilisateur en anglais (Subject + Action + Location + Composition + Style)
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.BRIEF_REFORMULATION_SYSTEM = void 0;
-exports.stripFaceBeautifyLanguage = stripFaceBeautifyLanguage;
-exports.buildReferenceRoles = buildReferenceRoles;
-exports.buildHonestFaceIdentityHeader = buildHonestFaceIdentityHeader;
-exports.buildEnglishSceneBriefScaffold = buildEnglishSceneBriefScaffold;
-exports.buildBriefReformulationUserText = buildBriefReformulationUserText;
-exports.parseEnglishSceneBriefFromJson = parseEnglishSceneBriefFromJson;
-exports.applyEnglishSceneBrief = applyEnglishSceneBrief;
-exports.processUserPromptForHonestFaces = processUserPromptForHonestFaces;
-exports.buildGeminiSceneSteps = buildGeminiSceneSteps;
 const FACE_BEAUTIFY_PATTERNS = [
     /\bembelli[sr]\s+(?:les?\s+)?(?:visages?|photos?|personnes?|traits?)\b/gi,
     /\b(?:visages?|peau|traits?|sourire)\s+(?:plus\s+)?(?:beau(?:x)?|belle|jolie?s?|clair(?:e)?|lisse|parfait(?:e)?s?)\b/gi,
@@ -41,6 +45,17 @@ const FACE_BEAUTIFY_PATTERNS = [
     /\bbeautif(?:y|ul\s+faces?)\b/gi,
 ];
 const EXPLICIT_FACE_CHANGE = /\b(?:changer|change|modifier|modifie|couper|raser|teindre|colorer)\b.{0,24}\b(?:cheveux|coiffure|barbe|habits?|tenue|v[eê]tement|costume|robe)\b/i;
+/**
+ * Directives de style RAW et contraintes strictes anti-lissage spécifiques
+ * à l'écosystème Nano Banana pour garantir un rendu non retouché des visages.
+ */
+exports.NANO_BANANA_STYLE_INSTRUCTION = 'Style instruction: RAW candid photography, unedited, natural skin texture, visible pores, skin blemishes, slight facial asymmetry, harsh flash photography, 8k UHD, dslr, film grain.';
+exports.NANO_BANANA_CRITICAL_CONSTRAINT = 'CRITICAL CONSTRAINT: Do NOT apply any beauty filters, do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing. The faces MUST retain the exact natural, unedited texture of the reference images.';
+function buildNanoBananaRawDirectives(hasPeople = true) {
+    if (!hasPeople)
+        return '';
+    return [exports.NANO_BANANA_CRITICAL_CONSTRAINT, exports.NANO_BANANA_STYLE_INSTRUCTION].join('\n');
+}
 /** System prompt for Gemini brief reformulation (Nano Banana best practices). */
 exports.BRIEF_REFORMULATION_SYSTEM = `You rewrite invitation design briefs for Gemini Image (Nano Banana).
 
@@ -100,6 +115,8 @@ function buildHonestFaceIdentityHeader(referenceCount) {
         `Use the attached reference photograph(s) as the ONLY identity source. These are ${who} — the same individuals, not siblings, celebrities, or beautified lookalikes.`,
         'Render each face as honestly as photographed: keep bone structure, eye spacing and slant, nose width, smile geometry (including asymmetry), cheek volume, skin tone and visible pores, hairline, moles/scars, age, and clothing unless the brief explicitly changes clothes or hair.',
         'Ensure each person\'s face and features remain completely unchanged. Do not enhance, beautify, reshape, symmetrize, slim, lighten, airbrush, or replace with a stock model.',
+        exports.NANO_BANANA_CRITICAL_CONSTRAINT,
+        exports.NANO_BANANA_STYLE_INSTRUCTION,
         'If any text in the brief conflicts with the pixels, obey the pixels.',
     ].join('\n');
 }
@@ -191,6 +208,8 @@ function applyEnglishSceneBrief(processed, englishSceneBrief) {
             processed.explicitAppearanceChange
                 ? 'The user explicitly asked to change hair or clothing; apply ONLY that change. Keep the face identical.'
                 : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
+            exports.NANO_BANANA_CRITICAL_CONSTRAINT,
+            exports.NANO_BANANA_STYLE_INSTRUCTION,
         ].join('\n')
         : narrative;
     const honestyNote = hasRefs
@@ -229,6 +248,8 @@ function processUserPromptForHonestFaces(prompt, options) {
             explicitAppearanceChange
                 ? 'The user explicitly asked to change hair or clothing; apply ONLY that change. Keep the face identical.'
                 : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
+            exports.NANO_BANANA_CRITICAL_CONSTRAINT,
+            exports.NANO_BANANA_STYLE_INSTRUCTION,
         ].join('\n')
         : englishSceneBrief;
     return {
@@ -251,5 +272,95 @@ function buildGeminiSceneSteps(embedText) {
         embedText
             ? 'Finally, embed sharp invitation lettering (names, date, venue from the brief) in the lower third or a cartouche that does not cover eyes, smile or cheeks.'
             : 'Finally, leave clean negative space for later typography — no readable names, dates, logos or watermarks.',
+        exports.NANO_BANANA_CRITICAL_CONSTRAINT,
+        exports.NANO_BANANA_STYLE_INSTRUCTION,
     ].join('\n');
+}
+function isSafetyText(raw) {
+    const lower = raw.toLowerCase();
+    return (lower.includes('safety') ||
+        lower.includes('block_reason') ||
+        lower.includes('blockreason') ||
+        lower.includes('prohibited_content') ||
+        lower.includes('spii') ||
+        lower.includes('hate_speech') ||
+        lower.includes('harassment') ||
+        lower.includes('sexually_explicit') ||
+        lower.includes('dangerous_content') ||
+        (lower.includes('policy') && (lower.includes('violat') || lower.includes('filter'))) ||
+        (lower.includes('filter') && lower.includes('content')));
+}
+/**
+ * Détecte si une erreur ou un corps de réponse Nano Banana provient d'un filtre de sécurité
+ * (Safety Filter, blocage d'image de visage réel, biométrie, etc.).
+ */
+function isSafetyFilterTriggered(textOrErr, jsonPayload) {
+    if (typeof textOrErr === 'string' && isSafetyText(textOrErr))
+        return true;
+    if (textOrErr instanceof Error && isSafetyText(textOrErr.message))
+        return true;
+    if (jsonPayload && typeof jsonPayload === 'object') {
+        try {
+            const p = jsonPayload;
+            if (p.promptFeedback && typeof p.promptFeedback === 'object') {
+                const pf = p.promptFeedback;
+                const br = String(pf.blockReason || '').toUpperCase();
+                if (br && br !== 'NONE' && (br.includes('SAFETY') || br.includes('BLOCK') || br.includes('PROHIBITED'))) {
+                    return true;
+                }
+            }
+            if (Array.isArray(p.candidates) && p.candidates[0] && typeof p.candidates[0] === 'object') {
+                const c = p.candidates[0];
+                const fr = String(c.finishReason || '').toUpperCase();
+                if (fr && (fr.includes('SAFETY') || fr.includes('PROHIBITED') || fr.includes('BLOCK') || fr.includes('SPII'))) {
+                    return true;
+                }
+            }
+            if (typeof p.status === 'string' && p.status.toUpperCase().includes('BLOCK')) {
+                return true;
+            }
+            const raw = JSON.stringify(jsonPayload);
+            if (isSafetyText(raw))
+                return true;
+        }
+        catch {
+            // ignore
+        }
+    }
+    return false;
+}
+/**
+ * Construit un prompt thématique d'arrière-plan sans aucun être humain,
+ * préservant l'ambiance, les couleurs, le style artistique et le ratio 9:16 de l'événement.
+ */
+function buildGenericThematicBackgroundPrompt(imagePrompt, options) {
+    const artStyle = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(options?.artStyle);
+    const cleanBrief = imagePrompt
+        .replace(/=== 1\. IDENTITY ANCHOR[\s\S]*?===/gi, '')
+        .replace(/REFERENCE ROLES[\s\S]*?\n\n/gi, '')
+        .replace(/FACE INVENTORY[\s\S]*?\n/gi, '')
+        .replace(/LANDMARKS[\s\S]*?\n/gi, '')
+        .replace(/People count[\s\S]*?\n/gi, '')
+        .replace(/Style instruction: RAW candid photography[\s\S]*?film grain\./gi, '')
+        .replace(/CRITICAL CONSTRAINT: Do NOT apply any beauty filters[\s\S]*?reference images\./gi, '')
+        .replace(/Use the attached reference photo[\s\S]*?\n/gi, '')
+        .replace(/The attached photo\(s\)[\s\S]*?\n/gi, '')
+        .trim();
+    const lines = [
+        'Create ONE vertical 9:16 luxury invitation card background with rich celebration atmosphere and ABSOLUTELY NO human beings.',
+        'STRICT CONSTRAINT: Pure festive décor, environment, florals, architecture and stationery styling only. NO people, NO faces, NO silhouettes, NO portraits, NO hands, NO human figures of any kind.',
+        `ART STYLE (${artStyle.toUpperCase()} DÉCOR): Luxurious event stationery and environmental architecture. Tactile textures, rich lighting, impeccable festive ambience.`,
+        (0, invitationArtStyle_ts_1.invitationArtStyleCompositionNote)(artStyle),
+        (0, invitationArtStyle_ts_1.invitationArtStyleLightNote)(artStyle),
+        (0, invitationArtStyle_ts_1.invitationArtStyleCraftNotes)(),
+        'Event theme and ambiance details:',
+        cleanBrief.slice(0, 1200),
+    ];
+    if (options?.embedText) {
+        lines.push('Embed crisp luxury typographic lettering (names, date, venue) integrated into the 9:16 layout negative space without covering any decorative motifs.');
+    }
+    else {
+        lines.push('Clean negative space reserved for later typography — NO readable text or watermarks.');
+    }
+    return lines.filter(Boolean).join('\n');
 }

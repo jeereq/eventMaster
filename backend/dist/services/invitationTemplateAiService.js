@@ -344,7 +344,10 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
     else {
         parts.push('No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).');
     }
-    return parts.join('\n').slice(0, hasPeople ? 5800 : 5400);
+    if (hasPeople) {
+        parts.push(invitationPromptFidelity_ts_1.NANO_BANANA_CRITICAL_CONSTRAINT, invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION);
+    }
+    return parts.join('\n').slice(0, hasPeople ? 6200 : 5400);
 }
 function structureSystemPrompt(embedText, artStyle) {
     const style = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(artStyle);
@@ -879,14 +882,188 @@ function getNanoBananaModelChain() {
     return [...new Set([getNanoBananaProModel(), getNanoBananaFlashModel()])];
 }
 /**
- * Génération et composition d'invitation avec Nano Banana (Pro ou Flash, selon `model`).
- * Prend en charge la préservation native de l'identité et cohérence de personnage (character consistency)
- * avec jusqu'à 4 photos de référence et un ratio portrait vertical 9:16 pour carte de prestige.
+ * Exécute un appel brut synchrone à Nano Banana (Interactions API ou generateContent).
+ * Injecte les images de référence en tête de payload (Image Reference Binding)
+ * et configure nativement le modèle Pro en ratio 9:16 et haute résolution 2K.
+ */
+async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model) {
+    const TIMEOUT_MS = 80_000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+        let b64 = null;
+        let safetyTriggered = false;
+        let safetyDetail = '';
+        // Tentative 1 : Google Interactions API (format 9:16, 2K)
+        const interactionInput = [];
+        // Priorité absolue aux images de référence des hôtes pour ancrer l'identité
+        for (const img of refImages) {
+            interactionInput.push({
+                type: 'image',
+                data: img.base64,
+                mime_type: img.mimeType,
+            });
+        }
+        interactionInput.push({ type: 'text', text: promptText });
+        const interactionPayload = {
+            model,
+            input: interactionInput,
+            response_format: {
+                type: 'image',
+                aspect_ratio: '9:16',
+                image_size: '2K',
+            },
+        };
+        try {
+            const interactionsRes = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+                method: 'POST',
+                signal: controller.signal,
+                headers: {
+                    'x-goog-api-key': apiKey,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(interactionPayload),
+            });
+            if (interactionsRes.ok) {
+                const data = (await interactionsRes.json().catch(() => ({})));
+                if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, data)) {
+                    safetyTriggered = true;
+                    safetyDetail = 'Interactions API safety filter triggered';
+                }
+                else if (typeof data.output_image?.data === 'string' && data.output_image.data) {
+                    b64 = data.output_image.data;
+                }
+                else if (Array.isArray(data.steps)) {
+                    for (const step of data.steps) {
+                        const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string');
+                        if (imgBlock?.data) {
+                            b64 = imgBlock.data;
+                            break;
+                        }
+                    }
+                }
+            }
+            else {
+                const errText = await interactionsRes.text().catch(() => '');
+                if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(errText)) {
+                    safetyTriggered = true;
+                    safetyDetail = errText;
+                }
+                console.warn('[invitationTemplateAi] Nano Banana interactions API non-200:', errText.slice(0, 300));
+            }
+        }
+        catch (interactErr) {
+            if (interactErr?.name === 'AbortError') {
+                throw new Error(`Timeout: la requête Nano Banana interactions a dépassé ${TIMEOUT_MS / 1000}s.`);
+            }
+            if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(interactErr)) {
+                safetyTriggered = true;
+                safetyDetail = interactErr?.message;
+            }
+            console.warn('[invitationTemplateAi] Nano Banana interactions attempt error:', interactErr?.message);
+        }
+        if (safetyTriggered) {
+            const safetyErr = new Error(`SafetyFilterTriggered: ${safetyDetail}`);
+            safetyErr.status = 400;
+            throw safetyErr;
+        }
+        // Tentative 2 : Standard generateContent API avec responseModalities IMAGE & aspectRatio 9:16
+        if (!b64) {
+            const generateParts = [];
+            // 1. Priorité absolue aux images de référence des hôtes pour ancrer l'identité
+            for (const img of refImages) {
+                generateParts.push({
+                    inline_data: {
+                        mime_type: img.mimeType,
+                        data: img.base64,
+                    },
+                });
+            }
+            // 2. Directives textuelles injectées après les références d'image
+            generateParts.push({ text: promptText });
+            const generatePayload = {
+                contents: [
+                    {
+                        role: 'user',
+                        parts: generateParts,
+                    },
+                ],
+                generationConfig: {
+                    responseModalities: ['IMAGE'],
+                    aspectRatio: '9:16',
+                    imageConfig: {
+                        aspectRatio: '9:16',
+                        imageSize: '2K',
+                    },
+                },
+            };
+            try {
+                const generateRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(generatePayload),
+                });
+                if (generateRes.ok) {
+                    const genData = (await generateRes.json().catch(() => ({})));
+                    if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, genData)) {
+                        const blockInfo = genData.promptFeedback?.blockReason || genData.candidates?.[0]?.finishReason || 'SAFETY';
+                        const safetyErr = new Error(`SafetyFilterTriggered: ${blockInfo}`);
+                        safetyErr.status = 400;
+                        throw safetyErr;
+                    }
+                    const parts = genData.candidates?.[0]?.content?.parts || [];
+                    for (const p of parts) {
+                        const found = p.inlineData?.data || p.inline_data?.data;
+                        if (typeof found === 'string' && found) {
+                            b64 = found;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    const genErr = await generateRes.text().catch(() => '');
+                    if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(genErr)) {
+                        const safetyErr = new Error(`SafetyFilterTriggered: ${genErr}`);
+                        safetyErr.status = 400;
+                        throw safetyErr;
+                    }
+                    console.warn('[invitationTemplateAi] Nano Banana generateContent API non-200:', genErr.slice(0, 300));
+                }
+            }
+            catch (genErr) {
+                if (genErr?.name === 'AbortError') {
+                    throw new Error(`Timeout: la requête Nano Banana generateContent a dépassé ${TIMEOUT_MS / 1000}s.`);
+                }
+                if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(genErr)) {
+                    const safetyErr = new Error(`SafetyFilterTriggered: ${genErr?.message}`);
+                    safetyErr.status = 400;
+                    throw safetyErr;
+                }
+                throw genErr;
+            }
+        }
+        if (!b64) {
+            fail(502, `Nano Banana (${model}) n'a pas renvoyé d'image valide.`);
+        }
+        return b64;
+    }
+    finally {
+        clearTimeout(timer);
+    }
+}
+/**
+ * Génération et composition d'invitation avec Nano Banana Pro (gemini-3-pro-image).
+ * Exploite la référence multimodale (Image Reference Binding prioritaire dans contents),
+ * les directives RAW candid anti-lissage, et le ratio portrait vertical 9:16 natif.
+ * Inclut un fallback automatique vers un arrière-plan thématique générique sans humains en cas de blocage sécurité.
  */
 async function generateImageWithNanoBanana(apiKey, imagePrompt, referenceUrls, tenantId, options, model = getNanoBananaProModel()) {
     const hasRefs = referenceUrls.length > 0;
     const hasPeople = Boolean(options?.hasPeople);
-    // Téléchargement et encodage base64 des photos de référence
+    // Téléchargement et encodage base64 des photos de référence des hôtes
     const refImages = [];
     for (const ref of referenceUrls.slice(0, 4)) {
         try {
@@ -906,116 +1083,42 @@ async function generateImageWithNanoBanana(apiKey, imagePrompt, referenceUrls, t
             console.warn('[invitationTemplateAi] Nano Banana skip ref download:', err?.message);
         }
     }
-    const promptText = hasPeople
-        ? imagePrompt
-        : `Vertical 9:16 luxury invitation. ${(0, invitationArtStyle_ts_1.invitationArtStyleImageDirective)((0, invitationArtStyle_ts_1.parseInvitationArtStyle)(options?.artStyle))} ${(0, invitationArtStyle_ts_1.invitationArtStyleCraftNotes)()} If people appear, Black African hosts only — never Caucasian stock faces.
+    // Verrouillage anti-lissage : injection des directives de style RAW et contraintes fermes
+    let promptText = imagePrompt;
+    if (hasPeople || hasRefs) {
+        if (!promptText.includes(invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION)) {
+            promptText = `${promptText}\n\n${invitationPromptFidelity_ts_1.NANO_BANANA_CRITICAL_CONSTRAINT}\n${invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION}`;
+        }
+    }
+    else {
+        promptText = `Vertical 9:16 luxury invitation. ${(0, invitationArtStyle_ts_1.invitationArtStyleImageDirective)((0, invitationArtStyle_ts_1.parseInvitationArtStyle)(options?.artStyle))} ${(0, invitationArtStyle_ts_1.invitationArtStyleCraftNotes)()} If people appear, Black African hosts only — never Caucasian stock faces.
 ${options?.embedText ? 'Embed invitation typography from the brief.\n' : ''}
 ${imagePrompt}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 120_000);
+    }
     try {
-        let b64 = null;
-        // Tentative 1 : Google Interactions API (API native de Nano Banana avec support format portrait 9:16)
-        const interactionInput = [];
-        for (const img of refImages) {
-            interactionInput.push({
-                type: 'image',
-                data: img.base64,
-                mime_type: img.mimeType,
-            });
-        }
-        interactionInput.push({ type: 'text', text: promptText });
-        const interactionPayload = {
-            model,
-            input: interactionInput,
-            response_format: {
-                type: 'image',
-                aspect_ratio: '9:16',
-                image_size: '2K',
-            },
-        };
-        const interactionsRes = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-                'x-goog-api-key': apiKey,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(interactionPayload),
-        });
-        if (interactionsRes.ok) {
-            const data = (await interactionsRes.json().catch(() => ({})));
-            if (typeof data.output_image?.data === 'string' && data.output_image.data) {
-                b64 = data.output_image.data;
-            }
-            else if (Array.isArray(data.steps)) {
-                for (const step of data.steps) {
-                    const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string');
-                    if (imgBlock?.data) {
-                        b64 = imgBlock.data;
-                        break;
-                    }
-                }
-            }
-        }
-        else {
-            const errText = await interactionsRes.text().catch(() => '');
-            console.warn('[invitationTemplateAi] Nano Banana interactions API non-200:', errText.slice(0, 300));
-        }
-        // Tentative 2 : Standard generateContent API avec responseModalities IMAGE si Interactions n'a pas renvoyé de b64
-        if (!b64) {
-            const generateParts = [];
-            for (const img of refImages) {
-                generateParts.push({
-                    inline_data: {
-                        mime_type: img.mimeType,
-                        data: img.base64,
-                    },
-                });
-            }
-            generateParts.push({ text: promptText });
-            const generateRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-                method: 'POST',
-                signal: controller.signal,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contents: [{ parts: generateParts }],
-                    generationConfig: {
-                        responseModalities: ['IMAGE'],
-                    },
-                }),
-            });
-            if (generateRes.ok) {
-                const genData = (await generateRes.json().catch(() => ({})));
-                const parts = genData.candidates?.[0]?.content?.parts || [];
-                for (const p of parts) {
-                    const found = p.inlineData?.data || p.inline_data?.data;
-                    if (typeof found === 'string' && found) {
-                        b64 = found;
-                        break;
-                    }
-                }
-            }
-            else {
-                const genErr = await generateRes.text().catch(() => '');
-                console.warn('[invitationTemplateAi] Nano Banana generateContent API non-200:', genErr.slice(0, 300));
-            }
-        }
-        if (!b64) {
-            fail(502, `Nano Banana (${model}) n'a pas renvoyé d'image valide.`);
-        }
+        const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model);
         const url = await uploadGeneratedB64(b64, tenantId);
         return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate' };
     }
     catch (error) {
+        // Gestion du fallback automatique en cas de filtre de sécurité sur visages réels
+        if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(error) && (hasPeople || hasRefs)) {
+            console.warn(`[invitationTemplateAi] Filtre de sécurité Nano Banana déclenché sur photo humaine (${error?.message}). Bascule automatique vers arrière-plan thématique générique sans humains...`);
+            try {
+                const fallbackPrompt = (0, invitationPromptFidelity_ts_1.buildGenericThematicBackgroundPrompt)(imagePrompt, options);
+                const fallbackB64 = await executeNanoBananaRawRequest(apiKey, fallbackPrompt, [], // Aucune photo de référence humaine pour contourner le filtre facial
+                model);
+                const url = await uploadGeneratedB64(fallbackB64, tenantId);
+                return { url, mode: 'generate' };
+            }
+            catch (fallbackErr) {
+                console.warn('[invitationTemplateAi] Nano Banana fallback décoratif sans humains a échoué:', fallbackErr?.message);
+                throw fallbackErr;
+            }
+        }
         if (error?.status)
             throw error;
         fail(502, error?.message || `Erreur lors de la génération avec Nano Banana (${model}).`);
-    }
-    finally {
-        clearTimeout(timer);
     }
 }
 /**
@@ -1071,6 +1174,18 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
     }
     const primary = imageUrls[0];
     if (!primary) {
+        if (nanoKey) {
+            try {
+                console.warn('[invitationTemplateAi] Filet de sécurité anti-blocage: tentative finale d\'arrière-plan décoratif sans humains via Nano Banana...');
+                const fallbackPrompt = (0, invitationPromptFidelity_ts_1.buildGenericThematicBackgroundPrompt)(imagePrompt, options);
+                const fallbackB64 = await executeNanoBananaRawRequest(nanoKey, fallbackPrompt, [], getNanoBananaProModel());
+                const url = await uploadGeneratedB64(fallbackB64, tenantId);
+                return { url, mode: 'generate' };
+            }
+            catch (finalFallbackErr) {
+                console.warn('[invitationTemplateAi] Échec du filet de sécurité décoratif Nano Banana:', finalFallbackErr?.message);
+            }
+        }
         fail(502, 'Impossible de créer la nouvelle image (Nano Banana + Luna + Images API).');
     }
     const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);

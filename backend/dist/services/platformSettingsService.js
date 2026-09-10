@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
+exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
 exports.sanitizeAudioNotifications = sanitizeAudioNotifications;
 exports.sanitizeEnabledCities = sanitizeEnabledCities;
 exports.sanitizeAuthOtpChannels = sanitizeAuthOtpChannels;
@@ -38,7 +38,8 @@ exports.settingsFilePath = settingsFilePath;
 const PLATFORM_CONFIG_ID = 'default';
 /** Cache processus : source de vérité après hydratation BD (le fichier est un secours local). */
 let memoryCache = null;
-exports.AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent'];
+exports.AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent', 'cosmic', 'fanfare'];
+exports.AUDIO_NOTIFICATION_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks', 'studio'];
 exports.DEFAULT_AUDIO_NOTIFICATIONS = {
     enabled: true,
     volume: 70,
@@ -47,6 +48,8 @@ exports.DEFAULT_AUDIO_NOTIFICATIONS = {
     commissions: 'chime',
     catalog: 'bell',
     tasks: 'soft',
+    studio: 'cosmic',
+    studioStepSound: true,
     default: 'chime',
 };
 function isAudioPreset(value) {
@@ -63,6 +66,8 @@ function sanitizeAudioNotifications(raw) {
         commissions: isAudioPreset(src.commissions) ? src.commissions : exports.DEFAULT_AUDIO_NOTIFICATIONS.commissions,
         catalog: isAudioPreset(src.catalog) ? src.catalog : exports.DEFAULT_AUDIO_NOTIFICATIONS.catalog,
         tasks: isAudioPreset(src.tasks) ? src.tasks : exports.DEFAULT_AUDIO_NOTIFICATIONS.tasks,
+        studio: isAudioPreset(src.studio) ? src.studio : exports.DEFAULT_AUDIO_NOTIFICATIONS.studio,
+        studioStepSound: src.studioStepSound !== false,
         default: isAudioPreset(src.default) ? src.default : exports.DEFAULT_AUDIO_NOTIFICATIONS.default,
     };
 }
