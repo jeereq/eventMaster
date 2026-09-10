@@ -15,23 +15,14 @@ import {
   Utensils,
   Truck,
   Mail,
-  Compass,
-  CheckCircle2,
   ShieldCheck,
   Wand2,
   Bookmark,
-  Calendar,
-  Layers,
-  HelpCircle,
-  ExternalLink,
   ChevronRight,
-  MapPin,
-  PartyPopper,
-  SlidersHorizontal,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import { cn } from '@/lib/cn';
 
@@ -49,7 +40,7 @@ export default function ClientDashboardHome() {
     loading: true,
   });
 
-  // Charger les compteurs d'activité du client
+  // Chargement des compteurs temps réel
   useEffect(() => {
     let mounted = true;
     Promise.allSettled([
@@ -111,85 +102,67 @@ export default function ClientDashboardHome() {
   const userName = user?.name ? user.name.split(' ')[0] : '';
 
   return (
-    <div className="space-y-7 pb-12 animate-fade-in max-w-7xl mx-auto">
-      {/* ─── 1. HERO : L'ATELIER DE CÉLÉBRATION ─── */}
-      <section className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-surface via-surface to-primary/5 p-6 sm:p-9 shadow-xs">
-        {/* Halos décoratifs subtils */}
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-16 w-56 h-56 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="space-y-6 pb-12 animate-fade-in max-w-7xl mx-auto">
+      {/* ─── 1. HERO COMPACT & RECHERCHE (ZERO TEXTE SUPERFLU) ─── */}
+      <section className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-surface via-surface to-primary/5 p-5 sm:p-7 shadow-xs">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative space-y-6 max-w-3xl">
-          {/* Badge & Titre de célébration avec Fraunces */}
-          <div className="space-y-2.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                <Sparkles className="w-3.5 h-3.5" />
-                Espace Célébration
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                100 % gratuit · Sans aucun abonnement
-              </span>
-            </div>
-
-            <h1 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.15]">
-              Bonjour{userName ? `, ${userName}` : ''}
-              <span className="text-muted font-normal block sm:inline sm:ml-2 text-xl sm:text-2xl">
-                — Votre événement commence ici.
-              </span>
+        <div className="relative space-y-4 max-w-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+              Bonjour{userName ? `, ${userName}` : ''} 👋
             </h1>
-
-            <p className="text-sm text-muted leading-relaxed max-w-2xl">
-              Trouvez les plus beaux lieux de réception, réservez des prestataires vérifiés, estimez vos coûts ou obtenez vos pass d’accès en direct.
-            </p>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              100 % gratuit · Sans abonnement
+            </span>
           </div>
 
-          {/* Moteur de recherche intégré */}
-          <form onSubmit={handleSearchSubmit} className="relative pt-1">
-            <div className="relative flex items-center shadow-xs rounded-2xl bg-surface border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition">
+          {/* Recherche directe */}
+          <form onSubmit={handleSearchSubmit} className="relative">
+            <div className="relative flex items-center rounded-2xl bg-surface border border-border shadow-xs focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition">
               <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Une salle à la Gombe, traiteur, photographe, sono, pass d'accès…"
+                placeholder="Salle à la Gombe, traiteur, DJ, mobilier, pass QR…"
                 aria-label="Rechercher une salle, un prestataire ou un équipement"
-                className="w-full pl-12 pr-32 py-4 bg-transparent text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none"
+                className="w-full pl-12 pr-28 py-3.5 bg-transparent text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none"
               />
               <button
                 type="submit"
-                className="absolute right-2 px-4 py-2.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer shadow-xs"
+                className="absolute right-2 px-4 py-2 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1 touch-manipulation cursor-pointer"
               >
-                <span>Explorer</span>
+                <span>Chercher</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </form>
 
-          {/* Raccourcis de recherche rapides */}
-          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs">
-            <span className="text-xs text-muted font-medium">Recherches fréquentes :</span>
+          {/* Raccourcis 1 clic */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <Link
               href="/dashboard/catalogue?kind=venue&q=Gombe"
-              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground text-xs font-medium transition hover:bg-surface-muted"
+              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground font-medium transition hover:bg-surface-muted"
             >
-              🏛️ Salles à la Gombe
+              🏛️ Salles Gombe
             </Link>
             <Link
               href="/dashboard/catalogue?kind=service&cat=caterer"
-              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground text-xs font-medium transition hover:bg-surface-muted"
+              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground font-medium transition hover:bg-surface-muted"
             >
               🍽️ Traiteurs
             </Link>
             <Link
               href="/dashboard/catalogue?kind=service&cat=dj"
-              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground text-xs font-medium transition hover:bg-surface-muted"
+              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground font-medium transition hover:bg-surface-muted"
             >
-              🎵 DJ &amp; Sonorisation
+              🎵 DJ &amp; Sono
             </Link>
             <Link
               href="/dashboard/catalogue?tab=plan&planView=ai"
-              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 hover:border-primary text-primary text-xs font-bold transition inline-flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 hover:border-primary text-primary font-bold transition inline-flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" />
               Simulateur
@@ -198,18 +171,15 @@ export default function ClientDashboardHome() {
         </div>
       </section>
 
-      {/* ─── 2. BAROMÈTRE D'ACTIVITÉ : SUIVI EN TEMPS RÉEL (BANDEAU INTÉGRÉ) ─── */}
-      <section aria-label="Suivi de vos démarches" className="rounded-2xl border border-border bg-surface p-2 shadow-2xs">
+      {/* ─── 2. BAROMÈTRE D'ACTIVITÉ : CHIFFRES CLÉS (ULTRA-PURIFIÉ) ─── */}
+      <section aria-label="Compteurs d'activité" className="rounded-2xl border border-border bg-surface p-1.5 shadow-2xs">
         <div className="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-border/60">
-          {/* Devis */}
           <Link
             href="/dashboard/bookings?tab=quotes"
-            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
-            <div className="space-y-0.5 min-w-0">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
-                Devis
-              </span>
+            <div>
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Devis</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -217,22 +187,18 @@ export default function ClientDashboardHome() {
                   stats.quotesCount
                 )}
               </p>
-              <span className="text-[11px] text-muted truncate block">Reçus &amp; en attente</span>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Inbox className="w-4 h-4" />
             </div>
           </Link>
 
-          {/* Réservations */}
           <Link
             href="/dashboard/bookings?tab=bookings"
-            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
-            <div className="space-y-0.5 min-w-0">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
-                Réservations
-              </span>
+            <div>
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Réservations</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -240,22 +206,18 @@ export default function ClientDashboardHome() {
                   stats.bookingsCount
                 )}
               </p>
-              <span className="text-[11px] text-muted truncate block">Dates confirmées</span>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <CalendarCheck className="w-4 h-4" />
             </div>
           </Link>
 
-          {/* Mes Billets */}
           <Link
             href="/dashboard/tickets"
-            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
-            <div className="space-y-0.5 min-w-0">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
-                Mes Billets
-              </span>
+            <div>
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Billets</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -263,22 +225,18 @@ export default function ClientDashboardHome() {
                   stats.ticketsCount
                 )}
               </p>
-              <span className="text-[11px] text-muted truncate block">Pass d’accès QR</span>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Ticket className="w-4 h-4" />
             </div>
           </Link>
 
-          {/* Mes Packs */}
           <Link
             href="/dashboard/catalogue?tab=packs"
-            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
-            <div className="space-y-0.5 min-w-0">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
-                Mes Packs
-              </span>
+            <div>
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Packs</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -286,22 +244,18 @@ export default function ClientDashboardHome() {
                   stats.packsCount
                 )}
               </p>
-              <span className="text-[11px] text-muted truncate block">Simulations</span>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Bookmark className="w-4 h-4" />
             </div>
           </Link>
 
-          {/* Favoris */}
           <Link
             href="/dashboard/catalogue?tab=favorites"
-            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3 col-span-2 md:col-span-1"
+            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3 col-span-2 md:col-span-1"
           >
-            <div className="space-y-0.5 min-w-0">
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
-                Favoris
-              </span>
+            <div>
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Favoris</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -309,181 +263,147 @@ export default function ClientDashboardHome() {
                   favoriteItems.length
                 )}
               </p>
-              <span className="text-[11px] text-muted truncate block">Coups de cœur</span>
             </div>
-            <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+            <div className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Heart className="w-4 h-4" />
             </div>
           </Link>
         </div>
       </section>
 
-      {/* ─── 3. LES 3 ATELIERS CRÉATIFS : LE CŒUR D'EVENTMASTER ─── */}
-      <section aria-labelledby="studios-heading" className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-border/70 pb-3">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-              Conception Assistée par IA
-            </span>
-            <h2 id="studios-heading" className="font-display text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
-              Les Ateliers Créatifs
-            </h2>
-          </div>
+      {/* ─── 3. LES 3 STUDIOS ACTIFS (VISUEL · ZÉRO TEXTE PESANT) ─── */}
+      <section aria-labelledby="studios-heading" className="space-y-3.5">
+        <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
+          <h2 id="studios-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            Studios Actifs
+          </h2>
           <Link
             href="/dashboard/catalogue?tab=plan&planView=ai"
-            className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1.5 self-start sm:self-auto touch-manipulation"
+            className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
           >
-            <span>Accéder au simulateur central</span>
+            <span>Simulateur complet</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Atelier 1 : Simulateur de Budget */}
-          <div className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/5 via-surface to-surface p-5 flex flex-col justify-between gap-4 transition hover:border-primary hover:shadow-xs group">
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          {/* Studio 1 : Budget */}
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
+            className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-primary hover:shadow-xs group"
+          >
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
                   <Wand2 className="w-5 h-5" />
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
-
-              <div className="space-y-1">
-                <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition">
-                  Simulateur de Budget
-                </h3>
-                <p className="text-xs text-muted leading-relaxed">
-                  3 formules complètes (Éco, Recommandée, Confort) chiffrées en direct selon votre capacité et vos souhaits.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5 pt-1">
+              <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition">
+                Simulateur Budget
+              </h3>
+              <div className="flex flex-wrap gap-1">
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Chiffrage CDF &amp; USD
+                  3 formules
                 </span>
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Lieux réels
+                  CDF &amp; USD
                 </span>
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                   Devis direct
                 </span>
               </div>
             </div>
+            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-primary group-hover:translate-x-0.5 transition">
+              <span>Calculer</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
 
-            <Link
-              href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
-              className="w-full inline-flex items-center justify-between pt-3 border-t border-border/70 text-xs font-bold text-primary group-hover:translate-x-0.5 transition"
-            >
-              <span>Calculer mon budget</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Atelier 2 : Studio Faire-Part & Invitations */}
-          <div className="rounded-2xl border border-pink-500/30 bg-gradient-to-b from-pink-500/5 via-surface to-surface p-5 flex flex-col justify-between gap-4 transition hover:border-pink-500 hover:shadow-xs group">
-            <div className="space-y-3">
+          {/* Studio 2 : Invitations */}
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
+            className="rounded-2xl border border-pink-500/30 bg-gradient-to-b from-pink-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-pink-500 hover:shadow-xs group"
+          >
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-105 transition">
+                <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-105 transition">
                   <Mail className="w-5 h-5" />
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
-
-              <div className="space-y-1">
-                <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
-                  Studio Invitations
-                </h3>
-                <p className="text-xs text-muted leading-relaxed">
-                  Cartons d’invitation verticaux 9:16 prêts pour WhatsApp avec lien de confirmation de présence (RSVP).
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5 pt-1">
+              <h3 className="font-display text-base font-semibold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
+                Invitations &amp; Cartes
+              </h3>
+              <div className="flex flex-wrap gap-1">
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Format 9:16 Story
+                  Format 9:16
                 </span>
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Partage WhatsApp
+                  WhatsApp
                 </span>
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  RSVP en direct
+                  Lien RSVP
                 </span>
               </div>
             </div>
+            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-pink-600 dark:text-pink-400 group-hover:translate-x-0.5 transition">
+              <span>Créer</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
 
-            <Link
-              href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
-              className="w-full inline-flex items-center justify-between pt-3 border-t border-border/70 text-xs font-bold text-pink-600 dark:text-pink-400 group-hover:translate-x-0.5 transition"
-            >
-              <span>Créer une invitation</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Atelier 3 : Studio Plans de Salle 2D / 3D */}
-          <div className="rounded-2xl border border-sky-500/30 bg-gradient-to-b from-sky-500/5 via-surface to-surface p-5 flex flex-col justify-between gap-4 transition hover:border-sky-500 hover:shadow-xs group">
-            <div className="space-y-3">
+          {/* Studio 3 : Plans 3D */}
+          <Link
+            href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
+            className="rounded-2xl border border-sky-500/30 bg-gradient-to-b from-sky-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-sky-500 hover:shadow-xs group"
+          >
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
                   <Building2 className="w-5 h-5" />
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
-
-              <div className="space-y-1">
-                <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-sky-600 dark:group-hover:text-sky-400 transition">
-                  Studio Plans 3D
-                </h3>
-                <p className="text-xs text-muted leading-relaxed">
-                  Modélisez votre lieu, disposez tables et buffets, puis visualisez le rendu dans l’espace immersif 3D.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5 pt-1">
+              <h3 className="font-display text-base font-semibold text-foreground group-hover:text-sky-600 dark:group-hover:text-sky-400 transition">
+                Plans de Salle 3D
+              </h3>
+              <div className="flex flex-wrap gap-1">
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Visite 3D WebGL
+                  Visite WebGL
                 </span>
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Tables &amp; Banquets
+                  Tables &amp; Buffets
                 </span>
                 <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Circulation
+                  Immersion
                 </span>
               </div>
             </div>
-
-            <Link
-              href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
-              className="w-full inline-flex items-center justify-between pt-3 border-t border-border/70 text-xs font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition"
-            >
-              <span>Ouvrir l’atelier 3D</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition">
+              <span>Agencer</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
         </div>
       </section>
 
-      {/* ─── 4. EXPLORATION PAR UNIVERS : LE MARKETPLACE DE RÉCEPTION ─── */}
-      <section aria-labelledby="marketplace-heading" className="space-y-4">
-        <div className="flex items-center justify-between border-b border-border/70 pb-3">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-              Sélection Qualifiée
-            </span>
-            <h2 id="marketplace-heading" className="font-display text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
-              Explorer par Univers
-            </h2>
-          </div>
+      {/* ─── 4. EXPLORATION PAR UNIVERS (CHIPS DIRECTS) ─── */}
+      <section aria-labelledby="marketplace-heading" className="space-y-3.5">
+        <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
+          <h2 id="marketplace-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight">
+            Explorer le Catalogue
+          </h2>
           <Link
             href="/dashboard/catalogue"
             className="text-xs font-bold text-muted hover:text-foreground inline-flex items-center gap-1 transition"
@@ -493,131 +413,124 @@ export default function ClientDashboardHome() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Univers 1 : Salles */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Salles */}
           <Link
             href="/dashboard/catalogue?kind=venue"
-            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
           >
-            <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Building2 className="w-5 h-5" />
+            <div className="space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Building2 className="w-4 h-4" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Lieux &amp; Espaces
-                </h3>
-                <p className="text-xs text-muted leading-relaxed">
-                  Salles climatisées, jardins de réception et domaines d’exception à Kinshasa et provinces.
-                </p>
+              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
+                Lieux &amp; Espaces
+              </h3>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Salles</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Jardins</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Domaines</span>
               </div>
             </div>
-            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Parcourir les salles</span>
-              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Explorer</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
             </div>
           </Link>
 
-          {/* Univers 2 : Prestataires */}
+          {/* Prestataires */}
           <Link
             href="/dashboard/catalogue?kind=service"
-            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
           >
-            <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Utensils className="w-5 h-5" />
+            <div className="space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Utensils className="w-4 h-4" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Prestataires de Réception
-                </h3>
-                <p className="text-xs text-muted leading-relaxed">
-                  Traiteurs, décorateurs, photographes, DJ et animation pour sublimer votre fête.
-                </p>
+              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
+                Prestataires
+              </h3>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Traiteurs</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">DJ</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Photo</span>
               </div>
             </div>
-            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Voir les prestataires</span>
-              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Explorer</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
             </div>
           </Link>
 
-          {/* Univers 3 : Location matériel */}
+          {/* Mobilier & Cortèges */}
           <Link
             href="/dashboard/catalogue?kind=rental"
-            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
           >
-            <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Truck className="w-5 h-5" />
+            <div className="space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Truck className="w-4 h-4" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Mobilier &amp; Cortèges
-                </h3>
-                <p className="text-xs text-muted leading-relaxed">
-                  Chaises VIP, chapiteaux, sonorisation professionnelle et véhicules de cortège.
-                </p>
+              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
+                Mobilier &amp; Cortèges
+              </h3>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Chaises</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Tentes</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Voitures</span>
               </div>
             </div>
-            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Consulter le matériel</span>
-              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Explorer</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
             </div>
           </Link>
 
-          {/* Univers 4 : Billetterie & Sorties */}
+          {/* Sorties & Billetterie */}
           <Link
             href="/dashboard/catalogue?kind=event"
-            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
           >
-            <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Ticket className="w-5 h-5" />
+            <div className="space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Ticket className="w-4 h-4" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Sorties &amp; Billetterie
-                </h3>
-                <p className="text-xs text-muted leading-relaxed">
-                  Concerts, galas de prestige et festivals en RDC. Billets avec pass QR instantané.
-                </p>
+              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
+                Billetterie
+              </h3>
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Concerts</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Galas</span>
+                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Pass QR</span>
               </div>
             </div>
-            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Voir les événements</span>
-              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Explorer</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
             </div>
           </Link>
         </div>
       </section>
 
-      {/* ─── 5. ENGAGEMENTS & CONCIERGERIE (100% SÉRÉNITÉ) ─── */}
-      <section className="rounded-2xl border border-border/80 bg-gradient-to-r from-surface via-surface to-surface-muted p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-2xs">
-        <div className="space-y-1.5 max-w-xl">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-              Une célébration en toute transparence
-            </h3>
-          </div>
-          <p className="text-xs text-muted leading-relaxed">
-            Consultez les fiches et demandez des devis sans frais. Vous réglez directement les acomptes aux prestataires de votre choix, sans intermédiaire financier sur les prestations.
-          </p>
+      {/* ─── 5. ENGAGEMENTS DIRECTS (1 SEULE LIGNE ÉPURÉE) ─── */}
+      <section className="rounded-2xl border border-border/80 bg-surface p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-2 text-xs text-muted font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          <span>Devis gratuits et sans engagement · Acomptes versés directement aux prestataires</span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
           <Link
             href="/dashboard/guide"
-            className="flex-1 md:flex-none text-center px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition min-h-[44px] inline-flex items-center justify-center"
+            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition min-h-[38px] inline-flex items-center justify-center"
           >
-            Guide pratique
+            Guide
           </Link>
           <Link
             href="/contact"
-            className="flex-1 md:flex-none text-center px-4 py-2.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs min-h-[44px] inline-flex items-center justify-center"
+            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs min-h-[38px] inline-flex items-center justify-center"
           >
-            Besoin d’assistance
+            Assistance
           </Link>
         </div>
       </section>
