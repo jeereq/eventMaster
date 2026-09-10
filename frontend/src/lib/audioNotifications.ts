@@ -1,4 +1,4 @@
-export const AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent'] as const;
+export const AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent', 'cosmic', 'fanfare'] as const;
 
 export type AudioNotificationPreset = (typeof AUDIO_NOTIFICATION_PRESETS)[number];
 
@@ -8,9 +8,11 @@ export const AUDIO_PRESET_LABELS: Record<AudioNotificationPreset, string> = {
   bell: 'Cloche',
   soft: 'Discret',
   urgent: 'Urgent',
+  cosmic: 'Onde cosmique studio',
+  fanfare: 'Fanfare festive',
 };
 
-export const AUDIO_NOTIFICATION_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks'] as const;
+export const AUDIO_NOTIFICATION_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks', 'studio'] as const;
 export type AudioNotificationFamily = (typeof AUDIO_NOTIFICATION_FAMILIES)[number];
 
 export interface AudioNotificationsSettings {
@@ -21,6 +23,8 @@ export interface AudioNotificationsSettings {
   commissions: AudioNotificationPreset;
   catalog: AudioNotificationPreset;
   tasks: AudioNotificationPreset;
+  studio: AudioNotificationPreset;
+  studioStepSound: boolean;
   default: AudioNotificationPreset;
 }
 
@@ -32,6 +36,8 @@ export const DEFAULT_AUDIO_NOTIFICATIONS: AudioNotificationsSettings = {
   commissions: 'chime',
   catalog: 'bell',
   tasks: 'soft',
+  studio: 'cosmic',
+  studioStepSound: true,
   default: 'chime',
 };
 
@@ -52,6 +58,8 @@ export function sanitizeAudioNotifications(raw: unknown): AudioNotificationsSett
     commissions: isAudioNotificationPreset(src.commissions) ? src.commissions : DEFAULT_AUDIO_NOTIFICATIONS.commissions,
     catalog: isAudioNotificationPreset(src.catalog) ? src.catalog : DEFAULT_AUDIO_NOTIFICATIONS.catalog,
     tasks: isAudioNotificationPreset(src.tasks) ? src.tasks : DEFAULT_AUDIO_NOTIFICATIONS.tasks,
+    studio: isAudioNotificationPreset(src.studio) ? src.studio : DEFAULT_AUDIO_NOTIFICATIONS.studio,
+    studioStepSound: src.studioStepSound !== false,
     default: isAudioNotificationPreset(src.default) ? src.default : DEFAULT_AUDIO_NOTIFICATIONS.default,
   };
 }
@@ -93,6 +101,22 @@ function tonesForPreset(preset: AudioNotificationPreset): Tone[] {
     return [
       { freq: 880, start: 0, duration: 0.1, type: 'square', gain: 0.09 },
       { freq: 1174, start: 0.14, duration: 0.14, type: 'square', gain: 0.1 },
+    ];
+  }
+  if (preset === 'cosmic') {
+    return [
+      { freq: 440, start: 0, duration: 0.14, type: 'sine', gain: 0.14 },
+      { freq: 659, start: 0.08, duration: 0.16, type: 'sine', gain: 0.18 },
+      { freq: 880, start: 0.16, duration: 0.24, type: 'triangle', gain: 0.22 },
+      { freq: 1318, start: 0.28, duration: 0.34, type: 'sine', gain: 0.15 },
+    ];
+  }
+  if (preset === 'fanfare') {
+    return [
+      { freq: 523, start: 0, duration: 0.12, type: 'triangle', gain: 0.18 },
+      { freq: 659, start: 0.1, duration: 0.12, type: 'triangle', gain: 0.18 },
+      { freq: 784, start: 0.2, duration: 0.14, type: 'triangle', gain: 0.2 },
+      { freq: 1046, start: 0.32, duration: 0.38, type: 'triangle', gain: 0.25 },
     ];
   }
   return [];
@@ -156,38 +180,45 @@ export function syncAudioNotificationSettings(settings: AudioNotificationsSettin
   liveAudioSettings = sanitizeAudioNotifications(settings);
 }
 
-function completeTones(): Tone[] {
-  return [
-    { freq: 523, start: 0, duration: 0.12, type: 'sine', gain: 0.16 },
-    { freq: 659, start: 0.1, duration: 0.14, type: 'sine', gain: 0.18 },
-    { freq: 784, start: 0.22, duration: 0.2, type: 'sine', gain: 0.2 },
-    { freq: 1046, start: 0.34, duration: 0.32, type: 'triangle', gain: 0.12 },
-  ];
+export function getLiveAudioSettings(): AudioNotificationsSettings {
+  return liveAudioSettings;
 }
 
-/** Carillon de fin de génération IA (invitation, plan de salle, simulation budget). */
-export function playAiGenerationCompleteSound() {
-  if (!liveAudioSettings.enabled || isLocalAudioMuted()) return;
+/** Tintement discret lors du passage d'une étape de studio IA. */
+export function playStudioStepSound(volumePercent?: number) {
+  if (!liveAudioSettings.enabled || isLocalAudioMuted() || !liveAudioSettings.studioStepSound) return;
   const ctx = getAudioContext();
   if (!ctx) return;
   if (ctx.state === 'suspended') {
-    void ctx.resume().then(() => playAiGenerationCompleteSound());
+    void ctx.resume();
     return;
   }
-
-  const master = Math.max(0, Math.min(1, liveAudioSettings.volume / 100));
+  const vol = volumePercent ?? liveAudioSettings.volume;
+  const master = Math.max(0, Math.min(1, vol / 100)) * 0.45;
   const now = ctx.currentTime;
-  for (const tone of completeTones()) {
+  const tones: Tone[] = [
+    { freq: 987, start: 0, duration: 0.07, type: 'sine', gain: 0.12 },
+    { freq: 1318, start: 0.035, duration: 0.1, type: 'sine', gain: 0.08 },
+  ];
+  for (const tone of tones) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = tone.type;
     osc.frequency.setValueAtTime(tone.freq, now + tone.start);
     gain.gain.setValueAtTime(0.0001, now + tone.start);
-    gain.gain.exponentialRampToValueAtTime(tone.gain * master, now + tone.start + 0.016);
+    gain.gain.exponentialRampToValueAtTime(tone.gain * master, now + tone.start + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.start + tone.duration);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start(now + tone.start);
-    osc.stop(now + tone.start + tone.duration + 0.03);
+    osc.stop(now + tone.start + tone.duration + 0.02);
   }
+}
+
+/** Son de fin de génération IA (invitation, plan de salle 3D, simulation budget). Configurable par le SuperAdmin. */
+export function playAiGenerationCompleteSound(customPreset?: AudioNotificationPreset) {
+  if (!liveAudioSettings.enabled || isLocalAudioMuted()) return;
+  const preset = customPreset || liveAudioSettings.studio || 'cosmic';
+  if (preset === 'off') return;
+  playAudioNotificationPreset(preset, liveAudioSettings.volume);
 }

@@ -34,8 +34,11 @@ let memoryCache: PlatformSettings | null = null;
 export type AuthOtpChannels = 'EMAIL' | 'WHATSAPP' | 'BOTH';
 export type AuthOtpMethod = 'EMAIL' | 'WHATSAPP';
 
-export const AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent'] as const;
+export const AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent', 'cosmic', 'fanfare'] as const;
 export type AudioNotificationPreset = (typeof AUDIO_NOTIFICATION_PRESETS)[number];
+
+export const AUDIO_NOTIFICATION_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks', 'studio'] as const;
+export type AudioNotificationFamily = (typeof AUDIO_NOTIFICATION_FAMILIES)[number];
 
 export interface AudioNotificationsSettings {
   enabled: boolean;
@@ -45,6 +48,8 @@ export interface AudioNotificationsSettings {
   commissions: AudioNotificationPreset;
   catalog: AudioNotificationPreset;
   tasks: AudioNotificationPreset;
+  studio: AudioNotificationPreset;
+  studioStepSound: boolean;
   default: AudioNotificationPreset;
 }
 
@@ -56,6 +61,8 @@ export const DEFAULT_AUDIO_NOTIFICATIONS: AudioNotificationsSettings = {
   commissions: 'chime',
   catalog: 'bell',
   tasks: 'soft',
+  studio: 'cosmic',
+  studioStepSound: true,
   default: 'chime',
 };
 
@@ -74,6 +81,8 @@ export function sanitizeAudioNotifications(raw: unknown): AudioNotificationsSett
     commissions: isAudioPreset(src.commissions) ? src.commissions : DEFAULT_AUDIO_NOTIFICATIONS.commissions,
     catalog: isAudioPreset(src.catalog) ? src.catalog : DEFAULT_AUDIO_NOTIFICATIONS.catalog,
     tasks: isAudioPreset(src.tasks) ? src.tasks : DEFAULT_AUDIO_NOTIFICATIONS.tasks,
+    studio: isAudioPreset(src.studio) ? src.studio : DEFAULT_AUDIO_NOTIFICATIONS.studio,
+    studioStepSound: src.studioStepSound !== false,
     default: isAudioPreset(src.default) ? src.default : DEFAULT_AUDIO_NOTIFICATIONS.default,
   };
 }

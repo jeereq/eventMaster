@@ -811,6 +811,7 @@ export default function AdminPlatformSettings({
             commissions: 'Commissions',
             catalog: 'Catalogue / marketplace',
             tasks: 'Tâches événement',
+            studio: 'Studio IA (Invitations, Plans 3D, Budgets)',
           };
           const patchAudio = (partial: Partial<typeof audio>) => {
             patch({ audioNotifications: { ...audio, ...partial } });
@@ -895,6 +896,24 @@ export default function AdminPlatformSettings({
                     Écouter
                   </button>
                 </div>
+              </div>
+
+              <div className="pt-3 border-t border-border space-y-2">
+                <label className="flex items-center justify-between gap-3 min-h-11 cursor-pointer">
+                  <div>
+                    <span className="text-sm font-medium text-foreground block">Tintement d’étape des loaders de studio</span>
+                    <span className="text-xs text-muted block leading-relaxed">
+                      Émet un son discret lors du passage de chaque étape de génération IA (lecture du brief, modélisation 3D, composition graphique, finitions).
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={audio.studioStepSound}
+                    onChange={(e) => patchAudio({ studioStepSound: e.target.checked })}
+                    className="accent-primary w-4 h-4 shrink-0 rounded"
+                    disabled={!audio.enabled}
+                  />
+                </label>
               </div>
             </div>
           );

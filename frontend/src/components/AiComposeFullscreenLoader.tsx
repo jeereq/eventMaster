@@ -2,8 +2,14 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Sparkles, type LucideIcon } from 'lucide-react';
+import { Check, Sparkles, Volume2, VolumeX, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import {
+  isLocalAudioMuted,
+  setLocalAudioMuted,
+  playStudioStepSound,
+  unlockAudioNotifications,
+} from '@/lib/audioNotifications';
 
 export type AiLoaderVariant = 'invitation' | 'room' | 'budget';
 
@@ -165,11 +171,21 @@ export function AiProcessFullscreenLoader({
   const [elapsed, setElapsed] = useState(0);
   const [waitLine, setWaitLine] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [muted, setMuted] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const prevStepIndexRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
+    setMuted(isLocalAudioMuted());
   }, []);
+
+  useEffect(() => {
+    if (active && stepIndex > prevStepIndexRef.current) {
+      playStudioStepSound();
+    }
+    prevStepIndexRef.current = stepIndex;
+  }, [active, stepIndex]);
 
   useEffect(() => {
     if (!active) {
@@ -260,16 +276,43 @@ export function AiProcessFullscreenLoader({
     <div
       ref={rootRef}
       tabIndex={-1}
-      className="em-stage em-stage-overlay flex items-center justify-center px-5"
+      className="em-stage em-stage-overlay flex items-center justify-center px-5 relative"
       role="alertdialog"
       aria-modal="true"
       aria-busy="true"
       aria-labelledby="ai-process-loader-title"
       aria-describedby="ai-process-loader-desc"
     >
+      <div className="absolute top-5 right-5 z-30 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            unlockAudioNotifications();
+            const next = !muted;
+            setMuted(next);
+            setLocalAudioMuted(next);
+          }}
+          aria-label={muted ? 'Activer le son du studio' : 'Couper le son du studio'}
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-stage-elevated/85 hover:bg-stage-elevated border border-stage-foreground/20 text-xs font-semibold text-stage-foreground transition shadow-xl backdrop-blur-md active:scale-95"
+        >
+          {muted ? (
+            <>
+              <VolumeX className="w-4 h-4 text-rose-400 shrink-0" />
+              <span className="text-stage-foreground/75">Son désactivé</span>
+            </>
+          ) : (
+            <>
+              <Volume2 className="w-4 h-4 text-primary shrink-0 animate-pulse" />
+              <span>Son studio actif</span>
+            </>
+          )}
+        </button>
+      </div>
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-        <div className="absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl motion-safe:animate-pulse" />
-        <div className="absolute bottom-[-3rem] right-[-2rem] h-72 w-72 rounded-full bg-festive-accent/15 blur-3xl" />
+        <div className="absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/25 blur-3xl motion-safe:animate-pulse" />
+        <div className="absolute bottom-[-3rem] right-[-2rem] h-72 w-72 rounded-full bg-festive-accent/20 blur-3xl" />
+        <div className="absolute top-1/3 left-10 h-60 w-60 rounded-full bg-primary/10 blur-2xl" />
       </div>
 
       <div className="relative w-full max-w-md text-center text-stage-foreground">
