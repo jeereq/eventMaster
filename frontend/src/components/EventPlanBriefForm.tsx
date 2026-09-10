@@ -231,7 +231,7 @@ export default function EventPlanBriefForm({
         </FieldSelect>
         <FieldSelect
           label="Commune"
-          hint="Optionnel. Affinez le quartier ; vide = toute la ville."
+          hint="Optionnel. Affinez par commune ; vide = toute la ville."
           value={brief.commune}
           onChange={(value) => patch({ commune: value })}
         >

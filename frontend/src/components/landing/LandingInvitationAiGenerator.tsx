@@ -160,6 +160,38 @@ export interface FormActionItem {
   snapshotPrompt?: string;
 }
 
+const QUICK_INVITATION_INSPIRATIONS: Array<{
+  emoji: string;
+  label: string;
+  artStyle: InvitationArtStyleId;
+  prompt: string;
+}> = [
+  {
+    emoji: '💍',
+    label: 'Mariage Princier',
+    artStyle: 'realiste',
+    prompt: 'Mariage princier grandiose, or étincelant et ivoire, fleurs blanches délicates, éclairage doux et chaleureux, typographie royale raffinée.',
+  },
+  {
+    emoji: '👑',
+    label: 'Dot Coutumière',
+    artStyle: 'illustration',
+    prompt: 'Cérémonie de dot traditionnelle congolaise, motifs wax royaux, teintes chaudes ocre, or et terre cuite, ambiance festive et digne.',
+  },
+  {
+    emoji: '🎂',
+    label: 'Anniversaire Chic',
+    artStyle: 'aquarelle',
+    prompt: 'Anniversaire chic et festif, émeraude lumineuse et champagne, confettis dorés subtils, cocktail moderne et élégant.',
+  },
+  {
+    emoji: '🏛️',
+    label: 'Gala Prestige',
+    artStyle: 'stylise-3d',
+    prompt: 'Soirée de gala d’entreprise prestigieuse, ardoise sobre et reflets or brossé, architecture contemporaine et typographie épurée.',
+  },
+];
+
 export default function LandingInvitationAiGenerator({
   className,
   id = 'generateur-ia',
@@ -865,7 +897,43 @@ export default function LandingInvitationAiGenerator({
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
+                {/* Inspirations prêtes à l'emploi en 1 clic */}
+                {studioIntent !== 'clone' ? (
+                  <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
+                    <span className="text-[11px] text-muted font-medium flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-primary" />
+                      Inspirations festives en 1 clic :
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {QUICK_INVITATION_INSPIRATIONS.map((item) => {
+                        const active = prompt === item.prompt;
+                        return (
+                          <button
+                            key={item.label}
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              updatePromptWithHistory(item.prompt, `Inspiration : ${item.label}`);
+                              setArtStyle(item.artStyle);
+                              persistInvitationArtStyle(item.artStyle);
+                            }}
+                            className={cn(
+                              'text-xs font-semibold px-2.5 py-1 min-h-[36px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                              active
+                                ? 'border-primary bg-primary text-white shadow-2xs'
+                                : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
+                            )}
+                          >
+                            <span>{item.emoji}</span>
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
                     {studioIntent === 'clone' ? 'Ce qu’il faut reprendre' : 'Décrivez la fête'}
@@ -914,6 +982,24 @@ export default function LandingInvitationAiGenerator({
                   }
                   className="w-full rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
                 />
+
+                {/* Indicateur de statut de saisie dynamique */}
+                <div className="flex items-center justify-between text-[11px] text-muted px-0.5">
+                  {prompt.trim().length === 0 ? (
+                    <span className="text-muted">
+                      💡 Cliquez sur une inspiration ci-dessus ou décrivez votre célébration.
+                    </span>
+                  ) : prompt.trim().length < 8 ? (
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">
+                      ✍️ Ajoutez encore quelques mots (minimum 8 caractères).
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Brief prêt pour la composition IA.
+                    </span>
+                  )}
+                </div>
 
                 <InvitationArtStylePicker
                   id={`${id}-art-style`}
@@ -1386,14 +1472,49 @@ export default function LandingInvitationAiGenerator({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 px-2">
-              <div className="w-14 h-14 rounded-[var(--radius-card)] bg-surface border border-border flex items-center justify-center shadow-2xs">
-                <Sparkles className="w-6 h-6 text-primary/60" aria-hidden />
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 px-2 py-4">
+              {/* Silhouette interactive 9:16 prévisualisant la future carte */}
+              <div
+                className="w-full max-w-[15rem] aspect-[9/16] rounded-2xl border-2 border-dashed border-primary/30 bg-surface/80 p-4 flex flex-col justify-between items-center relative overflow-hidden shadow-sm group hover:border-primary/60 transition-colors"
+                role="img"
+                aria-label="Aperçu du gabarit de carte 9:16 en attente de génération"
+              >
+                {/* Halo d'ambiance accordé au style artistique */}
+                <div
+                  className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-primary/5 pointer-events-none"
+                  aria-hidden
+                />
+
+                {/* En-tête silhouette */}
+                <div className="space-y-1.5 w-full text-center relative z-10 pt-1">
+                  <div className="inline-flex items-center justify-center p-1.5 rounded-full bg-primary/15 text-primary mb-1">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                  </div>
+                  <div className="h-2 w-16 mx-auto rounded-full bg-primary/25" />
+                  <div className="h-3 w-28 mx-auto rounded-full bg-foreground/20 font-serif" />
+                </div>
+
+                {/* Corps de carte silhouette (Mockup dynamique) */}
+                <div className="w-full space-y-2 py-2 px-1 relative z-10">
+                  <div className="h-4 w-36 mx-auto rounded bg-primary/30" />
+                  <div className="h-2 w-24 mx-auto rounded bg-foreground/15" />
+                  <div className="h-2 w-32 mx-auto rounded bg-foreground/15" />
+                  <div className="h-2 w-20 mx-auto rounded bg-foreground/10" />
+                </div>
+
+                {/* Pied de carte avec badge QR & RSVP */}
+                <div className="w-full pt-2 border-t border-border/60 flex items-center justify-between text-[10px] text-muted relative z-10 px-1">
+                  <span className="font-semibold text-primary">Pass QR · RSVP</span>
+                  <span className="font-mono text-[9px] opacity-75">Format 9:16</span>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-foreground">Votre carte apparaîtra ici</p>
-              <p className="text-xs text-muted leading-relaxed max-w-[16rem]">
-                Décrivez la fête ou déposez une carte à cloner, puis créez l’invitation.
-              </p>
+
+              <div className="space-y-1 max-w-[16rem]">
+                <p className="text-sm font-bold text-foreground">Aperçu interactif 9:16</p>
+                <p className="text-xs text-muted leading-relaxed">
+                  Choisissez une inspiration en 1 clic ou décrivez votre fête, puis cliquez sur <strong>« Créer la carte »</strong>.
+                </p>
+              </div>
             </div>
           )}
         </aside>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check } from 'lucide-react';
+import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, ArrowRight, DollarSign } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -81,6 +81,10 @@ export type EventPrepAiDefaults = {
   keepServiceSlugs?: string[];
 };
 
+const GUEST_PRESETS = [50, 100, 150, 250, 500];
+const BUDGET_PRESETS_USD = [800, 1500, 3000, 5000, 10000];
+const BUDGET_PRESETS_CDF = [2500000, 5000000, 8500000, 15000000, 30000000];
+
 export default function EventPrepAiSimulator({
   defaults,
   applyLabel = 'Appliquer à la préparation',
@@ -122,14 +126,14 @@ export default function EventPrepAiSimulator({
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
   const [city, setCity] = useState(defaults?.city || '');
   const [commune, setCommune] = useState(defaults?.commune || '');
-  const [neighborhood, setNeighborhood] = useState('');
   const [guestCount, setGuestCount] = useState(defaults?.guestCount && defaults.guestCount > 0 ? String(defaults.guestCount) : '');
-  const [budgetMinUsd, setBudgetMinUsd] = useState('');
-  const [budgetMaxUsd, setBudgetMaxUsd] = useState(() => {
+  const [budgetCurrency, setBudgetCurrency] = useState<'USD' | 'CDF'>('USD');
+  const [budgetInputVal, setBudgetInputVal] = useState(() => {
     if (defaults?.budgetMaxUsd && defaults.budgetMaxUsd > 0) return String(defaults.budgetMaxUsd);
     if (defaults?.budgetMaxFc && defaults.budgetMaxFc > 0) return String(Math.round(defaults.budgetMaxFc / exchangeRate));
     return '';
   });
+  const [budgetMinInputVal, setBudgetMinInputVal] = useState('');
   const [eventDate, setEventDate] = useState(defaults?.eventDate?.slice(0, 10) || '');
 
   useEffect(() => {
@@ -164,15 +168,71 @@ export default function EventPrepAiSimulator({
   const categoryChoices = useMemo(() => suggestedCategoriesForEvent(eventType), [eventType]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
-  const budgetMaxFcCalculated = useMemo(() => {
-    const parsed = parseFloat(String(budgetMaxUsd).replace(/\s+/g, ''));
-    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * exchangeRate) : 0;
-  }, [budgetMaxUsd, exchangeRate]);
+  const { budgetMaxUsdCalculated, budgetMaxFcCalculated } = useMemo(() => {
+    const raw = String(budgetInputVal || '').replace(/\s+/g, '').replace(',', '.');
+    const parsed = parseFloat(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return { budgetMaxUsdCalculated: 0, budgetMaxFcCalculated: 0 };
+    }
+    if (budgetCurrency === 'USD') {
+      return {
+        budgetMaxUsdCalculated: Math.round(parsed),
+        budgetMaxFcCalculated: Math.round(parsed * exchangeRate),
+      };
+    } else {
+      return {
+        budgetMaxUsdCalculated: Math.round(parsed / exchangeRate),
+        budgetMaxFcCalculated: Math.round(parsed),
+      };
+    }
+  }, [budgetInputVal, budgetCurrency, exchangeRate]);
 
-  const budgetMinFcCalculated = useMemo(() => {
-    const parsed = parseFloat(String(budgetMinUsd).replace(/\s+/g, ''));
-    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * exchangeRate) : 0;
-  }, [budgetMinUsd, exchangeRate]);
+  const { budgetMinUsdCalculated, budgetMinFcCalculated } = useMemo(() => {
+    const raw = String(budgetMinInputVal || '').replace(/\s+/g, '').replace(',', '.');
+    const parsed = parseFloat(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return { budgetMinUsdCalculated: 0, budgetMinFcCalculated: 0 };
+    }
+    if (budgetCurrency === 'USD') {
+      return {
+        budgetMinUsdCalculated: Math.round(parsed),
+        budgetMinFcCalculated: Math.round(parsed * exchangeRate),
+      };
+    } else {
+      return {
+        budgetMinUsdCalculated: Math.round(parsed / exchangeRate),
+        budgetMinFcCalculated: Math.round(parsed),
+      };
+    }
+  }, [budgetMinInputVal, budgetCurrency, exchangeRate]);
+
+  const handleCurrencySwitch = (next: 'USD' | 'CDF') => {
+    if (next === budgetCurrency) return;
+    setBudgetCurrency(next);
+    if (budgetMaxUsdCalculated > 0) {
+      setBudgetInputVal(next === 'CDF' ? String(budgetMaxFcCalculated) : String(budgetMaxUsdCalculated));
+    }
+    if (budgetMinUsdCalculated > 0) {
+      setBudgetMinInputVal(next === 'CDF' ? String(budgetMinFcCalculated) : String(budgetMinUsdCalculated));
+    }
+  };
+
+  const parsedGuestCount = Number(guestCount) || 0;
+  const guestRatio = useMemo(() => {
+    if (parsedGuestCount <= 0 || budgetMaxFcCalculated <= 0) return null;
+    const perGuestUsd = Math.round(budgetMaxUsdCalculated / parsedGuestCount);
+    const perGuestFc = Math.round(budgetMaxFcCalculated / parsedGuestCount);
+    let advice = 'Budget équilibré : buffet complet, sono, déco et reportage';
+    let tone: 'emerald' | 'amber' | 'primary' = 'primary';
+    if (perGuestUsd < 15) {
+      advice = 'Budget serré ou cocktail : idéal pour une réception intime ou salle économique';
+      tone = 'amber';
+    } else if (perGuestUsd >= 35) {
+      advice = 'Budget confort & prestige : dîner assis, déco soignée et prestataires premium';
+      tone = 'emerald';
+    }
+    return { perGuestUsd, perGuestFc, advice, tone };
+  }, [parsedGuestCount, budgetMaxUsdCalculated, budgetMaxFcCalculated]);
 
   const budgetValue = budgetMaxFcCalculated;
 
@@ -184,17 +244,24 @@ export default function EventPrepAiSimulator({
   const criteriaFromCache = (cached: ReturnType<typeof historyItemToCache>) => {
     const fromResult = cached.result.criteria || {};
     const fromBrief = cached.brief;
-    setNeighborhood(String(fromBrief.neighborhood || fromResult.neighborhood || ''));
     setAmbiance((fromBrief.ambiance || fromResult.ambiance || '') as AiAmbianceId | '');
     setMoment((fromBrief.moment || fromResult.moment || '') as AiMomentId | '');
     setSetting((fromBrief.setting || fromResult.setting || '') as AiSettingId | '');
     const min = fromBrief.budgetMinFc ?? fromResult.budgetMinFc;
-    setBudgetMinUsd(min ? String(Math.round(Number(min) / exchangeRate)) : '');
+    if (min && Number(min) > 0) {
+      if (budgetCurrency === 'USD') {
+        setBudgetMinInputVal(String(Math.round(Number(min) / exchangeRate)));
+      } else {
+        setBudgetMinInputVal(String(Math.round(Number(min))));
+      }
+    } else {
+      setBudgetMinInputVal('');
+    }
     const cats = fromBrief.wantedCategories || fromResult.wantedCategories || [];
     setWantedCategories(cats.filter((id): id is ServiceCategory => Boolean(id)));
     const amenities = fromBrief.venueAmenities || fromResult.venueAmenities || [];
     setVenueAmenities(amenities.filter((id): id is ListingAmenityId => Boolean(id)));
-    if (cats.length || amenities.length || fromBrief.neighborhood || fromResult.neighborhood) {
+    if (cats.length || amenities.length) {
       setAdvancedOpen(true);
     }
   };
@@ -209,7 +276,17 @@ export default function EventPrepAiSimulator({
     if (cached.brief.commune != null) setCommune(cached.brief.commune);
     if (cached.brief.guestCount) setGuestCount(String(cached.brief.guestCount));
     if (cached.brief.budgetMaxFc) {
-      setBudgetMaxUsd(String(Math.round(Number(cached.brief.budgetMaxFc) / exchangeRate)));
+      if (budgetCurrency === 'USD') {
+        setBudgetInputVal(String(Math.round(Number(cached.brief.budgetMaxFc) / exchangeRate)));
+      } else {
+        setBudgetInputVal(String(Math.round(Number(cached.brief.budgetMaxFc))));
+      }
+    } else if (cached.brief.budgetMaxUsd) {
+      if (budgetCurrency === 'USD') {
+        setBudgetInputVal(String(cached.brief.budgetMaxUsd));
+      } else {
+        setBudgetInputVal(String(Math.round(Number(cached.brief.budgetMaxUsd) * exchangeRate)));
+      }
     }
     if (cached.brief.eventDate) setEventDate(String(cached.brief.eventDate).slice(0, 10));
     if (cached.brief.prompt != null) setPrompt(cached.brief.prompt);
@@ -228,9 +305,17 @@ export default function EventPrepAiSimulator({
     if (seed.commune != null) setCommune(seed.commune);
     if (seed.guestCount && seed.guestCount > 0) setGuestCount(String(seed.guestCount));
     if (seed.budgetMaxUsd && seed.budgetMaxUsd > 0) {
-      setBudgetMaxUsd(String(seed.budgetMaxUsd));
+      if (budgetCurrency === 'USD') {
+        setBudgetInputVal(String(seed.budgetMaxUsd));
+      } else {
+        setBudgetInputVal(String(Math.round(seed.budgetMaxUsd * exchangeRate)));
+      }
     } else if (seed.budgetMaxFc && seed.budgetMaxFc > 0) {
-      setBudgetMaxUsd(String(Math.round(seed.budgetMaxFc / exchangeRate)));
+      if (budgetCurrency === 'CDF') {
+        setBudgetInputVal(String(seed.budgetMaxFc));
+      } else {
+        setBudgetInputVal(String(Math.round(seed.budgetMaxFc / exchangeRate)));
+      }
     }
     if (seed.eventDate) setEventDate(seed.eventDate.slice(0, 10));
     if (seed.keepVenueSlug) setKeepVenue(true);
@@ -242,9 +327,9 @@ export default function EventPrepAiSimulator({
     ambiance: ambiance || undefined,
     moment: moment || undefined,
     setting: setting || undefined,
-    neighborhood: neighborhood.trim() || undefined,
+    neighborhood: undefined,
     budgetMinFc: budgetMinFcCalculated > 0 ? budgetMinFcCalculated : null,
-    budgetMinUsd: budgetMinUsd ? Number(budgetMinUsd) : undefined,
+    budgetMinUsd: budgetMinUsdCalculated > 0 ? budgetMinUsdCalculated : undefined,
     wantedCategories,
     venueAmenities,
   });
@@ -326,7 +411,7 @@ export default function EventPrepAiSimulator({
         commune,
         guestCount: guestCount ? Number(guestCount) : undefined,
         budgetMaxFc: budgetMaxFcCalculated > 0 ? budgetMaxFcCalculated : undefined,
-        budgetMaxUsd: budgetMaxUsd ? Number(budgetMaxUsd) : undefined,
+        budgetMaxUsd: budgetMaxUsdCalculated > 0 ? budgetMaxUsdCalculated : undefined,
         eventDate: eventDate || undefined,
         prompt: prompt.trim() || undefined,
         includeVenue,
@@ -355,7 +440,7 @@ export default function EventPrepAiSimulator({
           commune,
           guestCount: guestCount ? Number(guestCount) : null,
           budgetMaxFc: budgetMaxFcCalculated > 0 ? budgetMaxFcCalculated : null,
-          budgetMaxUsd: budgetMaxUsd ? Number(budgetMaxUsd) : null,
+          budgetMaxUsd: budgetMaxUsdCalculated > 0 ? budgetMaxUsdCalculated : null,
           eventDate,
           ...criteria,
         },
@@ -684,31 +769,39 @@ export default function EventPrepAiSimulator({
                 ))}
               </select>
             </label>
-            <Input
-              label="Invités"
-              type="number"
-              min={1}
-              value={guestCount}
-              onChange={(e) => setGuestCount(e.target.value)}
-              placeholder="120"
-            />
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Input
-                label="Budget max ($ USD)"
+                label="Invités"
                 type="number"
                 min={1}
-                value={budgetMaxUsd}
-                onChange={(e) => setBudgetMaxUsd(e.target.value)}
-                placeholder="1 500"
+                value={guestCount}
+                onChange={(e) => setGuestCount(e.target.value)}
+                placeholder="120"
               />
-              <div className="flex items-center justify-between text-xs text-muted px-0.5">
-                <span>Calculé en francs :</span>
-                <span className="font-semibold text-primary-solid">
-                  {budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—'}
-                </span>
+              <div className="flex flex-wrap gap-1 items-center" role="group" aria-label="Raccourcis nombre d'invités">
+                <span className="text-[11px] text-muted mr-0.5 font-medium">Rapide :</span>
+                {GUEST_PRESETS.map((count) => {
+                  const active = guestCount === String(count);
+                  return (
+                    <button
+                      key={count}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setGuestCount(String(count))}
+                      className={cn(
+                        'text-xs font-semibold px-2.5 py-1 min-h-[36px] min-w-[36px] rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        active
+                          ? 'border-primary bg-primary text-white shadow-2xs'
+                          : 'border-border bg-surface-muted/50 text-foreground hover:border-primary/50 hover:bg-surface',
+                      )}
+                    >
+                      {count}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <Input
                 label="Date"
                 type="date"
@@ -717,6 +810,124 @@ export default function EventPrepAiSimulator({
               />
             </div>
           </div>
+
+          {/* Bloc Budget Max intuitif */}
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="space-y-0.5">
+                <span className={FIELD_LABEL}>Budget maximum</span>
+                <p className="text-[11px] text-muted">
+                  Saisissez directement en dollars ou en francs congolais
+                </p>
+              </div>
+
+              {/* Devise USD / CDF */}
+              <div
+                className="inline-flex rounded-lg p-0.5 bg-surface-muted border border-border text-xs"
+                role="group"
+                aria-label="Devise du budget"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleCurrencySwitch('USD')}
+                  className={cn(
+                    'px-2.5 py-1 font-bold rounded-md text-xs transition cursor-pointer',
+                    budgetCurrency === 'USD'
+                      ? 'bg-primary text-white shadow-2xs'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  $ USD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCurrencySwitch('CDF')}
+                  className={cn(
+                    'px-2.5 py-1 font-bold rounded-md text-xs transition cursor-pointer',
+                    budgetCurrency === 'CDF'
+                      ? 'bg-primary text-white shadow-2xs'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  FC (CDF)
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-start">
+              <Input
+                label=""
+                type="number"
+                min={1}
+                value={budgetInputVal}
+                onChange={(e) => setBudgetInputVal(e.target.value)}
+                placeholder={budgetCurrency === 'USD' ? 'Ex. 2 500' : 'Ex. 7 000 000'}
+                aria-label={budgetCurrency === 'USD' ? 'Budget maximum en dollars' : 'Budget maximum en francs congolais'}
+              />
+              <div className="sm:self-center px-3 py-2 rounded-[var(--radius-card)] bg-surface-muted border border-border/80 text-xs text-muted flex items-center justify-between sm:justify-start gap-2">
+                <span>Équivalent :</span>
+                <span className="font-extrabold text-primary-solid tabular-nums">
+                  {budgetCurrency === 'USD'
+                    ? (budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—')
+                    : (budgetMaxUsdCalculated > 0 ? `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $` : '—')}
+                </span>
+              </div>
+            </div>
+
+            {/* Presets rapides de budget */}
+            <div className="flex flex-wrap gap-1.5 items-center pt-0.5" role="group" aria-label="Paliers de budget">
+              <span className="text-[11px] text-muted mr-0.5 font-medium">Paliers suggérés :</span>
+              {(budgetCurrency === 'USD' ? BUDGET_PRESETS_USD : BUDGET_PRESETS_CDF).map((preset) => {
+                const active = budgetInputVal === String(preset);
+                const label = budgetCurrency === 'USD'
+                  ? `${preset.toLocaleString('fr-FR')} $`
+                  : `${(preset / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M FC`;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setBudgetInputVal(String(preset))}
+                    className={cn(
+                      'text-xs font-semibold px-2.5 py-1 min-h-[36px] rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      active
+                        ? 'border-primary bg-primary text-white shadow-2xs'
+                        : 'border-border bg-surface-muted text-foreground hover:border-primary/50 hover:bg-surface',
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ratio par invité en direct */}
+          {guestRatio ? (
+            <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-foreground">Ratio par convive :</span>
+                  <span className="text-sm font-extrabold text-primary-solid tabular-nums">
+                    ~{guestRatio.perGuestUsd} $ <span className="text-xs font-semibold text-muted">({guestRatio.perGuestFc.toLocaleString('fr-FR')} FC)</span>
+                  </span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  {guestRatio.advice}
+                </p>
+              </div>
+              <span className={cn(
+                'inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 self-start sm:self-center',
+                guestRatio.tone === 'emerald'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                  : guestRatio.tone === 'amber'
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                    : 'bg-primary/15 text-primary border border-primary/30',
+              )}>
+                {guestRatio.tone === 'emerald' ? '✨ Grand confort' : guestRatio.tone === 'amber' ? '⚡ Budget serré' : '👍 Équilibré'}
+              </span>
+            </div>
+          ) : null}
 
           <div className="flex items-center justify-between text-xs text-muted bg-surface-muted/60 px-3 py-1.5 rounded-[var(--radius-card)] border border-border/70">
             <span>Taux de change appliqué :</span>
@@ -809,28 +1020,24 @@ export default function EventPrepAiSimulator({
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="space-y-1">
                   <Input
-                    label="Quartier"
-                    value={neighborhood}
-                    onChange={(e) => setNeighborhood(e.target.value)}
-                    placeholder="Gombe, Golf…"
+                    label={budgetCurrency === 'USD' ? 'Budget minimum ($ USD)' : 'Budget minimum (FC CDF)'}
+                    type="number"
+                    min={0}
+                    value={budgetMinInputVal}
+                    onChange={(e) => setBudgetMinInputVal(e.target.value)}
+                    placeholder={budgetCurrency === 'USD' ? 'Optionnel (ex: 500 $)' : 'Optionnel (ex: 1 400 000 FC)'}
                   />
-                  <div className="space-y-1">
-                    <Input
-                      label="Budget min ($ USD)"
-                      type="number"
-                      min={0}
-                      value={budgetMinUsd}
-                      onChange={(e) => setBudgetMinUsd(e.target.value)}
-                      placeholder="Optionnel (ex: 500)"
-                    />
-                    {budgetMinFcCalculated > 0 ? (
-                      <p className="text-xs text-muted text-right px-0.5">
-                        Calculé : <span className="font-semibold text-primary-solid">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span>
-                      </p>
-                    ) : null}
-                  </div>
+                  {budgetMinFcCalculated > 0 ? (
+                    <p className="text-xs text-muted text-right px-0.5">
+                      {budgetCurrency === 'USD' ? (
+                        <>Calculé en francs : <span className="font-semibold text-primary-solid">{budgetMinFcCalculated.toLocaleString('fr-FR')} FC</span></>
+                      ) : (
+                        <>Calculé en dollars : <span className="font-semibold text-primary-solid">{budgetMinUsdCalculated.toLocaleString('fr-FR')} $</span></>
+                      )}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
                   <p className={FIELD_LABEL}>Prestations souhaitées</p>
@@ -971,10 +1178,17 @@ export default function EventPrepAiSimulator({
                 >
                   <div className="space-y-1 w-full">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-surface border border-border text-foreground">
-                        {pack.label}
-                      </span>
-                      <span className="text-xs font-semibold text-primary-solid">Éléments</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-surface border border-border text-foreground">
+                          {pack.label}
+                        </span>
+                        {pack.id.includes('equilibre') ? (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                            Recommandé
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="text-xs font-semibold text-primary-solid">Détails</span>
                     </div>
                     {pack.summary ? (
                       <p className="text-xs font-bold text-foreground leading-snug mt-1">{pack.summary}</p>
@@ -984,10 +1198,15 @@ export default function EventPrepAiSimulator({
                     ) : null}
                   </div>
 
-                  <div className="pt-2 border-t border-border/60 w-full mt-auto">
-                    <p className="text-base font-black text-foreground tabular-nums">
-                      {formatFc(pack.estimatedTotalFc)}
-                    </p>
+                  <div className="pt-2 border-t border-border/60 w-full mt-auto space-y-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-base font-black text-foreground tabular-nums">
+                        {formatFc(pack.estimatedTotalFc)}
+                      </p>
+                      <p className="text-xs font-semibold text-muted tabular-nums">
+                        ≈ {Math.round(pack.estimatedTotalFc / exchangeRate).toLocaleString('fr-FR')} $
+                      </p>
+                    </div>
                     <p className="text-xs text-muted">
                       {pack.venue ? '1 salle' : 'Sans salle'} + {pack.services.length} prestataire{pack.services.length > 1 ? 's' : ''}
                     </p>
@@ -998,6 +1217,10 @@ export default function EventPrepAiSimulator({
                           : `Dépassement ${formatFc(Math.abs(packLeftover))}`}
                       </p>
                     ) : null}
+                    <div className="pt-1 flex items-center justify-between text-xs font-semibold text-primary-solid">
+                      <span>Explorer la formule</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </div>
                   </div>
                 </button>
               );
