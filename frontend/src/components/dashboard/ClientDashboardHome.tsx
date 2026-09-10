@@ -23,150 +23,17 @@ import {
   Calendar,
   Layers,
   HelpCircle,
+  ExternalLink,
+  ChevronRight,
+  MapPin,
+  PartyPopper,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import { cn } from '@/lib/cn';
-
-export type ClientIntent =
-  | 'venue'
-  | 'service'
-  | 'rental'
-  | 'event'
-  | 'template';
-
-interface ClientIntentConfig {
-  id: ClientIntent;
-  title: string;
-  badge: string;
-  tagline: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  accentColor: string;
-  ctaLabel: string;
-  ctaHref: string;
-  quickFilters: Array<{ label: string; href: string }>;
-  features: string[];
-}
-
-const CLIENT_INTENTS: ClientIntentConfig[] = [
-  {
-    id: 'venue',
-    title: 'Trouver une salle',
-    badge: 'Lieux & Espaces',
-    tagline: 'Salles, jardins et domaines de réception',
-    description:
-      'Lieux de réception avec tarifs transparents, capacités d’accueil réelles et visites 3D immersives.',
-    icon: Building2,
-    accentColor: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400',
-    ctaLabel: 'Parcourir les salles',
-    ctaHref: '/dashboard/catalogue?kind=venue',
-    quickFilters: [
-      { label: 'Mariages & Grands galas', href: '/dashboard/catalogue?kind=venue&type=wedding' },
-      { label: 'Salles à la Gombe', href: '/dashboard/catalogue?kind=venue&q=Gombe' },
-      { label: 'Jardins & Plein air', href: '/dashboard/catalogue?kind=venue&type=garden' },
-      { label: 'Conférences & Salons', href: '/dashboard/catalogue?kind=venue&type=conference' },
-    ],
-    features: [
-      'Visites 3D et plans de salle',
-      'Disponibilités vérifiées',
-      'Devis gratuits et sans engagement',
-    ],
-  },
-  {
-    id: 'service',
-    title: 'Trouver des prestataires',
-    badge: 'Prestataires',
-    tagline: 'Traiteurs, décorateurs, photographes, DJ et animation',
-    description:
-      'Professionnels vérifiés avec portfolios, avis et devis sur-mesure pour votre réception.',
-    icon: Utensils,
-    accentColor: 'from-amber-500/10 to-orange-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400',
-    ctaLabel: 'Voir les prestataires',
-    ctaHref: '/dashboard/catalogue?kind=service',
-    quickFilters: [
-      { label: 'Traiteurs & Buffets', href: '/dashboard/catalogue?kind=service&cat=caterer' },
-      { label: 'Décoration & Scénographie', href: '/dashboard/catalogue?kind=service&cat=decoration' },
-      { label: 'Studios Photo & Vidéo', href: '/dashboard/catalogue?kind=service&cat=photographer' },
-      { label: 'DJ & Sonorisation', href: '/dashboard/catalogue?kind=service&cat=dj' },
-    ],
-    features: [
-      'Portfolios récents',
-      'Devis personnalisés directs',
-      'Prestataires recommandés',
-    ],
-  },
-  {
-    id: 'rental',
-    title: 'Louer du matériel & véhicules',
-    badge: 'Mobilier & Matériel',
-    tagline: 'Chaises VIP, tables, chapiteaux, sonorisation et cortèges',
-    description:
-      'Mobilier de réception, tentes, sonorisation, éclairage et voitures de cortège.',
-    icon: Truck,
-    accentColor: 'from-cyan-500/10 to-blue-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300',
-    ctaLabel: 'Voir le matériel',
-    ctaHref: '/dashboard/catalogue?kind=rental',
-    quickFilters: [
-      { label: 'Tentes & Chapiteaux', href: '/dashboard/catalogue?kind=rental&cat=tent' },
-      { label: 'Chaises & Mobilier VIP', href: '/dashboard/catalogue?kind=rental&cat=chairs' },
-      { label: 'Sonorisation & Éclairage', href: '/dashboard/catalogue?kind=rental&cat=sound' },
-      { label: 'Voitures de cortège', href: '/dashboard/catalogue?kind=rental&cat=cars' },
-    ],
-    features: [
-      'Tarifs clairs à la journée',
-      'Livraison et installation',
-      'Disponibilité garantie',
-    ],
-  },
-  {
-    id: 'event',
-    title: 'Prendre mes billets',
-    badge: 'Billetterie',
-    tagline: 'Concerts, festivals, galas et soirées',
-    description:
-      'Achetez vos places par Mobile Money ou carte et recevez instantanément votre pass QR.',
-    icon: Ticket,
-    accentColor: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
-    ctaLabel: 'Voir les événements',
-    ctaHref: '/dashboard/catalogue?kind=event',
-    quickFilters: [
-      { label: 'Concerts & Festivals', href: '/dashboard/catalogue?kind=event&type=concert' },
-      { label: 'Galas & Soirées', href: '/dashboard/catalogue?kind=event&type=gala' },
-      { label: 'Conférences & Salons', href: '/dashboard/catalogue?kind=event&type=business' },
-      { label: 'Mes billets achetés', href: '/dashboard/tickets' },
-    ],
-    features: [
-      'Mobile Money et cartes bancaires',
-      'Pass QR instantané',
-      'Accès fluide le jour J',
-    ],
-  },
-  {
-    id: 'template',
-    title: 'Faire-part & Invitations',
-    badge: 'Invitations',
-    tagline: 'Cartes interactives prêtes à partager',
-    description:
-      'Cartes d’invitation personnalisées 9:16 avec confirmation RSVP à partager sur WhatsApp.',
-    icon: Mail,
-    accentColor: 'from-pink-500/10 to-rose-500/10 border-pink-500/30 text-pink-600 dark:text-pink-400',
-    ctaLabel: 'Créer une invitation',
-    ctaHref: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite',
-    quickFilters: [
-      { label: 'Studio invitations IA', href: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite' },
-      { label: 'Modèles de faire-part', href: '/modeles' },
-      { label: 'Invitations mariage', href: '/dashboard/catalogue?tab=plan&planView=ai&studio=invite' },
-    ],
-    features: [
-      'Styles personnalisés assistés par IA',
-      'Format vertical 9:16 pour mobile',
-      'Partage WhatsApp en 1 clic',
-    ],
-  },
-];
 
 export default function ClientDashboardHome() {
   const { user } = useAuth();
@@ -182,7 +49,7 @@ export default function ClientDashboardHome() {
     loading: true,
   });
 
-  // Charger les statistiques d'activité client
+  // Charger les compteurs d'activité du client
   useEffect(() => {
     let mounted = true;
     Promise.allSettled([
@@ -241,457 +108,519 @@ export default function ClientDashboardHome() {
     router.push(`/dashboard/catalogue?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
-  return (
-    <div className="space-y-6 pb-12 animate-fade-in">
-      {/* ─── BANNIÈRE BIENVENUE CLIENT & RECHERCHE INTÉGRÉE (100% GRATUIT) ─── */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border bg-linear-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-7 shadow-xs">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+  const userName = user?.name ? user.name.split(' ')[0] : '';
 
-        <div className="relative space-y-4 max-w-3xl">
-          <div className="space-y-1.5">
+  return (
+    <div className="space-y-7 pb-12 animate-fade-in max-w-7xl mx-auto">
+      {/* ─── 1. HERO : L'ATELIER DE CÉLÉBRATION ─── */}
+      <section className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-surface via-surface to-primary/5 p-6 sm:p-9 shadow-xs">
+        {/* Halos décoratifs subtils */}
+        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-16 w-56 h-56 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative space-y-6 max-w-3xl">
+          {/* Badge & Titre de célébration avec Fraunces */}
+          <div className="space-y-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                <ShieldCheck className="w-3 h-3" />
-                100 % gratuit · Sans abonnement
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                <Sparkles className="w-3.5 h-3.5" />
+                Espace Célébration
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                100 % gratuit · Sans aucun abonnement
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">
-              Bonjour{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋
+            <h1 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-foreground leading-[1.15]">
+              Bonjour{userName ? `, ${userName}` : ''}
+              <span className="text-muted font-normal block sm:inline sm:ml-2 text-xl sm:text-2xl">
+                — Votre événement commence ici.
+              </span>
             </h1>
-            <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Trouvez vos lieux et prestataires, simulez votre budget et réservez vos billets en direct.
+
+            <p className="text-sm text-muted leading-relaxed max-w-2xl">
+              Trouvez les plus beaux lieux de réception, réservez des prestataires vérifiés, estimez vos coûts ou obtenez vos pass d’accès en direct.
             </p>
           </div>
 
-          {/* Barre de recherche principale */}
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <div className="relative flex items-center">
+          {/* Moteur de recherche intégré */}
+          <form onSubmit={handleSearchSubmit} className="relative pt-1">
+            <div className="relative flex items-center shadow-xs rounded-2xl bg-surface border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition">
               <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Une salle à la Gombe, un traiteur, un DJ, du mobilier, des billets…"
+                placeholder="Une salle à la Gombe, traiteur, photographe, sono, pass d'accès…"
                 aria-label="Rechercher une salle, un prestataire ou un équipement"
-                className="w-full pl-11 pr-28 py-3.5 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
+                className="w-full pl-12 pr-32 py-4 bg-transparent text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none"
               />
               <button
                 type="submit"
-                className="absolute right-2 px-4 py-2 rounded-lg bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer"
+                className="absolute right-2 px-4 py-2.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer shadow-xs"
               >
-                <span>Rechercher</span>
+                <span>Explorer</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </form>
 
-          {/* Suggestions de recherche en 1 clic */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-            <span className="text-xs font-medium text-muted mr-1">Recherches rapides :</span>
+          {/* Raccourcis de recherche rapides */}
+          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs">
+            <span className="text-xs text-muted font-medium">Recherches fréquentes :</span>
             <Link
               href="/dashboard/catalogue?kind=venue&q=Gombe"
-              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition"
+              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground text-xs font-medium transition hover:bg-surface-muted"
             >
-              Salles à la Gombe
+              🏛️ Salles à la Gombe
             </Link>
             <Link
               href="/dashboard/catalogue?kind=service&cat=caterer"
-              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition"
+              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground text-xs font-medium transition hover:bg-surface-muted"
             >
-              Traiteurs &amp; Buffets
+              🍽️ Traiteurs
             </Link>
             <Link
               href="/dashboard/catalogue?kind=service&cat=dj"
-              className="px-2.5 py-1 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition"
+              className="px-2.5 py-1 rounded-lg bg-surface border border-border/80 hover:border-primary/50 text-foreground text-xs font-medium transition hover:bg-surface-muted"
             >
-              DJ &amp; Sonorisation
+              🎵 DJ &amp; Sonorisation
             </Link>
             <Link
               href="/dashboard/catalogue?tab=plan&planView=ai"
-              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 hover:border-primary text-primary text-xs font-bold transition inline-flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" />
               Simulateur
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ─── WIDGETS D'ACTIVITÉS EN TEMPS RÉEL (5 CARTES) ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        {/* 1. Devis */}
-        <Link
-          href="/dashboard/bookings?tab=quotes"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Devis</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+      {/* ─── 2. BAROMÈTRE D'ACTIVITÉ : SUIVI EN TEMPS RÉEL (BANDEAU INTÉGRÉ) ─── */}
+      <section aria-label="Suivi de vos démarches" className="rounded-2xl border border-border bg-surface p-2 shadow-2xs">
+        <div className="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-border/60">
+          {/* Devis */}
+          <Link
+            href="/dashboard/bookings?tab=quotes"
+            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+          >
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
+                Devis
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
+                {stats.loading ? (
+                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
+                ) : (
+                  stats.quotesCount
+                )}
+              </p>
+              <span className="text-[11px] text-muted truncate block">Reçus &amp; en attente</span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Inbox className="w-4 h-4" />
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
-              {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-              ) : (
-                stats.quotesCount.toLocaleString('fr-FR')
-              )}
-            </p>
-            <p className="text-xs text-muted mt-0.5">Devis reçus</p>
-          </div>
-        </Link>
+          </Link>
 
-        {/* 2. Réservations */}
-        <Link
-          href="/dashboard/bookings?tab=bookings"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">Réservations</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+          {/* Réservations */}
+          <Link
+            href="/dashboard/bookings?tab=bookings"
+            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+          >
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
+                Réservations
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
+                {stats.loading ? (
+                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
+                ) : (
+                  stats.bookingsCount
+                )}
+              </p>
+              <span className="text-[11px] text-muted truncate block">Dates confirmées</span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <CalendarCheck className="w-4 h-4" />
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
-              {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-              ) : (
-                stats.bookingsCount.toLocaleString('fr-FR')
-              )}
-            </p>
-            <p className="text-xs text-muted mt-0.5">Confirmées</p>
-          </div>
-        </Link>
+          </Link>
 
-        {/* 3. Billets */}
-        <Link
-          href="/dashboard/tickets"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Billets</span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+          {/* Mes Billets */}
+          <Link
+            href="/dashboard/tickets"
+            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+          >
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
+                Mes Billets
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
+                {stats.loading ? (
+                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
+                ) : (
+                  stats.ticketsCount
+                )}
+              </p>
+              <span className="text-[11px] text-muted truncate block">Pass d’accès QR</span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Ticket className="w-4 h-4" />
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
-              {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-              ) : (
-                stats.ticketsCount.toLocaleString('fr-FR')
-              )}
-            </p>
-            <p className="text-xs text-muted mt-0.5">Pass QR</p>
-          </div>
-        </Link>
+          </Link>
 
-        {/* 4. Mes Packs */}
-        <Link
-          href="/dashboard/catalogue?tab=packs"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Packs</span>
-            <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+          {/* Mes Packs */}
+          <Link
+            href="/dashboard/catalogue?tab=packs"
+            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
+          >
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
+                Mes Packs
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
+                {stats.loading ? (
+                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
+                ) : (
+                  stats.packsCount
+                )}
+              </p>
+              <span className="text-[11px] text-muted truncate block">Simulations</span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Bookmark className="w-4 h-4" />
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
-              {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-              ) : (
-                stats.packsCount.toLocaleString('fr-FR')
-              )}
-            </p>
-            <p className="text-xs text-muted mt-0.5">Simulations</p>
-          </div>
-        </Link>
+          </Link>
 
-        {/* 5. Favoris */}
-        <Link
-          href="/dashboard/catalogue?tab=favorites"
-          className="p-4 rounded-2xl border border-border bg-surface hover:border-pink-500/40 hover:bg-pink-500/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">Mes Favoris</span>
-            <div className="p-2 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 group-hover:scale-110 transition">
+          {/* Favoris */}
+          <Link
+            href="/dashboard/catalogue?tab=favorites"
+            className="p-3.5 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3 col-span-2 md:col-span-1"
+          >
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block truncate">
+                Favoris
+              </span>
+              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
+                {stats.loading ? (
+                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
+                ) : (
+                  favoriteItems.length
+                )}
+              </p>
+              <span className="text-[11px] text-muted truncate block">Coups de cœur</span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
               <Heart className="w-4 h-4" />
             </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl font-black text-foreground min-h-[2rem] flex items-center">
-              {stats.loading ? (
-                <span className="inline-block w-8 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-              ) : (
-                favoriteItems.length.toLocaleString('fr-FR')
-              )}
-            </p>
-            <p className="text-xs text-muted mt-0.5">Favoris</p>
-          </div>
-        </Link>
-      </div>
+          </Link>
+        </div>
+      </section>
 
-      {/* ─── SECTION STUDIOS CRÉATIFS & SIMULATEURS ACTIFS (MISE EN VALEUR) ─── */}
-      <div className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-linear-to-br from-primary/5 via-surface to-surface-muted p-5 sm:p-6 space-y-4 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <h2 className="text-base sm:text-lg font-extrabold text-foreground flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-primary" />
-              Studios de préparation
+      {/* ─── 3. LES 3 ATELIERS CRÉATIFS : LE CŒUR D'EVENTMASTER ─── */}
+      <section aria-labelledby="studios-heading" className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-border/70 pb-3">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+              Conception Assistée par IA
+            </span>
+            <h2 id="studios-heading" className="font-display text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+              Les Ateliers Créatifs
             </h2>
-            <p className="text-xs text-muted">
-              Simulez votre budget, créez vos invitations et agencez votre salle en 3D.
-            </p>
           </div>
-
           <Link
             href="/dashboard/catalogue?tab=plan&planView=ai"
-            className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-center"
+            className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1.5 self-start sm:self-auto touch-manipulation"
           >
-            <span>Simulateur complet</span>
+            <span>Accéder au simulateur central</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          {/* Studio 1: Simulateur Budget & Packs */}
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
-            className="p-4 rounded-2xl border border-primary/30 bg-surface hover:border-primary hover:shadow-xs transition group flex flex-col justify-between gap-3"
-          >
-            <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Atelier 1 : Simulateur de Budget */}
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/5 via-surface to-surface p-5 flex flex-col justify-between gap-4 transition hover:border-primary hover:shadow-xs group">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
                   <Wand2 className="w-5 h-5" />
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
+
+              <div className="space-y-1">
+                <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition">
                   Simulateur de Budget
                 </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  3 formules chiffrées (Éco, Recommandée, Confort) selon votre budget avec prestataires réels.
+                <p className="text-xs text-muted leading-relaxed">
+                  3 formules complètes (Éco, Recommandée, Confort) chiffrées en direct selon votre capacité et vos souhaits.
                 </p>
               </div>
-            </div>
-            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-primary">
-              <span>Lancer la simulation</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
-            </div>
-          </Link>
 
-          {/* Studio 2: Invitations & Faire-part */}
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
-            className="p-4 rounded-2xl border border-pink-500/30 bg-surface hover:border-pink-500 hover:shadow-xs transition group flex flex-col justify-between gap-3"
-          >
-            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Chiffrage CDF &amp; USD
+                </span>
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Lieux réels
+                </span>
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Devis direct
+                </span>
+              </div>
+            </div>
+
+            <Link
+              href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
+              className="w-full inline-flex items-center justify-between pt-3 border-t border-border/70 text-xs font-bold text-primary group-hover:translate-x-0.5 transition"
+            >
+              <span>Calculer mon budget</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Atelier 2 : Studio Faire-Part & Invitations */}
+          <div className="rounded-2xl border border-pink-500/30 bg-gradient-to-b from-pink-500/5 via-surface to-surface p-5 flex flex-col justify-between gap-4 transition hover:border-pink-500 hover:shadow-xs group">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-105 transition">
                   <Mail className="w-5 h-5" />
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
+
+              <div className="space-y-1">
+                <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
                   Studio Invitations
                 </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  Cartes d’invitation 9:16 pour WhatsApp avec confirmation RSVP en direct.
+                <p className="text-xs text-muted leading-relaxed">
+                  Cartons d’invitation verticaux 9:16 prêts pour WhatsApp avec lien de confirmation de présence (RSVP).
                 </p>
               </div>
-            </div>
-            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-pink-600 dark:text-pink-400">
-              <span>Personnaliser ma carte</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
-            </div>
-          </Link>
 
-          {/* Studio 3: Plans 3D & Visites immersives */}
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
-            className="p-4 rounded-2xl border border-blue-500/30 bg-surface hover:border-blue-500 hover:shadow-xs transition group flex flex-col justify-between gap-3"
-          >
-            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Format 9:16 Story
+                </span>
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Partage WhatsApp
+                </span>
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  RSVP en direct
+                </span>
+              </div>
+            </div>
+
+            <Link
+              href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
+              className="w-full inline-flex items-center justify-between pt-3 border-t border-border/70 text-xs font-bold text-pink-600 dark:text-pink-400 group-hover:translate-x-0.5 transition"
+            >
+              <span>Créer une invitation</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Atelier 3 : Studio Plans de Salle 2D / 3D */}
+          <div className="rounded-2xl border border-sky-500/30 bg-gradient-to-b from-sky-500/5 via-surface to-surface p-5 flex flex-col justify-between gap-4 transition hover:border-sky-500 hover:shadow-xs group">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
                   <Building2 className="w-5 h-5" />
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                   Actif
                 </span>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+
+              <div className="space-y-1">
+                <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-sky-600 dark:group-hover:text-sky-400 transition">
                   Studio Plans 3D
                 </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  Agencement des tables, allées et visite 3D immersive de votre lieu de fête.
+                <p className="text-xs text-muted leading-relaxed">
+                  Modélisez votre lieu, disposez tables et buffets, puis visualisez le rendu dans l’espace immersif 3D.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Visite 3D WebGL
+                </span>
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Tables &amp; Banquets
+                </span>
+                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                  Circulation
+                </span>
+              </div>
+            </div>
+
+            <Link
+              href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
+              className="w-full inline-flex items-center justify-between pt-3 border-t border-border/70 text-xs font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition"
+            >
+              <span>Ouvrir l’atelier 3D</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 4. EXPLORATION PAR UNIVERS : LE MARKETPLACE DE RÉCEPTION ─── */}
+      <section aria-labelledby="marketplace-heading" className="space-y-4">
+        <div className="flex items-center justify-between border-b border-border/70 pb-3">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+              Sélection Qualifiée
+            </span>
+            <h2 id="marketplace-heading" className="font-display text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+              Explorer par Univers
+            </h2>
+          </div>
+          <Link
+            href="/dashboard/catalogue"
+            className="text-xs font-bold text-muted hover:text-foreground inline-flex items-center gap-1 transition"
+          >
+            <span>Tout voir</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Univers 1 : Salles */}
+          <Link
+            href="/dashboard/catalogue?kind=venue"
+            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                  Lieux &amp; Espaces
+                </h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Salles climatisées, jardins de réception et domaines d’exception à Kinshasa et provinces.
                 </p>
               </div>
             </div>
-            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400">
-              <span>Visiter et aménager</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Parcourir les salles</span>
+              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
+            </div>
+          </Link>
+
+          {/* Univers 2 : Prestataires */}
+          <Link
+            href="/dashboard/catalogue?kind=service"
+            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Utensils className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                  Prestataires de Réception
+                </h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Traiteurs, décorateurs, photographes, DJ et animation pour sublimer votre fête.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Voir les prestataires</span>
+              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
+            </div>
+          </Link>
+
+          {/* Univers 3 : Location matériel */}
+          <Link
+            href="/dashboard/catalogue?kind=rental"
+            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Truck className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                  Mobilier &amp; Cortèges
+                </h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Chaises VIP, chapiteaux, sonorisation professionnelle et véhicules de cortège.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Consulter le matériel</span>
+              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
+            </div>
+          </Link>
+
+          {/* Univers 4 : Billetterie & Sorties */}
+          <Link
+            href="/dashboard/catalogue?kind=event"
+            className="group rounded-2xl border border-border bg-surface p-5 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition">
+                <Ticket className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                  Sorties &amp; Billetterie
+                </h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Concerts, galas de prestige et festivals en RDC. Billets avec pass QR instantané.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
+              <span>Voir les événements</span>
+              <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition" />
             </div>
           </Link>
         </div>
-      </div>
+      </section>
 
-      {/* ─── DÉCOUVERTE PAR UNIVERS (SALLES, PRESTAS, LOCATION, BILLETS) ─── */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-            <Compass className="w-5 h-5 text-primary" />
-            Explorer par univers
-          </h2>
-          <p className="text-xs text-muted">
-            Sélectionnez une catégorie pour préparer votre événement.
+      {/* ─── 5. ENGAGEMENTS & CONCIERGERIE (100% SÉRÉNITÉ) ─── */}
+      <section className="rounded-2xl border border-border/80 bg-gradient-to-r from-surface via-surface to-surface-muted p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-2xs">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
+              Une célébration en toute transparence
+            </h3>
+          </div>
+          <p className="text-xs text-muted leading-relaxed">
+            Consultez les fiches et demandez des devis sans frais. Vous réglez directement les acomptes aux prestataires de votre choix, sans intermédiaire financier sur les prestations.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {CLIENT_INTENTS.map((intent) => {
-            const Icon = intent.icon;
-            return (
-              <div
-                key={intent.id}
-                className="p-4 sm:p-5 rounded-2xl border border-border bg-surface transition-all flex flex-col justify-between h-full gap-3 relative hover:border-primary/50 hover:shadow-xs group"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', intent.accentColor)}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted text-muted border border-border">
-                      {intent.badge}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition">
-                      {intent.title}
-                    </h3>
-                    <p className="text-xs text-muted leading-relaxed mt-1 line-clamp-2">
-                      {intent.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2.5 pt-3 mt-auto border-t border-border/70">
-                  {/* Raccourcis rapides */}
-                  <div className="flex flex-wrap gap-1">
-                    {intent.quickFilters.slice(0, 3).map((qf, idx) => (
-                      <Link
-                        key={idx}
-                        href={qf.href}
-                        className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted truncate max-w-full"
-                      >
-                        {qf.label}
-                      </Link>
-                    ))}
-                  </div>
-
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    onClick={() => router.push(intent.ctaHref)}
-                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                    className="font-bold text-xs"
-                  >
-                    {intent.ctaLabel}
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ─── COMMENT ÇA MARCHE ─── */}
-      <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 space-y-4">
-        <div className="space-y-0.5">
-          <h3 className="text-base sm:text-lg font-bold text-foreground">
-            Fonctionnement en 3 étapes
-          </h3>
-          <p className="text-xs text-muted">
-            Simple, direct et sans engagement.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
-          <div className="p-3.5 rounded-xl bg-surface-muted/50 border border-border/80 space-y-1.5">
-            <div className="w-6 h-6 rounded-md bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
-              1
-            </div>
-            <h4 className="text-xs font-bold text-foreground">Explorez &amp; Simulez</h4>
-            <p className="text-xs text-muted leading-relaxed">
-              Consultez les fiches, estimez votre budget et retenez vos coups de cœur.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface-muted/50 border border-border/80 space-y-1.5">
-            <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold flex items-center justify-center text-xs">
-              2
-            </div>
-            <h4 className="text-xs font-bold text-foreground">Demandez vos devis</h4>
-            <p className="text-xs text-muted leading-relaxed">
-              Contactez directement les prestataires pour recevoir des offres chiffrées.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface-muted/50 border border-border/80 space-y-1.5">
-            <div className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-xs">
-              3
-            </div>
-            <h4 className="text-xs font-bold text-foreground">Bloquez votre date</h4>
-            <p className="text-xs text-muted leading-relaxed">
-              Versez l’acompte en direct au professionnel et suivez vos pass QR.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── GUIDE RAPIDE & ASSISTANCE ─── */}
-      <div className="p-4 sm:p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <HelpCircle className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-foreground">Besoin de conseils ?</p>
-            <p className="text-[11px] text-muted">Consultez notre guide pratique ou explorez les prestataires du catalogue.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
           <Link
             href="/dashboard/guide"
-            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl border border-border hover:bg-surface-muted text-xs font-semibold text-foreground transition"
+            className="flex-1 md:flex-none text-center px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition min-h-[44px] inline-flex items-center justify-center"
           >
             Guide pratique
           </Link>
           <Link
-            href="/dashboard/catalogue"
-            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs"
+            href="/contact"
+            className="flex-1 md:flex-none text-center px-4 py-2.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs min-h-[44px] inline-flex items-center justify-center"
           >
-            Explorer
+            Besoin d’assistance
           </Link>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
