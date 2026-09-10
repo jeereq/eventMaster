@@ -3,11 +3,12 @@
 import React from 'react';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import GuestPortalShell, { GuestHowTo } from '@/components/GuestPortalShell';
+import GuestPortalShell from '@/components/GuestPortalShell';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
+import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
 import {
   Calendar, MapPin, CheckCircle2, XCircle, Utensils, Loader2, Clock,
-  User,
+  User, Heart,
 } from 'lucide-react';
 import {
   type RsvpField,
@@ -540,13 +541,15 @@ export default function GuestPendingInvitationView({
       }
       contentClassName="flex flex-col items-center gap-5 max-w-none w-full overflow-x-clip"
     >
-      <GuestHowTo
-        steps={[
-          'Choisissez présent ou absent',
-          'Envoyez votre réponse',
-          'Après confirmation : pass QR, table et lieu',
-        ]}
-      />
+      {guest.donations?.enabled && (
+        <a
+          href="#donations-section"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs font-semibold hover:bg-rose-500/20 transition-colors"
+        >
+          <Heart className="w-3.5 h-3.5 fill-rose-500/30" />
+          <span>Faire un don solidaire</span>
+        </a>
+      )}
       <InvitationWrapper {...invitationWrapperProps}>
       <div
         style={{
@@ -1254,15 +1257,30 @@ export default function GuestPendingInvitationView({
                       </span>
                     </button>
                   </div>
+
+                  {rsvpStatus === 'DECLINED' && guest.donations?.enabled && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center space-y-1.5 animate-fade-in">
+                      <p className="text-xs text-rose-700 dark:text-rose-300 font-semibold">
+                        Vous ne pouvez pas venir ? Vous pouvez soutenir l&apos;événement ci-dessous.
+                      </p>
+                      <a
+                        href="#donations-section"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 underline underline-offset-2"
+                      >
+                        <Heart className="w-3.5 h-3.5 fill-rose-500/30" />
+                        Accéder au formulaire de don
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Identity & Meal Preferences Panel - Only show if attending */}
                 {rsvpStatus === 'ACCEPTED' && (
                   <>
                     <div className="p-5 border border-border rounded-[var(--radius-card)] bg-surface space-y-4 text-sm text-left">
-                      <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-3">
-                        <User className="w-5 h-5 text-primary" />
-                        <h4>Vos coordonnées pour ce pass</h4>
+                      <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-2.5">
+                        <User className="w-4 h-4 text-primary" />
+                        <h4 className="text-sm">Vos coordonnées</h4>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1313,9 +1331,9 @@ export default function GuestPendingInvitationView({
                     </div>
 
                     <div className="p-5 border border-border rounded-[var(--radius-card)] bg-surface space-y-4 text-sm">
-                      <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-3">
-                        <Utensils className="w-5 h-5 text-primary" />
-                        <h4>Informations obligatoires</h4>
+                      <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-2.5">
+                        <Utensils className="w-4 h-4 text-primary" />
+                        <h4 className="text-sm">Préférences</h4>
                       </div>
 
                       <div className="space-y-3">
@@ -1340,7 +1358,7 @@ export default function GuestPendingInvitationView({
                 {/* Additional notes */}
                 <div>
                   <label className="block text-xs font-bold text-muted uppercase mb-1">
-                    Remarques / Message à l'organisateur
+                    Message à l&apos;organisateur
                   </label>
                   <textarea
                     value={additionalNotes}
@@ -1359,10 +1377,10 @@ export default function GuestPendingInvitationView({
                   {submitting ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Envoi de la réponse...
+                      Envoi…
                     </>
                   ) : (
-                    'Envoyer ma réponse'
+                    'Confirmer ma réponse'
                   )}
                 </button>
               </form>
@@ -1380,14 +1398,27 @@ export default function GuestPendingInvitationView({
 
       </InvitationWrapper>
 
+      {/* Campagne solidaire si active */}
+      {guest.donations && guest.donations.enabled && (
+        <div id="donations-section" className="w-full max-w-lg space-y-2">
+          <GuestDonationForm
+            guestId={guestId}
+            guestName={`${firstName || guest.firstName} ${lastName || guest.lastName}`.trim()}
+            guestEmail={guest.email}
+            guestPhone={phone || guest.phone}
+            donations={guest.donations}
+          />
+        </div>
+      )}
+
       {/* Event Location & Directions Card */}
       {guest && guest.event?.location && (
         <div className="w-full max-w-lg bg-surface rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] p-5 space-y-4 text-center relative">
           <div className="flex flex-col items-center gap-2">
-            <div className="bg-primary/10 text-primary p-2.5 rounded-[var(--radius-button)] border border-primary/15">
-              <MapPin className="w-5 h-5" />
+            <div className="bg-primary/10 text-primary p-2 rounded-xl border border-primary/15">
+              <MapPin className="w-4 h-4" />
             </div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Lieu de réception</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Lieu</h3>
             <p className="text-sm text-foreground font-semibold max-w-md mx-auto leading-relaxed">
               {guest.event.location}
             </p>
@@ -1442,9 +1473,8 @@ export default function GuestPendingInvitationView({
               </div>
             </>
           ) : (
-            <p className="text-xs text-muted leading-relaxed max-w-sm mx-auto">
-              L&apos;itinéraire (carte et GPS) s&apos;ouvre dans l&apos;onglet Itinéraire dès votre confirmation de présence.
-              L&apos;adresse ci-dessus reste visible pour vous orienter.
+            <p className="text-xs text-muted max-w-sm mx-auto">
+              Itinéraire détaillé disponible après confirmation.
             </p>
           )}
         </div>

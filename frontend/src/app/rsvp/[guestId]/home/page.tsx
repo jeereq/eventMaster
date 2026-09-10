@@ -8,7 +8,7 @@ import {
   Calendar, MapPin, Loader2, AlertCircle, CheckCircle2, XCircle,
   Clock, ArrowRight,
 } from 'lucide-react';
-import GuestPortalShell, { GuestPortalCard, GuestHowTo } from '@/components/GuestPortalShell';
+import GuestPortalShell, { GuestPortalCard } from '@/components/GuestPortalShell';
 import ShareButton from '@/components/ShareButton';
 import { guestRsvpUrl } from '@/lib/share';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -202,30 +202,18 @@ export default function GuestHomePage() {
       }
       contentClassName="space-y-6"
     >
-      <GuestHowTo
-        steps={[
-          'Ouvrez une invitation',
-          'Répondez présent ou absent',
-          'Retrouvez votre pass QR, votre table et le lieu',
-        ]}
-      />
-
       {pendingInvite ? (
-          <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-4 space-y-2">
-            <p className="text-sm font-semibold text-foreground">À faire : confirmer votre présence</p>
-            <p className="text-xs text-muted leading-relaxed">{pendingInvite.event.title}</p>
-            <Link
-              href={`/rsvp/${pendingInvite.guestId}`}
-              className="inline-flex items-center justify-center min-h-11 px-4 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            >
-              Répondre à l’invitation
-            </Link>
-          </div>
+        <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-4 space-y-2">
+          <p className="text-sm font-semibold text-foreground">Réponse en attente</p>
+          <p className="text-xs text-muted">{pendingInvite.event.title}</p>
+          <Link
+            href={`/rsvp/${pendingInvite.guestId}`}
+            className="inline-flex items-center justify-center min-h-11 px-4 rounded-[var(--radius-button)] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            Répondre à l’invitation
+          </Link>
+        </div>
       ) : null}
-
-      <p className="text-sm text-muted">
-        Invitations liées à votre e-mail et téléphone, regroupées ici.
-      </p>
 
       {upcoming.length > 0 && (
         <section>
@@ -241,7 +229,6 @@ export default function GuestHomePage() {
       {past.length > 0 && (
         <section className="space-y-1">
           <h2 className="text-sm font-semibold text-foreground">Passés</h2>
-          <p className="text-xs text-muted mb-1">Les réponses ne peuvent plus être modifiées après la date de l’événement.</p>
           <div>
             {past.map((item) => (
               <InvitationCard key={item.guestId} item={item} />

@@ -206,6 +206,7 @@ export function GuestPortalTabBar({
       >
         {tabs.map((tab) => {
           const active = tab.id === activeId;
+          const isDonation = tab.id === 'donations';
           const short = tab.shortLabel || tab.label;
           return (
             <button
@@ -222,14 +223,23 @@ export function GuestPortalTabBar({
               onClick={() => onChange(tab.id)}
               aria-label={tab.label}
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 min-h-12 sm:min-h-[3.25rem] px-0.5 sm:px-1 py-1.5 rounded-xl text-xs font-semibold transition touch-manipulation',
+                'relative flex flex-col items-center justify-center gap-0.5 min-h-12 sm:min-h-[3.25rem] px-0.5 sm:px-1 py-1.5 rounded-xl text-xs font-semibold transition touch-manipulation',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-muted',
-                active
-                  ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
-                  : 'text-muted hover:text-foreground active:bg-surface/70',
+                isDonation
+                  ? active
+                    ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 shadow-sm ring-1 ring-rose-500/30 font-bold'
+                    : 'text-rose-700 dark:text-rose-300 hover:text-rose-800 hover:bg-rose-500/10 active:bg-rose-500/15'
+                  : active
+                    ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
+                    : 'text-muted hover:text-foreground active:bg-surface/70',
               )}
             >
-              <span aria-hidden>{tab.icon}</span>
+              <span aria-hidden className="relative">
+                {tab.icon}
+                {isDonation && !active && (
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-rose-500" />
+                )}
+              </span>
               <span className="truncate max-w-full leading-tight px-0.5">
                 <span className="sm:hidden">{short}</span>
                 <span className="hidden sm:inline">{tab.label}</span>
