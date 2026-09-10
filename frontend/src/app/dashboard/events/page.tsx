@@ -682,6 +682,32 @@ function EventsPageInner() {
     setActiveTab(tabParam === 'tasks' ? 'tasks' : tabParam === 'ticketing' ? 'ticketing' : 'protocol');
   }, [protocolDesk, selectedEvent?.id, tabParam]);
 
+  // Fermeture des modales à la touche Échap pour l'accessibilité
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedGuestDetails) setSelectedGuestDetails(null);
+        else if (sharingGuest) setSharingGuest(null);
+        else if (showBroadcastModal) {
+          setShowBroadcastModal(false);
+          setBroadcastResults(null);
+          setBroadcastMessage('');
+          setBroadcastSummary(null);
+        } else if (showBulkInviteModal) setShowBulkInviteModal(false);
+        else if (showImportModal) {
+          setShowImportModal(false);
+          setParsedPreview(null);
+          setImportText('');
+        } else if (showGuestModal) {
+          setShowGuestModal(false);
+          setEditingGuestId(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedGuestDetails, sharingGuest, showBroadcastModal, showBulkInviteModal, showImportModal, showGuestModal]);
+
   const filteredEventsList = events.filter((event) => {
     const q = eventSearch.trim().toLowerCase();
     const matchesSearch = !q
@@ -1867,7 +1893,7 @@ Merci de confirmer votre présence :
         </p>
         <Link
           href="/dashboard"
-          className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition shadow-lg shadow-primary/10"
+          className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl transition shadow-lg shadow-primary-solid/10"
         >
           Retour au Tableau de Bord Admin
         </Link>
@@ -3345,7 +3371,12 @@ Merci de confirmer votre présence :
               <h3 id="guest-modal-title" className="text-lg font-bold text-foreground">
                 {editingGuestId ? "Modifier l'invité" : "Ajouter un invité"}
               </h3>
-              <button type="button" onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }} className="text-muted hover:text-foreground transition" aria-label="Fermer la fenêtre">
+              <button
+                type="button"
+                onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }}
+                className="text-muted hover:text-foreground transition min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-surface-muted"
+                aria-label="Fermer la fenêtre"
+              >
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
@@ -3479,7 +3510,7 @@ Merci de confirmer votre présence :
                   type="submit"
                   disabled={savingGuest || (!editingGuestId && guestsAtLimit)}
                   title={!editingGuestId && guestsQuotaMsg ? guestsQuotaMsg : undefined}
-                  className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-sm transition shadow-md shadow-primary-solid/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingGuest ? (
                     <>
@@ -3514,7 +3545,7 @@ Merci de confirmer votre présence :
                   setParsedPreview(null);
                   setImportText('');
                 }}
-                className="text-muted hover:text-foreground transition"
+                className="text-muted hover:text-foreground transition min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-surface-muted"
                 aria-label="Fermer la fenêtre"
               >
                 <XCircle className="w-6 h-6" />
@@ -3576,7 +3607,7 @@ Merci de confirmer votre présence :
                     <button
                       type="button"
                       onClick={() => downloadSampleTemplate(importMethod)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold rounded-lg transition shadow-sm"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Télécharger le modèle
@@ -3716,7 +3747,7 @@ Merci de confirmer votre présence :
                 <button
                   type="submit"
                   disabled={importingFile || (importMethod !== 'text' && (!parsedPreview || parsedPreview.length === 0))}
-                  className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-sm transition shadow-md shadow-primary-solid/10 flex items-center justify-center gap-2"
                 >
                   {importingFile ? (
                     <>
@@ -3747,7 +3778,12 @@ Merci de confirmer votre présence :
                 </div>
                 <h3 id="bulk-invite-modal-title" className="text-lg font-bold text-foreground">Envoyer une invitation groupée</h3>
               </div>
-              <button type="button" onClick={() => setShowBulkInviteModal(false)} className="text-muted hover:text-foreground transition" aria-label="Fermer la fenêtre">
+              <button
+                type="button"
+                onClick={() => setShowBulkInviteModal(false)}
+                className="text-muted hover:text-foreground transition min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-surface-muted"
+                aria-label="Fermer la fenêtre"
+              >
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
@@ -3987,17 +4023,17 @@ Merci de confirmer votre présence :
 
       {/* Broadcast Results Modal */}
       {showBroadcastModal && broadcastResults && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
           <div role="dialog" aria-modal="true" aria-labelledby="broadcast-results-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-4xl p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-border-subtle pb-4">
               <div className="flex items-center gap-2">
                 <div className={`p-1.5 rounded-lg ${broadcastSummary?.failed === broadcastSummary?.total
-                    ? 'bg-rose-50 text-rose-600'
+                    ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400'
                     : broadcastSummary?.allSimulated
-                      ? 'bg-amber-50 text-amber-600'
+                      ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
                       : (broadcastSummary?.failed || 0) > 0 || (broadcastSummary?.simulated || 0) > 0
-                        ? 'bg-amber-50 text-amber-600'
-                        : 'bg-emerald-50 text-emerald-600'
+                        ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
+                        : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
                   }`}>
                   {broadcastSummary?.failed === broadcastSummary?.total ? (
                     <AlertCircle className="w-5 h-5" />
@@ -4023,13 +4059,15 @@ Merci de confirmer votre présence :
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setShowBroadcastModal(false);
                   setBroadcastResults(null);
                   setBroadcastMessage('');
                   setBroadcastSummary(null);
                 }}
-                className="text-muted hover:text-muted transition"
+                className="text-muted hover:text-foreground transition min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-surface-muted"
+                aria-label="Fermer la fenêtre"
               >
                 <XCircle className="w-6 h-6" />
               </button>
@@ -4042,33 +4080,33 @@ Merci de confirmer votre présence :
                     <div className="text-xl font-black text-foreground">{broadcastSummary.total}</div>
                     <div className="text-xs font-bold text-muted uppercase tracking-wider">Total</div>
                   </div>
-                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-                    <div className="text-xl font-black text-emerald-700">{broadcastSummary.sent}</div>
-                    <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Envoyés</div>
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">{broadcastSummary.sent}</div>
+                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Envoyés</div>
                   </div>
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
-                    <div className="text-xl font-black text-amber-700">{broadcastSummary.simulated}</div>
-                    <div className="text-xs font-bold text-amber-600 uppercase tracking-wider">Simulés</div>
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black text-amber-700 dark:text-amber-300">{broadcastSummary.simulated}</div>
+                    <div className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Simulés</div>
                   </div>
-                  <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center">
-                    <div className="text-xl font-black text-rose-700">{broadcastSummary.failed}</div>
-                    <div className="text-xs font-bold text-rose-600 uppercase tracking-wider">Échecs</div>
+                  <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black text-rose-700 dark:text-rose-300">{broadcastSummary.failed}</div>
+                    <div className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Échecs</div>
                   </div>
                 </div>
                 {broadcastSummary.failed > 0 && broadcastSummary.failureReasons && (
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     {(broadcastSummary.failureReasons.noPhone || 0) > 0 && (
-                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 font-semibold">
+                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 font-semibold">
                         {broadcastSummary.failureReasons.noPhone} sans WhatsApp
                       </span>
                     )}
                     {(broadcastSummary.failureReasons.noEmail || 0) > 0 && (
-                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 font-semibold">
+                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 font-semibold">
                         {broadcastSummary.failureReasons.noEmail} e-mail invalide
                       </span>
                     )}
                     {(broadcastSummary.failureReasons.provider || 0) > 0 && (
-                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 font-semibold">
+                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 font-semibold">
                         {broadcastSummary.failureReasons.provider} erreur fournisseur
                       </span>
                     )}
@@ -4129,10 +4167,10 @@ Merci de confirmer votre présence :
                                   key={crIdx}
                                   title={cr.error || undefined}
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${cr.success && !cr.simulated
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                       : cr.simulated
-                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                                        ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                        : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                                     }`}
                                 >
                                   {getChannelLabel(cr.channel)}
@@ -4157,9 +4195,10 @@ Merci de confirmer votre présence :
 
                         {/* Copy Link */}
                         <button
+                          type="button"
                           onClick={() => handleCopyLink(res.guestId || index.toString(), publicRsvpLink(res.rsvpLink, res.guestId))}
                           className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition ${copiedGuestId === (res.guestId || index.toString())
-                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
                               : 'bg-surface border-border text-muted hover:bg-surface-muted'
                             }`}
                           title="Copier le lien d'invitation"
@@ -4196,7 +4235,7 @@ Merci de confirmer votre présence :
                           href={getXShareUrl(res.guestName, publicRsvpLink(res.rsvpLink, res.guestId), res.body)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-background hover:bg-background text-white rounded-xl text-xs font-bold transition shadow-sm"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition shadow-sm"
                           title="Partager sur X"
                         >
                           <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
@@ -4207,6 +4246,7 @@ Merci de confirmer votre présence :
 
                         {/* Instagram */}
                         <button
+                          type="button"
                           onClick={() => handleCopyLink(res.guestId || index.toString(), publicRsvpLink(res.rsvpLink, res.guestId))}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-tr from-yellow-500 via-red-500 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold transition shadow-sm"
                           title="Copier pour Instagram DM"
@@ -4238,13 +4278,14 @@ Merci de confirmer votre présence :
             </div>
             <div className="pt-4 border-t border-border-subtle flex justify-end">
               <button
+                type="button"
                 onClick={() => {
                   setShowBroadcastModal(false);
                   setBroadcastResults(null);
                   setBroadcastMessage('');
                   setBroadcastSummary(null);
                 }}
-                className="px-6 py-2.5 bg-background hover:bg-surface-muted text-white font-semibold rounded-xl text-sm transition"
+                className="px-6 py-2.5 bg-surface-muted hover:bg-surface text-foreground font-semibold rounded-xl text-sm transition border border-border"
               >
                 Fermer
               </button>
@@ -4255,7 +4296,7 @@ Merci de confirmer votre présence :
 
       {/* Individual Guest Sharing Modal */}
       {sharingGuest && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
           <div role="dialog" aria-modal="true" aria-labelledby="share-guest-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-border-subtle pb-4">
               <div className="flex items-center gap-2">
@@ -4264,8 +4305,13 @@ Merci de confirmer votre présence :
                 </div>
                 <h3 id="share-guest-title" className="text-lg font-bold text-foreground">Partager l'invitation</h3>
               </div>
-              <button type="button" onClick={() => setSharingGuest(null)} className="text-muted hover:text-muted transition" aria-label="Fermer la fenêtre">
-                <XCircle className="w-6 h-6" />
+              <button
+                type="button"
+                onClick={() => setSharingGuest(null)}
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted hover:text-foreground transition"
+                aria-label="Fermer la fenêtre"
+              >
+                <XCircle className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
@@ -4280,9 +4326,10 @@ Merci de confirmer votre présence :
                 <div className="grid grid-cols-2 gap-3">
                   {/* Copy Link */}
                   <button
+                    type="button"
                     onClick={() => handleCopyLink(sharingGuest.id, getGuestRsvpLink(sharingGuest.id))}
                     className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-bold transition ${copiedGuestId === sharingGuest.id
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
                         : 'bg-surface border-border text-foreground hover:bg-surface-muted'
                       }`}
                   >
@@ -4317,7 +4364,7 @@ Merci de confirmer votre présence :
                     href={getXShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), getRenderedInvitationBody(sharingGuest))}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 p-3 bg-background hover:bg-background text-white rounded-xl text-sm font-bold transition shadow-sm"
+                    className="flex items-center justify-center gap-2 p-3 bg-black hover:bg-neutral-800 text-white rounded-xl text-sm font-bold transition shadow-sm"
                   >
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -4327,6 +4374,7 @@ Merci de confirmer votre présence :
 
                   {/* Instagram */}
                   <button
+                    type="button"
                     onClick={() => handleCopyLink(sharingGuest.id, getGuestRsvpLink(sharingGuest.id))}
                     className="flex items-center justify-center gap-2 p-3 bg-gradient-to-tr from-yellow-500 via-red-500 to-purple-600 hover:opacity-90 text-white rounded-xl text-sm font-bold transition shadow-sm"
                   >
@@ -4376,15 +4424,15 @@ Merci de confirmer votre présence :
           Boolean(selectedGuestDetails.preferences?.notes);
 
         return (
-          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-            <div className="bg-surface rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] w-full max-w-lg p-5 sm:p-6 space-y-5">
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+            <div role="dialog" aria-modal="true" aria-labelledby="guest-details-title" className="bg-surface rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] w-full max-w-lg p-5 sm:p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)] shrink-0">
                     <Users className="w-4.5 h-4.5" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-base font-semibold text-foreground tracking-tight">Détails de l&apos;invité</h3>
+                    <h3 id="guest-details-title" className="text-base font-semibold text-foreground tracking-tight">Détails de l&apos;invité</h3>
                     <p className="text-xs text-muted truncate">
                       {selectedGuestDetails.firstName} {selectedGuestDetails.lastName}
                     </p>
@@ -4393,7 +4441,7 @@ Merci de confirmer votre présence :
                 <button
                   type="button"
                   onClick={() => setSelectedGuestDetails(null)}
-                  className="text-muted hover:text-foreground transition p-1"
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted hover:text-foreground transition"
                   aria-label="Fermer"
                 >
                   <XCircle className="w-5 h-5" />
