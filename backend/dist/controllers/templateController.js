@@ -405,6 +405,13 @@ async function composeTemplateWithAi(req, res) {
             return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
         }
         const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+        const baseImageUrl = typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
+            ? body.baseImageUrl.trim()
+            : null;
+        const isAlteration = body.isAlteration === true || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+        const existingElements = Array.isArray(body.existingElements)
+            ? body.existingElements
+            : undefined;
         const generateBackground = body.generateBackground !== false;
         const embedText = body.embedText === true;
         const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
@@ -419,6 +426,9 @@ async function composeTemplateWithAi(req, res) {
             tenantId: isSuperAdmin ? null : tenantId,
             prompt,
             imageUrls,
+            baseImageUrl,
+            isAlteration,
+            existingElements,
             generateBackground,
             embedText,
             deviceId,
@@ -481,6 +491,13 @@ async function publicComposeTemplateWithAi(req, res) {
             return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
         }
         const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+        const baseImageUrl = typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
+            ? body.baseImageUrl.trim()
+            : null;
+        const isAlteration = body.isAlteration === true || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+        const existingElements = Array.isArray(body.existingElements)
+            ? body.existingElements
+            : undefined;
         const generateBackground = body.generateBackground !== false;
         const embedText = body.embedText === true;
         const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
@@ -496,6 +513,9 @@ async function publicComposeTemplateWithAi(req, res) {
             tenantId: user?.tenantId || null,
             prompt,
             imageUrls,
+            baseImageUrl,
+            isAlteration,
+            existingElements,
             generateBackground,
             embedText,
             deviceId,
@@ -608,6 +628,12 @@ async function resolveComposeImageUrls(body, tenantId) {
     const urls = Array.isArray(body.imageUrls)
         ? body.imageUrls.filter((u) => typeof u === 'string' && u.trim().length > 0)
         : [];
+    const baseImageUrl = typeof body.baseImageUrl === 'string' && body.baseImageUrl.trim().length > 0
+        ? body.baseImageUrl.trim()
+        : null;
+    if (baseImageUrl && !urls.includes(baseImageUrl)) {
+        urls.unshift(baseImageUrl);
+    }
     const dataUrls = Array.isArray(body.imageDataUrls)
         ? body.imageDataUrls.filter((u) => typeof u === 'string' && u.startsWith('data:image/'))
         : [];

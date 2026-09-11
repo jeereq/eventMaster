@@ -1110,7 +1110,7 @@ async function listMyInquiries(req, res) {
                         slug: true,
                         headline: true,
                         room: { select: { name: true } },
-                        tenant: { select: { name: true, vendorProfile: { select: { slug: true, displayName: true, phone: true } } } },
+                        tenant: { select: { name: true, manager: { select: { phone: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
                     },
                 },
                 offering: {
@@ -1118,8 +1118,8 @@ async function listMyInquiries(req, res) {
                         slug: true,
                         title: true,
                         category: true,
-                        tenant: { select: { name: true } },
-                        vendorProfile: { select: { slug: true, displayName: true, phone: true } },
+                        tenant: { select: { name: true, manager: { select: { phone: true } } } },
+                        vendorProfile: { select: { slug: true, displayName: true } },
                     },
                 },
                 event: { select: { id: true, title: true, date: true } },
@@ -1142,7 +1142,7 @@ async function listMyInquiries(req, res) {
                     kind: item.offeringId
                         ? ((0, publicVenue_1.isServiceRentalCategory)(item.offering?.category) ? 'rental' : 'service')
                         : 'venue',
-                    title: item.offering?.title || item.listing?.headline || item.listing?.room.name || 'Demande',
+                    title: item.offering?.title || item.listing?.headline || item.listing?.room?.name || 'Demande',
                     fromName: item.fromName,
                     fromEmail: item.fromEmail,
                     fromPhone: item.fromPhone,
@@ -1165,7 +1165,7 @@ async function listMyInquiries(req, res) {
                         || item.listing?.tenant.name
                         || null,
                     vendorSlug: item.offering?.vendorProfile?.slug || item.listing?.tenant.vendorProfile?.slug || null,
-                    vendorPhone: item.offering?.vendorProfile?.phone || item.listing?.tenant.vendorProfile?.phone || null,
+                    vendorPhone: item.offering?.tenant.manager?.phone || item.listing?.tenant.manager?.phone || null,
                     listingSlug: item.listing?.slug || null,
                     offeringSlug: item.offering?.slug || null,
                     offeringCategory: item.offering?.category || null,

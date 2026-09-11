@@ -551,7 +551,7 @@ export async function listAdminBookings(req: AuthenticatedRequest, res: Response
       items: rows.map((row) => {
         const kind = row.offeringId ? 'offering' : 'venue';
         const slug = row.offering?.slug || row.listing?.slug;
-        const title = row.offering?.title || row.listing?.headline || row.listing?.room.name || 'Réservation';
+        const title = row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
         return {
           id: row.id,
           kind,
@@ -564,7 +564,7 @@ export async function listAdminBookings(req: AuthenticatedRequest, res: Response
           commissionFc: row.commissionFc,
           createdAt: row.createdAt,
           vendorTenantId: row.vendorTenantId,
-          vendorName: row.vendorTenant.name,
+          vendorName: row.vendorTenant?.name || '—',
           organizerTenantId: row.organizerTenantId,
           organizerName: row.organizerTenant?.name || null,
           href: slug
@@ -608,7 +608,7 @@ function mapCommissionRow(row: {
 }) {
   const kind = row.offeringId ? 'offering' : 'venue';
   const slug = row.offering?.slug || row.listing?.slug;
-  const title = row.offering?.title || row.listing?.headline || row.listing?.room.name || 'Réservation';
+  const title = row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
   return {
     id: row.id,
     kind,
@@ -621,7 +621,7 @@ function mapCommissionRow(row: {
     commissionSettledAt: row.commissionSettledAt,
     createdAt: row.createdAt,
     vendorTenantId: row.vendorTenantId,
-    vendorName: row.vendorTenant.name,
+    vendorName: row.vendorTenant?.name || '—',
     organizerName: row.organizerTenant?.name || null,
     href: slug ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug, row.offering?.category) : null,
   };

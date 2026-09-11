@@ -17,12 +17,12 @@ const bookingInclude = {
     listing: { select: { slug: true, headline: true, roomId: true, address: true, latitude: true, longitude: true, room: { select: { name: true, location: true } } } },
     offering: { select: { slug: true, title: true, category: true } },
     event: { select: { id: true, title: true, date: true } },
-    vendorTenant: { select: { id: true, name: true, managerId: true, vendorProfile: { select: { slug: true, displayName: true, phone: true } } } },
+    vendorTenant: { select: { id: true, name: true, managerId: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
     organizerTenant: { select: { id: true, name: true } },
 };
 function serializeBooking(row) {
     const kind = row.offeringId ? 'service' : 'venue';
-    const title = row.offering?.title || row.listing?.headline || row.listing?.room.name || 'Réservation';
+    const title = row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
     return {
         id: row.id,
         kind,
@@ -32,9 +32,9 @@ function serializeBooking(row) {
         offeringCategory: row.offering?.category || null,
         vendorTenantId: row.vendorTenantId,
         organizerTenantId: row.organizerTenantId,
-        vendorName: row.vendorTenant.vendorProfile?.displayName || row.vendorTenant.name,
-        vendorSlug: row.vendorTenant.vendorProfile?.slug || null,
-        vendorPhone: row.vendorTenant.vendorProfile?.phone || null,
+        vendorName: row.vendorTenant?.vendorProfile?.displayName || row.vendorTenant?.name || 'Prestataire',
+        vendorSlug: row.vendorTenant?.vendorProfile?.slug || null,
+        vendorPhone: row.vendorTenant?.manager?.phone || null,
         organizerName: row.organizerTenant?.name || null,
         eventDate: row.eventDate,
         eventEndDate: row.eventEndDate,

@@ -272,6 +272,9 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
     const hasPeople = Boolean(analysis?.hasPeople);
     const isClone = Boolean(analysis?.isInvitationClone ||
         /copi|clon|reprodu/i.test(brief));
+    const isAlteration = Boolean(options?.isAlteration ||
+        /retouch|ajust|refin|altér|réajust|modifier/i.test(brief) ||
+        /retouch|ajust|refin|altér|réajust|modifier/i.test(userPrompt));
     const parts = [];
     if (hasPeople && processed?.identityHeader) {
         parts.push(processed.identityHeader);
@@ -283,7 +286,10 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
     if (hasPeople) {
         parts.push((0, invitationArtStyle_ts_1.invitationArtStyleFaceLockNote)(artStyle));
     }
-    if (isClone) {
+    if (isAlteration) {
+        parts.push('=== TARGETED ALTERATION & REFINEMENT MANDATE ===', 'The reference image shows the EXISTING INVITATION CARD to be adjusted.', 'CRITICAL CONTEXT PRESERVATION: You MUST faithfully preserve the existing card’s overall composition, luxury layout, framing, ornamental arches, paper texture, lighting, and color harmony.', 'If people or faces appear in the card, their facial identity and expressions must remain completely unchanged.', 'Apply ONLY the specific targeted adjustment requested in the brief. Do NOT replace or redesign the whole card from scratch.');
+    }
+    else if (isClone) {
         parts.push('=== INVITATION CARD CLONING & DUPLICATION MANDATE ===', 'The reference image contains an existing INVITATION CARD. You MUST faithfully duplicate and replicate its architectural composition, ornamental borders, arches, filigree flourishes, paper textures, background gradients, and color harmonies.', analysis?.clonedCardFeatures ? `Cloned card layout details: ${analysis.clonedCardFeatures}` : '');
     }
     if (hasPeople) {
@@ -360,6 +366,20 @@ function structureSystemPrompt(embedText, artStyle) {
 function visionUserText(prompt, hasRefs, options) {
     const original = options?.processed?.originalBrief || prompt;
     const englishScene = options?.processed?.englishSceneBrief || options?.processed?.decorBrief || prompt;
+    const isAlteration = Boolean(options?.isAlteration ||
+        /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt));
+    const existingTexts = Array.isArray(options?.existingElements)
+        ? options.existingElements
+            .filter((el) => el && typeof el.text === 'string' && el.text.trim().length > 0)
+            .map((el) => `${el.type || 'text'}: "${el.text.trim()}"`)
+            .join('; ')
+        : '';
+    const alterationBlock = isAlteration
+        ? `\n=== REFINEMENT & ALTERATION MANDATE ===
+The user is adjusting an existing luxury invitation design.
+${existingTexts ? `EXISTING TEXTS & DETAILS TO PRESERVE: ${existingTexts}` : ''}
+PRESERVATION RULE: Do NOT invent new replacement couple names, dates, or venues. Keep the established event hierarchy and names intact unless explicitly instructed to change them.\n`
+        : '';
     const honesty = hasRefs
         ? `REFERENCE PHOTOS ATTACHED: faces = pixel truth (Gemini high-fidelity). ${options?.processed?.beautifyStripped
             ? 'The brief asked to beautify / smooth / lighten faces — IGNORE those requests.'
@@ -381,6 +401,7 @@ ENGLISH SCENE BRIEF (Nano Banana narrative — use this as the creative brief):
 ${englishScene.slice(0, 1400)}
 """
 ${contextBlock}${roles}
+${alterationBlock}
 ${honesty}
 
 Tasks (strict fidelity — faces first):
@@ -1241,11 +1262,22 @@ async function composeInvitationTemplateAi(input) {
     const embedText = Boolean(input.embedText);
     const artStyle = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(input.artStyle);
     const artStyleLine = (0, invitationArtStyle_ts_1.invitationArtStyleScaffoldLine)(artStyle);
-    const imageUrls = (input.imageUrls || [])
+    const isAlteration = Boolean(input.isAlteration) || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+    const rawImageUrls = (input.imageUrls || [])
         .filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))
-        .map((u) => u.trim())
-        .slice(0, 4);
-    const processedBase = (0, invitationPromptFidelity_ts_1.processUserPromptForHonestFaces)(prompt, {
+        .map((u) => u.trim());
+    if (input.baseImageUrl && /^https?:\/\//i.test(input.baseImageUrl.trim()) && !rawImageUrls.includes(input.baseImageUrl.trim())) {
+        rawImageUrls.unshift(input.baseImageUrl.trim());
+    }
+    const imageUrls = rawImageUrls.slice(0, 4);
+    const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
+    const existingTextSummaries = existingElements
+        .filter((el) => el && typeof el.text === 'string' && el.text.trim().length > 0)
+        .map((el) => `${el.type || 'text'}: "${el.text.trim()}"`);
+    const enrichedPrompt = isAlteration && existingTextSummaries.length > 0
+        ? `${prompt}. PRESERVATION DU CONTEXTE : Le carton existant contient [${existingTextSummaries.join(', ')}]. Conserver impérativement ces informations clés (noms, date, lieu) et la disposition générale, en appliquant avec précision la retouche demandée.`
+        : prompt;
+    const processedBase = (0, invitationPromptFidelity_ts_1.processUserPromptForHonestFaces)(enrichedPrompt, {
         referenceCount: imageUrls.length,
         embedText,
         artStyleLine,
@@ -1260,7 +1292,7 @@ async function composeInvitationTemplateAi(input) {
         userId: input.authUserId || input.userId,
         tenantId: input.tenantId,
         deviceId: input.deviceId,
-        currentPrompt: prompt,
+        currentPrompt: enrichedPrompt,
         source: contextSource,
     });
     const organizerContextEn = (0, invitationComposeContext_ts_1.formatContextForImage)(composeContext, contextSource);
@@ -1270,6 +1302,8 @@ async function composeInvitationTemplateAi(input) {
         organizerContext: organizerContextEn,
         processed,
         artStyle,
+        isAlteration,
+        existingElements,
     });
     if (!imageUrls.length && structured.visualAnalysis) {
         structured.visualAnalysis.hasPeople = false;
@@ -1280,6 +1314,7 @@ async function composeInvitationTemplateAi(input) {
         organizerContext: organizerContextEn,
         processed,
         artStyle,
+        isAlteration,
     });
     let bgImageUrl = '';
     let imageMode = null;
@@ -1384,6 +1419,13 @@ async function composeInvitationTemplateAi(input) {
     global.aiEnglishSceneBrief = processed.englishSceneBrief;
     global.aiOriginalBrief = processed.originalBrief;
     let elements = sanitizeElements(structured.elements);
+    if (isAlteration && existingElements.length > 0 && !embedText) {
+        const textChangeExplicit = /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(prompt);
+        if (!textChangeExplicit) {
+            // Le réajustement est visuel ou décoratif : préserver fidèlement les éléments personnalisés existants
+            elements = existingElements.map((el) => ({ ...el }));
+        }
+    }
     if (embedText) {
         elements = elements.filter((el) => el.type === 'rsvp-block');
     }

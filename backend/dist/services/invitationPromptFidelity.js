@@ -89,17 +89,18 @@ function optimizeReferenceImageUrl(url) {
 exports.BRIEF_REFORMULATION_SYSTEM = `You rewrite invitation design briefs for Gemini Image (Nano Banana).
 
 Rules (non-negotiable):
-1) Output ONLY valid JSON: {"englishSceneBrief":"...","preservedFacts":["..."],"intent":"clone|wedding|gala|birthday|other"}
+1) Output ONLY valid JSON: {"englishSceneBrief":"...","preservedFacts":["..."],"intent":"clone|wedding|gala|birthday|refine|other"}
 2) Write englishSceneBrief in clear English as a directorial scene narrative — NOT a keyword list.
 3) Follow Nano Banana formula: [Subject] + [Action] + [Location/context] + [Composition] + [Style].
-4) Start with a strong verb (Compose / Design / Create / Clone / Modernize…).
+4) Start with a strong verb (Compose / Design / Create / Clone / Modernize / Refine…).
 5) Be specific about paper, florals, lighting, materials, framing, and print finish (one light direction, tactile foil, 9:16 sharpness).
 6) Use positive framing (describe what to show, not what to avoid).
 7) Preserve every factual detail from the user: names, dates, venues, cities, colors, cultural motifs (Kuba, wax, pagne), event type, and any Congolese national language phrases (Lingala, Swahili, Kikongo, Tshiluba) without translating them into French or English.
 8) If reference photos of people will be attached: describe DÉCOR and CARD only — never rewrite faces, skin, smile, age, or ethnicity. Say hosts keep their photographed likeness.
 9) If no people photos: for wedding/gala/birthday, Black African hosts from Central Africa / RDC when people are implied; never invent a Caucasian stock couple.
 10) Strip any request to beautify, smooth, lighten, airbrush, or swap faces.
-11) Keep englishSceneBrief under 450 words. No markdown.`;
+11) Keep englishSceneBrief under 450 words. No markdown.
+12) If the brief is an ALTERATION / REFINEMENT (retouche, réajustement, altération, modification ciblée, conserver le carton existant): set intent="refine". Explicitly instruct to PRESERVE the existing card layout, framing, background composition, color harmony, and character identity, applying ONLY the specific targeted adjustment.`;
 function collapseSpaces(value) {
     return value.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -164,16 +165,21 @@ function buildEnglishSceneBriefScaffold(decorBrief, options) {
     if (!cleaned)
         return '';
     const referenceCount = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
-    const looksLikeClone = /copi|clon|reprodu|duplicate|faithful|moderni/i.test(cleaned);
-    const verb = looksLikeClone
-        ? 'Clone and redesign'
-        : 'Compose';
+    const looksLikeRefine = /retouch|ajust|refin|altér|réajust|modifier/i.test(cleaned);
+    const looksLikeClone = !looksLikeRefine && /copi|clon|reprodu|duplicate|faithful|moderni/i.test(cleaned);
+    const verb = looksLikeRefine
+        ? 'Refine and alter'
+        : looksLikeClone
+            ? 'Clone and redesign'
+            : 'Compose';
     const subject = referenceCount > 0
         ? 'a vertical print-ready luxury invitation card featuring the exact people from the attached reference photos (faces unchanged)'
         : 'a vertical print-ready luxury invitation card for a real Central African / RDC celebration';
-    const action = looksLikeClone
-        ? 'faithfully echoing the reference card’s layout, ornamental borders, paper texture and visual hierarchy while refreshing the atmosphere to match the brief'
-        : 'presenting a refined ceremonial mood that matches the brief’s event type, palette and cultural details';
+    const action = looksLikeRefine
+        ? 'faithfully preserving the overall visual composition, layout, color palette, ornaments, framing, and existing typography/people of the reference card, applying precisely the requested targeted adjustment'
+        : looksLikeClone
+            ? 'faithfully echoing the reference card’s layout, ornamental borders, paper texture and visual hierarchy while refreshing the atmosphere to match the brief'
+            : 'presenting a refined ceremonial mood that matches the brief’s event type, palette and cultural details';
     const location = 'as a prestige printed stationery piece for Kinshasa / Central Africa hospitality';
     const composition = 'tall 9:16 portrait frame, centered ceremonial focus, generous margins for lettering, soft depth of field on florals and paper grain';
     const styleParts = [
