@@ -51,6 +51,7 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
+ Calendar, MapPin, User, MessageSquare,
 } from 'lucide-react';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
@@ -157,6 +158,45 @@ const lightenColor = (hex: string, percent = 30) => {
  b = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
+
+function getElementFieldInfo(el: Record<string, unknown>, index: number): {
+ label: string;
+ iconType: 'user' | 'calendar' | 'map' | 'message' | 'rsvp' | 'type';
+ placeholder: string;
+} {
+ const type = typeof el.type === 'string' ? el.type : 'text';
+ const text = typeof el.text === 'string' ? el.text : '';
+ const lower = text.toLowerCase();
+
+ if (type === 'rsvp-block') {
+ return { label: 'Bouton RSVP / Confirmation', iconType: 'rsvp', placeholder: 'Ex: Confirmer votre présence' };
+ }
+
+ const hasDateWords = /(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre|202[0-9]|\b\d{1,2}h\d{0,2}\b)/i.test(text);
+ if (hasDateWords) {
+ return { label: 'Date & Heure', iconType: 'calendar', placeholder: 'Ex: Samedi 24 Octobre 2026 à 16h00' };
+ }
+
+ const hasPlaceWords = /(h[oô]tel|salle|palais|centre|parc|espace|avenue|boulevard|rue|kinshasa|lubumbashi|goma|gombe|limete|ngaliema)/i.test(lower);
+ if (hasPlaceWords) {
+ return { label: 'Lieu de réception', iconType: 'map', placeholder: 'Ex: Grand Hôtel de Kinshasa, Salle Virunga' };
+ }
+
+ const hasCoupleSymbol = /(&|et|\+|avec)/i.test(text) && text.length < 60;
+ if (hasCoupleSymbol || (index <= 1 && text.split(/\s+/).length >= 2 && text.length < 45 && !hasDateWords)) {
+ return { label: 'Noms sur l’invitation (Mariés / Hôtes)', iconType: 'user', placeholder: 'Ex: Sarah & Jonathan' };
+ }
+
+ if (index === 0 && text.length < 35) {
+ return { label: 'En-tête / Titre d’invitation', iconType: 'type', placeholder: 'Ex: Invitation au Mariage' };
+ }
+
+ if (text.length > 30) {
+ return { label: 'Message / Annonce', iconType: 'message', placeholder: 'Ex: Ont la joie de vous convier à la célébration…' };
+ }
+
+ return { label: `Texte personnalisé (${index + 1})`, iconType: 'type', placeholder: 'Texte sur la carte' };
+}
 
 export default function TemplatesPage() {
  const { user, planFeatures, planQuota, tenant } = useAuth();
@@ -344,6 +384,7 @@ export default function TemplatesPage() {
  const freeCanvasRef = useRef<HTMLDivElement>(null);
  const [importedWithOcr, setImportedWithOcr] = useState(false);
  const [generatedByAi, setGeneratedByAi] = useState(false);
+ const [quickTextModalOpen, setQuickTextModalOpen] = useState(false);
  const [ocrProgress, setOcrProgress] = useState<number | null>(null);
  const [mockupImportModalOpen, setMockupImportModalOpen] = useState(false);
  const [pendingMockupFile, setPendingMockupFile] = useState<File | null>(null);
@@ -1043,9 +1084,12 @@ export default function TemplatesPage() {
  setAiComposeStudioTab('create');
  };
 
- const openAiComposeModal = async () => {
+ const openAiComposeModal = async (presetPrompt?: string) => {
  if (!canUseCustomTemplates) return;
  setError('');
+ if (presetPrompt) {
+ setAiComposePrompt(presetPrompt);
+ }
  setAiComposeModalOpen(true);
  void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
  try {
@@ -2226,6 +2270,80 @@ export default function TemplatesPage() {
  { id: '0.2em', label: 'Luxury (0.2em)' },
  ];
 
+ const renderQuickTextModal = () => {
+ if (!quickTextModalOpen) return null;
+ const textElements = canvasElements.filter((el) => ['text', 'button', 'rsvp-block'].includes(el.type));
+
+ return (
+ <Modal
+ open={quickTextModalOpen}
+ onClose={() => setQuickTextModalOpen(false)}
+ title="Modifier les textes clés de l’invitation"
+ description="Modifiez directement les noms, dates, lieux et textes. Vos modifications s'appliquent en direct sur la carte."
+ size="lg"
+ footer={
+ <div className="flex justify-end w-full">
+ <Button type="button" onClick={() => setQuickTextModalOpen(false)}>
+ Terminer
+ </Button>
+ </div>
+ }
+ >
+ <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+ {textElements.length === 0 ? (
+ <p className="text-xs text-muted text-center py-6">Aucun texte sur cette carte.</p>
+ ) : (
+ textElements.map((el, idx) => {
+ const fieldInfo = getElementFieldInfo(el as unknown as Record<string, unknown>, idx);
+ const textValue = typeof el.text === 'string' ? el.text : '';
+
+ return (
+ <div key={el.id} className="p-3 rounded-xl border border-border bg-surface-muted/30 space-y-1.5">
+ <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+ {fieldInfo.iconType === 'user' && <User className="w-3.5 h-3.5 text-primary shrink-0" />}
+ {fieldInfo.iconType === 'calendar' && <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />}
+ {fieldInfo.iconType === 'map' && <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />}
+ {fieldInfo.iconType === 'rsvp' && <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />}
+ {fieldInfo.iconType === 'message' && <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0" />}
+ {fieldInfo.iconType === 'type' && <Type className="w-3.5 h-3.5 text-primary shrink-0" />}
+ <span>{fieldInfo.label}</span>
+ </label>
+ {textValue.length > 50 ? (
+ <textarea
+ rows={2}
+ value={textValue}
+ onChange={(e) => {
+ const updated = canvasElements.map((item) =>
+ item.id === el.id ? { ...item, text: e.target.value } : item,
+ );
+ setCanvasElements(updated);
+ }}
+ placeholder={fieldInfo.placeholder}
+ className="w-full text-xs rounded-lg border border-border bg-surface p-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 resize-y"
+ />
+ ) : (
+ <input
+ type="text"
+ value={textValue}
+ onChange={(e) => {
+ const updated = canvasElements.map((item) =>
+ item.id === el.id ? { ...item, text: e.target.value } : item,
+ );
+ setCanvasElements(updated);
+ }}
+ placeholder={fieldInfo.placeholder}
+ className="w-full text-xs rounded-lg border border-border bg-surface px-2.5 py-1.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+ />
+ )}
+ </div>
+ );
+ })
+ )}
+ </div>
+ </Modal>
+ );
+ };
+
 
  if (loading) {
  return <SkeletonTemplatesView />;
@@ -2236,6 +2354,7 @@ export default function TemplatesPage() {
  <>
  {renderMockupImportModal()}
  {renderAiComposeModal()}
+ {renderQuickTextModal()}
  <AiTokenPurchaseModal
  open={aiTokenModalOpen}
  onClose={() => setAiTokenModalOpen(false)}
@@ -2622,12 +2741,36 @@ export default function TemplatesPage() {
  <button
  type="button"
  disabled={mockupImporting || imageUploading || aiComposeBusy}
- onClick={openAiComposeModal}
+ onClick={() => openAiComposeModal()}
  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
  </button>
+
+ {canvasElements.length > 0 && (
+ <button
+ type="button"
+ disabled={aiComposeBusy}
+ onClick={() => openAiComposeModal('Conserver la base du carton actuel. Retouche demandée : ')}
+ className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+ >
+ <Sparkles className="w-3.5 h-3.5" />
+ Altérer légèrement avec l’IA
+ </button>
+ )}
+
+ {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (
+ <button
+ type="button"
+ onClick={() => setQuickTextModalOpen(true)}
+ className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer"
+ >
+ <Edit3 className="w-3.5 h-3.5 text-primary" />
+ Modifier les textes clés (noms, dates…)
+ </button>
+ )}
+
  <p className="text-xs text-muted text-center">
  Jetons partagés avec la simulation budget
  </p>

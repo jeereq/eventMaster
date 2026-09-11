@@ -21,6 +21,16 @@ import {
   Check,
   Clock,
   Download,
+  SlidersHorizontal,
+  Plus,
+  Trash2,
+  Calendar,
+  MapPin,
+  User,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { isProtocolUser, PROTOCOL_CREATIVE_DENIED } from '@/lib/protocolAccess';
@@ -194,6 +204,54 @@ const QUICK_INVITATION_INSPIRATIONS: Array<{
   },
 ];
 
+const QUICK_ALTERATION_SUGGESTIONS = [
+  { label: '✨ Dorures plus vives', prompt: 'Ajouter des dorures plus vives, reflets scintillants et bordures or brillant.' },
+  { label: '🌸 Lys blancs & ivoire', prompt: 'Remplacer les fleurs par de délicats lys blancs, orchidées et touches ivoire.' },
+  { label: '🌅 Ambiance crépuscule', prompt: 'Ambiance de soirée au crépuscule, lumière tamisée chaleureuse et ciel étoilé subtil.' },
+  { label: '👑 Style royal noble', prompt: 'Renforcer le caractère royal et prestigieux, velours noble et dorures sculptées.' },
+  { label: '🌿 Verdure & eucalyptus', prompt: 'Ajouter un feuillage d’eucalyptus et des branches d’olivier frais et raffinés.' },
+  { label: '✒️ Typographie majestueuse', prompt: 'Typographie calligraphique plus imposante, lettres d’or aux courbes majestueuses.' },
+];
+
+function getElementFieldInfo(el: Record<string, unknown>, index: number): {
+  label: string;
+  iconType: 'user' | 'calendar' | 'map' | 'message' | 'rsvp' | 'type';
+  placeholder: string;
+} {
+  const type = typeof el.type === 'string' ? el.type : 'text';
+  const text = typeof el.text === 'string' ? el.text : '';
+  const lower = text.toLowerCase();
+
+  if (type === 'rsvp-block') {
+    return { label: 'Bouton RSVP / Confirmation', iconType: 'rsvp', placeholder: 'Ex: Confirmer votre présence' };
+  }
+
+  const hasDateWords = /(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre|202[0-9]|\b\d{1,2}h\d{0,2}\b)/i.test(text);
+  if (hasDateWords) {
+    return { label: 'Date & Heure', iconType: 'calendar', placeholder: 'Ex: Samedi 24 Octobre 2026 à 16h00' };
+  }
+
+  const hasPlaceWords = /(h[oô]tel|salle|palais|centre|parc|espace|avenue|boulevard|rue|kinshasa|lubumbashi|goma|gombe|limete|ngaliema)/i.test(lower);
+  if (hasPlaceWords) {
+    return { label: 'Lieu de réception', iconType: 'map', placeholder: 'Ex: Grand Hôtel de Kinshasa, Salle Virunga' };
+  }
+
+  const hasCoupleSymbol = /(&|et|\+|avec)/i.test(text) && text.length < 60;
+  if (hasCoupleSymbol || (index <= 1 && text.split(/\s+/).length >= 2 && text.length < 45 && !hasDateWords)) {
+    return { label: 'Noms sur l’invitation (Mariés / Hôtes)', iconType: 'user', placeholder: 'Ex: Sarah & Jonathan' };
+  }
+
+  if (index === 0 && text.length < 35) {
+    return { label: 'En-tête / Titre d’invitation', iconType: 'type', placeholder: 'Ex: Invitation au Mariage' };
+  }
+
+  if (text.length > 30) {
+    return { label: 'Message / Annonce', iconType: 'message', placeholder: 'Ex: Ont la joie de vous convier à la célébration…' };
+  }
+
+  return { label: `Texte personnalisé (${index + 1})`, iconType: 'type', placeholder: 'Texte sur la carte' };
+}
+
 export default function LandingInvitationAiGenerator({
   className,
   id = 'generateur-ia',
@@ -236,7 +294,13 @@ export default function LandingInvitationAiGenerator({
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [previewTab, setPreviewTab] = useState<'card' | 'artwork' | 'details'>('card');
+  const [previewTab, setPreviewTab] = useState<'card' | 'customize' | 'alter' | 'artwork' | 'details'>('card');
+  const [customizeAccordionOpen, setCustomizeAccordionOpen] = useState(false);
+  const [alterAccordionOpen, setAlterAccordionOpen] = useState(false);
+  const [refinePrompt, setRefinePrompt] = useState('');
+  const [refineBusy, setRefineBusy] = useState(false);
+  const [refineStage, setRefineStage] = useState<string | null>(null);
+  const [refineSuccess, setRefineSuccess] = useState<string | null>(null);
   const [copiedColorKey, setCopiedColorKey] = useState<string | null>(null);
   const copyColorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -620,7 +684,129 @@ export default function LandingInvitationAiGenerator({
     setActiveHistoryId(null);
     setActiveStep(0);
     setPreviewOpen(false);
+    setRefineSuccess(null);
+    setCustomizeAccordionOpen(false);
+    setAlterAccordionOpen(false);
     logAction('reset', 'Aperçu retiré', 'Aperçu retiré');
+  };
+
+  const handleUpdateElementText = (index: number, newText: string) => {
+    if (!result || !Array.isArray(result.elements)) return;
+    const elements = [...result.elements] as Record<string, unknown>[];
+    if (!elements[index]) return;
+    elements[index] = { ...elements[index], text: newText };
+    const nextResult: TemplateAiComposeContent = { ...result, elements };
+    setResult(nextResult);
+    saveAiTemplateDraft(nextResult, prompt.trim());
+  };
+
+  const handleUpdateElementColor = (index: number, newColor: string) => {
+    if (!result || !Array.isArray(result.elements)) return;
+    const elements = [...result.elements] as Record<string, unknown>[];
+    if (!elements[index]) return;
+    elements[index] = { ...elements[index], color: newColor };
+    const nextResult: TemplateAiComposeContent = { ...result, elements };
+    setResult(nextResult);
+    saveAiTemplateDraft(nextResult, prompt.trim());
+  };
+
+  const handleUpdateElementAlign = (index: number, align: 'left' | 'center' | 'right') => {
+    if (!result || !Array.isArray(result.elements)) return;
+    const elements = [...result.elements] as Record<string, unknown>[];
+    if (!elements[index]) return;
+    elements[index] = { ...elements[index], align };
+    const nextResult: TemplateAiComposeContent = { ...result, elements };
+    setResult(nextResult);
+    saveAiTemplateDraft(nextResult, prompt.trim());
+  };
+
+  const handleDeleteElement = (index: number) => {
+    if (!result || !Array.isArray(result.elements)) return;
+    const elements = [...result.elements] as Record<string, unknown>[];
+    elements.splice(index, 1);
+    const nextResult: TemplateAiComposeContent = { ...result, elements };
+    setResult(nextResult);
+    saveAiTemplateDraft(nextResult, prompt.trim());
+    logAction('prompt_change', 'Élément retiré');
+  };
+
+  const handleAddTextElement = (type: 'text' | 'rsvp-block' = 'text') => {
+    if (!result) return;
+    const elements = (Array.isArray(result.elements) ? [...result.elements] : []) as Record<string, unknown>[];
+    const defaultText = type === 'rsvp-block' ? 'Confirmer votre présence' : 'Nouvelle information (ex: Dress code…)';
+    const accentColor = (palette && palette[0]?.color) || '#c5a059';
+    elements.push({
+      id: `ai-custom-${Date.now()}`,
+      type,
+      text: defaultText,
+      color: accentColor,
+      fontSize: type === 'rsvp-block' ? '16px' : '15px',
+      align: 'center',
+      width: 'full',
+      positionMode: 'flow',
+    });
+    const nextResult: TemplateAiComposeContent = { ...result, elements };
+    setResult(nextResult);
+    saveAiTemplateDraft(nextResult, prompt.trim());
+    logAction('prompt_change', 'Mention ajoutée', defaultText);
+  };
+
+  const handleRefineProposition = async (overridePrompt?: string) => {
+    const rawRefine = (overridePrompt || refinePrompt).trim();
+    if (!rawRefine) return;
+    if (protocolLocked) {
+      setError(PROTOCOL_CREATIVE_DENIED);
+      return;
+    }
+    if (!canAffordAiAction(allowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
+      setTokenModalOpen(true);
+      setError('Solde insuffisant pour réajuster la proposition.');
+      return;
+    }
+
+    setRefineBusy(true);
+    setRefineStage('Ajustement de la proposition par l’IA…');
+    setRefineSuccess(null);
+    setError('');
+
+    const basePrompt = prompt.trim();
+    const combinedPrompt = `${basePrompt}. Retouche demandée : ${rawRefine}. Conserver la cohérence globale de l'invitation, le thème et les visages de référence, tout en appliquant précisément cette retouche.`;
+
+    try {
+      const data = await composeTemplateWithAiPublic({
+        prompt: combinedPrompt,
+        files,
+        embedText,
+        contextSource,
+        artStyle,
+        variantsCount,
+        speedMode,
+      });
+
+      setResult(data.content);
+      setLastStageMeta(data.stage || null);
+      setActiveHistoryId(typeof data.historyId === 'string' ? data.historyId : null);
+      setAllowance(getAiSimulationAllowance());
+      saveAiTemplateDraft(data.content, combinedPrompt);
+      setPrompt(combinedPrompt);
+      void fetchAiTemplateComposeHistory().then(setHistory);
+      logAction('model_applied', 'Proposition ajustée', rawRefine);
+      playAiGenerationCompleteSound();
+      setRefineSuccess(`Proposition réajustée avec succès : « ${rawRefine} »`);
+      setRefinePrompt('');
+      scrollResultIntoView();
+    } catch (err: unknown) {
+      const e = err as { status?: number; message?: string };
+      if (e?.status === 402) {
+        setTokenModalOpen(true);
+        setError('Plus de jetons IA disponibles.');
+      } else {
+        setError(e?.message || 'Erreur lors de la retouche IA.');
+      }
+    } finally {
+      setRefineBusy(false);
+      setRefineStage(null);
+    }
   };
 
   const openHistoryItem = (item: AiTemplateComposeHistoryItem, preferredVariantUrl?: string) => {
@@ -669,6 +855,237 @@ export default function LandingInvitationAiGenerator({
     setStage(null);
     setPreviewOpen(false);
     scrollResultIntoView();
+  };
+
+  const renderCustomizeElementsSection = () => {
+    if (!result?.elements || !Array.isArray(result.elements) || result.elements.length === 0) {
+      return (
+        <div className="p-3 text-center text-xs text-muted rounded-xl border border-border bg-surface">
+          Aucun élément textuel à personnaliser sur cette proposition.
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between pb-1">
+          <div>
+            <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+              Modifier les éléments spécifiques
+            </h4>
+            <p className="text-[11px] text-muted">
+              Modifiez en direct les noms, dates, lieux et textes de la carte.
+            </p>
+          </div>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+            Aperçu instantané ✓
+          </span>
+        </div>
+
+        {resultEmbedText && (
+          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+            <span className="font-bold block">Texte incrusté dans l’illustration :</span>
+            Les écritures sont peintes dans l’image par l’IA. Pour retoucher le texte directement dans l’image, utilisez l’onglet <strong>« Altérer l’IA »</strong>.
+          </div>
+        )}
+
+        <div className="space-y-2.5 max-h-[22rem] overflow-y-auto overscroll-contain pr-1">
+          {result.elements.map((elRaw, idx) => {
+            const el = elRaw as Record<string, unknown>;
+            const fieldInfo = getElementFieldInfo(el, idx);
+            const textValue = typeof el.text === 'string' ? el.text : '';
+            const alignValue = (el.align as string) || 'center';
+            const colorValue = typeof el.color === 'string' ? el.color : '#1e293b';
+
+            return (
+              <div
+                key={(el.id as string) || idx}
+                className="p-2.5 rounded-xl border border-border bg-surface shadow-2xs space-y-2 group hover:border-primary/40 transition"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 truncate">
+                    {fieldInfo.iconType === 'user' && <User className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    {fieldInfo.iconType === 'calendar' && <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    {fieldInfo.iconType === 'map' && <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    {fieldInfo.iconType === 'rsvp' && <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    {fieldInfo.iconType === 'message' && <MessageSquare className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    {fieldInfo.iconType === 'type' && <Type className="w-3.5 h-3.5 text-primary shrink-0" />}
+                    <span className="truncate">{fieldInfo.label}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteElement(idx)}
+                    className="opacity-60 hover:opacity-100 text-muted hover:text-red-500 transition p-1 rounded hover:bg-surface-muted cursor-pointer"
+                    title="Supprimer cet élément"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {textValue.length > 50 ? (
+                  <textarea
+                    rows={2}
+                    value={textValue}
+                    onChange={(e) => handleUpdateElementText(idx, e.target.value)}
+                    placeholder={fieldInfo.placeholder}
+                    className="w-full text-xs rounded-lg border border-border bg-surface-muted/40 p-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 resize-y"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={textValue}
+                    onChange={(e) => handleUpdateElementText(idx, e.target.value)}
+                    placeholder={fieldInfo.placeholder}
+                    className="w-full text-xs rounded-lg border border-border bg-surface-muted/40 px-2.5 py-1.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  />
+                )}
+
+                <div className="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-border/40">
+                  <div className="flex items-center gap-1.5">
+                    <span>Alignement :</span>
+                    <div className="inline-flex rounded border border-border bg-surface-muted/60 p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateElementAlign(idx, 'left')}
+                        className={cn(
+                          'p-1 rounded text-muted hover:text-foreground cursor-pointer',
+                          alignValue === 'left' && 'bg-primary text-white shadow-2xs',
+                        )}
+                        title="Aligner à gauche"
+                      >
+                        <AlignLeft className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateElementAlign(idx, 'center')}
+                        className={cn(
+                          'p-1 rounded text-muted hover:text-foreground cursor-pointer',
+                          alignValue === 'center' && 'bg-primary text-white shadow-2xs',
+                        )}
+                        title="Centrer"
+                      >
+                        <AlignCenter className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateElementAlign(idx, 'right')}
+                        className={cn(
+                          'p-1 rounded text-muted hover:text-foreground cursor-pointer',
+                          alignValue === 'right' && 'bg-primary text-white shadow-2xs',
+                        )}
+                        title="Aligner à droite"
+                      >
+                        <AlignRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span>Couleur :</span>
+                    <input
+                      type="color"
+                      value={colorValue.startsWith('#') ? colorValue : '#c5a059'}
+                      onChange={(e) => handleUpdateElementColor(idx, e.target.value)}
+                      className="w-5 h-5 rounded cursor-pointer border border-border p-0 bg-transparent"
+                      title="Changer la couleur du texte"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => handleAddTextElement('text')}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-dashed border-border hover:border-primary/50 text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-primary" />
+            Ajouter une mention / information
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAlterAiSection = () => {
+    return (
+      <div className="space-y-3 p-3.5 rounded-xl border border-primary/25 bg-primary/5 dark:bg-primary/10">
+        <div className="space-y-1">
+          <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            Altérer légèrement cette proposition avec l’IA
+          </h4>
+          <p className="text-[11px] text-muted leading-relaxed">
+            Donnez une consigne de retouche ciblée : l’IA conserve les photos fournies et le style existant tout en appliquant précisément votre ajustement.
+          </p>
+        </div>
+
+        {refineSuccess && (
+          <Alert variant="success" className="text-xs py-2 flex items-center justify-between">
+            <span>{refineSuccess}</span>
+            <button
+              type="button"
+              onClick={() => setRefineSuccess(null)}
+              className="underline font-bold text-[11px] ml-2 shrink-0 cursor-pointer"
+            >
+              Fermer
+            </button>
+          </Alert>
+        )}
+
+        <div className="space-y-2.5">
+          <textarea
+            rows={2}
+            value={refinePrompt}
+            onChange={(e) => setRefinePrompt(e.target.value)}
+            disabled={refineBusy}
+            placeholder="Ex : Ajouter des dorures plus vives, remplacer les roses par des lys blancs, éclairage crépuscule…"
+            className="w-full text-xs rounded-lg border border-border bg-surface p-2.5 text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 resize-y"
+          />
+
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold text-muted block">Suggestions de retouche rapide :</span>
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_ALTERATION_SUGGESTIONS.map((sug) => (
+                <button
+                  key={sug.label}
+                  type="button"
+                  disabled={refineBusy}
+                  onClick={() => {
+                    setRefinePrompt(sug.prompt);
+                    void handleRefineProposition(sug.prompt);
+                  }}
+                  className="text-[11px] px-2.5 py-1 rounded-full border border-border bg-surface hover:border-primary/50 hover:bg-primary/10 text-foreground transition cursor-pointer disabled:opacity-50"
+                >
+                  {sug.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            size="sm"
+            fullWidth
+            disabled={refineBusy || !refinePrompt.trim()}
+            onClick={() => void handleRefineProposition()}
+            leftIcon={
+              refineBusy ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
+              ) : (
+                <Wand2 className="w-3.5 h-3.5" />
+              )
+            }
+          >
+            {refineBusy ? (refineStage || 'Ajustement en cours…') : 'Réajuster la proposition avec l’IA'}
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -1328,9 +1745,9 @@ export default function LandingInvitationAiGenerator({
 
           {previewTemplate ? (
             <div className="flex-1 flex flex-col gap-3 min-h-0 animate-fade-in">
-              {/* Commutateur de vue à 3 modes */}
+              {/* Commutateur de vue à 5 modes */}
               <div
-                className="flex items-center gap-1 p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-2xs"
+                className="flex flex-wrap items-center gap-1 p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-2xs"
                 role="tablist"
                 aria-label="Modes d'aperçu de l'invitation"
               >
@@ -1340,7 +1757,7 @@ export default function LandingInvitationAiGenerator({
                   aria-selected={previewTab === 'card'}
                   onClick={() => setPreviewTab('card')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    'flex-1 min-w-[4.5rem] flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'card'
                       ? 'bg-primary-solid text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
@@ -1352,17 +1769,48 @@ export default function LandingInvitationAiGenerator({
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={previewTab === 'artwork'}
-                  onClick={() => setPreviewTab('artwork')}
+                  aria-selected={previewTab === 'customize'}
+                  onClick={() => setPreviewTab('customize')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
-                    previewTab === 'artwork'
+                    'flex-1 min-w-[5rem] flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    previewTab === 'customize'
+                      ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+                  )}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden />
+                  <span>Modifier</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={previewTab === 'alter'}
+                  onClick={() => setPreviewTab('alter')}
+                  className={cn(
+                    'flex-1 min-w-[5rem] flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    previewTab === 'alter'
                       ? 'bg-primary-solid text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
                   )}
                 >
                   <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                  <span>Image seule</span>
+                  <span>Altérer l’IA</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={previewTab === 'artwork'}
+                  onClick={() => setPreviewTab('artwork')}
+                  className={cn(
+                    'flex-1 min-w-[5rem] flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    previewTab === 'artwork'
+                      ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+                  )}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" aria-hidden />
+                  <span className="hidden sm:inline">Image seule</span>
+                  <span className="sm:hidden">Image</span>
                 </button>
                 <button
                   type="button"
@@ -1370,7 +1818,7 @@ export default function LandingInvitationAiGenerator({
                   aria-selected={previewTab === 'details'}
                   onClick={() => setPreviewTab('details')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
+                    'flex-1 min-w-[4.5rem] flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer',
                     previewTab === 'details'
                       ? 'bg-primary-solid text-primary-foreground shadow-xs'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
@@ -1413,24 +1861,106 @@ export default function LandingInvitationAiGenerator({
 
               {/* Vue 1 : Carte d'invitation complète */}
               {previewTab === 'card' && (
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen(true)}
-                  className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                  aria-label="Agrandir la carte"
-                >
-                  <LandingInvitationPreview
-                    template={previewTemplate}
-                    showOnlyBackground={resultEmbedText}
-                    showCaption={false}
-                    fitMode={coverFitMode}
-                    aspectRatio="9/16"
-                    className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)] pointer-events-none"
-                  />
-                </button>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    aria-label="Agrandir la carte"
+                  >
+                    <LandingInvitationPreview
+                      template={previewTemplate}
+                      showOnlyBackground={resultEmbedText}
+                      showCaption={false}
+                      fitMode={coverFitMode}
+                      aspectRatio="9/16"
+                      className="!w-full !max-w-[min(100%,28rem)] xl:!max-w-[min(100%,32rem)] pointer-events-none"
+                    />
+                  </button>
+
+                  {/* Accès rapide directement sous la carte */}
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setCustomizeAccordionOpen((v) => !v)}
+                      className="w-full flex items-center justify-between p-3 rounded-xl border border-border bg-surface hover:bg-surface-muted/60 transition text-xs font-semibold text-foreground cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+                        <span>Modifier les noms, dates et textes</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                          {Array.isArray(result?.elements) ? result.elements.length : 0}
+                        </span>
+                      </span>
+                      {customizeAccordionOpen ? (
+                        <ChevronUp className="w-4 h-4 text-muted" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted" />
+                      )}
+                    </button>
+
+                    {customizeAccordionOpen && (
+                      <div className="p-3 rounded-xl border border-border bg-surface shadow-2xs">
+                        {renderCustomizeElementsSection()}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setAlterAccordionOpen((v) => !v)}
+                      className="w-full flex items-center justify-between p-3 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition text-xs font-semibold text-foreground cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-primary" />
+                        <span>Altérer légèrement avec l’IA (retouche)</span>
+                      </span>
+                      {alterAccordionOpen ? (
+                        <ChevronUp className="w-4 h-4 text-primary" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-primary" />
+                      )}
+                    </button>
+
+                    {alterAccordionOpen && renderAlterAiSection()}
+                  </div>
+                </div>
               )}
 
-              {/* Vue 2 : Illustration IA pure (sans texte, pour apprécier le photoréalisme) */}
+              {/* Vue 2 : Modification ciblée des textes et éléments */}
+              {previewTab === 'customize' && (
+                <div className="space-y-3">
+                  <div className="flex flex-col items-center p-2 rounded-xl border border-border bg-surface shadow-2xs">
+                    <LandingInvitationPreview
+                      template={previewTemplate}
+                      showOnlyBackground={resultEmbedText}
+                      showCaption={false}
+                      fitMode="contain"
+                      aspectRatio="card"
+                      className="!w-full !max-w-[14rem] sm:!max-w-[16rem]"
+                    />
+                  </div>
+                  {renderCustomizeElementsSection()}
+                </div>
+              )}
+
+              {/* Vue 3 : Altération légère par l'IA */}
+              {previewTab === 'alter' && (
+                <div className="space-y-3">
+                  <div className="flex flex-col items-center p-2 rounded-xl border border-border bg-surface shadow-2xs">
+                    <LandingInvitationPreview
+                      template={previewTemplate}
+                      showOnlyBackground={resultEmbedText}
+                      showCaption={false}
+                      fitMode="contain"
+                      aspectRatio="card"
+                      className="!w-full !max-w-[14rem] sm:!max-w-[16rem]"
+                    />
+                  </div>
+                  {renderAlterAiSection()}
+                </div>
+              )}
+
+              {/* Vue 4 : Illustration IA pure (sans texte) */}
               {previewTab === 'artwork' && (
                 <div className="rounded-[var(--radius-card)] border border-border bg-surface shadow-sm overflow-hidden p-2 flex flex-col items-center space-y-2">
                   <LandingInvitationPreview
@@ -1451,7 +1981,7 @@ export default function LandingInvitationAiGenerator({
                 </div>
               )}
 
-              {/* Vue 3 : Détails, Palette & Structure */}
+              {/* Vue 5 : Détails, Palette & Structure */}
               {previewTab === 'details' && (
                 <div className="space-y-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface shadow-xs">
                   {palette && palette.length > 0 && (

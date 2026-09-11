@@ -380,16 +380,27 @@ export default function SubscriptionApprovalModal({
                 className="w-full bg-primary hover:bg-primary-hover"
                 onClick={() => void submitAction('quote')}
               >
-                Valider le rabais et envoyer le lien de paiement
+                {submitting
+                  ? 'Validation en cours…'
+                  : feedback?.type === 'success'
+                  ? 'Rabais validé ✓'
+                  : 'Valider le rabais et envoyer le lien de paiement'}
               </Button>
             ) : (
               <>
                 <Button
                   type="submit"
                   disabled={submitting || feedback?.type === 'success'}
+                  loading={submitting}
                   className="w-full bg-emerald-600 hover:bg-emerald-700"
                 >
-                  {isPlanChange ? 'Changer le forfait maintenant' : 'Approuver & activer maintenant'}
+                  {submitting
+                    ? 'Approbation en cours…'
+                    : feedback?.type === 'success'
+                    ? 'Demande approuvée ✓'
+                    : isPlanChange
+                    ? 'Changer le forfait maintenant'
+                    : 'Approuver & activer maintenant'}
                 </Button>
                 <Button
                   type="button"

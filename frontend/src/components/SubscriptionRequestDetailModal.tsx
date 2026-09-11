@@ -80,11 +80,13 @@ export default function SubscriptionRequestDetailModal({
   onClose,
   onApprove,
   onReject,
+  isActionLoading = false,
 }: {
   request: AdminSubscriptionRequestItem | null;
   onClose: () => void;
   onApprove?: (request: AdminSubscriptionRequestItem) => void;
   onReject?: (id: string) => void;
+  isActionLoading?: boolean;
 }) {
   const pending = request?.status === 'PENDING' || request?.status === 'QUOTED';
   const commercials: Array<{ name: string; email?: string; kind: string }> = [];
@@ -112,16 +114,26 @@ export default function SubscriptionRequestDetailModal({
       footer={
         pending ? (
           <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" disabled={isActionLoading} onClick={onClose}>
               Fermer
             </Button>
             {onReject && request && (
-              <Button type="button" variant="danger" onClick={() => onReject(request.id)}>
+              <Button
+                type="button"
+                variant="danger"
+                disabled={isActionLoading}
+                loading={isActionLoading}
+                onClick={() => onReject(request.id)}
+              >
                 Rejeter
               </Button>
             )}
             {onApprove && request && (
-              <Button type="button" onClick={() => onApprove(request)}>
+              <Button
+                type="button"
+                disabled={isActionLoading}
+                onClick={() => onApprove(request)}
+              >
                 {request.requestKind === 'discount' ? 'Valider le rabais' : 'Approuver'}
               </Button>
             )}

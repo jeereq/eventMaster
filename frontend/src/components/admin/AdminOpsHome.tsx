@@ -273,13 +273,34 @@ export default function AdminOpsHome() {
     setError('');
     setSuccess('');
     try {
+      // Retrait optimiste immédiat de la file d'attente
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pendingRequests: (prev.pendingRequests || []).filter((r) => r.id !== id),
+          counts: {
+            ...prev.counts,
+            pendingRequests: Math.max(0, (prev.counts.pendingRequests || 0) - 1),
+          },
+        };
+      });
+      setFiche((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pendingRequests: prev.pendingRequests.filter((r) => r.id !== id),
+        };
+      });
+
       const response = await api.post(`/admin/subscriptions/requests/${id}/approve`, {
         discountPercent: 0,
       });
-      setSuccess(response.message || 'Demande approuvée.');
+      setSuccess(response.message || 'Demande d’abonnement approuvée avec succès !');
       await loadOverview();
       if (tenantId && ficheOpen) await refreshFiche(tenantId);
     } catch (err: unknown) {
+      await loadOverview();
       setError(err instanceof Error ? err.message : 'Erreur lors de l’approbation.');
     } finally {
       setBusyId(null);
@@ -292,11 +313,32 @@ export default function AdminOpsHome() {
     setError('');
     setSuccess('');
     try {
+      // Retrait optimiste immédiat
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pendingRequests: (prev.pendingRequests || []).filter((r) => r.id !== id),
+          counts: {
+            ...prev.counts,
+            pendingRequests: Math.max(0, (prev.counts.pendingRequests || 0) - 1),
+          },
+        };
+      });
+      setFiche((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pendingRequests: prev.pendingRequests.filter((r) => r.id !== id),
+        };
+      });
+
       const response = await api.post(`/admin/subscriptions/requests/${id}/reject`);
-      setSuccess(response.message || 'Demande rejetée.');
+      setSuccess(response.message || 'Demande d’abonnement rejetée.');
       await loadOverview();
       if (tenantId && ficheOpen) await refreshFiche(tenantId);
     } catch (err: unknown) {
+      await loadOverview();
       setError(err instanceof Error ? err.message : 'Erreur lors du rejet.');
     } finally {
       setBusyId(null);
@@ -408,6 +450,27 @@ export default function AdminOpsHome() {
           </Link>
         ))}
       </div>
+
+      {(error || success) && (
+        <div className="space-y-2">
+          {error && (
+            <Alert variant="error" className="flex items-center justify-between">
+              <span>{error}</span>
+              <button type="button" onClick={() => setError('')} className="text-xs font-semibold underline ml-2 cursor-pointer">
+                Fermer
+              </button>
+            </Alert>
+          )}
+          {success && (
+            <Alert variant="success" className="flex items-center justify-between">
+              <span>{success}</span>
+              <button type="button" onClick={() => setSuccess('')} className="text-xs font-semibold underline ml-2 cursor-pointer">
+                Fermer
+              </button>
+            </Alert>
+          )}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-10">
         <QueueSection

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Clock, CreditCard, Eye } from 'lucide-react';
+import { Clock, CreditCard, Eye, Loader2 } from 'lucide-react';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -29,11 +29,13 @@ export type { AdminSubscriptionRequestItem };
 export default function SubscriptionRequestListPanel({
   requests,
   loading = false,
+  busyId = null,
   onApprove,
   onReject,
 }: {
   requests: AdminSubscriptionRequestItem[];
   loading?: boolean;
+  busyId?: string | null;
   onApprove: (request: AdminSubscriptionRequestItem) => void;
   onReject: (id: string) => void;
 }) {
@@ -262,29 +264,34 @@ export default function SubscriptionRequestListPanel({
                 (req.tenant?.referredByOrgUser?.orgRole === 'COMMERCIAL'
                   ? req.tenant.referredByOrgUser.name
                   : null);
+              const isRowBusy = busyId === req.id;
               const actions =
                 req.status === 'PENDING' || req.status === 'QUOTED' ? (
                   <>
                     <button
                       type="button"
+                      disabled={isRowBusy}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         onApprove(req);
                       }}
-                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition"
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                     >
+                      {isRowBusy && <Loader2 className="w-3 h-3 animate-spin shrink-0" />}
                       {req.requestKind === 'discount' ? 'Valider le rabais' : 'Approuver'}
                     </button>
                     <button
                       type="button"
+                      disabled={isRowBusy}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         onReject(req.id);
                       }}
-                      className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-lg transition"
+                      className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                     >
+                      {isRowBusy && <Loader2 className="w-3 h-3 animate-spin shrink-0" />}
                       Rejeter
                     </button>
                   </>
@@ -376,12 +383,12 @@ export default function SubscriptionRequestListPanel({
       <SubscriptionRequestDetailModal
         request={selected}
         onClose={() => setSelected(null)}
+        isActionLoading={selected ? busyId === selected.id : false}
         onApprove={(req) => {
           setSelected(null);
           onApprove(req);
         }}
         onReject={(id) => {
-          setSelected(null);
           onReject(id);
         }}
       />

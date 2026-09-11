@@ -544,6 +544,8 @@ function DashboardPageContent() {
   const [adminGuestsLoading, setAdminGuestsLoading] = useState(false);
   const [adminSettingsLoading, setAdminSettingsLoading] = useState(false);
   const [subRequestsLoading, setSubRequestsLoading] = useState(false);
+  const [busySubRequestId, setBusySubRequestId] = useState<string | null>(null);
+  const [adminFeedback, setAdminFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [approvalModalRequest, setApprovalModalRequest] = useState<SubscriptionApprovalRequest | null>(null);
   const [commercialOverview, setCommercialOverview] = useState<{
     stats?: { monthlyCommission?: number; totalCommission?: number };
@@ -1142,7 +1144,15 @@ function DashboardPageContent() {
     options?: { discountPercent?: number; approvedAmount?: number },
     action: 'activate' | 'quote' = 'activate',
   ) => {
+    setBusySubRequestId(id);
+    setAdminFeedback(null);
     try {
+      // Mise à jour optimiste immédiate : désactive l'état d'attente et bascule vers le statut final
+      setSubscriptionRequests((prev: any[]) =>
+        (prev || []).map((req) =>
+          req.id === id ? { ...req, status: action === 'quote' ? 'QUOTED' : 'APPROVED' } : req,
+        ),
+      );
       const endpoint =
         action === 'quote'
           ? `/admin/subscriptions/requests/${id}/quote`
@@ -1151,6 +1161,15 @@ function DashboardPageContent() {
         discountPercent: options?.discountPercent ?? 0,
         approvedAmount: options?.approvedAmount,
       });
+      const successMsg =
+        response.message ||
+        (action === 'quote'
+          ? 'Rabais validé et lien de paiement transmis.'
+          : 'Demande d’abonnement approuvée et forfait activé avec succès !');
+      setAdminFeedback({
+        type: 'success',
+        message: successMsg,
+      });
       await loadSubscriptionRequests();
       await refreshStats();
       if (activeTab === 'invoices') {
@@ -1158,13 +1177,20 @@ function DashboardPageContent() {
         setAdminInvoices(data.invoices || []);
       }
       return {
-        message: response.message || 'Demande approuvée avec succès !',
+        message: successMsg,
         billingAction: response.billingAction,
         tenant: response.tenant,
       };
     } catch (err: unknown) {
+      await loadSubscriptionRequests();
       const message = err instanceof Error ? err.message : 'Erreur lors de l\'approbation.';
+      setAdminFeedback({
+        type: 'error',
+        message,
+      });
       throw new Error(message);
+    } finally {
+      setBusySubRequestId(null);
     }
   };
 
@@ -1172,12 +1198,28 @@ function DashboardPageContent() {
     if (!confirm('Êtes-vous sûr de vouloir rejeter cette demande d\'abonnement ?')) {
       return;
     }
+    setBusySubRequestId(id);
+    setAdminFeedback(null);
     try {
+      // Mise à jour optimiste immédiate
+      setSubscriptionRequests((prev: any[]) =>
+        (prev || []).map((req) => (req.id === id ? { ...req, status: 'REJECTED' } : req)),
+      );
       const response = await api.post(`/admin/subscriptions/requests/${id}/reject`);
-      alert(response.message || 'Demande rejetée.');
+      const msg = response.message || 'La demande d’abonnement a été rejetée.';
+      setAdminFeedback({
+        type: 'info',
+        message: msg,
+      });
       await loadSubscriptionRequests();
     } catch (err: any) {
-      alert(err.message || 'Erreur lors du rejet de la demande.');
+      await loadSubscriptionRequests();
+      setAdminFeedback({
+        type: 'error',
+        message: err.message || 'Erreur lors du rejet de la demande.',
+      });
+    } finally {
+      setBusySubRequestId(null);
     }
   };
 
@@ -2968,10 +3010,28 @@ function DashboardPageContent() {
                 {/* Demandes d'abonnement */}
                 {activeTab === 'subscription-requests' && (
                   <div className="space-y-6 animate-in fade-in duration-200">
+                    {adminFeedback && (
+                      <Alert
+                        variant={adminFeedback.type === 'info' ? 'info' : adminFeedback.type}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium text-xs sm:text-sm">{adminFeedback.message}</span>
+                          <button
+                            type="button"
+                            onClick={() => setAdminFeedback(null)}
+                            className="text-xs font-semibold underline ml-3 shrink-0 cursor-pointer"
+                          >
+                            Fermer
+                          </button>
+                        </div>
+                      </Alert>
+                    )}
                     <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6">
                       <SubscriptionRequestListPanel
                         requests={subscriptionRequests as AdminSubscriptionRequestItem[]}
                         loading={subRequestsLoading}
+                        busyId={busySubRequestId}
                         onApprove={(req) =>
                           setApprovalModalRequest({
                             id: req.id,
