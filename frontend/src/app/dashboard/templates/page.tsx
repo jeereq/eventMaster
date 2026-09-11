@@ -51,7 +51,7 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, MessageSquare,
+ Calendar, MapPin, User, MessageSquare, Layers, Move,
 } from 'lucide-react';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
@@ -1009,7 +1009,7 @@ export default function TemplatesPage() {
 
  return (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-white rounded-[28px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+      <div className="bg-surface rounded-[28px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
  <div className="p-6 border-b border-border-subtle">
  <h3 className="text-lg font-bold text-foreground">Comment importer cette image ?</h3>
  <p className="text-xs text-muted mt-1 leading-relaxed">
@@ -2031,15 +2031,47 @@ export default function TemplatesPage() {
  return issues;
  }, [canvasElements]);
 
- useEffect(() => {
- if (!editorOpen || !draftSavedAt) return;
- const onBeforeUnload = (e: BeforeUnloadEvent) => {
- e.preventDefault();
- e.returnValue = '';
- };
- window.addEventListener('beforeunload', onBeforeUnload);
- return () => window.removeEventListener('beforeunload', onBeforeUnload);
- }, [editorOpen, draftSavedAt]);
+  useEffect(() => {
+    if (!editorOpen || !draftSavedAt) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [editorOpen, draftSavedAt]);
+
+  useEffect(() => {
+    if (!editorOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedElementId) {
+          setSelectedElementId(null);
+        } else if (studioHistoryModalOpen) {
+          setStudioHistoryModalOpen(false);
+        } else if (cropperOpen) {
+          setCropperOpen(false);
+        }
+        return;
+      }
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (!isInput && (e.metaKey || e.ctrlKey)) {
+        if (e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleStudioRedo();
+          } else {
+            handleStudioUndo();
+          }
+        } else if (e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          handleStudioRedo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editorOpen, selectedElementId, studioHistoryModalOpen, cropperOpen, studioHistoryIndex, studioHistory]);
 
  useEffect(() => {
  if (!editorOpen) return;
@@ -2516,68 +2548,77 @@ export default function TemplatesPage() {
  <header className="shrink-0 space-y-3 border-b border-border pb-4">
  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
  <div className="flex items-start gap-3 min-w-0">
- <button
- type="button"
- onClick={() => requestCloseEditor()}
- className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
- aria-label={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
- >
- <ArrowLeft className="w-5 h-5" />
- </button>
- <div className="min-w-0 flex-1 pt-1">
- <div className="flex items-center gap-2 min-w-0">
- <input
- type="text"
- value={templateName}
- onChange={(e) => setTemplateName(e.target.value)}
- maxLength={120}
- className="w-full max-w-md min-w-0 text-xl font-extrabold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none focus-visible:border-primary px-0.5 transition underline-offset-4"
- placeholder="Nom du modèle"
- aria-label="Nom du modèle"
- />
- {draftSavedAt && (
- <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap" title="Modifications locales non encore enregistrées">
- Brouillon
- </span>
- )}
- </div>
- {templateName.length >= 100 && (
- <p className="text-xs text-muted mt-0.5">{templateName.length}/120 caractères</p>
- )}
- <div className="mt-1">
- {fromAdminConsole ? (
- <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
- <Globe className="w-3 h-3" />
- Catalogue Super Admin
- </span>
- ) : (
- <p className="text-xs text-muted font-semibold">
- {user?.role === 'SUPER_ADMIN' ? 'Modèle plateforme' : 'Invitation'}
- </p>
- )}
- {fromAdminConsole && (
- <p className="text-xs text-muted mt-0.5">
- L&apos;enregistrement vous renvoie au catalogue (filtres et vitrine).
- </p>
- )}
- </div>
- </div>
- </div>
- <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
- {rsvpReportingIssues.length > 0 ? (
- <p
- role="status"
- className="w-full sm:w-auto text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 max-w-xs sm:text-right"
- title={rsvpReportingIssues[0]}
- >
- Formulaire RSVP à finaliser
- </p>
- ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
- <p role="status" className="w-full sm:w-auto text-xs font-semibold text-primary sm:text-right">
- Formulaire RSVP prêt
- </p>
- ) : null}
+              <button
+                type="button"
+                onClick={() => requestCloseEditor()}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
+                aria-label={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="min-w-0 flex-1 pt-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="relative flex-1 max-w-md group">
+                    <input
+                      type="text"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      maxLength={120}
+                      className="w-full min-w-0 text-lg sm:text-xl font-extrabold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:border-primary pr-6 py-0.5 transition"
+                      placeholder="Nom du modèle"
+                      aria-label="Nom du modèle"
+                    />
+                    <Edit3 className="w-3.5 h-3.5 text-muted/40 group-hover:text-muted pointer-events-none absolute right-1 top-2 transition-colors" />
+                  </div>
+                  {draftSavedAt && (
+                    <span
+                      className="shrink-0 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md whitespace-nowrap"
+                      title="Modifications locales non encore enregistrées"
+                    >
+                      Brouillon
+                    </span>
+                  )}
+                </div>
+                {templateName.length >= 100 && (
+                  <p className="text-xs text-muted mt-0.5">{templateName.length}/120 caractères</p>
+                )}
+                <div className="mt-1 flex items-center gap-2">
+                  {fromAdminConsole ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
+                      <Globe className="w-3 h-3" />
+                      Catalogue Super Admin
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted font-semibold">
+                      {user?.role === 'SUPER_ADMIN' ? 'Modèle plateforme' : 'Atelier d’invitation'}
+                    </span>
+                  )}
+                  {fromAdminConsole && (
+                    <span className="text-xs text-muted hidden sm:inline">
+                      · L’enregistrement synchronise le catalogue public
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
+              {rsvpReportingIssues.length > 0 ? (
+                <p
+                  role="status"
+                  className="w-full sm:w-auto text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 max-w-xs sm:text-right"
+                  title={rsvpReportingIssues[0]}
+                >
+                  Formulaire RSVP à finaliser
+                </p>
+              ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
+                <p
+                  role="status"
+                  className="w-full sm:w-auto text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2.5 py-1.5 sm:text-right"
+                >
+                  Formulaire RSVP prêt ✓
+                </p>
+              ) : null}
  <div className="flex items-center gap-1 border border-border rounded-xl p-1 bg-surface shadow-2xs">
  <button
  type="button"
@@ -2783,64 +2824,70 @@ export default function TemplatesPage() {
 
  {studioRail === 'content' ? (
  <>
- {canUseCustomTemplates && (
- <div className="rounded-2xl border border-primary/25 bg-primary/8 p-3 space-y-2 shadow-sm shadow-primary/5">
- <div className="flex items-start gap-2">
- <span className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0">
- <Wand2 className="w-4 h-4" />
- </span>
- <div className="min-w-0">
- <h3 className="text-xs font-bold text-foreground tracking-tight">
- Créer avec l’IA
- </h3>
- <p className="text-xs text-muted leading-relaxed mt-0.5">
- Analysez vos images, décrivez le style : l’IA crée une nouvelle invitation éditable ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons).
- </p>
- </div>
- </div>
- <button
- type="button"
- disabled={mockupImporting || imageUploading || aiComposeBusy}
- onClick={() => openAiComposeModal()}
- className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
- {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
- </button>
+        {canUseCustomTemplates && (
+          <div className="rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent p-3.5 space-y-2.5 shadow-2xs">
+            <div className="flex items-start gap-2.5">
+              <span className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-sm shadow-primary/20">
+                <Wand2 className="w-4 h-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-foreground tracking-tight">
+                    Assistant IA du Studio
+                  </h3>
+                  <span className="text-[10px] font-bold text-primary bg-primary/15 px-1.5 py-0.2 rounded font-mono">
+                    2 jetons
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted leading-relaxed mt-0.5">
+                  Générez ou retouchez votre invitation à partir d’un brief et de photos.
+                </p>
+              </div>
+            </div>
 
-          {canvasElements.length > 0 && (
             <button
               type="button"
-              disabled={aiComposeBusy}
-              onClick={() =>
-                openAiComposeModal(
-                  'Conserver la base du carton actuel. Retouche demandée : ',
-                  { isAlteration: true },
-                )
-              }
-              className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+              disabled={mockupImporting || imageUploading || aiComposeBusy}
+              onClick={() => openAiComposeModal()}
+              className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              Altérer légèrement avec l’IA ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
+              {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
             </button>
-          )}
 
- {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (
- <button
- type="button"
- onClick={() => setQuickTextModalOpen(true)}
- className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer"
- >
- <Edit3 className="w-3.5 h-3.5 text-primary" />
- Modifier les textes clés (noms, dates…)
- </button>
- )}
+            {canvasElements.length > 0 && (
+              <button
+                type="button"
+                disabled={aiComposeBusy}
+                onClick={() =>
+                  openAiComposeModal(
+                    'Conserver la base du carton actuel. Retouche demandée : ',
+                    { isAlteration: true },
+                  )
+                }
+                className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Altérer légèrement avec l’IA ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
+              </button>
+            )}
 
- <p className="text-xs text-muted text-center">
- Jetons partagés avec la simulation budget
- </p>
- </div>
- )}
+            {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (
+              <button
+                type="button"
+                onClick={() => setQuickTextModalOpen(true)}
+                className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-primary" />
+                Modifier les textes clés (noms, dates…)
+              </button>
+            )}
+
+            <p className="text-[11px] text-muted text-center pt-0.5">
+              Jetons partagés avec la simulation budget
+            </p>
+          </div>
+        )}
 
  {canUseMockupImport && (
  <div className="space-y-2">
@@ -2939,108 +2986,129 @@ export default function TemplatesPage() {
  </div>
  )}
 
- <div className="space-y-2">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Disposition des éléments</h3>
- <div className="grid grid-cols-2 gap-1.5">
- <button
- type="button"
- onClick={() => convertToFlowLayout()}
- title="Les éléments se placent les uns sous les autres"
- className={`py-2 rounded-xl text-xs font-bold border transition ${
- layoutMode === 'flow'
- ? 'border-primary bg-primary/10 text-primary'
- : 'border-border text-muted hover:bg-surface-muted'
- }`}
- >
- Empilée
- </button>
- <button
- type="button"
- onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
- title="Glissez-déposez librement sur la carte"
- className={`py-2 rounded-xl text-xs font-bold border transition ${
- layoutMode === 'free'
- ? 'border-primary bg-primary/10 text-primary'
- : 'border-border text-muted hover:bg-surface-muted'
- }`}
- >
- Libre
- </button>
- </div>
- </div>
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Disposition des éléments</h3>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => convertToFlowLayout()}
+              title="Les éléments se placent les uns sous les autres"
+              aria-pressed={layoutMode === 'flow'}
+              className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                layoutMode === 'flow'
+                  ? 'border-primary bg-primary/10 text-primary shadow-2xs'
+                  : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Empilée</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
+              title="Glissez-déposez librement sur la carte"
+              aria-pressed={layoutMode === 'free'}
+              className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                layoutMode === 'free'
+                  ? 'border-primary bg-primary/10 text-primary shadow-2xs'
+                  : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
+              }`}
+            >
+              <Move className="w-3.5 h-3.5" />
+              <span>Libre</span>
+            </button>
+          </div>
+        </div>
 
- <div className="space-y-3">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Composants</h3>
- <div className="grid grid-cols-2 gap-2">
- <button
- type="button"
- onClick={() => handleAddElement('text')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- <Type className="w-5 h-5" />
- <span>Texte</span>
- </button>
- <button
- type="button"
- onClick={() => handleAddElement('button')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- <Columns className="w-5 h-5" />
- <span>Bouton</span>
- </button>
- <button
- type="button"
- onClick={() => handleAddElement('image')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- <Image className="w-5 h-5" />
- <span>Image</span>
- </button>
- <button
- type="button"
- onClick={() => handleAddElement('divider')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- <Palette className="w-5 h-5" />
- <span>Séparateur</span>
- </button>
- <button
- type="button"
- onClick={() => handleAddElement('rsvp-block')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- <CheckSquare className="w-5 h-5" />
- <span>Formulaire RSVP</span>
- </button>
- </div>
- <button
- type="button"
- onClick={() => setShowDecorTools((v) => !v)}
- className="w-full text-xs font-bold text-muted hover:text-primary py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-md"
- >
- {showDecorTools ? 'Masquer les formes décoratives' : 'Ajouter une courbe ou un triangle'}
- </button>
- {showDecorTools && (
- <div className="grid grid-cols-2 gap-2">
- <button
- type="button"
- onClick={() => handleAddElement('curve')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- <Spline className="w-5 h-5" />
- <span>Courbe</span>
- </button>
- <button
- type="button"
- onClick={() => handleAddElement('triangle')}
- className="flex flex-col items-center gap-1.5 p-3 border border-border rounded-2xl hover:border-primary hover:bg-primary/10 text-foreground hover:text-primary font-semibold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- <Triangle className="w-5 h-5" />
- <span>Triangle</span>
- </button>
- </div>
- )}
- </div>
+        <div className="space-y-2.5">
+          <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Composants</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleAddElement('text')}
+              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+            >
+              <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
+                <Type className="w-4 h-4" />
+              </span>
+              <span>Texte</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddElement('button')}
+              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+            >
+              <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
+                <Columns className="w-4 h-4" />
+              </span>
+              <span>Bouton</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddElement('image')}
+              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+            >
+              <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
+                <Image className="w-4 h-4" />
+              </span>
+              <span>Image</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddElement('divider')}
+              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+            >
+              <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
+                <Palette className="w-4 h-4" />
+              </span>
+              <span>Séparateur</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddElement('rsvp-block')}
+              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+            >
+              <span className="p-1.5 rounded-lg bg-primary/10 text-primary transition shrink-0">
+                <CheckSquare className="w-4 h-4" />
+              </span>
+              <div className="min-w-0">
+                <span className="block font-bold">Formulaire RSVP</span>
+                <span className="block text-[11px] text-muted font-normal">Validation de présence avec repas & accompagnants</span>
+              </div>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDecorTools((v) => !v)}
+            className="w-full text-xs font-bold text-muted hover:text-primary py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-lg border border-dashed border-border/80 hover:border-primary/40 cursor-pointer"
+          >
+            {showDecorTools ? 'Masquer les formes décoratives' : '+ Ajouter une courbe ou un triangle'}
+          </button>
+          {showDecorTools && (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleAddElement('curve')}
+                className="flex items-center gap-2 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              >
+                <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
+                  <Spline className="w-4 h-4" />
+                </span>
+                <span>Courbe</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddElement('triangle')}
+                className="flex items-center gap-2 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              >
+                <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
+                  <Triangle className="w-4 h-4" />
+                </span>
+                <span>Triangle</span>
+              </button>
+            </div>
+          )}
+        </div>
 
  <button
  type="button"
@@ -3171,22 +3239,63 @@ export default function TemplatesPage() {
  )}
  </aside>
 
- {/* Center Canvas Preview */}
- <div className={cn(
-  'order-1 lg:order-2 min-w-0 space-y-3',
-  mobilePane === 'canvas' ? 'max-lg:block' : 'max-lg:hidden',
- )}>
- <p className="text-center text-xs text-muted font-semibold tabular-nums">
- {canvasWidth} × {canvasHeight} px
- {canvasSizePreset !== 'custom' ? ` · ${CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset}` : ' · Personnalisé'}
- {showGuestPreview ? ' · Aperçu variables invité' : ''}
- {layoutMode === 'free' ? ' · Placement libre' : ''}
- </p>
- <p className="lg:hidden text-center text-xs text-muted">
- Touchez un texte pour le régler. Ajouter et styles sont dans le dock en bas.
- </p>
+      {/* Center Canvas Preview */}
+      <div className={cn(
+        'order-1 lg:order-2 min-w-0 space-y-3',
+        mobilePane === 'canvas' ? 'max-lg:block' : 'max-lg:hidden',
+      )}>
+        {/* HUD status bar above canvas */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-surface border border-border/80 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-muted text-foreground text-xs font-semibold tabular-nums">
+              <Layout className="w-3.5 h-3.5 text-primary" />
+              <span>{canvasWidth} × {canvasHeight} px</span>
+              <span className="text-muted font-normal hidden sm:inline">
+                ({canvasSizePreset !== 'custom' ? (CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset) : 'Personnalisé'})
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary">
+              {layoutMode === 'free' ? 'Placement libre' : 'Disposition empilée'}
+            </span>
+          </div>
 
- <div className="flex flex-col items-center w-full gap-4">
+          <div className="flex items-center gap-1.5 ml-auto">
+            {selectedElementId ? (
+              <button
+                type="button"
+                onClick={() => setSelectedElementId(null)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 transition cursor-pointer"
+                title="Désélectionner l'élément actuel (Échap)"
+              >
+                <span>Désélectionner</span>
+                <kbd className="hidden sm:inline px-1 py-0.5 text-[10px] font-mono rounded bg-surface border border-border/80 text-foreground">Échap</kbd>
+              </button>
+            ) : (
+              <span className="text-[11px] text-muted hidden sm:inline">Fond & carte actifs</span>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowGuestPreview((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                showGuestPreview
+                  ? 'border-primary/40 bg-primary/10 text-primary shadow-2xs'
+                  : 'border-border text-muted hover:text-foreground hover:bg-surface-muted'
+              }`}
+              title="Aperçu des balises de personnalisation {{firstName}}, etc."
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Aperçu invité</span>
+              <span className="sm:hidden">Variables</span>
+            </button>
+          </div>
+        </div>
+
+        <p className="lg:hidden text-center text-xs text-muted">
+          Touchez un texte pour le régler. Ajouter et styles sont dans le dock en bas.
+        </p>
+
+        <div className="w-full rounded-3xl bg-surface-muted/30 dark:bg-black/20 border border-border/60 p-4 sm:p-8 min-h-[560px] flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="flex flex-col items-center w-full gap-4">
  {/* Main Canvas Card */}
  <div 
  style={{
@@ -3561,95 +3670,173 @@ export default function TemplatesPage() {
  onPointerUp={handleFreePointerUp}
  onPointerLeave={handleFreePointerUp}
  >
- {canvasElements.length === 0 ? (
- <div className="w-full text-center py-24 text-muted">
- <Sparkles className="w-10 h-10 mx-auto mb-3 text-muted" />
- <p className="text-sm font-medium">La carte est vide.</p>
- <p className="text-xs mt-1">Ajoutez du texte, une image ou un formulaire RSVP depuis Contenu.</p>
- </div>
- ) : (
- canvasElements
- .filter((el) => !(el.type === 'rsvp-block' && el.rsvpPlacement === 'outside'))
- .map((el, index) => {
- const isSelected = selectedElementId === el.id;
- const isFree = layoutMode === 'free' || el.positionMode === 'absolute';
- const widthClass = isFree
- ? ''
- : el.width === 'half'
- ? 'w-1/2 px-2'
- : el.width === 'third'
- ? 'w-1/3 px-2'
- : 'w-full px-2';
- 
- return (
- <div 
- key={el.id}
- onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
- onPointerDown={(e) => isFree && handleFreePointerDown(el.id, e)}
- className={`${widthClass} group transition cursor-pointer relative ${isFree ? 'touch-none' : ''}`}
- style={
- isFree
- ? {
- position: 'absolute',
- left: `${el.xPct ?? 8}%`,
- top: `${el.yPct ?? 8}%`,
- width: `${el.wPct ?? 84}%`,
- zIndex: el.zIndex ?? index + 1,
- }
- : undefined
- }
- >
- <div className={`p-2.5 rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-dashed border-transparent hover:border-border/55'}`}>
- {/* Element Controls (Delete & Reorder) */}
- <div className="absolute -top-2.5 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
- {/* Move Up */}
- {index > 0 && (
- <button 
- onClick={(e) => handleMoveElementUp(index, e)}
- className="bg-surface-muted hover:bg-surface-muted text-white p-1 rounded-full shadow transition"
- title="Déplacer vers le haut"
- >
- <ArrowUp className="w-3 h-3" />
- </button>
- )}
- {/* Move Down */}
- {index < canvasElements.length - 1 && (
- <button 
- onClick={(e) => handleMoveElementDown(index, e)}
- className="bg-surface-muted hover:bg-surface-muted text-white p-1 rounded-full shadow transition"
- title="Déplacer vers le bas"
- >
- <ArrowDown className="w-3 h-3" />
- </button>
- )}
- <button
- onClick={(e) => {
- e.stopPropagation();
- const clone = { ...el, id: `${Date.now()}` };
- if (isFree) {
- clone.xPct = Math.min(88, (el.xPct ?? 8) + 4);
- clone.yPct = Math.min(88, (el.yPct ?? 8) + 4);
- }
- setCanvasElements((prev) => [...prev, clone]);
- setSelectedElementId(clone.id);
- }}
- className="bg-surface-muted hover:bg-surface-muted text-white p-1 rounded-full shadow transition"
- title="Dupliquer"
- >
- <Copy className="w-3 h-3" />
- </button>
- {/* Delete */}
- <button 
- onClick={(e) => {
- e.stopPropagation();
- if (confirm('Supprimer cet élément ?')) handleDeleteElement(el.id);
- }}
- className="bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full shadow transition"
- title="Supprimer cet élément"
- >
- <XCircle className="w-3 h-3" />
- </button>
- </div>
+          {canvasElements.length === 0 ? (
+            <div className="w-full text-center py-16 px-6 rounded-2xl border border-dashed border-border/80 bg-surface/50 backdrop-blur-xs flex flex-col items-center justify-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div className="space-y-1 text-center max-w-sm">
+                <p className="text-sm font-bold text-foreground">Votre carte est vierge</p>
+                <p className="text-xs text-muted leading-relaxed">
+                  Démarrez en ajoutant un texte ou appliquez le préréglage d&apos;invitation type pour démarrer rapidement.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleAddElement('text')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-2xs cursor-pointer"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Ajouter un texte
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const themeFonts = getFontTheme(fontTheme);
+                    const palette = importedPalette || invitationColorThemes(tenant?.branding)[0].palette;
+                    const baseId = Date.now();
+                    const presets: CanvasElement[] = [
+                      {
+                        id: `${baseId}-t`,
+                        type: 'text',
+                        text: '{{title}}',
+                        color: palette.primary,
+                        fontSize: '28px',
+                        align: 'center',
+                        width: 'full',
+                        fontFamily: themeFonts.titleFont,
+                        bold: true,
+                        ...(layoutMode === 'free'
+                          ? { positionMode: 'absolute' as const, xPct: 8, yPct: 14, wPct: 84, zIndex: 1 }
+                          : { positionMode: 'flow' as const }),
+                      },
+                      {
+                        id: `${baseId}-d`,
+                        type: 'text',
+                        text: '{{date}} · {{location}}',
+                        color: palette.secondary,
+                        fontSize: '14px',
+                        align: 'center',
+                        width: 'full',
+                        fontFamily: themeFonts.bodyFont,
+                        ...(layoutMode === 'free'
+                          ? { positionMode: 'absolute' as const, xPct: 8, yPct: 32, wPct: 84, zIndex: 2 }
+                          : { positionMode: 'flow' as const }),
+                      },
+                      {
+                        id: `${baseId}-b`,
+                        type: 'button',
+                        text: 'Confirmer ma présence',
+                        color: palette.accent,
+                        fontSize: '14px',
+                        align: 'center',
+                        width: 'full',
+                        buttonStyle: 'filled',
+                        buttonLink: '#rsvp-section',
+                        ...(layoutMode === 'free'
+                          ? { positionMode: 'absolute' as const, xPct: 20, yPct: 68, wPct: 60, zIndex: 3 }
+                          : { positionMode: 'flow' as const }),
+                      },
+                    ];
+                    setCanvasElements((prev) => [...prev, ...presets]);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition shadow-2xs cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  Appliquer le préréglage
+                </button>
+              </div>
+            </div>
+          ) : (
+            canvasElements
+              .filter((el) => !(el.type === 'rsvp-block' && el.rsvpPlacement === 'outside'))
+              .map((el, index) => {
+                const isSelected = selectedElementId === el.id;
+                const isFree = layoutMode === 'free' || el.positionMode === 'absolute';
+                const widthClass = isFree
+                  ? ''
+                  : el.width === 'half'
+                  ? 'w-1/2 px-2'
+                  : el.width === 'third'
+                  ? 'w-1/3 px-2'
+                  : 'w-full px-2';
+                
+                return (
+                  <div 
+                    key={el.id}
+                    onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
+                    onPointerDown={(e) => isFree && handleFreePointerDown(el.id, e)}
+                    className={`${widthClass} group transition cursor-pointer relative ${isFree ? 'touch-none' : ''}`}
+                    style={
+                      isFree
+                        ? {
+                            position: 'absolute',
+                            left: `${el.xPct ?? 8}%`,
+                            top: `${el.yPct ?? 8}%`,
+                            width: `${el.wPct ?? 84}%`,
+                            zIndex: el.zIndex ?? index + 1,
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className={`p-2.5 rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-xs ring-2 ring-primary/20' : 'border-dashed border-transparent hover:border-border/60'}`}>
+                      {/* Element Controls (Delete & Reorder) */}
+                      <div className={`absolute -top-3.5 right-2 flex items-center gap-1 z-20 transition-opacity ${
+                        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}>
+                        {/* Move Up */}
+                        {index > 0 && (
+                          <button 
+                            type="button"
+                            onClick={(e) => handleMoveElementUp(index, e)}
+                            className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
+                            title="Déplacer vers le haut"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {/* Move Down */}
+                        {index < canvasElements.length - 1 && (
+                          <button 
+                            type="button"
+                            onClick={(e) => handleMoveElementDown(index, e)}
+                            className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
+                            title="Déplacer vers le bas"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const clone = { ...el, id: `${Date.now()}` };
+                            if (isFree) {
+                              clone.xPct = Math.min(88, (el.xPct ?? 8) + 4);
+                              clone.yPct = Math.min(88, (el.yPct ?? 8) + 4);
+                            }
+                            setCanvasElements((prev) => [...prev, clone]);
+                            setSelectedElementId(clone.id);
+                          }}
+                          className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
+                          title="Dupliquer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        {/* Delete */}
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteElement(el.id);
+                          }}
+                          className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-xs transition cursor-pointer"
+                          title="Supprimer cet élément"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
  {isFree && isSelected && (
  <input
  type="range"
@@ -3861,46 +4048,46 @@ export default function TemplatesPage() {
  </div>
  )}
 
- {el.type === 'rsvp-block' && (
- <div className="bg-white/80 backdrop-blur-sm border border-border rounded-2xl p-5 space-y-4 pointer-events-none shadow-sm">
- <div className="font-bold text-foreground text-center text-sm">{el.text}</div>
- 
- {/* Render customizable fields preview */}
- {el.rsvpFields && el.rsvpFields.length > 0 && (
- <div className="space-y-3 border-t border-b border-border/60 py-3 text-left">
- {el.rsvpFields.map((field) => (
- <div key={field.id} className="space-y-1">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">
- {field.label} {field.required && <span className="text-rose-500">*</span>}
- </label>
- {field.type === 'text' && (
- <div className="w-full px-3 py-1.5 bg-white border border-border rounded-lg text-xs text-muted">
- Zone de texte
- </div>
- )}
- {field.type === 'select' && (
- <div className="w-full px-3 py-1.5 bg-white border border-border rounded-lg text-xs text-muted flex justify-between items-center">
- <span>{field.options ? field.options.split(',')[0].trim() : 'Option 1'}</span>
- <span className="text-xs text-muted">▼</span>
- </div>
- )}
- {field.type === 'checkbox' && (
- <div className="flex items-center gap-2">
- <div className="w-4 h-4 border border-border bg-white rounded" />
- <span className="text-xs text-muted font-medium">{field.label}</span>
- </div>
- )}
- </div>
- ))}
- </div>
- )}
+            {el.type === 'rsvp-block' && (
+              <div className="bg-surface/85 backdrop-blur-sm border border-border rounded-2xl p-5 space-y-4 pointer-events-none shadow-sm">
+                <div className="font-bold text-foreground text-center text-sm">{el.text}</div>
+                
+                {/* Render customizable fields preview */}
+                {el.rsvpFields && el.rsvpFields.length > 0 && (
+                  <div className="space-y-3 border-t border-b border-border/60 py-3 text-left">
+                    {el.rsvpFields.map((field) => (
+                      <div key={field.id} className="space-y-1">
+                        <label className="text-xs font-bold text-muted uppercase tracking-wider">
+                          {field.label} {field.required && <span className="text-rose-500">*</span>}
+                        </label>
+                        {field.type === 'text' && (
+                          <div className="w-full px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-muted">
+                            Zone de texte
+                          </div>
+                        )}
+                        {field.type === 'select' && (
+                          <div className="w-full px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-muted flex justify-between items-center">
+                            <span>{field.options ? field.options.split(',')[0].trim() : 'Option 1'}</span>
+                            <span className="text-xs text-muted">▼</span>
+                          </div>
+                        )}
+                        {field.type === 'checkbox' && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border border-border bg-surface rounded" />
+                            <span className="text-xs text-muted font-medium">{field.label}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
- <div className="flex gap-2 justify-center">
- <div className="px-4 py-2 bg-white border border-border rounded-lg text-xs font-bold text-muted">Je serai présent</div>
- <div className="px-4 py-2 bg-white border border-border rounded-lg text-xs font-bold text-muted">Je serai absent</div>
- </div>
- </div>
- )}
+                <div className="flex gap-2 justify-center">
+                  <div className="px-4 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-muted">Je serai présent</div>
+                  <div className="px-4 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-muted">Je serai absent</div>
+                </div>
+              </div>
+            )}
  </div>
  </div>
  );
@@ -3909,62 +4096,93 @@ export default function TemplatesPage() {
  </div>
  </div>
 
- {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
- <div className="w-full space-y-3" style={{ maxWidth: 'min(100%, 42rem)' }}>
- <p className="text-center text-xs font-bold uppercase tracking-wider text-primary">
- Formulaire RSVP sous la carte
- </p>
- {canvasElements
- .filter((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside')
- .map((el) => (
- <div
- key={el.id}
- onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
- className={`rounded-2xl border-2 border-dashed p-5 cursor-pointer transition ${
- selectedElementId === el.id
- ? 'border-primary bg-primary/10 shadow-md'
- : 'border-primary/30 bg-white hover:border-primary/50'
- }`}
- style={{ width: '100%' }}
- >
- <div className="text-xs font-bold text-primary text-center mb-3">{el.text || 'Confirmer votre présence'}</div>
- <div className="grid grid-cols-2 gap-2 mb-3">
- <div className="py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 text-center">Oui</div>
- <div className="py-2 rounded-xl border border-border text-xs font-bold text-muted text-center">Non</div>
- </div>
- {el.rsvpFields && el.rsvpFields.length > 0 && (
- <p className="text-xs text-muted text-center">
- {el.rsvpFields.length} champ{el.rsvpFields.length > 1 ? 's' : ''} personnalisé{el.rsvpFields.length > 1 ? 's' : ''}
- </p>
- )}
- </div>
- ))}
- </div>
- )}
- </div>
- </div>
+        {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
+          <div className="w-full space-y-3" style={{ maxWidth: 'min(100%, 42rem)' }}>
+            <p className="text-center text-xs font-bold uppercase tracking-wider text-primary">
+              Formulaire RSVP sous la carte
+            </p>
+            {canvasElements
+              .filter((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside')
+              .map((el) => (
+                <div
+                  key={el.id}
+                  onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
+                  className={`rounded-2xl border-2 border-dashed p-5 cursor-pointer transition ${
+                    selectedElementId === el.id
+                      ? 'border-primary bg-primary/10 shadow-md'
+                      : 'border-primary/30 bg-surface hover:border-primary/50'
+                  }`}
+                  style={{ width: '100%' }}
+                >
+                  <div className="text-xs font-bold text-primary text-center mb-3">{el.text || 'Confirmer votre présence'}</div>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs font-bold text-emerald-700 dark:text-emerald-400 text-center">Oui</div>
+                    <div className="py-2 rounded-xl border border-border bg-surface-muted text-xs font-bold text-muted text-center">Non</div>
+                  </div>
+                  {el.rsvpFields && el.rsvpFields.length > 0 && (
+                    <p className="text-xs text-muted text-center">
+                      {el.rsvpFields.length} champ{el.rsvpFields.length > 1 ? 's' : ''} personnalisé{el.rsvpFields.length > 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
+        </div>
+        </div>
+      </div>
 
  {/* Right Properties Panel */}
  <aside className={cn(
   'order-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4',
   mobilePane === 'inspect' ? 'max-lg:block' : 'max-lg:hidden',
  )}>
- {selectedElementId ? (
- // Element Properties Panel
- <div className="space-y-4">
- <div className="flex items-center justify-between gap-2 border-b border-border-subtle pb-2">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Élément</h3>
- <button
- type="button"
- onClick={() => {
- setSelectedElementId(null);
- setStudioRail('style');
- }}
- className="text-xs font-bold text-primary hover:text-primary bg-primary/10 px-2 py-1 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
- Style de la carte
- </button>
- </div>
+      {selectedElementId ? (
+        // Element Properties Panel
+        <div className="space-y-4">
+          {(() => {
+            const activeEl = canvasElements.find((e) => e.id === selectedElementId);
+            const typeLabel = 
+              activeEl?.type === 'text' ? 'Texte' :
+              activeEl?.type === 'button' ? 'Bouton' :
+              activeEl?.type === 'image' ? 'Image' :
+              activeEl?.type === 'divider' ? 'Séparateur' :
+              activeEl?.type === 'rsvp-block' ? 'Formulaire RSVP' :
+              activeEl?.type === 'curve' ? 'Courbe décorative' :
+              activeEl?.type === 'triangle' ? 'Triangle' : 'Élément';
+            
+            return (
+              <div className="flex items-center justify-between gap-2 border-b border-border/80 pb-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
+                    {activeEl?.type === 'text' && <Type className="w-4 h-4" />}
+                    {activeEl?.type === 'button' && <Columns className="w-4 h-4" />}
+                    {activeEl?.type === 'image' && <Image className="w-4 h-4" />}
+                    {activeEl?.type === 'divider' && <Palette className="w-4 h-4" />}
+                    {activeEl?.type === 'rsvp-block' && <CheckSquare className="w-4 h-4" />}
+                    {activeEl?.type === 'curve' && <Spline className="w-4 h-4" />}
+                    {activeEl?.type === 'triangle' && <Triangle className="w-4 h-4" />}
+                  </span>
+                  <div className="min-w-0">
+                    <span className="block text-xs font-bold text-foreground truncate">{typeLabel}</span>
+                    <span className="block text-[11px] text-muted">Propriétés de l&apos;élément</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedElementId(null);
+                    setStudioRail('style');
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer shrink-0"
+                  title="Revenir aux réglages de la carte"
+                >
+                  <span>Carte</span>
+                  <span aria-hidden="true">&rarr;</span>
+                </button>
+              </div>
+            );
+          })()}
 
  <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Profondeur des propriétés">
  <button
@@ -4441,82 +4659,82 @@ export default function TemplatesPage() {
  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${showOnLanding ? 'translate-x-5' : 'translate-x-0'}`} />
  </button>
  </label>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie sur la page d&apos;accueil</label>
- <select
- value={landingCategory}
- onChange={(e) => setLandingCategory(e.target.value as 'private' | 'corporate' | 'casual')}
- className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
- >
- <option value="private">Privé & Célébrations</option>
- <option value="corporate">Professionnel & Gala</option>
- <option value="casual">Moderne & Cocktail</option>
- </select>
- </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Accroche (visiteurs)</label>
- <textarea
- value={landingDescription}
- onChange={(e) => setLandingDescription(e.target.value)}
- rows={3}
- maxLength={220}
- placeholder="Ex. : Tons pastel et typographie élégante pour un mariage."
- className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-primary resize-none leading-relaxed"
- />
- <p className="text-xs text-muted text-right">{landingDescription.length}/220</p>
- </div>
- </div>
- )}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie sur la page d&apos;accueil</label>
+              <select
+                value={landingCategory}
+                onChange={(e) => setLandingCategory(e.target.value as 'private' | 'corporate' | 'casual')}
+                className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="private">Privé & Célébrations</option>
+                <option value="corporate">Professionnel & Gala</option>
+                <option value="casual">Moderne & Cocktail</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Accroche (visiteurs)</label>
+              <textarea
+                value={landingDescription}
+                onChange={(e) => setLandingDescription(e.target.value)}
+                rows={3}
+                maxLength={220}
+                placeholder="Ex. : Tons pastel et typographie élégante pour un mariage."
+                className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none leading-relaxed"
+              />
+              <p className="text-xs text-muted text-right">{landingDescription.length}/220</p>
+            </div>
+          </div>
+        )}
 
- {/* Canvas dimensions */}
- <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
- <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
- <Layout className="w-3.5 h-3.5" />
- Taille du modèle
- </h4>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
- <select
- value={canvasSizePreset}
- onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
- className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary"
- >
- {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
- <option key={key} value={key}>{preset.label}</option>
- ))}
- <option value="custom">Personnalisé</option>
- </select>
- </div>
- <div className="grid grid-cols-2 gap-2">
- <div className="space-y-1">
- <label className="text-xs font-bold text-muted uppercase">Largeur (px)</label>
- <input
- type="number"
- min={280}
- max={1200}
- value={canvasWidth}
- onChange={(e) => {
- setCanvasSizePreset('custom');
- setCanvasWidth(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.width);
- }}
- className="w-full px-2.5 py-1.5 bg-white border border-border rounded-lg text-xs focus:outline-none focus:border-primary"
- />
- </div>
- <div className="space-y-1">
- <label className="text-xs font-bold text-muted uppercase">Hauteur min. (px)</label>
- <input
- type="number"
- min={400}
- max={1600}
- value={canvasHeight}
- onChange={(e) => {
- setCanvasSizePreset('custom');
- setCanvasHeight(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.height);
- }}
- className="w-full px-2.5 py-1.5 bg-white border border-border rounded-lg text-xs focus:outline-none focus:border-primary"
- />
- </div>
- </div>
+        {/* Canvas dimensions */}
+        <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
+          <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+            <Layout className="w-3.5 h-3.5" />
+            Taille du modèle
+          </h4>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
+            <select
+              value={canvasSizePreset}
+              onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
+              className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+              {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
+                <option key={key} value={key}>{preset.label}</option>
+              ))}
+              <option value="custom">Personnalisé</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted uppercase">Largeur (px)</label>
+              <input
+                type="number"
+                min={280}
+                max={1200}
+                value={canvasWidth}
+                onChange={(e) => {
+                  setCanvasSizePreset('custom');
+                  setCanvasWidth(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.width);
+                }}
+                className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted uppercase">Hauteur min. (px)</label>
+              <input
+                type="number"
+                min={400}
+                max={1600}
+                value={canvasHeight}
+                onChange={(e) => {
+                  setCanvasSizePreset('custom');
+                  setCanvasHeight(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.height);
+                }}
+                className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
  <p className="text-xs text-muted leading-relaxed">
  Utilisée pour l&apos;aperçu, l&apos;invitation RSVP et les cartes du catalogue.
  </p>
@@ -4813,7 +5031,7 @@ export default function TemplatesPage() {
  {/* Image Cropper Modal */}
  {cropperOpen && (
  <div className="fixed inset-0 bg-surface-muted/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
- <div className="bg-white rounded-[32px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+      <div className="bg-surface rounded-[32px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
  {/* Modal Header */}
  <div className="p-6 border-b border-border-subtle flex items-center justify-between">
  <div className="flex items-center gap-2">
