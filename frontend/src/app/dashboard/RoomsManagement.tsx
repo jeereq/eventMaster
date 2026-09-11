@@ -63,6 +63,8 @@ import {
 } from '@/lib/roomLayoutDraft';
 import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
 import PlanCreationPath from '@/components/PlanCreationPath';
+import RoomPublicPublicationForm, { type RoomPublicationDraft } from '@/components/room/RoomPublicPublicationForm';
+import { calculateBlueprintCapacity } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
 import {
   applyRoomPlanVisionDraft,
@@ -197,11 +199,62 @@ const defaultParams: Record<RoomType, LayoutParams> = {
   CUSTOM: {},
 };
 
-const WIZARD_STEPS = [
+const WIZARD_STEPS_BASE = [
   { id: 1, label: 'Identité', shortLabel: 'Identité' },
   { id: 2, label: 'Type', shortLabel: 'Type' },
   { id: 3, label: 'Structure', shortLabel: 'Structure' },
 ] as const;
+
+const WIZARD_STEPS_WITH_PUBLISH = [
+  { id: 1, label: 'Identité', shortLabel: 'Identité' },
+  { id: 2, label: 'Type', shortLabel: 'Type' },
+  { id: 3, label: 'Structure', shortLabel: 'Structure' },
+  { id: 4, label: 'Publication', shortLabel: 'Publication' },
+] as const;
+
+function createDefaultListingDraft(initialName = '', initialLocation = ''): RoomPublicationDraft {
+  return {
+    isPublic: false,
+    headline: initialName,
+    city: '',
+    commune: '',
+    neighborhood: '',
+    address: initialLocation,
+    priceFromFc: '',
+    priceUnit: 'EVENT' as VenuePriceUnit,
+    quotaMin: '',
+    quotaMax: '',
+    photos: [],
+    blockedDates: [],
+    bookedDates: [],
+    latitude: '',
+    longitude: '',
+    details: { ...EMPTY_LISTING_DETAILS },
+  };
+}
+
+function createListingDraftFromRoom(room: RoomItem): RoomPublicationDraft {
+  const listing = room.venueListing;
+  const photos = Array.isArray(listing?.photos) ? listing.photos.filter(Boolean) : [];
+  return {
+    isPublic: Boolean(listing?.isPublic),
+    headline: listing?.headline || room.name,
+    city: listing?.city || '',
+    commune: listing?.commune || '',
+    neighborhood: listing?.neighborhood || '',
+    address: listing?.address || room.location || '',
+    priceFromFc: listing?.priceFromFc != null ? String(listing.priceFromFc) : '',
+    priceUnit: (listing?.priceUnit as VenuePriceUnit) || 'EVENT',
+    quotaMin: listing?.quotaMin != null ? String(listing.quotaMin) : '',
+    quotaMax: listing?.quotaMax != null ? String(listing.quotaMax) : '',
+    photos,
+    blockedDates: parseBlockedDates(listing?.blockedDates),
+    bookedDates: parseBlockedDates((listing?.bookings || []).flatMap((b) => bookingDateKeys(b))),
+    latitude: listing?.latitude != null ? String(listing.latitude) : '',
+    longitude: listing?.longitude != null ? String(listing.longitude) : '',
+    details: parseListingDetails(listing?.details),
+  };
+}
 
 type WizardPlanTab = 'structure' | 'capacite' | 'ambiance' | 'editeur';
 
@@ -288,6 +341,8 @@ export default function RoomsManagement() {
   const { site } = usePlatformSite();
   const marketplaceCities = enabledMarketplaceCities(site);
   const canCatalogPublish = canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
+  const wizardSteps = canCatalogPublish ? WIZARD_STEPS_WITH_PUBLISH : WIZARD_STEPS_BASE;
+  const maxWizardStep = wizardSteps.length;
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
   const [roomsPageSize, setRoomsPageSize] = usePageSize('org-rooms', 9);
@@ -327,7 +382,7 @@ export default function RoomsManagement() {
   const [viewingRoom, setViewingRoom] = useState<RoomItem | null>(null);
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '' });
-  const [editPane, setEditPane] = useState<'identite' | 'elements'>('identite');
+  const [editPane, setEditPane] = useState<'identite' | 'elements' | 'publication'>('identite');
   const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
   const [wizardDraftSavedAt, setWizardDraftSavedAt] = useState<string | null>(null);
@@ -352,24 +407,9 @@ export default function RoomsManagement() {
   const [assignUserId, setAssignUserId] = useState('');
   const [assignRole, setAssignRole] = useState<'MANAGER' | 'PROTOCOL'>('PROTOCOL');
   const [listingRoom, setListingRoom] = useState<RoomItem | null>(null);
-  const [listingDraft, setListingDraft] = useState({
-    isPublic: false,
-    headline: '',
-    city: '',
-    commune: '',
-    neighborhood: '',
-    address: '',
-    priceFromFc: '',
-    priceUnit: 'EVENT' as VenuePriceUnit,
-    quotaMin: '',
-    quotaMax: '',
-    photos: [] as string[],
-    blockedDates: [] as string[],
-    bookedDates: [] as string[],
-    latitude: '',
-    longitude: '',
-    details: EMPTY_LISTING_DETAILS,
-  });
+  const [wizardListingDraft, setWizardListingDraft] = useState<RoomPublicationDraft>(() => createDefaultListingDraft());
+  const [editListingDraft, setEditListingDraft] = useState<RoomPublicationDraft>(() => createDefaultListingDraft());
+  const [listingDraft, setListingDraft] = useState<RoomPublicationDraft>(() => createDefaultListingDraft());
   const [savingListing, setSavingListing] = useState(false);
   const [listingTab, setListingTab] = useState<MarketplaceFormTab>('details');
 
@@ -454,6 +494,7 @@ export default function RoomsManagement() {
     setNameAttempted(false);
     setWizardDraftRestored(false);
     setWizardDraftSavedAt(null);
+    setWizardListingDraft(createDefaultListingDraft());
   };
 
   const closeWizard = () => {
@@ -569,6 +610,19 @@ export default function RoomsManagement() {
     }
     if (step === 3 && (wizardStep < 3 || wizardPlanTab === 'editeur')) {
       setWizardPlanTab('structure');
+    }
+    if (step === 4) {
+      const blueprintCapacity = blueprintDraft ? calculateBlueprintCapacity(blueprintDraft) : 0;
+      setWizardListingDraft((prev) => ({
+        ...prev,
+        headline: prev.headline.trim() ? prev.headline : name.trim(),
+        address: prev.address.trim() ? prev.address : location.trim(),
+        quotaMax: prev.quotaMax.trim() ? prev.quotaMax : (blueprintCapacity > 0 ? String(blueprintCapacity) : ''),
+        details: {
+          ...prev.details,
+          description: prev.details?.description?.trim() ? prev.details.description : description.trim(),
+        },
+      }));
     }
     setWizardStep(step);
     setFarthestStep((current) => Math.max(current, step));
@@ -719,6 +773,7 @@ export default function RoomsManagement() {
     setEditPane('identite');
     setEditElementsReady(false);
     setEditSaveStatus('idle');
+    setEditListingDraft(createDefaultListingDraft());
   };
 
   const updateParam = <K extends keyof LayoutParams>(key: K, value: LayoutParams[K]) => {
@@ -743,9 +798,27 @@ export default function RoomsManagement() {
       setError(getRoomTypeLockMessage(roomType, tenant?.plan));
       return;
     }
+    if (canCatalogPublish && wizardListingDraft.isPublic) {
+      const missing = missingPublishLocation(wizardListingDraft);
+      if (missing === 'city') {
+        goToStep(4);
+        setError('Choisissez une ville active, puis la commune et le quartier pour la publication publique.');
+        return;
+      }
+      if (missing === 'map') {
+        goToStep(4);
+        setError('Ville, commune, quartier et position GPS sur la carte sont obligatoires pour publier.');
+        return;
+      }
+      if (missing) {
+        goToStep(4);
+        setError('Ville, commune et quartier sont obligatoires pour publier.');
+        return;
+      }
+    }
     setSaving(true);
     try {
-      await api.post('/rooms', {
+      const res = await api.post('/rooms', {
         name,
         description: description || undefined,
         floor: floor || undefined,
@@ -753,7 +826,37 @@ export default function RoomsManagement() {
         roomType,
         layoutBlueprint: blueprintDraft ?? undefined,
       });
-      setSuccess('Salle créée avec son plan.');
+
+      const newRoomId = res?.room?.id || res?.id;
+      if (newRoomId && canCatalogPublish && (wizardListingDraft.isPublic || wizardListingDraft.headline.trim() || wizardListingDraft.city.trim() || wizardListingDraft.photos.length > 0)) {
+        try {
+          await api.put(`/rooms/${newRoomId}/listing`, {
+            isPublic: wizardListingDraft.isPublic,
+            headline: wizardListingDraft.headline.trim() || name.trim(),
+            city: wizardListingDraft.city,
+            commune: wizardListingDraft.commune,
+            neighborhood: wizardListingDraft.neighborhood,
+            address: wizardListingDraft.address.trim() || location.trim() || undefined,
+            priceFromFc: wizardListingDraft.priceFromFc ? Number(wizardListingDraft.priceFromFc) : null,
+            priceUnit: wizardListingDraft.priceUnit,
+            quotaMin: wizardListingDraft.quotaMin ? Number(wizardListingDraft.quotaMin) : null,
+            quotaMax: wizardListingDraft.quotaMax ? Number(wizardListingDraft.quotaMax) : null,
+            photos: wizardListingDraft.photos,
+            blockedDates: wizardListingDraft.blockedDates,
+            latitude: wizardListingDraft.latitude || null,
+            longitude: wizardListingDraft.longitude || null,
+            details: wizardListingDraft.details,
+          });
+        } catch (listingErr: any) {
+          console.error('Erreur lors de la configuration de publication:', listingErr);
+        }
+      }
+
+      setSuccess(
+        canCatalogPublish && wizardListingDraft.isPublic
+          ? 'Salle créée et publiée sur le marketplace !'
+          : 'Salle créée avec son plan.'
+      );
       await clearRoomLayoutDraft(tenant?.id, WIZARD_DRAFT_KEY);
       closeWizard();
       await load();
@@ -789,6 +892,24 @@ export default function RoomsManagement() {
       setEditPane('identite');
       return;
     }
+    if (canCatalogPublish && editListingDraft.isPublic) {
+      const missing = missingPublishLocation(editListingDraft);
+      if (missing === 'city') {
+        setEditPane('publication');
+        setError('Choisissez une ville active, puis la commune et le quartier pour la publication publique.');
+        return;
+      }
+      if (missing === 'map') {
+        setEditPane('publication');
+        setError('Ville, commune, quartier et position GPS sur la carte sont obligatoires pour publier.');
+        return;
+      }
+      if (missing) {
+        setEditPane('publication');
+        setError('Ville, commune et quartier sont obligatoires pour publier.');
+        return;
+      }
+    }
     setSavingLayout(true);
     setError('');
     try {
@@ -800,61 +921,64 @@ export default function RoomsManagement() {
         layoutBlueprint: editBlueprint,
         roomType: editBlueprint.roomType,
       });
-      setSuccess('Plan de salle enregistré.');
+
+      if (canCatalogPublish) {
+        try {
+          await api.put(`/rooms/${editingRoom.id}/listing`, {
+            isPublic: editListingDraft.isPublic,
+            headline: editListingDraft.headline.trim() || editMeta.name.trim() || editingRoom.name,
+            city: editListingDraft.city,
+            commune: editListingDraft.commune,
+            neighborhood: editListingDraft.neighborhood,
+            address: editListingDraft.address.trim() || editMeta.location.trim() || undefined,
+            priceFromFc: editListingDraft.priceFromFc ? Number(editListingDraft.priceFromFc) : null,
+            priceUnit: editListingDraft.priceUnit,
+            quotaMin: editListingDraft.quotaMin ? Number(editListingDraft.quotaMin) : null,
+            quotaMax: editListingDraft.quotaMax ? Number(editListingDraft.quotaMax) : null,
+            photos: editListingDraft.photos,
+            blockedDates: editListingDraft.blockedDates,
+            latitude: editListingDraft.latitude || null,
+            longitude: editListingDraft.longitude || null,
+            details: editListingDraft.details,
+          });
+        } catch (listingErr: any) {
+          console.error('Erreur lors de la sauvegarde de la publication:', listingErr);
+        }
+      }
+
+      setSuccess('Salle et configuration enregistrées avec succès.');
       await clearRoomLayoutDraft(tenant?.id, editingRoom.id);
       editDirtyRef.current = false;
       setEditSaveStatus('saved');
       closeEditLayout();
       await load();
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la sauvegarde du plan.');
+      setError(err.message || 'Erreur lors de la sauvegarde.');
     } finally {
       setSavingLayout(false);
     }
   };
 
   const openListing = (room: RoomItem) => {
-    const listing = room.venueListing;
-    const photos = Array.isArray(listing?.photos) ? listing.photos.filter(Boolean) : [];
     setListingRoom(room);
-    setListingDraft({
-      isPublic: Boolean(listing?.isPublic),
-      headline: listing?.headline || room.name,
-      city: listing?.city || '',
-      commune: listing?.commune || '',
-      neighborhood: listing?.neighborhood || '',
-      address: listing?.address || room.location || '',
-      priceFromFc: listing?.priceFromFc != null ? String(listing.priceFromFc) : '',
-      priceUnit: listing?.priceUnit || 'EVENT',
-      quotaMin: listing?.quotaMin != null ? String(listing.quotaMin) : '',
-      quotaMax: listing?.quotaMax != null ? String(listing.quotaMax) : '',
-      photos,
-      blockedDates: parseBlockedDates(listing?.blockedDates),
-      bookedDates: parseBlockedDates((listing?.bookings || []).flatMap((b) => bookingDateKeys(b))),
-      latitude: listing?.latitude != null ? String(listing.latitude) : '',
-      longitude: listing?.longitude != null ? String(listing.longitude) : '',
-      details: parseListingDetails(listing?.details),
-    });
-    setListingTab('details');
+    setListingDraft(createListingDraftFromRoom(room));
     setError('');
   };
 
   const handleSaveListing = async (publish: boolean) => {
     if (!listingRoom) return;
+    const toSave: RoomPublicationDraft = { ...listingDraft, isPublic: publish };
     if (publish) {
-      const missing = missingPublishLocation(listingDraft);
+      const missing = missingPublishLocation(toSave);
       if (missing === 'city') {
-        setListingTab('details');
         setError('Choisissez une ville active, puis la commune et le quartier.');
         return;
       }
       if (missing === 'map') {
-        setListingTab('map');
         setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
         return;
       }
       if (missing) {
-        setListingTab('details');
         setError('Ville, commune et quartier sont obligatoires pour publier.');
         return;
       }
@@ -864,20 +988,20 @@ export default function RoomsManagement() {
     try {
       await api.put(`/rooms/${listingRoom.id}/listing`, {
         isPublic: publish,
-        headline: listingDraft.headline,
-        city: listingDraft.city,
-        commune: listingDraft.commune,
-        neighborhood: listingDraft.neighborhood,
-        address: listingDraft.address,
-        priceFromFc: listingDraft.priceFromFc ? Number(listingDraft.priceFromFc) : null,
-        priceUnit: listingDraft.priceUnit,
-        quotaMin: listingDraft.quotaMin ? Number(listingDraft.quotaMin) : null,
-        quotaMax: listingDraft.quotaMax ? Number(listingDraft.quotaMax) : null,
-        photos: listingDraft.photos,
-        blockedDates: listingDraft.blockedDates,
-        latitude: listingDraft.latitude || null,
-        longitude: listingDraft.longitude || null,
-        details: listingDraft.details,
+        headline: toSave.headline.trim() || listingRoom.name,
+        city: toSave.city,
+        commune: toSave.commune,
+        neighborhood: toSave.neighborhood,
+        address: toSave.address,
+        priceFromFc: toSave.priceFromFc ? Number(toSave.priceFromFc) : null,
+        priceUnit: toSave.priceUnit,
+        quotaMin: toSave.quotaMin ? Number(toSave.quotaMin) : null,
+        quotaMax: toSave.quotaMax ? Number(toSave.quotaMax) : null,
+        photos: toSave.photos,
+        blockedDates: toSave.blockedDates,
+        latitude: toSave.latitude || null,
+        longitude: toSave.longitude || null,
+        details: toSave.details,
       });
       setSuccess(publish ? 'Salle publiée sur le marketplace.' : 'Publication enregistrée (non visible).');
       setListingRoom(null);
@@ -896,6 +1020,7 @@ export default function RoomsManagement() {
     setEditPane('identite');
     setEditElementsReady(false);
     setEditingRoom(room);
+    setEditListingDraft(createListingDraftFromRoom(room));
     setEditMeta({
       name: room.name,
       floor: room.floor || '',
@@ -1308,15 +1433,23 @@ export default function RoomsManagement() {
         onClose={requestCloseWizard}
         title="Nouvelle salle"
         description={
-          wizardStep === 3
-            ? wizardPlanTab === 'editeur'
-              ? focusPlanImport
-                ? 'Importez une photo : l’IA reprend ce qui est visible, puis créez la salle.'
-                : 'Placez le mobilier avec les outils, puis créez la salle.'
-              : 'Créez le plan à la main ou depuis une photo.'
-            : 'Nommez la salle, choisissez le type, puis la structure — le plan reste modifiable.'
+          wizardStep === 4
+            ? 'Rendez votre salle visible sur le catalogue public avec ses tarifs, équipements et position GPS.'
+            : wizardStep === 3
+              ? wizardPlanTab === 'editeur'
+                ? focusPlanImport
+                  ? 'Importez une photo : l’IA reprend ce qui est visible, puis créez la salle.'
+                  : 'Placez le mobilier avec les outils, puis créez la salle.'
+                : 'Créez le plan à la main ou depuis une photo.'
+              : 'Nommez la salle, choisissez le type, puis la structure — le plan reste modifiable.'
         }
-        size={wizardStep === 3 && wizardPlanTab === 'editeur' ? 'full' : wizardStep === 3 ? 'lg' : 'lg'}
+        size={
+          wizardStep === 3 && wizardPlanTab === 'editeur'
+            ? 'full'
+            : wizardStep === 4
+              ? 'xl'
+              : 'lg'
+        }
         className={wizardStep === 3 && wizardPlanTab === 'editeur' ? 'h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl' : undefined}
         footer={
           <div className="flex w-full justify-between gap-2 items-center">
@@ -1343,7 +1476,7 @@ export default function RoomsManagement() {
             >
               Précédent
             </Button>
-            {wizardStep < 3 ? (
+            {wizardStep < maxWizardStep ? (
               <Button
                 type="button"
                 size="sm"
@@ -1368,7 +1501,7 @@ export default function RoomsManagement() {
                 }}
                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
               >
-                Créer la salle
+                {canCatalogPublish && wizardListingDraft.isPublic ? 'Créer et publier' : 'Créer la salle'}
               </Button>
             )}
             </div>
@@ -1415,7 +1548,7 @@ export default function RoomsManagement() {
 
         <nav aria-label="Étapes de création" className="mb-5 overflow-x-auto">
           <ol className="flex items-center gap-1 sm:gap-2 m-0 p-0 list-none">
-            {WIZARD_STEPS.map((step, idx) => {
+            {wizardSteps.map((step, idx) => {
               const active = wizardStep === step.id;
               const done = wizardStep > step.id;
               const canReach = step.id <= Math.max(wizardStep, farthestStep) || step.id === wizardStep + 1;
@@ -1893,6 +2026,15 @@ export default function RoomsManagement() {
         {wizardStep === 3 && !blueprintDraft && (
           <p role="status" className="text-sm text-muted">Préparation du plan…</p>
         )}
+        {wizardStep === 4 && canCatalogPublish && (
+          <div className="space-y-4 pt-1">
+            <RoomPublicPublicationForm
+              draft={wizardListingDraft}
+              onChange={setWizardListingDraft}
+              calculatedCapacity={blueprintDraft ? calculateBlueprintCapacity(blueprintDraft) : undefined}
+            />
+          </div>
+        )}
       </Modal>
 
       <Modal
@@ -2254,8 +2396,8 @@ export default function RoomsManagement() {
         open={Boolean(editingRoom && editBlueprint)}
         onClose={closeEditLayout}
         title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan'}
-        description="Identité d’abord, puis les éléments de la salle. Chaque action est enregistrée."
-        size={editPane === 'elements' ? 'full' : 'lg'}
+        description="Identité d’abord, plan 2D, puis publication sur le catalogue public."
+        size={editPane === 'elements' ? 'full' : editPane === 'publication' ? 'xl' : 'lg'}
         footer={
           <div className="flex justify-between items-center gap-2 w-full">
             <p className="text-xs text-muted min-w-0 truncate" role="status">
@@ -2279,7 +2421,7 @@ export default function RoomsManagement() {
               onClick={handleSaveRoomLayout}
               leftIcon={<CheckCircle2 className="w-4 h-4" />}
             >
-              Enregistrer la salle
+              Enregistrer
             </Button>
             </div>
           </div>
@@ -2297,8 +2439,8 @@ export default function RoomsManagement() {
               onKeyDown={(e) => {
                 if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
                 e.preventDefault();
-                const tabs = ['identite', 'elements'] as const;
-                const i = tabs.indexOf(editPane);
+                const tabs = canCatalogPublish ? ['identite', 'elements', 'publication'] as const : ['identite', 'elements'] as const;
+                const i = tabs.indexOf(editPane as any);
                 const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
                 setEditPane(next);
                 if (next === 'elements') setEditElementsReady(true);
@@ -2309,7 +2451,26 @@ export default function RoomsManagement() {
             >
               {([
                 { id: 'identite' as const, label: 'Identité' },
-                { id: 'elements' as const, label: 'Éléments de la salle' },
+                { id: 'elements' as const, label: 'Plan & Mobilier' },
+                ...(canCatalogPublish
+                  ? [
+                      {
+                        id: 'publication' as const,
+                        label: (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span>Publication</span>
+                            <span
+                              className={cn(
+                                'w-2 h-2 rounded-full',
+                                editListingDraft.isPublic ? 'bg-emerald-500' : 'bg-slate-400',
+                              )}
+                              aria-hidden
+                            />
+                          </span>
+                        ),
+                      },
+                    ]
+                  : []),
               ]).map((tab) => {
                 const selected = editPane === tab.id;
                 return (
@@ -2322,7 +2483,7 @@ export default function RoomsManagement() {
                     aria-controls={`edit-panel-${tab.id}`}
                     tabIndex={selected ? 0 : -1}
                     onClick={() => {
-                      setEditPane(tab.id);
+                      setEditPane(tab.id as any);
                       if (tab.id === 'elements') setEditElementsReady(true);
                     }}
                     className={cn(
@@ -2449,6 +2610,22 @@ export default function RoomsManagement() {
             />
             ) : null}
             </div>
+            {canCatalogPublish && (
+              <div
+                role="tabpanel"
+                id="edit-panel-publication"
+                aria-labelledby="edit-tab-publication"
+                hidden={editPane !== 'publication'}
+                className="space-y-4 pt-1"
+              >
+                <RoomPublicPublicationForm
+                  draft={editListingDraft}
+                  onChange={setEditListingDraft}
+                  calculatedCapacity={editBlueprint ? calculateBlueprintCapacity(editBlueprint) : undefined}
+                  publicSlug={editingRoom?.venueListing?.isPublic ? editingRoom.venueListing.slug : undefined}
+                />
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -2456,8 +2633,8 @@ export default function RoomsManagement() {
       <Modal
         open={Boolean(listingRoom)}
         onClose={() => setListingRoom(null)}
-        title={listingRoom ? `Publier — ${listingRoom.name}` : 'Marketplace'}
-        description="Visible sur le marketplace. Les plans de table d’événements privés ne sont jamais exposés."
+        title={listingRoom ? `Publication Marketplace — ${listingRoom.name}` : 'Publication Marketplace'}
+        description="Configurez la visibilité, les tarifs publics et la vitrine pour les organisateurs d’événements."
         size="xl"
         footer={
           <div className="flex w-full justify-between gap-2">
@@ -2473,7 +2650,7 @@ export default function RoomsManagement() {
                 onClick={() => handleSaveListing(false)}
                 leftIcon={<GlobeLock className="w-4 h-4" />}
               >
-                Enregistrer sans publier
+                Garder en brouillon
               </Button>
               <Button
                 type="button"
@@ -2483,7 +2660,7 @@ export default function RoomsManagement() {
                 onClick={() => handleSaveListing(true)}
                 leftIcon={<Globe className="w-4 h-4" />}
               >
-                Publier
+                Publier sur le catalogue
               </Button>
             </div>
           </div>
@@ -2492,120 +2669,16 @@ export default function RoomsManagement() {
         {listingRoom && (
           <div className="space-y-4">
             {error && <Alert variant="error">{error}</Alert>}
-            <MarketplaceFormTabs
-              value={listingTab}
-              onChange={setListingTab}
-              include={
-                listingRoom.venueListing?.id
-                  ? ['details', 'map', 'medias', 'activity']
-                  : ['details', 'map', 'medias']
+            <RoomPublicPublicationForm
+              draft={listingDraft}
+              onChange={setListingDraft}
+              calculatedCapacity={
+                listingRoom.layoutBlueprint
+                  ? calculateBlueprintCapacity(listingRoom.layoutBlueprint as RoomLayoutBlueprint)
+                  : undefined
               }
+              publicSlug={listingRoom.venueListing?.isPublic ? listingRoom.venueListing.slug : undefined}
             />
-            {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && listingTab === 'details' && (
-              <p className="text-xs text-muted">
-                Fiche actuelle :{' '}
-                <Link href={`/dashboard/catalogue/salles/${listingRoom.venueListing.slug}`} className="font-semibold text-primary hover:underline">
-                  {listingRoom.venueListing.headline || listingRoom.venueListing.slug}
-                </Link>
-              </p>
-            )}
-            {listingTab === 'details' && (
-              <>
-            <Input
-              label="Titre public"
-              value={listingDraft.headline}
-              onChange={(e) => setListingDraft((d) => ({ ...d, headline: e.target.value }))}
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <CityLocationFields
-                  city={listingDraft.city}
-                  commune={listingDraft.commune}
-                  neighborhood={listingDraft.neighborhood}
-                  onChange={({ city, commune, neighborhood }) =>
-                    setListingDraft((d) => ({ ...d, city, commune, neighborhood }))
-                  }
-                />
-              </div>
-              <Input
-                label="Adresse"
-                value={listingDraft.address}
-                onChange={(e) => setListingDraft((d) => ({ ...d, address: e.target.value }))}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label={`Tarif de départ (${formatFc(Number(listingDraft.priceFromFc) || 0)})`}
-                type="number"
-                min={0}
-                value={listingDraft.priceFromFc}
-                onChange={(e) => setListingDraft((d) => ({ ...d, priceFromFc: e.target.value }))}
-              />
-              <label>
-                <span className={labelClass}>Unité</span>
-                <select
-                  value={listingDraft.priceUnit}
-                  onChange={(e) => setListingDraft((d) => ({ ...d, priceUnit: e.target.value as VenuePriceUnit }))}
-                  className={fieldClass}
-                >
-                  {PRICE_UNIT_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id}>{opt.label}</option>
-                  ))}
-                </select>
-              </label>
-              <Input
-                label="Quota min. invités"
-                type="number"
-                min={0}
-                value={listingDraft.quotaMin}
-                onChange={(e) => setListingDraft((d) => ({ ...d, quotaMin: e.target.value }))}
-              />
-              <Input
-                label="Quota max. invités"
-                type="number"
-                min={0}
-                value={listingDraft.quotaMax}
-                onChange={(e) => setListingDraft((d) => ({ ...d, quotaMax: e.target.value }))}
-              />
-            </div>
-            <ListingDetailsFields
-              kind="venue"
-              value={listingDraft.details}
-              onChange={(details: ListingDetails) => setListingDraft((d) => ({ ...d, details }))}
-            />
-            <BlockedDatesField
-              value={listingDraft.blockedDates}
-              bookedDates={listingDraft.bookedDates}
-              onChange={(blockedDates) => setListingDraft((d) => ({ ...d, blockedDates }))}
-            />
-              </>
-            )}
-            {listingTab === 'map' && (
-              <LocationPickerMap
-                latitude={listingDraft.latitude}
-                longitude={listingDraft.longitude}
-                city={listingDraft.city}
-                commune={listingDraft.commune}
-                required
-                onChange={({ latitude, longitude }) => setListingDraft((d) => ({ ...d, latitude, longitude }))}
-              />
-            )}
-            {listingTab === 'medias' && (
-              <MarketplaceMediaField
-                urls={listingDraft.photos}
-                onChange={(photos) => setListingDraft((d) => ({ ...d, photos }))}
-              />
-            )}
-            {listingTab === 'activity' && (
-              <div className="text-center py-8 space-y-3">
-                <p className="text-sm text-muted">
-                  Les réalisations liées à cette salle se gèrent dans l’espace Réalisations.
-                </p>
-                <Button href="/dashboard/publications?tab=create" size="sm">
-                  Ouvrir Réalisations
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </Modal>
