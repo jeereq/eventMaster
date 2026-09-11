@@ -45,3 +45,96 @@ export function bucketLedgerByUtcDay(
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([day, values]) => ({ day, ...values }));
 }
+
+export const USD_TO_CDF_RATE = 2800;
+export const TOKEN_PRICE_CDF = 416; // 2 jetons = 832 FC ≈ 0,30 $ USD
+
+export type ComposeGenerationDetails = {
+  speedMode: 'fast' | 'quality';
+  speedModeLabel: string;
+  variantsCount: number;
+  safetyFallbackTriggered: boolean;
+  previewImageUrl: string | null;
+  prompt: string | null;
+  estimatedCostUsd: number;
+  estimatedCostFc: number;
+  estimatedRevenueUsd: number;
+  estimatedRevenueFc: number;
+  estimatedMarginUsd: number;
+  estimatedMarginPct: number;
+};
+
+export type GenerationEconomyReport = {
+  totalGenerations: number;
+  fastGenerations: number;
+  qualityGenerations: number;
+  multiVariantsGenerations: number;
+  safetyFallbackGenerations: number;
+  estimatedCostUsd: number;
+  estimatedCostFc: number;
+  estimatedRevenueUsd: number;
+  estimatedRevenueFc: number;
+  estimatedMarginUsd: number;
+  estimatedMarginPct: number;
+};
+
+export function estimateComposeCostAndMargin(params: {
+  speedMode?: string | null;
+  variantsCount?: number | null;
+  safetyFallbackTriggered?: boolean | null;
+  tokensConsumed?: number | null;
+  rateCdf?: number;
+}): {
+  speedMode: 'fast' | 'quality';
+  speedModeLabel: string;
+  variantsCount: number;
+  safetyFallbackTriggered: boolean;
+  estimatedCostUsd: number;
+  estimatedCostFc: number;
+  estimatedRevenueUsd: number;
+  estimatedRevenueFc: number;
+  estimatedMarginUsd: number;
+  estimatedMarginPct: number;
+} {
+  const rate = params.rateCdf || USD_TO_CDF_RATE;
+  const isFast = params.speedMode === 'fast';
+  const speedMode: 'fast' | 'quality' = isFast ? 'fast' : 'quality';
+  const speedModeLabel = isFast ? '⚡ Rapide (Flash)' : '✨ Qualité (Pro 2K)';
+  const variantsCount = Math.max(1, params.variantsCount ?? 1);
+  const safetyFallbackTriggered = Boolean(params.safetyFallbackTriggered);
+
+  // Coût API unitaire estimé (USD) par image
+  const unitImageCost = isFast ? 0.030 : 0.065;
+  const overheadVisionCost = 0.002; // reformulation & analyse vision OCR
+
+  // Si repli de sécurité, une tentative initiale a été exécutée puis un décor de secours a été généré
+  const totalCalls = variantsCount + (safetyFallbackTriggered ? 1 : 0);
+  const rawCostUsd = totalCalls * unitImageCost + overheadVisionCost;
+  const estimatedCostUsd = Math.round(rawCostUsd * 1000) / 1000;
+  const estimatedCostFc = Math.round(estimatedCostUsd * rate);
+
+  // Recette facturée (2 jetons par génération = 832 FC par défaut)
+  const tokens = Math.abs(params.tokensConsumed ?? 2) || 2;
+  const estimatedRevenueFc = tokens * TOKEN_PRICE_CDF;
+  const estimatedRevenueUsd = Math.round((estimatedRevenueFc / rate) * 1000) / 1000;
+
+  const estimatedMarginUsd = Math.round((estimatedRevenueUsd - estimatedCostUsd) * 1000) / 1000;
+  const estimatedMarginPct =
+    estimatedRevenueUsd > 0
+      ? Math.round((estimatedMarginUsd / estimatedRevenueUsd) * 100)
+      : 0;
+
+  return {
+    speedMode,
+    speedModeLabel,
+    variantsCount,
+    safetyFallbackTriggered,
+    estimatedCostUsd,
+    estimatedCostFc,
+    estimatedRevenueUsd,
+    estimatedRevenueFc,
+    estimatedMarginUsd,
+    estimatedMarginPct,
+  };
+}
+

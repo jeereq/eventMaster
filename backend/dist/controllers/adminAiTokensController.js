@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAdminAiTokenUsage = getAdminAiTokenUsage;
+exports.exportAdminAiTokenUsage = exportAdminAiTokenUsage;
 exports.grantAdminAiTokens = grantAdminAiTokens;
 const db_1 = require("../db");
 const aiSimulationWalletService_1 = require("../services/aiSimulationWalletService");
@@ -85,7 +86,87 @@ function buildWhere(req) {
     }
     return where;
 }
-function serializeRow(row) {
+function extractComposeDetailsFromRun(run, tokensDelta) {
+    const content = run.content && typeof run.content === 'object' ? run.content : {};
+    const global = content.global && typeof content.global === 'object' ? content.global : {};
+    const speedMode = global.speedMode === 'fast' ? 'fast' : 'quality';
+    const variants = Array.isArray(global.variants) ? global.variants : [];
+    const variantsCount = variants.length > 0 ? variants.length : 1;
+    const safetyFallbackTriggered = global.safetyFallbackTriggered === true;
+    const previewImageUrl = run.previewImageUrl || (typeof global.bgImageUrl === 'string' ? global.bgImageUrl : null);
+    const prompt = run.prompt || (typeof global.prompt === 'string' ? global.prompt : null);
+    const metrics = (0, aiTokenUsageQuery_1.estimateComposeCostAndMargin)({
+        speedMode,
+        variantsCount,
+        safetyFallbackTriggered,
+        tokensConsumed: Math.abs(tokensDelta),
+    });
+    return {
+        ...metrics,
+        previewImageUrl,
+        prompt,
+    };
+}
+async function computeGenerationReport(createdAt) {
+    const runs = await db_1.prisma.aiTemplateComposeRun.findMany({
+        where: {
+            ...(createdAt ? { createdAt } : {}),
+        },
+        select: {
+            id: true,
+            content: true,
+            stage: true,
+            previewImageUrl: true,
+            prompt: true,
+        },
+        take: 5000,
+    });
+    let fastGenerations = 0;
+    let qualityGenerations = 0;
+    let multiVariantsGenerations = 0;
+    let safetyFallbackGenerations = 0;
+    let estimatedCostUsd = 0;
+    let estimatedCostFc = 0;
+    let estimatedRevenueUsd = 0;
+    let estimatedRevenueFc = 0;
+    for (const run of runs) {
+        const details = extractComposeDetailsFromRun(run, 2);
+        if (details.speedMode === 'fast') {
+            fastGenerations += 1;
+        }
+        else {
+            qualityGenerations += 1;
+        }
+        if (details.variantsCount > 1) {
+            multiVariantsGenerations += 1;
+        }
+        if (details.safetyFallbackTriggered) {
+            safetyFallbackGenerations += 1;
+        }
+        estimatedCostUsd += details.estimatedCostUsd;
+        estimatedCostFc += details.estimatedCostFc;
+        estimatedRevenueUsd += details.estimatedRevenueUsd;
+        estimatedRevenueFc += details.estimatedRevenueFc;
+    }
+    const estimatedMarginUsd = Math.round((estimatedRevenueUsd - estimatedCostUsd) * 1000) / 1000;
+    const estimatedMarginPct = estimatedRevenueUsd > 0
+        ? Math.round((estimatedMarginUsd / estimatedRevenueUsd) * 100)
+        : 0;
+    return {
+        totalGenerations: runs.length,
+        fastGenerations,
+        qualityGenerations,
+        multiVariantsGenerations,
+        safetyFallbackGenerations,
+        estimatedCostUsd: Math.round(estimatedCostUsd * 1000) / 1000,
+        estimatedCostFc: Math.round(estimatedCostFc),
+        estimatedRevenueUsd: Math.round(estimatedRevenueUsd * 1000) / 1000,
+        estimatedRevenueFc: Math.round(estimatedRevenueFc),
+        estimatedMarginUsd,
+        estimatedMarginPct,
+    };
+}
+function serializeRow(row, composeDetails) {
     const action = (ACTION_IDS.includes(row.action)
         ? row.action
         : 'budget_simulation');
@@ -110,6 +191,7 @@ function serializeRow(row) {
         tenantId: row.user?.tenant?.id || null,
         tenantName: row.user?.tenant?.name || null,
         createdAt: row.createdAt.toISOString(),
+        composeDetails: composeDetails || null,
     };
 }
 async function platformStock() {
@@ -140,7 +222,7 @@ async function getAdminAiTokenUsage(req, res) {
         const pageSize = Math.min(Math.max(parseInt(String(req.query.limit || '20'), 10) || 20, 1), 100);
         const where = buildWhere(req);
         const createdAt = dateRange(req);
-        const [total, items, grouped, byPool, stock, daySource, paidOrders] = await Promise.all([
+        const [total, items, grouped, byPool, stock, daySource, paidOrders, generationReport] = await Promise.all([
             db_1.prisma.aiTokenLedger.count({ where }),
             db_1.prisma.aiTokenLedger.findMany({
                 where,
@@ -175,6 +257,7 @@ async function getAdminAiTokenUsage(req, res) {
                 _sum: { amountFc: true, tokensCount: true },
                 _count: { _all: true },
             }),
+            computeGenerationReport(createdAt),
         ]);
         let consumed = 0;
         let credited = 0;
@@ -203,6 +286,29 @@ async function getAdminAiTokenUsage(req, res) {
         const paidConsumed = byPool.reduce((sum, row) => sum + Math.max(0, row._sum.tokensFromBonus || 0), 0);
         const grantedConsumed = byPool.reduce((sum, row) => sum + Math.max(0, row._sum.tokensFromGranted || 0), 0);
         const unlimitedConsumed = Math.max(0, -poolSum('comp', 'tokensDelta'));
+        const relatedComposeIds = items
+            .filter((row) => row.action === 'invitation_compose' && row.relatedId)
+            .map((row) => row.relatedId);
+        const composeRuns = relatedComposeIds.length > 0
+            ? await db_1.prisma.aiTemplateComposeRun.findMany({
+                where: { id: { in: relatedComposeIds } },
+                select: {
+                    id: true,
+                    content: true,
+                    stage: true,
+                    previewImageUrl: true,
+                    prompt: true,
+                },
+            })
+            : [];
+        const composeMap = new Map(composeRuns.map((r) => [r.id, r]));
+        const serializedItems = items.map((row) => {
+            let details = null;
+            if (row.action === 'invitation_compose' && row.relatedId && composeMap.has(row.relatedId)) {
+                details = extractComposeDetailsFromRun(composeMap.get(row.relatedId), row.tokensDelta);
+            }
+            return serializeRow(row, details);
+        });
         return res.json({
             totals: {
                 moves: total,
@@ -223,9 +329,10 @@ async function getAdminAiTokenUsage(req, res) {
                 total: freeConsumed + grantedCredits + grantedConsumed + unlimitedConsumed,
             },
             stock,
+            generationReport,
             byAction,
             byDay: (0, aiTokenUsageQuery_1.bucketLedgerByUtcDay)(daySource),
-            items: items.map(serializeRow),
+            items: serializedItems,
             total,
             page,
             pageSize,
@@ -234,6 +341,117 @@ async function getAdminAiTokenUsage(req, res) {
     catch (error) {
         console.error('getAdminAiTokenUsage:', error);
         return res.status(500).json({ error: 'Impossible de charger l’usage des jetons IA.' });
+    }
+}
+async function exportAdminAiTokenUsage(req, res) {
+    try {
+        const where = buildWhere(req);
+        const createdAt = dateRange(req);
+        const [items, report] = await Promise.all([
+            db_1.prisma.aiTokenLedger.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                take: 5000,
+                include: {
+                    user: { select: { email: true, name: true, tenant: { select: { id: true, name: true } } } },
+                },
+            }),
+            computeGenerationReport(createdAt),
+        ]);
+        const relatedComposeIds = items
+            .filter((row) => row.action === 'invitation_compose' && row.relatedId)
+            .map((row) => row.relatedId);
+        const composeRuns = relatedComposeIds.length > 0
+            ? await db_1.prisma.aiTemplateComposeRun.findMany({
+                where: { id: { in: relatedComposeIds } },
+                select: {
+                    id: true,
+                    content: true,
+                    stage: true,
+                    previewImageUrl: true,
+                    prompt: true,
+                },
+            })
+            : [];
+        const composeMap = new Map(composeRuns.map((r) => [r.id, r]));
+        const escapeCsv = (str) => {
+            if (str == null)
+                return '""';
+            const s = String(str).replace(/"/g, '""');
+            return `"${s}"`;
+        };
+        const lines = [
+            `# RAPPORT ÉCONOMIQUE & USAGE JETONS IA — EVENTMASTER`,
+            `# Date d'extraction : ${new Date().toISOString()}`,
+            `# Mode Rapide (Flash) : ${report.fastGenerations} générations`,
+            `# Mode Qualité (Pro 2K) : ${report.qualityGenerations} générations`,
+            `# Variantes A/B (2 visuels) : ${report.multiVariantsGenerations} requêtes`,
+            `# Replis Sécurité (sans visage) : ${report.safetyFallbackGenerations} générations`,
+            `# Coût API Total Estimé : ${report.estimatedCostUsd} $ USD (${report.estimatedCostFc} FC)`,
+            `# Recette Estimée : ${report.estimatedRevenueUsd} $ USD (${report.estimatedRevenueFc} FC)`,
+            `# Marge Brute Globale : +${report.estimatedMarginPct}% (+${report.estimatedMarginUsd} $ USD)`,
+            `#`,
+            [
+                'ID Mouvement',
+                'Date (UTC)',
+                'Action',
+                'Source',
+                'Jetons Delta',
+                'Pool',
+                'Type Financier',
+                'Utilisateur / Nom',
+                'Email',
+                'Organisation',
+                'Appareil',
+                'Mode IA (Vitesse)',
+                'Échantillons Visuels',
+                'Repli Sécurité',
+                'Coût API Estimé ($ USD)',
+                'Coût API Estimé (FC)',
+                'Recette Estimée (FC)',
+                'Marge Brute ($ USD)',
+                'Marge Brute (%)',
+                'Prompt / Brief',
+            ].map(escapeCsv).join(','),
+        ];
+        for (const row of items) {
+            let details = null;
+            if (row.action === 'invitation_compose' && row.relatedId && composeMap.has(row.relatedId)) {
+                details = extractComposeDetailsFromRun(composeMap.get(row.relatedId), row.tokensDelta);
+            }
+            const s = serializeRow(row, details);
+            lines.push([
+                s.id,
+                s.createdAt,
+                s.actionLabel,
+                s.sourceLabel,
+                s.tokensDelta,
+                s.poolLabel,
+                s.moneyKind,
+                s.userName || '',
+                s.userEmail || '',
+                s.tenantName || '',
+                s.deviceId || '',
+                details ? details.speedModeLabel : '—',
+                details ? (details.variantsCount > 1 ? '2 propositions (Variations A/B)' : '1 proposition') : '—',
+                details ? (details.safetyFallbackTriggered ? 'Oui (Décor thématique)' : 'Non') : '—',
+                details ? details.estimatedCostUsd : '',
+                details ? details.estimatedCostFc : '',
+                details ? details.estimatedRevenueFc : '',
+                details ? details.estimatedMarginUsd : '',
+                details ? `${details.estimatedMarginPct}%` : '',
+                details?.prompt || '',
+            ].map(escapeCsv).join(','));
+        }
+        const csvContent = '\uFEFF' + lines.join('\r\n');
+        const timestamp = new Date().toISOString().slice(0, 10);
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="eventmaster-ai-tokens-report-${timestamp}.csv"`);
+        return res.send(csvContent);
+    }
+    catch (error) {
+        console.error('exportAdminAiTokenUsage:', error);
+        return res.status(500).json({ error: 'Impossible d’exporter le rapport des jetons IA.' });
     }
 }
 async function grantAdminAiTokens(req, res) {

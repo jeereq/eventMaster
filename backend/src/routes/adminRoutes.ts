@@ -76,7 +76,11 @@ import {
   getAdminPaymentsOverview,
   listAdminPaymentAttempts,
 } from '../controllers/adminPaymentsController';
-import { getAdminAiTokenUsage, grantAdminAiTokens } from '../controllers/adminAiTokensController';
+import {
+  getAdminAiTokenUsage,
+  exportAdminAiTokenUsage,
+  grantAdminAiTokens,
+} from '../controllers/adminAiTokensController';
 import {
   getAdminDonationsReport,
   exportAdminDonationsReport,
@@ -143,6 +147,7 @@ router.patch('/catalog/offerings/:id/unpublish', unpublishServiceOffering);
 router.get('/payments/overview', getAdminPaymentsOverview);
 router.get('/payments/attempts', listAdminPaymentAttempts);
 router.get('/ai-tokens/usage', getAdminAiTokenUsage);
+router.get('/ai-tokens/export', exportAdminAiTokenUsage);
 router.post('/ai-tokens/grant', grantAdminAiTokens);
 
 router.put('/tenants/:id', updateTenantPlanOrLicense);

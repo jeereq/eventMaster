@@ -2,12 +2,12 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Coins, Eye, Loader2, X } from 'lucide-react';
+import { Coins, Download, Eye, Layers, Loader2, ShieldAlert, Sparkles, X, Zap } from 'lucide-react';
 import AdminFinanceDetailsModal, { type AdminTokenDetail } from '@/components/admin/AdminFinanceDetailsModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Badge, usePageSize,
+  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Badge, Button, usePageSize,
 } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -39,6 +39,7 @@ interface LedgerRow {
   tenantId?: string | null;
   tenantName: string | null;
   createdAt: string;
+  composeDetails?: AdminTokenDetail['composeDetails'];
 }
 
 interface UsageResponse {
@@ -66,6 +67,19 @@ interface UsageResponse {
     remainingBonus: number;
     remainingGranted?: number;
     wallets: number;
+  };
+  generationReport?: {
+    totalGenerations: number;
+    fastGenerations: number;
+    qualityGenerations: number;
+    multiVariantsGenerations: number;
+    safetyFallbackGenerations: number;
+    estimatedCostUsd: number;
+    estimatedCostFc: number;
+    estimatedRevenueUsd: number;
+    estimatedRevenueFc: number;
+    estimatedMarginUsd: number;
+    estimatedMarginPct: number;
   };
   byAction: Array<{
     action: TokenAction;
@@ -155,6 +169,24 @@ export default function AdminAiTokensPage() {
   const [grantBusy, setGrantBusy] = useState(false);
   const [grantMessage, setGrantMessage] = useState('');
   const [selected, setSelected] = useState<AdminTokenDetail | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      setError('');
+      const params = new URLSearchParams();
+      if (action !== 'all') params.set('action', action);
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      if (q.trim()) params.set('q', q.trim());
+      await api.download(`/admin/ai-tokens/export?${params}`, `eventmaster-ai-tokens-${isoDate(new Date())}.csv`);
+    } catch (err: unknown) {
+      setError((err as { message?: string })?.message || 'Erreur lors de l’export CSV.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -281,6 +313,18 @@ export default function AdminAiTokensPage() {
         description="Revenus FlexPay séparés des jetons offerts, gratuits ou session support."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Jetons IA' }]} />
+        }
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 min-h-10"
+          >
+            <Download className="w-4 h-4" />
+            <span>{exporting ? 'Export en cours…' : 'Exporter CSV'}</span>
+          </Button>
         }
       />
 
@@ -440,6 +484,122 @@ export default function AdminAiTokensPage() {
         </div>
       </div>
 
+      {data?.generationReport ? (
+        <section className="space-y-3 p-4 rounded-[var(--radius-card)] border border-primary/25 bg-primary/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Rapport IA — Nuance Rapide (Flash) vs Qualité (Pro 2K) & Rentabilité
+              </h2>
+              <p className="text-xs text-muted">
+                Décomposition des générations d’invitation : vitesse d’exécution, coûts API Google réels et marge brute plateforme.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface border border-border text-xs font-semibold tabular-nums text-foreground self-start sm:self-auto">
+              <span>Marge brute estimée :</span>
+              <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                +{data.generationReport.estimatedMarginPct}%
+              </span>
+              <span className="text-muted font-normal">
+                (+${data.generationReport.estimatedMarginUsd.toFixed(2)} USD)
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-1">
+            <div className="bg-surface p-3.5 rounded-[var(--radius-card)] border border-border">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />
+                  Mode Rapide
+                </span>
+                <Badge variant="success">89% marge</Badge>
+              </div>
+              <div className="text-xl font-bold text-foreground tabular-nums">
+                {data.generationReport.fastGenerations}
+                <span className="text-xs font-normal text-muted ml-1.5">
+                  ({data.generationReport.totalGenerations ? Math.round((data.generationReport.fastGenerations / data.generationReport.totalGenerations) * 100) : 0}%)
+                </span>
+              </div>
+              <div className="text-[11px] text-muted mt-1">
+                Gemini 3.1 Flash (~$0.032 / 4–8s)
+              </div>
+            </div>
+
+            <div className="bg-surface p-3.5 rounded-[var(--radius-card)] border border-border">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                  Mode Qualité
+                </span>
+                <Badge variant="default">78% marge</Badge>
+              </div>
+              <div className="text-xl font-bold text-foreground tabular-nums">
+                {data.generationReport.qualityGenerations}
+                <span className="text-xs font-normal text-muted ml-1.5">
+                  ({data.generationReport.totalGenerations ? Math.round((data.generationReport.qualityGenerations / data.generationReport.totalGenerations) * 100) : 0}%)
+                </span>
+              </div>
+              <div className="text-[11px] text-muted mt-1">
+                Gemini 3 Pro 2K (~$0.067 / 15–22s)
+              </div>
+            </div>
+
+            <div className="bg-surface p-3.5 rounded-[var(--radius-card)] border border-border">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1">
+                  <Layers className="w-3.5 h-3.5 text-muted" />
+                  Variations A/B
+                </span>
+                <Badge variant="warning">2 visuels</Badge>
+              </div>
+              <div className="text-xl font-bold text-foreground tabular-nums">
+                {data.generationReport.multiVariantsGenerations}
+              </div>
+              <div className="text-[11px] text-muted mt-1">
+                Propositions doubles simultanées
+              </div>
+            </div>
+
+            <div className="bg-surface p-3.5 rounded-[var(--radius-card)] border border-border">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1">
+                  <ShieldAlert className="w-3.5 h-3.5 text-muted" />
+                  Replis Sécurité
+                </span>
+                {data.generationReport.safetyFallbackGenerations > 0 ? (
+                  <Badge variant="danger">Repli décor</Badge>
+                ) : (
+                  <Badge variant="success">0 repli</Badge>
+                )}
+              </div>
+              <div className="text-xl font-bold text-foreground tabular-nums">
+                {data.generationReport.safetyFallbackGenerations}
+              </div>
+              <div className="text-[11px] text-muted mt-1">
+                Décors sans visage générés
+              </div>
+            </div>
+
+            <div className="bg-surface p-3.5 rounded-[var(--radius-card)] border border-border col-span-2 md:col-span-4 lg:col-span-1">
+              <div className="text-xs font-semibold text-foreground mb-1">
+                Coût API vs Recette
+              </div>
+              <div className="text-sm font-semibold tabular-nums text-foreground">
+                Coût : ${data.generationReport.estimatedCostUsd.toFixed(2)} USD
+              </div>
+              <div className="text-xs font-medium tabular-nums text-emerald-700 dark:text-emerald-300 mt-0.5">
+                Recette : {data.generationReport.estimatedRevenueFc.toLocaleString('fr-FR')} FC
+              </div>
+              <div className="text-[11px] text-muted mt-1">
+                Marge nette : +${data.generationReport.estimatedMarginUsd.toFixed(2)} USD
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Coins className="w-4 h-4 text-primary" />
@@ -591,7 +751,33 @@ export default function AdminAiTokensPage() {
                   onClick={() => setSelected(row)}
                 >
                   <td className="px-3 py-2.5 text-muted whitespace-nowrap">{formatWhen(row.createdAt)}</td>
-                  <td className="px-3 py-2.5">{actionBadge(row.action, row.actionLabel)}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex flex-col gap-1 items-start">
+                      {actionBadge(row.action, row.actionLabel)}
+                      {row.composeDetails ? (
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className={cn(
+                            'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold',
+                            row.composeDetails.speedMode === 'fast'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                              : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300'
+                          )}>
+                            {row.composeDetails.speedMode === 'fast' ? '⚡ Flash' : '✨ Pro 2K'}
+                          </span>
+                          {row.composeDetails.variantsCount > 1 ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300">
+                              2x A/B
+                            </span>
+                          ) : null}
+                          {row.composeDetails.safetyFallbackTriggered ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                              Repli décor
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className={cn(
                     'px-3 py-2.5 text-right tabular-nums font-semibold',
                     row.tokensDelta > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground',
@@ -599,7 +785,16 @@ export default function AdminAiTokensPage() {
                     {row.tokensDelta > 0 ? `+${row.tokensDelta}` : row.tokensDelta}
                   </td>
                   <td className="px-3 py-2.5 text-muted">{row.poolLabel}</td>
-                  <td className="px-3 py-2.5">{moneyBadge(row.moneyKind)}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex flex-col gap-0.5">
+                      {moneyBadge(row.moneyKind)}
+                      {row.composeDetails ? (
+                        <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium whitespace-nowrap">
+                          +{row.composeDetails.estimatedMarginPct}% (${row.composeDetails.estimatedCostUsd.toFixed(3)})
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="px-3 py-2.5">
                     <div className="font-medium text-foreground">{row.tenantName || row.userName || 'Appareil'}</div>
                     <div className="text-xs text-muted truncate max-w-[16rem]">{row.userEmail || row.deviceId || '—'}</div>

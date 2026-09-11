@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   bucketLedgerByUtcDay,
+  estimateComposeCostAndMargin,
   parseUtcDayEnd,
   parseUtcDayStart,
   resolveLedgerAction,
@@ -52,3 +53,53 @@ describe('bucketLedgerByUtcDay', () => {
     assert.equal(utcDayKey(new Date('2026-09-05T23:30:00.000Z')), '2026-09-05');
   });
 });
+
+describe('estimateComposeCostAndMargin', () => {
+  it('calcule correctement pour le mode Rapide (Flash) 1 visuel', () => {
+    const res = estimateComposeCostAndMargin({
+      speedMode: 'fast',
+      variantsCount: 1,
+      tokensConsumed: 2,
+    });
+    assert.equal(res.speedMode, 'fast');
+    assert.equal(res.speedModeLabel, '⚡ Rapide (Flash)');
+    assert.equal(res.variantsCount, 1);
+    assert.equal(res.safetyFallbackTriggered, false);
+    // 1 * 0.030 + 0.002 = 0.032 $
+    assert.equal(res.estimatedCostUsd, 0.032);
+    // 2 jetons * 416 FC = 832 FC
+    assert.equal(res.estimatedRevenueFc, 832);
+    // 832 / 2800 = 0.297 $
+    assert.equal(res.estimatedRevenueUsd, 0.297);
+    // Marge brute ~ 89%
+    assert.ok(res.estimatedMarginPct >= 88 && res.estimatedMarginPct <= 90);
+    assert.ok(res.estimatedMarginUsd > 0.26);
+  });
+
+  it('calcule correctement pour le mode Qualité (Pro 2K) avec 2 variantes A/B', () => {
+    const res = estimateComposeCostAndMargin({
+      speedMode: 'quality',
+      variantsCount: 2,
+      tokensConsumed: 2,
+    });
+    assert.equal(res.speedMode, 'quality');
+    assert.equal(res.speedModeLabel, '✨ Qualité (Pro 2K)');
+    assert.equal(res.variantsCount, 2);
+    // 2 * 0.065 + 0.002 = 0.132 $
+    assert.equal(res.estimatedCostUsd, 0.132);
+    assert.ok(res.estimatedMarginPct >= 50 && res.estimatedMarginPct <= 60);
+  });
+
+  it('tient compte du surcoût d’un repli sécurité', () => {
+    const res = estimateComposeCostAndMargin({
+      speedMode: 'fast',
+      variantsCount: 1,
+      safetyFallbackTriggered: true,
+      tokensConsumed: 2,
+    });
+    assert.equal(res.safetyFallbackTriggered, true);
+    // (1 + 1) * 0.030 + 0.002 = 0.062 $
+    assert.equal(res.estimatedCostUsd, 0.062);
+  });
+});
+

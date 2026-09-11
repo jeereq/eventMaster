@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Coins, CreditCard, Eye, Heart, Mail, Phone, User } from 'lucide-react';
+import { Coins, CreditCard, Eye, Heart, Layers, Mail, Phone, ShieldAlert, Sparkles, User, Zap } from 'lucide-react';
 import { Badge, Button, Modal } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
@@ -40,6 +40,21 @@ export type AdminPaymentDetail = {
   isAnonymousDonation?: boolean;
 };
 
+export type ComposeGenerationDetails = {
+  speedMode: 'fast' | 'quality';
+  speedModeLabel: string;
+  variantsCount: number;
+  safetyFallbackTriggered: boolean;
+  previewImageUrl: string | null;
+  prompt: string | null;
+  estimatedCostUsd: number;
+  estimatedCostFc: number;
+  estimatedRevenueUsd: number;
+  estimatedRevenueFc: number;
+  estimatedMarginUsd: number;
+  estimatedMarginPct: number;
+};
+
 export type AdminTokenDetail = {
   id: string;
   action: string;
@@ -61,6 +76,7 @@ export type AdminTokenDetail = {
   tenantId?: string | null;
   tenantName: string | null;
   createdAt: string;
+  composeDetails?: ComposeGenerationDetails | null;
 };
 
 function formatWhen(iso: string | null | undefined): string {
@@ -279,9 +295,123 @@ export default function AdminFinanceDetailsModal({
                 <Badge variant="default">{token.poolLabel}</Badge>
                 {moneyBadge(token.moneyKind)}
                 <Badge variant="default">{token.sourceLabel}</Badge>
+                {token.composeDetails ? (
+                  <Badge variant={token.composeDetails.speedMode === 'fast' ? 'success' : 'default'}>
+                    {token.composeDetails.speedMode === 'fast' ? '⚡ Flash' : '✨ Pro 2K'}
+                  </Badge>
+                ) : null}
               </div>
             </div>
           </div>
+
+          {token.composeDetails ? (
+            <DetailSection title="Génération IA (Nuance technique & Rentabilité)">
+              <DetailRow label="Mode de rendu">
+                <span className="inline-flex items-center gap-1.5 font-semibold">
+                  {token.composeDetails.speedMode === 'fast' ? (
+                    <>
+                      <Zap className="w-3.5 h-3.5 text-amber-500" />
+                      <Badge variant="success">⚡ Rapide (Flash)</Badge>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                      <Badge variant="default">✨ Qualité (Pro 2K)</Badge>
+                    </>
+                  )}
+                </span>
+              </DetailRow>
+
+              <DetailRow label="Échantillons produits">
+                <span className="inline-flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-muted" />
+                  {token.composeDetails.variantsCount > 1 ? (
+                    <Badge variant="warning">2 visuels (Variations A/B)</Badge>
+                  ) : (
+                    <span>1 proposition unique</span>
+                  )}
+                </span>
+              </DetailRow>
+
+              <DetailRow label="Filtre de sécurité">
+                {token.composeDetails.safetyFallbackTriggered ? (
+                  <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 font-semibold text-xs">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    Repli décor thématique sans visage
+                  </span>
+                ) : (
+                  <span className="text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+                    Conforme (visage généré)
+                  </span>
+                )}
+              </DetailRow>
+
+              <DetailRow label="Coût API Google estimé">
+                <span className="text-foreground font-semibold tabular-nums">
+                  ${token.composeDetails.estimatedCostUsd.toFixed(3)} USD{' '}
+                  <span className="text-xs text-muted font-normal">({token.composeDetails.estimatedCostFc.toLocaleString('fr-FR')} FC)</span>
+                </span>
+              </DetailRow>
+
+              <DetailRow label="Recette jetons estimée">
+                <span className="text-foreground font-semibold tabular-nums">
+                  {token.composeDetails.estimatedRevenueFc.toLocaleString('fr-FR')} FC{' '}
+                  <span className="text-xs text-muted font-normal">(~${token.composeDetails.estimatedRevenueUsd.toFixed(3)} USD)</span>
+                </span>
+              </DetailRow>
+
+              <DetailRow label="Marge brute estimée">
+                <span className="text-emerald-700 dark:text-emerald-300 font-semibold tabular-nums">
+                  +{token.composeDetails.estimatedMarginPct}%{' '}
+                  <span className="text-xs font-normal">(+${token.composeDetails.estimatedMarginUsd.toFixed(3)} USD)</span>
+                </span>
+              </DetailRow>
+
+              {token.composeDetails.prompt ? (
+                <div className="px-3.5 py-2.5 border-b border-border last:border-0 space-y-1">
+                  <span className="text-xs text-muted">Prompt / Brief saisi</span>
+                  <p className="text-xs text-foreground bg-surface-muted p-2 rounded border border-border/60 whitespace-pre-wrap">
+                    {token.composeDetails.prompt}
+                  </p>
+                </div>
+              ) : null}
+
+              {token.composeDetails.previewImageUrl ? (
+                <div className="px-3.5 py-2.5 space-y-1.5">
+                  <span className="text-xs text-muted">Aperçu du modèle généré</span>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={token.composeDetails.previewImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block group relative w-20 h-28 rounded-lg overflow-hidden border border-border shadow-sm shrink-0 bg-slate-900"
+                    >
+                      <img
+                        src={token.composeDetails.previewImageUrl}
+                        alt="Invitation IA"
+                        className="w-full h-full object-cover transition group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
+                        <Eye className="w-4 h-4" />
+                      </div>
+                    </a>
+                    <div className="text-xs text-muted space-y-1">
+                      <p className="font-medium text-foreground">Visuel haute résolution</p>
+                      <a
+                        href={token.composeDetails.previewImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Ouvrir le rendu 9:16 complet
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </DetailSection>
+          ) : null}
 
           <DetailSection title="Compte">
             <DetailRow label="Organisation">{token.tenantName || '—'}</DetailRow>

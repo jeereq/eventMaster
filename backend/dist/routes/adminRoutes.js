@@ -63,6 +63,7 @@ router.patch('/catalog/offerings/:id/unpublish', adminCatalogController_1.unpubl
 router.get('/payments/overview', adminPaymentsController_1.getAdminPaymentsOverview);
 router.get('/payments/attempts', adminPaymentsController_1.listAdminPaymentAttempts);
 router.get('/ai-tokens/usage', adminAiTokensController_1.getAdminAiTokenUsage);
+router.get('/ai-tokens/export', adminAiTokensController_1.exportAdminAiTokenUsage);
 router.post('/ai-tokens/grant', adminAiTokensController_1.grantAdminAiTokens);
 router.put('/tenants/:id', adminController_1.updateTenantPlanOrLicense);
 router.delete('/tenants/:id', adminController_1.deleteTenant);
