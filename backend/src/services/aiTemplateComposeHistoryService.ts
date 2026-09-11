@@ -1,7 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
+import {
+  AiTemplateComposeSource,
+  serializeTemplateComposeRun,
+} from './aiTemplateComposeHistoryUtils';
 
-export type AiTemplateComposeSource = 'landing' | 'studio';
+export type { AiTemplateComposeSource };
+export { serializeTemplateComposeRun };
 
 export type SaveAiTemplateComposeInput = {
   userId?: string | null;
@@ -15,35 +20,6 @@ export type SaveAiTemplateComposeInput = {
   };
   stage?: Record<string, unknown> | null;
 };
-
-export function serializeTemplateComposeRun(run: {
-  id: string;
-  userId: string | null;
-  deviceId: string | null;
-  source: string;
-  prompt: string | null;
-  referenceUrls: Prisma.JsonValue;
-  previewImageUrl: string | null;
-  content: Prisma.JsonValue;
-  stage: Prisma.JsonValue | null;
-  createdAt: Date;
-}) {
-  const refs = Array.isArray(run.referenceUrls)
-    ? run.referenceUrls.filter((u): u is string => typeof u === 'string')
-    : [];
-  return {
-    id: run.id,
-    userId: run.userId,
-    deviceId: run.deviceId,
-    source: run.source,
-    prompt: run.prompt,
-    referenceUrls: refs,
-    previewImageUrl: run.previewImageUrl,
-    content: run.content,
-    stage: run.stage,
-    createdAt: run.createdAt.toISOString(),
-  };
-}
 
 function extractPreviewUrl(content: SaveAiTemplateComposeInput['content']): string | null {
   const global = content?.global;

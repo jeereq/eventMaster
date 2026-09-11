@@ -221,6 +221,7 @@ export type AiComposeEditorSetters = {
 export function applyAiComposeToEditor(
   content: TemplateAiComposeContent,
   setters: AiComposeEditorSetters,
+  options?: { preferredVariantUrl?: string },
 ) {
   const global = content.global || {};
   const elements = ensureMandatoryRsvpFieldsOnElements(
@@ -229,25 +230,16 @@ export function applyAiComposeToEditor(
 
   setters.setCanvasElements(elements);
 
-  const bgType =
-    global.bgType === 'image' || global.bgType === 'pattern' || global.bgType === 'color'
-      ? global.bgType
-      : 'color';
-  setters.setBgType(bgType);
-  setters.setBgColor(typeof global.bgColor === 'string' ? global.bgColor : '#faf8f5');
-  setters.setBgImageUrl(typeof global.bgImageUrl === 'string' ? global.bgImageUrl : '');
-  setters.setBgPattern(typeof global.bgPattern === 'string' ? global.bgPattern : 'paper');
-  setters.setFrameType(typeof global.frameType === 'string' ? global.frameType : 'double-border');
-  setters.setFontTheme(typeof global.fontTheme === 'string' ? global.fontTheme : 'classic');
-  setters.setFloralColor(typeof global.floralColor === 'string' ? global.floralColor : '#b91c1c');
-  setters.setFloralType(typeof global.floralType === 'string' ? global.floralType : 'roses');
-  setters.setFloralDensity(
-    typeof global.floralDensity === 'number' ? global.floralDensity : 40,
+  const rawVariants = Array.isArray(global.variants)
+    ? (global.variants as string[])
+    : Array.isArray(global.aiVariants)
+    ? (global.aiVariants as string[])
+    : [];
+  const validVariants = Array.from(
+    new Set(rawVariants.filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))),
   );
 
   if (setters.setAiVariants) {
-    const rawVariants = Array.isArray(global.aiVariants) ? (global.aiVariants as string[]) : [];
-    const validVariants = rawVariants.filter((u) => typeof u === 'string' && u.trim());
     if (validVariants.length > 0) {
       setters.setAiVariants(validVariants);
     } else if (typeof global.bgImageUrl === 'string' && global.bgImageUrl) {
@@ -256,6 +248,32 @@ export function applyAiComposeToEditor(
       setters.setAiVariants([]);
     }
   }
+
+  const chosenBgUrl =
+    options?.preferredVariantUrl && typeof options.preferredVariantUrl === 'string'
+      ? options.preferredVariantUrl
+      : typeof global.bgImageUrl === 'string' && global.bgImageUrl
+      ? global.bgImageUrl
+      : validVariants[0] || '';
+
+  const bgType =
+    chosenBgUrl
+      ? 'image'
+      : global.bgType === 'image' || global.bgType === 'pattern' || global.bgType === 'color'
+      ? global.bgType
+      : 'color';
+
+  setters.setBgType(bgType);
+  setters.setBgColor(typeof global.bgColor === 'string' ? global.bgColor : '#faf8f5');
+  setters.setBgImageUrl(chosenBgUrl);
+  setters.setBgPattern(typeof global.bgPattern === 'string' ? global.bgPattern : 'paper');
+  setters.setFrameType(typeof global.frameType === 'string' ? global.frameType : 'double-border');
+  setters.setFontTheme(typeof global.fontTheme === 'string' ? global.fontTheme : 'classic');
+  setters.setFloralColor(typeof global.floralColor === 'string' ? global.floralColor : '#b91c1c');
+  setters.setFloralType(typeof global.floralType === 'string' ? global.floralType : 'roses');
+  setters.setFloralDensity(
+    typeof global.floralDensity === 'number' ? global.floralDensity : 40,
+  );
 
   if (setters.setAiSafetyFallback) {
     setters.setAiSafetyFallback(Boolean(global.aiSafetyFallbackTriggered));

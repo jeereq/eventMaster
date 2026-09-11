@@ -410,6 +410,8 @@ describe('Nano Banana Robustesse & Safety Filter Fallback', () => {
     assert.match(variant, /ALTERNATIVE COMPOSITION VARIANT \(A\/B VARIATION 2\)/);
     assert.match(variant, /subtle variation in framing/i);
     assert.match(variant, /vertical 9:16/i);
+    assert.match(variant, /STRICT REFERENCE IMAGE & HOST IDENTITY ANCHORING/);
+    assert.match(variant, /GENTLE, CONTROLLED PROMPT ALTERATION/);
   });
 });
 

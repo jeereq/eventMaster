@@ -1,9 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Clock, ImageIcon } from 'lucide-react';
+import { Clock, ImageIcon, Layers } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import type { AiTemplateComposeHistoryItem } from '@/lib/aiTemplateComposeHistory';
+import {
+  type AiTemplateComposeHistoryItem,
+  extractItemVariants,
+} from '@/lib/aiTemplateComposeHistory';
 import { StudioAiEmpty } from '@/components/StudioAiTabs';
 
 function relativeTime(iso: string) {
@@ -62,7 +65,7 @@ export default function AiTemplateComposeHistoryList({
   emptyAction,
 }: {
   items: AiTemplateComposeHistoryItem[];
-  onOpen: (item: AiTemplateComposeHistoryItem) => void;
+  onOpen: (item: AiTemplateComposeHistoryItem, preferredVariantUrl?: string) => void;
   activeId?: string | null;
   className?: string;
   listClassName?: string;
@@ -98,42 +101,113 @@ export default function AiTemplateComposeHistoryList({
         {items.map((item) => {
           const active = activeId === item.id;
           const refs = item.referenceUrls?.length || 0;
-          const label = `Rouvrir : ${composeTitle(item)} · ${relativeTime(item.createdAt)}`;
+          const variants = extractItemVariants(item);
+          const hasDualVariants = variants.length >= 2;
+
           return (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => onOpen(item)}
-                aria-label={label}
-                aria-current={active ? 'true' : undefined}
-                className={cn(
-                  'w-full text-left px-3 py-2.5 min-h-14 transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50',
-                  active ? 'bg-primary/10' : 'hover:bg-surface-muted/70',
-                )}
-              >
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="relative w-12 h-14 shrink-0 rounded-md overflow-hidden border border-border bg-surface-muted">
+            <li
+              key={item.id}
+              className={cn(
+                'px-3 py-2.5 transition min-h-14',
+                active ? 'bg-primary/10' : 'hover:bg-surface-muted/70',
+              )}
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                {/* Vignette(s) : Affiche les 2 propositions côte-à-côte si disponibles */}
+                {hasDualVariants ? (
+                  <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+                    {variants.slice(0, 2).map((vUrl, vIdx) => {
+                      const propLetter = String.fromCharCode(65 + vIdx);
+                      return (
+                        <button
+                          key={vUrl}
+                          type="button"
+                          onClick={() => onOpen(item, vUrl)}
+                          title={`Charger la Proposition ${propLetter}`}
+                          aria-label={`Charger la Proposition ${propLetter}`}
+                          className="relative w-10 sm:w-11 h-14 rounded-md overflow-hidden border-2 border-border hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition group/thumb shadow-xs cursor-pointer touch-manipulation"
+                        >
+                          <HistoryPreviewThumb src={vUrl} />
+                          <span className="absolute bottom-0.5 inset-x-0.5 text-center text-[9px] font-black uppercase bg-black/75 text-white rounded-[3px] py-0.5 group-hover/thumb:bg-primary transition">
+                            {propLetter}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onOpen(item)}
+                    title="Rouvrir cette génération"
+                    aria-label="Rouvrir cette génération"
+                    className="relative w-12 h-14 shrink-0 rounded-md overflow-hidden border border-border bg-surface-muted hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition cursor-pointer touch-manipulation"
+                  >
                     <HistoryPreviewThumb src={item.previewImageUrl} />
+                  </button>
+                )}
+
+                {/* Contenu textuel et métadonnées */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onOpen(item)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onOpen(item);
+                    }
+                  }}
+                  className="min-w-0 flex-1 space-y-1 cursor-pointer focus-visible:outline-none"
+                >
+                  <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2 break-words hover:text-primary transition-colors">
+                    {composeTitle(item)}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+                    {hasDualVariants && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                        <Layers className="w-2.5 h-2.5" />
+                        2 propositions (A/B)
+                      </span>
+                    )}
+                    <span>{item.source === 'studio' ? 'Studio' : 'Modèles'}</span>
+                    {refs > 0 && <span>· {refs} photo{refs > 1 ? 's' : ''} réf.</span>}
+                    <span>· {relativeTime(item.createdAt)}</span>
                   </div>
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2 break-words">
-                      {composeTitle(item)}
-                    </p>
-                    <p className="text-[11px] text-muted">
-                      {[
-                        item.source === 'studio' ? 'Studio' : 'Modèles',
-                        refs ? `${refs} image${refs > 1 ? 's' : ''}` : null,
-                        relativeTime(item.createdAt),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                  <span className="text-[11px] font-semibold text-primary shrink-0 pt-0.5" aria-hidden>
-                    Rouvrir
-                  </span>
                 </div>
-              </button>
+
+                {/* Actions directes A / B ou Rouvrir standard */}
+                <div className="shrink-0 pt-0.5 flex flex-col sm:flex-row items-end gap-1">
+                  {hasDualVariants ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onOpen(item, variants[0])}
+                        title="Rouvrir avec la Proposition A"
+                        className="text-[11px] font-bold px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition cursor-pointer touch-manipulation"
+                      >
+                        Prop. A
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpen(item, variants[1])}
+                        title="Rouvrir avec la Proposition B"
+                        className="text-[11px] font-bold px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition cursor-pointer touch-manipulation"
+                      >
+                        Prop. B
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onOpen(item)}
+                      className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                    >
+                      Rouvrir
+                    </button>
+                  )}
+                </div>
+              </div>
             </li>
           );
         })}

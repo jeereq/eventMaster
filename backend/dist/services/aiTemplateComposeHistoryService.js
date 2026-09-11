@@ -1,28 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.serializeTemplateComposeRun = serializeTemplateComposeRun;
+exports.serializeTemplateComposeRun = void 0;
 exports.saveAiTemplateComposeRun = saveAiTemplateComposeRun;
 exports.listAiTemplateComposeRuns = listAiTemplateComposeRuns;
 exports.getAiTemplateComposeRun = getAiTemplateComposeRun;
 exports.claimDeviceTemplateComposeRuns = claimDeviceTemplateComposeRuns;
 const db_1 = require("../db");
-function serializeTemplateComposeRun(run) {
-    const refs = Array.isArray(run.referenceUrls)
-        ? run.referenceUrls.filter((u) => typeof u === 'string')
-        : [];
-    return {
-        id: run.id,
-        userId: run.userId,
-        deviceId: run.deviceId,
-        source: run.source,
-        prompt: run.prompt,
-        referenceUrls: refs,
-        previewImageUrl: run.previewImageUrl,
-        content: run.content,
-        stage: run.stage,
-        createdAt: run.createdAt.toISOString(),
-    };
-}
+const aiTemplateComposeHistoryUtils_1 = require("./aiTemplateComposeHistoryUtils");
+Object.defineProperty(exports, "serializeTemplateComposeRun", { enumerable: true, get: function () { return aiTemplateComposeHistoryUtils_1.serializeTemplateComposeRun; } });
 function extractPreviewUrl(content) {
     const global = content?.global;
     if (!global || typeof global !== 'object')
@@ -51,7 +36,7 @@ async function saveAiTemplateComposeRun(input) {
             stage: (input.stage || null),
         },
     });
-    return serializeTemplateComposeRun(run);
+    return (0, aiTemplateComposeHistoryUtils_1.serializeTemplateComposeRun)(run);
 }
 async function listAiTemplateComposeRuns(opts) {
     const userId = opts.userId?.trim() || null;
@@ -69,7 +54,7 @@ async function listAiTemplateComposeRuns(opts) {
         orderBy: { createdAt: 'desc' },
         take,
     });
-    return rows.map(serializeTemplateComposeRun);
+    return rows.map(aiTemplateComposeHistoryUtils_1.serializeTemplateComposeRun);
 }
 async function getAiTemplateComposeRun(opts) {
     const id = opts.id?.trim();
@@ -85,7 +70,7 @@ async function getAiTemplateComposeRun(opts) {
         (userId && !run.userId && deviceId && run.deviceId === deviceId);
     if (!allowed)
         return null;
-    return serializeTemplateComposeRun(run);
+    return (0, aiTemplateComposeHistoryUtils_1.serializeTemplateComposeRun)(run);
 }
 async function claimDeviceTemplateComposeRuns(userId, deviceId) {
     const cleanDevice = deviceId.trim();

@@ -16,6 +16,7 @@ import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
  fetchAiTemplateComposeHistoryStudio,
  type AiTemplateComposeHistoryItem,
+ extractItemVariants,
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
@@ -1055,36 +1056,63 @@ export default function TemplatesPage() {
  }
  };
 
- const applyAiComposeHistoryItem = (item: AiTemplateComposeHistoryItem) => {
- if (aiComposeBusy) return;
- applyAiComposeToEditor(item.content, {
- setCanvasElements,
- setBgType,
- setBgColor,
- setBgImageUrl,
- setBgPattern,
- setFrameType,
- setFontTheme,
- setFloralColor,
- setFloralType,
- setFloralDensity,
- setImportedPalette,
- setColorThemeId,
- setLayoutMode,
- setCanvasSizePreset,
- setCanvasWidth,
- setCanvasHeight,
- setSelectedElementId,
- setAiVariants,
- setAiSafetyFallback: setAiSafetyFallbackNotice,
- });
- setGeneratedByAi(true);
- setImportedWithOcr(false);
- setAiComposeHistoryId(item.id);
- if (item.prompt) setAiComposePrompt(item.prompt);
- setAiComposeModalOpen(false);
- resetAiComposeModal();
- setSuccess('Génération précédente rouverte dans l’éditeur.');
+ const applyAiComposeHistoryItem = (
+   item: AiTemplateComposeHistoryItem,
+   preferredVariantUrl?: string,
+ ) => {
+   if (aiComposeBusy) return;
+
+   const variants = extractItemVariants(item);
+   const chosenBg =
+     preferredVariantUrl || (item.content?.global as Record<string, unknown> | undefined)?.bgImageUrl as string || variants[0] || '';
+
+   const contentToApply = {
+     ...item.content,
+     global: {
+       ...(item.content?.global || {}),
+       variants,
+       aiVariants: variants,
+       bgImageUrl: chosenBg,
+       bgType: chosenBg ? 'image' : ((item.content?.global as Record<string, unknown> | undefined)?.bgType as string) || 'color',
+     },
+   };
+
+   applyAiComposeToEditor(
+     contentToApply,
+     {
+       setCanvasElements,
+       setBgType,
+       setBgColor,
+       setBgImageUrl,
+       setBgPattern,
+       setFrameType,
+       setFontTheme,
+       setFloralColor,
+       setFloralType,
+       setFloralDensity,
+       setImportedPalette,
+       setColorThemeId,
+       setLayoutMode,
+       setCanvasSizePreset,
+       setCanvasWidth,
+       setCanvasHeight,
+       setSelectedElementId,
+       setAiVariants,
+       setAiSafetyFallback: setAiSafetyFallbackNotice,
+     },
+     { preferredVariantUrl: chosenBg },
+   );
+
+   setGeneratedByAi(true);
+   setImportedWithOcr(false);
+   setAiComposeHistoryId(item.id);
+   if (item.prompt) setAiComposePrompt(item.prompt);
+   setAiComposeModalOpen(false);
+   resetAiComposeModal();
+   const propMsg = preferredVariantUrl && variants.length > 1
+     ? ` (Proposition ${variants.indexOf(preferredVariantUrl) === 1 ? 'B' : 'A'})`
+     : '';
+   setSuccess(`Génération précédente rouverte dans l’éditeur${propMsg}.`);
  };
 
  /** Depuis la liste : ouvre le studio puis l’assistant IA. */

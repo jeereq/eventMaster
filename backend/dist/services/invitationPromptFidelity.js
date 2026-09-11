@@ -440,16 +440,25 @@ function buildGenericThematicBackgroundPrompt(imagePrompt, options) {
     return lines.filter(Boolean).join('\n');
 }
 /**
- * Construit un prompt de variante A/B (Variante 2) à partir du prompt initial,
- * en introduisant une modulation subtile du décor, de l'angle de vue ou de la disposition florale
- * tout en conservant strictement les identités des hôtes et la palette chromatique.
+ * Construit un prompt de variante A/B (Variante 2 / Proposition B) à partir du prompt initial :
+ * 1. Ancrage strict et absolu sur les photos de référence passées (mêmes visages, mêmes personnes, morphologie, regard, carnation et tenues identiques).
+ * 2. Altération légère et contrôlée du prompt (jamais totale) : préserve 90-95% du décor, de l'ambiance et de la palette, en modulant uniquement l'angle de vue, les drapés/fleurs ou les accents lumineux.
  */
-function buildVariantImagePrompt(basePrompt) {
+function buildVariantImagePrompt(basePrompt, hasReferences = false) {
     const variantDirectives = [
         'ALTERNATIVE COMPOSITION VARIANT (A/B VARIATION 2):',
-        '- Provide a fresh, alternative composition with subtle variation in framing, floral arrangement, or decorative accents.',
-        '- Maintain identical host facial anatomy, outfits, colors, and lighting temperature.',
-        '- Keep the same vertical 9:16 aspect ratio and luxury aesthetic.',
+        '- STRICT REFERENCE IMAGE & HOST IDENTITY ANCHORING (MANDATORY):',
+        '  * The individuals depicted MUST BE THE EXACT SAME PEOPLE as provided in the reference images.',
+        '  * Retain 100% of their facial bone structure, natural skin texture, realistic gaze, genuine smile, undertone, age, hair, and clothing attire.',
+        '  * NEVER replace the reference hosts with stock models, different individuals, or generic AI faces. Do not alter their core physical traits.',
+        '- GENTLE, CONTROLLED PROMPT ALTERATION (NEVER A TOTAL REWRITE):',
+        '  * Preserve 90% to 95% of the base prompt instructions: keep the exact same event celebration theme, color palette, luxury stationery ambience, and vertical 9:16 aspect ratio.',
+        '  * DO NOT overhaul the scene or invent a completely unrelated environment.',
+        '- SUBTLE ARTISTIC VARIATIONS ONLY:',
+        '  * Nuanced camera angle or subtle variation in framing: adopt a slightly varied perspective (e.g., 10-15° angle modulation, subtly altered camera elevation, or refined depth-of-field).',
+        '  * Delicate decorative reorganization: elegantly vary the floral arch geometry, drapery folds, or candle/golden accent placements.',
+        '  * Refined lighting nuance: subtle shift in ambient warmth, soft rim highlights, or silky bokeh texture while preserving the overall color temperature.',
+        '- The second proposition must be immediately recognizable as a harmonious, premium alternative choice for the EXACT SAME event and the EXACT SAME hosts.',
     ].join('\n');
     return `${basePrompt}\n\n${variantDirectives}`;
 }

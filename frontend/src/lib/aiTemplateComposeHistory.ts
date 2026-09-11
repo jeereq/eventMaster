@@ -10,14 +10,39 @@ export type AiTemplateComposeHistoryItem = {
   prompt: string | null;
   referenceUrls: string[];
   previewImageUrl: string | null;
+  variants?: string[];
   content: TemplateAiComposeContent;
   stage: {
     structureReady?: boolean;
     backgroundReady?: boolean;
     imageMode?: 'edit' | 'generate' | null;
+    variants?: string[];
+    speedMode?: 'fast' | 'quality';
+    safetyFallbackTriggered?: boolean;
   } | null;
   createdAt: string;
 };
+
+export function extractItemVariants(item: AiTemplateComposeHistoryItem): string[] {
+  const global = (item?.content?.global || {}) as Record<string, unknown>;
+  const list: unknown[] =
+    item.variants && item.variants.length > 0
+      ? item.variants
+      : item.stage?.variants && item.stage.variants.length > 0
+      ? item.stage.variants
+      : Array.isArray(global.variants) && global.variants.length > 0
+      ? global.variants
+      : Array.isArray(global.aiVariants) && global.aiVariants.length > 0
+      ? global.aiVariants
+      : item.previewImageUrl
+      ? [item.previewImageUrl]
+      : [];
+
+  const valid = list.filter(
+    (u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u.trim()),
+  );
+  return Array.from(new Set(valid));
+}
 
 function isValidHistoryItem(item: unknown): item is AiTemplateComposeHistoryItem {
   if (!item || typeof item !== 'object') return false;

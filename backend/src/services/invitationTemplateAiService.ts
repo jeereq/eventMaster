@@ -1694,7 +1694,7 @@ export async function composeInvitationTemplateAi(input: {
       if (requestedVariantsCount >= 2) {
         // Levier A: Parallélisation simultanée des 2 variantes A et B via Promise.allSettled
         const promptA = imagePrompt;
-        const promptB = buildVariantImagePrompt(imagePrompt);
+        const promptB = buildVariantImagePrompt(imagePrompt, imageUrls.length > 0);
 
         const [resA, resB] = await Promise.allSettled([
           createNewInvitationImage(key, imageUrls, promptA, input.tenantId, imageOptions),
@@ -1752,6 +1752,7 @@ export async function composeInvitationTemplateAi(input: {
   const global = sanitizeGlobal(structured.global, bgImageUrl);
   if (variants.length > 0) {
     (global as Record<string, unknown>).aiVariants = variants;
+    (global as Record<string, unknown>).variants = variants;
   }
   if (safetyFallbackTriggered) {
     (global as Record<string, unknown>).aiSafetyFallbackTriggered = true;

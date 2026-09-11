@@ -49,6 +49,7 @@ import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
   fetchAiTemplateComposeHistory,
   type AiTemplateComposeHistoryItem,
+  extractItemVariants,
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
@@ -622,19 +623,36 @@ export default function LandingInvitationAiGenerator({
     logAction('reset', 'Aperçu retiré', 'Aperçu retiré');
   };
 
-  const openHistoryItem = (item: AiTemplateComposeHistoryItem) => {
+  const openHistoryItem = (item: AiTemplateComposeHistoryItem, preferredVariantUrl?: string) => {
     if (busy) return;
     if (!item?.content) {
       setError('Impossible de recharger cet élément : données incomplètes ou corrompues.');
       return;
     }
-    setResult(item.content);
+    const variants = extractItemVariants(item);
+    const chosenBg =
+      preferredVariantUrl || ((item.content.global as Record<string, unknown> | undefined)?.bgImageUrl as string) || variants[0] || '';
+
+    const contentToUse: TemplateAiComposeContent = {
+      ...item.content,
+      global: {
+        ...(item.content.global || {}),
+        bgImageUrl: chosenBg,
+        variants,
+        aiVariants: variants,
+      },
+    };
+
+    setResult(contentToUse);
     setLastStageMeta(
-      item.stage
+      item.stage || variants.length > 0
         ? {
-            structureReady: Boolean(item.stage.structureReady),
-            backgroundReady: Boolean(item.stage.backgroundReady),
-            imageMode: item.stage.imageMode ?? null,
+            structureReady: Boolean(item.stage?.structureReady ?? true),
+            backgroundReady: Boolean(chosenBg),
+            imageMode: item.stage?.imageMode ?? null,
+            variants,
+            safetyFallbackTriggered: Boolean(item.stage?.safetyFallbackTriggered),
+            speedMode: item.stage?.speedMode,
           }
         : null,
     );
@@ -644,7 +662,7 @@ export default function LandingInvitationAiGenerator({
       setPromptHistory((prev) => [...prev, item.prompt!]);
       setPromptHistoryIndex((i) => i + 1);
     }
-    saveAiTemplateDraft(item.content, item.prompt || undefined);
+    saveAiTemplateDraft(contentToUse, item.prompt || undefined);
     logAction('restore_history', 'Génération rétablie', item.prompt ? item.prompt.slice(0, 50) : 'Modèle');
     setActiveStep(3);
     setError('');
