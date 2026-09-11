@@ -5,6 +5,7 @@ import {
   resolveDurationDaysForPlan,
   resolveDefaultSubscriptionDiscountOptions,
   billingCycleFromDurationDays,
+  accountKindForPlanAssignment,
 } from '../config/plansConfig';
 import {
   issueTenantPlanInvoice,
@@ -126,6 +127,7 @@ export async function activateSubscriptionRequest(
         licenseExpiryWarningFor: null,
         billingCycle: billingCycleFromDurationDays(durationDays),
         pendingPlan: null,
+        accountKind: accountKindForPlanAssignment(request.requestedPlan, request.tenant.accountKind),
       },
     }),
   ]);

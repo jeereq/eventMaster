@@ -152,7 +152,7 @@ const B2B_PAID_IDS: PlanId[] = B2B_PLAN_IDS.filter((id) => id !== 'FREE');
 export function paidPlanIdsForAccountKind(kind?: string | null): PlanId[] {
   switch (kind) {
     case 'CLIENT':
-      return [];
+      return [...B2C_PLAN_IDS, ...B2B_PAID_IDS];
     case 'VENDOR':
       return [...VENDOR_PLAN_IDS];
     case 'BOTH':

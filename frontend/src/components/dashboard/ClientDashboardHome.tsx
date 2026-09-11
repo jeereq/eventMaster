@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,14 +20,125 @@ import {
   Bookmark,
   ChevronRight,
   HelpCircle,
+  Crown,
+  CheckCircle2,
+  CreditCard,
+  Smartphone,
+  Check,
+  Users,
+  Percent,
+  ScanLine,
+  Zap,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { useListingFavorites } from '@/lib/listingFavorites';
+import { Modal, Button } from '@/components/ui';
+import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
+import { formatFc, type BillingCycle, type PlanId } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 
+interface UpgradePlanConfig {
+  id: PlanId;
+  name: string;
+  badge?: string;
+  popular?: boolean;
+  basePriceFc: number;
+  periodLabel: string;
+  guestsMax: number;
+  description: string;
+  highlights: string[];
+}
+
+const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
+  {
+    id: 'PERSONAL_50',
+    name: 'Particulier 50',
+    badge: '50 invités',
+    basePriceFc: 60000,
+    periodLabel: '90 jours (trimestre)',
+    guestsMax: 50,
+    description: 'Petite célébration ou fête intime.',
+    highlights: ['3 événements · 50 invités', 'Invitations & RSVP WhatsApp', 'Éditeur de salle 2D/3D', 'Scan QR smartphone Jour J'],
+  },
+  {
+    id: 'PERSONAL_100',
+    name: 'Particulier 100',
+    badge: '100 invités',
+    basePriceFc: 90000,
+    periodLabel: '90 jours (trimestre)',
+    guestsMax: 100,
+    description: 'Anniversaire, baptême ou fiançailles.',
+    highlights: ['3 événements · 100 invités', 'Invitations nominatives WhatsApp', 'Plans de table 2D/3D', 'Contrôle d’accès Jour J'],
+  },
+  {
+    id: 'PERSONAL_200',
+    name: 'Particulier 200',
+    badge: 'Recommandé Mariage',
+    popular: true,
+    basePriceFc: 120000,
+    periodLabel: '90 jours (trimestre)',
+    guestsMax: 200,
+    description: 'Formule préférée pour mariages et réceptions.',
+    highlights: ['3 événements · 200 invités', 'Faire-part & RSVP en direct', 'Placement 2D/3D jusqu’à 80 tables', 'Émargement QR en direct'],
+  },
+  {
+    id: 'PERSONAL_PLUS',
+    name: 'Particulier +200',
+    badge: 'Grandes célébrations',
+    basePriceFc: 180000,
+    periodLabel: '90 jours (trimestre)',
+    guestsMax: 500,
+    description: 'Mariages d’envergure et fêtes communautaires.',
+    highlights: ['Événements illimités · +200 invités', 'Pass d’accès QR individuels', 'Plan 2D/3D multi-tables', 'Scan smartphone rapide'],
+  },
+];
+
+const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLabel'> & {
+  monthlyPriceFc: number;
+}> = [
+  {
+    id: 'STANDARD',
+    name: 'Business Standard',
+    badge: 'Lancement Pro',
+    monthlyPriceFc: 30000,
+    guestsMax: 150,
+    description: 'Organisateurs réguliers, associations et PME.',
+    highlights: ['10 événements · 150 invités/évt', 'Billetterie & encaissements', 'Invitations & scan QR', 'Tableau de bord financier'],
+  },
+  {
+    id: 'PREMIUM_1',
+    name: 'Business Premium',
+    badge: 'Recommandé Pro',
+    popular: true,
+    monthlyPriceFc: 55000,
+    guestsMax: 500,
+    description: 'Agences événementielles, galas et séminaires.',
+    highlights: ['Multi-événements · 500 invités/évt', 'Billetterie & dons solidaires', 'Gestion d’équipe (Managers)', 'Scan QR anti-doublon illimité'],
+  },
+  {
+    id: 'PREMIUM_2',
+    name: 'Business Premium Plus',
+    badge: 'Grand Public',
+    monthlyPriceFc: 85000,
+    guestsMax: 1000,
+    description: 'Grands rassemblements, galas et concerts.',
+    highlights: ['Multi-événements · 1 000 invités/évt', 'Multi-salles & plans avancés', 'Support prioritaire dédié', 'Rapports d’émargement complets'],
+  },
+  {
+    id: 'ENTERPRISE_1',
+    name: 'Enterprise Galas',
+    badge: 'Grand Volume',
+    monthlyPriceFc: 350000,
+    guestsMax: 3500,
+    description: 'Concerts, festivals, salons et foires d’envergure.',
+    highlights: ['3 500 invités · Multi-agences', 'Multi-opérateurs de scan Jour J', 'SLA & assistance sur site', 'Export comptable & analytics'],
+  },
+];
+
 export default function ClientDashboardHome() {
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const router = useRouter();
   const { items: favoriteItems } = useListingFavorites();
 
@@ -39,6 +150,85 @@ export default function ClientDashboardHome() {
     packsCount: 0,
     loading: true,
   });
+
+  // États pour l'évolution vers organisation et paiement direct
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeCategory, setUpgradeCategory] = useState<'b2c' | 'b2b'>('b2c');
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanId>('PERSONAL_200');
+  const [b2bBillingCycle, setB2bBillingCycle] = useState<BillingCycle>('monthly');
+  const [orgName, setOrgName] = useState(tenant?.name || user?.name || '');
+  const [savingOrgName, setSavingOrgName] = useState(false);
+  const [flexPayOpen, setFlexPayOpen] = useState(false);
+  const [upgradeSuccess, setUpgradeSuccess] = useState(false);
+
+  useEffect(() => {
+    if (tenant?.name) setOrgName(tenant.name);
+    else if (user?.name) setOrgName(user.name);
+  }, [tenant?.name, user?.name]);
+
+  const handleOpenUpgrade = (category: 'b2c' | 'b2b') => {
+    setUpgradeCategory(category);
+    if (category === 'b2c') {
+      setSelectedPlanId('PERSONAL_200');
+    } else {
+      setSelectedPlanId('PREMIUM_1');
+    }
+    setUpgradeModalOpen(true);
+  };
+
+  const activePlanDetails = useMemo(() => {
+    if (upgradeCategory === 'b2c') {
+      const plan = UPGRADE_B2C_PLANS.find((p) => p.id === selectedPlanId) || UPGRADE_B2C_PLANS[2];
+      return {
+        id: plan.id,
+        name: plan.name,
+        priceFc: plan.basePriceFc,
+        priceLabel: formatFc(plan.basePriceFc),
+        durationLabel: '90 jours (trimestre)',
+        description: plan.description,
+      };
+    } else {
+      const plan = UPGRADE_B2B_PLANS.find((p) => p.id === selectedPlanId) || UPGRADE_B2B_PLANS[1];
+      const priceFc =
+        b2bBillingCycle === 'annual'
+          ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
+          : plan.monthlyPriceFc;
+      return {
+        id: plan.id,
+        name: plan.name,
+        priceFc,
+        priceLabel: formatFc(priceFc),
+        durationLabel:
+          b2bBillingCycle === 'annual'
+            ? '365 jours (annuel · −10 %)'
+            : '30 jours (mensuel)',
+        description: plan.description,
+      };
+    }
+  }, [upgradeCategory, selectedPlanId, b2bBillingCycle]);
+
+  const handleProceedToPayment = async () => {
+    const trimmed = orgName.trim();
+    if (trimmed && trimmed !== tenant?.name) {
+      setSavingOrgName(true);
+      try {
+        await api.put('/auth/profile', { tenantName: trimmed });
+      } catch {
+        // Poursuivre le checkout même si la mise à jour du nom échoue
+      } finally {
+        setSavingOrgName(false);
+      }
+    }
+    setUpgradeModalOpen(false);
+    setFlexPayOpen(true);
+  };
+
+  const handlePaidSuccess = async () => {
+    setUpgradeSuccess(true);
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 1500);
+  };
 
   // Chargement des compteurs temps réel
   useEffect(() => {
@@ -268,6 +458,153 @@ export default function ClientDashboardHome() {
               <Heart className="w-4 h-4" />
             </div>
           </Link>
+        </div>
+      </section>
+
+      {/* ─── CALL TO ACTION : ÉVOLUTION VERS ORGANISATION B2C OU B2B ─── */}
+      <section
+        aria-labelledby="upgrade-heading"
+        className="relative overflow-hidden rounded-3xl border border-primary/25 bg-linear-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-7 shadow-xs space-y-6"
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/15 text-primary border border-primary/25">
+              <Crown className="w-3.5 h-3.5" />
+              <span>Évolution de compte · Créez votre Organisation</span>
+            </div>
+            <h2 id="upgrade-heading" className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
+              Organisez vos événements privés ou professionnels
+            </h2>
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
+              Débloquez la création d’événements, l’envoi de faire-part WhatsApp nominatifs avec RSVP, la conception de plans de table 2D/3D et le contrôle d’accès par QR code Jour J. Choisissez votre orientation pour régler directement votre premier abonnement et activer votre compte.
+            </p>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-2">
+            <Link
+              href="/dashboard/billing?tab=plans"
+              className="text-xs font-semibold text-muted hover:text-foreground transition underline underline-offset-4"
+            >
+              Consulter la grille tarifaire complète
+            </Link>
+          </div>
+        </div>
+
+        {/* 2 Cartes de choix interactives : B2C vs B2B */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Carte 1 : Organisation Particulier (B2C) */}
+          <div
+            onClick={() => handleOpenUpgrade('b2c')}
+            className="cursor-pointer group p-5 rounded-2xl border border-rose-500/25 bg-surface hover:border-rose-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                  <Heart className="w-3.5 h-3.5" />
+                  Organisation Particulier (B2C)
+                </span>
+                <span className="text-xs font-black text-foreground">Dès 60 000 FC / 90 j</span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-400 transition">
+                  Mariages & Célébrations Privées
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Pour mariages, anniversaires, fêtes familiales ou cérémonies privées sans abonnement mensuel contraignant.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 pt-1 text-xs text-muted">
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>3 événements inclus · 50 à 500 invités</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>Faire-part WhatsApp nominatifs avec confirmation RSVP</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>Plan de table 2D/3D & scan smartphone Jour J</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
+              <span className="text-[11px] font-medium text-muted">Durée : 90 jours (trimestre)</span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenUpgrade('b2c');
+                }}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
+              >
+                Choisir Particulier & Payer
+              </Button>
+            </div>
+          </div>
+
+          {/* Carte 2 : Organisation Professionnelle (B2B) */}
+          <div
+            onClick={() => handleOpenUpgrade('b2b')}
+            className="cursor-pointer group p-5 rounded-2xl border border-primary/25 bg-surface hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Organisation Professionnelle (B2B)
+                </span>
+                <span className="text-xs font-black text-foreground">Dès 30 000 FC / mois</span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                  Entreprises, Galas & Agences Pro
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Pour entreprises, agences événementielles, institutions, séminaires, concerts et organisateurs réguliers.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 pt-1 text-xs text-muted">
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>Multi-événements · 150 à 3 500+ invités</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>Billetterie en ligne, dons solidaires et encaissements</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>Gestion d’équipe (Managers) & scan QR illimité</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
+              <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 font-semibold">
+                −10 % en annuel (365 j)
+              </span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenUpgrade('b2b');
+                }}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="shadow-xs shadow-primary/20"
+              >
+                Choisir Entreprise & Payer
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -534,6 +871,283 @@ export default function ClientDashboardHome() {
           </Link>
         </div>
       </section>
+
+      {/* ─── MODALE D'ÉVOLUTION VERS ORGANISATION & SÉLECTION DE FORFAIT ─── */}
+      <Modal
+        open={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        size="lg"
+        title={
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <Crown className="w-5 h-5" />
+            </span>
+            <span>
+              {upgradeCategory === 'b2c'
+                ? 'Activer une Organisation Particulier (B2C)'
+                : 'Activer une Organisation Professionnelle (B2B)'}
+            </span>
+          </div>
+        }
+        description="Choisissez votre formule et réglez directement votre abonnement pour débloquer votre organisation."
+      >
+        <div className="space-y-6 pt-2">
+          {/* Commutateur de catégorie (B2C vs B2B) */}
+          <div className="flex p-1 rounded-xl bg-surface-muted border border-border gap-1">
+            <button
+              type="button"
+              onClick={() => handleOpenUpgrade('b2c')}
+              className={cn(
+                'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2',
+                upgradeCategory === 'b2c'
+                  ? 'bg-surface text-foreground shadow-xs border border-border'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              <Heart className="w-4 h-4 text-rose-500" />
+              <span>Particulier & Privé (B2C)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenUpgrade('b2b')}
+              className={cn(
+                'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2',
+                upgradeCategory === 'b2b'
+                  ? 'bg-surface text-foreground shadow-xs border border-border'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              <Building2 className="w-4 h-4 text-primary" />
+              <span>Entreprise & Agence (B2B)</span>
+            </button>
+          </div>
+
+          {/* Commutateur mensuel / annuel si B2B */}
+          {upgradeCategory === 'b2b' && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-foreground">Cycle de facturation B2B</p>
+                <p className="text-[11px] text-muted">Économisez 10 % en optant pour un engagement annuel (365 jours)</p>
+              </div>
+              <div className="flex items-center gap-1 bg-surface p-0.5 rounded-lg border border-border">
+                <button
+                  type="button"
+                  onClick={() => setB2bBillingCycle('monthly')}
+                  className={cn(
+                    'px-2.5 py-1 text-xs font-bold rounded-md transition',
+                    b2bBillingCycle === 'monthly'
+                      ? 'bg-primary-solid text-primary-foreground'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  Mensuel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setB2bBillingCycle('annual')}
+                  className={cn(
+                    'px-2.5 py-1 text-xs font-bold rounded-md transition flex items-center gap-1',
+                    b2bBillingCycle === 'annual'
+                      ? 'bg-primary-solid text-primary-foreground'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  <span>Annuel</span>
+                  <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-500 text-white font-black">−10%</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Champ optionnel : Nom de l'organisation ou de l'événement */}
+          <div className="space-y-1.5">
+            <label htmlFor="upgrade-org-name" className="text-xs font-bold text-foreground flex items-center justify-between">
+              <span>Nom de votre organisation ou événement</span>
+              <span className="text-[11px] font-normal text-muted">(Modifiable à tout moment)</span>
+            </label>
+            <input
+              id="upgrade-org-name"
+              type="text"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              placeholder={upgradeCategory === 'b2c' ? 'ex: Mariage Sarah & Paul, Anniversaire 30 ans…' : 'ex: Agence Lumina, Event Corp Kinshasa…'}
+              className="w-full min-h-11 px-3.5 py-2.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+            />
+          </div>
+
+          {/* Grille des formules disponibles */}
+          <div className="space-y-2.5">
+            <p className="text-xs font-bold text-muted uppercase tracking-wider">
+              Sélectionnez votre formule {upgradeCategory === 'b2c' ? 'Particulier (90 jours)' : 'Entreprise'}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {upgradeCategory === 'b2c'
+                ? UPGRADE_B2C_PLANS.map((plan) => {
+                    const isSelected = selectedPlanId === plan.id;
+                    return (
+                      <div
+                        key={plan.id}
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={cn(
+                          'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative',
+                          isSelected
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
+                            : 'border-border bg-surface hover:border-primary/40',
+                        )}
+                      >
+                        {plan.popular && (
+                          <span className="absolute -top-2.5 right-3 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-xs">
+                            Recommandé Mariage
+                          </span>
+                        )}
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-foreground">{plan.name}</span>
+                            <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                              {plan.badge}
+                            </span>
+                          </div>
+                          <p className="text-lg font-black text-foreground">
+                            {formatFc(plan.basePriceFc)}
+                            <span className="text-xs font-normal text-muted ml-1">/ 90 j</span>
+                          </p>
+                          <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
+                        </div>
+
+                        <div className="space-y-1 pt-2 border-t border-border/60 text-[11px] text-muted">
+                          {plan.highlights.map((h, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5">
+                              <Check className="w-3 h-3 text-rose-600 shrink-0" />
+                              <span className="truncate">{h}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                : UPGRADE_B2B_PLANS.map((plan) => {
+                    const isSelected = selectedPlanId === plan.id;
+                    const priceFc =
+                      b2bBillingCycle === 'annual'
+                        ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
+                        : plan.monthlyPriceFc;
+                    return (
+                      <div
+                        key={plan.id}
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={cn(
+                          'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative',
+                          isSelected
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
+                            : 'border-border bg-surface hover:border-primary/40',
+                        )}
+                      >
+                        {plan.popular && (
+                          <span className="absolute -top-2.5 right-3 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-xs">
+                            Recommandé Pro
+                          </span>
+                        )}
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-foreground">{plan.name}</span>
+                            <span className="text-[11px] font-semibold text-primary">
+                              {plan.badge}
+                            </span>
+                          </div>
+                          <p className="text-lg font-black text-foreground">
+                            {formatFc(priceFc)}
+                            <span className="text-xs font-normal text-muted ml-1">
+                              {b2bBillingCycle === 'annual' ? '/ an' : '/ mois'}
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
+                        </div>
+
+                        <div className="space-y-1 pt-2 border-t border-border/60 text-[11px] text-muted">
+                          {plan.highlights.map((h, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5">
+                              <Check className="w-3 h-3 text-primary shrink-0" />
+                              <span className="truncate">{h}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+            </div>
+          </div>
+
+          {/* Récapitulatif et bouton de paiement direct */}
+          <div className="p-4 rounded-2xl bg-surface-muted border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-foreground">
+                  Formule sélectionnée : <span className="text-primary">{activePlanDetails.name}</span>
+                </p>
+                <p className="text-[11px] text-muted">Durée de couverture : {activePlanDetails.durationLabel}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-muted block">Total à payer</span>
+                <span className="text-lg font-black text-foreground">{activePlanDetails.priceLabel}</span>
+              </div>
+            </div>
+
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={savingOrgName}
+              onClick={handleProceedToPayment}
+              leftIcon={savingOrgName ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+              className="font-bold shadow-md shadow-primary/20 min-h-12"
+            >
+              {savingOrgName
+                ? 'Préparation de l’organisation…'
+                : `Payer l’abonnement (${activePlanDetails.priceLabel}) & Activer`}
+            </Button>
+
+            <div className="flex items-center justify-center gap-2 text-[11px] text-muted text-center pt-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Paiement sécurisé FlexPay via Mobile Money (Orange, M-Pesa, Airtel, Afrimoney) ou Carte</span>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ─── MODALE FLEXPAY DE PAIEMENT DIRECT (MOBILE MONEY & CARTE) ─── */}
+      <SubscriptionFlexPayModal
+        open={flexPayOpen}
+        onClose={() => setFlexPayOpen(false)}
+        planId={activePlanDetails.id}
+        planName={activePlanDetails.name}
+        priceLabel={activePlanDetails.priceLabel}
+        billingCycle={upgradeCategory === 'b2c' ? 'monthly' : b2bBillingCycle}
+        onPaid={handlePaidSuccess}
+      />
+
+      {/* ─── FEEDBACK VISUEL DE CONFIRMATION D'UPGRADE ─── */}
+      {upgradeSuccess && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface border border-border p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-xl animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-extrabold text-foreground">Organisation activée avec succès !</h3>
+              <p className="text-xs text-muted">
+                Votre forfait {activePlanDetails.name} est actif. Ouverture de votre nouveau tableau de bord…
+              </p>
+            </div>
+            <div className="flex justify-center pt-2">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
