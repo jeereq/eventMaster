@@ -714,6 +714,39 @@ export async function downloadReferenceImage(url: string): Promise<{ buffer: Buf
   }
 }
 
+export type PreloadedRefImage = { mimeType: string; base64: string };
+
+/**
+ * Télécharge et précharge en mémoire toutes les photos de référence en parallèle via Promise.allSettled.
+ * Évite les téléchargements séquentiels et les ré-appels réseau inutiles lors de multiples variantes ou replis.
+ */
+export async function preloadReferenceImages(urls: string[]): Promise<PreloadedRefImage[]> {
+  const validUrls = urls
+    .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))
+    .slice(0, 4);
+  if (!validUrls.length) return [];
+
+  const results = await Promise.allSettled(
+    validUrls.map(async (url) => {
+      const { buffer, mimeType } = await downloadReferenceImage(url);
+      return {
+        mimeType,
+        base64: buffer.toString('base64'),
+      };
+    }),
+  );
+
+  const preloaded: PreloadedRefImage[] = [];
+  for (const res of results) {
+    if (res.status === 'fulfilled') {
+      preloaded.push(res.value);
+    } else {
+      console.warn('[invitationTemplateAi] Skip ref download in parallel preload:', res.reason?.message);
+    }
+  }
+  return preloaded;
+}
+
 async function downloadImageAsPngBuffer(url: string): Promise<Buffer> {
   const { buffer } = await downloadReferenceImage(url);
   return buffer;
@@ -1124,6 +1157,8 @@ function getNanoBananaApiKey(): string | null {
 const NANO_BANANA_PRO = 'gemini-3-pro-image';
 const NANO_BANANA_FLASH = 'gemini-3.1-flash-image';
 
+export type AiSpeedMode = 'fast' | 'quality';
+
 function getNanoBananaProModel(): string {
   return process.env.NANO_BANANA_MODEL || process.env.GEMINI_IMAGE_MODEL || NANO_BANANA_PRO;
 }
@@ -1132,15 +1167,22 @@ function getNanoBananaFlashModel(): string {
   return process.env.NANO_BANANA_FLASH_MODEL || NANO_BANANA_FLASH;
 }
 
-/** Pro d’abord, puis Nano Banana 2 (Flash), sans doublon si les IDs sont identiques. */
-function getNanoBananaModelChain(): string[] {
+/**
+ * Chaîne de repli des modèles Nano Banana.
+ * En mode 'fast', le modèle Flash (gemini-3.1-flash-image) est interrogé en premier pour un rendu en ~4-8s.
+ * En mode 'quality', le modèle Pro (gemini-3-pro-image 2K) est privilégié pour un piqué maximal.
+ */
+function getNanoBananaModelChain(speedMode?: AiSpeedMode): string[] {
+  if (speedMode === 'fast') {
+    return [...new Set([getNanoBananaFlashModel(), getNanoBananaProModel()])];
+  }
   return [...new Set([getNanoBananaProModel(), getNanoBananaFlashModel()])];
 }
 
 /**
  * Exécute un appel brut synchrone à Nano Banana (Interactions API ou generateContent).
  * Injecte les images de référence en tête de payload (Image Reference Binding)
- * et configure nativement le modèle Pro en ratio 9:16 et haute résolution 2K.
+ * et configure nativement le ratio 9:16 (et haute résolution 2K pour le modèle Pro).
  */
 async function executeNanoBananaRawRequest(
   apiKey: string,
@@ -1148,7 +1190,8 @@ async function executeNanoBananaRawRequest(
   refImages: Array<{ mimeType: string; base64: string }>,
   model: string,
 ): Promise<string> {
-  const TIMEOUT_MS = 80_000;
+  const isFlash = model.toLowerCase().includes('flash');
+  const TIMEOUT_MS = isFlash ? 35_000 : 55_000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -1357,24 +1400,23 @@ async function generateImageWithNanoBanana(
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean; embedText?: boolean; artStyle?: InvitationArtStyleId },
+  options?: {
+    hasPeople?: boolean;
+    embedText?: boolean;
+    artStyle?: InvitationArtStyleId;
+    preloadedRefImages?: PreloadedRefImage[];
+  },
   model: string = getNanoBananaProModel(),
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const hasRefs = referenceUrls.length > 0;
   const hasPeople = Boolean(options?.hasPeople);
 
-  // Téléchargement et encodage base64 des photos de référence des hôtes avec optimisation adaptative
-  const refImages: Array<{ mimeType: string; base64: string }> = [];
-  for (const ref of referenceUrls.slice(0, 4)) {
-    try {
-      const { buffer, mimeType } = await downloadReferenceImage(ref);
-      refImages.push({
-        mimeType,
-        base64: buffer.toString('base64'),
-      });
-    } catch (err) {
-      console.warn('[invitationTemplateAi] Nano Banana skip ref download:', (err as Error)?.message);
-    }
+  // Utilisation des images de référence déjà préchargées en mémoire (Levier B) ou téléchargement parallèle
+  let refImages: PreloadedRefImage[] = [];
+  if (options?.preloadedRefImages && options.preloadedRefImages.length > 0) {
+    refImages = options.preloadedRefImages;
+  } else if (hasRefs) {
+    refImages = await preloadReferenceImages(referenceUrls);
   }
 
   // Verrouillage anti-lissage : injection des directives de style RAW, lumière et contraintes fermes
@@ -1435,16 +1477,22 @@ async function createNewInvitationImage(
   imageUrls: string[],
   imagePrompt: string,
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean; embedText?: boolean; artStyle?: InvitationArtStyleId },
+  options?: {
+    hasPeople?: boolean;
+    embedText?: boolean;
+    artStyle?: InvitationArtStyleId;
+    speedMode?: AiSpeedMode;
+    preloadedRefImages?: PreloadedRefImage[];
+  },
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const nanoKey = getNanoBananaApiKey();
   if (nanoKey) {
-    const chain = getNanoBananaModelChain();
+    const chain = getNanoBananaModelChain(options?.speedMode);
     for (let i = 0; i < chain.length; i++) {
       const model = chain[i];
       const next = chain[i + 1];
       try {
-        console.log(`[invitationTemplateAi] Generating with Nano Banana (${model})...`);
+        console.log(`[invitationTemplateAi] Generating with Nano Banana (${model}, speed=${options?.speedMode || 'quality'})...`);
         return await generateImageWithNanoBanana(
           nanoKey,
           imagePrompt,
@@ -1541,6 +1589,7 @@ export type InvitationAiComposeResult = {
     imageMode?: 'edit' | 'generate' | null;
     variants?: string[];
     safetyFallbackTriggered?: boolean;
+    speedMode?: AiSpeedMode;
   };
 };
 
@@ -1556,6 +1605,7 @@ export async function composeInvitationTemplateAi(input: {
   contextSource?: string | null;
   artStyle?: string | null;
   variantsCount?: number;
+  speedMode?: string | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const prompt = String(input.prompt || '').trim();
@@ -1619,50 +1669,72 @@ export async function composeInvitationTemplateAi(input: {
   const variants: string[] = [];
   const wantBg = input.generateBackground !== false;
   const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
+  const speedMode: AiSpeedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
 
   if (wantBg) {
     try {
-      const created = await createNewInvitationImage(
-        key,
-        imageUrls,
-        imagePrompt,
-        input.tenantId,
-        {
-          hasPeople: Boolean(structured.visualAnalysis?.hasPeople) && imageUrls.length > 0,
-          embedText,
-          artStyle,
-        },
-      );
-      bgImageUrl = created.url;
-      imageMode = created.mode;
-      safetyFallbackTriggered = Boolean(created.safetyFallbackTriggered);
-      if (bgImageUrl) {
-        variants.push(bgImageUrl);
-      }
+      // Levier B: Préchargement parallèle des photos de référence une seule fois en mémoire
+      const preloadedRefImages = imageUrls.length > 0
+        ? await preloadReferenceImages(imageUrls)
+        : [];
 
-      // Si l'utilisateur a demandé 2 variantes A/B et que l'image principale a réussi
-      if (requestedVariantsCount >= 2 && bgImageUrl) {
-        try {
-          const variantPrompt = buildVariantImagePrompt(imagePrompt);
-          const variantCreated = await createNewInvitationImage(
-            key,
-            imageUrls,
-            variantPrompt,
-            input.tenantId,
-            {
-              hasPeople: Boolean(structured.visualAnalysis?.hasPeople) && imageUrls.length > 0,
-              embedText,
-              artStyle,
-            },
-          );
-          if (variantCreated?.url && variantCreated.url !== bgImageUrl) {
-            variants.push(variantCreated.url);
+      const imageOptions = {
+        hasPeople: Boolean(structured.visualAnalysis?.hasPeople) && imageUrls.length > 0,
+        embedText,
+        artStyle,
+        speedMode,
+        preloadedRefImages,
+      };
+
+      if (requestedVariantsCount >= 2) {
+        // Levier A: Parallélisation simultanée des 2 variantes A et B via Promise.allSettled
+        const promptA = imagePrompt;
+        const promptB = buildVariantImagePrompt(imagePrompt);
+
+        const [resA, resB] = await Promise.allSettled([
+          createNewInvitationImage(key, imageUrls, promptA, input.tenantId, imageOptions),
+          createNewInvitationImage(key, imageUrls, promptB, input.tenantId, imageOptions),
+        ]);
+
+        if (resA.status === 'fulfilled') {
+          bgImageUrl = resA.value.url;
+          imageMode = resA.value.mode;
+          safetyFallbackTriggered = Boolean(resA.value.safetyFallbackTriggered);
+          variants.push(bgImageUrl);
+        }
+
+        if (resB.status === 'fulfilled') {
+          const urlB = resB.value.url;
+          if (urlB && urlB !== bgImageUrl) {
+            variants.push(urlB);
           }
-        } catch (variantErr) {
-          console.warn(
-            '[invitationTemplateAi] Échec de la génération de la variante A/B secondaire (non-bloquant):',
-            (variantErr as Error)?.message,
-          );
+          if (!bgImageUrl && urlB) {
+            bgImageUrl = urlB;
+            imageMode = resB.value.mode;
+            safetyFallbackTriggered = Boolean(resB.value.safetyFallbackTriggered);
+          }
+        } else {
+          console.warn('[invitationTemplateAi] Échec de la variante B (non-bloquant):', resB.reason?.message);
+        }
+
+        if (!bgImageUrl) {
+          const errA = resA.status === 'rejected' ? resA.reason : new Error('Échec de la génération des variantes');
+          if ((errA as HttpError)?.status) throw errA;
+          fail(502, (errA as Error)?.message || 'La création de la nouvelle image a échoué.');
+        }
+      } else {
+        const created = await createNewInvitationImage(
+          key,
+          imageUrls,
+          imagePrompt,
+          input.tenantId,
+          imageOptions,
+        );
+        bgImageUrl = created.url;
+        imageMode = created.mode;
+        safetyFallbackTriggered = Boolean(created.safetyFallbackTriggered);
+        if (bgImageUrl) {
+          variants.push(bgImageUrl);
         }
       }
     } catch (err) {
@@ -1679,6 +1751,7 @@ export async function composeInvitationTemplateAi(input: {
   if (safetyFallbackTriggered) {
     (global as Record<string, unknown>).aiSafetyFallbackTriggered = true;
   }
+  (global as Record<string, unknown>).aiSpeedMode = speedMode;
   if (structured.visualAnalysis) {
     (global as Record<string, unknown>).aiVisualAnalysis = structured.visualAnalysis;
   }
@@ -1736,6 +1809,7 @@ export async function composeInvitationTemplateAi(input: {
       imageMode,
       variants: variants.length > 0 ? variants : (bgImageUrl ? [bgImageUrl] : []),
       safetyFallbackTriggered,
+      speedMode,
     },
   };
 }

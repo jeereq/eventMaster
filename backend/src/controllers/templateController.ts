@@ -467,6 +467,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
     const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
     const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
+    const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
     const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
 
     const unlimited = isUnlimitedAiTokenUser(req.user);
@@ -483,6 +484,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       contextSource,
       artStyle,
       variantsCount,
+      speedMode,
     });
     const historyId = await persistTemplateCompose({
       userId: req.user.id,
@@ -542,6 +544,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
     const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
     const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
+    const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
     const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
     const rateKey = user?.id || req.ip || deviceId;
 
@@ -559,6 +562,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       contextSource,
       artStyle,
       variantsCount,
+      speedMode,
     });
     const historyId = await persistTemplateCompose({
       userId: user?.id || null,

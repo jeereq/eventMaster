@@ -43,6 +43,7 @@ import {
   generatedImageUrlFromContent,
   type TemplateAiComposeContent,
   type TemplateAiComposeResult,
+  type AiSpeedMode,
 } from '@/lib/templateAiCompose';
 import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
@@ -242,6 +243,7 @@ export default function LandingInvitationAiGenerator({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [embedText, setEmbedText] = useState(false);
   const [variantsCount, setVariantsCount] = useState<1 | 2>(1);
+  const [speedMode, setSpeedMode] = useState<AiSpeedMode>('quality');
   const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
   const [contextSource, setContextSource] = useState<InvitationContextSource>('none');
   const [downloading, setDownloading] = useState(false);
@@ -550,6 +552,7 @@ export default function LandingInvitationAiGenerator({
         contextSource,
         artStyle,
         variantsCount,
+        speedMode,
       });
       if (seq !== generationSeq.current) return;
       setResult(data.content);
@@ -1057,6 +1060,39 @@ export default function LandingInvitationAiGenerator({
                     </span>
                   </span>
                 </button>
+
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="block text-xs font-bold text-foreground">Vitesse & Rendu</span>
+                    <span className="block text-[11px] text-muted">Rapide (~5s Flash) ou Haute Définition (Pro 2K)</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setSpeedMode('fast')}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        speedMode === 'fast' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                      )}
+                      title="Génération ultra-rapide via Gemini 3.1 Flash Image"
+                    >
+                      ⚡ Rapide (Flash)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setSpeedMode('quality')}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        speedMode === 'quality' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                      )}
+                      title="Rendu 2K haute fidélité via Gemini 3 Pro Image"
+                    >
+                      ✨ Qualité (Pro)
+                    </button>
+                  </div>
+                </div>
 
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                   <div>

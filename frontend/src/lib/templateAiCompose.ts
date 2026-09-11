@@ -15,6 +15,8 @@ import type { TemplatePalette } from '@/lib/imagePalette';
 
 export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
 
+export type AiSpeedMode = 'fast' | 'quality';
+
 export type TemplateAiComposeContent = {
   global?: Record<string, unknown>;
   elements?: unknown[];
@@ -28,6 +30,7 @@ export type TemplateAiComposeResult = {
     imageMode?: 'edit' | 'generate' | null;
     variants?: string[];
     safetyFallbackTriggered?: boolean;
+    speedMode?: AiSpeedMode;
   };
   historyId?: string | null;
   remaining?: number;
@@ -58,6 +61,7 @@ export async function composeTemplateWithAi(input: {
   contextSource?: InvitationContextSource;
   artStyle?: InvitationArtStyleId;
   variantsCount?: number;
+  speedMode?: AiSpeedMode;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const data = await api.post('/templates/ai/compose', {
@@ -69,6 +73,7 @@ export async function composeTemplateWithAi(input: {
     contextSource: input.contextSource || 'none',
     artStyle: input.artStyle || 'realiste',
     variantsCount: input.variantsCount,
+    speedMode: input.speedMode || 'quality',
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
@@ -88,6 +93,7 @@ export async function composeTemplateWithAiPublic(input: {
   contextSource?: InvitationContextSource;
   artStyle?: InvitationArtStyleId;
   variantsCount?: number;
+  speedMode?: AiSpeedMode;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
@@ -103,6 +109,7 @@ export async function composeTemplateWithAiPublic(input: {
     contextSource: input.contextSource || 'none',
     artStyle: input.artStyle || 'realiste',
     variantsCount: input.variantsCount,
+    speedMode: input.speedMode || 'quality',
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);

@@ -11,7 +11,7 @@ import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buil
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
-import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage } from '@/lib/templateAiCompose';
+import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, type AiSpeedMode } from '@/lib/templateAiCompose';
 import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
  fetchAiTemplateComposeHistoryStudio,
@@ -359,6 +359,7 @@ export default function TemplatesPage() {
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
  const [aiComposeVariantsCount, setAiComposeVariantsCount] = useState<1 | 2>(1);
+ const [aiComposeSpeedMode, setAiComposeSpeedMode] = useState<AiSpeedMode>('quality');
  const [aiVariants, setAiVariants] = useState<string[]>([]);
  const [aiSafetyFallbackNotice, setAiSafetyFallbackNotice] = useState(false);
  const [aiComposeArtStyle, setAiComposeArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
@@ -1170,6 +1171,7 @@ export default function TemplatesPage() {
  contextSource: aiComposeContextSource,
  artStyle: aiComposeArtStyle,
  variantsCount: aiComposeVariantsCount,
+ speedMode: aiComposeSpeedMode,
  });
  // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
  const stageTimer = window.setTimeout(() => {
@@ -1469,6 +1471,33 @@ export default function TemplatesPage() {
  </span>
  </span>
  </button>
+
+ <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+   <div>
+     <span className="block text-xs font-bold text-foreground">Vitesse & Qualité</span>
+     <span className="block text-[11px] text-muted">Rapide (~5s Flash) ou Haute Définition (Pro 2K)</span>
+   </div>
+   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+     <button
+       type="button"
+       disabled={aiComposeBusy}
+       onClick={() => setAiComposeSpeedMode('fast')}
+       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeSpeedMode === 'fast' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+       title="Génération ultra-rapide en 4-8s via Gemini 3.1 Flash Image"
+     >
+       ⚡ Rapide (Flash)
+     </button>
+     <button
+       type="button"
+       disabled={aiComposeBusy}
+       onClick={() => setAiComposeSpeedMode('quality')}
+       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeSpeedMode === 'quality' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+       title="Résolution 2K et piqué maximal via Gemini 3 Pro Image"
+     >
+       ✨ Qualité (Pro 2K)
+     </button>
+   </div>
+ </div>
 
  <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
    <div>
