@@ -8,6 +8,7 @@ import { auditReq, serializeAuditLog } from '../services/adminAuditService';
 import { serviceGroupPrismaFilter } from '../utils/publicVenue';
 import { MarketplaceBookingStatus } from '@prisma/client';
 import { previousPeriodPlatformPayoutSummary } from '../services/commercialPayoutService';
+import { countTenantGuestsForQuota } from '../services/tenantPeriodService';
 
 const IMPERSONATE_EXPIRES_SECONDS = 2 * 60 * 60;
 
@@ -412,7 +413,7 @@ export async function getTenantOps(req: AuthenticatedRequest, res: Response) {
       return res.status(404).json({ error: 'Organisation non trouvée.' });
     }
 
-    const [users, pendingRequests, invoices, audit] = await Promise.all([
+    const [users, pendingRequests, invoices, audit, guestUsage] = await Promise.all([
       prisma.user.findMany({
         where: { tenantId },
         select: {
@@ -450,6 +451,7 @@ export async function getTenantOps(req: AuthenticatedRequest, res: Response) {
         orderBy: { createdAt: 'desc' },
         take: 15,
       }),
+      countTenantGuestsForQuota(tenantId),
     ]);
 
     return res.json({
@@ -460,6 +462,7 @@ export async function getTenantOps(req: AuthenticatedRequest, res: Response) {
         manager: tenant.manager,
       },
       counts: tenant._count,
+      guestUsage,
       users,
       pendingRequests,
       invoices: invoices.map((inv) => formatInvoiceForApi({ ...inv, tenant: { name: tenant.name } })),

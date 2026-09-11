@@ -100,6 +100,10 @@ interface AdminTenantItem {
   managerEmail: string;
   eventsCount: number;
   usersCount: number;
+  guestsPeriodCount?: number;
+  guestsTotalCount?: number;
+  maxGuests?: number;
+  periodLabel?: string;
   accountKind?: string;
   billingCycle?: 'PERIOD' | 'ANNUAL';
 }
@@ -1714,6 +1718,15 @@ function DashboardPageContent() {
     try {
       const data = await api.get(`/admin/tenants/${tenantId}/subscription-history`);
       setTenantSubscriptionHistory(data.history || []);
+      if (data.guestUsage) {
+        setDetailsData((prev: any) => ({
+          ...prev,
+          guestsPeriodCount: data.guestUsage.periodGuests,
+          guestsTotalCount: data.guestUsage.totalHistoricalGuests,
+          maxGuests: data.guestUsage.maxGuests,
+          periodLabel: data.guestUsage.periodLabel,
+        }));
+      }
     } catch (err) {
       console.error(err);
       setTenantSubscriptionHistory([]);
@@ -2439,7 +2452,7 @@ function DashboardPageContent() {
                               }
                               value={
                                 tenantsViewMode === 'list'
-                                  ? `${t.eventsCount} évén.`
+                                  ? `${t.eventsCount} évén. · ${t.guestsPeriodCount ?? 0}/${(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? 50)} inv.`
                                   : undefined
                               }
                               valueMeta={
@@ -2463,7 +2476,7 @@ function DashboardPageContent() {
                               footer={
                                 tenantsViewMode === 'grid' ? (
                                   <span className="text-[11px] text-muted">
-                                    {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''} · {t.eventsCount} événement{t.eventsCount !== 1 ? 's' : ''}
+                                    {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''} · {t.eventsCount} événement{t.eventsCount !== 1 ? 's' : ''} · {t.guestsPeriodCount ?? 0}/{(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? 50)} inv. (période)
                                   </span>
                                 ) : undefined
                               }

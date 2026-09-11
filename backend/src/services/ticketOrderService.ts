@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
+import { countTenantGuestsForQuota } from './tenantPeriodService';
 import { sendRealEmail } from './notificationService';
 import { notifyTicketPayment } from './paymentTraceService';
 import { assignSeatInTablePlan, assignMultipleSeatsInTablePlan } from './seatSelectionService';
@@ -46,10 +47,10 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
       throw new Error('Plus assez de billets disponibles.');
     }
 
-    const guestCount = await prisma.guest.count({ where: { event: { tenantId: event.tenantId } } });
+    const { periodGuests } = await countTenantGuestsForQuota(event.tenantId);
     const limits = getPlanLimitsForTenant(event.tenant.plan, event.tenant.accountKind);
-    if (guestCount + order.quantity > limits.maxGuests) {
-      throw new Error('Quota d’invités de l’organisation atteint. Contactez l’organisateur.');
+    if (periodGuests + order.quantity > limits.maxGuests) {
+      throw new Error('Quota d’invités de l’organisation atteint pour la période en cours. Contactez l’organisateur.');
     }
   }
 

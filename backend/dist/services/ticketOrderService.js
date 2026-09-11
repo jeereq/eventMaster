@@ -4,6 +4,7 @@ exports.ticketsRemaining = exports.companionTicketEmail = exports.splitBuyerName
 exports.fulfillTicketOrder = fulfillTicketOrder;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
+const tenantPeriodService_1 = require("./tenantPeriodService");
 const notificationService_1 = require("./notificationService");
 const paymentTraceService_1 = require("./paymentTraceService");
 const seatSelectionService_1 = require("./seatSelectionService");
@@ -43,10 +44,10 @@ async function fulfillTicketOrder(orderId, stripeSession) {
             });
             throw new Error('Plus assez de billets disponibles.');
         }
-        const guestCount = await db_1.prisma.guest.count({ where: { event: { tenantId: event.tenantId } } });
+        const { periodGuests } = await (0, tenantPeriodService_1.countTenantGuestsForQuota)(event.tenantId);
         const limits = (0, plansConfig_1.getPlanLimitsForTenant)(event.tenant.plan, event.tenant.accountKind);
-        if (guestCount + order.quantity > limits.maxGuests) {
-            throw new Error('Quota d’invités de l’organisation atteint. Contactez l’organisateur.');
+        if (periodGuests + order.quantity > limits.maxGuests) {
+            throw new Error('Quota d’invités de l’organisation atteint pour la période en cours. Contactez l’organisateur.');
         }
     }
     const { firstName, lastName } = (0, ticketOrderUtils_1.splitBuyerName)(order.buyerName);
@@ -160,6 +161,8 @@ async function fulfillTicketOrder(orderId, stripeSession) {
         eventId: event.id,
         tenantId: event.tenantId,
         tenantName: event.tenant.name,
+        isDonation,
+        donationNote: typeof donationMeta?.donationNote === 'string' ? donationMeta.donationNote : null,
     }).catch((err) => console.error('[Ticket] notify payment:', err));
     const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
     const orgBrand = (0, brandedMessaging_1.orgBrandFromTenant)(event.tenant);

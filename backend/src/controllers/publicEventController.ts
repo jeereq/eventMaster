@@ -13,6 +13,7 @@ import {
   resolveZoneTicketPrice,
 } from '../services/ticketPricingService';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
+import { countTenantGuestsForQuota } from '../services/tenantPeriodService';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 import { formatEventPlace } from '../utils/eventPlace';
@@ -631,10 +632,10 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       });
     }
 
-    const guestCount = await prisma.guest.count({ where: { event: { tenantId: event.tenantId } } });
+    const { periodGuests } = await countTenantGuestsForQuota(event.tenantId);
     const limits = getPlanLimitsForTenant(event.tenant.plan, event.tenant.accountKind);
-    if (guestCount + quantity > limits.maxGuests) {
-      return res.status(403).json({ error: 'Plus de places du côté de l’organisateur (quota atteint).' });
+    if (periodGuests + quantity > limits.maxGuests) {
+      return res.status(403).json({ error: 'Plus de places du côté de l’organisateur (quota d’invités atteint pour la période en cours).' });
     }
 
     const existing = await prisma.guest.findUnique({

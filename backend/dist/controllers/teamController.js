@@ -10,6 +10,8 @@ exports.updateMemberCommissionRate = updateMemberCommissionRate;
 exports.updateOrgCommercialSettings = updateOrgCommercialSettings;
 exports.resendTeamMemberVerification = resendTeamMemberVerification;
 exports.deleteTeamMember = deleteTeamMember;
+exports.getOrgNotificationSettings = getOrgNotificationSettings;
+exports.updateOrgNotificationSettings = updateOrgNotificationSettings;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const db_1 = require("../db");
 const permissionsService_1 = require("../services/permissionsService");
@@ -19,6 +21,7 @@ const authController_1 = require("./authController");
 const phone_1 = require("../utils/phone");
 const platformSettingsService_1 = require("../services/platformSettingsService");
 const welcomeAiTokens_1 = require("../services/welcomeAiTokens");
+const tenantNotificationSettingsService_1 = require("../services/tenantNotificationSettingsService");
 const userSelect = {
     id: true,
     name: true,
@@ -455,5 +458,54 @@ async function deleteTeamMember(req, res) {
     catch (error) {
         console.error('Erreur deleteTeamMember:', error);
         return res.status(500).json({ error: 'Impossible de supprimer l\'utilisateur.' });
+    }
+}
+/**
+ * Récupère les paramètres de notification billetterie & dons de l'organisation.
+ */
+async function getOrgNotificationSettings(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
+            return res.status(403).json({ error: 'Organisation non identifiée.' });
+        }
+        const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
+        if (!access.canManageTeam && !access.isOwner) {
+            return res.status(403).json({ error: 'Accès non autorisé.' });
+        }
+        const settings = await (0, tenantNotificationSettingsService_1.getTenantNotificationSettings)(tenantId);
+        return res.json({ settings, isOwner: access.isOwner });
+    }
+    catch (error) {
+        console.error('Erreur getOrgNotificationSettings:', error);
+        return res.status(500).json({ error: 'Impossible de récupérer les paramètres de notification.' });
+    }
+}
+/**
+ * Met à jour les paramètres de notification billetterie & dons de l'organisation (réservé au propriétaire).
+ */
+async function updateOrgNotificationSettings(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
+            return res.status(403).json({ error: 'Organisation non identifiée.' });
+        }
+        const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
+        if (!access.isOwner) {
+            return res.status(403).json({
+                error: 'Seul le propriétaire de l\'organisation a le droit de configurer la réception des notifications.',
+            });
+        }
+        const settings = await (0, tenantNotificationSettingsService_1.updateTenantNotificationSettings)(tenantId, req.body);
+        return res.json({
+            message: 'Paramètres de notification mis à jour avec succès.',
+            settings,
+        });
+    }
+    catch (error) {
+        console.error('Erreur updateOrgNotificationSettings:', error);
+        return res.status(500).json({ error: 'Impossible de mettre à jour les paramètres de notification.' });
     }
 }

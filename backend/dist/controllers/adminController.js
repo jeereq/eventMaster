@@ -46,6 +46,7 @@ const adminAuditService_1 = require("../services/adminAuditService");
 const adminPager_1 = require("../utils/adminPager");
 const welcomeAiTokens_1 = require("../services/welcomeAiTokens");
 const donationsAccess_1 = require("../services/donationsAccess");
+const tenantPeriodService_1 = require("../services/tenantPeriodService");
 // Get global system statistics and list of all tenants (Super Admin only)
 async function getSystemStats(req, res) {
     try {
@@ -236,7 +237,8 @@ async function listAdminTenants(req, res) {
             }),
             db_1.prisma.tenant.count({ where }),
         ]);
-        return res.json((0, adminPager_1.listPayload)(rows.map((t) => ({
+        const guestUsages = await Promise.all(rows.map((t) => (0, tenantPeriodService_1.countTenantGuestsForQuota)(t.id)));
+        return res.json((0, adminPager_1.listPayload)(rows.map((t, index) => ({
             id: t.id,
             name: t.name,
             plan: t.plan,
@@ -250,6 +252,10 @@ async function listAdminTenants(req, res) {
             usersCount: t._count.users,
             accountKind: t.accountKind,
             billingCycle: t.billingCycle,
+            guestsPeriodCount: guestUsages[index]?.periodGuests ?? 0,
+            guestsTotalCount: guestUsages[index]?.totalHistoricalGuests ?? 0,
+            maxGuests: guestUsages[index]?.maxGuests ?? 50,
+            periodLabel: guestUsages[index]?.periodLabel,
         })), total, page, pageSize));
     }
     catch (error) {
@@ -288,7 +294,7 @@ async function getTenantSubscriptionHistory(req, res) {
                 return res.status(403).json({ error: 'Accès réservé aux organisations que vous avez parrainées.' });
             }
         }
-        const [requests, invoices] = await Promise.all([
+        const [requests, invoices, guestUsage] = await Promise.all([
             db_1.prisma.subscriptionRequest.findMany({
                 where: { tenantId },
                 orderBy: { createdAt: 'desc' },
@@ -316,6 +322,7 @@ async function getTenantSubscriptionHistory(req, res) {
                 where: { tenantId },
                 orderBy: { createdAt: 'desc' },
             }),
+            (0, tenantPeriodService_1.countTenantGuestsForQuota)(tenantId),
         ]);
         const requestEntries = requests.map((r) => ({
             id: r.id,
@@ -348,6 +355,7 @@ async function getTenantSubscriptionHistory(req, res) {
             history,
             requestsCount: requests.length,
             invoicesCount: invoices.length,
+            guestUsage,
         });
     }
     catch (error) {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Check, Minus, ChevronDown, ChevronUp, Sparkles, Tag, ShieldCheck, CreditCard, Smartphone, Wallet } from 'lucide-react';
+import { Check, Minus, ChevronDown, ChevronUp, Sparkles, Tag, ShieldCheck, CreditCard, Smartphone, Wallet, Info } from 'lucide-react';
 import {
  LANDING_PLANS,
  FEATURE_COMPARISON,
@@ -145,7 +145,7 @@ export default function LandingPricingSection({
  badges,
  limits: {
  events: db?.maxEvents ?? parseComparisonQuota(plan.id, 'Événements actifs'),
- guests: db?.maxGuests ?? parseComparisonQuota(plan.id, 'Invités (quota org.)'),
+ guests: db?.maxGuests ?? parseComparisonQuota(plan.id, 'Invités inclus par période payée (quota org.)'),
  templates: db?.maxTemplates ?? parseComparisonQuota(plan.id, "Modèles d'invitation"),
  rooms: db?.maxRooms ?? parseComparisonQuota(plan.id, 'Salles organisation'),
  services: db?.maxServices ?? parseComparisonQuota(plan.id, 'Prestations marketplace'),
@@ -610,7 +610,17 @@ export default function LandingPricingSection({
  </div>
  </div>
 
- <p className="text-center text-xs text-muted mt-8 max-w-2xl mx-auto leading-relaxed">
+ <div className="mt-8 max-w-2xl mx-auto rounded-xl border border-primary/25 bg-primary/5 p-4 text-center sm:text-left flex flex-col sm:flex-row items-center sm:items-start gap-3">
+ <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+ <div className="space-y-1">
+ <p className="text-xs font-bold text-primary">Nuance de décompte : invitations par période payée</p>
+ <p className="text-xs text-foreground leading-relaxed">
+ Pour tous nos forfaits payants, le quota d’invités est comptabilisé <strong>exclusivement sur la période payée en cours</strong> (chaque mois pour les formules Business, Premium et Enterprise ; chaque trimestre de 90 jours pour les forfaits Particulier) et <strong>non sur la totalité de l’histoire de votre compte</strong>. À chaque renouvellement, votre quota se renouvelle pour accueillir vos nouveaux événements sans blocage lié aux invités passés.
+ </p>
+ </div>
+ </div>
+
+ <p className="text-center text-xs text-muted mt-6 max-w-2xl mx-auto leading-relaxed">
  Réduction annuelle de {ANNUAL_DISCOUNT_PERCENT} % sur le total (12 mois ou 4 trimestres). Promotions configurables
  par l&apos;administrateur. Tous les forfaits incluent l&apos;isolation multi-tenant et le portail RSVP invité.
  </p>

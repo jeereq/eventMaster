@@ -14,6 +14,7 @@ exports.assertRoomTypeForPlan = assertRoomTypeForPlan;
 exports.formatPlanFeaturesResponse = formatPlanFeaturesResponse;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
+const tenantPeriodService_1 = require("./tenantPeriodService");
 const ROOM_TYPES_BY_LEVEL = {
     basic: ['SIMPLE'],
     standard: ['SIMPLE', 'BANQUET', 'CONFERENCE'],
@@ -44,23 +45,27 @@ async function getTenantPlanSnapshot(tenantId) {
     if (!tenant)
         return null;
     const features = (0, plansConfig_1.getPlanLimitsForTenant)(tenant.plan, tenant.accountKind);
-    const guestCount = await db_1.prisma.guest.count({
-        where: { event: { tenantId } },
-    });
-    const orgManagers = await db_1.prisma.user.count({
-        where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
-    });
+    const [guestUsage, orgManagers] = await Promise.all([
+        (0, tenantPeriodService_1.countTenantGuestsForQuota)(tenantId),
+        db_1.prisma.user.count({
+            where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
+        }),
+    ]);
     return {
         plan: tenant.plan,
         planName: features.name,
         features,
         usage: {
             events: tenant._count.events,
-            guests: guestCount,
+            guests: guestUsage.periodGuests,
+            totalGuests: guestUsage.totalHistoricalGuests,
             templates: tenant._count.templates,
             rooms: tenant._count.rooms,
             services: tenant._count.serviceOfferings,
             orgManagers: orgManagers + (tenant.managerId ? 1 : 0),
+            periodStart: guestUsage.periodStart ? guestUsage.periodStart.toISOString() : null,
+            periodEnd: guestUsage.periodEnd ? guestUsage.periodEnd.toISOString() : null,
+            periodLabel: guestUsage.periodLabel,
         },
     };
 }

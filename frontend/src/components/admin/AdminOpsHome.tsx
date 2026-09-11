@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Building2, Check, Clock, CreditCard, FileText, Loader2, LogIn, ShieldAlert, Users, X,
+  AlertCircle, Building2, Check, Clock, CreditCard, FileText, Loader2, LogIn, ShieldAlert, Ticket, Users, X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -94,6 +94,15 @@ interface TenantOps {
     rooms: number;
     venueListings: number;
     serviceOfferings: number;
+  };
+  guestUsage?: {
+    periodGuests: number;
+    totalHistoricalGuests: number;
+    maxGuests: number;
+    periodStart: string | null;
+    periodEnd: string | null;
+    isPaidPlan: boolean;
+    periodLabel: string;
   };
   users: Array<{
     id: string;
@@ -693,21 +702,40 @@ export default function AdminOpsHome() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               {[
                 { label: 'Membres', value: fiche.counts.users, icon: Users },
                 { label: 'Événements', value: fiche.counts.events, icon: Clock },
+                {
+                  label: 'Invités (période)',
+                  value: fiche.guestUsage
+                    ? `${fiche.guestUsage.periodGuests}/${fiche.guestUsage.maxGuests >= 9999 ? '∞' : fiche.guestUsage.maxGuests}`
+                    : '—',
+                  icon: Ticket,
+                },
                 { label: 'Salles', value: fiche.counts.rooms, icon: Building2 },
                 { label: 'Annonces salles', value: fiche.counts.venueListings, icon: FileText },
                 { label: 'Prestations', value: fiche.counts.serviceOfferings, icon: CreditCard },
               ].map((item) => (
                 <div key={item.label} className="border border-border px-3 py-2.5 text-center rounded-[var(--radius-card)]">
                   <item.icon className="w-3.5 h-3.5 text-muted mx-auto mb-1" />
-                  <div className="text-lg font-semibold text-foreground">{item.value}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted">{item.label}</div>
+                  <div className="text-base sm:text-lg font-semibold text-foreground truncate">{item.value}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted truncate">{item.label}</div>
                 </div>
               ))}
             </div>
+
+            {fiche.guestUsage && (
+              <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 text-xs text-foreground flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-primary">Règle de comptage des invitations & invités</p>
+                  <p className="text-muted leading-relaxed">
+                    Le quota d’invitations est calculé exclusivement sur la période active ({fiche.guestUsage.periodLabel}). Les invités des cycles précédents ({fiche.guestUsage.totalHistoricalGuests} au total dans l’historique) ne bloquent pas le renouvellement du quota pour le cycle en cours.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Gérant</h4>

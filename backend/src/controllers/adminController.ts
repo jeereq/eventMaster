@@ -36,6 +36,7 @@ import { auditReq } from '../services/adminAuditService';
 import { adminPager, adminQueryString, adminSearch, listPayload, prismaAnd } from '../utils/adminPager';
 import { grantWelcomeAtPlanActivation } from '../services/welcomeAiTokens';
 import { extractEventDonationsConfig } from '../services/donationsAccess';
+import { countTenantGuestsForQuota } from '../services/tenantPeriodService';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -249,9 +250,13 @@ export async function listAdminTenants(req: AuthenticatedRequest, res: Response)
       prisma.tenant.count({ where }),
     ]);
 
+    const guestUsages = await Promise.all(
+      rows.map((t) => countTenantGuestsForQuota(t.id)),
+    );
+
     return res.json(
       listPayload(
-        rows.map((t) => ({
+        rows.map((t, index) => ({
           id: t.id,
           name: t.name,
           plan: t.plan,
@@ -265,6 +270,10 @@ export async function listAdminTenants(req: AuthenticatedRequest, res: Response)
           usersCount: t._count.users,
           accountKind: t.accountKind,
           billingCycle: t.billingCycle,
+          guestsPeriodCount: guestUsages[index]?.periodGuests ?? 0,
+          guestsTotalCount: guestUsages[index]?.totalHistoricalGuests ?? 0,
+          maxGuests: guestUsages[index]?.maxGuests ?? 50,
+          periodLabel: guestUsages[index]?.periodLabel,
         })),
         total,
         page,
@@ -314,7 +323,7 @@ export async function getTenantSubscriptionHistory(req: AuthenticatedRequest, re
       }
     }
 
-    const [requests, invoices] = await Promise.all([
+    const [requests, invoices, guestUsage] = await Promise.all([
       prisma.subscriptionRequest.findMany({
         where: { tenantId },
         orderBy: { createdAt: 'desc' },
@@ -342,6 +351,7 @@ export async function getTenantSubscriptionHistory(req: AuthenticatedRequest, re
         where: { tenantId },
         orderBy: { createdAt: 'desc' },
       }),
+      countTenantGuestsForQuota(tenantId),
     ]);
 
     const requestEntries = requests.map((r) => ({
@@ -383,6 +393,7 @@ export async function getTenantSubscriptionHistory(req: AuthenticatedRequest, re
       history,
       requestsCount: requests.length,
       invoicesCount: invoices.length,
+      guestUsage,
     });
   } catch (error: any) {
     console.error('Erreur getTenantSubscriptionHistory:', error);

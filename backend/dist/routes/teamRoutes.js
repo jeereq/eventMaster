@@ -8,6 +8,8 @@ router.use(auth_1.requireAuth);
 router.use(auth_1.requireActiveLicense);
 router.get('/', teamController_1.getTeamMembers);
 router.post('/', teamController_1.createTeamMember);
+router.get('/notification-settings', teamController_1.getOrgNotificationSettings);
+router.put('/notification-settings', teamController_1.updateOrgNotificationSettings);
 router.put('/commercial-settings', teamController_1.updateOrgCommercialSettings);
 router.put('/:id/commission', teamController_1.updateMemberCommissionRate);
 router.post('/:id/resend-verification', teamController_1.resendTeamMemberVerification);

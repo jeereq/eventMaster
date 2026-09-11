@@ -13,6 +13,7 @@ const invoiceService_1 = require("../services/invoiceService");
 const adminAuditService_1 = require("../services/adminAuditService");
 const publicVenue_1 = require("../utils/publicVenue");
 const commercialPayoutService_1 = require("../services/commercialPayoutService");
+const tenantPeriodService_1 = require("../services/tenantPeriodService");
 const IMPERSONATE_EXPIRES_SECONDS = 2 * 60 * 60;
 function tenantSummary(tenant) {
     return {
@@ -353,7 +354,7 @@ async function getTenantOps(req, res) {
         if (!tenant) {
             return res.status(404).json({ error: 'Organisation non trouvée.' });
         }
-        const [users, pendingRequests, invoices, audit] = await Promise.all([
+        const [users, pendingRequests, invoices, audit, guestUsage] = await Promise.all([
             db_1.prisma.user.findMany({
                 where: { tenantId },
                 select: {
@@ -391,6 +392,7 @@ async function getTenantOps(req, res) {
                 orderBy: { createdAt: 'desc' },
                 take: 15,
             }),
+            (0, tenantPeriodService_1.countTenantGuestsForQuota)(tenantId),
         ]);
         return res.json({
             tenant: {
@@ -400,6 +402,7 @@ async function getTenantOps(req, res) {
                 manager: tenant.manager,
             },
             counts: tenant._count,
+            guestUsage,
             users,
             pendingRequests,
             invoices: invoices.map((inv) => (0, invoiceService_1.formatInvoiceForApi)({ ...inv, tenant: { name: tenant.name } })),

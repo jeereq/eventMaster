@@ -102,6 +102,7 @@ async function activateSubscriptionRequest(requestId, opts) {
                 licenseExpiryWarningFor: null,
                 billingCycle: (0, plansConfig_1.billingCycleFromDurationDays)(durationDays),
                 pendingPlan: null,
+                accountKind: (0, plansConfig_1.accountKindForPlanAssignment)(request.requestedPlan, request.tenant.accountKind),
             },
         }),
     ]);

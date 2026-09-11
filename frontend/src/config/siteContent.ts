@@ -115,13 +115,19 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'free-trial',
     question: 'Puis-je essayer gratuitement ?',
     answer:
-      'Oui. Le forfait gratuit (Essentiel) permet de créer une organisation, jusqu’à 3 événements et 50 invités — sans carte. Ensuite, vous passez au forfait qui correspond : particulier, organisation, salle ou prestataire.',
+      'Oui. Le forfait gratuit (Essentiel) permet de créer une organisation, jusqu’à 3 événements et 50 invités au total — sans carte bancaire. Ensuite, vous passez au forfait qui correspond : particulier, organisation, salle ou prestataire.',
   },
   {
     id: 'plans-quotas',
     question: 'Comment fonctionnent les forfaits et les quotas ?',
     answer:
-      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou +200) avec éditeur de salle complet : période de base = trimestre (90 jours). Les organisateurs B2B ont Essentiel (gratuit), Business, Premium / Premium Plus et Enterprise (mois). Les gestionnaires de salles et prestataires ont Salle (salles illimitées), Prestataire (prestations illimitées) ou Salle & presta (les deux illimités) — sans événements ni invités. Le tableau de bord affiche vos quotas. Le paiement annuel facture 12 mois (ou 4 trimestres pour Particulier) d’un coup, avec −10 % sur ce total. L’éditeur de salles 2D/3D dépend aussi du niveau d’éditeur du forfait — voir la question dédiée.',
+      'Chaque organisation souscrit un seul forfait. Pour tous les forfaits incluant la gestion d’invités (Particulier ou Professionnel), le quota d’invités est comptabilisé par période de facturation payée (chaque mois pour les formules B2B, chaque trimestre de 90 jours pour Particulier) et non sur la totalité de l’histoire du compte. À chaque renouvellement, votre quota d’invitations se renouvelle intégralement pour vos nouveaux événements sans blocage lié aux invités passés. Les particuliers choisissent un palier d’invités (50, 100, 200 ou +200) avec éditeur de salle complet. Les organisateurs B2B ont Essentiel (gratuit), Business (150 invités/mois), Premium (500 invités/mois), Premium Plus (1 000 invités/mois) et Enterprise. Les forfaits Salle et Prestataire sont quant à eux dédiés au marketplace (sans événements ni quota d’invités). Le paiement annuel applique −10 % de réduction.',
+  },
+  {
+    id: 'guest-quota-period',
+    question: 'Comment sont comptabilisés les invités pour un abonnement mensuel ?',
+    answer:
+      'Le quota d’invités est comptabilisé uniquement sur la période payée en cours (chaque mois pour les forfaits Business, Premium et Enterprise ; chaque trimestre de 90 jours pour les forfaits Particulier) et non sur l’ensemble de l’historique de votre compte. À chaque renouvellement de période, votre compteur d’invitations repart pour accueillir vos prochains événements. Les invités et réponses RSVP de vos événements passés restent précieusement archivés et consultables dans votre espace.',
   },
   {
     id: 'room-editor-plans',

@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import { getPlanLimitsForTenant, PlanDefinition, formatPlanPriceFc } from '../config/plansConfig';
+import { countTenantGuestsForQuota } from './tenantPeriodService';
 
 export type PlanFeatureKey =
   | 'protocolQr'
@@ -25,10 +26,14 @@ export interface TenantPlanSnapshot {
   usage: {
     events: number;
     guests: number;
+    totalGuests?: number;
     templates: number;
     rooms: number;
     services: number;
     orgManagers: number;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    periodLabel?: string;
   };
 }
 
@@ -59,13 +64,12 @@ export async function getTenantPlanSnapshot(tenantId: string): Promise<TenantPla
 
   const features = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
 
-  const guestCount = await prisma.guest.count({
-    where: { event: { tenantId } },
-  });
-
-  const orgManagers = await prisma.user.count({
-    where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
-  });
+  const [guestUsage, orgManagers] = await Promise.all([
+    countTenantGuestsForQuota(tenantId),
+    prisma.user.count({
+      where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
+    }),
+  ]);
 
   return {
     plan: tenant.plan,
@@ -73,11 +77,15 @@ export async function getTenantPlanSnapshot(tenantId: string): Promise<TenantPla
     features,
     usage: {
       events: tenant._count.events,
-      guests: guestCount,
+      guests: guestUsage.periodGuests,
+      totalGuests: guestUsage.totalHistoricalGuests,
       templates: tenant._count.templates,
       rooms: tenant._count.rooms,
       services: tenant._count.serviceOfferings,
       orgManagers: orgManagers + (tenant.managerId ? 1 : 0),
+      periodStart: guestUsage.periodStart ? guestUsage.periodStart.toISOString() : null,
+      periodEnd: guestUsage.periodEnd ? guestUsage.periodEnd.toISOString() : null,
+      periodLabel: guestUsage.periodLabel,
     },
   };
 }

@@ -11,6 +11,7 @@ const ticketOrderService_1 = require("../services/ticketOrderService");
 const seatSelectionService_1 = require("../services/seatSelectionService");
 const ticketPricingService_1 = require("../services/ticketPricingService");
 const plansConfig_1 = require("../config/plansConfig");
+const tenantPeriodService_1 = require("../services/tenantPeriodService");
 const publicVenue_1 = require("../utils/publicVenue");
 const eventPlace_1 = require("../utils/eventPlace");
 const marketplaceDates_1 = require("../utils/marketplaceDates");
@@ -548,10 +549,10 @@ async function checkoutPublicEvent(req, res) {
                 error: remaining === 0 ? 'Complet.' : `Il ne reste que ${remaining} place${remaining > 1 ? 's' : ''}.`,
             });
         }
-        const guestCount = await db_1.prisma.guest.count({ where: { event: { tenantId: event.tenantId } } });
+        const { periodGuests } = await (0, tenantPeriodService_1.countTenantGuestsForQuota)(event.tenantId);
         const limits = (0, plansConfig_1.getPlanLimitsForTenant)(event.tenant.plan, event.tenant.accountKind);
-        if (guestCount + quantity > limits.maxGuests) {
-            return res.status(403).json({ error: 'Plus de places du côté de l’organisateur (quota atteint).' });
+        if (periodGuests + quantity > limits.maxGuests) {
+            return res.status(403).json({ error: 'Plus de places du côté de l’organisateur (quota d’invités atteint pour la période en cours).' });
         }
         const existing = await db_1.prisma.guest.findUnique({
             where: { eventId_email: { eventId: event.id, email: buyerEmail } },

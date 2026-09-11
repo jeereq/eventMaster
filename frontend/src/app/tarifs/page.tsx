@@ -70,7 +70,7 @@ export default function TarifsPage() {
             id="faq"
             title="Questions fréquentes sur les tarifs"
             subtitle="Modalités de paiement, activation immédiate et conditions de résiliation."
-            itemIds={['pricing', 'mobile-money', 'trial', 'upgrade', 'support']}
+            itemIds={['plans-quotas', 'guest-quota-period', 'free-trial', 'b2c-annual', 'upgrade', 'support']}
           />
         </div>
 

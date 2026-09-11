@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
+import { countTenantGuestsForQuota } from '../services/tenantPeriodService';
 import {
   canManageGuests,
   canProtocolGuests,
@@ -74,16 +75,16 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
     }
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-    const guestCount = await prisma.guest.count({ where: { event: { tenantId } } });
 
     if (tenant) {
       const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
-      if (limits.maxGuests <= 0 || guestCount >= limits.maxGuests) {
+      const { periodGuests } = await countTenantGuestsForQuota(tenantId);
+      if (limits.maxGuests <= 0 || periodGuests >= limits.maxGuests) {
         return res.status(403).json({
           error:
             limits.maxGuests <= 0
               ? `La gestion des invités n’est pas incluse dans votre forfait ${limits.name}. Choisissez un forfait organisateur.`
-              : `Quota total d'invités atteint pour votre forfait ${limits.name} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+              : `Quota d'invités atteint pour la période en cours de votre forfait ${limits.name} (${periodGuests}/${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Votre quota se renouvelle au prochain cycle de facturation ou passez à un forfait supérieur.`,
         });
       }
     }
@@ -257,16 +258,16 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
     }
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-    const guestCount = await prisma.guest.count({ where: { event: { tenantId } } });
 
     if (tenant) {
       const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
-      if (limits.maxGuests <= 0 || guestCount + guests.length > limits.maxGuests) {
+      const { periodGuests } = await countTenantGuestsForQuota(tenantId);
+      if (limits.maxGuests <= 0 || periodGuests + guests.length > limits.maxGuests) {
         return res.status(403).json({
           error:
             limits.maxGuests <= 0
               ? `La gestion des invités n’est pas incluse dans votre forfait ${limits.name}. Choisissez un forfait organisateur.`
-              : `Quota total d'invités dépassé pour votre forfait ${limits.name} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+              : `Quota d'invités dépassé pour la période en cours de votre forfait ${limits.name} (${periodGuests} utilisés sur ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Votre quota se renouvelle au prochain cycle ou passez à un forfait supérieur.`,
         });
       }
     }

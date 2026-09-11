@@ -262,9 +262,30 @@ export default function AdminDetailsModal({
               items={[
                 { label: 'Utilisateurs', value: data.usersCount ?? 0 },
                 { label: 'Événements', value: data.eventsCount ?? 0 },
+                {
+                  label: 'Invités (période)',
+                  value:
+                    data.guestsPeriodCount != null
+                      ? `${data.guestsPeriodCount} / ${data.maxGuests >= 9999 ? '∞' : (data.maxGuests ?? 50)}`
+                      : '—',
+                },
+                {
+                  label: 'Invités (total hist.)',
+                  value: data.guestsTotalCount != null ? data.guestsTotalCount : '—',
+                },
                 { label: 'Inscription', value: formatDate(data.createdAt) },
               ]}
             />
+
+            <div className="rounded-xl border border-primary/25 bg-primary/5 p-3.5 text-xs text-foreground flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-primary">Nuance facturation : décompte des invitations & invités</p>
+                <p className="text-muted leading-relaxed">
+                  Le quota d’invités d’un forfait payant est comptabilisé <strong>exclusivement sur la période payée en cours</strong> ({data.periodLabel || (data.billingCycle === 'ANNUAL' ? 'cycle mensuel dans l’année' : 'mois ou trimestre actif')}) et <strong>non sur l’ensemble de l’historique</strong> du compte. À chaque renouvellement, le compteur d’invitations repart pour accueillir les nouveaux événements sans blocage lié aux invités passés.
+                </p>
+              </div>
+            </div>
 
             <DetailSection title="Gérant" icon={Users}>
               <DetailRow label="Nom">{data.managerName || 'Aucun'}</DetailRow>
@@ -278,6 +299,14 @@ export default function AdminDetailsModal({
                 </Badge>
               </DetailRow>
               <DetailRow label="Expiration">{formatDate(data.licenseExpiresAt, true)}</DetailRow>
+              <DetailRow label="Quota invités période">
+                <span className="font-semibold text-foreground">
+                  {data.guestsPeriodCount ?? 0} / {data.maxGuests >= 9999 ? 'Illimité' : (data.maxGuests ?? 50)}
+                </span>
+                <span className="text-muted ml-2">
+                  ({data.guestsTotalCount ?? 0} au total dans l’historique)
+                </span>
+              </DetailRow>
               {data.licenseKey && (
                 <DetailRow label="Clé" mono>
                   <span className="select-all">{data.licenseKey}</span>

@@ -56,7 +56,7 @@ async function resolveOrgAccess(userId, tenantId) {
             canCreateRooms: false,
             canManageAllEvents: false,
             canProtocolAllEvents: false,
-            canViewBilling: false,
+            canViewBilling: tenant.managerId === userId,
             canViewInvoices: false,
             isProtocolOnly: false,
         };

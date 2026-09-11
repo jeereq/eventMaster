@@ -477,7 +477,7 @@ const B2B_PAID_KEYS = exports.B2B_PLAN_KEYS.filter((k) => k !== 'FREE');
 function paidPlanKeysForAccountKind(kind) {
     switch (kind) {
         case 'CLIENT':
-            return [];
+            return [...exports.B2C_PLAN_KEYS, ...B2B_PAID_KEYS];
         case 'VENDOR':
             return [...exports.VENDOR_PLAN_KEYS];
         case 'BOTH':
@@ -511,6 +511,13 @@ function accountKindForPlanAssignment(planKey, currentKind) {
     const normalized = normalizePlanKey(planKey);
     if (currentKind === 'CLIENT' && normalized === 'FREE')
         return 'CLIENT';
+    if (currentKind === 'CLIENT') {
+        if (normalized === 'VENUE' || normalized === 'SERVICE')
+            return 'VENDOR';
+        if (normalized === 'CATALOG')
+            return 'BOTH';
+        return 'ORGANIZER';
+    }
     if (currentKind && isPlanAllowedForAccountKind(normalized, currentKind)) {
         return currentKind;
     }
@@ -526,7 +533,7 @@ function accountKindForPlanAssignment(planKey, currentKind) {
 }
 function planAudienceMismatchMessage(planKey, kind) {
     if (kind === 'CLIENT') {
-        return 'Un compte client ne souscrit pas d’abonnement SaaS. Contactez le support EventMaster pour faire passer le compte en organisateur ou prestataire, puis choisissez un forfait.';
+        return 'Pour activer votre compte en organisation, choisissez un forfait Particulier (B2C) ou Entreprise (B2B).';
     }
     const plan = getPlanLimits(planKey);
     if (kind === 'VENDOR') {

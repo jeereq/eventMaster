@@ -73,12 +73,6 @@ async function getBillingStatus(req, res) {
         if (!tenant) {
             return res.status(404).json({ error: 'Tenant non trouvé' });
         }
-        // Retrieve total guests count under this tenant
-        const guestCount = await db_1.prisma.guest.count({
-            where: {
-                event: { tenantId },
-            },
-        });
         const roomCount = await db_1.prisma.organizationRoom.count({ where: { tenantId } });
         const orgManagerCount = await db_1.prisma.user.count({
             where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
@@ -91,7 +85,11 @@ async function getBillingStatus(req, res) {
             plan: tenant.plan,
             usage: {
                 events: tenant._count.events,
-                guests: guestCount,
+                guests: snapshot?.usage.guests ?? 0,
+                totalGuests: snapshot?.usage.totalGuests ?? 0,
+                periodStart: snapshot?.usage.periodStart ?? null,
+                periodEnd: snapshot?.usage.periodEnd ?? null,
+                periodLabel: snapshot?.usage.periodLabel ?? null,
                 templates: tenant._count.templates,
                 rooms: roomCount,
                 services: snapshot?.usage.services ?? 0,
