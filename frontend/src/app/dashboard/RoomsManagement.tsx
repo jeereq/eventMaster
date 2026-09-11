@@ -2462,7 +2462,7 @@ export default function RoomsManagement() {
                             <span
                               className={cn(
                                 'w-2 h-2 rounded-full',
-                                editListingDraft.isPublic ? 'bg-emerald-500' : 'bg-slate-400',
+                                editListingDraft.isPublic ? 'bg-emerald-500' : 'bg-muted/50',
                               )}
                               aria-hidden
                             />

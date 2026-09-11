@@ -73,6 +73,26 @@ export default function RoomPublicPublicationForm({
   const [activeTab, setActiveTab] = useState<PublicationSubTab>('pricing');
   const headlineInputId = useId();
   const addressInputId = useId();
+  const priceInputId = useId();
+  const priceUnitSelectId = useId();
+  const quotaMinInputId = useId();
+  const quotaMaxInputId = useId();
+  const descriptionTextareaId = useId();
+  const visibilitySwitchId = useId();
+  const visibilityStatusId = useId();
+
+  // Focus helper when user clicks on a checklist item
+  const handleChecklistNavigate = (tab: PublicationSubTab, targetInputId?: string) => {
+    setActiveTab(tab);
+    if (targetInputId && typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById(targetInputId);
+        if (el) {
+          el.focus();
+        }
+      });
+    }
+  };
 
   // Validation criteria checklist for public publishing
   const hasTitle = Boolean((draft.headline || displayName).trim());
@@ -95,6 +115,7 @@ export default function RoomPublicPublicationForm({
         valid: hasTitle,
         required: true,
         tab: 'pricing' as const,
+        targetInputId: headlineInputId,
         detail: draft.headline.trim() || displayName || 'À renseigner',
       },
       {
@@ -103,6 +124,7 @@ export default function RoomPublicPublicationForm({
         valid: hasPrice,
         required: true,
         tab: 'pricing' as const,
+        targetInputId: priceInputId,
         detail: hasPrice ? `${formatFc(priceNum)} · ${PRICE_UNIT_OPTIONS.find((o) => o.id === draft.priceUnit)?.label || draft.priceUnit}` : 'Indiquez un tarif en FC',
       },
       {
@@ -111,6 +133,7 @@ export default function RoomPublicPublicationForm({
         valid: hasCityCommuneNeighborhood,
         required: true,
         tab: 'location' as const,
+        targetInputId: undefined,
         detail: hasCityCommuneNeighborhood ? `${draft.city} (${draft.commune} · ${draft.neighborhood})` : 'Ville, commune & quartier requis',
       },
       {
@@ -119,6 +142,7 @@ export default function RoomPublicPublicationForm({
         valid: hasGps,
         required: true,
         tab: 'location' as const,
+        targetInputId: undefined,
         detail: hasGps ? 'Coordonnées GPS enregistrées' : 'Placez le repère sur la carte',
       },
       {
@@ -127,10 +151,11 @@ export default function RoomPublicPublicationForm({
         valid: hasPhotos,
         required: false,
         tab: 'medias' as const,
+        targetInputId: undefined,
         detail: hasPhotos ? `${draft.photos.length} média(s) ajouté(s)` : 'Fortement conseillé pour recevoir des devis',
       },
     ],
-    [hasTitle, draft.headline, displayName, hasPrice, priceNum, draft.priceUnit, hasCityCommuneNeighborhood, draft.city, draft.commune, draft.neighborhood, hasGps, hasPhotos, draft.photos.length],
+    [hasTitle, draft.headline, displayName, headlineInputId, hasPrice, priceNum, draft.priceUnit, priceInputId, hasCityCommuneNeighborhood, draft.city, draft.commune, draft.neighborhood, hasGps, hasPhotos, draft.photos.length],
   );
 
   const requiredCount = checklistItems.filter((i) => i.required).length;
@@ -145,10 +170,22 @@ export default function RoomPublicPublicationForm({
     { id: 'preview' as const, label: 'Aperçu vitrine', icon: Eye, completed: isReadyToPublish },
   ];
 
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const currentIndex = TABS.findIndex((t) => t.id === activeTab);
+    const nextIndex = (currentIndex + (e.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length;
+    const nextTab = TABS[nextIndex].id;
+    setActiveTab(nextTab);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`publication-subtab-${nextTab}`)?.focus();
+    });
+  };
+
   return (
     <div className="space-y-5">
       {error && (
-        <div className="p-3.5 rounded-xl border border-rose-300 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5">
+        <div className="p-3.5 rounded-lg border border-rose-300 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <div className="flex-1">{error}</div>
         </div>
@@ -157,7 +194,7 @@ export default function RoomPublicPublicationForm({
       {/* Main Publication Visibility Switch Card */}
       <div
         className={cn(
-          'p-4 sm:p-5 rounded-2xl border transition-all duration-200',
+          'p-4 sm:p-5 rounded-xl border transition-all duration-200',
           draft.isPublic
             ? 'bg-emerald-500/5 border-emerald-500/30 dark:bg-emerald-950/20'
             : 'bg-surface-muted/60 border-border dark:bg-surface/50',
@@ -204,24 +241,27 @@ export default function RoomPublicPublicationForm({
           <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
             <button
               type="button"
+              id={visibilitySwitchId}
               role="switch"
               aria-checked={draft.isPublic}
+              aria-describedby={visibilityStatusId}
               onClick={() => onChange((d) => ({ ...d, isPublic: !d.isPublic }))}
               className={cn(
-                'relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-                draft.isPublic ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700',
+                'relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+                draft.isPublic ? 'bg-primary' : 'bg-border dark:bg-surface-muted',
               )}
             >
-              <span className="sr-only">Activer la publication publique</span>
+              <span className="sr-only">Visibilité publique sur le catalogue marketplace</span>
               <span
                 aria-hidden="true"
                 className={cn(
-                  'pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out',
+                  'pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
                   draft.isPublic ? 'translate-x-7' : 'translate-x-0',
                 )}
               />
             </button>
-            <span className="text-xs font-semibold text-foreground">
+            <span id={visibilityStatusId} className="text-xs font-semibold text-foreground">
               {draft.isPublic ? 'Publiée' : 'Privée'}
             </span>
           </div>
@@ -263,9 +303,11 @@ export default function RoomPublicPublicationForm({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setActiveTab(item.tab)}
+                aria-label={`Accéder à ${item.label} : ${item.valid ? 'valide' : 'à compléter'}`}
+                onClick={() => handleChecklistNavigate(item.tab, item.targetInputId)}
                 className={cn(
-                  'text-left p-2 rounded-xl border text-xs transition flex items-start gap-2 group',
+                  'text-left p-2.5 rounded-lg border text-xs transition flex items-start gap-2 group min-h-[44px]',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                   item.valid
                     ? 'border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
                     : item.required
@@ -293,27 +335,38 @@ export default function RoomPublicPublicationForm({
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border">
+      {/* Navigation Sub-Tabs with ARIA tablist & keyboard controls */}
+      <div
+        role="tablist"
+        aria-label="Sections de la fiche commerciale"
+        onKeyDown={handleTabKeyDown}
+        className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border"
+      >
         {TABS.map((tab) => {
           const active = activeTab === tab.id;
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
+              role="tab"
+              id={`publication-subtab-${tab.id}`}
+              aria-selected={active}
+              aria-controls={`publication-panel-${tab.id}`}
+              tabIndex={active ? 0 : -1}
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'min-h-10 px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-2 shrink-0 transition-colors',
+                'min-h-11 px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-2 shrink-0 transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 active
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'text-muted hover:text-foreground hover:bg-surface-muted',
               )}
             >
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
               {tab.completed && tab.id !== 'preview' && (
-                <span className={cn('w-1.5 h-1.5 rounded-full', active ? 'bg-primary-foreground' : 'bg-emerald-500')} />
+                <span className={cn('w-1.5 h-1.5 rounded-full', active ? 'bg-primary-foreground' : 'bg-emerald-500')} aria-hidden="true" />
               )}
             </button>
           );
@@ -322,10 +375,16 @@ export default function RoomPublicPublicationForm({
 
       {/* TAB 1: Tarifs & Capacité */}
       {activeTab === 'pricing' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-150">
+        <div
+          role="tabpanel"
+          id="publication-panel-pricing"
+          aria-labelledby="publication-subtab-pricing"
+          tabIndex={0}
+          className="space-y-4 animate-in fade-in-50 duration-150 focus-visible:outline-none"
+        >
           <div className="space-y-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
-              Identité publique & Tarification
+            <h4 className="text-sm font-semibold text-foreground">
+              Identité commerciale & Tarification
             </h4>
             <p className="text-xs text-muted">
               Le titre et le tarif sont les premiers critères scrutés par les organisateurs d’événements en RDC.
@@ -351,11 +410,12 @@ export default function RoomPublicPublicationForm({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                <label htmlFor={priceInputId} className="block text-xs font-semibold text-foreground mb-1.5">
                   Tarif de départ en FC <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Input
+                    id={priceInputId}
                     type="number"
                     min={0}
                     step={1000}
@@ -374,13 +434,14 @@ export default function RoomPublicPublicationForm({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                <label htmlFor={priceUnitSelectId} className="block text-xs font-semibold text-foreground mb-1.5">
                   Unité de tarification
                 </label>
                 <select
+                  id={priceUnitSelectId}
                   value={draft.priceUnit}
                   onChange={(e) => onChange((d) => ({ ...d, priceUnit: e.target.value as VenuePriceUnit }))}
-                  className="w-full min-h-11 px-3 py-2 rounded-xl border border-border bg-surface-muted text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                  className="w-full min-h-11 px-3 py-2 rounded-lg border border-border bg-surface-muted text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
                 >
                   {PRICE_UNIT_OPTIONS.map((opt) => (
                     <option key={opt.id} value={opt.id}>
@@ -396,10 +457,11 @@ export default function RoomPublicPublicationForm({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                <label htmlFor={quotaMinInputId} className="block text-xs font-semibold text-foreground mb-1.5">
                   Capacité minimale d'invités
                 </label>
                 <Input
+                  id={quotaMinInputId}
                   type="number"
                   min={0}
                   value={draft.quotaMin}
@@ -410,10 +472,11 @@ export default function RoomPublicPublicationForm({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                <label htmlFor={quotaMaxInputId} className="block text-xs font-semibold text-foreground mb-1.5">
                   Capacité maximale d'invités
                 </label>
                 <Input
+                  id={quotaMaxInputId}
                   type="number"
                   min={0}
                   value={draft.quotaMax}
@@ -441,10 +504,11 @@ export default function RoomPublicPublicationForm({
             </div>
 
             <div className="pt-2">
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor={descriptionTextareaId} className="block text-xs font-semibold text-foreground mb-1.5">
                 Description publique & Argumentaire de vente
               </label>
               <textarea
+                id={descriptionTextareaId}
                 rows={3}
                 value={draft.details.description}
                 onChange={(e) => {
@@ -455,7 +519,7 @@ export default function RoomPublicPublicationForm({
                   }));
                 }}
                 placeholder="Décrivez l'acoustique, les lumières tamisées, la hauteur sous plafond, la vue extérieure ou les avantages exclusifs..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface-muted text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface-muted text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
               />
             </div>
           </div>
@@ -464,9 +528,15 @@ export default function RoomPublicPublicationForm({
 
       {/* TAB 2: Localisation & Carte GPS */}
       {activeTab === 'location' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-150">
+        <div
+          role="tabpanel"
+          id="publication-panel-location"
+          aria-labelledby="publication-subtab-location"
+          tabIndex={0}
+          className="space-y-4 animate-in fade-in-50 duration-150 focus-visible:outline-none"
+        >
           <div className="space-y-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+            <h4 className="text-sm font-semibold text-foreground">
               Localisation & Coordonnées GPS
             </h4>
             <p className="text-xs text-muted">
@@ -532,9 +602,15 @@ export default function RoomPublicPublicationForm({
 
       {/* TAB 3: Photos & Galerie vitrine */}
       {activeTab === 'medias' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-150">
+        <div
+          role="tabpanel"
+          id="publication-panel-medias"
+          aria-labelledby="publication-subtab-medias"
+          tabIndex={0}
+          className="space-y-4 animate-in fade-in-50 duration-150 focus-visible:outline-none"
+        >
           <div className="space-y-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+            <h4 className="text-sm font-semibold text-foreground">
               Photos & Médias de la salle
             </h4>
             <p className="text-xs text-muted">
@@ -542,7 +618,7 @@ export default function RoomPublicPublicationForm({
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 text-xs text-foreground flex items-start gap-2.5">
+          <div className="p-3.5 rounded-lg border border-primary/20 bg-primary/5 text-xs text-foreground flex items-start gap-2.5">
             <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div className="space-y-0.5">
               <span className="font-bold text-primary">Conseil de mise en valeur</span>
@@ -561,9 +637,15 @@ export default function RoomPublicPublicationForm({
 
       {/* TAB 4: Commodités & Calendrier */}
       {activeTab === 'amenities' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-150">
+        <div
+          role="tabpanel"
+          id="publication-panel-amenities"
+          aria-labelledby="publication-subtab-amenities"
+          tabIndex={0}
+          className="space-y-4 animate-in fade-in-50 duration-150 focus-visible:outline-none"
+        >
           <div className="space-y-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+            <h4 className="text-sm font-semibold text-foreground">
               Commodités, Équipements & Dates indisponibles
             </h4>
             <p className="text-xs text-muted">
@@ -594,9 +676,15 @@ export default function RoomPublicPublicationForm({
 
       {/* TAB 5: Live Marketplace Card Preview */}
       {activeTab === 'preview' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-150">
+        <div
+          role="tabpanel"
+          id="publication-panel-preview"
+          aria-labelledby="publication-subtab-preview"
+          tabIndex={0}
+          className="space-y-4 animate-in fade-in-50 duration-150 focus-visible:outline-none"
+        >
           <div className="space-y-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+            <h4 className="text-sm font-semibold text-foreground">
               Aperçu en direct sur le Marketplace
             </h4>
             <p className="text-xs text-muted">
@@ -604,14 +692,16 @@ export default function RoomPublicPublicationForm({
             </p>
           </div>
 
-          <div className="max-w-md mx-auto rounded-2xl border border-border bg-surface overflow-hidden shadow-sm">
+          <div className="max-w-md mx-auto rounded-xl border border-border bg-surface overflow-hidden shadow-xs">
             {/* Preview Photo */}
             <div className="relative aspect-video w-full bg-surface-muted overflow-hidden">
               {draft.photos && draft.photos[0] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={draft.photos[0]}
-                  alt={draft.headline || displayName}
+                  alt={draft.headline || displayName || 'Aperçu salle'}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -626,7 +716,7 @@ export default function RoomPublicPublicationForm({
                 </Badge>
               </div>
               {hasPrice && (
-                <div className="absolute bottom-2.5 right-2.5 bg-background/90 backdrop-blur-md px-3 py-1 rounded-xl shadow-xs text-xs font-extrabold text-foreground border border-border/60">
+                <div className="absolute bottom-2.5 right-2.5 bg-background/90 backdrop-blur-md px-3 py-1 rounded-lg shadow-xs text-xs font-extrabold text-foreground border border-border/60">
                   {formatFc(priceNum)}
                   <span className="text-[10px] font-normal text-muted ml-1">
                     / {PRICE_UNIT_OPTIONS.find((o) => o.id === draft.priceUnit)?.label.toLowerCase().replace('par ', '') || 'événement'}
