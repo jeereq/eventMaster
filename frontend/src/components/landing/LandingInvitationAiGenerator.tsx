@@ -1043,6 +1043,7 @@ export default function LandingInvitationAiGenerator({
             value={refinePrompt}
             onChange={(e) => setRefinePrompt(e.target.value)}
             disabled={refineBusy}
+            aria-label="Instructions de retouche ciblée pour l’IA"
             placeholder="Ex : Ajouter des dorures plus vives, remplacer les roses par des lys blancs, éclairage crépuscule…"
             className="w-full text-xs rounded-lg border border-border bg-surface p-2.5 text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 resize-y"
           />
@@ -1067,6 +1068,16 @@ export default function LandingInvitationAiGenerator({
             </div>
           </div>
 
+          <div className="flex items-center justify-between text-[11px] font-mono text-muted pt-0.5">
+            <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+              <Coins className="w-3.5 h-3.5" />
+              {allowance.unlimited
+                ? 'Jetons illimités'
+                : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'} disponible${allowance.totalRemaining === 1 ? '' : 's'}`}
+            </span>
+            <span className="text-muted">Coût : {AI_INVITATION_COMPOSE_TOKEN_COST} jetons / retouche</span>
+          </div>
+
           <Button
             type="button"
             size="sm"
@@ -1081,7 +1092,9 @@ export default function LandingInvitationAiGenerator({
               )
             }
           >
-            {refineBusy ? (refineStage || 'Ajustement en cours…') : 'Réajuster la proposition avec l’IA'}
+            {refineBusy
+              ? (refineStage || 'Ajustement en cours…')
+              : `Réajuster la proposition avec l’IA (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
           </Button>
         </div>
       </div>
@@ -2276,10 +2289,12 @@ export default function LandingInvitationAiGenerator({
       />
 
       <AiComposeFullscreenLoader
-        active={busy && isExpanded}
+        active={(busy || refineBusy) && isExpanded}
         embedText={embedText}
         hasReferences={files.length > 0}
-        stageHint={stage}
+        title={refineBusy ? 'Retouche de l’invitation IA…' : undefined}
+        stageHint={refineBusy ? (refineStage || 'Altération ciblée par l’IA…') : stage}
+        footnote={refineBusy ? 'Conservation du style et des éléments avec application précise de la retouche.' : undefined}
       />
     </section>
   );

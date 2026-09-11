@@ -151,28 +151,28 @@ function Game3DInvitationArtifact({
 }) {
   return (
     <div className="relative w-48 h-64 flex items-center justify-center select-none" style={{ perspective: '1200px' }}>
-      {/* Anneaux gyroscopiques 3D en rotation orbitale */}
+      {/* Anneaux gyroscopiques 3D en rotation orbitale émeraude */}
       <div
-        className="em-gyro-ring-1 absolute w-52 h-52 rounded-full border border-amber-400/25 pointer-events-none"
+        className="em-gyro-ring-1 absolute w-52 h-52 rounded-full border border-emerald-400/25 pointer-events-none"
         style={{ transformStyle: 'preserve-3d' }}
       >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-400/50" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-400/50" />
       </div>
 
       <div
-        className="em-gyro-ring-2 absolute w-44 h-44 rounded-full border border-amber-300/20 border-dashed pointer-events-none"
+        className="em-gyro-ring-2 absolute w-44 h-44 rounded-full border border-emerald-300/20 border-dashed pointer-events-none"
         style={{ transformStyle: 'preserve-3d' }}
       >
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
       </div>
 
       <div
-        className="em-gyro-ring-3 absolute w-60 h-60 rounded-full border border-amber-400/10 pointer-events-none"
+        className="em-gyro-ring-3 absolute w-60 h-60 rounded-full border border-emerald-400/10 pointer-events-none"
         style={{ transformStyle: 'preserve-3d' }}
       />
 
-      {/* Particules flottantes dorées */}
+      {/* Particules flottantes émeraudes */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
         {[
           { left: '20%', top: '25%', delay: '0s', size: 'w-1 h-1' },
@@ -182,7 +182,7 @@ function Game3DInvitationArtifact({
         ].map((pt, i) => (
           <span
             key={i}
-            className={cn('absolute rounded-full bg-amber-300 shadow-[0_0_8px_#fde68a] animate-pulse', pt.size)}
+            className={cn('absolute rounded-full bg-emerald-300 shadow-[0_0_8px_#6ee7b7] animate-pulse', pt.size)}
             style={{ left: pt.left, top: pt.top, animationDelay: pt.delay }}
           />
         ))}
@@ -201,56 +201,56 @@ function Game3DInvitationArtifact({
       >
         {/* Face avant 3D de la carte */}
         <div
-          className="absolute inset-0 rounded-2xl border-2 border-amber-400/60 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-black/95 p-2.5 flex flex-col justify-between overflow-hidden shadow-[0_0_35px_rgba(245,158,11,0.35),inset_0_0_20px_rgba(245,158,11,0.15)]"
+          className="absolute inset-0 rounded-2xl border-2 border-emerald-400/60 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-black/95 p-2.5 flex flex-col justify-between overflow-hidden shadow-[0_0_35px_rgba(16,185,129,0.35),inset_0_0_20px_rgba(16,185,129,0.15)]"
           style={{ transform: 'translateZ(12px)', backfaceVisibility: 'hidden' }}
         >
           {/* Laser Scanner 3D */}
-          <div className="em-laser-scanner-3d absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-300 to-transparent shadow-[0_0_15px_#f59e0b,0_0_30px_#f59e0b] pointer-events-none z-20" />
+          <div className="em-laser-scanner-3d absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-300 to-transparent shadow-[0_0_15px_#10b981,0_0_30px_#059669] pointer-events-none z-20" />
 
           {/* Grille holographique filigrane */}
-          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:8px_8px] pointer-events-none" />
+          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:8px_8px] pointer-events-none" />
 
           {/* Remplissage de synthèse progressif */}
           <div
-            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-amber-500/25 via-amber-400/15 to-transparent transition-[height] duration-500 pointer-events-none"
+            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-emerald-500/25 via-emerald-400/15 to-transparent transition-[height] duration-500 pointer-events-none"
             style={{ height: `${Math.max(15, progress)}%` }}
           />
 
           {/* En-tête de carte 3D */}
           <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[7px] font-mono tracking-widest text-amber-400/80 uppercase">9:16 RAW</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
+            <span className="text-[7px] font-mono tracking-widest text-emerald-400/80 uppercase">9:16 RAW</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]" />
           </div>
 
           {/* Monogramme / Emblème royal central */}
           <div className="relative z-10 my-auto text-center space-y-1">
-            <div className="w-9 h-9 mx-auto rounded-full border border-amber-400/50 flex items-center justify-center bg-amber-400/10 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
-              <Sparkles className="w-4 h-4 text-amber-300 animate-spin [animation-duration:8s]" />
+            <div className="w-9 h-9 mx-auto rounded-full border border-emerald-400/50 flex items-center justify-center bg-emerald-400/10 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+              <Sparkles className="w-4 h-4 text-emerald-300 animate-spin [animation-duration:8s]" />
             </div>
             <div className="space-y-0.5">
               <div
                 className={cn(
                   'h-1 mx-auto rounded-full transition-all duration-500',
-                  stepIndex >= 1 ? 'w-12 bg-amber-200/80 shadow-[0_0_6px_#fde68a]' : 'w-6 bg-slate-700',
+                  stepIndex >= 1 ? 'w-12 bg-emerald-200/80 shadow-[0_0_6px_#a7f3d0]' : 'w-6 bg-slate-700',
                 )}
               />
               <div
                 className={cn(
                   'h-0.5 mx-auto rounded-full transition-all duration-500',
-                  stepIndex >= 2 ? 'w-16 bg-amber-200/60' : 'w-8 bg-slate-800',
+                  stepIndex >= 2 ? 'w-16 bg-emerald-200/60' : 'w-8 bg-slate-800',
                 )}
               />
               <div
                 className={cn(
                   'h-0.5 mx-auto rounded-full transition-all duration-500',
-                  stepIndex >= 3 ? 'w-10 bg-amber-200/40' : 'w-4 bg-slate-850',
+                  stepIndex >= 3 ? 'w-10 bg-emerald-200/40' : 'w-4 bg-slate-850',
                 )}
               />
             </div>
           </div>
 
-          {/* Pied de carte avec dorures */}
-          <div className="relative z-10 pt-1 border-t border-amber-400/30 flex items-center justify-between text-[7px] font-mono text-amber-300/80">
+          {/* Pied de carte avec dorures émeraudes */}
+          <div className="relative z-10 pt-1 border-t border-emerald-400/30 flex items-center justify-between text-[7px] font-mono text-emerald-300/80">
             <span>EVENTMASTER</span>
             <span>2K UHD</span>
           </div>
@@ -258,17 +258,17 @@ function Game3DInvitationArtifact({
 
         {/* Tranche / épaisseur 3D latérale */}
         <div
-          className="absolute inset-0 rounded-2xl bg-amber-500/20 border border-amber-400/30"
+          className="absolute inset-0 rounded-2xl bg-emerald-500/20 border border-emerald-400/30"
           style={{ transform: 'translateZ(6px)', backfaceVisibility: 'hidden' }}
         />
 
         {/* Face arrière 3D de la carte */}
         <div
-          className="absolute inset-0 rounded-2xl border-2 border-amber-400/30 bg-slate-950 p-3 flex flex-col items-center justify-center text-center shadow-[0_0_25px_rgba(245,158,11,0.2)]"
+          className="absolute inset-0 rounded-2xl border-2 border-emerald-400/30 bg-slate-950 p-3 flex flex-col items-center justify-center text-center shadow-[0_0_25px_rgba(16,185,129,0.2)]"
           style={{ transform: 'rotateY(180deg) translateZ(12px)', backfaceVisibility: 'hidden' }}
         >
-          <Cpu className="w-6 h-6 text-amber-400 mb-1 animate-pulse" />
-          <span className="text-[8px] font-mono tracking-wider text-amber-300 uppercase">STUDIO AI ENGINE</span>
+          <Cpu className="w-6 h-6 text-emerald-400 mb-1 animate-pulse" />
+          <span className="text-[8px] font-mono tracking-wider text-emerald-300 uppercase">STUDIO AI ENGINE</span>
           <span className="text-[7px] text-muted font-mono mt-0.5">GEMINI 3 PRO 2K</span>
         </div>
       </div>
@@ -298,9 +298,9 @@ function Game3DRoomPlanArtifact({
 
   return (
     <div className="relative w-48 h-64 flex items-center justify-center select-none" style={{ perspective: '1000px' }}>
-      {/* Anneau radar de balayage */}
-      <div className="absolute w-52 h-52 rounded-full border border-amber-400/20 pointer-events-none">
-        <div className="em-radar-sweep absolute inset-0 rounded-full border-t border-amber-400/70 bg-gradient-to-b from-amber-500/10 to-transparent" />
+      {/* Anneau radar de balayage émeraude */}
+      <div className="absolute w-52 h-52 rounded-full border border-emerald-400/20 pointer-events-none">
+        <div className="em-radar-sweep absolute inset-0 rounded-full border-t border-emerald-400/70 bg-gradient-to-b from-emerald-500/10 to-transparent" />
       </div>
 
       <div
@@ -314,14 +314,14 @@ function Game3DRoomPlanArtifact({
       >
         {/* Sol isométrique maillé */}
         <div
-          className="absolute inset-0 rounded-xl border-2 border-amber-400/40 bg-slate-950/90 shadow-[0_0_25px_rgba(245,158,11,0.2)] overflow-hidden"
+          className="absolute inset-0 rounded-xl border-2 border-emerald-400/40 bg-slate-950/90 shadow-[0_0_25px_rgba(16,185,129,0.2)] overflow-hidden"
           style={{ transform: 'translateZ(0px)' }}
         >
           {/* Lignes de quadrillage architectural */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(251,191,36,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(251,191,36,0.08)_1px,transparent_1px)] bg-[size:16px_16px]" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(52,211,153,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(52,211,153,0.08)_1px,transparent_1px)] bg-[size:16px_16px]" />
 
           {/* Scanner LiDAR */}
-          <div className="em-laser-scanner-3d absolute inset-x-0 h-0.5 bg-amber-300 shadow-[0_0_12px_#f59e0b]" />
+          <div className="em-laser-scanner-3d absolute inset-x-0 h-0.5 bg-emerald-300 shadow-[0_0_12px_#10b981]" />
 
           {/* Tables 3D en lévitation */}
           {tables.map((t, i) => (
@@ -331,8 +331,8 @@ function Game3DRoomPlanArtifact({
                 'absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all duration-500',
                 t.show ? 'opacity-100 scale-100' : 'opacity-0 scale-50',
                 t.label === 'VIP'
-                  ? 'w-8 h-8 bg-amber-400/35 border border-amber-300 shadow-[0_0_15px_#f59e0b]'
-                  : 'w-6 h-6 bg-amber-400/15 border border-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.25)]',
+                  ? 'w-8 h-8 bg-emerald-400/35 border border-emerald-300 shadow-[0_0_15px_#10b981]'
+                  : 'w-6 h-6 bg-emerald-400/15 border border-emerald-400/50 shadow-[0_0_8px_rgba(16,185,129,0.25)]',
               )}
               style={{
                 left: t.x,
@@ -340,16 +340,16 @@ function Game3DRoomPlanArtifact({
                 transform: `translateZ(${t.z}px)`,
               }}
             >
-              <span className="text-[7px] font-mono font-bold text-amber-200">{t.label}</span>
+              <span className="text-[7px] font-mono font-bold text-emerald-200">{t.label}</span>
             </div>
           ))}
 
-          {/* Estreade / Scène en fond */}
+          {/* Estrade / Scène en fond */}
           <div
-            className="absolute top-1 inset-x-8 h-3 rounded border border-amber-400/50 bg-amber-400/20 flex items-center justify-center"
+            className="absolute top-1 inset-x-8 h-3 rounded border border-emerald-400/50 bg-emerald-400/20 flex items-center justify-center"
             style={{ transform: 'translateZ(14px)' }}
           >
-            <span className="text-[6px] font-mono font-bold text-amber-300 uppercase">ESTRADE</span>
+            <span className="text-[6px] font-mono font-bold text-emerald-300 uppercase">ESTRADE</span>
           </div>
         </div>
       </div>
@@ -378,11 +378,11 @@ function Game3DBudgetArtifact({
 
   return (
     <div className="relative w-48 h-64 flex items-center justify-center select-none" style={{ perspective: '1000px' }}>
-      {/* Orbite dorée extérieure */}
-      <div className="em-gyro-ring-1 absolute w-48 h-48 rounded-full border border-amber-400/25 pointer-events-none" />
+      {/* Orbite émeraude extérieure */}
+      <div className="em-gyro-ring-1 absolute w-48 h-48 rounded-full border border-emerald-400/25 pointer-events-none" />
 
       <div
-        className="relative w-36 h-36 flex items-end justify-center gap-2.5 p-2 rounded-xl border border-amber-400/40 bg-slate-950/80 shadow-[0_0_25px_rgba(245,158,11,0.25)]"
+        className="relative w-36 h-36 flex items-end justify-center gap-2.5 p-2 rounded-xl border border-emerald-400/40 bg-slate-950/80 shadow-[0_0_25px_rgba(16,185,129,0.25)]"
         style={{
           transformStyle: 'preserve-3d',
           transform: `rotateX(${dragRot.x + 25}deg) rotateY(${dragRot.y - 15}deg)`,
@@ -394,7 +394,7 @@ function Game3DBudgetArtifact({
               className={cn(
                 'w-5 rounded-t-md border transition-all duration-700 shadow-lg',
                 bar.show
-                  ? 'border-amber-300 bg-gradient-to-t from-amber-600/40 via-amber-400/40 to-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
+                  ? 'border-emerald-300 bg-gradient-to-t from-emerald-600/40 via-emerald-400/40 to-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)]'
                   : 'border-slate-700 bg-slate-800/40',
               )}
               style={{
@@ -402,7 +402,7 @@ function Game3DBudgetArtifact({
                 transform: `translateZ(${10 + i * 4}px)`,
               }}
             />
-            <span className="text-[6px] font-mono text-amber-200/80">{bar.label}</span>
+            <span className="text-[6px] font-mono text-emerald-200/80">{bar.label}</span>
           </div>
         ))}
       </div>
@@ -430,19 +430,19 @@ function GameTipsCarousel({ variant }: { variant: AiLoaderVariant }) {
     <div className="relative overflow-hidden rounded-xl border border-stage-foreground/15 bg-stage-elevated/90 backdrop-blur-md p-3.5 text-left shadow-2xl transition">
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-1.5">
-          <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="text-[10px] font-mono font-bold tracking-wider text-amber-400 uppercase">
+          <Lightbulb className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span className="text-[10px] font-mono font-bold tracking-wider text-emerald-400 uppercase">
             ASTUCE DU STUDIO [{tipIndex + 1}/{tips.length}] · {current.tag}
           </span>
         </div>
         <button
           type="button"
           onClick={() => setTipIndex((prev) => (prev + 1) % tips.length)}
-          className="text-[10px] font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-0.5 px-2 py-0.5 rounded-md hover:bg-amber-400/10 transition"
-          title="Afficher l’astuce suivante"
+          aria-label="Afficher l’astuce suivante"
+          className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-emerald-400/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
         >
           <span>Suivante</span>
-          <ChevronRight className="w-3 h-3" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -454,7 +454,7 @@ function GameTipsCarousel({ variant }: { variant: AiLoaderVariant }) {
       <div className="mt-2 h-0.5 w-full bg-stage-foreground/10 rounded-full overflow-hidden">
         <div
           key={tipIndex}
-          className="h-full bg-amber-400/80 rounded-full transition-all duration-[5500ms] ease-linear"
+          className="h-full bg-emerald-400/80 rounded-full transition-all duration-[5500ms] ease-linear"
           style={{ width: '100%' }}
         />
       </div>
@@ -665,9 +665,9 @@ export function AiProcessFullscreenLoader({
         aria-hidden
       />
 
-      {/* Halos volumétriques d'arrière-plan (ambiance unifiée or champagne & ardoise pure) */}
+      {/* Halos volumétriques d'arrière-plan (ambiance unifiée émeraude prestigieuse & ardoise pure) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[38rem] h-[38rem] rounded-full bg-amber-500/[0.08] blur-[120px] motion-safe:animate-pulse" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[38rem] h-[38rem] rounded-full bg-emerald-500/[0.12] blur-[120px] motion-safe:animate-pulse" />
         <div className="absolute bottom-0 inset-x-0 h-96 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
       </div>
 
@@ -676,7 +676,7 @@ export function AiProcessFullscreenLoader({
         {/* Télémétrie gauche */}
         <div className="flex items-center gap-3">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-stage-elevated/90 border border-stage-foreground/20 shadow-lg backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="font-bold tracking-wider text-stage-foreground uppercase">
               STUDIO 3D // EN COURS
             </span>
@@ -689,7 +689,7 @@ export function AiProcessFullscreenLoader({
         {/* Télémétrie droite : FPS, Horloge & Audio */}
         <div className="flex items-center gap-2.5">
           <div className="hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-stage-elevated/70 border border-stage-foreground/15 text-stage-foreground/75 tabular-nums">
-            <Cpu className="w-3.5 h-3.5 text-amber-400/80" />
+            <Cpu className="w-3.5 h-3.5 text-emerald-400/80" />
             <span>60 FPS</span>
             <span className="text-stage-foreground/30">|</span>
             <span>T+{elapsedLabel}</span>
@@ -713,8 +713,8 @@ export function AiProcessFullscreenLoader({
               </>
             ) : (
               <>
-                <Volume2 className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
-                <span className="hidden sm:inline text-amber-300">Audio 3D actif</span>
+                <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 animate-pulse" />
+                <span className="hidden sm:inline text-emerald-300">Audio 3D actif</span>
               </>
             )}
           </button>
@@ -733,11 +733,11 @@ export function AiProcessFullscreenLoader({
             className="relative cursor-grab active:cursor-grabbing p-4 rounded-3xl group touch-none"
             title="Cliquez et faites glisser pour inspecter en 3D"
           >
-            {/* Viseur de ciblage HUD d'angle */}
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-400/60" />
-            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-400/60" />
-            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-400/60" />
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-400/60" />
+            {/* Viseur de ciblage HUD d'angle émeraude */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-emerald-400/60" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-emerald-400/60" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-emerald-400/60" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-emerald-400/60" />
 
             {/* Rendu 3D selon la variante */}
             {variant === 'invitation' ? (
@@ -764,9 +764,9 @@ export function AiProcessFullscreenLoader({
 
           {/* Badge interactif sous l'artefact */}
           <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stage-elevated/80 border border-stage-foreground/15 text-[11px] font-mono text-stage-foreground/70">
-            <Compass className="w-3.5 h-3.5 text-amber-400" />
+            <Compass className="w-3.5 h-3.5 text-emerald-400" />
             {isDragging ? (
-              <span className="text-amber-300 font-semibold">ROTATION MANUELLE 3D</span>
+              <span className="text-emerald-300 font-semibold">ROTATION MANUELLE 3D</span>
             ) : (
               <span>GLISSEZ POUR INSPECTER EN 3D</span>
             )}
@@ -777,7 +777,7 @@ export function AiProcessFullscreenLoader({
         <div className="w-full max-w-md text-left space-y-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-400/15 text-amber-300 border border-amber-400/30">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-400/15 text-emerald-300 border border-emerald-400/30">
                 PHASE {stepIndex + 1}/{steps.length}
               </span>
               <span className="text-xs font-mono text-stage-foreground/50">
@@ -804,7 +804,7 @@ export function AiProcessFullscreenLoader({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-stage-foreground/70">PROGRESSION DU RENDU</span>
-              <span className="font-bold text-amber-300 tabular-nums">
+              <span className="font-bold text-emerald-300 tabular-nums">
                 [ {shownProgress} % ]
               </span>
             </div>
@@ -818,7 +818,7 @@ export function AiProcessFullscreenLoader({
               aria-label="Progression du chargement 3D"
             >
               <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-200 transition-[width] duration-350 ease-out shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                className="h-full rounded-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-200 transition-[width] duration-350 ease-out shadow-[0_0_12px_rgba(16,185,129,0.5)]"
                 style={{ width: `${shownProgress}%` }}
               />
             </div>
@@ -836,7 +836,7 @@ export function AiProcessFullscreenLoader({
                   className={cn(
                     'flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-all duration-300',
                     isCurrent
-                      ? 'border-amber-400/60 bg-amber-400/10 text-amber-200 font-semibold shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                      ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-200 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.15)]'
                       : isDone
                         ? 'border-stage-foreground/10 bg-stage-foreground/5 text-stage-foreground/75'
                         : 'border-stage-foreground/5 bg-stage-foreground/[0.02] text-stage-foreground/40',
@@ -846,9 +846,9 @@ export function AiProcessFullscreenLoader({
                     className={cn(
                       'w-5 h-5 rounded-md inline-flex items-center justify-center text-[10px] font-bold shrink-0',
                       isCurrent
-                        ? 'bg-amber-400 text-slate-950 shadow-[0_0_8px_#f59e0b]'
+                        ? 'bg-emerald-400 text-emerald-950 font-black shadow-[0_0_8px_rgba(16,185,129,0.7)]'
                         : isDone
-                          ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
+                          ? 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/40'
                           : 'bg-stage-foreground/10 text-stage-foreground/40',
                     )}
                   >
@@ -858,12 +858,12 @@ export function AiProcessFullscreenLoader({
                   <span className="font-sans text-xs flex-1 truncate">{step.label}</span>
 
                   {isCurrent ? (
-                    <span className="flex items-center gap-1 text-amber-400 text-[10px] font-mono shrink-0">
+                    <span className="flex items-center gap-1 text-emerald-400 text-[10px] font-mono shrink-0">
                       <span>RUNNING</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                     </span>
                   ) : isDone ? (
-                    <span className="text-amber-300/80 text-[10px] font-mono shrink-0">OK</span>
+                    <span className="text-emerald-300/80 text-[10px] font-mono shrink-0">OK</span>
                   ) : null}
                 </li>
               );
@@ -889,11 +889,15 @@ export default function AiComposeFullscreenLoader({
   embedText = false,
   hasReferences = false,
   stageHint,
+  title = 'Synthèse 3D de l’invitation',
+  footnote,
 }: {
   active: boolean;
   embedText?: boolean;
   hasReferences?: boolean;
   stageHint?: string | null;
+  title?: string;
+  footnote?: string;
 }) {
   const steps = COMPOSE_STEPS.map((step) => {
     if (step.id === 'faces' && !hasReferences) {
@@ -909,13 +913,14 @@ export default function AiComposeFullscreenLoader({
     <AiProcessFullscreenLoader
       active={active}
       variant="invitation"
-      title="Synthèse 3D de l’invitation"
+      title={title}
       stageHint={stageHint}
       steps={steps}
       footnote={
-        hasReferences
+        footnote ||
+        (hasReferences
           ? 'Les regards, sourires et volumes faciaux restent fidèles aux photos de référence.'
-          : 'Modèle 9:16 sculpté fidèlement à partir de votre brief.'
+          : 'Modèle 9:16 sculpté fidèlement à partir de votre brief.')
       }
     />
   );

@@ -1657,20 +1657,14 @@ export default function TemplatesPage() {
  onClick={handleAiComposeGenerate}
  className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md inline-flex items-center gap-2"
  >
- {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
- {aiComposeBusy ? 'Génération…' : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
- </button>
- </div>
- </div>
- <AiComposeFullscreenLoader
- active={aiComposeBusy}
- embedText={aiComposeEmbedText}
- hasReferences={aiComposeFiles.length > 0}
- stageHint={aiComposeStage}
- />
- </div>
- );
- };
+            {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+            {aiComposeBusy ? 'Génération…' : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
  // Handle image file upload → Cloudinary
  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2349,17 +2343,33 @@ export default function TemplatesPage() {
  return <SkeletonTemplatesView />;
  }
 
- if (editorOpen && canUseCustomTemplates) {
- return (
- <>
- {renderMockupImportModal()}
- {renderAiComposeModal()}
- {renderQuickTextModal()}
- <AiTokenPurchaseModal
- open={aiTokenModalOpen}
- onClose={() => setAiTokenModalOpen(false)}
- onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
- />
+  if (editorOpen && canUseCustomTemplates) {
+    return (
+      <>
+        {renderMockupImportModal()}
+        {renderAiComposeModal()}
+        {renderQuickTextModal()}
+        <AiTokenPurchaseModal
+          open={aiTokenModalOpen}
+          onClose={() => setAiTokenModalOpen(false)}
+          onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
+        />
+        <AiComposeFullscreenLoader
+          active={aiComposeBusy}
+          embedText={aiComposeEmbedText}
+          hasReferences={aiComposeFiles.length > 0}
+          title={
+            aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
+              ? 'Retouche de l’invitation IA…'
+              : undefined
+          }
+          stageHint={aiComposeStage}
+          footnote={
+            aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
+              ? 'Conservation de la base avec ajustement précis par l’IA.'
+              : undefined
+          }
+        />
  <Modal
  open={exitConfirmOpen}
  onClose={() => setExitConfirmOpen(false)}
@@ -2748,17 +2758,17 @@ export default function TemplatesPage() {
  {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
  </button>
 
- {canvasElements.length > 0 && (
- <button
- type="button"
- disabled={aiComposeBusy}
- onClick={() => openAiComposeModal('Conserver la base du carton actuel. Retouche demandée : ')}
- className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
- >
- <Sparkles className="w-3.5 h-3.5" />
- Altérer légèrement avec l’IA
- </button>
- )}
+          {canvasElements.length > 0 && (
+            <button
+              type="button"
+              disabled={aiComposeBusy}
+              onClick={() => openAiComposeModal('Conserver la base du carton actuel. Retouche demandée : ')}
+              className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Altérer légèrement avec l’IA ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
+            </button>
+          )}
 
  {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (
  <button
@@ -4921,15 +4931,26 @@ export default function TemplatesPage() {
  );
  }
 
- return (
- <>
- {renderMockupImportModal()}
- {renderAiComposeModal()}
- <AiTokenPurchaseModal
- open={aiTokenModalOpen}
- onClose={() => setAiTokenModalOpen(false)}
- onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
- />
+  return (
+    <>
+      {renderMockupImportModal()}
+      {renderAiComposeModal()}
+      <AiTokenPurchaseModal
+        open={aiTokenModalOpen}
+        onClose={() => setAiTokenModalOpen(false)}
+        onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
+      />
+      <AiComposeFullscreenLoader
+        active={aiComposeBusy}
+        embedText={aiComposeEmbedText}
+        hasReferences={aiComposeFiles.length > 0}
+        title={
+          aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
+            ? 'Retouche de l’invitation IA…'
+            : undefined
+        }
+        stageHint={aiComposeStage}
+      />
  <div className="space-y-6">
  <PageHeader
  title={
